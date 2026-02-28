@@ -271,12 +271,12 @@ public final class GetDeviceOverviewHandlerTest {
             "Detected by OmniLab",
             DimensionSourceGroup.newBuilder()
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("detected_supported")
                         .setValue("val1"))
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("config_supported")
                         .setValue("val3"))
@@ -286,12 +286,12 @@ public final class GetDeviceOverviewHandlerTest {
             "Detected by OmniLab",
             DimensionSourceGroup.newBuilder()
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("detected_required")
                         .setValue("val2"))
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("config_required")
                         .setValue("val4"))
@@ -326,7 +326,7 @@ public final class GetDeviceOverviewHandlerTest {
             "From Device Config",
             DimensionSourceGroup.newBuilder()
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("config_supported")
                         .setValue("val3"))
@@ -334,7 +334,7 @@ public final class GetDeviceOverviewHandlerTest {
             "Detected by OmniLab",
             DimensionSourceGroup.newBuilder()
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("detected_supported")
                         .setValue("val1"))
@@ -344,7 +344,7 @@ public final class GetDeviceOverviewHandlerTest {
             "From Device Config",
             DimensionSourceGroup.newBuilder()
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("config_required")
                         .setValue("val4"))
@@ -352,7 +352,7 @@ public final class GetDeviceOverviewHandlerTest {
             "Detected by OmniLab",
             DimensionSourceGroup.newBuilder()
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("detected_required")
                         .setValue("val2"))
@@ -394,7 +394,7 @@ public final class GetDeviceOverviewHandlerTest {
             "From Host Config",
             DimensionSourceGroup.newBuilder()
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("config_supported")
                         .setValue("val3"))
@@ -402,7 +402,7 @@ public final class GetDeviceOverviewHandlerTest {
             "Detected by OmniLab",
             DimensionSourceGroup.newBuilder()
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("detected_supported")
                         .setValue("val1"))
@@ -412,7 +412,7 @@ public final class GetDeviceOverviewHandlerTest {
             "From Host Config",
             DimensionSourceGroup.newBuilder()
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("config_required")
                         .setValue("val4"))
@@ -420,7 +420,7 @@ public final class GetDeviceOverviewHandlerTest {
             "Detected by OmniLab",
             DimensionSourceGroup.newBuilder()
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("detected_required")
                         .setValue("val2"))
@@ -448,12 +448,12 @@ public final class GetDeviceOverviewHandlerTest {
             "Detected by OmniLab",
             DimensionSourceGroup.newBuilder()
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("detected_supported")
                         .setValue("val1"))
                 .addDimensions(
-                    com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+                    com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
                         .setName("config_supported")
                         .setValue("val3"))

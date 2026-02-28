@@ -29,6 +29,7 @@ proto_library(
     name = "device_resources_proto",
     srcs = ["device_resources.proto"],
     deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_proto",
         "@protobuf//:timestamp_proto",
     ],
 )

@@ -37,6 +37,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.PermissionInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.BasicDeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.BasicDeviceInfo.Form;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.CapabilitiesInfo;
@@ -47,7 +48,6 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.DimensionSou
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.Dimensions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.NetworkInfo;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.PermissionInfo;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.DeviceData;
 import java.time.Duration;
@@ -296,13 +296,13 @@ public final class GetDeviceOverviewHandler {
     List<DeviceDimension> allRequired =
         deviceInfo.getDeviceFeature().getCompositeDimension().getRequiredDimensionList();
 
-    ImmutableList<com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension>
+    ImmutableList<com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension>
         detectedSupported =
             allSupported.stream()
                 .filter(d -> !configDims.contains(d))
                 .map(this::convertToFeDimension)
                 .collect(toImmutableList());
-    ImmutableList<com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension>
+    ImmutableList<com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension>
         detectedRequired =
             allRequired.stream()
                 .filter(d -> !configDims.contains(d))
@@ -327,14 +327,14 @@ public final class GetDeviceOverviewHandler {
   }
 
   private ImmutableList<
-          com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension>
+          com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension>
       convertToFeDimensions(List<DeviceDimension> dimensions) {
     return dimensions.stream().map(this::convertToFeDimension).collect(toImmutableList());
   }
 
-  private com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension
+  private com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
       convertToFeDimension(DeviceDimension dimension) {
-    return com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceDimension.newBuilder()
+    return com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension.newBuilder()
         .setName(dimension.getName())
         .setValue(dimension.getValue())
         .build();

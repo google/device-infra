@@ -18,24 +18,11 @@ syntax = "proto3";
 
 package devtools.mobileharness.fe.v6.service.proto.config;
 
+import "src/devtools/mobileharness/fe/v6/service/proto/common/common_resources.proto";
+
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.config";
 option java_multiple_files = true;
 option java_outer_classname = "ConfigResourcesProto";
-
-// Represents a single dimension name-value pair.
-message DeviceDimension {
-  string name = 1;
-  string value = 2;
-}
-
-// Defines who can control and use a device.
-message PermissionInfo {
-  // List of users or groups who have full control over the device,
-  // including changing its configuration.
-  repeated string owners = 1;
-  // List of users or groups who are allowed to execute tests on the device.
-  repeated string executors = 2;
-}
 
 // Configuration for the device's default Wi-Fi network.
 message WifiConfig {
@@ -74,10 +61,13 @@ message StabilitySettings {
 // in the UI.
 message DeviceConfig {
   message Dimensions {
-    repeated DeviceDimension supported = 1;
-    repeated DeviceDimension required = 2;
+    repeated devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
+        supported = 1;
+    repeated devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
+        required = 2;
   }
-  PermissionInfo permissions = 1;
+  devtools.mobileharness.fe.v6.service.proto.common.PermissionInfo permissions =
+      1;
   WifiConfig wifi = 2;
   Dimensions dimensions = 3;
   StabilitySettings settings = 4;
@@ -113,20 +103,12 @@ enum DeviceConfigSection {
   ALL = 5;
 }
 
-// Defines a principal (user or group) allowed to SSH as a specific login user.
-message SshPrincipal {
-  // The username on the host machine (e.g., 'root', 'mobileharness')
-  string login_user = 1;
-  // List of users or MDB groups allowed to assume the loginUser role
-  repeated string principals = 2;
-}
-
 // Permissions for the host.
 message HostPermissions {
   // Users/groups who can edit this host config.
   repeated string host_admins = 1;
-  repeated SshPrincipal ssh_access =
-      2;  // Defines SSH access rules. Will be [] if no rules are set.
+
+  reserved 2;
 }
 
 // Device configuration mode for the host.
