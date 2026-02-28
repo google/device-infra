@@ -114,6 +114,7 @@ message TestEnvironment {
   optional bool use_parallel_setup = 14;
   repeated DeviceActionConfigObject device_action_config_objects = 15;
   repeated Option tradefed_options = 16;
+  optional google.protobuf.Duration device_recovery_timeout = 17;
 }
 
 message Option {

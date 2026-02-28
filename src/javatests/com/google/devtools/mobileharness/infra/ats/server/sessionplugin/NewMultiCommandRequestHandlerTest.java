@@ -29,6 +29,7 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -37,10 +38,12 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.flogger.testing.FloggerMessage;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
+import com.google.devtools.mobileharness.infra.ats.common.AtsMasterUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
@@ -142,6 +145,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Rule public final SetFlagsOss flags = new SetFlagsOss();
 
   @Bind @Mock private DeviceQuerier deviceQuerier;
+  @Bind @Mock private AtsMasterUtil atsMasterUtil;
   @Bind @Mock private SessionRequestHandlerUtil sessionRequestHandlerUtil;
   @Bind @Mock private SessionResultHandlerUtil sessionResultHandlerUtil;
   @Bind @Mock private XtsJobCreator xtsJobCreator;
@@ -182,13 +186,28 @@ public final class NewMultiCommandRequestHandlerTest {
     when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
     when(sessionRequestHandlerUtil.addXtsModuleInfo(any()))
         .thenAnswer(invocation -> invocation.getArgument(0));
+    when(sessionRequestHandlerUtil.getDeviceInfo(any()))
+        .thenReturn(
+            Optional.of(
+                com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper
+                    .DeviceInfo.builder()
+                    .setDeviceId("device_id")
+                    .setSupportedAbi("arm64-v8a")
+                    .setSupportedAbiList("arm64-v8a")
+                    .build()));
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
             DeviceQueryResult.newBuilder()
                 .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId(DEVICE_ID_1).addType("AndroidOnlineDevice"))
+                    DeviceInfo.newBuilder()
+                        .setId(DEVICE_ID_1)
+                        .addType("AndroidOnlineDevice")
+                        .setStatus("IDLE"))
                 .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId(DEVICE_ID_2).addType("AndroidOnlineDevice"))
+                    DeviceInfo.newBuilder()
+                        .setId(DEVICE_ID_2)
+                        .addType("AndroidOnlineDevice")
+                        .setStatus("IDLE"))
                 .build());
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     when(xtsTypeLoader.getXtsType(eq(xtsRootDir), any())).thenReturn("cts");
@@ -1206,6 +1225,138 @@ public final class NewMultiCommandRequestHandlerTest {
 
     assertThat(createJobsResult.state()).isEqualTo(RequestState.RUNNING);
     assertThat(createJobsResult.jobInfos()).isEmpty();
+  }
+
+  @Test
+  public void waitForRequestedDevicesToBeReady_success() throws Exception {
+    logged.allowRegex("WARNING: Devices*");
+    when(atsMasterUtil.queryAndroidDevicesFromMaster())
+        .thenReturn(
+            ImmutableList.of(
+                com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo
+                    .newBuilder()
+                    .setId(DEVICE_ID_1)
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("BUSY")
+                    .build(),
+                com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo
+                    .newBuilder()
+                    .setId(DEVICE_ID_2)
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("IDLE")
+                    .build()))
+        .thenReturn(
+            ImmutableList.of(
+                com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo
+                    .newBuilder()
+                    .setId(DEVICE_ID_1)
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("IDLE")
+                    .build(),
+                com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo
+                    .newBuilder()
+                    .setId(DEVICE_ID_2)
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("IDLE")
+                    .build()));
+
+    newMultiCommandRequestHandler.waitForRequestedDevicesToBeReady(
+        NewMultiCommandRequest.getDefaultInstance(), commandInfo, sessionInfo);
+
+    verify(atsMasterUtil, times(2)).queryAndroidDevicesFromMaster();
+    verify(sleeper).sleep(Duration.ofSeconds(30));
+  }
+
+  @Test
+  public void waitForRequestedDevicesToBeReady_noSerials_shouldNotWait() throws Exception {
+    newMultiCommandRequestHandler.waitForRequestedDevicesToBeReady(
+        request, commandInfo.toBuilder().clearDeviceDimensions().build(), sessionInfo);
+    verify(atsMasterUtil, never()).queryAndroidDevicesFromMaster();
+    verify(sleeper, never()).sleep(any());
+  }
+
+  @Test
+  public void waitForRequestedDevicesToBeReady_queryException_onlyLogWarning() throws Exception {
+    logged.allowRegex("WARNING: Devices*");
+    when(atsMasterUtil.queryAndroidDevicesFromMaster())
+        .thenThrow(new MobileHarnessException(BasicErrorId.COMMAND_EXEC_FAIL, "error"))
+        .thenReturn(
+            ImmutableList.of(
+                com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo
+                    .newBuilder()
+                    .setId(DEVICE_ID_1)
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("IDLE")
+                    .build(),
+                com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo
+                    .newBuilder()
+                    .setId(DEVICE_ID_2)
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("IDLE")
+                    .build()));
+
+    newMultiCommandRequestHandler.waitForRequestedDevicesToBeReady(
+        request, commandInfo, sessionInfo);
+
+    verify(atsMasterUtil, times(2)).queryAndroidDevicesFromMaster();
+    verify(sleeper).sleep(Duration.ofSeconds(30));
+    logged.expectMatch(FloggerMessage.contains("Failed to query device"));
+  }
+
+  @Test
+  public void waitForRequestedDevicesToBeReady_timeoutExceeded() throws Exception {
+    logged.allowRegex("WARNING: Devices*");
+    NewMultiCommandRequest requestWithTimeout =
+        request.toBuilder()
+            .setTestEnvironment(
+                request.getTestEnvironment().toBuilder()
+                    .setDeviceRecoveryTimeout(
+                        toProtoDuration(Duration.ofSeconds(60)))) // 2 attempts
+            .build();
+    when(atsMasterUtil.queryAndroidDevicesFromMaster())
+        .thenReturn(
+            ImmutableList.of(
+                com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo
+                    .newBuilder()
+                    .setId(DEVICE_ID_1)
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("BUSY")
+                    .build()));
+
+    newMultiCommandRequestHandler.waitForRequestedDevicesToBeReady(
+        requestWithTimeout, commandInfo, sessionInfo);
+
+    verify(atsMasterUtil, times(2)).queryAndroidDevicesFromMaster();
+    verify(sleeper).sleep(Duration.ofSeconds(30));
+    logged.expectMatch(FloggerMessage.contains("still not idle after 2 attempts"));
+  }
+
+  @Test
+  public void waitForRequestedDevicesToBeReady_customTimeout_success() throws Exception {
+    logged.allowRegex("WARNING: Devices*");
+    NewMultiCommandRequest requestWithTimeout =
+        request.toBuilder()
+            .setTestEnvironment(
+                request.getTestEnvironment().toBuilder()
+                    .setDeviceRecoveryTimeout(
+                        toProtoDuration(Duration.ofSeconds(1230)))) // 41 attempts
+            .build();
+    when(atsMasterUtil.queryAndroidDevicesFromMaster())
+        .thenReturn(
+            ImmutableList.of(
+                com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo
+                    .newBuilder()
+                    .setId(DEVICE_ID_1)
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("BUSY")
+                    .build()));
+
+    newMultiCommandRequestHandler.waitForRequestedDevicesToBeReady(
+        requestWithTimeout, commandInfo, sessionInfo);
+
+    verify(atsMasterUtil, times(41)).queryAndroidDevicesFromMaster();
+    verify(sleeper, times(40)).sleep(Duration.ofSeconds(30));
+    logged.expectMatch(FloggerMessage.contains("still not idle after 41 attempts"));
   }
 
   @Test

@@ -243,6 +243,11 @@ public abstract class XtsJobCreator {
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     logger.atInfo().log("Get the sub device spec list: %s", subDeviceSpecList);
 
+    if (sessionRequestInfo.isAtsServerRequest()) {
+      // If the request is from ATS UI, we need to set the shard count to the number of sub devices.
+      shardCount = subDeviceSpecList.size();
+    }
+
     injectEnvSpecificProperties(sessionRequestInfo, driverParams, subDeviceSpecList.size());
 
     ImmutableList<String> shardCountArg =

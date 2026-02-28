@@ -223,6 +223,15 @@ public final class AtsServerSessionPluginTest {
     when(files.getAll()).thenReturn(ImmutableMultimap.of());
     when(sessionRequestHandlerUtil.addXtsModuleInfo(any()))
         .thenAnswer(invocation -> invocation.getArgument(0));
+    when(sessionRequestHandlerUtil.getDeviceInfo(any()))
+        .thenReturn(
+            Optional.of(
+                com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper
+                    .DeviceInfo.builder()
+                    .setDeviceId("device_id")
+                    .setSupportedAbi("arm64-v8a")
+                    .setSupportedAbiList("arm64-v8a")
+                    .build()));
     Mockito.doNothing().when(localFileUtil).mergeDir(any(Path.class), any(Path.class));
     commandInfo =
         CommandInfo.newBuilder()
@@ -259,9 +268,15 @@ public final class AtsServerSessionPluginTest {
         .thenReturn(
             DeviceQueryResult.newBuilder()
                 .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addType("AndroidOnlineDevice")
+                        .setStatus("IDLE"))
                 .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_2")
+                        .addType("AndroidOnlineDevice")
+                        .setStatus("IDLE"))
                 .build());
     LinkedListMultimap<String, TestInfo> testInfosMap = LinkedListMultimap.create();
     testInfosMap.put("test_name", testInfo);
@@ -350,6 +365,50 @@ public final class AtsServerSessionPluginTest {
     assertThat(
             requestDetail.getCommandDetailsMap().values().iterator().next().getDeviceSerialsList())
         .containsExactly("device_id_1", "device_id_2");
+  }
+
+  @Test
+  public void onSessionStarting_waitForDeviceRecovery_success() throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addType("AndroidOnlineDevice")
+                        .setStatus("BUSY"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_2")
+                        .addType("AndroidOnlineDevice")
+                        .setStatus("IDLE"))
+                .build())
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addType("AndroidOnlineDevice")
+                        .setStatus("IDLE"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_2")
+                        .addType("AndroidOnlineDevice")
+                        .setStatus("IDLE"))
+                .build());
+    when(clock.instant())
+        .thenReturn(Instant.ofEpochMilli(1000L))
+        .thenReturn(Instant.ofEpochMilli(2000L))
+        .thenReturn(Instant.ofEpochMilli(3000L));
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sleeper).sleep(any());
   }
 
   @Test

@@ -179,7 +179,8 @@ final class AtsServerSessionPlugin {
                     .build());
           }
           updateSessionPluginOutput(requestDetail);
-
+          newMultiCommandRequestHandler.waitForRequestedDevicesToBeReady(
+              newMultiCommandRequest, newMultiCommandRequest.getCommands(0), sessionInfo);
           if (newMultiCommandRequest.getCommands(0).getCommandLine().startsWith("slate")) {
             createSlateJobs(requestDetail, newMultiCommandRequest);
           } else {
