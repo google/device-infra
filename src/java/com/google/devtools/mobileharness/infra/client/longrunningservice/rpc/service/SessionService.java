@@ -39,6 +39,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionManagerStatusResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetTestModuleResultsRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetTestModuleResultsResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifyAllSessionsRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifyAllSessionsResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifySessionRequest;
@@ -163,6 +165,18 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
         SessionServiceGrpc.getGetSessionManagerStatusMethod());
   }
 
+  @Override
+  public void getTestModuleResults(
+      GetTestModuleResultsRequest request,
+      StreamObserver<GetTestModuleResultsResponse> responseObserver) {
+    GrpcServiceUtil.invoke(
+        request,
+        responseObserver,
+        this::doGetTestModuleResults,
+        SessionServiceGrpc.getServiceDescriptor(),
+        SessionServiceGrpc.getGetTestModuleResultsMethod());
+  }
+
   CreateSessionResponse doCreateSession(CreateSessionRequest request)
       throws MobileHarnessException {
     SessionDetail sessionDetail =
@@ -264,6 +278,11 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
     return GetSessionManagerStatusResponse.newBuilder()
         .setSessionManagerStatus(sessionManager.getSessionManagerStatus())
         .build();
+  }
+
+  private GetTestModuleResultsResponse doGetTestModuleResults(GetTestModuleResultsRequest request) {
+    // TODO: b/353949598 - actually implement instead of returning mocked data.
+    return GetTestModuleResultsResponse.getDefaultInstance();
   }
 
   /**

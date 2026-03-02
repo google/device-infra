@@ -66,6 +66,10 @@ service SessionService {
   // Gets the status of the session manager.
   rpc GetSessionManagerStatus(GetSessionManagerStatusRequest)
       returns (GetSessionManagerStatusResponse);
+
+  // Gets test module results of a session.
+  rpc GetTestModuleResults(GetTestModuleResultsRequest)
+      returns (GetTestModuleResultsResponse) {}
 }
 
 message CreateSessionRequest {
@@ -262,4 +266,40 @@ message GetSessionManagerStatusRequest {}
 
 message GetSessionManagerStatusResponse {
   SessionManagerStatus session_manager_status = 1;
+}
+
+message GetTestModuleResultsRequest {
+  // Required.
+  SessionId session_id = 1;
+}
+
+message GetTestModuleResultsResponse {
+  // Required.
+  repeated TestModuleResult result = 1;
+}
+
+message TestModuleResult {
+  // Required.
+  string id = 1;
+
+  // Required.
+  string name = 2;
+
+  // Required.
+  bool complete = 3;
+
+  // Required.
+  int64 duration_ms = 4;
+
+  // Required.
+  int64 passed_tests = 5;
+
+  // Required.
+  int64 failed_tests = 6;
+
+  // Required.
+  int64 total_tests = 7;
+
+  // Optional.
+  string error_message = 8;
 }
