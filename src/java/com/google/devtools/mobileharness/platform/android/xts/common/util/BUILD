@@ -34,7 +34,6 @@ java_library(
     srcs = ["AbiUtil.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
     ],
