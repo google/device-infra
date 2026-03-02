@@ -17,7 +17,6 @@
 package com.google.wireless.qa.mobileharness.shared.api;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.test.local.annotation.DoNotSubscribeTestEvent;
@@ -38,8 +37,6 @@ import java.util.Set;
 
 /** Util for using reflection to get lab side class based on class name. */
 public final class ClassUtil {
-
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /**
    * Gets the sub-class of {@link Device} according to the given class simple name. The target class
@@ -150,10 +147,6 @@ public final class ClassUtil {
               EnvValidator.class,
               ClassConstants.SHARED_API_PACKAGE_NAME + ".validator.env"));
     } catch (MobileHarnessException e) {
-      logger.atInfo().log(
-          "No env validator for driver/decorator \"%s\" (expected class with name %s)",
-          driverOrDecoratorSimpleClassName,
-          driverOrDecoratorSimpleClassName + EnvValidator.class.getSimpleName());
       return Optional.empty();
     }
   }
