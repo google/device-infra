@@ -31,6 +31,19 @@ import java.util.Map;
  * All Device Infra flags.
  *
  * <p>Remember to sort all flags by @FlagSpec.name.
+ *
+ * <p>To set flags in unit tests, please use {@code
+ * com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss}
+ *
+ * <pre>{@code
+ * @Rule public final SetFlagsOss flags = new SetFlagsOss();
+ *
+ * @Test
+ * public void test() {
+ *   flags.setAllFlags(ImmutableMap.of("flag_name", "flag_value"));
+ *   ...
+ * }
+ * }</pre>
  */
 @com.beust.jcommander.Parameters(separators = "=")
 @SuppressWarnings({
