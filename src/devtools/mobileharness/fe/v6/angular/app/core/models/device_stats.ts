@@ -3,6 +3,17 @@
  */
 
 /**
+ * Represents a whole or partial calendar date, such as a birthday.
+ * The time of day and time zone are either specified elsewhere or are
+ * insignificant. The date is relative to the Gregorian Calendar.
+ */
+export declare interface GoogleTypeDate {
+  year: number;
+  month: number;
+  day: number;
+}
+
+/**
  * Represents the data for the Device Healthiness Statistics card.
  * Backend is responsible for fetching, filtering by date, and aggregating.
  */
@@ -18,7 +29,7 @@ export declare interface HealthinessStats {
  */
 export declare interface DailyHealthiness {
   /** The date in YYYY-MM-DD format. */
-  date: string;
+  date: GoogleTypeDate;
   healthinessSummary: HealthinessSummary;
 }
 
@@ -92,8 +103,8 @@ export declare interface TestResultStats {
  * Test results for a single day.
  */
 export declare interface DailyTestResults {
-  /** The date in YYYY-MM-DD format. */
-  date: string;
+  /** The date. */
+  date: GoogleTypeDate;
   totalCount: number;
   categoryStats: DailyCategoryStats[];
 }
@@ -160,8 +171,8 @@ export declare interface RecoveryTaskStats {
  * Recovery task outcomes for a single day.
  */
 export declare interface DailyRecoveryTasks {
-  /** The date in YYYY-MM-DD format. */
-  date: string;
+  /** The date. */
+  date: GoogleTypeDate;
   totalCount: number;
   categoryStats: DailyOutcomeStats[];
 }

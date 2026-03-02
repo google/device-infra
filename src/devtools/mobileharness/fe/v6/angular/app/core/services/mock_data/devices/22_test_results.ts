@@ -16,7 +16,7 @@ const DEVICE_ID = 'DEVICE_WITH_TEST_RESULTS';
 const HEALTHINESS_STATS: HealthinessStats = {
   'dailyStats': [
     {
-      'date': '2026-01-17',
+      'date': {year: 2026, month: 1, day: 17},
       'healthinessSummary': {
         'inServiceBreakdown': [{'category': 'BUSY'}, {'category': 'IDLE'}],
         'outOfServiceBreakdown': [
@@ -32,7 +32,7 @@ const HEALTHINESS_STATS: HealthinessStats = {
       },
     },
     {
-      'date': '2026-01-18',
+      'date': {year: 2026, month: 1, day: 18},
       'healthinessSummary': {
         'inServiceBreakdown': [{'category': 'BUSY'}, {'category': 'IDLE'}],
         'outOfServiceBreakdown': [
@@ -48,7 +48,7 @@ const HEALTHINESS_STATS: HealthinessStats = {
       },
     },
     {
-      'date': '2026-01-19',
+      'date': {year: 2026, month: 1, day: 19},
       'healthinessSummary': {
         'inServiceBreakdown': [{'category': 'BUSY'}, {'category': 'IDLE'}],
         'outOfServiceBreakdown': [
@@ -64,7 +64,7 @@ const HEALTHINESS_STATS: HealthinessStats = {
       },
     },
     {
-      'date': '2026-01-20',
+      'date': {year: 2026, month: 1, day: 20},
       'healthinessSummary': {
         'inServiceBreakdown': [{'category': 'BUSY'}, {'category': 'IDLE'}],
         'outOfServiceBreakdown': [
@@ -80,7 +80,7 @@ const HEALTHINESS_STATS: HealthinessStats = {
       },
     },
     {
-      'date': '2026-01-21',
+      'date': {year: 2026, month: 1, day: 21},
       'healthinessSummary': {
         'inServiceBreakdown': [{'category': 'BUSY'}, {'category': 'IDLE'}],
         'outOfServiceBreakdown': [
@@ -96,7 +96,7 @@ const HEALTHINESS_STATS: HealthinessStats = {
       },
     },
     {
-      'date': '2026-01-22',
+      'date': {year: 2026, month: 1, day: 22},
       'healthinessSummary': {
         'inServiceBreakdown': [{'category': 'BUSY'}, {'category': 'IDLE'}],
         'outOfServiceBreakdown': [
@@ -112,7 +112,7 @@ const HEALTHINESS_STATS: HealthinessStats = {
       },
     },
     {
-      'date': '2026-01-23',
+      'date': {year: 2026, month: 1, day: 23},
       'healthinessSummary': {
         'inServiceBreakdown': [{'category': 'BUSY'}, {'category': 'IDLE'}],
         'outOfServiceBreakdown': [
@@ -146,7 +146,7 @@ const HEALTHINESS_STATS: HealthinessStats = {
 const TEST_RESULT_STATS: TestResultStats = {
   'dailyStats': [
     {
-      'date': '2026-01-01',
+      'date': {year: 2026, month: 1, day: 1},
       'totalCount': 15,
       'categoryStats': [
         {
@@ -160,12 +160,12 @@ const TEST_RESULT_STATS: TestResultStats = {
       ],
     },
     {
-      'date': '2026-01-02',
+      'date': {year: 2026, month: 1, day: 2},
       'totalCount': 0,
       'categoryStats': [],
     },
     {
-      'date': '2026-01-03',
+      'date': {year: 2026, month: 1, day: 3},
       'totalCount': 12,
       'categoryStats': [
         {
@@ -179,7 +179,7 @@ const TEST_RESULT_STATS: TestResultStats = {
       ],
     },
     {
-      'date': '2026-01-04',
+      'date': {year: 2026, month: 1, day: 4},
       'totalCount': 17,
       'categoryStats': [
         {
@@ -193,7 +193,7 @@ const TEST_RESULT_STATS: TestResultStats = {
       ],
     },
     {
-      'date': '2026-01-05',
+      'date': {year: 2026, month: 1, day: 5},
       'totalCount': 10,
       'categoryStats': [
         {
@@ -207,7 +207,7 @@ const TEST_RESULT_STATS: TestResultStats = {
       ],
     },
     {
-      'date': '2026-01-06',
+      'date': {year: 2026, month: 1, day: 6},
       'totalCount': 18,
       'categoryStats': [
         {
@@ -225,7 +225,7 @@ const TEST_RESULT_STATS: TestResultStats = {
       ],
     },
     {
-      'date': '2026-01-07',
+      'date': {year: 2026, month: 1, day: 7},
       'totalCount': 2,
       'categoryStats': [
         {
@@ -276,7 +276,7 @@ const TEST_RESULT_STATS: TestResultStats = {
 const RECOVERY_TASK_STATS: RecoveryTaskStats = {
   'dailyStats': [
     {
-      'date': '2026-01-01',
+      'date': {year: 2026, month: 1, day: 1},
       'totalCount': 14,
       'categoryStats': [
         {
@@ -286,7 +286,7 @@ const RECOVERY_TASK_STATS: RecoveryTaskStats = {
       ],
     },
     {
-      'date': '2026-01-02',
+      'date': {year: 2026, month: 1, day: 2},
       'totalCount': 14,
       'categoryStats': [
         {
@@ -296,7 +296,7 @@ const RECOVERY_TASK_STATS: RecoveryTaskStats = {
       ],
     },
     {
-      'date': '2026-01-03',
+      'date': {year: 2026, month: 1, day: 3},
       'totalCount': 15,
       'categoryStats': [
         {
@@ -306,7 +306,7 @@ const RECOVERY_TASK_STATS: RecoveryTaskStats = {
       ],
     },
     {
-      'date': '2026-01-04',
+      'date': {year: 2026, month: 1, day: 4},
       'totalCount': 14,
       'categoryStats': [
         {
@@ -316,7 +316,7 @@ const RECOVERY_TASK_STATS: RecoveryTaskStats = {
       ],
     },
     {
-      'date': '2026-01-05',
+      'date': {year: 2026, month: 1, day: 5},
       'totalCount': 17,
       'categoryStats': [
         {
@@ -330,7 +330,7 @@ const RECOVERY_TASK_STATS: RecoveryTaskStats = {
       ],
     },
     {
-      'date': '2026-01-06',
+      'date': {year: 2026, month: 1, day: 6},
       'totalCount': 9,
       'categoryStats': [
         {
@@ -340,7 +340,7 @@ const RECOVERY_TASK_STATS: RecoveryTaskStats = {
       ],
     },
     {
-      'date': '2026-01-07',
+      'date': {year: 2026, month: 1, day: 7},
       'totalCount': 1,
       'categoryStats': [
         {

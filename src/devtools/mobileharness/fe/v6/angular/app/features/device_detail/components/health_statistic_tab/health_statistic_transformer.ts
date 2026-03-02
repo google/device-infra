@@ -6,6 +6,7 @@ import {
 } from '../../../../core/constants/statistic_constants';
 import {
   HealthinessStats,
+  GoogleTypeDate,
   RecoveryOutcomeCategory,
   RecoveryTaskStats,
   TestResultCategory,
@@ -102,7 +103,7 @@ function createEmptyChartData(): ColumnChartData {
   return {columns: [], rows: [], options: {}, hasData: false};
 }
 
-function prepareColumnChartData<T extends {date: string}>(
+function prepareColumnChartData<T extends {date: string | GoogleTypeDate}>(
   dataList: T[],
   columns: Array<{type: string; label: string}>,
   rowMapper: (item: T, date: Date) => Array<ChartRowValue | null | undefined>,
@@ -113,7 +114,12 @@ function prepareColumnChartData<T extends {date: string}>(
   let hasData = false;
 
   dataList.forEach((d) => {
-    const date = new Date(`${d.date}T00:00:00`);
+    let date: Date;
+    if (typeof d.date === 'string') {
+      date = new Date(`${d.date}T00:00:00`);
+    } else {
+      date = new Date(d.date.year, d.date.month - 1, d.date.day);
+    }
     dates.push(date);
     const row = rowMapper(d, date);
 

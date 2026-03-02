@@ -5,6 +5,7 @@ import {
   DailyOutcomeStats,
   DailyRecoveryTasks,
   DailyTestResults,
+  GoogleTypeDate,
   HealthinessStats,
   HealthinessSummary,
   RecoveryOutcomeCategory,
@@ -15,11 +16,12 @@ import {
   TestResultStats,
 } from '../../models/device_stats';
 
-function formatDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+function toGoogleTypeDate(date: Date): GoogleTypeDate {
+  return {
+    year: date.getFullYear(),
+    month: date.getMonth() + 1,
+    day: date.getDate(),
+  };
 }
 
 function getDates(
@@ -135,7 +137,7 @@ export function generateHealthinessStats(
     accumulated.others += others;
 
     return {
-      date: formatDate(date),
+      date: toGoogleTypeDate(date),
       healthinessSummary: createHealthinessSummary(
         idle,
         busy,
@@ -218,7 +220,7 @@ export function generateTestResultStats(
     totalCounts['TEST_RESULT_CATEGORY_ABORT'] += abort;
 
     return {
-      date: formatDate(date),
+      date: toGoogleTypeDate(date),
       totalCount: total,
       categoryStats: [
         {
@@ -429,7 +431,7 @@ export function generateRecoveryTaskStats(
       ) as DailyOutcomeStats[];
 
       return {
-        date: formatDate(date),
+        date: toGoogleTypeDate(date),
         totalCount: total,
         categoryStats,
       };
