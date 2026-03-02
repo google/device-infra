@@ -3,6 +3,7 @@ import {Observable} from 'rxjs';
 
 import {
   CheckRemoteControlEligibilityResponse,
+  DeviceTarget,
   GetHostDeviceSummariesResponse,
   HostOverview,
   RemoteControlDevicesRequest,
@@ -41,23 +42,23 @@ export abstract class HostService {
   /**
    * Decommissions missing devices on a specific host.
    * @param hostName The name of the host.
-   * @param deviceControlIds The list of device control IDs to decommission.
+   * @param deviceIds The list of device IDs to decommission.
    * @return An Observable emitting when the operation is complete.
    */
   abstract decommissionMissingDevices(
     hostName: string,
-    deviceControlIds: string[],
+    deviceIds: string[],
   ): Observable<void>;
 
   /**
    * Checks for remote control eligibility for the given devices on the host.
    * @param hostName The name of the host.
-   * @param deviceControlIds The list of device control IDs to check.
+   * @param targets The list of device targets to check.
    * @return An Observable emitting the CheckRemoteControlEligibilityResponse.
    */
   abstract checkRemoteControlEligibility(
     hostName: string,
-    deviceControlIds: string[],
+    targets: DeviceTarget[],
   ): Observable<CheckRemoteControlEligibilityResponse>;
 
   /**

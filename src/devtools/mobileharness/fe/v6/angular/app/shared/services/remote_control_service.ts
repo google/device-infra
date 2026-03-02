@@ -4,6 +4,7 @@ import {
   CheckRemoteControlEligibilityResponse,
   DeviceProxyType,
   DeviceSummary,
+  DeviceTarget,
   EligibilityStatus,
   RemoteControlDevicesRequest,
 } from 'app/core/models/host_overview';
@@ -46,9 +47,12 @@ export class RemoteControlService {
       return;
     }
 
-    const deviceControlIds = selectedDevices.map((d) => d.id);
+    const targets: DeviceTarget[] = selectedDevices.map((d) => ({
+      deviceId: d.id,
+      parentDeviceId: d.parentDeviceId,
+    }));
     this.hostService
-      .checkRemoteControlEligibility(hostName, deviceControlIds)
+      .checkRemoteControlEligibility(hostName, targets)
       .subscribe({
         next: (response: CheckRemoteControlEligibilityResponse) => {
           this.handleEligibilityResponse(response, selectedDevices, hostName);

@@ -5,6 +5,7 @@ import {
   CheckRemoteControlEligibilityResponse,
   DeviceEligibilityResult,
   DeviceProxyType,
+  DeviceTarget,
   EligibilityStatus,
   GetHostDeviceSummariesResponse,
   HostOverview,
@@ -97,14 +98,15 @@ export class FakeHostService extends HostService {
 
   override checkRemoteControlEligibility(
     hostName: string,
-    deviceControlIds: string[],
+    targets: DeviceTarget[],
   ): Observable<CheckRemoteControlEligibilityResponse> {
     const results: DeviceEligibilityResult[] = [];
 
     const isTestbed = (id: string) =>
-      id.includes('TESTBED') && deviceControlIds.length > 1;
+      id.includes('TESTBED') && targets.length > 1;
 
-    deviceControlIds.forEach((id) => {
+    targets.forEach((target) => {
+      const id = target.deviceId;
       const result: DeviceEligibilityResult = {
         deviceId: id,
         isEligible: true,

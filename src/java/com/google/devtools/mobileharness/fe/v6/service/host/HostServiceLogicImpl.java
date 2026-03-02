@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.fe.v6.service.host;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.CheckRemoteControlEligibilityHandler;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.DecommissionMissingDevicesHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostDeviceSummariesHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostOverviewHandler;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityRequest;
@@ -42,13 +44,19 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
 
   private final GetHostOverviewHandler getHostOverviewHandler;
   private final GetHostDeviceSummariesHandler getHostDeviceSummariesHandler;
+  private final DecommissionMissingDevicesHandler decommissionMissingDevicesHandler;
+  private final CheckRemoteControlEligibilityHandler checkRemoteControlEligibilityHandler;
 
   @Inject
   HostServiceLogicImpl(
       GetHostOverviewHandler getHostOverviewHandler,
-      GetHostDeviceSummariesHandler getHostDeviceSummariesHandler) {
+      GetHostDeviceSummariesHandler getHostDeviceSummariesHandler,
+      DecommissionMissingDevicesHandler decommissionMissingDevicesHandler,
+      CheckRemoteControlEligibilityHandler checkRemoteControlEligibilityHandler) {
     this.getHostOverviewHandler = getHostOverviewHandler;
     this.getHostDeviceSummariesHandler = getHostDeviceSummariesHandler;
+    this.decommissionMissingDevicesHandler = decommissionMissingDevicesHandler;
+    this.checkRemoteControlEligibilityHandler = checkRemoteControlEligibilityHandler;
   }
 
   @Override
@@ -72,15 +80,13 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   @Override
   public ListenableFuture<DecommissionMissingDevicesResponse> decommissionMissingDevices(
       DecommissionMissingDevicesRequest request) {
-    // TODO: Implement this method.
-    return immediateFuture(DecommissionMissingDevicesResponse.getDefaultInstance());
+    return decommissionMissingDevicesHandler.decommissionMissingDevices(request);
   }
 
   @Override
   public ListenableFuture<CheckRemoteControlEligibilityResponse> checkRemoteControlEligibility(
       CheckRemoteControlEligibilityRequest request) {
-    // TODO: Implement this method.
-    return immediateFuture(CheckRemoteControlEligibilityResponse.getDefaultInstance());
+    return checkRemoteControlEligibilityHandler.checkRemoteControlEligibility(request);
   }
 
   @Override

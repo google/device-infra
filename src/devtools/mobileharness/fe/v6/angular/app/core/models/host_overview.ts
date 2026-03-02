@@ -177,6 +177,16 @@ export declare interface GetHostDeviceSummariesResponse {
 }
 
 /**
+ * Represents a device to check for eligibility.
+ */
+export interface DeviceTarget {
+  /** The unique identifier of the device. */
+  deviceId: string;
+  /** Optional. The unique identifier of the parent device if it is a sub-device. */
+  parentDeviceId?: string;
+}
+
+/**
  * Represents the comprehensive data required to render the Host Detail Page's
  * overview section. This is the top-level interface for host overview data.
  * Corresponds to HostOverview in host_resources.proto.
