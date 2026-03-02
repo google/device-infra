@@ -18,6 +18,7 @@
           "builder": "@angular-devkit/build-angular:application",
           "options": {
             "outputPath": "dist/angular",
+            "outputHashing": "none",
             "index": "index.html",
             "browser": "main.ts",
             "polyfills": [
