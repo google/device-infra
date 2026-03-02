@@ -44,12 +44,12 @@ public class ConfigServiceCapability {
 
   /** Returns true if the configuration service is available for the current context. */
   public boolean isConfigServiceAvailable() {
-    if (!Flags.instance().feConnectToConfigServer.get()) {
-      return false;
-    }
-
     if (environment.isGoogleInternal()) {
       return universe.isEmpty() || universe.equals("google_1p");
+    }
+
+    if (!Flags.instance().feConnectToConfigServer.get()) {
+      return false;
     }
 
     // OSS/ATS only supports the default context (empty universe).
@@ -65,14 +65,14 @@ public class ConfigServiceCapability {
       return;
     }
 
-    if (!Flags.instance().feConnectToConfigServer.getNonNull()) {
-      throw new UnsupportedOperationException("Configuration service is currently disabled.");
-    }
-
     if (environment.isGoogleInternal()) {
       throw new UnsupportedOperationException(
           String.format(
               "Configuration operations are not currently supported for universe '%s'.", universe));
+    }
+
+    if (!Flags.instance().feConnectToConfigServer.getNonNull()) {
+      throw new UnsupportedOperationException("Configuration service is currently disabled.");
     }
 
     throw new UnsupportedOperationException(

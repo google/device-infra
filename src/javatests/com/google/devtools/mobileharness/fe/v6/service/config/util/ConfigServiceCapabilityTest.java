@@ -57,6 +57,16 @@ public final class ConfigServiceCapabilityTest {
   }
 
   @Test
+  public void isConfigServiceAvailable_googleInternal_flagDisabled() {
+    when(environment.isGoogleInternal()).thenReturn(true);
+    flags.setAllFlags(ImmutableMap.of("fe_connect_to_config_server", "false"));
+
+    assertThat(new ConfigServiceCapability(environment, "google_1p").isConfigServiceAvailable())
+        .isTrue();
+    assertThat(new ConfigServiceCapability(environment, "").isConfigServiceAvailable()).isTrue();
+  }
+
+  @Test
   public void isConfigServiceAvailable_googleInternal_unsupported() {
     when(environment.isGoogleInternal()).thenReturn(true);
 
