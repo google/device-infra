@@ -15,10 +15,7 @@
 
 load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
 
-package(
-    default_applicable_licenses = ["//:license"],
-    default_visibility = ["//:deviceinfra_all_pkg"],
-)
+package(default_applicable_licenses = ["//:license"])
 
 kt_jvm_library(
     name = "javatime-ktx",
