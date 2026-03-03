@@ -1098,19 +1098,11 @@ public class AndroidPackageManagerUtil {
       @Nullable Duration installTimeout,
       String... extraArgs)
       throws MobileHarnessException, InterruptedException {
-    isMultiUserSupported(utilArgs, AndroidVersion.LOLLIPOP.getEndSdkVersion());
     if (dexMetadataPath != null) {
       isDexMetadataSupported(utilArgs);
     }
 
-    String packageName = "";
-    try {
-      packageName = aapt.getApkPackageName(apkPath);
-    } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_GET_PACKAGE_NAME_ERROR, e.getMessage(), e);
-    }
-
+    String packageName = getApkPackageName(apkPath);
     ImmutableList<String> artifactPaths =
         dexMetadataPath != null
             ? ImmutableList.of(apkPath, dexMetadataPath)
@@ -1143,12 +1135,13 @@ public class AndroidPackageManagerUtil {
    * @param installCmdArgs args to the install command
    * @param packageName name of the package
    * @param artifactPaths paths of the package files (apks and dex metadata file)
-   * @param isRemoteInstall whether the installation is remote, only supports single apk
+   * @param isRemoteInstall whether the installation is remote, using {@code pm} and on-device
+   *     files, only supports single apk
    * @param installTimeout timeout for APK installation
    * @throws MobileHarnessException if error occurs
    * @throws InterruptedException if the thread executing the commands is interrupted
    */
-  private void installPackage(
+  public void installPackage(
       UtilArgs utilArgs,
       InstallCmdArgs installCmdArgs,
       String packageName,
@@ -1156,6 +1149,11 @@ public class AndroidPackageManagerUtil {
       boolean isRemoteInstall,
       @Nullable Duration installTimeout)
       throws MobileHarnessException, InterruptedException {
+    isMultiUserSupported(utilArgs, AndroidVersion.LOLLIPOP.getEndSdkVersion());
+    if (artifactPaths.size() > 1) {
+      isMultiApkSupported(utilArgs);
+    }
+
     String serial = utilArgs.serial();
     int sdkVersion = utilArgs.sdkVersion().orElse(0);
     String[] installFiles = artifactPaths.toArray(new String[0]);
@@ -1480,41 +1478,6 @@ public class AndroidPackageManagerUtil {
     }
 
     logger.atInfo().log("Successfully installed apks %s to device %s", packageMap, serial);
-  }
-
-  /**
-   * Installs a package consisting of one or multiple APK splits with a single "adb
-   * install-multiple" command. Only work on devices with SDK version >= 21.
-   *
-   * @param utilArgs args with serial, sdkVersion and userId
-   * @param installCmdArgs adb install args
-   * @param packageName name of the package to be installed
-   * @param apks a list of APK splits to be installed
-   * @param installTimeout timeout for installation
-   * @throws MobileHarnessException if install command fails
-   * @throws InterruptedException if the thread executing the command is interrupted
-   */
-  public void installMultiple(
-      UtilArgs utilArgs,
-      InstallCmdArgs installCmdArgs,
-      String packageName,
-      Collection<String> apks,
-      @Nullable Duration installTimeout)
-      throws MobileHarnessException, InterruptedException {
-    isMultiUserSupported(utilArgs, DEFAULT_MULTI_USER_START_SDK_VERSION);
-    if (utilArgs.sdkVersion().isPresent()
-        && utilArgs.sdkVersion().getAsInt() < DEFAULT_INSTALL_MULTIPLE_START_SDK_VERSION) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_SDK_VERSION_NOT_SUPPORT,
-          String.format(
-              "Install-multiple support requires the minimal API level to be %d",
-              DEFAULT_INSTALL_MULTIPLE_START_SDK_VERSION));
-    }
-    if (apks.isEmpty()) {
-      logger.atWarning().log("No package to install.");
-      return;
-    }
-    installPackage(utilArgs, installCmdArgs, packageName, apks, false, installTimeout);
   }
 
   /**
@@ -1997,6 +1960,13 @@ public class AndroidPackageManagerUtil {
   private static void isDexMetadataSupported(UtilArgs utilArgs) throws MobileHarnessException {
     isDeviceSdkVersionIsAtLeast(
         utilArgs, DEFAULT_INSTALL_DEX_METADATA_START_SDK_VERSION, "Dex metadata installation");
+  }
+
+  private static void isMultiApkSupported(UtilArgs utilArgs) throws MobileHarnessException {
+    if (utilArgs.sdkVersion().isPresent()) {
+      isDeviceSdkVersionIsAtLeast(
+          utilArgs, DEFAULT_INSTALL_MULTIPLE_START_SDK_VERSION, "Multi-apk");
+    }
   }
 
   /** Check if the device sdk version is at least {@code minSdkVersion}. */

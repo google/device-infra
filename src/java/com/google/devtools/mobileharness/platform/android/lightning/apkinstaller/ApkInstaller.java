@@ -906,11 +906,12 @@ public class ApkInstaller {
     if (utilArgs.sdkVersion().isPresent()
         && utilArgs.sdkVersion().getAsInt() <= AndroidVersion.PI.getEndSdkVersion()) {
       for (Map.Entry<String, Collection<String>> packageEntry : packageMap.asMap().entrySet()) {
-        androidPackageManagerUtil.installMultiple(
+        androidPackageManagerUtil.installPackage(
             utilArgs,
             installCmdArgs,
             packageEntry.getKey(),
             packageEntry.getValue(),
+            /* isRemoteInstall= */ false,
             installTimeout);
       }
     } else {
