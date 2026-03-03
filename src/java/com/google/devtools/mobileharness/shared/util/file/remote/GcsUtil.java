@@ -1005,7 +1005,7 @@ public abstract class GcsUtil {
     return getMetadata(gcsFile).isPresent();
   }
 
-  protected static BufferedOutputStream getOutputStream(Path localFile) throws IOException {
+  protected BufferedOutputStream getOutputStream(Path localFile) throws IOException {
     return getOutputStreamFromLocalFile(localFile);
   }
 
