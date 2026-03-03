@@ -114,5 +114,9 @@ message AndroidRoboTestSpec {
     help: "Contextual robo scripts to be used with crawl. Order of the scripts supplied matters."
   }];
 
+  optional string client_name = 25 [(field_detail) = {
+    help: "Internal name of the infrastructure invoking the crawl."
+  }];
+
   reserved 1, 15;
 }
