@@ -136,6 +136,8 @@ public enum MoblySubdeviceType {
       /* mhClassName= */ "EmbeddedLinuxDevice"),
   GEM5_DEVICE(
       /* jsonTypeName= */ "Gem5Device", /* jsonIdKey= */ "id", /* mhClassName= */ "Gem5Device"),
+  ZEBU_DEVICE(
+      /* jsonTypeName= */ "ZebuDevice", /* jsonIdKey= */ "id", /* mhClassName= */ "ZebuDevice"),
   LINUX_DEVICE(
       /* jsonTypeName= */ "LinuxDevice", /* jsonIdKey= */ "id", /* mhClassName= */ "LinuxDevice"),
   OPEN_WRT_DEVICE(
