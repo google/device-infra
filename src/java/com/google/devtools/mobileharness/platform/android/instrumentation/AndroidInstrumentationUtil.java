@@ -55,7 +55,6 @@ import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
-import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
@@ -390,15 +389,15 @@ public class AndroidInstrumentationUtil {
     }
     if (!StrUtil.isEmptyOrWhitespace(className)) {
       command.append(" -e class ");
-      command.append(ShellUtils.shellEscape(className));
+      command.append(className);
     }
 
     if (otherOptions != null && !otherOptions.isEmpty()) {
       for (Entry<String, String> entry : otherOptions.entrySet()) {
         command.append(" -e ");
-        command.append(ShellUtils.shellEscape(entry.getKey()));
+        command.append(entry.getKey());
         command.append(' ');
-        command.append(ShellUtils.shellEscape(entry.getValue()));
+        command.append(entry.getValue());
       }
     }
 
