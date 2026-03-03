@@ -21,18 +21,6 @@ package(
 )
 
 java_library(
-    name = "oss_configuration_provider_impl",
-    srcs = ["OssConfigurationProviderImpl.java"],
-    deps = [
-        "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
-        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",
-        "@maven//:com_google_guava_guava",
-        "@maven//:javax_inject_jsr330_api",
-    ],
-)
-
-java_library(
     name = "oss_lab_info_provider_impl",
     srcs = ["OssLabInfoProviderImpl.java"],
     deps = [

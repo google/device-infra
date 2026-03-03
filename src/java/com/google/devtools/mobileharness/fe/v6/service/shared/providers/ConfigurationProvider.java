@@ -21,9 +21,14 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceCon
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import java.util.Optional;
 
-/** Interface for fetching device and lab configurations. */
+/** Interface for fetching and updating device and lab configurations. */
 public interface ConfigurationProvider {
   ListenableFuture<Optional<DeviceConfig>> getDeviceConfig(String deviceId, String universe);
 
   ListenableFuture<Optional<LabConfig>> getLabConfig(String hostName, String universe);
+
+  ListenableFuture<Void> updateDeviceConfig(
+      String deviceId, DeviceConfig deviceConfig, String universe);
+
+  ListenableFuture<Void> updateLabConfig(String hostName, LabConfig labConfig, String universe);
 }

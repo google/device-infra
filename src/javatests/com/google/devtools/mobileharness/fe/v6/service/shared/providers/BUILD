@@ -14,54 +14,37 @@
 #
 
 load("@rules_java//java:java_library.bzl", "java_library")
+load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = ["//src/devtools/mobileharness/fe/v6:visibility"],
 )
 
 java_library(
-    name = "configuration_provider",
-    srcs = ["ConfigurationProvider.java"],
-    deps = [
-        "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
-        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
-        "@maven//:com_google_guava_guava",
+    name = "providers_tests",
+    testonly = 1,
+    srcs = [
+        "ConfigurationProviderImplTest.java",
+        "NoOpConfigurationProviderTest.java",
     ],
-)
-
-java_library(
-    name = "configuration_provider_impl",
-    srcs = ["ConfigurationProviderImpl.java"],
     deps = [
-        ":configuration_provider",
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_config_service_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_service_capability",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider_impl",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:no_op_configuration_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "//src/java/com/google/devtools/mobileharness/service/deviceconfig/rpc/stub:device_config_stub",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
-        "@maven//:javax_inject_jsr330_api",
+        "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
 )
 
-java_library(
-    name = "lab_info_provider",
-    srcs = ["LabInfoProvider.java"],
-    deps = [
-        "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "no_op_configuration_provider",
-    srcs = ["NoOpConfigurationProvider.java"],
-    deps = [
-        ":configuration_provider",
-        "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
-        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
-        "@maven//:com_google_guava_guava",
-    ],
+junit_test_suites(
+    name = "gen_tests",
+    sizes = ["small"],
+    deps = [":providers_tests"],
 )

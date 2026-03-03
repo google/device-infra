@@ -14,33 +14,41 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.fe.v6.service.shared.providers.oss;
+package com.google.devtools.mobileharness.fe.v6.service.shared.providers;
 
+import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
-import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import java.util.Optional;
-import javax.inject.Inject;
 
-/** OSS implementation of {@link ConfigurationProvider}. */
-public class OssConfigurationProviderImpl implements ConfigurationProvider {
-
-  @Inject
-  OssConfigurationProviderImpl() {}
+/** No-op implementation of {@link ConfigurationProvider}. */
+public class NoOpConfigurationProvider implements ConfigurationProvider {
 
   @Override
   public ListenableFuture<Optional<DeviceConfig>> getDeviceConfig(
       String deviceId, String universe) {
-    // TODO: Implement when OSS Device Config Service is available.
     return immediateFuture(Optional.empty());
   }
 
   @Override
   public ListenableFuture<Optional<LabConfig>> getLabConfig(String hostName, String universe) {
-    // TODO: Implement when OSS Device Config Service is available.
     return immediateFuture(Optional.empty());
+  }
+
+  @Override
+  public ListenableFuture<Void> updateDeviceConfig(
+      String deviceId, DeviceConfig deviceConfig, String universe) {
+    return immediateFailedFuture(
+        new UnsupportedOperationException("NoOpConfigurationProvider does not support updates"));
+  }
+
+  @Override
+  public ListenableFuture<Void> updateLabConfig(
+      String hostName, LabConfig labConfig, String universe) {
+    return immediateFailedFuture(
+        new UnsupportedOperationException("NoOpConfigurationProvider does not support updates"));
   }
 }
