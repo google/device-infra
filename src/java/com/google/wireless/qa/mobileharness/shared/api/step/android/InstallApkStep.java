@@ -282,8 +282,7 @@ public class InstallApkStep implements InstallApkStepConstants {
             InstallApkStepConstants.PARAM_CHECK_INSTALLED_GMS_CORE_VERSION,
             /* defaultValue= */ true)) {
       // Gets Gms version if it is not in build apks.
-      apkInstaller.checkInstalledAppVersion(
-          testInfo, deviceId, PackageConstants.PACKAGE_NAME_GMS, null);
+      apkInstaller.checkInstalledAppVersion(testInfo, deviceId, PackageConstants.PACKAGE_NAME_GMS);
     }
 
     // Install non-GMS packages.
@@ -419,7 +418,7 @@ public class InstallApkStep implements InstallApkStepConstants {
             deviceId, packageName, APP_OP_MANAGE_EXTERNAL_STORAGE, AppOperationMode.ALLOW);
       }
 
-      apkInstaller.checkInstalledAppVersion(testInfo, deviceId, packageName, apkPath);
+      apkInstaller.checkInstalledAppVersion(testInfo, deviceId, packageName);
       checkSizeInfo(testInfo, packageName, ImmutableSet.of(apkPath));
     } finally {
       if (broadcastInstallMessage) {
@@ -451,9 +450,7 @@ public class InstallApkStep implements InstallApkStepConstants {
       throws InterruptedException, MobileHarnessException {
     String deviceId = device.getDeviceId();
     // Uninstall APKs.
-    if (apkInstaller
-        .checkInstalledAppVersion(testInfo, deviceId, buildPackageName, null)
-        .isPresent()) {
+    if (apkInstaller.checkInstalledAppVersion(testInfo, deviceId, buildPackageName).isPresent()) {
       testInfo
           .log()
           .atInfo()
@@ -492,7 +489,7 @@ public class InstallApkStep implements InstallApkStepConstants {
           .alsoTo(logger)
           .log("Installed package: %s, Device ID = %s", buildPackageName, deviceId);
 
-      apkInstaller.checkInstalledAppVersion(testInfo, deviceId, buildPackageName, null);
+      apkInstaller.checkInstalledAppVersion(testInfo, deviceId, buildPackageName);
       checkSizeInfo(testInfo, buildPackageName, apkPaths);
     } finally {
       if (broadcastInstallMessage) {

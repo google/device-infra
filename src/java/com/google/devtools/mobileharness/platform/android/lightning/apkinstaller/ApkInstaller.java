@@ -40,7 +40,6 @@ import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.checksum.ChecksumUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
-import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
@@ -169,17 +168,14 @@ public class ApkInstaller {
    * are installing 2 or more versions of the same app twice within the same test, this method will
    * return the first installed app version.
    *
-   * @param apkName apk name for logging only
    * @return the app version info; or empty if failed to retrieve it from the device like app not
    *     installed
    */
   @CanIgnoreReturnValue
   @Beta
   public Optional<AndroidAppVersion> checkInstalledAppVersion(
-      TestInfo testInfo, String deviceId, String packageName, @Nullable String apkName)
-      throws InterruptedException {
-    String formattedApkName = apkName == null ? "" : "(" + PathUtil.basename(apkName) + ")";
-    final String logTemplate = "%s%s: version code %s, version name %s (retrieved from %s)";
+      TestInfo testInfo, String deviceId, String packageName) throws InterruptedException {
+    final String logTemplate = "%s: version code %s, version name %s (retrieved from %s)";
 
     String packageInPropertyName = packageName.replace('.', '_');
     String versionCodePropertyName =
@@ -195,13 +191,7 @@ public class ApkInstaller {
           .log()
           .atInfo()
           .alsoTo(logger)
-          .log(
-              logTemplate,
-              packageName,
-              formattedApkName,
-              versionCode,
-              versionName,
-              "test properties");
+          .log(logTemplate, packageName, versionCode, versionName, "test properties");
     } else {
       try {
         versionCode =
@@ -218,7 +208,7 @@ public class ApkInstaller {
           .log()
           .atInfo()
           .alsoTo(logger)
-          .log(logTemplate, packageName, formattedApkName, versionCode, versionName, "dumpsys");
+          .log(logTemplate, packageName, versionCode, versionName, "dumpsys");
     }
     return Optional.of(AndroidAppVersion.create(Integer.parseInt(versionCode), versionName));
   }
