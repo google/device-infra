@@ -259,6 +259,38 @@ public class AndroidProcessUtil {
   }
 
   /**
+   * Resolves the default launch activity for a package.
+   *
+   * @param serial device serial number
+   * @param packageName package name to resolve activity for
+   * @return component name in format "packageName/activityName"
+   * @throws MobileHarnessException if activity resolution fails or no launch activity is found
+   * @throws InterruptedException if command execution is interrupted
+   */
+  public String resolveDefaultActivity(String serial, String packageName)
+      throws MobileHarnessException, InterruptedException {
+    String command =
+        String.format(
+            "cmd package resolve-activity --brief -c android.intent.category.LAUNCHER %s",
+            packageName);
+    String output;
+    try {
+      output = adb.runShellWithRetry(serial, command);
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PROCESS_RESOLVE_ACTIVITY_ERROR,
+          "Failed to execute resolve-activity command for package " + packageName,
+          e);
+    }
+    if (output.contains("No activity found") || output.trim().isEmpty()) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PROCESS_RESOLVE_ACTIVITY_ERROR,
+          "No launch activity found for package " + packageName);
+    }
+    return Splitter.on('\n').splitToList(output).get(1).trim();
+  }
+
+  /**
    * Starts an application on an android device.
    *
    * @param serial the serial number of the device
