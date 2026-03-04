@@ -24,9 +24,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedHashMultimap;
-import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.google.common.flogger.FluentLogger;
@@ -291,43 +289,37 @@ public class InstallApkStep implements InstallApkStepConstants {
 
     for (Map.Entry<String, Collection<String>> entry : allPackages.asMap().entrySet()) {
       String packageName = entry.getKey();
-      Collection<String> apkPaths = entry.getValue();
+      Collection<String> packages = entry.getValue();
 
       if (packageName.equals(PackageConstants.PACKAGE_NAME_GMS)) {
         continue;
       }
 
-      if (apkPaths.size() > 1) {
-        installMultiPackages(
-            device,
-            packageName,
-            apkPaths,
-            deviceSdkVersion,
-            testInfo,
-            broadcastInstallMessage,
-            grantPermissionsOnInstall,
-            installTimeout);
-      } else {
-        String buildApk = Iterables.getOnlyElement(apkPaths);
-        Optional<String> dexMetadataFile =
-            getMatchingDexMetadataFile(buildApk, dexMetadataFilesByNameMap);
-        dexMetadataFile.ifPresent(matchedDexMetadataFiles::add);
+      ImmutableList.Builder<String> apkPaths = ImmutableList.builder();
+      ImmutableList.Builder<String> dexMetadataPaths = ImmutableList.builder();
 
-        installApk(
-            device,
-            deviceSdkVersion,
-            packageName,
-            ImmutableList.of(buildApk),
-            dexMetadataFile.map(ImmutableList::of).orElse(ImmutableList.of()),
-            testInfo,
-            broadcastInstallMessage,
-            skipGmsDowngrade,
-            clearGmsAppData,
-            grantPermissionsOnInstall,
-            bypassLowTargetSdkBlock,
-            installTimeout,
-            sleepAfterInstallGms);
+      for (String apkPath : packages) {
+        apkPaths.add(apkPath);
+        Optional<String> dexMetadataFile =
+            getMatchingDexMetadataFile(apkPath, dexMetadataFilesByNameMap);
+        dexMetadataFile.ifPresent(matchedDexMetadataFiles::add);
+        dexMetadataFile.ifPresent(dexMetadataPaths::add);
       }
+
+      installApk(
+          device,
+          deviceSdkVersion,
+          packageName,
+          apkPaths.build(),
+          dexMetadataPaths.build(),
+          testInfo,
+          broadcastInstallMessage,
+          skipGmsDowngrade,
+          clearGmsAppData,
+          grantPermissionsOnInstall,
+          bypassLowTargetSdkBlock,
+          installTimeout,
+          sleepAfterInstallGms);
     }
 
     if (!matchedDexMetadataFiles.equals(dexMetadataFiles)) {
@@ -440,77 +432,6 @@ public class InstallApkStep implements InstallApkStepConstants {
     }
   }
 
-  private void installMultiPackages(
-      Device device,
-      String buildPackageName,
-      Collection<String> apkPaths,
-      int deviceSdkVersion,
-      TestInfo testInfo,
-      boolean broadcastInstallMessage,
-      boolean grantPermissionsOnInstall,
-      Optional<Duration> installTimeout)
-      throws InterruptedException, MobileHarnessException {
-    String deviceId = device.getDeviceId();
-    // Uninstall APKs.
-    if (apkInstaller.checkInstalledAppVersion(testInfo, deviceId, buildPackageName).isPresent()) {
-      testInfo
-          .log()
-          .atInfo()
-          .alsoTo(logger)
-          .log("Uninstall the installed package %s before installation.", buildPackageName);
-      apkInstaller.uninstallApk(device, buildPackageName, true, testInfo.log());
-    }
-    try {
-      if (broadcastInstallMessage) {
-        try {
-          testMessageUtil.sendMessageToTest(
-              testInfo,
-              AppInstallEventUtil.createStartMessage(device.getDimensions(), buildPackageName));
-        } catch (MobileHarnessException e) {
-          testInfo
-              .log()
-              .atInfo()
-              .withCause(e)
-              .alsoTo(logger)
-              .log("Failed to broadcast message for starting installing app");
-        }
-      }
-      // Installs APKs.
-      apkInstaller.installMultiNonGmsPackages(
-          deviceId,
-          /* userId= */ null,
-          deviceSdkVersion,
-          Multimaps.index(apkPaths, v -> buildPackageName),
-          grantPermissionsOnInstall,
-          /* forceNoStreaming= */ false,
-          installTimeout.orElse(null),
-          testInfo.log());
-      testInfo
-          .log()
-          .atInfo()
-          .alsoTo(logger)
-          .log("Installed package: %s, Device ID = %s", buildPackageName, deviceId);
-
-      apkInstaller.checkInstalledAppVersion(testInfo, deviceId, buildPackageName);
-      checkSizeInfo(testInfo, buildPackageName, apkPaths);
-    } finally {
-      if (broadcastInstallMessage) {
-        try {
-          testMessageUtil.sendMessageToTest(
-              testInfo,
-              AppInstallEventUtil.createFinishMessage(device.getDimensions(), buildPackageName));
-        } catch (MobileHarnessException e) {
-          testInfo
-              .log()
-              .atInfo()
-              .withCause(e)
-              .alsoTo(logger)
-              .log("Failed to broadcast message for finishing installing app");
-        }
-      }
-    }
-  }
-
   private static void addApks(Set<String> buildApks, Set<String> apksToAdd, TestInfo testInfo) {
     if (!apksToAdd.isEmpty()) {
       testInfo.log().atInfo().alsoTo(logger).log("Add apks %s to install.", apksToAdd);
@@ -531,7 +452,6 @@ public class InstallApkStep implements InstallApkStepConstants {
     if (errorId == AndroidErrorId.ANDROID_APK_INSTALLER_GMS_INCOMPATIBLE
         || errorId == AndroidErrorId.ANDROID_APK_INSTALLER_INVALID_GMS_VERSION
         || errorId == AndroidErrorId.ANDROID_APK_INSTALLER_DEVICE_SDK_TOO_LOW
-        || errorId == AndroidErrorId.ANDROID_APK_INSTALLER_APPLY_MULTI_PACKAGE_INSTALL_TO_GMS
         || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_ABI_INCOMPATIBLE
         || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_MISSING_SHARED_LIBRARY
         || errorId == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_UPDATE_INCOMPATIBLE
