@@ -171,11 +171,17 @@ public class GcsFileManager {
     LocalFileUtil localFileUtil = new LocalFileUtil();
     String fileTransferCredFile = Flags.instance().fileTransferCredFile.get();
     if (fileTransferCredFile != null && localFileUtil.isFileExist(fileTransferCredFile)) {
+      logger.atInfo().log(
+          "Using local file from --file_transfer_cred_file as credential: %s",
+          fileTransferCredFile);
       return Optional.of(fileTransferCredFile);
     }
 
     String internalServiceCredFile = Flags.instance().internalServiceCredentialFile.get();
     if (internalServiceCredFile != null && localFileUtil.isFileExist(internalServiceCredFile)) {
+      logger.atInfo().log(
+          "Using local file from --internal_service_credential_file as credential: %s",
+          internalServiceCredFile);
       return Optional.of(internalServiceCredFile);
     }
     return Optional.empty();
