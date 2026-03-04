@@ -60,16 +60,3 @@ java_library(
         "@grpc-java//stub",
     ],
 )
-
-java_library(
-    name = "module",
-    srcs = ["GrpcServiceModule.java"],
-    deps = [
-        ":exec_test",
-        ":prepare_test",
-        ":stat",
-        "//src/java/com/google/devtools/mobileharness/infra/lab:annotations",
-        "@grpc-java//core",
-        "@maven//:com_google_inject_guice",
-    ],
-)
