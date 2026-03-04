@@ -16,7 +16,11 @@
 
 package com.google.devtools.mobileharness.platform.android.lightning.apkinstaller;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import com.google.auto.value.AutoValue;
+import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.time.Duration;
 import java.util.Optional;
 
@@ -24,16 +28,24 @@ import java.util.Optional;
 @AutoValue
 public abstract class ApkInstallArgs {
 
-  /** The path for the apk being installed on device. */
-  public abstract String apkPath();
+  /** APK files paths making up one package to be installed on device. */
+  public abstract ImmutableList<String> apkPaths();
 
-  /** The path for the dex metadata file being installed with the apk. */
-  public abstract Optional<String> dexMetadataPath();
+  /**
+   * Additional dex metadata files to be installed.
+   *
+   * <p>See https://source.android.com/docs/core/runtime/configure for more details.
+   */
+  public abstract ImmutableList<String> dexMetadataPaths();
 
   /** Whether to skip installing apk if it's a downgrade. */
   public abstract Optional<Boolean> skipDowngrade();
 
-  /** Whether to force reinstall APK if it already exist on device for user. */
+  /**
+   * Whether to force reinstall APK if it already exist on device for user.
+   *
+   * <p>NOTE: Only supported for single apk file installation.
+   */
   public abstract Optional<Boolean> skipIfCached();
 
   /** Whether to skip installing APK if same version already exist on device. */
@@ -101,9 +113,49 @@ public abstract class ApkInstallArgs {
   @AutoValue.Builder
   public abstract static class Builder {
 
-    public abstract Builder setApkPath(String apkPath);
+    public abstract Builder setApkPaths(ImmutableList<String> apks);
 
-    public abstract Builder setDexMetadataPath(String dexMetadataPath);
+    public abstract ImmutableList.Builder<String> apkPathsBuilder();
+
+    @CanIgnoreReturnValue
+    public Builder addApkPaths(String apkPath) {
+      apkPathsBuilder().add(apkPath);
+      return this;
+    }
+
+    @CanIgnoreReturnValue
+    public Builder addAllApkPaths(Iterable<String> apkPaths) {
+      apkPathsBuilder().addAll(apkPaths);
+      return this;
+    }
+
+    /**
+     * Sets the given APK as the only artifact to be installed.
+     *
+     * @deprecated Use {@link #addApkPaths(String)} instead.
+     */
+    @CanIgnoreReturnValue
+    @Deprecated
+    public Builder setApkPath(String apkPath) {
+      setApkPaths(ImmutableList.of(apkPath));
+      return this;
+    }
+
+    public abstract Builder setDexMetadataPaths(ImmutableList<String> dexMetadataPaths);
+
+    public abstract ImmutableList.Builder<String> dexMetadataPathsBuilder();
+
+    @CanIgnoreReturnValue
+    public Builder addDexMetadataPaths(String dexMetadataPath) {
+      dexMetadataPathsBuilder().add(dexMetadataPath);
+      return this;
+    }
+
+    @CanIgnoreReturnValue
+    public Builder addAllDexMetadataPaths(Iterable<String> dexMetadataPaths) {
+      dexMetadataPathsBuilder().addAll(dexMetadataPaths);
+      return this;
+    }
 
     public abstract Builder setSkipDowngrade(boolean skipDowngrade);
 
@@ -129,6 +181,12 @@ public abstract class ApkInstallArgs {
 
     public abstract Builder setUserId(String userId);
 
-    public abstract ApkInstallArgs build();
+    protected abstract ApkInstallArgs autoBuild();
+
+    public ApkInstallArgs build() {
+      ApkInstallArgs args = autoBuild();
+      checkState(!args.apkPaths().isEmpty(), "At least one apk file is required.");
+      return args;
+    }
   }
 }

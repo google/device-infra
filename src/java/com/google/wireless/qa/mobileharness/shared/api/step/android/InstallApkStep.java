@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -238,16 +239,17 @@ public class InstallApkStep implements InstallApkStepConstants {
     // new permissions. APKs that define permissions must precede the APKs that use them.
     // b/149046112 b/36941003
     if (allPackages.containsKey(PackageConstants.PACKAGE_NAME_GMS)) {
-      Set<String> apkPaths = allPackages.get(PackageConstants.PACKAGE_NAME_GMS);
-      if (apkPaths.size() > 1) {
-        throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_INSTALL_APK_STEP_INSTALL_NOT_SUPPORTED,
-            "GMS Core is not supported as a split APK.");
+      Set<String> packages = allPackages.get(PackageConstants.PACKAGE_NAME_GMS);
+      ImmutableList.Builder<String> apkPaths = ImmutableList.builder();
+      ImmutableList.Builder<String> dexMetadataPaths = ImmutableList.builder();
+
+      for (String apkPath : packages) {
+        apkPaths.add(apkPath);
+        Optional<String> dexMetadataFile =
+            getMatchingDexMetadataFile(apkPath, dexMetadataFilesByNameMap);
+        dexMetadataFile.ifPresent(matchedDexMetadataFiles::add);
+        dexMetadataFile.ifPresent(dexMetadataPaths::add);
       }
-      String buildApk = Iterables.getOnlyElement(apkPaths);
-      Optional<String> dexMetadataFile =
-          getMatchingDexMetadataFile(buildApk, dexMetadataFilesByNameMap);
-      dexMetadataFile.ifPresent(matchedDexMetadataFiles::add);
 
       if (spec.hasSleepAfterInstallGmsSec()) {
         long sleepAfterInstallGmsSec = spec.getSleepAfterInstallGmsSec();
@@ -261,12 +263,12 @@ public class InstallApkStep implements InstallApkStepConstants {
                 sleepAfterInstallGmsSec, deviceId);
       }
 
-      installSingleApk(
+      installApk(
           device,
           deviceSdkVersion,
           PackageConstants.PACKAGE_NAME_GMS,
-          buildApk,
-          dexMetadataFile,
+          apkPaths.build(),
+          dexMetadataPaths.build(),
           testInfo,
           broadcastInstallMessage,
           skipGmsDowngrade,
@@ -311,12 +313,12 @@ public class InstallApkStep implements InstallApkStepConstants {
             getMatchingDexMetadataFile(buildApk, dexMetadataFilesByNameMap);
         dexMetadataFile.ifPresent(matchedDexMetadataFiles::add);
 
-        installSingleApk(
+        installApk(
             device,
             deviceSdkVersion,
             packageName,
-            buildApk,
-            dexMetadataFile,
+            ImmutableList.of(buildApk),
+            dexMetadataFile.map(ImmutableList::of).orElse(ImmutableList.of()),
             testInfo,
             broadcastInstallMessage,
             skipGmsDowngrade,
@@ -344,12 +346,12 @@ public class InstallApkStep implements InstallApkStepConstants {
     return new ArrayList<>(allPackageNames);
   }
 
-  private void installSingleApk(
+  private void installApk(
       Device device,
       int deviceSdkVersion,
       String packageName,
-      String apkPath,
-      Optional<String> dexMetadataPath,
+      ImmutableList<String> apkPaths,
+      ImmutableList<String> dexMetadataPaths,
       TestInfo testInfo,
       boolean broadcastInstallMessage,
       boolean skipGmsDowngrade,
@@ -380,15 +382,15 @@ public class InstallApkStep implements InstallApkStepConstants {
       // Installs APKs.
       ApkInstallArgs.Builder installArgsBuilder =
           ApkInstallArgs.builder()
-              .setApkPath(apkPath)
+              .addAllApkPaths(apkPaths)
+              .addAllDexMetadataPaths(dexMetadataPaths)
               .setSkipDowngrade(isGms && skipGmsDowngrade)
               .setClearAppData(isGms && clearGmsAppData)
               .setGrantPermissions(grantPermissionsOnInstall)
               .setBypassLowTargetSdkBlock(bypassLowTargetSdkBlock);
-      if (isGms && shouldSkipGmsCompatibilityCheck(testInfo, apkPath)) {
+      if (isGms && shouldSkipGmsCompatibilityCheck(testInfo, apkPaths.get(0))) {
         installArgsBuilder.setSkipGmsCompatCheck(true);
       }
-      dexMetadataPath.ifPresent(installArgsBuilder::setDexMetadataPath);
       boolean forceQueryable =
           deviceSdkVersion >= AndroidVersion.ANDROID_11.getStartSdkVersion()
               && PackageConstants.ANDROIDX_SERVICES_APK_PACKAGE_NAMES.contains(packageName);
@@ -419,7 +421,7 @@ public class InstallApkStep implements InstallApkStepConstants {
       }
 
       apkInstaller.checkInstalledAppVersion(testInfo, deviceId, packageName);
-      checkSizeInfo(testInfo, packageName, ImmutableSet.of(apkPath));
+      checkSizeInfo(testInfo, packageName, apkPaths);
     } finally {
       if (broadcastInstallMessage) {
         try {

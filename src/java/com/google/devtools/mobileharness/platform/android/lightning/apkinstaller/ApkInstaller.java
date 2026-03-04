@@ -20,6 +20,7 @@ import com.google.common.annotations.Beta;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.hash.Hashing;
@@ -282,8 +283,7 @@ public class ApkInstaller {
   @CanIgnoreReturnValue
   public String installApk(Device device, ApkInstallArgs installArgs, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
-    String apkPath = installArgs.apkPath();
-    String dexMetadataPath = installArgs.dexMetadataPath().orElse(null);
+    String firstApkFile = installArgs.apkPaths().get(0);
     boolean clearAppData = installArgs.clearAppData().orElse(false);
     boolean grantPermissions = installArgs.grantPermissions().orElse(true);
     boolean skipIfDowngrade = installArgs.skipDowngrade().orElse(false);
@@ -302,23 +302,26 @@ public class ApkInstaller {
     }
 
     // Checks whether the apk has been installed.
-    String packageName = aapt.getApkPackageName(apkPath);
-    String apkName = new File(apkPath).getName();
-    String apkMd5 = md5Util.fingerprint(apkPath);
-    logger.atInfo().log("Md5 for apk %s is: %s", apkPath, apkMd5);
-    if (skipIfCached
-        && checkApkInstalledByMd5(
-            device, deviceSdkVersion, apkMd5, apkName, packageName, userId, log)) {
-      return packageName;
+    String packageName = aapt.getApkPackageName(firstApkFile);
+    String apkMd5 = null;
+    if (installArgs.apkPaths().size() == 1) {
+      String apkName = new File(firstApkFile).getName();
+      apkMd5 = md5Util.fingerprint(firstApkFile);
+      logger.atInfo().log("Md5 for apk %s is: %s", firstApkFile, apkMd5);
+      if (skipIfCached
+          && checkApkInstalledByMd5(
+              device, deviceSdkVersion, apkMd5, apkName, packageName, userId, log)) {
+        return packageName;
+      }
     }
 
     // Checks whether the apk can be installed.
-    checkApkMinSdkVersion(deviceSdkVersion, apkPath, log);
+    checkApkMinSdkVersion(deviceSdkVersion, firstApkFile, log);
 
     // Check if should skip install apk according to version code.
     Integer apkVersionCode = null;
     try {
-      apkVersionCode = aapt.getApkVersionCode(apkPath);
+      apkVersionCode = aapt.getApkVersionCode(firstApkFile);
     } catch (MobileHarnessException e) {
       // Apks may have empty version code, like
       // java/com/google/android/apps/common/testing/services/basic_services.apk
@@ -326,7 +329,7 @@ public class ApkInstaller {
           logger,
           log,
           "Not found a valid version code for apk %s:%n%s",
-          apkPath,
+          firstApkFile,
           MoreThrowables.shortDebugString(e));
     }
     if (apkVersionCode != null
@@ -340,9 +343,9 @@ public class ApkInstaller {
       SharedLogUtil.logMsg(
           logger,
           log,
-          "Skip installing apk %s (version:%s) on device %s, skipIfDowngrade = %s,"
+          "Skip installing package %s (version:%s) on device %s, skipIfDowngrade = %s,"
               + " skipIfVersionMatch = %s.",
-          apkName,
+          packageName,
           apkVersionCode,
           deviceId,
           skipIfDowngrade,
@@ -352,16 +355,17 @@ public class ApkInstaller {
 
     boolean isGms = PackageConstants.PACKAGE_NAME_GMS.equals(packageName);
     if (isGms) {
-      String apkVersionName = aapt.getApkVersionName(apkPath);
+      String apkVersionName = aapt.getApkVersionName(firstApkFile);
       if (!installArgs.skipGmsCompatCheck().orElse(false)) {
         checkGmsCompatibility(
-            device, deviceSdkVersion, apkPath, apkVersionCode, apkVersionName, log);
+            device, deviceSdkVersion, firstApkFile, apkVersionCode, apkVersionName, log);
       } else {
         SharedLogUtil.logMsg(
             logger,
             log,
-            "Skip GMS compatibility check for apk %s (version:%s, versionName:%s) on device %s.",
-            apkName,
+            "Skip GMS compatibility check for package %s (version:%s, versionName:%s) on device"
+                + " %s.",
+            packageName,
             apkVersionCode,
             apkVersionName,
             deviceId);
@@ -380,7 +384,7 @@ public class ApkInstaller {
           logger,
           log,
           "Start to install %s on device %s with user id %s",
-          apkName,
+          packageName,
           deviceId,
           userId);
       if (forceQueryable) {
@@ -394,8 +398,10 @@ public class ApkInstaller {
       installApkHelper(
           buildUtilArgs(deviceId, userId, deviceSdkVersion),
           packageName,
-          apkPath,
-          dexMetadataPath,
+          ImmutableList.<String>builder()
+              .addAll(installArgs.apkPaths())
+              .addAll(installArgs.dexMetadataPaths())
+              .build(),
           isGms || grantPermissions,
           forceNoStreaming,
           installArgs.installTimeout().orElse(null),
@@ -403,7 +409,7 @@ public class ApkInstaller {
           extraArgs.toArray(new String[0]));
       success = true;
       SharedLogUtil.logMsg(
-          logger, log, "Successfully installed %s on device %s", apkName, deviceId);
+          logger, log, "Successfully installed package %s on device %s", packageName, deviceId);
     } finally {
       if (Flags.instance().cacheInstalledApks.get()) {
         device.setProperty(
@@ -806,8 +812,7 @@ public class ApkInstaller {
   private void installApkHelper(
       UtilArgs utilArgs,
       String packageName,
-      String apkPath,
-      @Nullable String dexMetadataPath,
+      ImmutableList<String> artifactPaths,
       boolean grantPermissions,
       boolean forceNoStreaming,
       @Nullable Duration installTimeout,
@@ -817,15 +822,18 @@ public class ApkInstaller {
     String serial = utilArgs.serial();
     boolean installThrowsException = false;
     String installExceptionMsg = "";
+    InstallCmdArgs installCmdArgs =
+        InstallCmdArgs.builder()
+            .setReplaceExistingApp(true)
+            .setAllowTestPackages(true)
+            .setAllowVersionCodeDowngrade(true)
+            .setGrantPermissions(grantPermissions)
+            .setForceNoStreaming(forceNoStreaming)
+            .addExtraArgs(extraArgs)
+            .build();
     try {
-      androidPackageManagerUtil.installApk(
-          utilArgs,
-          apkPath,
-          dexMetadataPath,
-          grantPermissions,
-          forceNoStreaming,
-          installTimeout,
-          extraArgs);
+      androidPackageManagerUtil.installPackage(
+          utilArgs, installCmdArgs, packageName, artifactPaths, false, installTimeout);
     } catch (MobileHarnessException e) {
       installThrowsException = true;
       installExceptionMsg = e.getMessage();
@@ -834,8 +842,8 @@ public class ApkInstaller {
           Level.WARNING,
           log,
           e,
-          "First attempt to install apk %s on device %s failed",
-          apkPath,
+          "First attempt to install package %s on device %s failed",
+          packageName,
           serial);
     }
     if (!installThrowsException) {
@@ -861,15 +869,10 @@ public class ApkInstaller {
       }
     }
     // Retry to install the apk again
-    SharedLogUtil.logMsg(logger, log, "Retry to install apk %s on device %s...", apkPath, serial);
-    androidPackageManagerUtil.installApk(
-        utilArgs,
-        apkPath,
-        dexMetadataPath,
-        grantPermissions,
-        forceNoStreaming,
-        installTimeout,
-        extraArgs);
+    SharedLogUtil.logMsg(
+        logger, log, "Retry to install package %s on device %s...", packageName, serial);
+    androidPackageManagerUtil.installPackage(
+        utilArgs, installCmdArgs, packageName, artifactPaths, false, installTimeout);
   }
 
   /** Helper method for installing multiple packages on device. */
