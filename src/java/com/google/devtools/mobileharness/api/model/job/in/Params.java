@@ -93,6 +93,19 @@ public class Params {
     return this;
   }
 
+  /**
+   * Removes the given parameter and returns its value, or an empty Optional if the parameter not
+   * exists.
+   */
+  @CanIgnoreReturnValue
+  public Optional<String> remove(String name) {
+    String removed = params.remove(name);
+    if (removed != null) {
+      touch();
+    }
+    return Optional.ofNullable(removed);
+  }
+
   /** Returns whether the parameter map is empty. */
   public boolean isEmpty() {
     return params.isEmpty();

@@ -67,6 +67,13 @@ public class Params {
     return this;
   }
 
+  /** Removes the given parameter and returns its value, or null if the parameter not exists. */
+  @CanIgnoreReturnValue
+  @Nullable
+  public String remove(String name) {
+    return newParams.remove(name).orElse(null);
+  }
+
   /** Returns whether the parameter map is empty. */
   public boolean isEmpty() {
     return newParams.isEmpty();
