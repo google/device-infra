@@ -390,15 +390,15 @@ public class AndroidInstrumentationUtil {
     }
     if (!StrUtil.isEmptyOrWhitespace(className)) {
       command.append(" -e class ");
-      command.append(ShellUtils.shellEscape(className));
+      command.append(ShellUtils.shellEscapeIfNotQuoted(className));
     }
 
     if (otherOptions != null && !otherOptions.isEmpty()) {
       for (Entry<String, String> entry : otherOptions.entrySet()) {
         command.append(" -e ");
-        command.append(ShellUtils.shellEscape(entry.getKey()));
+        command.append(ShellUtils.shellEscapeIfNotQuoted(entry.getKey()));
         command.append(' ');
-        command.append(ShellUtils.shellEscape(entry.getValue()));
+        command.append(ShellUtils.shellEscapeIfNotQuoted(entry.getValue()));
       }
     }
 

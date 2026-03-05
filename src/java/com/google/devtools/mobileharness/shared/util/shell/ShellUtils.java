@@ -51,6 +51,40 @@ public abstract class ShellUtils {
   }
 
   /**
+   * Quotes a word so that it can be used, without further quoting, as an argument (or part of an
+   * argument) in a shell command, ONLY if it is not already quoted.
+   */
+  public static String shellEscapeIfNotQuoted(String word) {
+    // This method relies on `tokenize` to determine if a string is a single token. Note that if
+    // the input is double-quoted (e.g., `"$VAR"`), it will be considered 'quoted' and returned
+    // as-is by `shellEscapeIfNotQuoted`, which means the shell will still perform expansion on it.
+    // This is consistent with letting the user control the quoting, but it's a slight departure
+    // from the strictly literal behavior of `shellEscape`. The current implementation is correct
+    // for its intended purpose.
+    if (isQuoted(word)) {
+      return word;
+    }
+    return shellEscape(word);
+  }
+
+  private static boolean isQuoted(String word) {
+    if (word.length() < 2) {
+      return false;
+    }
+    char first = word.charAt(0);
+    char last = word.charAt(word.length() - 1);
+    if ((first == '\'' || first == '"') && first == last) {
+      try {
+        ImmutableList<String> tokens = tokenize(word);
+        return tokens.size() == 1;
+      } catch (TokenizationException e) {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Given an argv array such as might be passed to execve(2), returns a string that can be copied
    * and pasted into a Bourne shell for a similar effect.
    */

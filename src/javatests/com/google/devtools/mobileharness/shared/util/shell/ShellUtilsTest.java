@@ -38,6 +38,39 @@ public class ShellUtilsTest extends TestCase {
     assertEquals("'<html!>'", shellEscape("<html!>"));
   }
 
+  public void testShellEscapeIfNotQuoted() throws Exception {
+    // Already quoted
+    assertEquals("'foo bar'", ShellUtils.shellEscapeIfNotQuoted("'foo bar'"));
+    assertEquals("\"foo bar\"", ShellUtils.shellEscapeIfNotQuoted("\"foo bar\""));
+    assertEquals("'foo\"bar\"'", ShellUtils.shellEscapeIfNotQuoted("'foo\"bar\"'"));
+    assertEquals("''", ShellUtils.shellEscapeIfNotQuoted("''"));
+    assertEquals("\"\"", ShellUtils.shellEscapeIfNotQuoted("\"\""));
+
+    // Escaped quotes within quotes
+    assertEquals("'a'\\''b'", ShellUtils.shellEscapeIfNotQuoted("'a'\\''b'"));
+    assertEquals("\"a\\\"b\"", ShellUtils.shellEscapeIfNotQuoted("\"a\\\"b\""));
+
+    // Multiple quoted segments forming one token
+    assertEquals("'a'\"b\"'c'", ShellUtils.shellEscapeIfNotQuoted("'a'\"b\"'c'"));
+
+    // Quoted special characters
+    assertEquals("'*'", ShellUtils.shellEscapeIfNotQuoted("'*'"));
+    assertEquals("\"?\"", ShellUtils.shellEscapeIfNotQuoted("\"?\""));
+
+    // Strings that look quoted but aren't (multiple tokens)
+    assertEquals("'\"a\" \"b\"'", ShellUtils.shellEscapeIfNotQuoted("\"a\" \"b\""));
+    assertEquals("'\"a\" '", ShellUtils.shellEscapeIfNotQuoted("\"a\" "));
+
+    // Not quoted as a whole / Mix of quoted and unquoted parts
+    assertEquals("'foo bar'", ShellUtils.shellEscapeIfNotQuoted("foo bar"));
+    assertEquals("'foo'\\''bar'\\'''", ShellUtils.shellEscapeIfNotQuoted("foo'bar'"));
+    assertEquals("'\"foo bar\" '", ShellUtils.shellEscapeIfNotQuoted("\"foo bar\" "));
+
+    // Invalid quotes
+    assertEquals("'\"foo bar'", ShellUtils.shellEscapeIfNotQuoted("\"foo bar"));
+    assertEquals("'foo bar\"'", ShellUtils.shellEscapeIfNotQuoted("foo bar\""));
+  }
+
   public void testPrettyPrintArgv() {
     assertEquals("echo '$US' 100", prettyPrintArgv(Arrays.asList("echo", "$US", "100")));
   }
