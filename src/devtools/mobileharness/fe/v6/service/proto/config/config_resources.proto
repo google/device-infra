@@ -188,7 +188,8 @@ message HostPropertiesUiStatus {
 message HostConfigUiStatus {
   // Corresponds to parts within the HOST_PERMISSIONS section
   PartStatus host_admins = 1;
-  PartStatus ssh_access = 2;
+
+  reserved 2;
 
   // Corresponds to the DEVICE_CONFIG_MODE section
   PartStatus device_config_mode = 3;

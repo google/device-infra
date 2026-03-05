@@ -35,8 +35,8 @@ import com.google.common.util.concurrent.JdkFutureAdapters;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
-import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.PermissionInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.BasicDeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.BasicDeviceInfo.Form;
@@ -50,6 +50,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOve
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.NetworkInfo;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.DeviceData;
+import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.ManagementMode;
 import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
@@ -68,6 +69,7 @@ public final class GetDeviceOverviewHandler {
   private static final String DIMENSION_SOURCE_DETECTED = "Detected by OmniLab";
   private static final String DIMENSION_SOURCE_DEVICE_CONFIG = "From Device Config";
   private static final String DIMENSION_SOURCE_HOST_CONFIG = "From Host Config";
+  private static final String DIMENSION_SOURCE_UNKNOWN = "Unknown";
 
   private final DeviceDataLoader deviceDataLoader;
   private final ListeningExecutorService executor;
@@ -171,19 +173,20 @@ public final class GetDeviceOverviewHandler {
     builder.setHost(headerInfo.getHost());
 
     // BasicDeviceInfo
-    ImmutableList<DeviceDimension> allDimensions =
-        Stream.concat(
-                deviceInfo
-                    .getDeviceFeature()
-                    .getCompositeDimension()
-                    .getSupportedDimensionList()
-                    .stream(),
-                deviceInfo
-                    .getDeviceFeature()
-                    .getCompositeDimension()
-                    .getRequiredDimensionList()
-                    .stream())
-            .collect(toImmutableList());
+    ImmutableList<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension>
+        allDimensions =
+            Stream.concat(
+                    deviceInfo
+                        .getDeviceFeature()
+                        .getCompositeDimension()
+                        .getSupportedDimensionList()
+                        .stream(),
+                    deviceInfo
+                        .getDeviceFeature()
+                        .getCompositeDimension()
+                        .getRequiredDimensionList()
+                        .stream())
+                .collect(toImmutableList());
     builder.setBasicInfo(buildBasicDeviceInfo(allDimensions));
 
     // Permissions
@@ -212,7 +215,8 @@ public final class GetDeviceOverviewHandler {
     return builder.build();
   }
 
-  private BasicDeviceInfo buildBasicDeviceInfo(List<DeviceDimension> dimensions) {
+  private BasicDeviceInfo buildBasicDeviceInfo(
+      List<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension> dimensions) {
     BasicDeviceInfo.Builder basicInfo = BasicDeviceInfo.newBuilder();
     ImmutableMap<String, String> dimMap =
         dimensions.stream()
@@ -260,8 +264,10 @@ public final class GetDeviceOverviewHandler {
     ImmutableMap.Builder<String, DimensionSourceGroup> supportedMap = ImmutableMap.builder();
     ImmutableMap.Builder<String, DimensionSourceGroup> requiredMap = ImmutableMap.builder();
 
-    List<DeviceDimension> configSupported = ImmutableList.of();
-    List<DeviceDimension> configRequired = ImmutableList.of();
+    List<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension> configSupported =
+        ImmutableList.of();
+    List<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension> configRequired =
+        ImmutableList.of();
     String configSourceKey =
         switch (deviceData.managementMode()) {
           case HOST_MANAGED -> DIMENSION_SOURCE_HOST_CONFIG;
@@ -288,35 +294,40 @@ public final class GetDeviceOverviewHandler {
               .build());
     }
 
-    ImmutableSet<DeviceDimension> configDims =
-        Stream.concat(configSupported.stream(), configRequired.stream()).collect(toImmutableSet());
+    ImmutableSet<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension>
+        configDims =
+            Stream.concat(configSupported.stream(), configRequired.stream())
+                .collect(toImmutableSet());
 
-    List<DeviceDimension> allSupported =
+    List<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension> allSupported =
         deviceInfo.getDeviceFeature().getCompositeDimension().getSupportedDimensionList();
-    List<DeviceDimension> allRequired =
+    List<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension> allRequired =
         deviceInfo.getDeviceFeature().getCompositeDimension().getRequiredDimensionList();
 
-    ImmutableList<com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension>
-        detectedSupported =
-            allSupported.stream()
-                .filter(d -> !configDims.contains(d))
-                .map(this::convertToFeDimension)
-                .collect(toImmutableList());
-    ImmutableList<com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension>
-        detectedRequired =
-            allRequired.stream()
-                .filter(d -> !configDims.contains(d))
-                .map(this::convertToFeDimension)
-                .collect(toImmutableList());
+    ImmutableList<DeviceDimension> detectedSupported =
+        allSupported.stream()
+            .filter(d -> !configDims.contains(d))
+            .map(this::convertToFeDimension)
+            .collect(toImmutableList());
+    ImmutableList<DeviceDimension> detectedRequired =
+        allRequired.stream()
+            .filter(d -> !configDims.contains(d))
+            .map(this::convertToFeDimension)
+            .collect(toImmutableList());
+
+    String detectedSourceKey =
+        deviceData.managementMode() == ManagementMode.NOT_SUPPORTED
+            ? DIMENSION_SOURCE_UNKNOWN
+            : DIMENSION_SOURCE_DETECTED;
 
     if (!detectedSupported.isEmpty()) {
       supportedMap.put(
-          DIMENSION_SOURCE_DETECTED,
+          detectedSourceKey,
           DimensionSourceGroup.newBuilder().addAllDimensions(detectedSupported).build());
     }
     if (!detectedRequired.isEmpty()) {
       requiredMap.put(
-          DIMENSION_SOURCE_DETECTED,
+          detectedSourceKey,
           DimensionSourceGroup.newBuilder().addAllDimensions(detectedRequired).build());
     }
 
@@ -326,15 +337,14 @@ public final class GetDeviceOverviewHandler {
         .build();
   }
 
-  private ImmutableList<
-          com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension>
-      convertToFeDimensions(List<DeviceDimension> dimensions) {
+  private ImmutableList<DeviceDimension> convertToFeDimensions(
+      List<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension> dimensions) {
     return dimensions.stream().map(this::convertToFeDimension).collect(toImmutableList());
   }
 
-  private com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
-      convertToFeDimension(DeviceDimension dimension) {
-    return com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension.newBuilder()
+  private DeviceDimension convertToFeDimension(
+      com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension dimension) {
+    return DeviceDimension.newBuilder()
         .setName(dimension.getName())
         .setValue(dimension.getValue())
         .build();

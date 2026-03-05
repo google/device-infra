@@ -48,6 +48,16 @@ java_library(
 )
 
 java_library(
+    name = "configuration_provider",
+    deprecation = "This rule probably does not need to be depended on.",
+)
+
+java_library(
+    name = "oss_configuration_provider_impl",
+    deprecation = "This rule probably does not need to be depended on.",
+)
+
+java_library(
     name = "device_service_logic_impl",
     srcs = ["DeviceServiceLogicImpl.java"],
     deps = [
