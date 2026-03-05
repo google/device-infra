@@ -16,11 +16,14 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.shared;
 
+import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.OssHostAuxiliaryInfoProviderImpl;
+import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProviderImpl;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
@@ -39,6 +42,7 @@ import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import io.grpc.ManagedChannel;
+import java.util.List;
 import javax.inject.Singleton;
 
 /** Module for providing OSS (gRPC) stubs. */
@@ -65,11 +69,19 @@ public final class OssStubsModule extends AbstractModule {
 
     bind(LabInfoProvider.class).to(OssLabInfoProviderImpl.class).in(Singleton.class);
     bind(HostAuxiliaryInfoProvider.class).to(OssHostAuxiliaryInfoProviderImpl.class);
+    bind(GroupMembershipProvider.class).to(NoOpGroupMembershipProvider.class).in(Singleton.class);
   }
 
   @Provides
   @Singleton
   LabInfoStub provideLabInfoStub(@GrpcStub LabInfoStub grpcStub) {
     return grpcStub;
+  }
+
+  private static final class NoOpGroupMembershipProvider implements GroupMembershipProvider {
+    @Override
+    public ListenableFuture<Boolean> isMemberOfAny(String username, List<String> groupNames) {
+      return immediateFuture(false);
+    }
   }
 }
