@@ -112,6 +112,16 @@ public class Bundletool {
     run(args.toBundletoolCommand(adb.getAdbPath(), aapt.getAaptPath()), args.commandTimeout());
   }
 
+  public void getDeviceSpec(GetDeviceSpecArgs args)
+      throws MobileHarnessException, InterruptedException {
+    run(args.toBundletoolCommand(adb.getAdbPath()), args.commandTimeout());
+  }
+
+  public void extractApks(ExtractApksArgs args)
+      throws MobileHarnessException, InterruptedException {
+    run(args.toBundletoolCommand(), args.commandTimeout());
+  }
+
   public void installApks(InstallApksArgs args)
       throws MobileHarnessException, InterruptedException {
     run(args.toBundletoolCommand(adb.getAdbPath()), args.commandTimeout());
