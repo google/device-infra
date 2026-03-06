@@ -1142,6 +1142,28 @@ public class LocalFileUtil {
   }
 
   /**
+   * Lists all the sub-directories under the given directory recursively.
+   *
+   * @param dirPath the absolute directory path
+   * @param recursively whether to scan the sub-directories recursively
+   * @param fileFilter filter for the sub-files
+   * @throws MobileHarnessException if the given path doesn't exist or is a file, not a directory
+   */
+  public List<String> listDirs(String dirPath, boolean recursively, @Nullable FileFilter fileFilter)
+      throws MobileHarnessException {
+    List<String> dirs = new ArrayList<>();
+    for (File subDir : listDirs(dirPath)) {
+      if (fileFilter == null || fileFilter.accept(subDir)) {
+        dirs.add(subDir.getAbsolutePath());
+      }
+      if (recursively) {
+        dirs.addAll(listDirs(subDir.getAbsolutePath(), true, fileFilter));
+      }
+    }
+    return dirs;
+  }
+
+  /**
    * Lists the sub-directories according to the depth under the given directory.
    *
    * @param dirPath the absolute directory path
