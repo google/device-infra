@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.infra.controller.device.DeviceStateChec
 import com.google.devtools.mobileharness.infra.controller.test.event.TestExecutionEndedEvent;
 import com.google.devtools.mobileharness.infra.controller.test.model.JobExecutionUnit;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.helper.JobSyncHelper;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 import java.time.Clock;
 import java.time.Duration;
@@ -161,12 +162,15 @@ public class MasterSyncerForJob implements Runnable {
       return;
     }
     // Gets the alive job ids from master.
-    Set<String> aliveJobsInMaster = null;
+    Set<String> aliveJobsInMaster;
+    if (!Flags.instance().labServerCheckJobsFromMaster.getNonNull()) {
+      aliveJobsInMaster = null;
+    }
     try {
       aliveJobsInMaster = new HashSet<>(jobSyncHelper.getAliveJobs(jobs.keySet()));
-
     } catch (MobileHarnessException e) {
       logger.atWarning().withCause(e).log("Failed to get the alive job ids from master");
+      aliveJobsInMaster = null;
     }
     for (JobExecutionUnit job : jobs.values()) {
       String jobId = job.locator().id();
