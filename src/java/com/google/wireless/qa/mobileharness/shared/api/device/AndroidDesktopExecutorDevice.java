@@ -17,7 +17,6 @@
 package com.google.wireless.qa.mobileharness.shared.api.device;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
@@ -71,12 +70,12 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
     this.addSupportedDecorator("AndroidSwitchLanguageDecorator");
     this.addSupportedDecorator("CrosLsNexusDecorator");
     this.addSupportedDecorator("CrosDutTopologyDecorator");
+    if (getDimension("network_zone").isEmpty()) {
+      addDimension("network_zone", "unspecified");
+    }
     String executorGroup = Flags.instance().androidDesktopExecutorGroup.getNonNull();
-    ImmutableSet<String> validGroups = ImmutableSet.of("sfo36", "acs", "htl");
-    if (validGroups.contains(executorGroup)) {
-      addDimension("network_zone", executorGroup);
-    } else {
-      addDimension("network_zone", "undefined");
+    if (!executorGroup.isEmpty()) {
+      updateDimension("network_zone", executorGroup);
     }
   }
 
