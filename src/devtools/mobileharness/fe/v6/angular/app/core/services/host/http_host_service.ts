@@ -5,6 +5,7 @@ import {Observable} from 'rxjs';
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
   CheckRemoteControlEligibilityResponse,
+  DeviceTarget,
   GetHostDeviceSummariesResponse,
   HostOverview,
   RemoteControlDevicesRequest,
@@ -59,12 +60,12 @@ export class HttpHostService extends HostService {
 
   override checkRemoteControlEligibility(
     hostName: string,
-    deviceControlIds: string[],
+    targets: DeviceTarget[],
   ): Observable<CheckRemoteControlEligibilityResponse> {
     return this.http.post<CheckRemoteControlEligibilityResponse>(
       `${this.apiUrl}/${hostName}/checkRemoteControlEligibility`,
       {
-        deviceControlIds,
+        targets,
       },
     );
   }
