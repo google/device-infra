@@ -156,6 +156,7 @@ public class GcsFileManager {
    * @param bucketName name of bucket to manage
    */
   public static GcsUtil.CredentialType getCredentialType(String bucketName, SystemUtil systemUtil) {
+
     Optional<String> credentialFile = getCredentialFile();
     return GcsUtil.CredentialType.ofCredentialFile(credentialFile.get());
   }
