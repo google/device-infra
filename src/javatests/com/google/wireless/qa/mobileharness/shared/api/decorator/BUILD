@@ -41,6 +41,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:cros_base_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:cros_dut_topology_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:cros_ls_nexus_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:cross_over_android_desktop_provision_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:python_version_check_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_device",
