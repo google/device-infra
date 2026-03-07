@@ -1,0 +1,323 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.devtools.mobileharness.platform.android.xts.runtime;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
+
+import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedTestModuleResults.ModuleInfo;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.InstantSource;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * A monitor that runs in a Tradefed invocation agent, collects test module execution progress, and
+ * saves the progress to a file periodically.
+ */
+public class XtsTradefedTestModuleResultsMonitor {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  // The interval to update the module results file with the latest progress.
+  private static final Duration UPDATE_INTERVAL = Duration.ofSeconds(10L);
+
+  private static final XtsTradefedTestModuleResultsMonitor INSTANCE =
+      new XtsTradefedTestModuleResultsMonitor();
+
+  public static XtsTradefedTestModuleResultsMonitor getInstance() {
+    return INSTANCE;
+  }
+
+  // runningInvocations mapping from a unique invocation ID to Invocation instance.
+  // Because Tradefed invocations may run in parallel within the same JVM, we key them by a unique
+  // invocation ID derived from the module context object.
+  private final Map<String, Invocation> runningInvocations = new HashMap<>();
+
+  private final Object fileLock = new Object();
+  // Used to decide if we need to update the module results file.
+  private XtsTradefedTestModuleResults previousModuleResults = null;
+
+  private XtsTradefedTestModuleResultsMonitor() {}
+
+  /** Starts the monitor. */
+  public void start(Path moduleResultsFilePath) {
+    Thread thread =
+        new Thread(() -> run(moduleResultsFilePath), "xts-tradefed-test-module-results-monitor");
+    thread.setDaemon(true);
+    thread.start();
+  }
+
+  private void run(Path moduleResultsFilePath) {
+    try {
+      while (!Thread.interrupted()) {
+        Thread.sleep(UPDATE_INTERVAL.toMillis());
+        try {
+          doUpdate(moduleResultsFilePath);
+        } catch (RuntimeException | Error e) {
+          logger.atWarning().withCause(e).log(
+              "Fatal error in XTS Tradefed test module results monitor");
+        }
+      }
+    } catch (InterruptedException e) {
+      logger.atInfo().log("XTS Tradefed test module results monitor interrupted");
+      Thread.currentThread().interrupt();
+    }
+  }
+
+  /** Gets the invocation ID from the module context object. */
+  public static String getInvocationId(Object moduleContext) {
+    if (moduleContext == null) {
+      return "";
+    }
+    try {
+      Object invocationId =
+          moduleContext.getClass().getMethod("getInvocationId").invoke(moduleContext);
+      if (invocationId != null) {
+        return invocationId.toString();
+      }
+    } catch (ReflectiveOperationException e) {
+      throw new LinkageError("Failed to get invocation ID from module context", e);
+    }
+    return String.valueOf(System.identityHashCode(moduleContext));
+  }
+
+  /** Gets an attribute (e.g. module name) from the module context object. */
+  private String getAttribute(Object moduleContext, String attributeName) {
+    try {
+      Object attributes = moduleContext.getClass().getMethod("getAttributes").invoke(moduleContext);
+      if (attributes != null) {
+        Object attribute =
+            attributes.getClass().getMethod("get", Object.class).invoke(attributes, attributeName);
+        if (attribute instanceof List && !((List<?>) attribute).isEmpty()) {
+          return ((List<?>) attribute).get(0).toString();
+        }
+      }
+    } catch (ReflectiveOperationException e) {
+      throw new LinkageError("Failed to get attribute from module context", e);
+    }
+    return "";
+  }
+
+  /** Called when a test module starts execution. */
+  public void onModuleStart(Object moduleContext, String invocationId) {
+    // The "module-id" attribute is something like "arm64-v8a CtsUsbTests[instant]" while the
+    // "module-name" is "CtsUsbTests".
+    String moduleId = getAttribute(moduleContext, "module-id");
+
+    synchronized (runningInvocations) {
+      Invocation invocation =
+          runningInvocations.computeIfAbsent(invocationId, unused -> new Invocation());
+      invocation.onModuleStart(moduleId);
+    }
+  }
+
+  /** Called when a test module ends execution. */
+  public void onModuleEnd(String invocationId) {
+    synchronized (runningInvocations) {
+      Invocation invocation = runningInvocations.get(invocationId);
+      if (invocation != null) {
+        invocation.onModuleEnd();
+      }
+    }
+  }
+
+  /**
+   * Called when a test run starts execution.
+   *
+   * @param invocationId the invocation ID
+   * @param runName the name of the test run, e.g. "arm64-v8a CtsUsbTests[instant]"
+   * @param testCount the number of tests in the test run.
+   */
+  public void onTestRunStarted(String invocationId, String runName, int testCount) {
+    synchronized (runningInvocations) {
+      Invocation invocation = runningInvocations.get(invocationId);
+      if (invocation != null) {
+        invocation.onTestRunStarted(runName, testCount);
+      }
+    }
+  }
+
+  /**
+   * Called when a test event occurs.
+   *
+   * @param invocationId the invocation ID
+   * @param eventType the test event type, e.g. "testStarted", "testEnded", etc.
+   * @param testId the test ID, e.g.
+   *     "com.android.cts.usb.TestUsbTest#testInstantAppsCannotReadSerial"
+   */
+  public void onTestEvent(String invocationId, String eventType, String testId) {
+    synchronized (runningInvocations) {
+      Invocation invocation = runningInvocations.get(invocationId);
+      if (invocation != null) {
+        invocation.onTestEvent(eventType, testId);
+      }
+    }
+  }
+
+  /** Updates the module results file with the latest progress. */
+  private void doUpdate(Path moduleResultsFilePath) {
+    Map<String, List<ModuleInfo>> runningModulesMap = new HashMap<>();
+
+    synchronized (runningInvocations) {
+      if (runningInvocations.isEmpty()) {
+        return;
+      }
+      for (Map.Entry<String, Invocation> entry : runningInvocations.entrySet()) {
+        runningModulesMap.put(entry.getKey(), entry.getValue().getModules());
+      }
+    }
+
+    XtsTradefedTestModuleResults moduleResults =
+        new XtsTradefedTestModuleResults(runningModulesMap);
+
+    if (moduleResults.equals(previousModuleResults)) {
+      return;
+    }
+    previousModuleResults = moduleResults;
+
+    synchronized (fileLock) {
+      try {
+        try (FileChannel lockFile =
+                FileChannel.open(
+                    moduleResultsFilePath, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+            FileLock ignored = lockFile.lock()) {
+          lockFile.truncate(0);
+          lockFile.write(ByteBuffer.wrap(moduleResults.encodeToString().getBytes(UTF_8)));
+        }
+        logger.atFine().log("Updated module results info: %s", moduleResults);
+      } catch (IOException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to write module results to file %s", moduleResultsFilePath);
+      }
+    }
+  }
+
+  /** Represents the state of module execution within a single Tradefed invocation. */
+  private static class Invocation {
+
+    private final List<ModuleProgress> modules = new ArrayList<>();
+
+    private Invocation() {}
+
+    private void onModuleStart(String moduleId) {
+      modules.add(new ModuleProgress(moduleId, /* isRunning= */ true));
+    }
+
+    private void onModuleEnd() {
+      if (modules.isEmpty()) {
+        return;
+      }
+      ModuleProgress lastModule = modules.get(modules.size() - 1);
+      if (lastModule.isRunning) {
+        lastModule.isRunning = false;
+        lastModule.duration = Duration.between(lastModule.startTime, Instant.now());
+      }
+    }
+
+    private void onTestRunStarted(String runName, int testCount) {
+      if (modules.isEmpty()) {
+        return;
+      }
+      ModuleProgress lastModule = modules.get(modules.size() - 1);
+      if (lastModule.isRunning) {
+        if (lastModule.startedRuns.add(runName)) {
+          lastModule.testsExpected += testCount;
+        }
+      }
+    }
+
+    private void onTestEvent(String eventType, String testId) {
+      if (modules.isEmpty()) {
+        return;
+      }
+      ModuleProgress lastModule = modules.get(modules.size() - 1);
+      if (!lastModule.isRunning) {
+        return;
+      }
+      switch (eventType) {
+        case "testStarted" -> {
+          lastModule.failedTests.remove(testId);
+          lastModule.skippedTests.remove(testId);
+        }
+        case "testEnded" -> {
+          lastModule.completedTests.add(testId);
+        }
+        case "testFailed", "testAssumptionFailure" -> {
+          lastModule.failedTests.add(testId);
+        }
+        case "testIgnored", "testSkipped" -> {
+          lastModule.skippedTests.add(testId);
+        }
+        default -> {}
+      }
+    }
+
+    private List<ModuleInfo> getModules() {
+      List<ModuleInfo> currentModules = new ArrayList<>(modules.size());
+      for (ModuleProgress module : modules) {
+        currentModules.add(module.toModuleInfo());
+      }
+      return currentModules;
+    }
+  }
+
+  private static class ModuleProgress {
+    private final String id;
+    private boolean isRunning;
+    private int testsExpected;
+    private final Set<String> startedRuns = new HashSet<>();
+    private final Set<String> completedTests = new HashSet<>();
+    private final Set<String> failedTests = new HashSet<>();
+    private final Set<String> skippedTests = new HashSet<>();
+    private final Instant startTime = InstantSource.system().instant();
+    private Duration duration = Duration.ZERO;
+
+    private ModuleProgress(String id, boolean isRunning) {
+      this.id = id;
+      this.isRunning = isRunning;
+    }
+
+    private ModuleInfo toModuleInfo() {
+      int testsPassed =
+          Math.max(0, completedTests.size() - failedTests.size() - skippedTests.size());
+      if (isRunning) {
+        duration = Duration.between(startTime, Instant.now());
+      }
+      return new ModuleInfo(
+          id,
+          isRunning,
+          testsExpected,
+          completedTests.size(),
+          failedTests.size(),
+          testsPassed,
+          skippedTests.size(),
+          duration);
+    }
+  }
+}

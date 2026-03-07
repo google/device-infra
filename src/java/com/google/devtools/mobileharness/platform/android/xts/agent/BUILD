@@ -31,6 +31,7 @@ java_binary(
     deps = [
         ":tradefed_invocation_agent_logger",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/runtime:xts_tradefed_runtime_info_monitor",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/runtime:xts_tradefed_test_module_results_monitor",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:net_bytebuddy_byte_buddy",
     ],

@@ -35,7 +35,7 @@ public class FakeTradefed {
   public static final String INVOCATION_UNCHECKED_EXCEPTION_MESSAGE =
       "Fake tradefed invocation unchecked exception.";
 
-  public static void main(String[] args) throws InterruptedException {
+  public static void main(String[] args) throws Exception {
     ImmutableList<String> deviceSerials =
         IntStream.range(0, args.length - 1)
             .filter(i -> args[i].equals("-s"))
@@ -59,11 +59,15 @@ public class FakeTradefed {
                                     // command ID (with values being 1, 2, etc.).
                                     new FakeInvocationContext(
                                         /* invocationId= */ "1", ImmutableList.of(deviceSerial)),
-                                    0,
-                                    0,
-                                    0);
-                          } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt(); // Restore interrupt status
+                                    new FakeConfiguration(),
+                                    null,
+                                    null);
+                          } catch (Exception e) {
+                            if (e instanceof InterruptedException) {
+                              Thread.currentThread().interrupt(); // Restore interrupt status
+                            }
+                            // Print stack trace or rethrow runtime
+                            e.printStackTrace();
                           }
                         })
                     .start());
@@ -72,7 +76,11 @@ public class FakeTradefed {
         Thread.sleep(2_000L);
       } else {
         new TestInvocation()
-            .invoke(new FakeInvocationContext(/* invocationId= */ "1", deviceSerials), 0, 0, 0);
+            .invoke(
+                new FakeInvocationContext(/* invocationId= */ "1", deviceSerials),
+                new FakeConfiguration(),
+                null,
+                null);
         // Sleep time is shorter compared to the sharding case, since the fake invocation is running
         // seqentially (vs. in parallel for the sharding case).
         Thread.sleep(1_000L);

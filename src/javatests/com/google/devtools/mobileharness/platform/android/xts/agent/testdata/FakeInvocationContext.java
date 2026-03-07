@@ -16,7 +16,9 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.agent.testdata;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @SuppressWarnings("JdkImmutableCollections")
 public class FakeInvocationContext {
@@ -35,5 +37,15 @@ public class FakeInvocationContext {
 
   public List<String> getSerials() {
     return serials;
+  }
+
+  private final Map<String, List<String>> attributes = new HashMap<>();
+
+  public Map<String, List<String>> getAttributes() {
+    return attributes;
+  }
+
+  public void addAttribute(String key, String value) {
+    attributes.put(key, List.of(value));
   }
 }

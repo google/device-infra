@@ -22,10 +22,13 @@ package(
 )
 
 java_library(
-    name = "runtime",
-    srcs = glob(["*.java"]),
+    name = "tests",
+    testonly = 1,
+    srcs = glob(["*Test.java"]),
     deps = [
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/runtime:xts_tradefed_runtime_info",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/runtime:xts_tradefed_test_module_results",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/runtime:xts_tradefed_test_module_results_monitor",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
@@ -37,5 +40,5 @@ junit_test_suites(
     sizes = [
         "small",
     ],
-    deps = [":runtime"],
+    deps = [":tests"],
 )

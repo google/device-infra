@@ -385,6 +385,11 @@ public class TradefedTest extends BaseDriver
         .properties()
         .add(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_PATH, runtimeInfoFilePath.toString());
 
+    // Creates test module results file path.
+    Path testModuleResultsFilePath =
+        Path.of(testInfo.getGenFileDir())
+            .resolve(XtsConstants.TRADEFED_TEST_MODULE_RESULTS_FILE_NAME);
+
     // Creates JVM flags.
     ImmutableList.Builder<String> jvmFlagsBuilder =
         ImmutableList.<String>builder()
@@ -392,7 +397,9 @@ public class TradefedTest extends BaseDriver
                 "-Xmx" + Flags.instance().xtsTfXmx.getNonNull(), "-XX:+HeapDumpOnOutOfMemoryError");
     if (Flags.instance().enableXtsTradefedInvocationAgent.getNonNull()) {
       jvmFlagsBuilder.add(
-          String.format("-javaagent:%s=%s", getTradefedAgentFilePath(), runtimeInfoFilePath));
+          String.format(
+              "-javaagent:%s=%s:%s",
+              getTradefedAgentFilePath(), runtimeInfoFilePath, testModuleResultsFilePath));
     }
 
     ImmutableList<String> runCommandArgs = getTradefedRunCommandArgs(spec, env, testInfo);
