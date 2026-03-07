@@ -688,11 +688,21 @@ final class NewMultiCommandRequestHandler {
       mountedXtsRootDir = xtsRootDir;
     }
     String xtsType = getXtsType(xtsRootDir, androidXtsZipPath);
+    String commandLine = commandInfo.getCommandLine();
+
+    // If there is a previous test context and the command line is not a retry, override the command
+    // to the retry command line.
+    if (request.hasPrevTestContext()
+        && !commandInfo.getCommandLine().startsWith("retry")
+        && !request.getTestEnvironment().getRetryCommandLine().isEmpty()
+        && hasResultZip(request)) {
+      commandLine = request.getTestEnvironment().getRetryCommandLine();
+    }
 
     SessionRequestInfo.Builder sessionRequestInfoBuilder =
         CommandLineParser.getInstance()
-            .parseCommandLine(commandInfo.getCommandLine())
-            .setCommandLineArgs(commandInfo.getCommandLine())
+            .parseCommandLine(commandLine)
+            .setCommandLineArgs(commandLine)
             .setXtsType(xtsType)
             .setXtsRootDir(xtsRootDir)
             .setAndroidXtsZip(replacePathForRemoteRunner(androidXtsZipPath))
@@ -803,6 +813,23 @@ final class NewMultiCommandRequestHandler {
         break;
       }
     }
+  }
+
+  private boolean hasResultZip(NewMultiCommandRequest request) {
+    for (TestResource testResource : request.getPrevTestContext().getTestResourceList()) {
+      try {
+        URL testResourceUrl = getTestResourceUrl(testResource);
+        Path fileName = Path.of(testResourceUrl.getPath()).getFileName();
+        if (testResourceUrl.getProtocol().equals("file")
+            && fileName != null
+            && XtsConstants.RESULT_ZIP_FILENAME_PATTERN.matcher(fileName.toString()).matches()) {
+          return true;
+        }
+      } catch (MobileHarnessException e) {
+        // Ignore
+      }
+    }
+    return false;
   }
 
   /**
