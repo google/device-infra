@@ -26,9 +26,9 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
-import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -41,19 +41,19 @@ public class DeviceDataLoader {
 
   private final LabInfoProvider labInfoProvider;
   private final ConfigurationProvider configurationProvider;
-  private final Environment environment;
   private final ListeningExecutorService executor;
+  private final ConfigServiceCapabilityFactory configServiceCapabilityFactory;
 
   @Inject
   DeviceDataLoader(
       LabInfoProvider labInfoProvider,
       ConfigurationProvider configurationProvider,
-      Environment environment,
-      ListeningExecutorService executor) {
+      ListeningExecutorService executor,
+      ConfigServiceCapabilityFactory configServiceCapabilityFactory) {
     this.labInfoProvider = labInfoProvider;
     this.configurationProvider = configurationProvider;
-    this.environment = environment;
     this.executor = executor;
+    this.configServiceCapabilityFactory = configServiceCapabilityFactory;
   }
 
   /** Represents how the device's configuration is managed and where it originates. */
@@ -111,22 +111,6 @@ public class DeviceDataLoader {
   public ListenableFuture<DeviceData> loadDeviceData(String deviceId, String universe) {
     logger.atInfo().log("Loading device data for %s (universe: %s)", deviceId, universe);
 
-    // TODO: Implement early check for universe config support to avoid wasteful calls.
-    boolean mightSupportConfig = true;
-
-    if (!mightSupportConfig) {
-      return Futures.transform(
-          getDeviceInfoAsync(deviceId, universe),
-          info ->
-              DeviceData.create(
-                  info,
-                  DeviceConfig.getDefaultInstance(),
-                  ManagementMode.NOT_SUPPORTED,
-                  Optional.empty(),
-                  Optional.empty()),
-          executor);
-    }
-
     // Parallel fetch start: DeviceInfo (Required) and Individual Config (Speculative)
     ListenableFuture<DeviceInfo> deviceInfoFuture = getDeviceInfoAsync(deviceId, universe);
     ListenableFuture<Optional<DeviceConfig>> individualConfigFuture =
@@ -148,7 +132,7 @@ public class DeviceDataLoader {
                         Futures.getDone(individualConfigFuture);
 
                     return resolveDeviceData(
-                        deviceId, deviceInfo, labConfigOpt, individualConfigOpt);
+                        deviceId, universe, deviceInfo, labConfigOpt, individualConfigOpt);
                   },
                   executor);
         },
@@ -157,12 +141,15 @@ public class DeviceDataLoader {
 
   private DeviceData resolveDeviceData(
       String deviceId,
+      String universe,
       DeviceInfo deviceInfo,
       Optional<LabConfig> labConfigOpt,
       Optional<DeviceConfig> individualConfigOpt) {
 
-    // If we couldn't even get a LabConfig, we assume Config Service is not supported/accessible.
-    if (labConfigOpt.isEmpty()) {
+    // If config service is not supported for the universe, or we couldn't even get a LabConfig,
+    // we assume Config Service is not supported/accessible.
+    if (!configServiceCapabilityFactory.create(universe).isConfigServiceAvailable()
+        || labConfigOpt.isEmpty()) {
       return DeviceData.create(
           deviceInfo,
           DeviceConfig.getDefaultInstance(),

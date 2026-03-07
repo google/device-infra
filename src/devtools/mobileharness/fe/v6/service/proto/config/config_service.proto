@@ -48,7 +48,7 @@ service ConfigService {
   rpc UpdateDeviceConfig(UpdateDeviceConfigRequest)
       returns (UpdateDeviceConfigResponse) {
     option (google.api.http) = {
-      post: "/v6/devices/{device_id}/config",
+      post: "/v6/devices/{device_id}/config:update",
       body: "*"
     };
   }
@@ -90,7 +90,7 @@ service ConfigService {
   rpc UpdateHostConfig(UpdateHostConfigRequest)
       returns (UpdateHostConfigResponse) {
     option (google.api.http) = {
-      post: "/v6/hosts/{host_name}/config",
+      post: "/v6/hosts/{host_name}/config:update",
       body: "*"
     };
   }
