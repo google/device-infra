@@ -26,8 +26,9 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_converter",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_service_capability",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
@@ -82,7 +83,12 @@ java_library(
     name = "get_host_config_handler",
     srcs = ["GetHostConfigHandler.java"],
     deps = [
+        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_converter",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_service_capability",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",

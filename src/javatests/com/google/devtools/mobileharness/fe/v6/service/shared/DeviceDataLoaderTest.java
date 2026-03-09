@@ -17,21 +17,28 @@
 package com.google.devtools.mobileharness.fe.v6.service.shared;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.GroupedDevices;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.DeviceView;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapability;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.DeviceData;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.ManagementMode;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
@@ -43,7 +50,9 @@ import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import javax.inject.Inject;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -84,6 +93,8 @@ public final class DeviceDataLoaderTest {
 
   @Bind @Mock private LabInfoProvider labInfoProvider;
   @Bind @Mock private ConfigurationProvider configurationProvider;
+  @Mock private ConfigServiceCapability configServiceCapability;
+  @Bind @Mock private ConfigServiceCapabilityFactory configServiceCapabilityFactory;
   @Bind @Mock private Environment environment;
   @Bind private ListeningExecutorService executor = newDirectExecutorService();
 
@@ -93,6 +104,7 @@ public final class DeviceDataLoaderTest {
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
 
+    when(configServiceCapabilityFactory.create(any())).thenReturn(configServiceCapability);
     when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any()))
         .thenReturn(immediateFuture(DEFAULT_LAB_INFO_RESPONSE));
     when(configurationProvider.getDeviceConfig(any(), any()))
@@ -100,6 +112,7 @@ public final class DeviceDataLoaderTest {
     when(configurationProvider.getLabConfig(any(), any()))
         .thenReturn(immediateFuture(Optional.of(LabConfig.getDefaultInstance())));
     when(environment.isGoogleInternal()).thenReturn(true);
+    when(configServiceCapability.isConfigServiceAvailable()).thenReturn(true);
   }
 
   @Test
@@ -124,5 +137,71 @@ public final class DeviceDataLoaderTest {
 
     assertThat(deviceData.managementMode()).isEqualTo(ManagementMode.NOT_SUPPORTED);
     assertThat(deviceData.isConfigSupported()).isFalse();
+  }
+
+  @Test
+  public void loadDeviceData_hostManaged_success() throws Exception {
+    LabConfig labConfig =
+        LabConfig.newBuilder()
+            .setHostProperties(
+                HostProperties.newBuilder()
+                    .addHostProperty(
+                        HostProperty.newBuilder().setKey("device_config_mode").setValue("host")))
+            .setDefaultDeviceConfig(BasicDeviceConfig.newBuilder().addOwner("host_owner"))
+            .build();
+    when(configurationProvider.getLabConfig(HOST_NAME, UNIVERSE))
+        .thenReturn(immediateFuture(Optional.of(labConfig)));
+
+    DeviceData deviceData = deviceDataLoader.loadDeviceData(DEVICE_ID, UNIVERSE).get();
+
+    assertThat(deviceData.managementMode()).isEqualTo(ManagementMode.HOST_MANAGED);
+    assertThat(deviceData.effectiveDeviceConfig().getBasicConfig().getOwner(0))
+        .isEqualTo("host_owner");
+    assertThat(deviceData.isHostManaged()).isTrue();
+  }
+
+  @Test
+  public void loadDeviceData_deviceConfigFetchFailure_returnsDefault() throws Exception {
+    when(configurationProvider.getDeviceConfig(any(), any()))
+        .thenReturn(immediateFailedFuture(new RuntimeException("Config service error")));
+
+    DeviceData deviceData = deviceDataLoader.loadDeviceData(DEVICE_ID, UNIVERSE).get();
+
+    assertThat(deviceData.managementMode()).isEqualTo(ManagementMode.PER_DEVICE);
+    assertThat(deviceData.effectiveDeviceConfig()).isEqualTo(DeviceConfig.getDefaultInstance());
+  }
+
+  @Test
+  public void loadDeviceData_labConfigFetchFailure_returnsNotSupported() throws Exception {
+    when(configurationProvider.getLabConfig(any(), any()))
+        .thenReturn(immediateFailedFuture(new RuntimeException("Config service error")));
+
+    DeviceData deviceData = deviceDataLoader.loadDeviceData(DEVICE_ID, UNIVERSE).get();
+
+    assertThat(deviceData.managementMode()).isEqualTo(ManagementMode.NOT_SUPPORTED);
+    assertThat(deviceData.isConfigSupported()).isFalse();
+  }
+
+  @Test
+  public void loadDeviceData_deviceInfoNotFound_throwsException() throws Exception {
+    when(labInfoProvider.getLabInfoAsync(any(), any()))
+        .thenReturn(
+            immediateFuture(
+                GetLabInfoResponse.newBuilder()
+                    .setLabQueryResult(
+                        LabQueryResult.newBuilder()
+                            .setDeviceView(
+                                DeviceView.newBuilder()
+                                    .setGroupedDevices(
+                                        GroupedDevices.newBuilder()
+                                            .setDeviceList(DeviceList.getDefaultInstance()))))
+                    .build()));
+
+    ListenableFuture<DeviceData> future = deviceDataLoader.loadDeviceData(DEVICE_ID, UNIVERSE);
+
+    ExecutionException exception =
+        Assert.assertThrows(ExecutionException.class, () -> future.get());
+    assertThat(exception).hasCauseThat().isInstanceOf(RuntimeException.class);
+    assertThat(exception).hasCauseThat().hasMessageThat().contains("Device not found");
   }
 }
