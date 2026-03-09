@@ -148,9 +148,24 @@ public class Properties {
     return Optional.ofNullable(properties.get(key));
   }
 
+  /**
+   * Gets the optional value for the given key.
+   *
+   * @param key the required key
+   * @return the value of the given if the key exists; else, return Optional.empty
+   */
+  public Optional<String> getOptional(PropertyName key) {
+    return getOptional(Ascii.toLowerCase(key.toString()));
+  }
+
   /** Checks whether there is a property with the given name. */
   public boolean has(String key) {
     return properties.containsKey(key);
+  }
+
+  /** Checks whether there is a property with the given property name. */
+  public boolean has(PropertyName key) {
+    return has(Ascii.toLowerCase(key.toString()));
   }
 
   /**
@@ -256,9 +271,28 @@ public class Properties {
    * @throws NullPointerException if the specified key is null
    */
   @Nullable
+  @CanIgnoreReturnValue
   public String remove(String key) {
     String previousValue = properties.remove(key);
     timing.touch();
     return previousValue;
+  }
+
+  /**
+   * Removes the property.
+   *
+   * @return the previous value associated with <tt>key</tt>, or <tt>null</tt> if there was no
+   *     mapping for <tt>key</tt>
+   * @throws NullPointerException if the specified key is null
+   */
+  @Nullable
+  @CanIgnoreReturnValue
+  public String remove(PropertyName key) {
+    return remove(Ascii.toLowerCase(key.toString()));
+  }
+
+  @Override
+  public String toString() {
+    return properties.toString();
   }
 }
