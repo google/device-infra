@@ -244,6 +244,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/event",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_unit",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub/helper:job_sync",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
         "@maven//:com_google_guava_guava",

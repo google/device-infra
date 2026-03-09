@@ -1729,6 +1729,16 @@ public class Flags {
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> labRemovalThreshold = labRemovalThresholdDefault;
 
+  private static final Flag<Boolean> labServerCheckJobsFromMasterDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--lab_server_check_jobs_from_master",
+      description =
+          "If true, lab server will periodically check jobs from master to remove expired jobs."
+              + " Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> labServerCheckJobsFromMaster = labServerCheckJobsFromMasterDefault;
+
   private static final Flag<String> localTenantDeviceConfigPathDefault = Flag.value("");
 
   @com.beust.jcommander.Parameter(
