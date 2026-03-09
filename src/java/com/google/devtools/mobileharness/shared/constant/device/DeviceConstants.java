@@ -28,6 +28,7 @@ public final class DeviceConstants {
           "AndroidFastbootDevice",
           "AndroidFastbootdModeDevice",
           "AndroidOfflineDevice",
+          "AndroidRecoveryDevice",
           "AndroidUnauthorizedDevice",
           "DisconnectedDevice",
           "FailedDevice");
