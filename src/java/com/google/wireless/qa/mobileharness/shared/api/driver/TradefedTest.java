@@ -81,6 +81,7 @@ import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotati
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;
+import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -100,6 +101,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import javax.annotation.Nullable;
@@ -141,6 +144,7 @@ public class TradefedTest extends BaseDriver
   private final XtsCommandUtil xtsCommandUtil;
   private final String testId;
   private TradefedRunStrategy tradefedRunStrategy;
+  private final TestMessageUtil testMessageUtil;
 
   private final Object tfProcessLock = new Object();
 
@@ -165,7 +169,8 @@ public class TradefedTest extends BaseDriver
       Sleeper sleeper,
       ResUtil resUtil,
       Clock clock,
-      XtsCommandUtil xtsCommandUtil) {
+      XtsCommandUtil xtsCommandUtil,
+      TestMessageUtil testMessageUtil) {
     super(device, testInfo);
     this.cmdExecutor = cmdExecutor;
     this.localFileUtil = localFileUtil;
@@ -182,6 +187,7 @@ public class TradefedTest extends BaseDriver
     this.resUtil = resUtil;
     this.clock = clock;
     this.xtsCommandUtil = xtsCommandUtil;
+    this.testMessageUtil = testMessageUtil;
   }
 
   @Override
@@ -385,6 +391,11 @@ public class TradefedTest extends BaseDriver
         .properties()
         .add(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_PATH, runtimeInfoFilePath.toString());
 
+    // Creates test module results file path.
+    Path testModuleResultsFilePath =
+        Path.of(testInfo.getGenFileDir())
+            .resolve(XtsConstants.TRADEFED_TEST_MODULE_RESULTS_FILE_NAME);
+
     // Creates JVM flags.
     ImmutableList.Builder<String> jvmFlagsBuilder =
         ImmutableList.<String>builder()
@@ -392,7 +403,9 @@ public class TradefedTest extends BaseDriver
                 "-Xmx" + Flags.instance().xtsTfXmx.getNonNull(), "-XX:+HeapDumpOnOutOfMemoryError");
     if (Flags.instance().enableXtsTradefedInvocationAgent.getNonNull()) {
       jvmFlagsBuilder.add(
-          String.format("-javaagent:%s=%s", getTradefedAgentFilePath(), runtimeInfoFilePath));
+          String.format(
+              "-javaagent:%s=%s:%s",
+              getTradefedAgentFilePath(), runtimeInfoFilePath, testModuleResultsFilePath));
     }
 
     ImmutableList<String> runCommandArgs = getTradefedRunCommandArgs(spec, env, testInfo);
@@ -460,6 +473,16 @@ public class TradefedTest extends BaseDriver
       tfOutputPath =
           Path.of(testInfo.getGenFileDir()).resolve(XtsConstants.TRADEFED_OUTPUT_FILE_NAME);
     }
+
+    ScheduledFuture<?> periodicModuleResultsChecker =
+        scheduledThreadPool.scheduleWithFixedDelay(
+            threadRenaming(
+                new PeriodicTestModuleResultsChecker(
+                    testInfo, testModuleResultsFilePath.toString()),
+                () -> "tf-module-results-checker-" + testInfo.locator().getId()),
+            /* initialDelay= */ 60,
+            /* delay= */ 60,
+            TimeUnit.SECONDS);
 
     CommandProcess process = null;
     try (BufferedWriter outputFileWriter = Files.newBufferedWriter(tfOutputPath)) {
@@ -534,8 +557,47 @@ public class TradefedTest extends BaseDriver
       testInfo.log().atWarning().alsoTo(logger).log("Tradefed was interrupted.");
       throw e;
     } finally {
+      periodicModuleResultsChecker.cancel(/* mayInterruptIfRunning= */ false);
       if (process != null && process.isAlive()) {
         process.killAndThenKillForcibly(/* timeout= */ Duration.ofMinutes(1L));
+      }
+    }
+  }
+
+  @VisibleForTesting
+  class PeriodicTestModuleResultsChecker implements Runnable {
+
+    private final TestInfo testInfo;
+    private final String testModuleResultsFilePath;
+
+    PeriodicTestModuleResultsChecker(TestInfo testInfo, String testModuleResultsFilePath) {
+      this.testInfo = testInfo;
+      this.testModuleResultsFilePath = testModuleResultsFilePath;
+    }
+
+    @Override
+    public void run() {
+      try {
+        if (!localFileUtil.isFileExist(testModuleResultsFilePath)) {
+          return;
+        }
+        String resultsString = localFileUtil.readFile(testModuleResultsFilePath);
+        if (resultsString.isEmpty()) {
+          return;
+        }
+
+        testMessageUtil.sendMessageToTest(
+            testInfo,
+            ImmutableMap.of(
+                "namespace",
+                XtsConstants.MODULE_RESULTS_TEST_MESSAGE_NAMESPACE,
+                "type",
+                XtsConstants.MODULE_RESULTS_TEST_MESSAGE_TYPE,
+                XtsConstants.MODULE_RESULTS_TEST_MESSAGE_KEY,
+                resultsString));
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to read test module results or send as test message");
       }
     }
   }

@@ -77,6 +77,9 @@ import com.google.devtools.mobileharness.infra.controller.scheduler.model.job.in
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedTestModuleResults;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedTestModuleResults.ModuleInfo;
+import com.google.devtools.mobileharness.shared.util.comm.messaging.message.TestMessageInfo;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -90,6 +93,7 @@ import com.google.protobuf.TextFormat;
 import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
+import com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
@@ -113,6 +117,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.UnaryOperator;
@@ -1568,5 +1573,62 @@ public final class AtsServerSessionPluginTest {
         Command.of("fusermount", "-u", xtsRootDir).timeout(Duration.ofMinutes(10));
     verify(commandExecutor).run(unmountCommand);
     verify(sleeper).sleep(Duration.ofSeconds(5));
+  }
+
+  @Test
+  public void onTestMessage_testModuleResult_updateSessionOutput() throws Exception {
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(jobInfo);
+
+    ImmutableMap<String, List<ModuleInfo>> runningModules =
+        ImmutableMap.of(
+            "invocationId",
+            ImmutableList.of(
+                new ModuleInfo("module1", true, 12, 12, 2, 10, 0, Duration.ofMillis(1234)),
+                new ModuleInfo("module2", false, 5, 5, 0, 5, 0, Duration.ofMillis(5678))));
+    XtsTradefedTestModuleResults results = new XtsTradefedTestModuleResults(runningModules);
+    ImmutableMap<String, String> message =
+        ImmutableMap.of(
+            "namespace",
+            XtsConstants.MODULE_RESULTS_TEST_MESSAGE_NAMESPACE,
+            "type",
+            XtsConstants.MODULE_RESULTS_TEST_MESSAGE_TYPE,
+            XtsConstants.MODULE_RESULTS_TEST_MESSAGE_KEY,
+            results.encodeToString());
+
+    TestMessageInfo testMessageInfo =
+        TestMessageInfo.of("test_id", message, ImmutableList.of(), /* isRemote= */ false);
+    plugin.onTestMessage(
+        new TestMessageEvent(
+            testMessageInfo, testInfo, /* allocation= */ null, /* deviceInfo= */ null));
+
+    // sessionInfo.setSessionPluginOutput() will be called twice in onSessionStarting
+    // and once in onTestMessage.
+    verify(sessionInfo, times(3))
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+
+    RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
+    assertThat(requestDetail.getTestModuleResultsCount()).isEqualTo(2);
+
+    assertThat(requestDetail.getTestModuleResults(0).getName()).isEqualTo("module1");
+    assertThat(requestDetail.getTestModuleResults(0).getComplete()).isFalse();
+    assertThat(requestDetail.getTestModuleResults(0).getDurationMs()).isEqualTo(1234);
+    assertThat(requestDetail.getTestModuleResults(0).getPassedTests()).isEqualTo(10);
+    assertThat(requestDetail.getTestModuleResults(0).getFailedTests()).isEqualTo(2);
+    assertThat(requestDetail.getTestModuleResults(0).getTotalTests()).isEqualTo(12);
+
+    assertThat(requestDetail.getTestModuleResults(1).getName()).isEqualTo("module2");
+    assertThat(requestDetail.getTestModuleResults(1).getComplete()).isTrue();
+    assertThat(requestDetail.getTestModuleResults(1).getDurationMs()).isEqualTo(5678);
+    assertThat(requestDetail.getTestModuleResults(1).getPassedTests()).isEqualTo(5);
+    assertThat(requestDetail.getTestModuleResults(1).getFailedTests()).isEqualTo(0);
+    assertThat(requestDetail.getTestModuleResults(1).getTotalTests()).isEqualTo(5);
   }
 }

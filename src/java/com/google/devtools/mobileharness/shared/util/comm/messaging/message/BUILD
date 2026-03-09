@@ -28,6 +28,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
