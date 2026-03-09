@@ -4,13 +4,13 @@
 # RecoverBot Firmware Build Script
 #
 # This script automates the build environment setup and resource generation.
-# Usage: ./compile.sh [arduino-cli-flags]
+# Usage: ./build.sh [arduino-cli-flags]
 #
 # Examples:
-#   ./compile.sh                    # Standard compile
-#   ./compile.sh --verbose          # Compile with verbose logging
-#   ./compile.sh --clean            # Clean build cache before compiling
-#   ./compile.sh --upload -p /dev/ttyUSB0  # Compile and upload to board
+#   ./build.sh                    # Standard compile
+#   ./build.sh --verbose          # Compile with verbose logging
+#   ./build.sh --clean            # Clean build cache before compiling
+#   ./build.sh --upload -p /dev/ttyUSB0  # Compile and upload to board
 # ==============================================================================
 
 # Exit immediately if a command exits with a non-zero status
@@ -92,7 +92,7 @@ fi
 
 # --- Step 3: Compile / Upload ---
 # Pass all command line arguments ("$@") directly to the compile command.
-# This allows usage like: ./compile.sh --upload --port ...
+# This allows usage like: ./build.sh --upload --port ...
 
 echo "🔨 Running arduino-cli compile with args: $@"
 echo "----------------------------------------"
