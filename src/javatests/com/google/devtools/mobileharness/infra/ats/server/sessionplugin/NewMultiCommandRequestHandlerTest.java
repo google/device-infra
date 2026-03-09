@@ -634,6 +634,55 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
+  public void createTradefedJobs_withPrevContextAndNotRetryCommand_overrideToRetryCommandLine()
+      throws Exception {
+    when(clock.instant())
+        .thenReturn(
+            Instant.ofEpochMilli(1000L), Instant.ofEpochMilli(2000L), Instant.ofEpochMilli(3000L));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    doReturn(Path.of("/path/to/previous_result.pb")).when(localFileUtil).checkFile(any(Path.class));
+    String expectedCommandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    String retryCommandLine = "retry --retry 1";
+    String prevSessionId = UUID.randomUUID().toString();
+    request =
+        request.toBuilder()
+            .clearCommands()
+            .addCommands(commandInfo) // Not a retry command
+            .setPrevTestContext(
+                TestContext.newBuilder()
+                    .setCommandLine(commandInfo.getCommandLine())
+                    .addTestResource(
+                        TestResource.newBuilder()
+                            .setUrl(
+                                "file:///path/retry_previous_test_run_id/output/"
+                                    + prevSessionId
+                                    + "/"
+                                    + expectedCommandId
+                                    + "/2024.07.16_15.09.01.972_5844.zip")
+                            .setName("2024.07.16_15.09.01.972_5844.zip")
+                            .build())
+                    .build())
+            .setTestEnvironment(
+                request.getTestEnvironment().toBuilder().setRetryCommandLine(retryCommandLine))
+            .build();
+
+    // Trigger the handler.
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
+
+    verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+
+    // Verify sessionRequestInfo has been correctly generated.
+    SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
+    assertThat(sessionRequestInfo.testPlan()).isEqualTo("retry");
+    assertThat(sessionRequestInfo.commandLineArgs()).isEqualTo(retryCommandLine);
+  }
+
+  @Test
   public void createTradefedJobs_retryResultNotFound_runAsNewAttempt() throws Exception {
     when(clock.instant())
         .thenReturn(
