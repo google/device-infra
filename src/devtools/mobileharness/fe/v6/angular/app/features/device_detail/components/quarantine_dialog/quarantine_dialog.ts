@@ -1,4 +1,4 @@
-import {CommonModule, DatePipe} from '@angular/common';
+import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -40,7 +40,6 @@ import {Dialog} from '../../../../shared/components/config_common/dialog/dialog'
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
-    DatePipe,
     Dialog,
     FormsModule,
     MatButtonModule,

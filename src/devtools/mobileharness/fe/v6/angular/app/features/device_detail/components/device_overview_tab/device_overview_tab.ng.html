@@ -274,41 +274,6 @@
       </app-info-card>
     }
 
-    <!-- Permissions Card -->
-    <app-info-card
-      #overviewSection
-      id="overview-permissions"
-      title="Permissions"
-      [collapsible]="false"
-    >
-      <div class="info-card-content permissions-content">
-        <div>
-          <h4 class="permission-type-title">Owners</h4>
-          <div class="chip-grid-container">
-            @if (device.permissions.owners && device.permissions.owners.length > 0) {
-              @for (owner of device.permissions.owners; track owner) {
-                <div class="type-chip type-chip-normal">{{ owner }}</div>
-              }
-            } @else {
-              <p class="no-permission">None</p>
-            }
-          </div>
-        </div>
-        <div>
-          <h4 class="permission-type-title">Executors</h4>
-          <div class="chip-grid-container">
-            @if (device.permissions.executors && device.permissions.executors.length > 0) {
-              @for (executor of device.permissions.executors; track executor) {
-                <div class="type-chip type-chip-normal">{{ executor }}</div>
-              }
-            } @else {
-              <p class="no-permission">None</p>
-            }
-          </div>
-        </div>
-      </div>
-    </app-info-card>
-
     <!-- Capabilities Card -->
     <app-info-card #overviewSection id="overview-capabilities" title="Capabilities">
       <div id="capabilities-content" class="info-card-content capabilities-content">

@@ -197,10 +197,6 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
 
     list.push(
       {
-        id: 'overview-permissions',
-        label: 'Permissions',
-      },
-      {
         id: 'overview-capabilities',
         label: 'Capabilities',
       },

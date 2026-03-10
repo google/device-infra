@@ -580,6 +580,11 @@
     gap: 4px;
   }
 
+  .hide-action-column {
+    max-width: 0;
+    padding: 0;
+  }
+
   ::ng-deep .sub-device-dim-chip {
     display: inline-block;
     background-color: #e8f0fe;

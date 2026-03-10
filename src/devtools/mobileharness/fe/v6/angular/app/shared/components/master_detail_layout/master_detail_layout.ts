@@ -1,3 +1,4 @@
+import {DOCUMENT} from '@angular/common';
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
@@ -30,6 +31,7 @@ export interface NavItem {
 })
 export class MasterDetailLayout implements OnInit, AfterViewInit, OnDestroy {
   private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly document = inject(DOCUMENT);
 
   readonly navList = input<NavItem[]>([]);
 
@@ -92,7 +94,9 @@ export class MasterDetailLayout implements OnInit, AfterViewInit, OnDestroy {
     if (sections.length === 0) return;
 
     const options = {
-      root: null, // viewport
+      // Use the document as root instead of null. In cross-origin iframes,
+      // root: null causes rootMargin to be ignored (treated as 0px).
+      root: this.document,
       rootMargin: '-10% 0px -85% 0px',
       threshold: 0,
     };

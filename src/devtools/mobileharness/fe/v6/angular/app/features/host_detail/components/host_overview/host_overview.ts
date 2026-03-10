@@ -312,10 +312,6 @@ export class HostOverviewPage implements OnInit, OnChanges {
       label: 'Devices',
     },
     {
-      id: 'daemon-server',
-      label: 'Daemon Server',
-    },
-    {
       id: 'host-properties',
       label: 'Host Properties',
     },
