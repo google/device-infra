@@ -36,7 +36,7 @@
 //    - raw off        : disable RAW mode immediately
 //    - raw_tick <boardHex> <ch> <tick>
 //        Writes a tick value directly, but ONLY when RAW is enabled
-//        AND tick is within [RAW_TICK_MIN, RAW_TICK_MAX]
+//        AND tick is within [g_rawTickMin, g_rawTickMax] (configurable)
 //    - RAW mode auto-locks after expiration
 //
 // 5) Serial command interface
@@ -82,12 +82,11 @@ static const int LOGO_H = 240;
 const uint32_t FORCE_MAX_PRESS_MS = 100000UL;  // 100 seconds
 
 // ===== RAW tick guard rails =====
-const bool RAW_DEFAULT_LOCKED   = true;  // power-on default: disabled
-const uint32_t RAW_UNLOCK_WINDOW_MS = 300000UL;  // default 5 minutes
-const uint16_t RAW_TICK_MIN     = 250;   // safe lower bound
-const uint16_t RAW_TICK_MAX     = 450;   // safe upper bound
+static uint32_t g_rawUnlockWindowMs = 300000UL;  // default 5 minutes
+static uint16_t g_rawTickMin        = 250;       // safe lower bound
+static uint16_t g_rawTickMax        = 450;       // safe upper bound
 
-bool     g_rawEnabled = !RAW_DEFAULT_LOCKED;
+bool     g_rawEnabled = false;
 uint32_t g_rawExpire  = 0;   // 0 => no expiry
 
 // ===== Default Servo PWM presets (ticks) =====
@@ -226,7 +225,7 @@ int getBoardIndex(uint8_t boardAddr) {
 }
 
 bool isTickSafe(uint16_t t) {
-  return (t >= RAW_TICK_MIN && t <= RAW_TICK_MAX);
+  return (t >= g_rawTickMin && t <= g_rawTickMax);
 }
 
 void getDefaultPressRelease(uint8_t channel, int& pressPwm, int& releasePwm) {
@@ -323,6 +322,26 @@ void getPressAndReleaseTicks(uint8_t boardAddr, uint8_t channel,
   relT   = (uint16_t)dr;
 }
 
+void loadGlobalConfig() {
+  g_rawUnlockWindowMs = prefs.getUInt("cfg_win", 300000UL);
+  g_rawTickMin        = prefs.getUShort("cfg_min", 250);
+  g_rawTickMax        = prefs.getUShort("cfg_max", 450);
+}
+
+void saveGlobalConfig() {
+  prefs.putUInt("cfg_win", g_rawUnlockWindowMs);
+  prefs.putUShort("cfg_min", g_rawTickMin);
+  prefs.putUShort("cfg_max", g_rawTickMax);
+}
+
+void resetGlobalConfig() {
+  prefs.remove("cfg_win");
+  prefs.remove("cfg_min");
+  prefs.remove("cfg_max");
+  g_rawUnlockWindowMs = 300000UL;
+  g_rawTickMin        = 250;
+  g_rawTickMax        = 450;
+}
 
 // ---------------------------------------------------------
 // Core servo actions
@@ -397,7 +416,7 @@ void setRawTicks(uint8_t boardAddr, uint8_t channel, uint16_t ticks) {
   }
 
   if (!isTickSafe(ticks)) {
-    logMsg("ERR: raw tick out of range [%u,%u]", RAW_TICK_MIN, RAW_TICK_MAX);
+    logMsg("ERR: raw tick out of range [%u,%u]", g_rawTickMin, g_rawTickMax);
     return;
   }
 
@@ -415,6 +434,8 @@ void printStatus() {
   uint32_t now = millis();
   logMsg("=== Status ===");
   logMsg("Boards: %u", numBoards);
+  logMsg("RAW Config: win=%lu ms, min=%u, max=%u",
+         g_rawUnlockWindowMs, g_rawTickMin, g_rawTickMax);
 
   if (g_rawEnabled) {
     if (g_rawExpire) {
@@ -456,14 +477,18 @@ void printHelp() {
   logMsg("release  <boardHex> <ch>");
   logMsg("");
   logMsg("cal_set   <boardHex> <ch> <pressTick> <releaseTick>   (ticks %u~%u)",
-         RAW_TICK_MIN, RAW_TICK_MAX);
+         g_rawTickMin, g_rawTickMax);
   logMsg("cal_get   <boardHex> <ch>");
   logMsg("cal_reset <boardHex> <ch>");
   logMsg("cal_list");
   logMsg("");
   logMsg("raw on [sec]   | raw off");
-  logMsg("raw_tick <boardHex> <ch> <tick> (ticks %u~%u)", RAW_TICK_MIN,
-         RAW_TICK_MAX);
+  logMsg("raw_tick <boardHex> <ch> <tick> (ticks %u~%u)", g_rawTickMin,
+         g_rawTickMax);
+  logMsg("");
+  logMsg("cfg_set   <win|min|max> <val>");
+  logMsg("cfg_get");
+  logMsg("cfg_reset");
   logMsg("================");
 }
 
@@ -532,7 +557,7 @@ void cmd_release(int argc, char** argv) {
 void cmd_raw_on(int argc, char** argv) {
   uint32_t sec = 0;
   if (argc >= 2) sec = strtoul(argv[1], nullptr, 10); // NOLINT
-  if (sec == 0) sec = RAW_UNLOCK_WINDOW_MS / 1000;
+  if (sec == 0) sec = g_rawUnlockWindowMs / 1000;
   g_rawEnabled = true;
   g_rawExpire  = millis() + sec * 1000UL;
   logMsg("OK,RAW_ON,sec=%lu", sec);
@@ -564,7 +589,7 @@ void cmd_cal_set(int argc, char** argv) {
 
   if (ch >= MAX_CHANNELS) { logMsg("ERR: invalid channel"); return; }
   if (!isTickSafe(pressT) || !isTickSafe(relT)) {
-    logMsg("ERR: ticks must be in [%u,%u]", RAW_TICK_MIN, RAW_TICK_MAX);
+    logMsg("ERR: ticks must be in [%u,%u]", g_rawTickMin, g_rawTickMax);
     return;
   }
 
@@ -621,6 +646,33 @@ void cmd_cal_list(int /*argc*/, char** /*argv*/) {
   logMsg("==================================");
 }
 
+void cmd_cfg_set(int argc, char** argv) {
+  if (argc < 3) { logMsg("ERR: cfg_set <win|min|max> <val>"); return; }
+  uint32_t val = strtoul(argv[2], nullptr, 10); // NOLINT
+  if (strcmp(argv[1], "win") == 0) {
+    g_rawUnlockWindowMs = val * 1000UL;
+  } else if (strcmp(argv[1], "min") == 0) {
+    g_rawTickMin = (uint16_t)val;
+  } else if (strcmp(argv[1], "max") == 0) {
+    g_rawTickMax = (uint16_t)val;
+  } else {
+    logMsg("ERR: unknown key"); return;
+  }
+  saveGlobalConfig();
+  logMsg("OK,CFG_SET,%s=%lu", argv[1], val);
+}
+
+void cmd_cfg_get(int /*argc*/, char** /*argv*/) {
+  logMsg("=== Config ===");
+  logMsg("win: %lu ms", g_rawUnlockWindowMs);
+  logMsg("min: %u", g_rawTickMin);
+  logMsg("max: %u", g_rawTickMax);
+}
+
+void cmd_cfg_reset(int /*argc*/, char** /*argv*/) {
+  resetGlobalConfig();
+  logMsg("OK,CFG_RESET");
+}
 
 // Command table
 struct Cmd { const char* name; void (*fn)(int, char**); };
@@ -639,6 +691,9 @@ const Cmd g_cmds[] = {
   { "cal_get",   cmd_cal_get   },
   { "cal_reset", cmd_cal_reset },
   { "cal_list",  cmd_cal_list  },
+  { "cfg_set",   cmd_cfg_set   },
+  { "cfg_get",   cmd_cfg_get   },
+  { "cfg_reset", cmd_cfg_reset },
 };
 const size_t g_cmdCount = sizeof(g_cmds) / sizeof(g_cmds[0]);
 
@@ -745,6 +800,9 @@ void setup() {
     logMsg("ERROR: No PCA9685 boards detected on Wire1 (Port A)!");
     return;
   }
+
+  // Load global configuration
+  loadGlobalConfig();
 
   // Load calibration for detected boards
   loadAllCalForDetectedBoards();
