@@ -237,6 +237,87 @@ public final class AndroidProcessUtilTest {
   }
 
   @Test
+  public void getPackageName() {
+    assertThat(androidProcessUtil.getPackageName("youtube"))
+        .isEqualTo("com.google.android.youtube.tv");
+    assertThat(androidProcessUtil.getPackageName("YouTube"))
+        .isEqualTo("com.google.android.youtube.tv");
+    assertThat(androidProcessUtil.getPackageName("non_existent_app")).isNull();
+  }
+
+  @Test
+  public void resolveActivity() throws Exception {
+    String packageName = "com.google.android.gms";
+    String command =
+        "cmd package resolve-activity --brief -c android.intent.category.LAUNCHER " + packageName;
+    when(adb.runShellWithRetry(SERIAL, command))
+        .thenReturn(
+            """
+            priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=true
+            com.google.android.youtube.tv/com.google.android.apps.youtube.tv.activity.ShellActivity
+            """);
+
+    assertThat(androidProcessUtil.resolveDefaultActivity(SERIAL, packageName))
+        .isEqualTo("com.google.android.apps.youtube.tv.activity.ShellActivity");
+  }
+
+  @Test
+  public void resolveActivity_noActivityFound() throws Exception {
+    String packageName = "com.google.android.gms";
+    String command =
+        "cmd package resolve-activity --brief -c android.intent.category.LAUNCHER " + packageName;
+    when(adb.runShellWithRetry(SERIAL, command)).thenReturn("No activity found");
+
+    MobileHarnessException exception =
+        assertThrows(
+            MobileHarnessException.class,
+            () -> androidProcessUtil.resolveDefaultActivity(SERIAL, packageName));
+    assertThat(exception.getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_PROCESS_RESOLVE_ACTIVITY_ERROR);
+    assertThat(exception)
+        .hasMessageThat()
+        .contains("No launch activity found for package com.google.android.gms");
+  }
+
+  @Test
+  public void resolveActivity_commandFailed_throwException() throws Exception {
+    String packageName = "com.google.android.gms";
+    String command =
+        "cmd package resolve-activity --brief -c android.intent.category.LAUNCHER " + packageName;
+    when(adb.runShellWithRetry(SERIAL, command))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_ERROR, "Error"));
+
+    MobileHarnessException exception =
+        assertThrows(
+            MobileHarnessException.class,
+            () -> androidProcessUtil.resolveDefaultActivity(SERIAL, packageName));
+    assertThat(exception.getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_PROCESS_RESOLVE_ACTIVITY_ERROR);
+    assertThat(exception)
+        .hasMessageThat()
+        .contains("Failed to execute resolve-activity command for package com.google.android.gms");
+  }
+
+  @Test
+  public void resolveActivity_malformedOutput_throwException() throws Exception {
+    String packageName = "com.google.android.gms";
+    String command =
+        "cmd package resolve-activity --brief -c android.intent.category.LAUNCHER " + packageName;
+    when(adb.runShellWithRetry(SERIAL, command)).thenReturn("Some malformed output");
+    MobileHarnessException exception =
+        assertThrows(
+            MobileHarnessException.class,
+            () -> androidProcessUtil.resolveDefaultActivity(SERIAL, packageName));
+    assertThat(exception.getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_PROCESS_RESOLVE_ACTIVITY_ERROR);
+    assertThat(exception)
+        .hasMessageThat()
+        .contains("Failed to parse resolve-activity output: Some malformed output");
+  }
+
+  @Test
   public void startApplication_withException() throws Exception {
     String packageName = "org.openqa.selenium.android.app";
     String activityName = ".MainActivity";
