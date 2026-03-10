@@ -50,7 +50,8 @@ public class XtsTradefedRuntimeInfo {
   }
 
   private static final String LINE_SEPARATOR = "\n";
-  private static final String TOKEN_SEPARATOR = ",";
+  private static final String TOKEN_SEPARATOR = ";";
+  private static final String DEVICE_ID_SEPARATOR = ",";
 
   private final List<TradefedInvocation> invocations;
   private final Instant timestamp;
@@ -125,13 +126,11 @@ public class XtsTradefedRuntimeInfo {
       String status = decodeFromBase64(parts.get(0));
       boolean isRunning = Boolean.parseBoolean(parts.get(1));
       String errorMessage = decodeFromBase64(parts.get(2));
-      List<String> deviceIds = new ArrayList<>();
-      for (int i = 3; i < parts.size(); i++) {
-        if (!parts.get(i).isEmpty()) {
-          deviceIds.add(parts.get(i));
-        }
-      }
-
+      String deviceIdsString = decodeFromBase64(parts.get(3));
+      List<String> deviceIds =
+          deviceIdsString.isEmpty()
+              ? new ArrayList<>()
+              : new ArrayList<>(asList(deviceIdsString.split(DEVICE_ID_SEPARATOR)));
       return new TradefedInvocation(isRunning, deviceIds, status, errorMessage);
     }
 
@@ -170,7 +169,7 @@ public class XtsTradefedRuntimeInfo {
       return encodeToBase64(status())
           .concat(TOKEN_SEPARATOR + isRunning())
           .concat(TOKEN_SEPARATOR + encodeToBase64(errorMessage()))
-          .concat(TOKEN_SEPARATOR + String.join(TOKEN_SEPARATOR, deviceIds()));
+          .concat(TOKEN_SEPARATOR + encodeToBase64(String.join(DEVICE_ID_SEPARATOR, deviceIds())));
     }
 
     @Override

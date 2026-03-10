@@ -33,7 +33,7 @@ import java.util.Objects;
 public class XtsTradefedTestModuleResults {
 
   private static final String LINE_SEPARATOR = "\n";
-  private static final String TOKEN_SEPARATOR = ",";
+  private static final String TOKEN_SEPARATOR = ";";
   private static final String KEY_VALUE_SEPARATOR = ":";
 
   @SuppressWarnings(
