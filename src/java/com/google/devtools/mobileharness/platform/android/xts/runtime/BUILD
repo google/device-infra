@@ -58,3 +58,24 @@ java_library(
         "@maven//:com_google_code_findbugs_jsr305",
     ],
 )
+
+java_library(
+    name = "xts_tradefed_test_module_results_monitor",
+    srcs = ["XtsTradefedTestModuleResultsMonitor.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/agent:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/runtime:__pkg__",
+    ],
+    deps = [
+        ":xts_tradefed_test_module_results",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+    ],
+)
+
+java_library(
+    name = "xts_tradefed_test_module_results",
+    srcs = ["XtsTradefedTestModuleResults.java"],
+    visibility = [
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts:__subpackages__",
+    ],
+)
