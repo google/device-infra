@@ -197,6 +197,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_switch_language_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_switch_user_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:composite_device_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:cross_over_android_desktop_provision_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:mobly_decorator_adapter",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:no_op_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:python_version_check_decorator",
