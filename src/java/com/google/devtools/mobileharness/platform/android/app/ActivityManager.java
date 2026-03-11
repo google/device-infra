@@ -28,10 +28,10 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/** Utility methods for controling the activity manager (am) of Android devices/emulators. */
+/** Utility methods for controlling the activity manager (am) of Android devices/emulators. */
 public class ActivityManager {
   /** Short timeout for quick operations. */
-  @VisibleForTesting static final Duration SHORT_TIMEOUT = Duration.ofSeconds(5);
+  @VisibleForTesting static final Duration ADB_SHELL_TIMEOUT = Duration.ofSeconds(30);
 
   /** Adb shell command to get config. */
   @VisibleForTesting static final String ADB_SHELL_GET_CONFIG = "am get-config";
@@ -75,7 +75,7 @@ public class ActivityManager {
   public Locale getLocale(String serial) throws MobileHarnessException, InterruptedException {
     String output = "";
     try {
-      output = adb.runShellWithRetry(serial, ADB_SHELL_GET_CONFIG, SHORT_TIMEOUT).trim();
+      output = adb.runShellWithRetry(serial, ADB_SHELL_GET_CONFIG, ADB_SHELL_TIMEOUT).trim();
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_AM_GET_LOCALE_ERROR,
