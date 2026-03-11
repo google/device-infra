@@ -42,6 +42,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Req
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetailOrBuilder;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.SessionRequest;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.SessionRequest.RequestCase;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestModuleResult;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.NewMultiCommandRequestHandler.CreateJobsResult;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.NewMultiCommandRequestHandler.HandleResultProcessingResult;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
@@ -59,14 +60,19 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.ser
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
+import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedTestModuleResultsMessage;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedTestModuleResults;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.protobuf.Any;
+import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.TextFormat;
+import com.google.protobuf.TextFormat.ParseException;
 import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
+import com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -314,6 +320,51 @@ final class AtsServerSessionPlugin {
             sendCancellationMessageToStartedTest(testInfo);
           }
         }
+      } finally {
+        updateSessionPluginOutput(requestDetail);
+      }
+    }
+  }
+
+  @Subscribe
+  public void onTestMessage(TestMessageEvent event) {
+    XtsTradefedTestModuleResultsMessage.Builder resultsMessage =
+        XtsTradefedTestModuleResultsMessage.newBuilder();
+    try {
+      if (!event.decodeProtoTestMessage(resultsMessage, ExtensionRegistry.getEmptyRegistry())) {
+        return;
+      }
+    } catch (ParseException e) {
+      logger.atWarning().withCause(e).log("Failed to decode test message");
+      return;
+    }
+
+    synchronized (sessionLock) {
+      RequestDetail.Builder requestDetail = requestDetailSupplier.get();
+      try {
+        String testModuleResultsString = resultsMessage.getTestModuleResultsString();
+        XtsTradefedTestModuleResults testModuleResults;
+        try {
+          testModuleResults =
+              XtsTradefedTestModuleResults.decodeFromString(testModuleResultsString);
+        } catch (RuntimeException e) {
+          logger.atWarning().withCause(e).log("Failed to decode Tradefed test module results");
+          return;
+        }
+        requestDetail.clearTestModuleResults();
+        testModuleResults.runningModules().values().stream()
+            .flatMap(List::stream)
+            .map(
+                module ->
+                    TestModuleResult.newBuilder()
+                        .setName(module.id())
+                        .setComplete(!module.isRunning())
+                        .setDurationMs(module.duration().toMillis())
+                        .setPassedTests(module.testsPassed())
+                        .setFailedTests(module.testsFailed())
+                        .setTotalTests(module.testsExpected())
+                        .build())
+            .forEach(requestDetail::addTestModuleResults);
       } finally {
         updateSessionPluginOutput(requestDetail);
       }

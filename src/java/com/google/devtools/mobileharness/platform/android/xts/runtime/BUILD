@@ -76,6 +76,8 @@ java_library(
     name = "xts_tradefed_test_module_results",
     srcs = ["XtsTradefedTestModuleResults.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts:__subpackages__",
     ],
 )

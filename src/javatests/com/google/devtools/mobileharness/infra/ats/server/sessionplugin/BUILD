@@ -43,6 +43,7 @@ java_library(
         "//src/devtools/mobileharness/infra/ats/server/proto:service_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_service_java_proto",
+        "//src/devtools/mobileharness/platform/android/xts/proto:test_message_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out",
@@ -66,13 +67,16 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/runtime:xts_tradefed_runtime_info",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/runtime:xts_tradefed_runtime_info_file_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/runtime:xts_tradefed_test_module_results",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_common",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/message",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/java/com/google/wireless/qa/mobileharness/client/api/event:job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message/event",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:client_test_events",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_config_java_proto",
@@ -97,5 +101,7 @@ junit_test_suites(
     sizes = [
         "small",
     ],
-    deps = [":sessionplugin"],
+    deps = [
+        ":sessionplugin",
+    ],
 )

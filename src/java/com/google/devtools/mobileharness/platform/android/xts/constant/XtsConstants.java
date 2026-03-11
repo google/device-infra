@@ -28,6 +28,12 @@ public class XtsConstants {
   public static final String TRADEFED_JOBS_PASSED = "tradefed_jobs_passed";
   public static final String TRADEFED_JOBS_HAS_RESULT_FILE = "tradefed_jobs_has_result_file";
 
+  /** Test message constants used for the monitoring of Tradefed test module results. */
+  public static final String MODULE_RESULTS_TEST_MESSAGE_NAMESPACE = "mh:ats:test_module_results";
+
+  public static final String MODULE_RESULTS_TEST_MESSAGE_TYPE = "progress_report";
+  public static final String MODULE_RESULTS_TEST_MESSAGE_KEY = "test_module_results";
+
   public static final String TRADEFED_OUTPUT_FILE_NAME = "xts_tf_output.log";
 
   /** A MH test property key of TF invocation dir name. */

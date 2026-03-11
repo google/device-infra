@@ -28,3 +28,10 @@ message XtsTradefedRunCancellation {
   // Required.
   string cancel_reason = 2;
 }
+
+// Message used by the Tradefed driver to send real-time test module results (as
+// an encoded string) to subscribers.
+message XtsTradefedTestModuleResultsMessage {
+  // Required. The encoded test module results string.
+  string test_module_results_string = 1;
+}
