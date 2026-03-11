@@ -195,6 +195,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
         .add(deviceId, apiConfig, type.isAnnotationPresent(RetainDeviceInfoAnnotation.class));
 
     this.device = new DeviceFactory().createDevice(type, deviceId.controlId());
+    DeviceIdUtil.addDeviceIdAndClassNameToDimension(deviceId, this.device);
     this.deviceStat = stat;
     deviceStat.onShowUp();
     clock = Clock.systemUTC();
@@ -219,6 +220,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
       ExternalDeviceManager externalDeviceManager,
       ContainerDeviceCache containerDeviceCache) {
     this.device = device;
+    DeviceIdUtil.addDeviceIdAndClassNameToDimension(deviceId, this.device);
     this.deviceStat = stat;
     this.apiConfig = apiConfig;
     this.clock = clock;
@@ -251,7 +253,6 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
     try {
 
       logger.atInfo().log("Started");
-      DeviceIdUtil.addDeviceIdAndClassNameToDimension(device.info().deviceId(), device);
       boolean isDeviceConfigSynced =
           apiConfig.waitUntilDeviceConfigSynced(device.getDeviceId(), Duration.ofMinutes(5));
       if (isDeviceConfigSynced) {
