@@ -28,6 +28,7 @@ java_library(
     visibility = [
         "//:deviceinfra_api_users",
         "//:omnilab_fusion",
+        "//third_party/java_src/android_app/bugle/tests/hawkeye/mhplugins:__pkg__",
     ],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",

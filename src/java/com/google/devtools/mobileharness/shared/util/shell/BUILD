@@ -20,6 +20,7 @@ package(
     default_visibility = [
         "//:deviceinfra_all_pkg",
         "//:omnilab_fusion",
+        "//third_party/java_src/android_app/bugle/tests/hawkeye/mhplugins:__pkg__",
     ],
 )
 

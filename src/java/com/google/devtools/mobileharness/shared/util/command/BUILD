@@ -32,6 +32,13 @@ java_library(
             "CommandResults.java",
         ],
     ),
+    visibility = [
+        "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
+        "//java/com/google/cloud/test/device/remote/service/shell/client:__subpackages__",
+        "//java/com/google/devtools/mobileharness/shared/util/command:command_users",
+        "//third_party/java_src/android_app/bugle/tests/hawkeye/mhplugins:__pkg__",
+    ],
     exports = [
         ":command_result",
     ],
