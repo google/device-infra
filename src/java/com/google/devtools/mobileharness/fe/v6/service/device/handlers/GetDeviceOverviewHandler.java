@@ -51,6 +51,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.NetworkInfo;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.DeviceData;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.ManagementMode;
+import com.google.devtools.mobileharness.fe.v6.service.shared.SubDeviceInfoListFactory;
 import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
@@ -75,6 +76,7 @@ public final class GetDeviceOverviewHandler {
   private final ListeningExecutorService executor;
   private final HealthAndActivityBuilder healthAndActivityBuilder;
   private final DeviceHeaderInfoBuilder deviceHeaderInfoBuilder;
+  private final SubDeviceInfoListFactory subDeviceInfoListFactory;
   private final AsyncLoadingCache<String, DeviceOverviewPageData> overviewCache;
 
   @Inject
@@ -82,11 +84,13 @@ public final class GetDeviceOverviewHandler {
       DeviceDataLoader deviceDataLoader,
       ListeningExecutorService executor,
       HealthAndActivityBuilder healthAndActivityBuilder,
-      DeviceHeaderInfoBuilder deviceHeaderInfoBuilder) {
+      DeviceHeaderInfoBuilder deviceHeaderInfoBuilder,
+      SubDeviceInfoListFactory subDeviceInfoListFactory) {
     this.deviceDataLoader = deviceDataLoader;
     this.deviceHeaderInfoBuilder = deviceHeaderInfoBuilder;
     this.executor = executor;
     this.healthAndActivityBuilder = healthAndActivityBuilder;
+    this.subDeviceInfoListFactory = subDeviceInfoListFactory;
     this.overviewCache =
         Caffeine.newBuilder()
             .expireAfterWrite(Duration.ofMinutes(5))
@@ -211,6 +215,14 @@ public final class GetDeviceOverviewHandler {
 
     // HealthAndActivityInfo
     builder.setHealthAndActivity(healthAndActivityBuilder.buildHealthAndActivityInfo(deviceInfo));
+
+    // subDevices for testbeds
+    if (deviceInfo.getDeviceFeature().getTypeList().contains("TestbedDevice")) {
+      builder.addAllSubDevices(
+          subDeviceInfoListFactory.create(
+              allDimensions.stream()
+                  .collect(toImmutableMap(d -> d.getName(), d -> d.getValue(), (v1, v2) -> v1))));
+    }
 
     return builder.build();
   }

@@ -30,6 +30,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -62,6 +63,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOve
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HostInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.SubDeviceInfo;
+import com.google.devtools.mobileharness.fe.v6.service.shared.SubDeviceInfoListFactory;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
@@ -150,6 +153,7 @@ public final class GetDeviceOverviewHandlerTest {
   @Mock private ConfigServiceCapability configServiceCapability;
   @Bind @Mock private ConfigServiceCapabilityFactory configServiceCapabilityFactory;
   @Bind @Mock private DeviceHeaderInfoBuilder deviceHeaderInfoBuilder;
+  @Bind @Mock private SubDeviceInfoListFactory subDeviceInfoListFactory;
   @Bind @Mock private Environment environment;
 
   @Bind private ListeningExecutorService executorService = newDirectExecutorService();
@@ -726,5 +730,24 @@ public final class GetDeviceOverviewHandlerTest {
 
     assertThat(response.getBasicInfo().getBatteryLevel()).isEqualTo(-1);
     assertThat(response.getBasicInfo().getNetwork().getWifiRssi()).isEqualTo(0);
+  }
+
+  @Test
+  public void getDeviceOverview_testbedSubDevices() throws Exception {
+    DeviceInfo testbedDeviceInfo =
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceFeature(
+                DEFAULT_DEVICE_INFO.getDeviceFeature().toBuilder().addType("TestbedDevice"))
+            .build();
+    mockDeviceInfo(testbedDeviceInfo);
+
+    SubDeviceInfo subDevice = SubDeviceInfo.newBuilder().setId("sub_id").build();
+    when(subDeviceInfoListFactory.create(any())).thenReturn(ImmutableList.of(subDevice));
+
+    DeviceOverview response =
+        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get().getOverview();
+
+    assertThat(response.getSubDevicesList()).containsExactly(subDevice);
+    verify(subDeviceInfoListFactory).create(any());
   }
 }
