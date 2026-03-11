@@ -25,6 +25,7 @@ java_library(
     visibility = [
         "//:deviceinfra_all_pkg",
         "//:omnilab_fusion",
+        "//javatests/com/google/cloud/security/assurant/rcmonitoring/processors/common/messageconverters:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
