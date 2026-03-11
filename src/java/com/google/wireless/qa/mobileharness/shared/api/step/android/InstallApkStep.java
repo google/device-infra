@@ -183,7 +183,6 @@ public class InstallApkStep implements InstallApkStepConstants {
         getDexMetadataFilesByName(dexMetadataFiles);
     Set<String> matchedDexMetadataFiles = new HashSet<>();
 
-    Optional<Duration> sleepAfterInstallGms = Optional.empty();
     Optional<Duration> installTimeout = Optional.empty();
     if (spec.hasInstallApkTimeoutSec()) {
       long installTimeoutSec = spec.getInstallApkTimeoutSec();
@@ -249,9 +248,10 @@ public class InstallApkStep implements InstallApkStepConstants {
         dexMetadataFile.ifPresent(dexMetadataPaths::add);
       }
 
+      Optional<Duration> sleepAfterInstall = Optional.empty();
       if (spec.hasSleepAfterInstallGmsSec()) {
         long sleepAfterInstallGmsSec = spec.getSleepAfterInstallGmsSec();
-        sleepAfterInstallGms = Optional.of(Duration.ofSeconds(sleepAfterInstallGmsSec));
+        sleepAfterInstall = Optional.of(Duration.ofSeconds(sleepAfterInstallGmsSec));
         testInfo
             .log()
             .atInfo()
@@ -274,7 +274,7 @@ public class InstallApkStep implements InstallApkStepConstants {
           grantPermissionsOnInstall,
           bypassLowTargetSdkBlock,
           installTimeout,
-          sleepAfterInstallGms);
+          sleepAfterInstall);
     } else if (testInfo
         .jobInfo()
         .params()
@@ -319,7 +319,7 @@ public class InstallApkStep implements InstallApkStepConstants {
           grantPermissionsOnInstall,
           bypassLowTargetSdkBlock,
           installTimeout,
-          sleepAfterInstallGms);
+          Optional.empty());
     }
 
     if (!matchedDexMetadataFiles.equals(dexMetadataFiles)) {
@@ -351,7 +351,7 @@ public class InstallApkStep implements InstallApkStepConstants {
       boolean grantPermissionsOnInstall,
       boolean bypassLowTargetSdkBlock,
       Optional<Duration> installTimeout,
-      Optional<Duration> sleepAfterInstallGms)
+      Optional<Duration> sleepAfterInstall)
       throws MobileHarnessException, InterruptedException {
     String deviceId = device.getDeviceId();
     try {
@@ -387,7 +387,7 @@ public class InstallApkStep implements InstallApkStepConstants {
         installArgsBuilder.setForceQueryable(true);
       }
       installTimeout.ifPresent(installArgsBuilder::setInstallTimeout);
-      sleepAfterInstallGms.ifPresent(installArgsBuilder::setSleepAfterInstallGms);
+      sleepAfterInstall.ifPresent(installArgsBuilder::setSleepAfterInstall);
       apkInstaller.installApkIfNotExist(device, installArgsBuilder.build(), testInfo.log());
       // If currently not on system user 0, ensure apks are installed on system user too.
       // b/142827104

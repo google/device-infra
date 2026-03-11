@@ -405,11 +405,12 @@ public class ApkInstaller {
       }
     }
 
+    // Sleep a while to wait system idle (b/169651299)
+    if (installArgs.sleepAfterInstall().isPresent()) {
+      sleeper.sleep(installArgs.sleepAfterInstall().get());
+    }
+
     if (isGms) {
-      // Sleep a while to wait system idle before updateGmsDimension (b/169651299)
-      if (installArgs.sleepAfterInstallGms().isPresent()) {
-        sleeper.sleep(installArgs.sleepAfterInstallGms().get());
-      }
       // Update Dimension "gms_version" after installation (b/30948987)
       updateGmsDimension(device, log);
     }

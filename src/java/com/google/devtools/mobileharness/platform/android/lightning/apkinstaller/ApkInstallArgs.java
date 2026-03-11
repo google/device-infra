@@ -82,8 +82,8 @@ public abstract class ApkInstallArgs {
   /** Timeout for apk installation. */
   public abstract Optional<Duration> installTimeout();
 
-  /** Sleep after GMS installation. */
-  public abstract Optional<Duration> sleepAfterInstallGms();
+  /** Sleep after apk installation. */
+  public abstract Optional<Duration> sleepAfterInstall();
 
   /** User ID for apk installation. */
   public abstract Optional<String> userId();
@@ -177,7 +177,7 @@ public abstract class ApkInstallArgs {
 
     public abstract Builder setInstallTimeout(Duration installTimeout);
 
-    public abstract Builder setSleepAfterInstallGms(Duration sleepAfterInstallGms);
+    public abstract Builder setSleepAfterInstall(Duration sleepAfterInstall);
 
     public abstract Builder setUserId(String userId);
 
