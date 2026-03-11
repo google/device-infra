@@ -21,7 +21,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Multimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.hash.Hashing;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
@@ -53,9 +52,7 @@ import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.io.File;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import javax.annotation.Nullable;
@@ -68,11 +65,6 @@ import javax.annotation.Nullable;
 public class ApkInstaller {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  private static final Duration WAIT_FOR_STAGED_SESSION_READY_TIMEOUT = Duration.ofSeconds(60L);
-
-  /** Suffix of apex files. */
-  private static final String APEX_SUFFIX = ".apex";
 
   /** Default delimiter of the device property names for the installed apks. */
   @VisibleForTesting static final String DEVICE_PROP_PREFIX_DELIMITER = ":";
@@ -507,51 +499,6 @@ public class ApkInstaller {
   }
 
   /**
-   * Installs multiple packages on the device. None of the packages should be GMS since GMS requires
-   * additional operations. It doesn't check if the apps are already installed. Only applied to real
-   * device with SDK version >= 29.
-   *
-   * @param deviceId device id of the device.
-   * @param userId all the packages are installed to the same user. If not specified, installation
-   *     is for all users.
-   * @param deviceSdkVersion must be >= 29.
-   * @param packageMap multimap from app package name to the corresponding list of app files.
-   * @param grantPermissions whether to grant all runtime permissions.
-   * @param forceNoStreaming if true, always pushes APK to device and invoke Package Manager as
-   *     separate steps.
-   * @param installTimeout the timeout of the whole installation. If null, will use the default
-   *     timeout.
-   * @param log log collector.
-   * @param extraArgs extra arguments to the install-multi-package command.
-   */
-  public void installMultiNonGmsPackages(
-      String deviceId,
-      @Nullable String userId,
-      int deviceSdkVersion,
-      Multimap<String, String> packageMap,
-      boolean grantPermissions,
-      boolean forceNoStreaming,
-      @Nullable Duration installTimeout,
-      @Nullable LogCollector<?> log,
-      String... extraArgs)
-      throws MobileHarnessException, InterruptedException {
-    if (packageMap.containsKey(PackageConstants.PACKAGE_NAME_GMS)) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_APK_INSTALLER_APPLY_MULTI_PACKAGE_INSTALL_TO_GMS,
-          "Don't use install-multi-package to install GMS. Please install GMS separately.");
-    }
-    installMultiPackageHelper(
-        buildUtilArgs(deviceId, userId == null ? MULTI_USER_DEFAULT_ID : userId, deviceSdkVersion),
-        packageMap,
-        grantPermissions,
-        forceNoStreaming,
-        packageMap.values().stream().anyMatch(f -> f.endsWith(APEX_SUFFIX)),
-        installTimeout,
-        log,
-        extraArgs);
-  }
-
-  /**
    * Uninstalls the given package from the android device.
    *
    * <p>Logs will be appended to the test's info. If failed, log the message without throwing out
@@ -873,53 +820,6 @@ public class ApkInstaller {
         logger, log, "Retry to install package %s on device %s...", packageName, serial);
     androidPackageManagerUtil.installPackage(
         utilArgs, installCmdArgs, packageName, artifactPaths, false, installTimeout);
-  }
-
-  /** Helper method for installing multiple packages on device. */
-  private void installMultiPackageHelper(
-      UtilArgs utilArgs,
-      Multimap<String, String> packageMap,
-      boolean grantPermissions,
-      boolean forceNoStreaming,
-      boolean hasApex,
-      @Nullable Duration installTimeout,
-      @Nullable LogCollector<?> log,
-      String... extraArgs)
-      throws MobileHarnessException, InterruptedException {
-    SharedLogUtil.logMsg(
-        logger, log, "Start to install multiple packages to device %s...", utilArgs.serial());
-    InstallCmdArgs installCmdArgs =
-        InstallCmdArgs.builder()
-            .setReplaceExistingApp(true)
-            .setAllowTestPackages(true)
-            .setGrantPermissions(grantPermissions)
-            .setForceNoStreaming(forceNoStreaming)
-            .addExtraArgs(extraArgs)
-            .build();
-    if (utilArgs.sdkVersion().isPresent()
-        && utilArgs.sdkVersion().getAsInt() <= AndroidVersion.PI.getEndSdkVersion()) {
-      for (Map.Entry<String, Collection<String>> packageEntry : packageMap.asMap().entrySet()) {
-        androidPackageManagerUtil.installPackage(
-            utilArgs,
-            installCmdArgs,
-            packageEntry.getKey(),
-            packageEntry.getValue(),
-            /* isRemoteInstall= */ false,
-            installTimeout);
-      }
-    } else {
-      androidPackageManagerUtil.installMultiPackage(
-          utilArgs,
-          installCmdArgs,
-          packageMap,
-          hasApex ? WAIT_FOR_STAGED_SESSION_READY_TIMEOUT : null,
-          installTimeout);
-    }
-    SharedLogUtil.logMsg(
-        logger,
-        log,
-        "Complete the install of multiple packages to device %s...",
-        utilArgs.serial());
   }
 
   private static boolean isMultiUserSupported(int sdkVersion) {
