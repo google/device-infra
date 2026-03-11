@@ -51,6 +51,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil.LocationType;
+import java.net.InetAddress;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -469,6 +470,33 @@ public class AndroidConnectivityUtil {
       result.add(split.get(8));
     }
     return result;
+  }
+
+  /**
+   * Gets the externally visible IP addresses of the device.
+   *
+   * <p>This method filters out the link-local, loopback, and multicast addresses from the available
+   * network link addresses.
+   *
+   * @param serial serial number of the device
+   * @return a list of the IP addresses including ipv4 and ipv6 addresses
+   */
+  public ImmutableList<String> getExternallyVisibleIpAddresses(String serial)
+      throws MobileHarnessException, InterruptedException {
+    return getNetworkLinkAddress(serial).stream()
+        .map(
+            address -> {
+              // Link address might be RFC 1519 CIDR IP address.
+              int slash = address.indexOf('/');
+              return InetAddresses.forString((slash < 0) ? address : address.substring(0, slash));
+            })
+        .filter(
+            address ->
+                !address.isLinkLocalAddress()
+                    && !address.isLoopbackAddress()
+                    && !address.isMulticastAddress())
+        .map(InetAddress::getHostAddress)
+        .collect(toImmutableList());
   }
 
   /**
