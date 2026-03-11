@@ -383,10 +383,7 @@ public class InstallApkStep implements InstallApkStepConstants {
       if (isGms && shouldSkipGmsCompatibilityCheck(testInfo, apkPaths.get(0))) {
         installArgsBuilder.setSkipGmsCompatCheck(true);
       }
-      boolean forceQueryable =
-          deviceSdkVersion >= AndroidVersion.ANDROID_11.getStartSdkVersion()
-              && PackageConstants.ANDROIDX_SERVICES_APK_PACKAGE_NAMES.contains(packageName);
-      if (forceQueryable) {
+      if (PackageConstants.ANDROIDX_SERVICES_APK_PACKAGE_NAMES.contains(packageName)) {
         installArgsBuilder.setForceQueryable(true);
       }
       installTimeout.ifPresent(installArgsBuilder::setInstallTimeout);

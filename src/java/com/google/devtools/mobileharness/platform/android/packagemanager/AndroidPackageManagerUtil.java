@@ -1085,7 +1085,6 @@ public class AndroidPackageManagerUtil {
    * @param grantPermissions whether to grant runtime permissions
    * @param forceNoStreaming whether to add --no-streaming
    * @param installTimeout timeout for APK installation
-   * @param extraArgs extra arguments to the install command
    * @throws MobileHarnessException if error occurs
    * @throws InterruptedException if the thread executing the commands is interrupted
    */
@@ -1095,8 +1094,7 @@ public class AndroidPackageManagerUtil {
       @Nullable String dexMetadataPath,
       boolean grantPermissions,
       boolean forceNoStreaming,
-      @Nullable Duration installTimeout,
-      String... extraArgs)
+      @Nullable Duration installTimeout)
       throws MobileHarnessException, InterruptedException {
     if (dexMetadataPath != null) {
       isDexMetadataSupported(utilArgs);
@@ -1116,7 +1114,6 @@ public class AndroidPackageManagerUtil {
             .setAllowVersionCodeDowngrade(true)
             .setGrantPermissions(grantPermissions)
             .setForceNoStreaming(forceNoStreaming)
-            .addExtraArgs(extraArgs)
             .build(),
         packageName,
         artifactPaths,

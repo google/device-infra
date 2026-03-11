@@ -51,8 +51,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.io.File;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
 import javax.annotation.Nullable;
@@ -277,14 +275,9 @@ public class ApkInstaller {
       throws MobileHarnessException, InterruptedException {
     String firstApkFile = installArgs.apkPaths().get(0);
     boolean clearAppData = installArgs.clearAppData().orElse(false);
-    boolean grantPermissions = installArgs.grantPermissions().orElse(true);
     boolean skipIfDowngrade = installArgs.skipDowngrade().orElse(false);
     boolean skipIfCached = installArgs.skipIfCached().orElse(true);
     boolean skipIfVersionMatch = installArgs.skipIfVersionMatch().orElse(false);
-    boolean forceNoStreaming = installArgs.forceNoStreaming().orElse(DeviceUtil.inSharedLab());
-    boolean forceQueryable = installArgs.forceQueryable().orElse(false);
-    boolean bypassLowTargetSdkBlock = installArgs.bypassLowTargetSdkBlock().orElse(false);
-    List<String> extraArgs = new ArrayList<>();
 
     String deviceId = device.getDeviceId();
     int deviceSdkVersion = systemSettingUtil.getDeviceSdkVersion(deviceId);
@@ -363,6 +356,7 @@ public class ApkInstaller {
             deviceId);
       }
       if (clearAppData) {
+        // Does a clean up before installing GmsCore if requested (b/18693644)
         SharedLogUtil.logMsg(logger, "Clear GmsCore before installation", log);
         androidPackageManagerUtil.clearPackage(
             buildUtilArgs(deviceId, userId, deviceSdkVersion), PackageConstants.PACKAGE_NAME_GMS);
@@ -379,14 +373,9 @@ public class ApkInstaller {
           packageName,
           deviceId,
           userId);
-      if (forceQueryable) {
-        extraArgs.add("--force-queryable");
-      }
-      if (bypassLowTargetSdkBlock
-          && deviceSdkVersion > AndroidVersion.ANDROID_13.getEndSdkVersion()) {
-        extraArgs.add("--bypass-low-target-sdk-block");
-      }
-      // If the package name is gms, ignore the grant runtime permissions switch.
+      boolean grantPermissions = installArgs.grantPermissions().orElse(true);
+      // Shared Lab devices with customized adbd don't allow streamed install (b/147886797)
+      boolean forceNoStreaming = installArgs.forceNoStreaming().orElse(DeviceUtil.inSharedLab());
       installApkHelper(
           buildUtilArgs(deviceId, userId, deviceSdkVersion),
           packageName,
@@ -394,11 +383,17 @@ public class ApkInstaller {
               .addAll(installArgs.apkPaths())
               .addAll(installArgs.dexMetadataPaths())
               .build(),
-          isGms || grantPermissions,
-          forceNoStreaming,
+          InstallCmdArgs.builder()
+              .setReplaceExistingApp(true)
+              .setAllowTestPackages(true)
+              .setAllowVersionCodeDowngrade(true)
+              .setGrantPermissions(isGms || grantPermissions)
+              .setForceNoStreaming(forceNoStreaming)
+              .setForceQueryable(installArgs.forceQueryable().orElse(false))
+              .setBypassLowTargetSdkBlock(installArgs.bypassLowTargetSdkBlock().orElse(false))
+              .build(),
           installArgs.installTimeout().orElse(null),
-          log,
-          extraArgs.toArray(new String[0]));
+          log);
       success = true;
       SharedLogUtil.logMsg(
           logger, log, "Successfully installed package %s on device %s", packageName, deviceId);
@@ -411,13 +406,16 @@ public class ApkInstaller {
     }
 
     if (isGms) {
+      // Sleep a while to wait system idle before updateGmsDimension (b/169651299)
       if (installArgs.sleepAfterInstallGms().isPresent()) {
         sleeper.sleep(installArgs.sleepAfterInstallGms().get());
       }
+      // Update Dimension "gms_version" after installation (b/30948987)
       updateGmsDimension(device, log);
     }
 
     if (clearAppData) {
+      // Clean up after installing app if asked. For GmsCore see b/28943187.
       SharedLogUtil.logMsg(logger, log, "Clear app %s after installation", packageName);
       androidPackageManagerUtil.clearPackage(
           buildUtilArgs(deviceId, userId, deviceSdkVersion), packageName);
@@ -760,24 +758,13 @@ public class ApkInstaller {
       UtilArgs utilArgs,
       String packageName,
       ImmutableList<String> artifactPaths,
-      boolean grantPermissions,
-      boolean forceNoStreaming,
+      InstallCmdArgs installCmdArgs,
       @Nullable Duration installTimeout,
-      @Nullable LogCollector<?> log,
-      String... extraArgs)
+      @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
     String serial = utilArgs.serial();
     boolean installThrowsException = false;
     String installExceptionMsg = "";
-    InstallCmdArgs installCmdArgs =
-        InstallCmdArgs.builder()
-            .setReplaceExistingApp(true)
-            .setAllowTestPackages(true)
-            .setAllowVersionCodeDowngrade(true)
-            .setGrantPermissions(grantPermissions)
-            .setForceNoStreaming(forceNoStreaming)
-            .addExtraArgs(extraArgs)
-            .build();
     try {
       androidPackageManagerUtil.installPackage(
           utilArgs, installCmdArgs, packageName, artifactPaths, false, installTimeout);

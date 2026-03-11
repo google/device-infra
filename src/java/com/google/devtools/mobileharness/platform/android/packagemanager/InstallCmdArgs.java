@@ -39,6 +39,10 @@ public abstract class InstallCmdArgs {
 
   private static final String ARG_FORCE_NO_STREAMING = "--no-streaming";
 
+  private static final String ARG_FORCE_QUERYABLE = "--force-queryable";
+
+  private static final String ARG_BYPASS_LOW_TARGET_SDK_BLOCK = "--bypass-low-target-sdk-block";
+
   /** Whether to replace existing application. Default to be false. */
   public abstract boolean replaceExistingApp();
 
@@ -59,6 +63,15 @@ public abstract class InstallCmdArgs {
    * be false.
    */
   public abstract boolean forceNoStreaming();
+
+  /** If true, forces the app to be visible to all other apps on the device. Default to be false. */
+  public abstract boolean forceQueryable();
+
+  /**
+   * If true, bypasses the potential blocking of the install due to low target sdk. Default to be
+   * false.
+   */
+  public abstract boolean bypassLowTargetSdkBlock();
 
   /** The list of all extra args passing to adb cmd. Default to be empty. */
   public abstract ImmutableList<String> extraArgs();
@@ -95,6 +108,12 @@ public abstract class InstallCmdArgs {
     if (forceNoStreaming() && sdkVersion >= 27) {
       args.add(ARG_FORCE_NO_STREAMING);
     }
+    if (forceQueryable() && sdkVersion >= 30) {
+      args.add(ARG_FORCE_QUERYABLE);
+    }
+    if (bypassLowTargetSdkBlock() && sdkVersion >= 34) {
+      args.add(ARG_BYPASS_LOW_TARGET_SDK_BLOCK);
+    }
     args.addAll(extraArgs());
     return args.build().toArray(new String[0]);
   }
@@ -108,7 +127,8 @@ public abstract class InstallCmdArgs {
         .setGrantPermissions(false)
         .setInstant(false)
         .setForceNoStreaming(false)
-        .setExtraArgs(ImmutableList.of());
+        .setForceQueryable(false)
+        .setBypassLowTargetSdkBlock(false);
   }
 
   /** Auto value builder for {@link InstallCmdArgs}. */
@@ -126,13 +146,21 @@ public abstract class InstallCmdArgs {
 
     public abstract Builder setForceNoStreaming(boolean value);
 
-    public abstract Builder setExtraArgs(ImmutableList<String> extras);
+    public abstract Builder setForceQueryable(boolean value);
+
+    public abstract Builder setBypassLowTargetSdkBlock(boolean value);
 
     public abstract ImmutableList.Builder<String> extraArgsBuilder();
 
     @CanIgnoreReturnValue
     public Builder addExtraArgs(String... extras) {
       extraArgsBuilder().add(extras);
+      return this;
+    }
+
+    @CanIgnoreReturnValue
+    public Builder addAllExtraArgs(Iterable<String> extras) {
+      extraArgsBuilder().addAll(extras);
       return this;
     }
 

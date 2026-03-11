@@ -239,7 +239,7 @@ public class AndroidPhone implements Device {
       extraArgsBuilder.add(STAGED_READY_TIMEOUT, String.valueOf(stagedReady.toMillis()));
     }
     InstallCmdArgs installCmdArgs =
-        InstallCmdArgs.builder().setExtraArgs(extraArgsBuilder.build()).build();
+        InstallCmdArgs.builder().addAllExtraArgs(extraArgsBuilder.build()).build();
 
     try {
       androidPackageManagerUtil.installMultiPackage(
