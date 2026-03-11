@@ -118,5 +118,9 @@ message AndroidRoboTestSpec {
     help: "Internal name of the infrastructure invoking the crawl."
   }];
 
+  optional string user_project_override = 26 [
+    (field_detail) = { help: "Project name to override for internal users." }
+  ];
+
   reserved 1, 15;
 }

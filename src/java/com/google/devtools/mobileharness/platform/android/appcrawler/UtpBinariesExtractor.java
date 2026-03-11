@@ -29,6 +29,9 @@ public class UtpBinariesExtractor {
       "/com/google/devtools/mobileharness/platform/android/appcrawler/cli/UtpRoboCli_deploy.jar";
   private static final String UTP_LAUNCHER_RESOURCE_PATH =
       "/com/google/testing/platform/launcher/launcher_with_protobuf_deploy.jar";
+
+  private static final String UTP_LAUNCHER_WITH_ENVELOPE_RESOURCE_PATH =
+      "/com/google/testing/platform/launcher/launcher_with_envelope_loader_deploy.jar";
   private static final String UTP_MAIN_RESOURCE_PATH =
       "/com/google/testing/platform/main/main_deploy.jar";
   private static final String UTP_DEVICE_PROVIDER_RESOURCE_PATH =
@@ -48,11 +51,13 @@ public class UtpBinariesExtractor {
   /** Setup UTP binaries needed to run the test. */
   public UtpBinaries setUpUtpBinaries() throws MobileHarnessException {
     String cliPath = getResourceFile(CLI_RESOURCE_PATH);
-    String launcherPath = getResourceFile(UTP_LAUNCHER_RESOURCE_PATH);
+    String launcherResourcePath = UTP_LAUNCHER_RESOURCE_PATH;
+    String launcherPath = getResourceFile(launcherResourcePath);
     String mainPath = getResourceFile(UTP_MAIN_RESOURCE_PATH);
     String driverPath = getResourceFile(UTP_ANDROID_ROBO_DRIVER_RESOURCE_PATH);
     String providerPath = getResourceFile(UTP_DEVICE_PROVIDER_RESOURCE_PATH);
     String stubAppPath = getResourceFile(STUB_APP_RESOURCE_PATH);
+
     return UtpBinaries.create(
         cliPath, launcherPath, mainPath, providerPath, driverPath, stubAppPath);
   }
