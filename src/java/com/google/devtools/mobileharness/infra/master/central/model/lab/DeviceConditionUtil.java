@@ -188,7 +188,14 @@ public final class DeviceConditionUtil {
   private static boolean exceedRemovalThreshold(DeviceDao deviceDao) {
     Instant timestamp = Instant.ofEpochMilli(deviceDao.condition().getSyncTimeMsFromMaster());
     List<String> types = deviceDao.profile().getFeature().getTypeList();
-    if (types.contains(CLOUD_TF_AVD_DEVICE_TYPE) || types.contains(ANDROID_LOCAL_EMULATOR_TYPE)) {
+    if (types.contains(CLOUD_TF_AVD_DEVICE_TYPE)
+        || types.contains(ANDROID_LOCAL_EMULATOR_TYPE)
+        || getDeviceDimension(deviceDao, Name.DEVICE_CLASS_NAME.lowerCaseName())
+            .filter(
+                deviceClassName ->
+                    deviceClassName.equals(CLOUD_TF_AVD_DEVICE_TYPE)
+                        || deviceClassName.equals(ANDROID_LOCAL_EMULATOR_TYPE))
+            .isPresent()) {
       return timestamp
           .plus(Flags.instance().ephemeralRemovalThreshold.get())
           .isBefore(InstantSource.system().instant());

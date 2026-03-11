@@ -259,6 +259,35 @@ public class DeviceConditionUtilTest {
   }
 
   @Test
+  public void shouldRemove_expiredEphemeralDevice_byDimension() {
+    DeviceCondition deviceCondition =
+        DeviceCondition.newBuilder()
+            .setStatusFromLab(DeviceStatus.MISSING)
+            .setSyncTimeMsFromMaster(
+                Instant.now().minus(Duration.ofDays(1)).minusSeconds(1L).toEpochMilli())
+            .setSyncTimeMsFromLab(
+                Instant.now().minus(Duration.ofDays(1)).minusSeconds(1L).toEpochMilli())
+            .build();
+    deviceDao =
+        DeviceDao.create(
+            deviceLocator,
+            DeviceProfile.newBuilder()
+                .setFeature(
+                    DeviceFeature.newBuilder()
+                        .setCompositeDimension(
+                            DeviceCompositeDimension.newBuilder()
+                                .addSupportedDimension(
+                                    DeviceDimension.newBuilder()
+                                        .setName("device_class_name")
+                                        .setValue("CloudTFAvdDevice"))))
+                .build(),
+            deviceCondition);
+
+    assertThat(DeviceConditionUtil.shouldRemoveMissingDevice(deviceDao, ImmutableSet.of()))
+        .isTrue();
+  }
+
+  @Test
   public void shouldRemove_expiredAndroidLocalEmulator() {
     DeviceCondition deviceCondition =
         DeviceCondition.newBuilder()
