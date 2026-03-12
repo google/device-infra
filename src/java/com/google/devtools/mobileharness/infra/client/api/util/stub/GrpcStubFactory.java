@@ -18,8 +18,10 @@ package com.google.devtools.mobileharness.infra.client.api.util.stub;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import com.google.devtools.mobileharness.infra.lab.rpc.stub.DeviceOpsStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.ExecTestStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.PrepareTestStub;
+import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.DeviceOpsGrpcStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.ExecTestGrpcStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.PrepareTestGrpcStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
@@ -67,6 +69,15 @@ final class GrpcStubFactory implements StubFactory {
     return new PrepareTestGrpcStub(
         getBlockingInterfaceFactory(stubConfiguration)
             .createPrepareTestBlockingInterface(stubConfiguration));
+  }
+
+  @Override
+  public DeviceOpsStub createDeviceOpsStub(StubConfiguration stubConfiguration) {
+    return new DeviceOpsGrpcStub(
+        getBlockingInterfaceFactory(stubConfiguration)
+            .createDeviceOpsBlockingInterface(stubConfiguration),
+        getFutureInterfaceFactory(stubConfiguration)
+            .createDeviceOpsFutureInterface(stubConfiguration));
   }
 
   @Override
