@@ -332,7 +332,7 @@ public class SessionResultHandlerUtil {
     ImmutableList<TradefedResultBundle> tradefedResultBundles =
         tradefedResultBundlesBuilder.build();
 
-    ImmutableSet.Builder<String> skippedModuleIdsBuilder = ImmutableSet.builder();
+    ImmutableList.Builder<Module> skippedNonTradefedModulesBuilder = ImmutableList.builder();
     List<MoblyReportInfo> moblyReportInfos = new ArrayList<>();
     // Copies non-tradefed test relevant log and result files to dedicated locations
     for (Entry<JobInfo, Optional<TestInfo>> testEntry : nonTradefedTests.entrySet()) {
@@ -344,14 +344,6 @@ public class SessionResultHandlerUtil {
       }
       curSessionHasNonTfJob = true;
       TestInfo test = testEntry.getValue().get();
-
-      // Check if the module is skipped by feature checker.
-      JobInfo jobInfo = testEntry.getKey();
-      if (jobInfo.resultWithCause().get().type() == TestResult.SKIP
-          && !jobInfo.properties().getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)) {
-        String moduleId = getExpandedNonTfModuleId(jobInfo);
-        skippedModuleIdsBuilder.add(moduleId);
-      }
 
       if (!previousSessionHasTfModule) {
         previousSessionHasTfModule =
@@ -370,6 +362,7 @@ public class SessionResultHandlerUtil {
           .properties()
           .getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS)
           .orElse(false)) {
+        JobInfo jobInfo = testEntry.getKey();
         callAndLogException(
             () -> {
               Optional<NonTradefedTestResult> nonTradefedTestResult =
@@ -398,7 +391,7 @@ public class SessionResultHandlerUtil {
                               res.deviceBuildFingerprint(),
                               res.buildAttributesFile(),
                               res.moduleResultFile(),
-                              test.jobInfo()
+                              jobInfo
                                   .params()
                                   .getOptional(
                                       MoblyReportInfo.MOBLY_TEST_ENTRY_CONVERTER_CLASS_PARAM))));
@@ -407,8 +400,22 @@ public class SessionResultHandlerUtil {
             String.format(
                 "Failed to copy non-tradefed test [%s]'s result files to result dir [%s].",
                 test.locator().getId(), nonTradefedTestResultsDir));
+        // Check if the module is skipped by feature checker.
+        if (jobInfo.resultWithCause().get().type() == TestResult.SKIP) {
+          Module skippedModule =
+              CompatibilityReportMerger.createSkippedModule(
+                  jobInfo.properties().get(SessionHandlerHelper.XTS_MODULE_ABI_PROP),
+                  getParameterizedModuleName(jobInfo),
+                  test.resultWithCause()
+                      .get()
+                      .causeException()
+                      .map(Throwable::getMessage)
+                      .orElse(""));
+          skippedNonTradefedModulesBuilder.add(skippedModule);
+        }
       }
     }
+    ImmutableList<Module> skippedNonTradefedModules = skippedNonTradefedModulesBuilder.build();
 
     Optional<Result> mergedTradefedReport = Optional.empty();
     if (!tradefedResultBundles.isEmpty()) {
@@ -416,9 +423,7 @@ public class SessionResultHandlerUtil {
           compatibilityReportMerger.mergeResultBundles(
               tradefedResultBundles, sessionRequestInfo.skipDeviceInfo().orElse(false));
       mergedTradefedReport = parseResult.report();
-      skippedModuleIdsBuilder.addAll(parseResult.skippedModuleIds());
     }
-    ImmutableSet<String> skippedModuleIds = skippedModuleIdsBuilder.build();
 
     boolean skipDeviceInfo = sessionRequestInfo.skipDeviceInfo().orElse(false);
     Optional<Result> mergedNonTradefedReport = Optional.empty();
@@ -430,6 +435,9 @@ public class SessionResultHandlerUtil {
     List<Result> reportList = new ArrayList<>();
     mergedTradefedReport.ifPresent(reportList::add);
     mergedNonTradefedReport.ifPresent(reportList::add);
+    if (!skippedNonTradefedModules.isEmpty()) {
+      reportList.add(Result.newBuilder().addAllModuleInfo(skippedNonTradefedModules).build());
+    }
 
     Optional<Result> mergedReport =
         compatibilityReportMerger.mergeReports(
@@ -553,8 +561,7 @@ public class SessionResultHandlerUtil {
                     sessionRequestInfo.retrySessionId().get(),
                     sessionRequestInfo.retryType().orElse(null),
                     mergedReport.orElse(null),
-                    sessionRequestInfo.moduleNames(),
-                    skippedModuleIds)
+                    sessionRequestInfo.moduleNames())
                 : retryReportMerger.mergeReports(
                     XtsDirUtil.getXtsResultsDir(
                         Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
@@ -562,8 +569,7 @@ public class SessionResultHandlerUtil {
                     sessionRequestInfo.retrySessionResultDirName().orElse(null),
                     sessionRequestInfo.retryType().orElse(null),
                     mergedReport.orElse(null),
-                    sessionRequestInfo.moduleNames(),
-                    skippedModuleIds);
+                    sessionRequestInfo.moduleNames());
         finalReport = mergedResult.mergedResult();
         previousResult = mergedResult.previousResult();
       } else {
@@ -1334,15 +1340,21 @@ public class SessionResultHandlerUtil {
 
   /** Returns the expanded non-tradefed module id of the given non-tradefed job. */
   public static String getExpandedNonTfModuleId(JobInfo jobInfo) {
+    String moduleName = getParameterizedModuleName(jobInfo);
+    String abi = jobInfo.properties().get(SessionHandlerHelper.XTS_MODULE_ABI_PROP);
+    if (!isNullOrEmpty(abi)) {
+      moduleName = AbiUtil.createId(abi, moduleName);
+    }
+    return moduleName;
+  }
+
+  /** Returns the module id of the given test info. */
+  private static String getParameterizedModuleName(JobInfo jobInfo) {
     String moduleName =
         jobInfo.properties().getOptional(SessionHandlerHelper.XTS_MODULE_NAME_PROP).orElse("");
-    String abi = jobInfo.properties().get(SessionHandlerHelper.XTS_MODULE_ABI_PROP);
     String parameter = jobInfo.properties().get(SessionHandlerHelper.XTS_MODULE_PARAMETER_PROP);
     if (!isNullOrEmpty(parameter)) {
       moduleName = String.format("%s[%s]", moduleName, parameter);
-    }
-    if (!isNullOrEmpty(abi)) {
-      moduleName = AbiUtil.createId(abi, moduleName);
     }
     return moduleName;
   }

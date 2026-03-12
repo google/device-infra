@@ -23,12 +23,12 @@ import com.android.tradefed.metrics.proto.MetricMeasurement.Measurements;
 import com.android.tradefed.metrics.proto.MetricMeasurement.Metric;
 import com.android.tradefed.result.proto.TestRecordProto.TestRecord;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.BuildInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Reason;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger.ParseResult;
@@ -60,6 +60,10 @@ public final class CompatibilityReportMergerTest {
 
   private static final String CTS_TEST_RESULT_XML_3 =
       TestRunfilesUtil.getRunfilesLocation("result/report/testdata/xml/cts_test_result_3.xml");
+
+  private static final String CTS_TEST_RESULT_WITH_SKIPPED_MODULES_XML =
+      TestRunfilesUtil.getRunfilesLocation(
+          "result/report/testdata/xml/cts_test_result_with_skipped_modules.xml");
 
   private static final String CTS_TEST_RECORD_PB_FILE =
       TestRunfilesUtil.getRunfilesLocation("result/report/testdata/xml/cts_test_record.pb");
@@ -127,7 +131,7 @@ public final class CompatibilityReportMergerTest {
   }
 
   @Test
-  public void insertMetadataFromTestRecord_success() throws Exception {
+  public void insertDataFromTestRecord_metadata_success() throws Exception {
     List<ParseResult> res =
         reportMerger.parseResultBundles(
             ImmutableList.of(
@@ -139,13 +143,68 @@ public final class CompatibilityReportMergerTest {
     TestRecord testRecord =
         TextFormat.parse(Files.readString(Path.of(CTS_TEST_RECORD_PB_FILE)), TestRecord.class);
 
-    Result updatedReport =
-        CompatibilityReportMerger.insertMetadataFromTestRecord(report, testRecord);
+    Result updatedReport = CompatibilityReportMerger.insertDataFromTestRecord(report, testRecord);
 
     assertThat(updatedReport.getModuleInfoList().get(0).getPrepTimeMillis()).isEqualTo(123456);
     assertThat(updatedReport.getModuleInfoList().get(0).getTeardownTimeMillis()).isEqualTo(654321);
     assertThat(updatedReport.getModuleInfoList().get(1).getPrepTimeMillis()).isEqualTo(321);
     assertThat(updatedReport.getModuleInfoList().get(1).getTeardownTimeMillis()).isEqualTo(123);
+  }
+
+  @Test
+  public void insertDataFromTestRecord_skippedModules_success() throws Exception {
+    List<ParseResult> res =
+        reportMerger.parseResultBundles(
+            ImmutableList.of(
+                TradefedResultBundle.of(
+                    Path.of(CTS_TEST_RESULT_WITH_SKIPPED_MODULES_XML),
+                    /* testRecordFile= */ Optional.empty(),
+                    /* modules= */ ImmutableList.of())));
+    Result report = res.get(0).report().get();
+    Optional<TestRecord> testRecord =
+        CompatibilityReportMerger.readTestRecord(Path.of(CTS_SKIPPED_MODULES_TEST_RECORD_PB_FILE));
+
+    Result updatedReport =
+        CompatibilityReportMerger.insertDataFromTestRecord(report, testRecord.get());
+
+    assertThat(updatedReport.getModuleInfoList()).hasSize(6);
+
+    // Original modules are not changed.
+    assertThat(updatedReport.getModuleInfoList().subList(0, 3))
+        .isEqualTo(report.getModuleInfoList());
+    // Skipped modules are added.
+    assertThat(updatedReport.getModuleInfoList().subList(3, 6))
+        .containsExactly(
+            Module.newBuilder()
+                .setSkipped(true)
+                .setDone(true)
+                .setName("CtsCarTestCases")
+                .setAbi("armeabi-v7a")
+                .setReason(
+                    Reason.newBuilder()
+                        .setMsg("Module CtsCarTestCases is skipped by module controller.")
+                        .build())
+                .build(),
+            Module.newBuilder()
+                .setSkipped(true)
+                .setDone(true)
+                .setName("CtsCarBuiltinApiTestCases")
+                .setAbi("arm64-v8a")
+                .setReason(
+                    Reason.newBuilder()
+                        .setMsg("Module CtsCarBuiltinApiTestCases is skipped by module controller.")
+                        .build())
+                .build(),
+            Module.newBuilder()
+                .setSkipped(true)
+                .setDone(true)
+                .setName("CtsCarBuiltinApiTestCases")
+                .setAbi("armeabi-v7a")
+                .setReason(
+                    Reason.newBuilder()
+                        .setMsg("Module CtsCarBuiltinApiTestCases is skipped by module controller.")
+                        .build())
+                .build());
   }
 
   @Test
@@ -421,25 +480,58 @@ public final class CompatibilityReportMergerTest {
         .isEqualTo(ExtErrorId.REPORT_MERGER_DIFF_DEVICE_BUILD_FINGERPRINT_FOUND);
   }
 
-  @Test
-  public void getSkippedModules_success() throws Exception {
-    Optional<TestRecord> testRecord =
-        CompatibilityReportMerger.readTestRecord(Path.of(CTS_SKIPPED_MODULES_TEST_RECORD_PB_FILE));
-    ImmutableSet<String> skippedModules =
-        CompatibilityReportMerger.getSkippedModuleIds(testRecord.get());
-
-    assertThat(skippedModules)
-        .containsExactly(
-            "arm64-v8a CtsCarBuiltinApiTestCases",
-            "armeabi-v7a CtsCarBuiltinApiTestCases",
-            "arm64-v8a CtsCarTestCases",
-            "armeabi-v7a CtsCarTestCases");
-  }
-
   private Metric createBasicMetric(long value) {
     return Metric.newBuilder()
         .setMeasurements(Measurements.newBuilder().setSingleInt(value))
         .build();
+  }
+
+  @Test
+  public void mergeReports_withSkippedModules() throws Exception {
+    Result report1 =
+        Result.newBuilder()
+            .setSummary(
+                Summary.newBuilder()
+                    .setPassed(10)
+                    .setFailed(1)
+                    .setModulesDone(1)
+                    .setModulesTotal(1))
+            .addModuleInfo(
+                Module.newBuilder()
+                    .setName("Module1")
+                    .setAbi("arm64-v8a")
+                    .setDone(true)
+                    .setPassed(10)
+                    .setFailedTests(1)
+                    .setTotalTests(11))
+            .build();
+    Result report2 =
+        Result.newBuilder()
+            .addModuleInfo(
+                Module.newBuilder()
+                    .setName("Module1")
+                    .setAbi("arm64-v8a")
+                    .setDone(true)
+                    .setSkipped(true))
+            .addModuleInfo(
+                Module.newBuilder()
+                    .setName("Module2")
+                    .setAbi("arm64-v8a")
+                    .setSkipped(true)
+                    .setDone(true))
+            .build();
+
+    Optional<Result> mergedReport =
+        reportMerger.mergeReports(
+            ImmutableList.of(report1, report2),
+            /* validateReports= */ false,
+            /* skipDeviceInfo= */ true);
+
+    assertThat(mergedReport).isPresent();
+    assertThat(mergedReport.get().getSummary().getModulesDone()).isEqualTo(1);
+    assertThat(mergedReport.get().getSummary().getModulesTotal()).isEqualTo(1);
+    assertThat(mergedReport.get().getModuleInfoList()).hasSize(2);
+    assertThat(mergedReport.get().getModuleInfo(1).getSkipped()).isTrue();
   }
 
   @Test

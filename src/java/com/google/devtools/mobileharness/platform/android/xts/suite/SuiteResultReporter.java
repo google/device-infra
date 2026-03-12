@@ -117,6 +117,9 @@ public class SuiteResultReporter {
           moduleCheckers.put(getModuleCheckerName(module), module);
           continue;
         }
+        if (module.getSkipped()) {
+          continue;
+        }
         totalModules.incrementAndGet();
         if (module.getDone()) {
           completeModules.incrementAndGet();

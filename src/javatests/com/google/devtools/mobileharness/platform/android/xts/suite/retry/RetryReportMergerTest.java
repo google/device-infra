@@ -155,8 +155,7 @@ public final class RetryReportMergerTest {
             /* previousSessionResultDirName= */ null,
             /* retryType= */ null,
             /* retryResult= */ null,
-            /* passedInModules= */ ImmutableList.of(),
-            /* skippedModuleIds= */ ImmutableSet.of());
+            /* passedInModules= */ ImmutableList.of());
 
     assertThat(mergedResult.mergedResult()).isEqualTo(expectedMergedReport);
   }
@@ -180,8 +179,7 @@ public final class RetryReportMergerTest {
             "session_id",
             /* retryType= */ null,
             /* retryResult= */ null,
-            /* passedInModules= */ ImmutableList.of(),
-            ImmutableSet.of());
+            /* passedInModules= */ ImmutableList.of());
 
     assertThat(mergedResult.mergedResult()).isEqualTo(expectedMergedReport);
   }
@@ -218,8 +216,7 @@ public final class RetryReportMergerTest {
             /* previousSessionResultDirName= */ null,
             /* retryType= */ null,
             retryReport,
-            /* passedInModules= */ ImmutableList.of(),
-            /* skippedModuleIds= */ ImmutableSet.of());
+            /* passedInModules= */ ImmutableList.of());
 
     assertThat(mergedResult.mergedResult()).isEqualTo(expectedMergedReport);
   }
@@ -249,8 +246,7 @@ public final class RetryReportMergerTest {
             /* previousSessionResultDirName= */ null,
             /* retryType= */ null,
             retryReport,
-            /* passedInModules= */ ImmutableList.of(),
-            /* skippedModuleIds= */ ImmutableSet.of());
+            /* passedInModules= */ ImmutableList.of());
 
     assertThat(mergedResult.mergedResult()).isEqualTo(expectedMergedReport);
   }
@@ -289,8 +285,7 @@ public final class RetryReportMergerTest {
             /* previousSessionResultDirName= */ null,
             RetryType.NOT_EXECUTED,
             retryReport,
-            /* passedInModules= */ ImmutableList.of(),
-            /* skippedModuleIds= */ ImmutableSet.of());
+            /* passedInModules= */ ImmutableList.of());
 
     assertThat(mergedResult.mergedResult()).isEqualTo(expectedMergedReport);
   }
@@ -332,8 +327,7 @@ public final class RetryReportMergerTest {
             /* previousSessionResultDirName= */ null,
             /* retryType= */ null,
             retryReport,
-            /* passedInModules= */ ImmutableList.of("CtsVcnTestCases"),
-            /* skippedModuleIds= */ ImmutableSet.of());
+            /* passedInModules= */ ImmutableList.of("CtsVcnTestCases"));
 
     assertThat(mergedResult.mergedResult()).isEqualTo(expectedMergedReport);
   }
@@ -375,8 +369,7 @@ public final class RetryReportMergerTest {
             /* previousSessionResultDirName= */ null,
             /* retryType= */ null,
             retryReport,
-            /* passedInModules= */ ImmutableList.of("CtsVcnTestCases"),
-            /* skippedModuleIds= */ ImmutableSet.of("arm64-v8a CtsVcnTestCases"));
+            /* passedInModules= */ ImmutableList.of("CtsVcnTestCases"));
 
     assertThat(mergedResult.mergedResult()).isEqualTo(expectedMergedReport);
   }
@@ -420,8 +413,7 @@ public final class RetryReportMergerTest {
             /* previousSessionResultDirName= */ null,
             /* retryType= */ null,
             retryReport,
-            /* passedInModules= */ ImmutableList.of(""),
-            /* skippedModuleIds= */ ImmutableSet.of());
+            /* passedInModules= */ ImmutableList.of(""));
 
     assertThat(mergedResult.mergedResult()).isEqualTo(expectedMergedReport);
   }

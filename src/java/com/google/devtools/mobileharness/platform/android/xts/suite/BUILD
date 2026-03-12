@@ -175,7 +175,10 @@ java_library(
 java_library(
     name = "suite_result_reporter",
     srcs = ["SuiteResultReporter.java"],
-    visibility = ["//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
+    ],
     deps = [
         ":suite_common_util",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
