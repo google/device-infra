@@ -47,6 +47,8 @@ public class Result {
 
   static final String PARAM_ALLOW_OVERRIDE_PASS_TO_ERROR = "allow_override_pass_to_error";
 
+  static final String PARAM_ALLOW_OVERRIDE_FAIL_TO_ERROR = "allow_override_fail_to_error";
+
   /** Job param to print stack trace when setting the result as PASS. True by default. */
   static final String PARAM_PRINT_STACK_TRACE_FOR_PASS_TEST = "print_stack_trace_for_pass_test";
 
@@ -170,17 +172,29 @@ public class Result {
         return this;
       }
 
-      if ((this.result.equals(TestResult.PASS)
-          && ((!params.isTrue(PARAM_ALLOW_OVERRIDE_PASS_TO_ERROR)
-                  && result.equals(TestResult.ERROR))
-              || (!params.isTrue(PARAM_ALLOW_OVERRIDE_PASS_TO_TIMEOUT)
-                  && result.equals(TestResult.TIMEOUT))))) {
+      boolean preventOverrideOfExistingPassToError =
+          this.result.equals(TestResult.PASS)
+              && !params.isTrue(PARAM_ALLOW_OVERRIDE_PASS_TO_ERROR)
+              && result.equals(TestResult.ERROR);
+
+      boolean preventOverrideOfExistingPassToTimeout =
+          this.result.equals(TestResult.PASS)
+              && !params.isTrue(PARAM_ALLOW_OVERRIDE_PASS_TO_TIMEOUT)
+              && result.equals(TestResult.TIMEOUT);
+
+      if (preventOverrideOfExistingPassToError || preventOverrideOfExistingPassToTimeout) {
         logger.atWarning().withStackTrace(StackSize.FULL).log(
             "Prevent overriding %s result to %s", this, formatResultWithCause(result, cause));
         return this;
       }
 
-      if ((this.result.equals(TestResult.FAIL) || this.result.equals(TestResult.SKIP))
+      boolean allowOverrideOfExistingFailToError =
+          this.result.equals(TestResult.FAIL) /* Check existing */
+              && result.equals(TestResult.ERROR) /* Check supplied */
+              && params.isTrue(PARAM_ALLOW_OVERRIDE_FAIL_TO_ERROR); /* Check override parameter */
+
+      if (!allowOverrideOfExistingFailToError
+          && (this.result.equals(TestResult.FAIL) || this.result.equals(TestResult.SKIP))
           && (result.equals(TestResult.ERROR) || result.equals(TestResult.TIMEOUT))) {
         logger.atWarning().withStackTrace(StackSize.FULL).log(
             "Prevent overriding %s result to %s", this, formatResultWithCause(result, cause));
