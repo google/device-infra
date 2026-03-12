@@ -336,6 +336,7 @@ export class HostOverviewPage implements OnInit, OnChanges {
     return '';
   }
 
+  // leave an empty string for OSS to avoid compiler error.
   getTradefedLogUrl(): string {
 
     return '';

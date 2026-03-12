@@ -176,6 +176,10 @@ export class DeviceActionBar {
     deviceId: string,
     config: DeviceConfig | null,
   ) {
+    // the configuration UI has more features in google internal,
+    // thus we need a Wizard to guide the user to complete the configuration.
+    // While for OSS, the configuration UI is simpler
+    // thus we can directly use the HostSettings component.
     if (this.environment.isGoogleInternal()) {
       this.dialog.open(DeviceWizard, {
         data: {source: action, deviceId, config},

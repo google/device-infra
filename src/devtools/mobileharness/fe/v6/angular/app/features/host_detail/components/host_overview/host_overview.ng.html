@@ -1,6 +1,7 @@
 <app-master-detail-layout [navList]="navList">
   <app-info-card #overviewSection id="overview" title="Overview" [collapsible]="false">
     @if (isGoogleInternal && isAteHost()) {
+      <!-- Only gogole internal Host with ATE Lab type has tradefed log on pantheon -->
       <div operations class="operation-button">
         <a href="{{ getTradefedLogUrl() }}" target="_blank">
           <mat-icon>description</mat-icon>
@@ -41,6 +42,7 @@
   </app-info-card>
   <app-info-card #overviewSection id="lab-server" title="Lab Server" [collapsible]="false">
     @if (isGoogleInternal) {
+      <!-- Only gogole internal Host has lab server log on pantheon -->
       <div operations class="operation-button">
         <a href="{{ getLogUrl('lab') }}" target="_blank">
           <mat-icon>article</mat-icon>
