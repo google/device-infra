@@ -166,6 +166,7 @@ maven.install(
         "org.jetbrains.kotlinx:atomicfu:0.27.0",
         "org.jline:jline:3.25.1",
         "org.json:json:20231013",
+        "org.pantsbuild:jarjar:1.7.2",
         "org.reflections:reflections:0.9.10",
         "org.robolectric:android-all:14-robolectric-10818077",
         "org.yaml:snakeyaml:2.2",

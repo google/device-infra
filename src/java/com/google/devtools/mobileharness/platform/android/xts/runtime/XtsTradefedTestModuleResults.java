@@ -16,13 +16,13 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.runtime;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
-
+import com.google.devtools.mobileharness.platform.android.xts.runtime.shaded.gson.Gson;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.shaded.gson.GsonBuilder;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.shaded.gson.TypeAdapter;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.shaded.gson.stream.JsonReader;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.shaded.gson.stream.JsonWriter;
+import java.io.IOException;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -32,37 +32,25 @@ import java.util.Objects;
 /** Contains Tradefed test module execution progress. */
 public class XtsTradefedTestModuleResults {
 
-  private static final String LINE_SEPARATOR = "\n";
-  private static final String TOKEN_SEPARATOR = ";";
-  private static final String KEY_VALUE_SEPARATOR = ":";
+  private static final Gson GSON =
+      new GsonBuilder()
+          .registerTypeAdapter(
+              Duration.class,
+              new TypeAdapter<Duration>() {
+                @Override
+                public void write(JsonWriter out, Duration value) throws IOException {
+                  out.value(value.toMillis());
+                }
 
-  @SuppressWarnings(
-      "JdkCollectors") // To avoid pulling in the Guava dep (for the Nullable annotation) to keep
-  // the size of the agent jar small.
+                @Override
+                public Duration read(JsonReader in) throws IOException {
+                  return Duration.ofMillis(in.nextLong());
+                }
+              })
+          .create();
+
   public static XtsTradefedTestModuleResults decodeFromString(String string) {
-    List<String> lines = split(string, LINE_SEPARATOR);
-    Map<String, List<ModuleInfo>> map = new HashMap<>();
-
-    for (String line : lines) {
-      if (line.isEmpty()) {
-        continue;
-      }
-      List<String> parts = split(line, KEY_VALUE_SEPARATOR);
-      if (parts.size() < 2) {
-        continue; // Invalid line format
-      }
-      String uniqueId = decodeFromBase64(parts.get(0));
-      List<String> moduleStrings = split(parts.get(1), TOKEN_SEPARATOR);
-
-      List<ModuleInfo> modules =
-          moduleStrings.stream()
-              .filter(s -> !s.isEmpty())
-              .map(ModuleInfo::decodeFromString)
-              .collect(toList());
-
-      map.put(uniqueId, Collections.unmodifiableList(modules));
-    }
-    return new XtsTradefedTestModuleResults(map);
+    return GSON.fromJson(string, XtsTradefedTestModuleResults.class);
   }
 
   // invocationId -> List<ModuleInfo>
@@ -78,16 +66,7 @@ public class XtsTradefedTestModuleResults {
   }
 
   public String encodeToString() {
-    return runningModules.entrySet().stream()
-        .map(
-            entry -> {
-              String modulesStr =
-                  entry.getValue().stream()
-                      .map(ModuleInfo::encodeToString)
-                      .collect(joining(TOKEN_SEPARATOR));
-              return encodeToBase64(entry.getKey()) + KEY_VALUE_SEPARATOR + modulesStr;
-            })
-        .collect(joining(LINE_SEPARATOR));
+    return GSON.toJson(this);
   }
 
   @Override
@@ -122,30 +101,6 @@ public class XtsTradefedTestModuleResults {
 
   /** Details of a Tradefed module. */
   public static class ModuleInfo {
-
-    private static final String MODULE_TOKEN_SEPARATOR = ";";
-
-    public static ModuleInfo decodeFromString(String string) {
-      String decoded = decodeFromBase64(string);
-      List<String> parts = split(decoded, MODULE_TOKEN_SEPARATOR);
-      String id = decodeFromBase64(parts.get(0));
-      boolean isRunning = Boolean.parseBoolean(parts.get(1));
-      int testsExpected = parts.size() > 2 ? Integer.parseInt(parts.get(2)) : 0;
-      int testsCompleted = parts.size() > 3 ? Integer.parseInt(parts.get(3)) : 0;
-      int testsFailed = parts.size() > 4 ? Integer.parseInt(parts.get(4)) : 0;
-      int testsPassed = parts.size() > 5 ? Integer.parseInt(parts.get(5)) : 0;
-      int testsSkipped = parts.size() > 6 ? Integer.parseInt(parts.get(6)) : 0;
-      long durationMillis = parts.size() > 7 ? Long.parseLong(parts.get(7)) : 0L;
-      return new ModuleInfo(
-          id,
-          isRunning,
-          testsExpected,
-          testsCompleted,
-          testsFailed,
-          testsPassed,
-          testsSkipped,
-          Duration.ofMillis(durationMillis));
-    }
 
     private final String id;
     private final boolean isRunning;
@@ -211,26 +166,6 @@ public class XtsTradefedTestModuleResults {
       return duration;
     }
 
-    public String encodeToString() {
-      String joined =
-          encodeToBase64(id())
-              + MODULE_TOKEN_SEPARATOR
-              + isRunning()
-              + MODULE_TOKEN_SEPARATOR
-              + testsExpected()
-              + MODULE_TOKEN_SEPARATOR
-              + testsCompleted()
-              + MODULE_TOKEN_SEPARATOR
-              + testsFailed()
-              + MODULE_TOKEN_SEPARATOR
-              + testsPassed()
-              + MODULE_TOKEN_SEPARATOR
-              + testsSkipped()
-              + MODULE_TOKEN_SEPARATOR
-              + duration().toMillis();
-      return encodeToBase64(joined);
-    }
-
     @Override
     public boolean equals(Object o) {
       if (this == o) {
@@ -276,18 +211,5 @@ public class XtsTradefedTestModuleResults {
           testsSkipped,
           duration);
     }
-  }
-
-  private static String encodeToBase64(String string) {
-    return Base64.getEncoder().encodeToString(string.getBytes(UTF_8));
-  }
-
-  private static String decodeFromBase64(String string) {
-    return new String(Base64.getDecoder().decode(string), UTF_8);
-  }
-
-  private static List<String> split(String string, String separator) {
-    // -1 limit to match Guava Splitter's behavior of preserving trailing empty strings
-    return Arrays.asList(string.split(separator, /* limit= */ -1));
   }
 }

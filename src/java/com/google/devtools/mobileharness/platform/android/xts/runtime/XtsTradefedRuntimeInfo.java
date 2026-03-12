@@ -16,13 +16,14 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.runtime;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Arrays.asList;
-import static java.util.stream.Collectors.joining;
-
+import com.google.devtools.mobileharness.platform.android.xts.runtime.shaded.gson.Gson;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.shaded.gson.GsonBuilder;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.shaded.gson.TypeAdapter;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.shaded.gson.stream.JsonReader;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.shaded.gson.stream.JsonWriter;
+import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 
@@ -32,26 +33,30 @@ public class XtsTradefedRuntimeInfo {
   private static final XtsTradefedRuntimeInfo DEFAULT_INSTANCE =
       new XtsTradefedRuntimeInfo(new ArrayList<>(), Instant.EPOCH);
 
+  private static final Gson GSON =
+      new GsonBuilder()
+          .registerTypeAdapter(
+              Instant.class,
+              new TypeAdapter<Instant>() {
+                @Override
+                public void write(JsonWriter out, Instant value) throws IOException {
+                  out.value(value.toEpochMilli());
+                }
+
+                @Override
+                public Instant read(JsonReader in) throws IOException {
+                  return Instant.ofEpochMilli(in.nextLong());
+                }
+              })
+          .create();
+
   public static XtsTradefedRuntimeInfo getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
   public static XtsTradefedRuntimeInfo decodeFromString(String string) {
-    List<String> parts = split(string, LINE_SEPARATOR);
-    Instant timestamp = Instant.ofEpochMilli(Long.parseLong(parts.get(0)));
-    List<TradefedInvocation> invocations = new ArrayList<>();
-    for (int i = 1; i < parts.size(); i++) {
-      if (!parts.get(i).isEmpty()) {
-        invocations.add(TradefedInvocation.decodeFromString(decodeFromBase64(parts.get(i))));
-      }
-    }
-
-    return new XtsTradefedRuntimeInfo(invocations, timestamp);
+    return GSON.fromJson(string, XtsTradefedRuntimeInfo.class);
   }
-
-  private static final String LINE_SEPARATOR = "\n";
-  private static final String TOKEN_SEPARATOR = ";";
-  private static final String DEVICE_ID_SEPARATOR = ",";
 
   private final List<TradefedInvocation> invocations;
   private final Instant timestamp;
@@ -76,11 +81,7 @@ public class XtsTradefedRuntimeInfo {
 
   /** Returns a string that can be parsed by {@link #decodeFromString(String)}. */
   public String encodeToString() {
-    return timestamp().toEpochMilli()
-        + LINE_SEPARATOR
-        + invocations().stream()
-            .map(invocation -> encodeToBase64(invocation.encodeToString()))
-            .collect(joining(LINE_SEPARATOR));
+    return GSON.toJson(this);
   }
 
   @Override
@@ -88,10 +89,9 @@ public class XtsTradefedRuntimeInfo {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof XtsTradefedRuntimeInfo)) {
+    if (!(o instanceof XtsTradefedRuntimeInfo that)) {
       return false;
     }
-    XtsTradefedRuntimeInfo that = (XtsTradefedRuntimeInfo) o;
     return Objects.equals(invocations, that.invocations)
         && Objects.equals(timestamp, that.timestamp);
   }
@@ -120,18 +120,12 @@ public class XtsTradefedRuntimeInfo {
       return DEFAULT_INSTANCE;
     }
 
-    /** Parses a string into a {@link TradefedInvocation}. */
     public static TradefedInvocation decodeFromString(String string) {
-      List<String> parts = split(string, TOKEN_SEPARATOR);
-      String status = decodeFromBase64(parts.get(0));
-      boolean isRunning = Boolean.parseBoolean(parts.get(1));
-      String errorMessage = decodeFromBase64(parts.get(2));
-      String deviceIdsString = decodeFromBase64(parts.get(3));
-      List<String> deviceIds =
-          deviceIdsString.isEmpty()
-              ? new ArrayList<>()
-              : new ArrayList<>(asList(deviceIdsString.split(DEVICE_ID_SEPARATOR)));
-      return new TradefedInvocation(isRunning, deviceIds, status, errorMessage);
+      return GSON.fromJson(string, TradefedInvocation.class);
+    }
+
+    public String encodeToString() {
+      return GSON.toJson(this);
     }
 
     // Indicates whether it's a currently running invocation.
@@ -164,23 +158,14 @@ public class XtsTradefedRuntimeInfo {
       return errorMessage;
     }
 
-    /** Returns a string that can be parsed by {@link #decodeFromString(String)}. */
-    public String encodeToString() {
-      return encodeToBase64(status())
-          .concat(TOKEN_SEPARATOR + isRunning())
-          .concat(TOKEN_SEPARATOR + encodeToBase64(errorMessage()))
-          .concat(TOKEN_SEPARATOR + encodeToBase64(String.join(DEVICE_ID_SEPARATOR, deviceIds())));
-    }
-
     @Override
     public boolean equals(Object o) {
       if (this == o) {
         return true;
       }
-      if (!(o instanceof TradefedInvocation)) {
+      if (!(o instanceof TradefedInvocation that)) {
         return false;
       }
-      TradefedInvocation that = (TradefedInvocation) o;
       return isRunning == that.isRunning
           && Objects.equals(deviceIds, that.deviceIds)
           && Objects.equals(status, that.status)
@@ -198,20 +183,5 @@ public class XtsTradefedRuntimeInfo {
           "TradefedInvocation{isRunning='%s', deviceIds=%s, status='%s', errorMessage='%s'}",
           isRunning, deviceIds, status, errorMessage);
     }
-  }
-
-  @SuppressWarnings("ArraysAsListWithZeroOrOneArgument")
-  private static List<String> split(String string, String separator) {
-    // Setting limit to -1 to not discard the trailing empty string.
-    String[] result = string.split(separator, /* limit= */ -1);
-    return result.length == 0 ? asList("") : asList(result);
-  }
-
-  private static String encodeToBase64(String string) {
-    return Base64.getEncoder().encodeToString(string.getBytes(UTF_8));
-  }
-
-  private static String decodeFromBase64(String string) {
-    return new String(Base64.getDecoder().decode(string), UTF_8);
   }
 }

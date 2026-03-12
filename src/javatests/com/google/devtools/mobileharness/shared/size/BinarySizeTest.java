@@ -55,7 +55,7 @@ public class BinarySizeTest {
           "base_olc_server",
           31_750_000L,
           "ats_olc_server",
-          39_650_000L,
+          39_950_000L,
           "ats_olc_server_local_mode",
           41_950_000L,
           "lab_server",
@@ -65,7 +65,7 @@ public class BinarySizeTest {
           "persistent_cache_manager",
           9_050_000L,
           "xts_tradefed_agent",
-          4_550_000L);
+          4_950_000L);
 
   private static final long MAX_RESOURCE_FILE_SIZE_BYTE = 800_000L;
 

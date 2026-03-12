@@ -13,6 +13,7 @@
 # limitations under the License.
 #
 
+load("@rules_java//java:defs.bzl", "java_binary")
 load("@rules_kotlin//kotlin:core.bzl", "define_kt_toolchain", "kt_javac_options", "kt_kotlinc_options")
 load("@rules_license//rules:license.bzl", "license")
 
@@ -73,6 +74,15 @@ package_group(
     name = "omnilab_console",
     packages = [
     ],
+)
+
+# A java_binary target to wrap the JarJar library.
+# This is needed for Bazel because the Maven artifact does not have a main manifest attribute.
+java_binary(
+    name = "jarjar_bin",
+    main_class = "org.pantsbuild.jarjar.Main",
+    visibility = ["//visibility:public"],
+    runtime_deps = ["@maven//:org_pantsbuild_jarjar"],
 )
 
 kt_kotlinc_options(

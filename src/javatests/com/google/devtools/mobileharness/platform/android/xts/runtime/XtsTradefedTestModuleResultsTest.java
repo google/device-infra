@@ -17,14 +17,11 @@
 package com.google.devtools.mobileharness.platform.android.xts.runtime;
 
 import static com.google.common.truth.Truth.assertThat;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedTestModuleResults.ModuleInfo;
 import java.time.Duration;
-import java.util.Base64;
-import java.util.List;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -34,77 +31,29 @@ public class XtsTradefedTestModuleResultsTest {
 
   @Test
   public void encodeAndDecodeToString() {
-    ImmutableMap<String, List<ModuleInfo>> runningModulesMap =
-        ImmutableMap.of(
-            "invocation-1",
-            ImmutableList.of(
-                new ModuleInfo(
-                    /* id= */ "id1",
-                    /* isRunning= */ true,
-                    /* testsExpected= */ 10,
-                    /* testsCompleted= */ 5,
-                    /* testsFailed= */ 1,
-                    /* testsPassed= */ 4,
-                    /* testsSkipped= */ 0,
-                    Duration.ZERO),
-                new ModuleInfo(
-                    /* id= */ "id2",
-                    /* isRunning= */ false,
-                    /* testsExpected= */ 5,
-                    /* testsCompleted= */ 5,
-                    /* testsFailed= */ 0,
-                    /* testsPassed= */ 5,
-                    /* testsSkipped= */ 0,
-                    Duration.ZERO)),
-            "invocation-2",
-            ImmutableList.of(
-                new ModuleInfo(
-                    /* id= */ "id3",
-                    /* isRunning= */ true,
-                    /* testsExpected= */ 2,
-                    /* testsCompleted= */ 0,
-                    /* testsFailed= */ 0,
-                    /* testsPassed= */ 0,
-                    /* testsSkipped= */ 0,
-                    Duration.ZERO)));
-
-    XtsTradefedTestModuleResults moduleResults =
-        new XtsTradefedTestModuleResults(runningModulesMap);
-
-    String encoded = moduleResults.encodeToString();
-    XtsTradefedTestModuleResults decoded = XtsTradefedTestModuleResults.decodeFromString(encoded);
-
-    assertThat(decoded).isEqualTo(moduleResults);
-  }
-
-  @Test
-  public void decodeFromOldFormat() {
-    String invocation1 = Base64.getEncoder().encodeToString("invocation-1".getBytes(UTF_8));
-
-    String moduleId = Base64.getEncoder().encodeToString("id1".getBytes(UTF_8));
-    String moduleIsRunning = "true";
-    String moduleStr =
-        Base64.getEncoder().encodeToString((moduleId + ";" + moduleIsRunning).getBytes(UTF_8));
-
-    String encoded = invocation1 + ":" + moduleStr;
-
-    XtsTradefedTestModuleResults decoded = XtsTradefedTestModuleResults.decodeFromString(encoded);
-
-    XtsTradefedTestModuleResults expected =
+    XtsTradefedTestModuleResults results =
         new XtsTradefedTestModuleResults(
             ImmutableMap.of(
-                "invocation-1",
+                "inv_1",
+                ImmutableList.of(
+                    new ModuleInfo("module_1", /* isRunning= */ false),
+                    new ModuleInfo("module_2", /* isRunning= */ true)),
+                "inv_2",
                 ImmutableList.of(
                     new ModuleInfo(
-                        /* id= */ "id1",
+                        "module_3",
                         /* isRunning= */ true,
-                        /* testsExpected= */ 0,
-                        /* testsCompleted= */ 0,
-                        /* testsFailed= */ 0,
-                        /* testsPassed= */ 0,
-                        /* testsSkipped= */ 0,
-                        Duration.ZERO))));
+                        /* testsExpected= */ 100,
+                        /* testsCompleted= */ 50,
+                        /* testsFailed= */ 1,
+                        /* testsPassed= */ 48,
+                        /* testsSkipped= */ 1,
+                        Runtime.version().feature() < 17
+                            ? Duration.ofSeconds(0)
+                            : Duration.ofSeconds(1234)))));
 
-    assertThat(decoded).isEqualTo(expected);
+    String string = results.encodeToString();
+
+    assertThat(XtsTradefedTestModuleResults.decodeFromString(string)).isEqualTo(results);
   }
 }
