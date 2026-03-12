@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.platform.android.xts.runtime;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedTestModuleResults.ModuleInfo;
 import java.time.Duration;
@@ -34,23 +33,36 @@ public class XtsTradefedTestModuleResultsTest {
     XtsTradefedTestModuleResults results =
         new XtsTradefedTestModuleResults(
             ImmutableMap.of(
-                "inv_1",
-                ImmutableList.of(
-                    new ModuleInfo("module_1", /* isRunning= */ false),
-                    new ModuleInfo("module_2", /* isRunning= */ true)),
-                "inv_2",
-                ImmutableList.of(
-                    new ModuleInfo(
-                        "module_3",
-                        /* isRunning= */ true,
-                        /* testsExpected= */ 100,
-                        /* testsCompleted= */ 50,
-                        /* testsFailed= */ 1,
-                        /* testsPassed= */ 48,
-                        /* testsSkipped= */ 1,
-                        Runtime.version().feature() < 17
-                            ? Duration.ofSeconds(0)
-                            : Duration.ofSeconds(1234)))));
+                "id1",
+                new ModuleInfo(
+                    /* id= */ "id1",
+                    /* isRunning= */ true,
+                    /* testsExpected= */ 10,
+                    /* testsCompleted= */ 5,
+                    /* testsFailed= */ 1,
+                    /* testsPassed= */ 4,
+                    /* testsSkipped= */ 0,
+                    Duration.ZERO),
+                "id2",
+                new ModuleInfo(
+                    /* id= */ "id2",
+                    /* isRunning= */ false,
+                    /* testsExpected= */ 5,
+                    /* testsCompleted= */ 5,
+                    /* testsFailed= */ 0,
+                    /* testsPassed= */ 5,
+                    /* testsSkipped= */ 0,
+                    Duration.ZERO),
+                "id3",
+                new ModuleInfo(
+                    "id3",
+                    /* isRunning= */ true,
+                    /* testsExpected= */ 100,
+                    /* testsCompleted= */ 50,
+                    /* testsFailed= */ 1,
+                    /* testsPassed= */ 48,
+                    /* testsSkipped= */ 1,
+                    Runtime.version().feature() < 17 ? Duration.ZERO : Duration.ofSeconds(1234))));
 
     String string = results.encodeToString();
 

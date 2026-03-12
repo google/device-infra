@@ -353,7 +353,6 @@ final class AtsServerSessionPlugin {
         }
         requestDetail.clearTestModuleResults();
         testModuleResults.runningModules().values().stream()
-            .flatMap(List::stream)
             .map(
                 module ->
                     TestModuleResult.newBuilder()

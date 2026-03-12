@@ -24,8 +24,7 @@ import com.google.devtools.mobileharness.platform.android.xts.runtime.shaded.gso
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -53,15 +52,15 @@ public class XtsTradefedTestModuleResults {
     return GSON.fromJson(string, XtsTradefedTestModuleResults.class);
   }
 
-  // invocationId -> List<ModuleInfo>
-  private final Map<String, List<ModuleInfo>> runningModules;
+  // Module ID -> ModuleInfo
+  private final Map<String, ModuleInfo> runningModules;
 
-  public XtsTradefedTestModuleResults(Map<String, List<ModuleInfo>> runningModules) {
-    this.runningModules = Collections.unmodifiableMap(new HashMap<>(runningModules));
+  public XtsTradefedTestModuleResults(Map<String, ModuleInfo> runningModules) {
+    this.runningModules = Collections.unmodifiableMap(new LinkedHashMap<>(runningModules));
   }
 
-  /** Gets the mapping of running modules per Tradefed invocation ID. */
-  public Map<String, List<ModuleInfo>> runningModules() {
+  /** Gets the mapping of running modules per Tradefed module ID. */
+  public Map<String, ModuleInfo> runningModules() {
     return runningModules;
   }
 
@@ -89,11 +88,9 @@ public class XtsTradefedTestModuleResults {
   public String toString() {
     StringBuilder sb = new StringBuilder("XtsTradefedTestModuleResults{\n");
     runningModules.forEach(
-        (invocationId, modules) -> {
-          sb.append(String.format("  invocationId=%s:\n", invocationId));
-          for (ModuleInfo module : modules) {
-            sb.append("    ").append(module).append("\n");
-          }
+        (moduleId, module) -> {
+          sb.append(String.format("  moduleId=%s:\n", moduleId));
+          sb.append("    ").append(module).append("\n");
         });
     sb.append("}");
     return sb.toString();

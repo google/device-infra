@@ -74,6 +74,20 @@ public class XtsTradefedTestModuleResultsMonitorTest {
     }
   }
 
+  @Before
+  public void setUp() throws Exception {
+    XtsTradefedTestModuleResultsMonitor monitor = XtsTradefedTestModuleResultsMonitor.getInstance();
+    Field runningInvocationsField =
+        XtsTradefedTestModuleResultsMonitor.class.getDeclaredField("runningInvocations");
+    runningInvocationsField.setAccessible(true);
+    ((Map<?, ?>) runningInvocationsField.get(monitor)).clear();
+
+    Field previousModuleResultsField =
+        XtsTradefedTestModuleResultsMonitor.class.getDeclaredField("previousModuleResults");
+    previousModuleResultsField.setAccessible(true);
+    previousModuleResultsField.set(monitor, null);
+  }
+
   // Mock class to mimic an invocation context that uses a standard Map.
   public static class MapInvocationContext {
     private final Map<String, List<String>> attributes = new HashMap<>();
@@ -94,15 +108,6 @@ public class XtsTradefedTestModuleResultsMonitorTest {
     public Map<String, List<String>> getAttributes() {
       return attributes;
     }
-  }
-
-  @Before
-  public void setUp() throws Exception {
-    XtsTradefedTestModuleResultsMonitor monitor = XtsTradefedTestModuleResultsMonitor.getInstance();
-    Field invocationsField =
-        XtsTradefedTestModuleResultsMonitor.class.getDeclaredField("runningInvocations");
-    invocationsField.setAccessible(true);
-    ((Map<?, ?>) invocationsField.get(monitor)).clear();
   }
 
   @Test
@@ -201,10 +206,8 @@ public class XtsTradefedTestModuleResultsMonitorTest {
     String content = Files.readString(resultsFile);
     XtsTradefedTestModuleResults results = XtsTradefedTestModuleResults.decodeFromString(content);
 
-    assertThat(results.runningModules()).containsKey("inv-1");
-    List<ModuleInfo> modules = results.runningModules().get("inv-1");
-    assertThat(modules).hasSize(1);
-    ModuleInfo module = modules.get(0);
+    assertThat(results.runningModules()).containsKey("test-module-id");
+    ModuleInfo module = results.runningModules().get("test-module-id");
     assertThat(module.id()).isEqualTo("test-module-id");
     assertThat(module.isRunning()).isTrue();
     assertThat(module.testsExpected()).isEqualTo(2);
@@ -217,7 +220,54 @@ public class XtsTradefedTestModuleResultsMonitorTest {
 
     content = Files.readString(resultsFile);
     results = XtsTradefedTestModuleResults.decodeFromString(content);
-    modules = results.runningModules().get("inv-1");
-    assertThat(modules.get(0).isRunning()).isFalse();
+    module = results.runningModules().get("test-module-id");
+    assertThat(module.isRunning()).isFalse();
+  }
+
+  @Test
+  public void monitor_mergesResultsFromMultipleInvocations() throws Exception {
+    XtsTradefedTestModuleResultsMonitor monitor = XtsTradefedTestModuleResultsMonitor.getInstance();
+
+    // Invocation 1: 1 pass, 1 expected
+    MockInvocationContext context1 = new MockInvocationContext("inv-1");
+    context1.addAttribute("module-id", "test-module-id");
+    monitor.onModuleStart(context1, "inv-1");
+    monitor.onTestRunStarted("inv-1", "run-1", 1);
+    monitor.onTestEvent("inv-1", "testStarted", "test-1");
+    monitor.onTestEvent("inv-1", "testEnded", "test-1");
+    monitor.onModuleEnd("inv-1");
+
+    // Invocation 2: 1 fail, 2 expected (total)
+    MockInvocationContext context2 = new MockInvocationContext("inv-2");
+    context2.addAttribute("module-id", "test-module-id");
+    monitor.onModuleStart(context2, "inv-2");
+    monitor.onTestRunStarted("inv-2", "run-1", 1);
+    monitor.onTestEvent("inv-2", "testStarted", "test-2");
+    monitor.onTestEvent("inv-2", "testFailed", "test-2");
+    // test-2 not ended yet in this invocation
+    monitor.onModuleEnd("inv-2");
+
+    // Force an update
+    Method doUpdateMethod =
+        XtsTradefedTestModuleResultsMonitor.class.getDeclaredMethod("doUpdate", Path.class);
+    doUpdateMethod.setAccessible(true);
+
+    Path resultsFile = tempFolder.newFile("results_merged.txt").toPath();
+    doUpdateMethod.invoke(monitor, resultsFile);
+
+    String content = Files.readString(resultsFile);
+    XtsTradefedTestModuleResults results = XtsTradefedTestModuleResults.decodeFromString(content);
+
+    // Should only contain 1 module-id entry (the merged one)
+    assertThat(results.runningModules()).hasSize(1);
+    assertThat(results.runningModules()).containsKey("test-module-id");
+
+    ModuleInfo mergedModule = results.runningModules().get("test-module-id");
+    assertThat(mergedModule.id()).isEqualTo("test-module-id");
+    assertThat(mergedModule.isRunning()).isFalse();
+    assertThat(mergedModule.testsExpected()).isEqualTo(2);
+    assertThat(mergedModule.testsCompleted()).isEqualTo(1); // Only test-1 ended
+    assertThat(mergedModule.testsFailed()).isEqualTo(1); // test-2 failed
+    assertThat(mergedModule.testsPassed()).isEqualTo(1); // test-1 passed
   }
 }

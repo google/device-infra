@@ -118,7 +118,6 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.UnaryOperator;
@@ -1588,12 +1587,12 @@ public final class AtsServerSessionPluginTest {
     plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
     verify(sessionInfo).addJob(jobInfo);
 
-    ImmutableMap<String, List<ModuleInfo>> runningModules =
+    ImmutableMap<String, ModuleInfo> runningModules =
         ImmutableMap.of(
-            "invocationId",
-            ImmutableList.of(
-                new ModuleInfo("module1", true, 12, 12, 2, 10, 0, Duration.ofMillis(1234)),
-                new ModuleInfo("module2", false, 5, 5, 0, 5, 0, Duration.ofMillis(5678))));
+            "module1",
+            new ModuleInfo("module1", true, 12, 12, 2, 10, 0, Duration.ofMillis(1234)),
+            "module2",
+            new ModuleInfo("module2", false, 5, 5, 0, 5, 0, Duration.ofMillis(5678)));
     XtsTradefedTestModuleResults results = new XtsTradefedTestModuleResults(runningModules);
     XtsTradefedTestModuleResultsMessage resultsMessage =
         XtsTradefedTestModuleResultsMessage.newBuilder()

@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.platform.android.xts.runtime;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.stream.Collectors.toMap;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedTestModuleResults.ModuleInfo;
@@ -30,7 +31,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,6 +39,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 /**
  * A monitor that runs in a Tradefed invocation agent, collects test module execution progress, and
@@ -182,13 +183,17 @@ public class XtsTradefedTestModuleResultsMonitor {
       return;
     }
 
-    Map<String, List<ModuleInfo>> runningModulesMap = new HashMap<>();
-    for (Map.Entry<String, Invocation> entry : runningInvocations.entrySet()) {
-      runningModulesMap.put(entry.getKey(), entry.getValue().getModules());
-    }
+    // Merge module info from all invocations/shards.
+    Map<String, ModuleInfo> mergedModules =
+        runningInvocations.values().stream()
+            .flatMap(invocation -> invocation.getModules().stream())
+            .collect(
+                toMap(
+                    /* keyMapper= */ ModuleInfo::id,
+                    /* valueMapper= */ Function.identity(),
+                    /* mergeFunction= */ XtsTradefedTestModuleResultsMonitor::mergeModuleInfo));
 
-    XtsTradefedTestModuleResults moduleResults =
-        new XtsTradefedTestModuleResults(runningModulesMap);
+    XtsTradefedTestModuleResults moduleResults = new XtsTradefedTestModuleResults(mergedModules);
 
     if (moduleResults.equals(previousModuleResults)) {
       return;
@@ -210,6 +215,18 @@ public class XtsTradefedTestModuleResultsMonitor {
             "Failed to write module results to file %s", moduleResultsFilePath);
       }
     }
+  }
+
+  private static ModuleInfo mergeModuleInfo(ModuleInfo module1, ModuleInfo module2) {
+    return new ModuleInfo(
+        module1.id(),
+        module1.isRunning() || module2.isRunning(),
+        module1.testsExpected() + module2.testsExpected(),
+        module1.testsCompleted() + module2.testsCompleted(),
+        module1.testsFailed() + module2.testsFailed(),
+        module1.testsPassed() + module2.testsPassed(),
+        module1.testsSkipped() + module2.testsSkipped(),
+        module1.duration().plus(module2.duration()));
   }
 
   /** Represents the state of module execution within a single Tradefed invocation. */
