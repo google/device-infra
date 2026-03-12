@@ -31,7 +31,7 @@ service ConfigService {
   rpc GetDeviceConfig(GetDeviceConfigRequest)
       returns (GetDeviceConfigResponse) {
     option (google.api.http) = {
-      get: "/v6/devices/{device_id}/config"
+      get: "/v6/devices/{id}/config"
     };
   }
 
@@ -39,7 +39,7 @@ service ConfigService {
   rpc CheckDeviceWritePermission(CheckDeviceWritePermissionRequest)
       returns (CheckDeviceWritePermissionResponse) {
     option (google.api.http) = {
-      post: "/v6/devices/{device_id}/config:checkWritePermission",
+      post: "/v6/devices/{id}/config:checkWritePermission",
       body: "*"
     };
   }
@@ -48,7 +48,7 @@ service ConfigService {
   rpc UpdateDeviceConfig(UpdateDeviceConfigRequest)
       returns (UpdateDeviceConfigResponse) {
     option (google.api.http) = {
-      post: "/v6/devices/{device_id}/config:update",
+      post: "/v6/devices/{id}/config:update",
       body: "*"
     };
   }
@@ -98,7 +98,7 @@ service ConfigService {
 
 // Request for GetDeviceConfig.
 message GetDeviceConfigRequest {
-  string device_id = 1;
+  string id = 1;
 
   // The universe the device belongs to.
   string universe = 2;
@@ -114,7 +114,7 @@ message GetDeviceConfigResponse {
 
 // Request for CheckDeviceWritePermission.
 message CheckDeviceWritePermissionRequest {
-  string device_id = 1;
+  string id = 1;
 
   // The universe the device belongs to.
   string universe = 2;
@@ -141,7 +141,7 @@ message UpdateError {
 
 // Request for UpdateDeviceConfig.
 message UpdateDeviceConfigRequest {
-  string device_id = 1;
+  string id = 1;
   DeviceConfig config = 2;
   DeviceConfigSection section = 3;
   UpdateOptions options = 4;

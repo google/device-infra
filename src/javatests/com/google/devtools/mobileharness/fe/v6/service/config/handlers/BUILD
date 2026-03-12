@@ -25,6 +25,8 @@ java_library(
     testonly = 1,
     srcs = glob(["*.java"]),
     deps = [
+        "//src/devtools/mobileharness/api/deviceconfig/proto:basic_java_proto",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_resources_java_proto",
@@ -38,6 +40,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:update_device_config_handler",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:update_host_config_handler",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_service_capability",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/auth",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",

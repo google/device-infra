@@ -54,7 +54,7 @@ public final class GetDeviceConfigHandler {
   }
 
   public ListenableFuture<GetDeviceConfigResponse> getDeviceConfig(GetDeviceConfigRequest request) {
-    logger.atInfo().log("Getting device config for %s", request.getDeviceId());
+    logger.atInfo().log("Getting device config for %s", request.getId());
     ConfigServiceCapability configServiceCapability =
         configServiceCapabilityFactory.create(request.getUniverse());
     try {
@@ -64,7 +64,7 @@ public final class GetDeviceConfigHandler {
     }
 
     ListenableFuture<DeviceData> deviceDataFuture =
-        deviceDataLoader.loadDeviceData(request.getDeviceId(), request.getUniverse());
+        deviceDataLoader.loadDeviceData(request.getId(), request.getUniverse());
 
     return Futures.transform(
         deviceDataFuture,

@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDevice
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigResponse;
+import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -84,14 +85,14 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
 
   @Override
   public ListenableFuture<CheckDeviceWritePermissionResponse> checkDeviceWritePermission(
-      CheckDeviceWritePermissionRequest request) {
-    return checkDeviceWritePermissionHandler.checkDeviceWritePermission(request);
+      CheckDeviceWritePermissionRequest request, Optional<String> username) {
+    return checkDeviceWritePermissionHandler.checkDeviceWritePermission(request, username);
   }
 
   @Override
   public ListenableFuture<UpdateDeviceConfigResponse> updateDeviceConfig(
-      UpdateDeviceConfigRequest request) {
-    return updateDeviceConfigHandler.updateDeviceConfig(request);
+      UpdateDeviceConfigRequest request, Optional<String> username) {
+    return updateDeviceConfigHandler.updateDeviceConfig(request, username);
   }
 
   @Override
@@ -113,13 +114,13 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
 
   @Override
   public ListenableFuture<CheckHostWritePermissionResponse> checkHostWritePermission(
-      CheckHostWritePermissionRequest request) {
-    return checkHostWritePermissionHandler.checkHostWritePermission(request);
+      CheckHostWritePermissionRequest request, Optional<String> username) {
+    return checkHostWritePermissionHandler.checkHostWritePermission(request, username);
   }
 
   @Override
   public ListenableFuture<UpdateHostConfigResponse> updateHostConfig(
-      UpdateHostConfigRequest request) {
-    return updateHostConfigHandler.updateHostConfig(request);
+      UpdateHostConfigRequest request, Optional<String> username) {
+    return updateHostConfigHandler.updateHostConfig(request, username);
   }
 }

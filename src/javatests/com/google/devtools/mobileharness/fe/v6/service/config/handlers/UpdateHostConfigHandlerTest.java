@@ -21,6 +21,7 @@ import static com.google.common.truth.Truth.assertThat;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigResponse;
 import com.google.inject.Guice;
+import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,7 +41,7 @@ public final class UpdateHostConfigHandlerTest {
   @Test
   public void updateHostConfig_success() throws Exception {
     UpdateHostConfigRequest request = UpdateHostConfigRequest.getDefaultInstance();
-    assertThat(updateHostConfigHandler.updateHostConfig(request).get())
+    assertThat(updateHostConfigHandler.updateHostConfig(request, Optional.empty()).get())
         .isEqualTo(UpdateHostConfigResponse.getDefaultInstance());
   }
 }

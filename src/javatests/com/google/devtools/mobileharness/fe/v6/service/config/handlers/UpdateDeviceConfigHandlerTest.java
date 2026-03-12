@@ -21,6 +21,7 @@ import static com.google.common.truth.Truth.assertThat;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigResponse;
 import com.google.inject.Guice;
+import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,7 +41,7 @@ public final class UpdateDeviceConfigHandlerTest {
   @Test
   public void updateDeviceConfig_success() throws Exception {
     UpdateDeviceConfigRequest request = UpdateDeviceConfigRequest.getDefaultInstance();
-    assertThat(updateDeviceConfigHandler.updateDeviceConfig(request).get())
+    assertThat(updateDeviceConfigHandler.updateDeviceConfig(request, Optional.empty()).get())
         .isEqualTo(UpdateDeviceConfigResponse.getDefaultInstance());
   }
 }

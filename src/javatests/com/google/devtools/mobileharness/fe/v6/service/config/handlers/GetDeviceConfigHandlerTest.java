@@ -25,7 +25,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
@@ -57,15 +56,12 @@ import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class GetDeviceConfigHandlerTest {
-
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
-
   @Bind @Mock private LabInfoProvider labInfoProvider;
   @Bind @Mock private ConfigurationProvider configurationProvider;
   @Mock private ConfigServiceCapability configServiceCapability;
   @Bind @Mock private ConfigServiceCapabilityFactory configServiceCapabilityFactory;
   @Bind private ListeningExecutorService executorService = newDirectExecutorService();
-
   @Inject private GetDeviceConfigHandler getDeviceConfigHandler;
 
   @Before
@@ -98,7 +94,7 @@ public final class GetDeviceConfigHandlerTest {
   @Test
   public void getDeviceConfig_success() throws Exception {
     GetDeviceConfigRequest request =
-        GetDeviceConfigRequest.newBuilder().setDeviceId("test").setUniverse("google_1p").build();
+        GetDeviceConfigRequest.newBuilder().setId("test").setUniverse("google_1p").build();
     GetDeviceConfigResponse response = getDeviceConfigHandler.getDeviceConfig(request).get();
     assertThat(response.getIsHostManaged()).isFalse();
   }
@@ -109,9 +105,8 @@ public final class GetDeviceConfigHandlerTest {
         .when(configServiceCapability)
         .checkConfigServiceAvailability();
     GetDeviceConfigRequest request =
-        GetDeviceConfigRequest.newBuilder().setDeviceId("test").setUniverse("unsupported").build();
-    ListenableFuture<GetDeviceConfigResponse> listenableFuture =
-        getDeviceConfigHandler.getDeviceConfig(request);
-    assertThrows(ExecutionException.class, () -> listenableFuture.get());
+        GetDeviceConfigRequest.newBuilder().setId("test").setUniverse("unsupported").build();
+    assertThrows(
+        ExecutionException.class, () -> getDeviceConfigHandler.getDeviceConfig(request).get());
   }
 }

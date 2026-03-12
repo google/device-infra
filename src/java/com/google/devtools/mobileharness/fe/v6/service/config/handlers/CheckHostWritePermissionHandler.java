@@ -22,6 +22,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionResponse;
+import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -34,7 +35,7 @@ public final class CheckHostWritePermissionHandler {
   CheckHostWritePermissionHandler() {}
 
   public ListenableFuture<CheckHostWritePermissionResponse> checkHostWritePermission(
-      CheckHostWritePermissionRequest request) {
+      CheckHostWritePermissionRequest request, Optional<String> username) {
     logger.atInfo().log("Checking host write permission for %s", request.getHostName());
     // TODO: Implement real logic.
     return immediateFuture(CheckHostWritePermissionResponse.getDefaultInstance());

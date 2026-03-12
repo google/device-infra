@@ -22,6 +22,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigResponse;
+import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -34,7 +35,7 @@ public final class UpdateHostConfigHandler {
   UpdateHostConfigHandler() {}
 
   public ListenableFuture<UpdateHostConfigResponse> updateHostConfig(
-      UpdateHostConfigRequest request) {
+      UpdateHostConfigRequest request, Optional<String> username) {
     logger.atInfo().log("Updating host config for %s", request.getHostName());
     // TODO: Implement real logic.
     return immediateFuture(UpdateHostConfigResponse.getDefaultInstance());

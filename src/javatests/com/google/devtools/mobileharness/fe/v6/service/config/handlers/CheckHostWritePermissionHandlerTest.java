@@ -21,6 +21,7 @@ import static com.google.common.truth.Truth.assertThat;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionResponse;
 import com.google.inject.Guice;
+import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,7 +41,10 @@ public final class CheckHostWritePermissionHandlerTest {
   @Test
   public void checkHostWritePermission_success() throws Exception {
     CheckHostWritePermissionRequest request = CheckHostWritePermissionRequest.getDefaultInstance();
-    assertThat(checkHostWritePermissionHandler.checkHostWritePermission(request).get())
+    assertThat(
+            checkHostWritePermissionHandler
+                .checkHostWritePermission(request, Optional.empty())
+                .get())
         .isEqualTo(CheckHostWritePermissionResponse.getDefaultInstance());
   }
 }

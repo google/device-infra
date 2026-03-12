@@ -39,8 +39,10 @@ java_library(
     name = "check_device_write_permission_handler",
     srcs = ["CheckDeviceWritePermissionHandler.java"],
     deps = [
+        "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/auth",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],

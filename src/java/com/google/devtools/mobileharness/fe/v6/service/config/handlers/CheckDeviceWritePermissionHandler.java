@@ -18,25 +18,79 @@ package com.google.devtools.mobileharness.fe.v6.service.config.handlers;
 
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
-import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionResponse;
+import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
+import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.DeviceData;
+import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
 /** Handler for the CheckDeviceWritePermission RPC. */
 @Singleton
 public final class CheckDeviceWritePermissionHandler {
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private final DeviceDataLoader deviceDataLoader;
+  private final GroupMembershipProvider groupMembershipProvider;
+  private final ListeningExecutorService executor;
 
   @Inject
-  CheckDeviceWritePermissionHandler() {}
+  CheckDeviceWritePermissionHandler(
+      DeviceDataLoader deviceDataLoader,
+      GroupMembershipProvider groupMembershipProvider,
+      ListeningExecutorService executor) {
+    this.deviceDataLoader = deviceDataLoader;
+    this.groupMembershipProvider = groupMembershipProvider;
+    this.executor = executor;
+  }
 
   public ListenableFuture<CheckDeviceWritePermissionResponse> checkDeviceWritePermission(
-      CheckDeviceWritePermissionRequest request) {
-    logger.atInfo().log("Checking device write permission for %s", request.getDeviceId());
-    // TODO: Implement real logic.
-    return immediateFuture(CheckDeviceWritePermissionResponse.getDefaultInstance());
+      CheckDeviceWritePermissionRequest request, Optional<String> endUser) {
+    if (endUser.isEmpty()) {
+      return immediateFuture(
+          CheckDeviceWritePermissionResponse.newBuilder().setHasPermission(false).build());
+    }
+    String user = endUser.get();
+    String deviceId = request.getId();
+    String universe = request.getUniverse();
+
+    return Futures.transformAsync(
+        deviceDataLoader.loadDeviceData(deviceId, universe),
+        (DeviceData deviceData) -> {
+          DeviceConfig config = deviceData.effectiveDeviceConfig();
+          if (!config.hasBasicConfig()) {
+            return immediateFuture(
+                CheckDeviceWritePermissionResponse.newBuilder().setHasPermission(false).build());
+          }
+
+          List<String> owners = config.getBasicConfig().getOwnerList();
+          if (owners.isEmpty()) {
+            return immediateFuture(
+                CheckDeviceWritePermissionResponse.newBuilder().setHasPermission(true).build());
+          }
+
+          if (owners.contains(user)) {
+            return immediateFuture(
+                CheckDeviceWritePermissionResponse.newBuilder().setHasPermission(true).build());
+          }
+
+          List<String> groups = new ArrayList<>(owners);
+
+          return Futures.transform(
+              groupMembershipProvider.isMemberOfAny(user, groups),
+              (Boolean isMember) ->
+                  CheckDeviceWritePermissionResponse.newBuilder()
+                      .setHasPermission(isMember)
+                      .build(),
+              executor);
+        },
+        executor);
   }
 }
