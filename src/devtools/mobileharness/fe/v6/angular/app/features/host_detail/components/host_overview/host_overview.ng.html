@@ -171,7 +171,7 @@
                   <mat-icon>settings</mat-icon>
                   <span class="action-button-text">Configure</span>
                 </button>
-                <button mat-flat-button class="action-button" matTooltip="Remote Control" (click)="startMultiRemoteControl()">
+                <button mat-flat-button class="action-button" matTooltip="Remote Control" (click)="startRemoteControl(selection.selected)">
                   <mat-icon>important_devices</mat-icon>
                   <span class="action-button-text">Remote Control</span>
                 </button>
@@ -359,7 +359,7 @@
                   </button>
                 </th>
                 <td mat-cell *matCellDef="let element" class="sticky-end-cell" [class.hide-action-column]="!isGoogleInternal">
-                  <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Device actions">
+                  <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Device actions" (click)="$event.stopPropagation()">
                     <mat-icon>more_vert</mat-icon>
                   </button>
                   <mat-menu #menu="matMenu">
@@ -367,7 +367,7 @@
                       <mat-icon>screenshot</mat-icon>
                       <span>Screenshot</span>
                     </button>
-                    <button mat-menu-item (click)="startSingleRemoteControl(element)">
+                    <button mat-menu-item (click)="startRemoteControl([element])">
                       <mat-icon>important_devices</mat-icon>
                       <span>Remote Control</span>
                     </button>

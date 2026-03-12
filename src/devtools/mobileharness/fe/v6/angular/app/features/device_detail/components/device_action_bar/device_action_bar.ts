@@ -22,10 +22,10 @@ import {
   ScreenshotDialogData,
 } from '../../../../core/models/device_action';
 import type {DeviceOverviewPageData} from '../../../../core/models/device_overview';
-import {DeviceSummary} from '../../../../core/models/host_overview';
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
 import {Environment} from '../../../../core/services/environment';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
+import {RemoteControlDeviceInfo} from '../../../../shared/components/remote_control/remote_control.types';
 import {RemoteControlService} from '../../../../shared/services/remote_control_service';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {DeviceConfig} from '../device_config/device_config';
@@ -220,24 +220,17 @@ export class DeviceActionBar {
 
   remoteControl(): void {
     const overview = this.pageData.overview;
-    const deviceSummary: DeviceSummary = {
-      id: overview.id,
-      healthState: {
-        health: overview.healthAndActivity.state,
-        title: overview.healthAndActivity.title,
-        tooltip: overview.healthAndActivity.subtitle || '',
+    const device: RemoteControlDeviceInfo[] = [
+      {
+        id: overview.id,
+        model: overview.basicInfo.model || '',
+        isTestbed: overview.healthAndActivity.deviceTypes.some(
+          (t) => t.type === 'TestbedDevice',
+        ),
+        subDevices: overview.subDevices,
       },
-      types: overview.healthAndActivity.deviceTypes,
-      deviceStatus: overview.healthAndActivity.deviceStatus,
-      label: '',
-      requiredDims: '',
-      model: overview.basicInfo.model || '',
-      version: overview.basicInfo.version || '',
-      subDevices: overview.subDevices,
-    };
-    this.remoteControlService.startRemoteControl(this.hostName, [
-      deviceSummary,
-    ]);
+    ];
+    this.remoteControlService.startRemoteControl(this.hostName, device);
   }
 
   flashDevice(): void {

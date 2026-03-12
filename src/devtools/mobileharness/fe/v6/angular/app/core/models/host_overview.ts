@@ -165,8 +165,6 @@ export declare interface DeviceSummary {
   readonly model?: string;
   readonly version?: string;
   readonly subDevices?: SubDeviceInfo[];
-  /** Optional parent device ID (e.g. for sub-devices belonging to a testbed). */
-  readonly parentDeviceId?: string;
 }
 
 /**
@@ -174,6 +172,16 @@ export declare interface DeviceSummary {
  */
 export declare interface GetHostDeviceSummariesResponse {
   deviceSummaries: DeviceSummary[];
+}
+
+/**
+ * Represents a device to check for remote control eligibility.
+ */
+export interface DeviceTarget {
+  /** The identifier of the physical or parent device. */
+  deviceId: string;
+  /** Optional. The specific sub-device ID if targeting a testbed component. */
+  subDeviceId?: string;
 }
 
 /**
@@ -363,7 +371,7 @@ export declare interface FlashOptions {
 export declare interface DeviceRemoteControlConfig {
   deviceId: string;
   runAs: string;
-  parentDeviceId?: string;
+  subDeviceId?: string;
 }
 
 /**

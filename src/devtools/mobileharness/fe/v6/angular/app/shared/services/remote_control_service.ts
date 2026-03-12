@@ -3,7 +3,7 @@ import {MatDialog} from '@angular/material/dialog';
 import {
   CheckRemoteControlEligibilityResponse,
   DeviceProxyType,
-  DeviceSummary,
+  DeviceTarget,
   EligibilityStatus,
   RemoteControlDevicesRequest,
 } from 'app/core/models/host_overview';
@@ -15,16 +15,10 @@ import {RemoteControlDialog} from '../components/remote_control/dialog/remote_co
 import {AccessDeniedContent} from '../components/remote_control/feedback/access_denied_content';
 import {ConnectionErrorContent} from '../components/remote_control/feedback/connection_error_content';
 import {IncompatibleDevicesContent} from '../components/remote_control/feedback/incompatible_devices_content';
-
-/** Labels for DeviceProxyType enum values. */
-export const PROXY_TYPE_LABELS: Record<number, string> = {
-  0: 'Auto (Default)',
-  1: 'ADB & Video',
-  2: 'ADB Console',
-  3: 'USB-over-IP',
-  4: 'SSH',
-  5: 'Video Only',
-};
+import {
+  PROXY_TYPE_LABELS,
+  RemoteControlDeviceInfo,
+} from '../components/remote_control/remote_control.types';
 
 /** Service for managing remote control sessions. */
 @Injectable({providedIn: 'root'})
@@ -33,7 +27,11 @@ export class RemoteControlService {
   private readonly hostService = inject(HOST_SERVICE);
   private readonly snackBar = inject(SnackBarService);
 
-  startRemoteControl(hostName: string, selectedDevices: DeviceSummary[]) {
+  startRemoteControl(
+    hostName: string,
+    selectedDevices: RemoteControlDeviceInfo[],
+    isSubDevice = false,
+  ) {
     // 1. Quantity Check
     if (selectedDevices.length === 0) {
       this.snackBar.showError('Please select at least one device.');
@@ -46,9 +44,24 @@ export class RemoteControlService {
       return;
     }
 
-    const deviceControlIds = selectedDevices.map((d) => d.id);
+    const targets: DeviceTarget[] = selectedDevices.map((d) => ({
+      deviceId: d.id,
+      subDeviceId: isSubDevice ? d.subDevices?.[0]?.id : undefined,
+    }));
+
+    // if subDevice is true, pass the sub-device info.
+    if (isSubDevice) {
+      selectedDevices = selectedDevices.map((d) => {
+        d.id = d.subDevices?.[0]?.id || '';
+        d.model = d.subDevices?.[0]?.model || '';
+        d.isTestbed = true;
+        d.subDevices = [];
+        return d;
+      });
+    }
+
     this.hostService
-      .checkRemoteControlEligibility(hostName, deviceControlIds)
+      .checkRemoteControlEligibility(hostName, targets)
       .subscribe({
         next: (response: CheckRemoteControlEligibilityResponse) => {
           this.handleEligibilityResponse(response, selectedDevices, hostName);
@@ -66,7 +79,7 @@ export class RemoteControlService {
 
   private handleEligibilityResponse(
     response: CheckRemoteControlEligibilityResponse,
-    selectedDevices: DeviceSummary[],
+    selectedDevices: RemoteControlDeviceInfo[],
     hostName: string,
   ) {
     switch (response.status) {
@@ -102,7 +115,7 @@ export class RemoteControlService {
               contentComponent: ConnectionErrorContent,
               contentComponentInputs: {
                 device: {id: device.id},
-                isTestbed: this.isTestbed(device),
+                isTestbed: device.isTestbed,
               },
               type: 'warning',
               primaryButtonLabel: 'Got it',
@@ -154,7 +167,7 @@ export class RemoteControlService {
   }
 
   private openRemoteControlDialog(
-    selectedDevices: DeviceSummary[],
+    selectedDevices: RemoteControlDeviceInfo[],
     eligibilityResponse: CheckRemoteControlEligibilityResponse,
     hostName: string,
   ) {
@@ -207,13 +220,5 @@ export class RemoteControlService {
         );
       },
     });
-  }
-
-  isTestbed(element: DeviceSummary): boolean {
-    return (
-      (element.types?.some((t) => t.type === 'TestbedDevice') ?? false) &&
-      !!element.subDevices &&
-      element.subDevices.length > 0
-    );
   }
 }

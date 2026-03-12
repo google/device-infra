@@ -4,6 +4,7 @@ import {
   Component,
   computed,
   inject,
+  NgZone,
   OnDestroy,
   OnInit,
   signal,
@@ -37,33 +38,21 @@ import {MatSelectModule} from '@angular/material/select';
 import {MatSliderModule} from '@angular/material/slider';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {
-  DeviceEligibilityResult,
   DeviceProxyType,
-  DeviceSummary,
   RemoteControlDevicesRequest,
-  SessionOptions,
   SubDeviceEligibilityResult,
 } from 'app/core/models/host_overview';
 import {ConfirmDialog} from 'app/shared/components/confirm_dialog/confirm_dialog';
 import {ToggleSwitch} from 'app/shared/components/toggle_switch/toggle_switch';
 import {SnackBarService} from 'app/shared/services/snackbar_service';
 import {ConfirmConnectionContent} from '../feedback/confirm_connection_content';
-
-/** Data required to initialize the RemoteControlDialog. */
-export interface RemoteControlDialogData {
-  devices: DeviceSummary[];
-  eligibilityResults: DeviceEligibilityResult[];
-  sessionOptions: SessionOptions;
-}
-
-interface DeviceListItem {
-  summary: DeviceSummary;
-  eligibility: DeviceEligibilityResult;
-  validIdentities: string[];
-  hasAccess: boolean;
-  subDevices: SubDeviceEligibilityResult[];
-  readySubDeviceCount: number;
-}
+import {
+  DeviceListItem,
+  DURATION_CHIPS,
+  DURATION_CHIPS_SHORT,
+  PROXY_TYPE_LABELS,
+  RemoteControlDialogData,
+} from '../remote_control.types';
 
 /**
  * Dialog for configuring and starting a remote control session.
@@ -99,6 +88,7 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
   readonly data = inject<RemoteControlDialogData>(MAT_DIALOG_DATA);
   private readonly fb = inject(FormBuilder);
   private readonly snackBar = inject(SnackBarService);
+  private readonly ngZone = inject(NgZone);
 
   /** Form group for the dialog configuration. */
   readonly form = this.fb.group({
@@ -144,37 +134,26 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
   });
 
   startingSession = signal(false);
-
-  // Constants
-  readonly PROXY_TYPE_LABELS: Record<number, string> = {
-    0: 'Auto (Default)',
-    1: 'ADB & Video',
-    2: 'ADB Console',
-    3: 'USB-over-IP',
-    4: 'SSH',
-    5: 'Video Only',
-  };
-
-  // Duration presets in minutes
-  readonly DURATION_CHIPS = [60, 120, 240, 480, 720];
-  readonly DURATION_CHIPS_SHORT = [15, 30, 45, 60, 120, 180];
+  readonly PROXY_TYPE_LABELS = PROXY_TYPE_LABELS;
 
   get deviceConfigs(): FormArray {
     return this.form.get('deviceConfigs') as FormArray;
   }
 
-  get maxDurationHours(): number {
+  /** Maximum session duration hours from configuration. */
+  readonly maxDurationHours = computed(() => {
     return this.data.sessionOptions.maxDurationHours;
-  }
+  });
 
-  get durationChips(): Array<{label: string; value: number}> {
-    const maxMinutes = this.maxDurationHours * 60;
+  /** Chip options for session duration based on max allowed hours. */
+  readonly durationChips = computed(() => {
+    const maxMinutes = this.maxDurationHours() * 60;
     let chips: number[];
 
-    if (this.maxDurationHours <= 3) {
-      chips = this.DURATION_CHIPS_SHORT.filter((m) => m <= maxMinutes);
+    if (this.maxDurationHours() <= 3) {
+      chips = DURATION_CHIPS_SHORT.filter((m) => m <= maxMinutes);
     } else {
-      chips = this.DURATION_CHIPS.filter((m) => m <= maxMinutes);
+      chips = DURATION_CHIPS.filter((m) => m <= maxMinutes);
     }
 
     return chips.map((m) => {
@@ -185,7 +164,12 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
         value: m,
       };
     });
-  }
+  });
+
+  /** CSS class for the device grid based on the number of selected devices. */
+  readonly deviceGridClass = computed(() => {
+    return `cols-${Math.min(3, this.deviceList().length)}`;
+  });
 
   // Proxies common to all selected devices
   commonProxyModes = signal<DeviceProxyType[]>([]);
@@ -202,6 +186,7 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
   );
 
   // Computed signal for End Time
+  /** Computed end time string, recalculates when duration or currentTime changes. */
   readonly endTime = computed(() => {
     const minutes = this.durationMinutes() || 0;
     const now = this.currentTime();
@@ -216,26 +201,26 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
     return `Ends at ${timeStr}`;
   });
 
-  get deviceGridClass(): string {
-    return `cols-${Math.min(3, this.deviceList().length)}`;
-  }
-
   ngOnInit() {
     this.initializeDeviceData();
     this.setupDurationSync();
     this.setupGlobalRunAsSync();
     this.setupFlashValidation();
 
-    // Update time aligned to the next minute for better performance and accuracy
-    const now = new Date();
-    const msToNextMinute =
-      (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
-    this.timerId = setTimeout(() => {
-      this.currentTime.set(Date.now());
-      this.intervalId = setInterval(() => {
+    // Timer to update currentTime every minute.
+    // Run outside Angular Zone to prevent triggering global change detection
+    // on every tick, as the Signal itself will handle local UI updates.
+    this.ngZone.runOutsideAngular(() => {
+      const now = new Date();
+      const msToNextMinute =
+        (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+      this.timerId = setTimeout(() => {
         this.currentTime.set(Date.now());
-      }, 60000);
-    }, msToNextMinute);
+        this.intervalId = setInterval(() => {
+          this.currentTime.set(Date.now());
+        }, 60000);
+      }, msToNextMinute);
+    });
   }
 
   ngOnDestroy() {
@@ -393,8 +378,8 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
       const h = this.form.get('durationH')?.value || 0;
       const m = this.form.get('durationM')?.value || 0;
       let total = h * 60 + m;
-      if (total > this.maxDurationHours * 60) {
-        total = this.maxDurationHours * 60;
+      if (total > this.maxDurationHours() * 60) {
+        total = this.maxDurationHours() * 60;
       }
       this.form.get('durationMinutes')?.setValue(total);
     };
@@ -518,7 +503,7 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
 
     const parts = [];
     parts.push(
-      proxy === 0 ? 'Auto Proxy' : this.PROXY_TYPE_LABELS[proxy] || 'Proxy',
+      proxy === 0 ? 'Auto Proxy' : PROXY_TYPE_LABELS[proxy] || 'Proxy',
     );
 
     let qual = res.charAt(0).toUpperCase() + res.slice(1) + ' Quality';
@@ -543,7 +528,7 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
   }
 
   getProxyLabel(req: RemoteControlDevicesRequest): string {
-    return this.PROXY_TYPE_LABELS[req.proxyType] || 'Unknown';
+    return PROXY_TYPE_LABELS[req.proxyType] || 'Unknown';
   }
 
   getFlashLabel(req: RemoteControlDevicesRequest): string {
@@ -579,7 +564,7 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
         return {
           deviceId: c.deviceId,
           runAs: c.runAs,
-          parentDeviceId: deviceSummary?.parentDeviceId,
+          subDeviceId: deviceSummary?.subDevices?.[0]?.id,
         };
       })
       .filter((c) => c.runAs);

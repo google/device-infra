@@ -47,7 +47,7 @@
         }
       </div>
 
-      <div class="device-grid" [class]="deviceGridClass">
+      <div class="device-grid" [class]="deviceGridClass()">
         @for (item of deviceList(); track item.summary.id; let i = $index) {
           <div class="device-card" [class.no-access]="!item.hasAccess">
             @if (!item.hasAccess) {
@@ -150,13 +150,13 @@
 
       <div class="duration-box">
         <div class="slider-row">
-          <mat-slider min="10" [max]="maxDurationHours * 60" step="10" class="slider">
+          <mat-slider min="10" [max]="maxDurationHours() * 60" step="10" class="slider">
             <input matSliderThumb formControlName="durationMinutes">
           </mat-slider>
 
           <div class="inputs">
             <div class="input-wrapper">
-              <input type="number" formControlName="durationH" min="0" [max]="maxDurationHours">
+              <input type="number" formControlName="durationH" min="0" [max]="maxDurationHours()">
               <span>h</span>
             </div>
             <span class="colon">:</span>
@@ -171,7 +171,7 @@
           class="chips-row"
           hideSingleSelectionIndicator
           (change)="setDuration($event.value)">
-          @for (chip of durationChips; track chip.value) {
+          @for (chip of durationChips(); track chip.value) {
             <mat-chip-option
               #chipRef
               [selected]="form.get('durationMinutes')?.value === chip.value"

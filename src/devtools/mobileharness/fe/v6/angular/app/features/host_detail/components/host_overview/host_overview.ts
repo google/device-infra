@@ -54,6 +54,7 @@ import {
   NavItem,
 } from '../../../../shared/components/master_detail_layout/master_detail_layout';
 import {OverflowList} from '../../../../shared/components/overflow_list/overflow_list';
+import {RemoteControlDeviceInfo} from '../../../../shared/components/remote_control/remote_control.types';
 import {
   SearchableListOverlayComponent,
   SearchableListOverlayData,
@@ -538,45 +539,37 @@ export class HostOverviewPage implements OnInit, OnChanges {
   }
 
   // device table actions -  Multi-device remote control
-  startMultiRemoteControl() {
+  startRemoteControl(devices: DeviceSummary[]) {
+    const selectedDevices: RemoteControlDeviceInfo[] = devices.map((d) => ({
+      id: d.id,
+      model: d.model,
+      isTestbed: this.isTestbed(d),
+      subDevices: d.subDevices,
+    }));
     this.remoteControlService.startRemoteControl(
       this.host.hostName,
-      this.selection.selected,
+      selectedDevices,
     );
-  }
-
-  startSingleRemoteControl(device: DeviceSummary) {
-    this.remoteControlService.startRemoteControl(this.host.hostName, [device]);
   }
 
   startSubDeviceRemoteControl(
     subDevice: SubDeviceInfo,
     parentDevice: DeviceSummary,
   ) {
-    // Construct a temporary DeviceSummary from SubDeviceInfo
-    const deviceSummary: DeviceSummary = {
-      id: subDevice.id,
-      healthState: {
-        health: 'UNKNOWN', // Default for sub-devices if unknown
-        title: 'Unknown',
-        tooltip: '',
+    const device: RemoteControlDeviceInfo[] = [
+      {
+        id: parentDevice.id,
+        model: parentDevice.model,
+        isTestbed: true,
+        subDevices: [subDevice],
       },
-      types: subDevice.types,
-      deviceStatus: {
-        status: 'UNKNOWN',
-        isCritical: false,
-      },
-      label: '',
-      requiredDims: '',
-      model: subDevice.model || '',
-      version: subDevice.version || '',
-      subDevices: [],
-      parentDeviceId: parentDevice.id,
-    };
+    ];
 
-    this.remoteControlService.startRemoteControl(this.host.hostName, [
-      deviceSummary,
-    ]);
+    this.remoteControlService.startRemoteControl(
+      this.host.hostName,
+      device,
+      true,
+    );
   }
 
   toggleRow(element: DeviceSummary) {

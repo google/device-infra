@@ -3,6 +3,7 @@ import {ChangeDetectionStrategy, Component, Input, signal} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {type RemoteControlDevicesRequest} from 'app/core/models/host_overview';
+import {PROXY_TYPE_LABELS} from '../remote_control.types';
 
 /**
  * Component for displaying confirmation content before starting remote control.
@@ -21,15 +22,6 @@ export class ConfirmConnectionContent {
 
   showSkippedInConfirm = signal(true);
 
-  readonly PROXY_TYPE_LABELS: Record<number, string> = {
-    0: 'Auto (Default)',
-    1: 'ADB & Video',
-    2: 'ADB Console',
-    3: 'USB-over-IP',
-    4: 'SSH',
-    5: 'Video Only',
-  };
-
   getDurationLabel(): string {
     if (!this.request) return '';
     const minutes = Math.floor(this.request.durationSeconds / 60);
@@ -47,7 +39,7 @@ export class ConfirmConnectionContent {
 
   getProxyLabel(): string {
     if (!this.request) return '';
-    return this.PROXY_TYPE_LABELS[this.request.proxyType] || 'Unknown';
+    return PROXY_TYPE_LABELS[this.request.proxyType] || 'Unknown';
   }
 
   getFlashLabel(): string {

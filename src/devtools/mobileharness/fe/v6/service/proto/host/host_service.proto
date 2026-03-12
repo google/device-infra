@@ -46,7 +46,7 @@ service HostService {
   rpc UpdatePassThroughFlags(UpdatePassThroughFlagsRequest)
       returns (UpdatePassThroughFlagsResponse) {
     option (google.api.http) = {
-      post: "/v6/hosts/{host_name}:updatePassThroughFlags"
+      post: "/v6/hosts/{host_name}/updatePassThroughFlags"
       body: "*"
     };
   }
@@ -55,7 +55,7 @@ service HostService {
   rpc DecommissionMissingDevices(DecommissionMissingDevicesRequest)
       returns (DecommissionMissingDevicesResponse) {
     option (google.api.http) = {
-      post: "/v6/hosts/{host_name}/decommission_missing_devices"
+      post: "/v6/hosts/{host_name}/decommissionMissingDevices"
       body: "*"
     };
   }
@@ -112,8 +112,8 @@ message UpdatePassThroughFlagsResponse {}
 message DecommissionMissingDevicesRequest {
   // The unique name of the host.
   string host_name = 1;
-  // The list of device control IDs to decommission.
-  repeated string device_control_ids = 2;
+  // The list of device IDs to decommission.
+  repeated string device_ids = 2;
 }
 
 // Response message for DecommissionMissingDevices.
@@ -123,8 +123,19 @@ message DecommissionMissingDevicesResponse {}
 message CheckRemoteControlEligibilityRequest {
   // The unique name of the host.
   string host_name = 1;
-  // The list of device control IDs to check.
-  repeated string device_control_ids = 2;
+
+  // Represents a device to check for eligibility.
+  message DeviceTarget {
+    // The unique identifier of the device. If sub_device_id is provided,
+    // this should be parent device id.
+    string device_id = 1;
+    // Optional. The unique identifier of the sub-device when targeting a
+    // specific sub-device.
+    string sub_device_id = 2;
+  }
+
+  // The list of device targets to check.
+  repeated DeviceTarget targets = 3;
 }
 
 // Response for remote control eligibility check.
