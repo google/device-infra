@@ -807,6 +807,8 @@ public class TradefedTest extends BaseDriver
         }
       }
       // Replace ${COMMAND} with the Tradefed command
+      boolean hasCommandLineTemplate =
+          configTemplate.contains(TradefedConfigGenerator.COMMAND_LINE_TEMPLATE);
       config =
           config.replace(
               TradefedConfigGenerator.COMMAND_LINE_TEMPLATE,
@@ -829,6 +831,12 @@ public class TradefedTest extends BaseDriver
               .toString();
       localFileUtil.writeToFile(testPlanFile, config);
       tradefedRunCommand.add(testPlanFile);
+
+      // If the config does not contain command template, then append the command line args to
+      // the test plan file. Example: "run commandAndExit <test plan file> <command line args>".
+      if (!hasCommandLineTemplate) {
+        tradefedRunCommand.addAll(tradefedCommand);
+      }
     }
 
     // Appends allocated device(s) serial
