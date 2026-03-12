@@ -58,6 +58,7 @@ public final class DeviceHeaderInfoBuilderTest {
   @Bind @Mock private LogcatButtonBuilder logcatButtonBuilder;
   @Bind @Mock private QuarantineButtonBuilder quarantineButtonBuilder;
   @Bind @Mock private ScreenshotButtonBuilder screenshotButtonBuilder;
+  @Bind @Mock private ConfigurationButtonBuilder configurationButtonBuilder;
   @Inject private DeviceHeaderInfoBuilder deviceHeaderInfoBuilder;
 
   @Before
@@ -70,6 +71,8 @@ public final class DeviceHeaderInfoBuilderTest {
     when(quarantineButtonBuilder.build(any(DeviceInfo.class)))
         .thenReturn(ActionButtonState.getDefaultInstance());
     when(screenshotButtonBuilder.build(any(DeviceInfo.class)))
+        .thenReturn(ActionButtonState.getDefaultInstance());
+    when(configurationButtonBuilder.build(any(DeviceInfo.class)))
         .thenReturn(ActionButtonState.getDefaultInstance());
   }
 
@@ -102,7 +105,8 @@ public final class DeviceHeaderInfoBuilderTest {
                     .setLogcat(ActionButtonState.getDefaultInstance())
                     .setFlash(FlashActionButtonState.getDefaultInstance())
                     .setRemoteControl(ActionButtonState.getDefaultInstance())
-                    .setQuarantine(ActionButtonState.getDefaultInstance()))
+                    .setQuarantine(ActionButtonState.getDefaultInstance())
+                    .setConfiguration(ActionButtonState.getDefaultInstance()))
             .build();
 
     assertThat(
@@ -132,7 +136,8 @@ public final class DeviceHeaderInfoBuilderTest {
                     .setLogcat(ActionButtonState.getDefaultInstance())
                     .setFlash(FlashActionButtonState.getDefaultInstance())
                     .setRemoteControl(ActionButtonState.getDefaultInstance())
-                    .setQuarantine(ActionButtonState.getDefaultInstance()))
+                    .setQuarantine(ActionButtonState.getDefaultInstance())
+                    .setConfiguration(ActionButtonState.getDefaultInstance()))
             .build();
 
     assertThat(

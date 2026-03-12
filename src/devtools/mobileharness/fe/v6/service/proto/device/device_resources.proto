@@ -256,6 +256,7 @@ message DeviceActions {
   FlashActionButtonState flash = 3;
   ActionButtonState remote_control = 4;
   ActionButtonState quarantine = 5;
+  ActionButtonState configuration = 6;
 }
 
 // Information for device header.
