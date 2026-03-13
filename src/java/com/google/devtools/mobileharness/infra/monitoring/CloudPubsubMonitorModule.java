@@ -24,6 +24,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.monitoring.proto.MonitoredRecordProto.MonitoredRecord;
+import com.google.devtools.mobileharness.shared.util.chubby.MasterElectionParticipant;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -101,7 +102,11 @@ public final class CloudPubsubMonitorModule extends AbstractModule {
   @Provides
   @Singleton
   MonitorPipelineLauncher provideMonitorPipelineLauncher(
-      BatchPipelineService<MonitoredRecord> batchPipelineService) {
-    return new MonitorPipelineLauncher(batchPipelineService);
+      DataPuller<MonitoredRecord> puller,
+      DataPusher pusher,
+      MasterElectionParticipant.Factory masterElectionParticipantFactory) {
+    BatchPipelineService<MonitoredRecord> service =
+        new BatchPipelineService<>(puller, pusher, masterElectionParticipantFactory);
+    return new MonitorPipelineLauncher(service);
   }
 }

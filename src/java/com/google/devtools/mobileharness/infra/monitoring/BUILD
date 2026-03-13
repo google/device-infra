@@ -34,6 +34,7 @@ java_library(
     deps = [
         ":monitor_lib",
         ":monitor_pipeline_launcher",
+        "//java/com/google/devtools/mobileharness/shared/util/chubby",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/query/proto:filter_java_proto",
@@ -70,11 +71,12 @@ java_library(
         "DataPusher.java",
     ],
     deps = [
+        "//java/com/google/devtools/mobileharness/shared/util/chubby",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
-        "@maven//:com_google_inject_guice",
         "@protobuf//:protobuf_java",
     ],
 )
