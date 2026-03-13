@@ -148,8 +148,8 @@ public class GrpcExceptionUtil {
   }
 
   private static Optional<RpcErrorPayload> getPayloadFromProto(Metadata trailers) {
-    return Optional.ofNullable(
-        trailers.get(ProtoUtils.keyForProto(RpcErrorPayload.getDefaultInstance())));
+    return Optional.ofNullable(trailers)
+        .map(t -> t.get(ProtoUtils.keyForProto(RpcErrorPayload.getDefaultInstance())));
   }
 
   private static Optional<RpcErrorPayload> getPayloadFromBinary(
