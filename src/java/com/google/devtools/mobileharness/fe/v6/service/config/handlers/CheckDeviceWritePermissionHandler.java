@@ -52,12 +52,12 @@ public final class CheckDeviceWritePermissionHandler {
   }
 
   public ListenableFuture<CheckDeviceWritePermissionResponse> checkDeviceWritePermission(
-      CheckDeviceWritePermissionRequest request, Optional<String> endUser) {
-    if (endUser.isEmpty()) {
+      CheckDeviceWritePermissionRequest request, Optional<String> username) {
+    if (username.isEmpty()) {
       return immediateFuture(
           CheckDeviceWritePermissionResponse.newBuilder().setHasPermission(false).build());
     }
-    String user = endUser.get();
+    String user = username.get();
     String deviceId = request.getId();
     String universe = request.getUniverse();
 
