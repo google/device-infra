@@ -337,32 +337,12 @@ public final class FileOperatorTest {
 
   @Test
   public void pushFileOrDir_md5Equal_skipped() throws Exception {
-    flags.setAllFlags(ImmutableMap.of("cache_pushed_files", "true"));
-    int sdkVersion = 28;
-    String md5 = "1234567890";
-    String srcPathOnHost = "file_path_and_name_on_host";
-    String desPathOnDevice = "/sdcard/tmp/";
-    String desFinalPathOnDevice = "/sdcard/tmp/name";
-    String cachedPropertyKeyForDesPath =
-        FileOperator.DEVICE_PROP_PREFIX_PUSHED_FILE_OR_DIR + desFinalPathOnDevice;
+    pushFileOrDirMd5Equal(/* fileExistedOnDevice= */ true);
+  }
 
-    when(systemSettingUtil.getDeviceSdkVersion(DEVICE_ID)).thenReturn(sdkVersion);
-    when(localFileUtil.isFileOrDirExist(srcPathOnHost)).thenReturn(true);
-    when(checksumUtil.fingerprint(srcPathOnHost)).thenReturn(md5);
-    when(device.getProperty(cachedPropertyKeyForDesPath)).thenReturn(md5);
-    when(androidFileUtil.getPushedFileOrDirFinalDestinationPathOnDevice(
-            DEVICE_ID, sdkVersion, srcPathOnHost, desPathOnDevice))
-        .thenReturn(desFinalPathOnDevice);
-
-    fileOperator.pushFileOrDir(
-        device,
-        FilePushArgs.builder()
-            .setSrcPathOnHost(srcPathOnHost)
-            .setDesPathOnDevice(desPathOnDevice)
-            .build(),
-        testLog);
-
-    verify(androidFileUtil, never()).push(anyString(), anyInt(), anyString(), anyString(), any());
+  @Test
+  public void pushFileOrDir_md5Equal_fileNotExist_repush() throws Exception {
+    pushFileOrDirMd5Equal(/* fileExistedOnDevice= */ false);
   }
 
   @Test
@@ -610,5 +590,41 @@ public final class FileOperatorTest {
                     () -> fileOperator.removeFileOrDir(device, fileOrDirPath, testLog))
                 .getErrorId())
         .isEqualTo(AndroidErrorId.ANDROID_FILE_OPERATOR_REMOVE_FILE_INVALID_ARGUMENT);
+  }
+
+  private void pushFileOrDirMd5Equal(boolean fileExistedOnDevice) throws Exception {
+    flags.setAllFlags(ImmutableMap.of("cache_pushed_files", "true"));
+    int sdkVersion = 28;
+    String md5 = "1234567890";
+    String srcPathOnHost = "file_path_and_name_on_host";
+    String desPathOnDevice = "/sdcard/tmp/";
+    String desFinalPathOnDevice = "/sdcard/tmp/name";
+    String cachedPropertyKeyForDesPath =
+        FileOperator.DEVICE_PROP_PREFIX_PUSHED_FILE_OR_DIR + desFinalPathOnDevice;
+
+    when(systemSettingUtil.getDeviceSdkVersion(DEVICE_ID)).thenReturn(sdkVersion);
+    when(localFileUtil.isFileOrDirExist(srcPathOnHost)).thenReturn(true);
+    when(checksumUtil.fingerprint(srcPathOnHost)).thenReturn(md5);
+    when(device.getProperty(cachedPropertyKeyForDesPath)).thenReturn(md5);
+    when(androidFileUtil.getPushedFileOrDirFinalDestinationPathOnDevice(
+            DEVICE_ID, sdkVersion, srcPathOnHost, desPathOnDevice))
+        .thenReturn(desFinalPathOnDevice);
+    when(androidFileUtil.isFileOrDirExisted(DEVICE_ID, desPathOnDevice))
+        .thenReturn(fileExistedOnDevice);
+
+    fileOperator.pushFileOrDir(
+        device,
+        FilePushArgs.builder()
+            .setSrcPathOnHost(srcPathOnHost)
+            .setDesPathOnDevice(desPathOnDevice)
+            .build(),
+        testLog);
+
+    if (fileExistedOnDevice) {
+      verify(androidFileUtil, never()).push(anyString(), anyInt(), anyString(), anyString(), any());
+    } else {
+      verify(androidFileUtil)
+          .push(DEVICE_ID, sdkVersion, srcPathOnHost, desPathOnDevice, /* pushTimeout= */ null);
+    }
   }
 }

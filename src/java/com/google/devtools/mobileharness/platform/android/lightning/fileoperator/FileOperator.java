@@ -205,13 +205,25 @@ public class FileOperator {
       // Checks whether the file/dir has been pushed.
       md5 = md5Util.fingerprint(srcPathOnHost);
       if (md5.equals(device.getProperty(propertyKey))) {
-        SharedLogUtil.logMsg(
-            logger,
-            log,
-            "Skip pushing file/dir on device %s, which has been pushed before:%n%s",
-            deviceId,
-            info);
-        return;
+        if (!androidFileUtil.isFileOrDirExisted(deviceId, desPathOnDevice)) {
+          // Best effort to detect cached path was removed. In case of folder it only checks that
+          // the folder exists, not files inside. In case of file it only checks that the file
+          // exists but doesn't calculate the md5 checksum of the file on the device.
+          SharedLogUtil.logMsg(
+              logger,
+              log,
+              "File/dir on device %s has been pushed before:%n%s, but is now missing, re-pushing.",
+              deviceId,
+              info);
+        } else {
+          SharedLogUtil.logMsg(
+              logger,
+              log,
+              "Skip pushing file/dir on device %s, which has been pushed before:%n%s",
+              deviceId,
+              info);
+          return;
+        }
       }
     }
     if (prepareDesDirWhenSrcIsFile && localFileUtil.isFileExist(srcPathOnHost)) {
