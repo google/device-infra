@@ -147,6 +147,8 @@ public class TradefedTest extends BaseDriver
   private TradefedRunStrategy tradefedRunStrategy;
   private final TestMessageUtil testMessageUtil;
 
+  private final AtomicBoolean deviceLostDetected = new AtomicBoolean(false);
+
   private final Object tfProcessLock = new Object();
 
   @Nullable
@@ -193,6 +195,7 @@ public class TradefedTest extends BaseDriver
 
   @Override
   public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    deviceLostDetected.set(false);
     TradefedTestDriverSpec spec = testInfo.jobInfo().combinedSpec(this);
     String xtsType = Strings.emptyToNull(spec.getXtsType());
     tradefedRunStrategy =
@@ -233,6 +236,19 @@ public class TradefedTest extends BaseDriver
               spec.getXtsType(), tfExitCode);
       setTestResult(testInfo, tfExitCode.orElse(null));
       addTestResultPropertiesToJob(workDir, xtsType, testInfo);
+
+      if (deviceLostDetected.get()
+          && !testInfo
+              .properties()
+              .getBoolean(XtsConstants.TRADEFED_JOBS_HAS_RESULT_FILE)
+              .orElse(false)) {
+        testInfo
+            .log()
+            .atInfo()
+            .alsoTo(logger)
+            .log("DNAE detected during preparation stage. Signal for provision.");
+        testInfo.properties().add("needs_provision_repair", "true");
+      }
     } finally {
       scheduledThreadPool.shutdown();
       CompositeDeviceUtil.uncacheTestbed(getDevice());
@@ -535,13 +551,19 @@ public class TradefedTest extends BaseDriver
           "Failed to operate TF output file " + tfOutputPath,
           e);
     } catch (CommandFailureException e) {
+      String message = e.getMessage();
+      if (message != null
+          && (message.contains("DeviceNotAvailableException")
+              || message.contains("device offline"))) {
+        deviceLostDetected.set(true);
+      }
       testInfo
           .resultWithCause()
           .setNonPassing(
               TestResult.ERROR,
               MobileHarnessExceptionFactory.createUserFacingException(
                   AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR,
-                  "Failed to run Tradefed command: " + e.getMessage(),
+                  "Failed to run Tradefed command: " + message,
                   e));
       return Optional.of(e.result().exitCode());
     } catch (CommandTimeoutException e) {
@@ -624,6 +646,9 @@ public class TradefedTest extends BaseDriver
 
     @Override
     public Response onLine(String line) {
+      if (line.contains("DeviceNotAvailableException") || line.contains("device offline")) {
+        deviceLostDetected.set(true);
+      }
       // Writes to LogManager (for log stream).
       if (tfResultStarting(line)) {
         printingTfResult = true;
