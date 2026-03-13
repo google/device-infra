@@ -26,6 +26,7 @@ java_library(
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//tools/jdk/internal:jdk.unsupported/sun.misc",
         "@maven//:com_google_guava_guava",
     ],
 )
