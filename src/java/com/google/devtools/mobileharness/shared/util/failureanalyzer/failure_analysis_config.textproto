@@ -1,0 +1,17 @@
+# proto-file: google3/third_party/deviceinfra/src/java/com/google/devtools/mobileharness/shared/util/failureanalyzer/proto/failure_analysis_config.proto
+# proto-message: com.google.devtools.mobileharness.shared.util.failureanalyzer.proto.FailureAnalysisConfig
+
+# Standard patterns for analyzing test failures.
+# New patterns can be added here as and when required to improve root cause segmentation.
+
+pattern {
+  file_name: "cobalt.log"
+  pattern: "beginning of crash"
+  message: "Some crash found in cobalt.log"
+}
+pattern {
+  file_name: "cobalt.log"
+  pattern: "\"Refused to display '.*' in a frame because it set 'X-Frame-Options' to 'sameorigin'\\.\", source: chrome-error://chromewebdata/"
+  message: "Failed to establish connection error due to X-Frame-Options 'sameorigin' error : YouTube or frame content blocked."
+}
+
