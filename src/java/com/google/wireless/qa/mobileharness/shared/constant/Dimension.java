@@ -78,6 +78,11 @@ public final class Dimension {
     DM_TYPE,
     /** The id of the device. */
     ID,
+    /**
+     * If the device status is FAILED, a short (one to three word, i.e. not a stack trace) reason
+     * why it failed.
+     */
+    FAILURE_REASON,
     /** Hinge angle of the foldable device. */
     HINGE_ANGLE,
     /** Host IP of the lab server. */
