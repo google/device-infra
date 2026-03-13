@@ -769,6 +769,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
       extendExpireTime(testRemainingTime);
     }
     try {
+      postDeviceAllocatedEvent("Here: allocated and testing");
       deviceStat.addNewTest();
       TestExecutionResult testExecutionResult =
           TestExecutionResult.create(TestResult.UNKNOWN, PostTestDeviceOp.REBOOT);
@@ -795,6 +796,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
         }
       }
     } finally {
+      postDeviceChangeEvent("Here: deallocated and finished testing");
       test = null;
       if (!needReboot) {
         recordBecomeIdleTime();
@@ -877,6 +879,15 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
   /** Posts {@link LocalDeviceChangeEvent} to signal the device status/dimension change. */
   private void postDeviceChangeEvent(String info) {
     logger.atInfo().log("Post LocalDeviceChangeEvent: %s", info);
+    globalInternalBus.post(
+        new LocalDeviceChangeEvent(
+            device.getDeviceControlId(),
+            device.getDeviceUuid(),
+            device.getClass().getSimpleName()));
+  }
+
+  private void postDeviceAllocatedEvent(String info) {
+    logger.atInfo().log("Here: Post LocalDeviceAllocatedEvent: %s", info);
     globalInternalBus.post(
         new LocalDeviceChangeEvent(
             device.getDeviceControlId(),
