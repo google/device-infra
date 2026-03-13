@@ -237,6 +237,53 @@ public final class AndroidProcessUtilTest {
   }
 
   @Test
+  public void resolveActivity() throws Exception {
+    String packageName = "com.google.android.gms";
+    String command =
+        "cmd package resolve-activity --brief -c android.intent.category.LAUNCHER " + packageName;
+    when(adb.runShellWithRetry(SERIAL, command))
+        .thenReturn(
+            "Activity resolver briefః\n"
+                + "  101d7e com.google.android.gms/.chimera.GmsIntentOperationService");
+
+    assertThat(androidProcessUtil.resolveDefaultActivity(SERIAL, packageName))
+        .isEqualTo("101d7e com.google.android.gms/.chimera.GmsIntentOperationService");
+  }
+
+  @Test
+  public void resolveActivity_noActivityFound() throws Exception {
+    String packageName = "com.google.android.gms";
+    String command =
+        "cmd package resolve-activity --brief -c android.intent.category.LAUNCHER " + packageName;
+    when(adb.runShellWithRetry(SERIAL, command)).thenReturn("No activity found");
+
+    MobileHarnessException exception =
+        assertThrows(
+            MobileHarnessException.class,
+            () -> androidProcessUtil.resolveDefaultActivity(SERIAL, packageName));
+    assertThat(exception.getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_PROCESS_RESOLVE_ACTIVITY_ERROR);
+  }
+
+  @Test
+  public void resolveActivity_commandFailed_throwException() throws Exception {
+    String packageName = "com.google.android.gms";
+    String command =
+        "cmd package resolve-activity --brief -c android.intent.category.LAUNCHER " + packageName;
+    when(adb.runShellWithRetry(SERIAL, command))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_ERROR, "Error"));
+
+    MobileHarnessException exception =
+        assertThrows(
+            MobileHarnessException.class,
+            () -> androidProcessUtil.resolveDefaultActivity(SERIAL, packageName));
+    assertThat(exception.getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_PROCESS_RESOLVE_ACTIVITY_ERROR);
+  }
+
+  @Test
   public void startApplication_withException() throws Exception {
     String packageName = "org.openqa.selenium.android.app";
     String activityName = ".MainActivity";
