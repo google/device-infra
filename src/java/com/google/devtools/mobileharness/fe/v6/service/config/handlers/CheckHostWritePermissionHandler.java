@@ -18,10 +18,16 @@ package com.google.devtools.mobileharness.fe.v6.service.config.handlers;
 
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
-import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigConverter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionResponse;
+import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
+import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -29,15 +35,57 @@ import javax.inject.Singleton;
 /** Handler for the CheckHostWritePermission RPC. */
 @Singleton
 public final class CheckHostWritePermissionHandler {
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private final ConfigurationProvider configurationProvider;
+  private final GroupMembershipProvider groupMembershipProvider;
+  private final ListeningExecutorService executor;
 
   @Inject
-  CheckHostWritePermissionHandler() {}
+  CheckHostWritePermissionHandler(
+      ConfigurationProvider configurationProvider,
+      GroupMembershipProvider groupMembershipProvider,
+      ListeningExecutorService executor) {
+    this.configurationProvider = configurationProvider;
+    this.groupMembershipProvider = groupMembershipProvider;
+    this.executor = executor;
+  }
 
   public ListenableFuture<CheckHostWritePermissionResponse> checkHostWritePermission(
       CheckHostWritePermissionRequest request, Optional<String> username) {
-    logger.atInfo().log("Checking host write permission for %s", request.getHostName());
-    // TODO: Implement real logic.
-    return immediateFuture(CheckHostWritePermissionResponse.getDefaultInstance());
+    if (username.isEmpty()) {
+      return immediateFuture(
+          CheckHostWritePermissionResponse.newBuilder().setHasPermission(false).build());
+    }
+    String user = username.get();
+    String hostName = request.getHostName();
+    String universe = request.getUniverse();
+
+    return Futures.transformAsync(
+        configurationProvider.getLabConfig(hostName, universe),
+        (Optional<LabConfig> labConfig) -> {
+          if (labConfig.isEmpty()) {
+            return immediateFuture(
+                CheckHostWritePermissionResponse.newBuilder().setHasPermission(false).build());
+          }
+
+          List<String> hostAdmins =
+              ConfigConverter.toFeHostConfig(labConfig.get()).getPermissions().getHostAdminsList();
+          if (hostAdmins.contains(user)) {
+            return immediateFuture(
+                CheckHostWritePermissionResponse.newBuilder().setHasPermission(true).build());
+          }
+
+          if (hostAdmins.isEmpty()) {
+            return immediateFuture(
+                CheckHostWritePermissionResponse.newBuilder().setHasPermission(true).build());
+          }
+
+          return Futures.transform(
+              groupMembershipProvider.isMemberOfAny(user, hostAdmins),
+              (Boolean isMember) ->
+                  CheckHostWritePermissionResponse.newBuilder().setHasPermission(isMember).build(),
+              executor);
+        },
+        executor);
   }
 }

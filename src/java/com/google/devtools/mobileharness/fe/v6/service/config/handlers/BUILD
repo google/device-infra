@@ -101,8 +101,11 @@ java_library(
     name = "check_host_write_permission_handler",
     srcs = ["CheckHostWritePermissionHandler.java"],
     deps = [
+        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_converter",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/auth",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
