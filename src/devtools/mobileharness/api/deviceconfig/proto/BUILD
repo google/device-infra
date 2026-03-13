@@ -25,6 +25,7 @@ package(
     default_visibility = [
         "//:deviceinfra_all_pkg",
         "//:omnilab_fusion",
+        "//devtools/mobileharness/fe/v6/angular:__subpackages__",
     ],
 )
 
