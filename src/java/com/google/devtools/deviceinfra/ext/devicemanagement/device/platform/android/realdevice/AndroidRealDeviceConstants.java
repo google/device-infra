@@ -137,7 +137,8 @@ public class AndroidRealDeviceConstants {
           "android\\.hardware\\.type\\.automotive",
           "android\\.hardware\\.ram\\.low",
           "com\\.google\\.android\\.play\\.feature\\.HPE_EXPERIENCE",
-          "android\\.software\\.xr\\.api\\.spatial");
+          "android\\.software\\.xr\\.api\\.spatial",
+          "android\\.hardware\\.type\\.xr_peripheral");
 
   /** The keywords whitelist of features on device. Could be extended. */
   public static final ImmutableList<String> FEATURES_KEYWORDS =
