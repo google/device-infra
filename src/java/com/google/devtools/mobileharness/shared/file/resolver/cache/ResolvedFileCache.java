@@ -29,9 +29,6 @@ public interface ResolvedFileCache {
 
   /** A functional interface for a loader. */
   @FunctionalInterface
-  @SuppressWarnings(
-      "GoogleInternalAnnotationsChecker") // AbstractFileResolver is Javax ThreadSafe annotated.
-  @javax.annotation.concurrent.ThreadSafe
   public static interface CacheLoader {
     Optional<ResolveResult> load(ResolveSource key)
         throws MobileHarnessException, InterruptedException;
