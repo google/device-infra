@@ -54,6 +54,7 @@ public final class Enums {
     AR_FORCE_UPDATE,
     AR_UPDATE_ALLOW,
     CURRENT_SLOT,
+    DDR_SIZE,
     DEVKEY_ALLOW,
     HARDWARE,
     HW_REVISION,
@@ -67,6 +68,7 @@ public final class Enums {
     SECURE_BOOT,
     SERIALNO,
     SOC_ID,
+    STORAGE_CAPACITY,
     UNLOCKED,
     VERSION_OS,
     // keep-sorted end sticky_prefixes=@
