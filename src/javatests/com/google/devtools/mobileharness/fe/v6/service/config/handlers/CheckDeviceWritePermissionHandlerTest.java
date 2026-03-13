@@ -102,8 +102,7 @@ public final class CheckDeviceWritePermissionHandlerTest {
   public void checkDeviceWritePermission_userInOwners_returnsTrue() throws Exception {
     DeviceConfig config =
         DeviceConfig.newBuilder()
-            .setBasicConfig(
-                BasicDeviceConfig.newBuilder().addOwner("owner1").addExecutor("executor1").build())
+            .setBasicConfig(BasicDeviceConfig.newBuilder().addOwner("owner1").build())
             .build();
     DeviceData deviceData =
         DeviceData.create(
@@ -114,7 +113,6 @@ public final class CheckDeviceWritePermissionHandlerTest {
             Optional.of(config));
     when(deviceDataLoader.loadDeviceData("device", "universe"))
         .thenReturn(immediateFuture(deviceData));
-    when(groupMembershipProvider.isMemberOfAny(any(), any())).thenReturn(immediateFuture(false));
 
     CheckDeviceWritePermissionRequest request =
         CheckDeviceWritePermissionRequest.newBuilder()
@@ -128,6 +126,63 @@ public final class CheckDeviceWritePermissionHandlerTest {
                 .get()
                 .getHasPermission())
         .isTrue();
+  }
+
+  @Test
+  public void checkDeviceWritePermission_noOwnersUserIsExecutor_returnsTrue() throws Exception {
+    DeviceConfig config =
+        DeviceConfig.newBuilder()
+            .setBasicConfig(BasicDeviceConfig.newBuilder().addExecutor("executor1").build())
+            .build();
+    DeviceData deviceData =
+        DeviceData.create(
+            DeviceInfo.getDefaultInstance(),
+            config,
+            ManagementMode.PER_DEVICE,
+            Optional.empty(),
+            Optional.of(config));
+    when(deviceDataLoader.loadDeviceData("device", "universe"))
+        .thenReturn(immediateFuture(deviceData));
+
+    CheckDeviceWritePermissionRequest request =
+        CheckDeviceWritePermissionRequest.newBuilder()
+            .setId("device")
+            .setUniverse("universe")
+            .build();
+
+    assertThat(
+            handler
+                .checkDeviceWritePermission(request, Optional.of("executor1"))
+                .get()
+                .getHasPermission())
+        .isTrue();
+  }
+
+  @Test
+  public void checkDeviceWritePermission_userInExecutorsNotOwners_returnsFalse() throws Exception {
+    DeviceConfig config =
+        DeviceConfig.newBuilder()
+            .setBasicConfig(
+                BasicDeviceConfig.newBuilder().addOwner("owner1").addExecutor("executor1").build())
+            .build();
+    DeviceData deviceData =
+        DeviceData.create(
+            DeviceInfo.getDefaultInstance(),
+            config,
+            ManagementMode.PER_DEVICE,
+            Optional.empty(),
+            Optional.of(config));
+    when(deviceDataLoader.loadDeviceData("device", "universe"))
+        .thenReturn(immediateFuture(deviceData));
+    when(groupMembershipProvider.isMemberOfAny(eq("executor1"), any()))
+        .thenReturn(immediateFuture(false));
+
+    CheckDeviceWritePermissionRequest request =
+        CheckDeviceWritePermissionRequest.newBuilder()
+            .setId("device")
+            .setUniverse("universe")
+            .build();
+
     assertThat(
             handler
                 .checkDeviceWritePermission(request, Optional.of("executor1"))
