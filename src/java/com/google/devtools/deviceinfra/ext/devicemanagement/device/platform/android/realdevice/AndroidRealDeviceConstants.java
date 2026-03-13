@@ -123,9 +123,6 @@ public class AndroidRealDeviceConstants {
   /** Max memory that a device can have and still be considered a Svelte(low-end) device. */
   public static final int MAX_SVELTE_MEMORY_IN_MB = 512;
 
-  /** Number of consecutive setup failure need to reboot devices to fastboot mode. */
-  public static final long CONSECUTIVE_SETUP_FAILURE_NUM_TO_FASTBOOT_MODE = 5;
-
   /** The disk free percentage threshold of disk alert. */
   public static final double DISK_ALERT_FREE_PERCENTAGE = 0.1;
 
