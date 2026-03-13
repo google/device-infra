@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.flogger.FluentLogger;
@@ -78,6 +79,11 @@ public class AndroidProcessUtil {
   @VisibleForTesting
   static final String ADB_SHELL_TEMPLATE_DUMP_SYS_SERVICE = "dumpsys activity services -p %s";
 
+  /** ADB shell command for resolving default activity. Should fill with: package name. */
+  @VisibleForTesting
+  static final String ADB_SHELL_TEMPLATE_RESOLVE_ACTIVITY =
+      "cmd package resolve-activity --brief -c android.intent.category.LAUNCHER %s";
+
   /** ADB shell command for checking state of a specific service */
   @VisibleForTesting static final String ADB_SHELL_TEMPLATE_SERVICE_CHECK = "service check %s";
 
@@ -92,6 +98,13 @@ public class AndroidProcessUtil {
 
   /** Output of a failed service application. */
   @VisibleForTesting static final String OUTPUT_START_SERVICE_FAILED = "no service started";
+
+  /** Map from friendly app name to package name. */
+  private static final ImmutableMap<String, String> APP_NAME_TO_PACKAGE_NAME =
+      ImmutableMap.<String, String>builder()
+          .put("youtube", "com.google.android.youtube.tv")
+          .put("youtube tv", "com.google.android.youtube.tvunplugged")
+          .buildOrThrow();
 
   /** Timeout for stopping application on a device. */
   private static final Duration DEFAULT_STOP_APPLICATION_TIMEOUT = Duration.ofMinutes(1);
@@ -244,6 +257,17 @@ public class AndroidProcessUtil {
     return Iterables.getFirst(getAllProcessId(args, processName), null);
   }
 
+  /**
+   * Gets package name from a friendly app name.
+   *
+   * @param appName friendly name of app, e.g. "youtube tv"
+   * @return package name if a mapping exists, otherwise null
+   */
+  @Nullable
+  public String getPackageName(String appName) {
+    return APP_NAME_TO_PACKAGE_NAME.get(appName.toLowerCase());
+  }
+
   /** Uses dumpsys to check if service package is running. */
   public boolean isServiceRunning(String serial, String packageName)
       throws MobileHarnessException, InterruptedException {
@@ -256,6 +280,55 @@ public class AndroidProcessUtil {
           AndroidErrorId.ANDROID_PROCESS_DUMPSYS_SERVICE_ERROR, e.getMessage(), e);
     }
     return output.contains("packageName=" + packageName);
+  }
+
+  /**
+   * Resolves the default launch activity for a package.
+   *
+   * @param serial device serial number
+   * @param packageName package name to resolve activity for
+   * @return activity name
+   * @throws MobileHarnessException if activity resolution fails or no launch activity is found
+   * @throws InterruptedException if command execution is interrupted
+   */
+  public String resolveDefaultActivity(String serial, String packageName)
+      throws MobileHarnessException, InterruptedException {
+    String command = String.format(ADB_SHELL_TEMPLATE_RESOLVE_ACTIVITY, packageName);
+
+    // Expected output:
+    // priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=true
+    // com.google.android.youtube.tv/com.google.android.apps.youtube.tv.activity.ShellActivity
+    String output;
+    try {
+      output = adb.runShellWithRetry(serial, command);
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PROCESS_RESOLVE_ACTIVITY_ERROR,
+          "Failed to execute resolve-activity command for package " + packageName,
+          e);
+    }
+    if (output.contains("No activity found") || output.trim().isEmpty()) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PROCESS_RESOLVE_ACTIVITY_ERROR,
+          "No launch activity found for package " + packageName);
+    }
+
+    List<String> lines = Splitters.LINE_SPLITTER.omitEmptyStrings().splitToList(output);
+    if (lines.size() < 2) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PROCESS_RESOLVE_ACTIVITY_ERROR,
+          "Failed to parse resolve-activity output: " + output);
+    }
+
+    String componentName = lines.get(1).trim();
+    List<String> parts = Splitter.on('/').splitToList(componentName);
+    if (parts.size() != 2) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PROCESS_RESOLVE_ACTIVITY_ERROR,
+          "Failed to parse component name: " + componentName);
+    }
+
+    return parts.get(1);
   }
 
   /**
