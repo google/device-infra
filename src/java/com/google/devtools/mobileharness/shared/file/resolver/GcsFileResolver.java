@@ -93,6 +93,7 @@ public class GcsFileResolver extends AbstractFileResolver {
 
   @Override
   protected boolean shouldActuallyResolve(ResolveSource resolveSource) {
+    // gs:// is the prefix for GCS files.
     return resolveSource.path().startsWith(RemoteFileType.GCS.prefix());
   }
 
