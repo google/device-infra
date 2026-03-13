@@ -39,6 +39,7 @@ py_test(
     srcs = [
         "grpc_error_util_test.py",
     ],
+    strict_deps = False,
     tags = ["deviceinfra_disable_in_kokoro"],
     deps = [
         ":grpc_error_util_lib",
