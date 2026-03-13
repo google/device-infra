@@ -727,9 +727,21 @@ public class SessionRequestHandlerUtil {
     // Gets expanded modules with abi and module parameters (if any).
     TestSuiteHelper testSuiteHelper =
         getTestSuiteHelper(xtsRootDir.toString(), xtsType, sessionRequestInfo);
+
+    // Set a dummy arm device info for ATS server requests if no device info is available.
+    DeviceInfo deviceInfoToUse = sessionRequestInfo.deviceInfo().orElse(null);
+    if (deviceInfoToUse == null && sessionRequestInfo.isAtsServerRequest()) {
+      logger.atWarning().log(
+          "No device info is available for ATS server request, use a dummy device info instead.");
+      deviceInfoToUse =
+          DeviceInfo.builder()
+              .setDeviceId("dummy_device_id")
+              .setSupportedAbiList("arm64-v8a,armeabi-v7a")
+              .setSupportedAbi("arm64-v8a")
+              .build();
+    }
     updatedSessionRequestInfo.setExpandedModules(
-        ImmutableMap.copyOf(
-            testSuiteHelper.loadTests(sessionRequestInfo.deviceInfo().orElse(null))));
+        ImmutableMap.copyOf(testSuiteHelper.loadTests(deviceInfoToUse)));
 
     ImmutableList<String> modules = sessionRequestInfo.moduleNames();
     ImmutableSet<String> allNonTfModules = getNonTfModules(configsMap);
