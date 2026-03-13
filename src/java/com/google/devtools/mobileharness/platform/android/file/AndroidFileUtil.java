@@ -213,6 +213,25 @@ public class AndroidFileUtil {
   }
 
   /**
+   * Reads the content of a file on the device.
+   *
+   * @param serial serial number of the device
+   * @param filePath path of the file on the device
+   * @return the content of the file
+   * @throws MobileHarnessException if failed to run the command
+   * @throws InterruptedException if the thread executing the commands is interrupted
+   */
+  public String catFile(String serial, String filePath)
+      throws MobileHarnessException, InterruptedException {
+    try {
+      return adb.runShell(serial, "cat " + filePath);
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_FILE_UTIL_CAT_FILE_EXE_ERROR, e.getMessage(), e);
+    }
+  }
+
+  /**
    * Get the shared preferences key value pairs of a package. Example xml: <map> <long
    * name="android.app.binary.adbwatchdog.adbResetInterval" value="60000" /> <long
    * name="android.app.binary.adbwatchdog.adbTtl" value="43200000" /> <long
