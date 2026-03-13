@@ -29,6 +29,7 @@ import {
   SubDeviceInfo,
 } from '../../../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
+import {Environment} from '../../../../core/services/environment';
 import {InfoCard} from '../../../../shared/components/info_card/info_card';
 import {
   MasterDetailLayout,
@@ -81,6 +82,7 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
   private readonly breakpointObserver = inject(BreakpointObserver);
   private readonly dialog = inject(MatDialog);
   private readonly deviceService = inject(DEVICE_SERVICE);
+  private readonly environment = inject(Environment);
 
   @Input({required: true}) device!: DeviceOverview;
 
@@ -435,5 +437,13 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
         (d.name?.toLowerCase() || '').includes(term) ||
         (d.value?.toLowerCase() || '').includes(term),
     );
+  }
+
+  get isGoogleInternal(): boolean {
+    return this.environment.isGoogleInternal();
+  }
+
+  getStackdriverLogUrl(): string {
+    return '';
   }
 }

@@ -7,18 +7,28 @@
       title="Health & Activity"
       [collapsible]="false"
     >
+      <!-- Stack Driver Log Button (only visible to Google internal users) -->
+      @if (isGoogleInternal) {
+        <div operations class="operation-button">
+          <a [href]="getStackdriverLogUrl()" target="_blank">
+            <mat-icon>description</mat-icon>
+            <span class="operation-text">Stack Driver Log</span>
+            <mat-icon>open_in_new</mat-icon>
+          </a>
+        </div>
+      }
       <div class="info-card-content">
         @let healthUI = getHealthStateUI(device.healthAndActivity.state);
         <div class="health-summary">
-          <div class="summary-icon-bg {{ healthUI.iconBgColorClass }}">
+          <div [class]="'summary-icon-bg ' + healthUI.iconBgColorClass">
             <mat-icon
-              class="summary-icon {{ healthUI.iconColorClass }} {{ healthUI.isSpinning ? 'spin-animation' : '' }}"
+              [class]="'summary-icon ' + healthUI.iconColorClass + (healthUI.isSpinning ? ' spin-animation' : '')"
             >
               {{ healthUI.icon }}
             </mat-icon>
           </div>
-          <div class="health-details {{ healthUI.borderColorClass }}">
-            <h3 class="health-title {{ healthUI.iconColorClass }}">
+          <div [class]="'health-details ' + healthUI.borderColorClass">
+            <h3 [class]="'health-title ' + healthUI.iconColorClass">
               {{ device.healthAndActivity.title }}
             </h3>
             <p class="health-subtitle">{{ device.healthAndActivity.subtitle }}</p>
@@ -77,7 +87,7 @@
             @if (device.healthAndActivity.deviceTypes.length > 0) {
               @for (type of device.healthAndActivity.deviceTypes; track $index) {
                 <div
-                  class="type-chip {{ type.isAbnormal ? 'type-chip-abnormal' : 'type-chip-normal' }}"
+                  [class]="'type-chip ' + (type.isAbnormal ? 'type-chip-abnormal' : 'type-chip-normal')"
                 >
                   {{ type.type }}
                 </div>
@@ -89,7 +99,7 @@
           <dt>Status</dt>
           <dd>
             <div
-              class="type-chip {{ device.healthAndActivity.deviceStatus.isCritical ? 'type-chip-critical-status' : 'type-chip-normal' }}"
+              [class]="'type-chip ' + (device.healthAndActivity.deviceStatus.isCritical ? 'type-chip-critical-status' : 'type-chip-normal')"
             >
               {{ device.healthAndActivity.deviceStatus.status }}
             </div>
@@ -105,12 +115,12 @@
               <div class="task-info">
                 <div class="task-title">
                   {{ task.type }}:
-                  <a href="#" class="task-link" title="{{ task.taskId }}">{{ task.taskId }}</a>
+                  <a href="#" class="task-link" [title]="task.taskId">{{ task.taskId }}</a>
                 </div>
                 @if (task.jobId) {
                   <div class="task-jobid">
                     Part of job:
-                    <a href="#" class="task-link" title="{{ task.jobId }}">{{ task.jobId }}</a>
+                    <a href="#" class="task-link" [title]="task.jobId">{{ task.jobId }}</a>
                   </div>
                 }
               </div>
@@ -131,18 +141,18 @@
         <div class="basic-info-grid-wrapper">
           <dl class="info-grid-tight">
             <dt title="Model">Model</dt>
-            <dd title="{{ device.basicInfo.model }}">{{ device.basicInfo.model || 'N/A' }}</dd>
+            <dd [title]="device.basicInfo.model">{{ device.basicInfo.model || 'N/A' }}</dd>
 
             <dt title="Version">Version</dt>
-            <dd title="{{ device.basicInfo.version }}">
+            <dd [title]="device.basicInfo.version">
               {{ device.basicInfo.version || 'N/A' }}
             </dd>
 
             <dt title="Form">Form</dt>
-            <dd title="{{ device.basicInfo.form }}">{{ device.basicInfo.form || 'N/A' }}</dd>
+            <dd [title]="device.basicInfo.form">{{ device.basicInfo.form || 'N/A' }}</dd>
 
             <dt title="OS">OS</dt>
-            <dd title="{{ device.basicInfo.os }}">{{ device.basicInfo.os || 'N/A' }}</dd>
+            <dd [title]="device.basicInfo.os">{{ device.basicInfo.os || 'N/A' }}</dd>
           </dl>
           <dl class="info-grid-tight">
             <dt title="Battery">Battery</dt>
@@ -165,7 +175,7 @@
                   getWifiQualityText(device.basicInfo.network.wifiRssi);
                   <mat-icon
                     class="wifi-icon"
-                    title="Signal: {{ wifiQuality }} ({{ device.basicInfo.network.wifiRssi }} dBm)"
+                    [title]="'Signal: ' + wifiQuality + ' (' + device.basicInfo.network.wifiRssi + ' dBm)'"
                   >
                     {{ wifiIcon }}
                   </mat-icon>
@@ -189,11 +199,11 @@
             </dd>
             <dt title="Hardware">Hardware</dt
             ><dd
-              title="{{ device.basicInfo.hardware }}"
+              [title]="device.basicInfo.hardware"
               >{{ device.basicInfo.hardware || 'N/A' }}</dd
             >
             <dt title="Build">Build</dt
-            ><dd title="{{ device.basicInfo.build }}">{{ device.basicInfo.build || 'N/A' }}</dd>
+            ><dd [title]="device.basicInfo.build">{{ device.basicInfo.build || 'N/A' }}</dd>
           </dl>
         </div>
       </div>
@@ -221,7 +231,7 @@
                     <dt>Types</dt>
                     <dd class="chip-grid-container">
                       @for(type of sub.types; track type) {
-                        <div class="type-chip {{ type.isAbnormal ? 'type-chip-abnormal' : 'type-chip-normal' }}">
+                        <div [class]="'type-chip ' + (type.isAbnormal ? 'type-chip-abnormal' : 'type-chip-normal')">
                           {{ type.type }}
                         </div>
                       }
