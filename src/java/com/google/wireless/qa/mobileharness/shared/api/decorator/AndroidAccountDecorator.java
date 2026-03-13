@@ -44,7 +44,6 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdb
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.IntentArgs;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.WaitArgs;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
-import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
@@ -86,8 +85,6 @@ public class AndroidAccountDecorator extends BaseDecorator
 
   private final Sleeper sleeper;
 
-  private final AndroidSystemSpecUtil systemSpecUtil;
-
   private final AndroidProcessUtil androidProcessUtil;
 
   private final SystemStateManager systemStateManager;
@@ -105,7 +102,6 @@ public class AndroidAccountDecorator extends BaseDecorator
         decoratedDriver,
         testInfo,
         new SystemStateManager(),
-        new AndroidSystemSpecUtil(),
         new AndroidProcessUtil(),
         new AndroidAccountManager(),
         Sleeper.defaultSleeper());
@@ -116,13 +112,11 @@ public class AndroidAccountDecorator extends BaseDecorator
       Driver decoratedDriver,
       TestInfo testInfo,
       SystemStateManager systemStateManager,
-      AndroidSystemSpecUtil systemSpecUtil,
       AndroidProcessUtil androidProcessUtil,
       AndroidAccountManager androidAccountManager,
       Sleeper sleeper) {
     super(decoratedDriver, testInfo);
     this.systemStateManager = systemStateManager;
-    this.systemSpecUtil = systemSpecUtil;
     this.androidProcessUtil = androidProcessUtil;
     this.androidAccountManager = androidAccountManager;
     this.sleeper = sleeper;
@@ -222,48 +216,45 @@ public class AndroidAccountDecorator extends BaseDecorator
   }
 
   private void tryStartAuthAccountService(String deviceId, TestInfo testInfo)
-      throws InterruptedException, MobileHarnessException {
-    // On emulators, the auth_test_support_debug.apk sometime is frozen or killed. Try to
-    // proactively start the service to avoid login error. See b/466982406#comment9
-    if (systemSpecUtil.isEmulator(deviceId) && !systemSpecUtil.isCuttlefishEmulator(deviceId)) {
-      // Wait for auth support apk to be ready. removeExistingAndGetAccountsToUpdate installs the
-      // auth_test_support_debug.apk. However, the service may not be ready to start immediately.
-      boolean authServiceStarted =
-          AndroidAdbUtil.waitForDeviceReady(
-              UtilArgs.builder().setSerial(deviceId).build(),
-              utilArgs -> {
-                try {
-                  androidProcessUtil.startService(
-                      utilArgs,
-                      IntentArgs.builder()
-                          .setComponent(AUTH_SUPPORT_APK_SERVICED_COMPONENT_NAME)
-                          .build());
-                  return true;
-                } catch (MobileHarnessException e) {
-                  logger.atInfo().log(
-                      "Failed to start auth support service on device %s, will retry...",
-                      utilArgs.serial());
-                  return false;
-                } catch (InterruptedException e) {
-                  Thread.currentThread().interrupt();
-                  return false;
-                }
-              },
-              WaitArgs.builder()
-                  .setSleeper(sleeper)
-                  .setClock(Clock.systemUTC())
-                  .setCheckReadyInterval(Duration.ofSeconds(5))
-                  .setCheckReadyTimeout(Duration.ofSeconds(30))
-                  .build());
-      if (!authServiceStarted) {
-        testInfo
-            .log()
-            .atWarning()
-            .alsoTo(logger)
-            .log(
-                "Auth support service failed to start on device %s after multiple retries.",
-                deviceId);
-      }
+      throws InterruptedException {
+    // Proactively start the service to avoid login error. See b/466982406#comment9
+    // Wait for auth support apk to be ready. removeExistingAndGetAccountsToUpdate installs the
+    // auth_test_support_debug.apk. However, the service may not be ready to start immediately.
+    boolean authServiceStarted =
+        AndroidAdbUtil.waitForDeviceReady(
+            UtilArgs.builder().setSerial(deviceId).build(),
+            utilArgs -> {
+              try {
+                androidProcessUtil.startService(
+                    utilArgs,
+                    IntentArgs.builder()
+                        .setComponent(AUTH_SUPPORT_APK_SERVICED_COMPONENT_NAME)
+                        .build());
+                return true;
+              } catch (MobileHarnessException e) {
+                logger.atInfo().log(
+                    "Failed to start auth support service on device %s, will retry...",
+                    utilArgs.serial());
+                return false;
+              } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+              }
+            },
+            WaitArgs.builder()
+                .setSleeper(sleeper)
+                .setClock(Clock.systemUTC())
+                .setCheckReadyInterval(Duration.ofSeconds(5))
+                .setCheckReadyTimeout(Duration.ofSeconds(30))
+                .build());
+    if (!authServiceStarted) {
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .log(
+              "Auth support service failed to start on device %s after multiple retries.",
+              deviceId);
     }
   }
 
