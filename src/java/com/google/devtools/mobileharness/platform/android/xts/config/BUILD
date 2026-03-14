@@ -13,7 +13,8 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_binary", "java_library")
+load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:java_library.bzl", "java_library")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -131,7 +132,7 @@ java_library(
     ],
 )
 
-java_binary(
+java_library(
     name = "module_configuration_lab_plugin",
     srcs = ["ModuleConfigurationLabPlugin.java"],
     deps = [
