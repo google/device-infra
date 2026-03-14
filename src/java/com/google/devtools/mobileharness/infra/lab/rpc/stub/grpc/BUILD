@@ -51,3 +51,19 @@ java_library(
         "@grpc-java//core",
     ],
 )
+
+java_library(
+    name = "device_ops_grpc_stub",
+    srcs = ["DeviceOpsGrpcStub.java"],
+    deps = [
+        "//src/java/com/google/devtools/common/metrics/stability/rpc:exception",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:stub_util",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:device_ops",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:stub_configures",
+        "//src/java/com/google/wireless/qa/mobileharness/lab/proto:device_ops_serv_grpc",
+        "//src/java/com/google/wireless/qa/mobileharness/lab/proto:device_ops_serv_java_proto",
+        "@grpc-java//core",
+        "@maven//:com_google_guava_guava",
+    ],
+)

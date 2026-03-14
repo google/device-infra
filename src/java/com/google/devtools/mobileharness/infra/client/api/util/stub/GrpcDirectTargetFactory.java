@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.client.api.util.stub;
 
+import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.DeviceOpsGrpcStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.ExecTestGrpcStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.PrepareTestGrpcStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.JobSyncGrpcStub;
@@ -58,6 +59,13 @@ final class GrpcDirectTargetFactory
   }
 
   @Override
+  public DeviceOpsGrpcStub.BlockingInterface createDeviceOpsBlockingInterface(
+      StubConfiguration stubConfiguration) {
+    return directTargetConfigures.createStubInterface(
+        DeviceOpsGrpcStub::newBlockingInterface, stubConfiguration);
+  }
+
+  @Override
   public VersionGrpcStub.BlockingInterface createVersionBlockingInterface(
       StubConfiguration stubConfiguration) {
     return directTargetConfigures.createStubInterface(
@@ -86,6 +94,13 @@ final class GrpcDirectTargetFactory
       StubConfiguration stubConfiguration) {
     return directTargetConfigures.createStubInterface(
         JobSyncGrpcStub::newFutureInterface, stubConfiguration);
+  }
+
+  @Override
+  public DeviceOpsGrpcStub.FutureInterface createDeviceOpsFutureInterface(
+      StubConfiguration stubConfiguration) {
+    return directTargetConfigures.createStubInterface(
+        DeviceOpsGrpcStub::newFutureInterface, stubConfiguration);
   }
 
   @Override

@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.client.api.util.stub;
 
+import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.DeviceOpsGrpcStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.ExecTestGrpcStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.PrepareTestGrpcStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.JobSyncGrpcStub;
@@ -32,6 +33,9 @@ interface BlockingInterfaceFactory {
       StubConfiguration stubConfiguration);
 
   PrepareTestGrpcStub.BlockingInterface createPrepareTestBlockingInterface(
+      StubConfiguration stubConfiguration);
+
+  DeviceOpsGrpcStub.BlockingInterface createDeviceOpsBlockingInterface(
       StubConfiguration stubConfiguration);
 
   VersionGrpcStub.BlockingInterface createVersionBlockingInterface(

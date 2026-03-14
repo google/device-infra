@@ -61,8 +61,10 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/shared/util/comm/stub:stub_configuration_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:device_ops",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:exec_test",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:prepare_test",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub/grpc:device_ops_grpc_stub",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub/grpc:exec_test_grpc_stub",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub/grpc:prepare_test_grpc_stub",
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:job_sync",
