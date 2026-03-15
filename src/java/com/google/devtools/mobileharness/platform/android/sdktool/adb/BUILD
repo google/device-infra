@@ -129,6 +129,7 @@ java_library(
     visibility = DEFAULT_VISIBILITY + [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
+        "//third_party/java_src/android_app/bugle/tests/hawkeye/mhplugins:__pkg__",
     ],
     deps = [
         ":adb_internal_util",
