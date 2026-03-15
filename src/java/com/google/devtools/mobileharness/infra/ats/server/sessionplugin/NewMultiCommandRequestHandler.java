@@ -1072,7 +1072,7 @@ final class NewMultiCommandRequestHandler {
     if (processResult.isPresent() && processResult.get().hasSummary()) {
       long failedModuleCount =
           processResult.get().getModuleInfoList().stream()
-              .filter(module -> module.getFailedTests() > 0)
+              .filter(module -> module.hasReason() && !module.getReason().getMsg().isEmpty())
               .count();
       commandDetailBuilder
           .setPassedTestCount(processResult.get().getSummary().getPassed())
