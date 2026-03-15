@@ -153,6 +153,36 @@ public final class CompatibilityReportCreatorTest {
   }
 
   @Test
+  public void writeReportToXml_withSkippedModules_excludedFromXml() throws Exception {
+    Module skippedModule =
+        Module.newBuilder()
+            .setName("SkippedModule")
+            .setAbi("arm64-v8a")
+            .setSkipped(true)
+            .setDone(true)
+            .build();
+    Module normalModule =
+        Module.newBuilder()
+            .setName("NormalModule")
+            .setAbi("arm64-v8a")
+            .setDone(true)
+            .setTotalTests(1)
+            .setPassed(1)
+            .build();
+    Result report =
+        Result.newBuilder().addModuleInfo(skippedModule).addModuleInfo(normalModule).build();
+    File xmlResultDir = temporaryFolder.newFolder("xml_result_skipped");
+
+    reportCreator.writeReportToXml(report, xmlResultDir);
+
+    String xmlContent =
+        realLocalFileUtil.readFile(
+            xmlResultDir.toPath().resolve(CompatibilityReportCreator.TEST_RESULT_FILE_NAME));
+    assertThat(xmlContent).contains("NormalModule");
+    assertThat(xmlContent).doesNotContain("SkippedModule");
+  }
+
+  @Test
   public void truncateLargeStacktrace() throws Exception {
     String fullStacktrace = "expected:<-25.0> but was:<15.0>\n".repeat(100000);
     assertThat(

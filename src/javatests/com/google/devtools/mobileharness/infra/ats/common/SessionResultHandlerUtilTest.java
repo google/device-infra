@@ -291,4 +291,28 @@ public final class SessionResultHandlerUtilTest {
     assertThat(moduleInfo.getTestCase(0).getTest(1).getResult()).isEqualTo(expectedTest2Result);
     assertThat(moduleInfo.getTestCase(1).getTest(0).getResult()).isEqualTo(expectedTest3Result);
   }
+
+  @Test
+  public void getExpandedNonTfModuleId_withAbi_withoutParameter() {
+    when(jobProperties.getOptional(SessionHandlerHelper.XTS_MODULE_NAME_PROP))
+        .thenReturn(Optional.of("module_name"));
+    when(jobProperties.get(SessionHandlerHelper.XTS_MODULE_ABI_PROP)).thenReturn("x86_64");
+    when(jobProperties.get(SessionHandlerHelper.XTS_MODULE_PARAMETER_PROP)).thenReturn("");
+
+    String result = SessionResultHandlerUtil.getExpandedNonTfModuleId(jobInfo);
+
+    assertThat(result).isEqualTo("x86_64 module_name");
+  }
+
+  @Test
+  public void getExpandedNonTfModuleId_withoutAbi_withParameter() {
+    when(jobProperties.getOptional(SessionHandlerHelper.XTS_MODULE_NAME_PROP))
+        .thenReturn(Optional.of("module_name"));
+    when(jobProperties.get(SessionHandlerHelper.XTS_MODULE_ABI_PROP)).thenReturn("");
+    when(jobProperties.get(SessionHandlerHelper.XTS_MODULE_PARAMETER_PROP)).thenReturn("param1");
+
+    String result = SessionResultHandlerUtil.getExpandedNonTfModuleId(jobInfo);
+
+    assertThat(result).isEqualTo("module_name[param1]");
+  }
 }

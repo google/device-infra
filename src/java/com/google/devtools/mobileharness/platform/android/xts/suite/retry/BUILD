@@ -145,6 +145,7 @@ java_library(
     srcs = ["RetryStatsHelper.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
     ],
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",

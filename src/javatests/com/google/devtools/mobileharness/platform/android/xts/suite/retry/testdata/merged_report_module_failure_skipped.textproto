@@ -55,6 +55,20 @@ summary {
   modules_done: 0
   modules_total: 0
 }
+module_info {
+  name: "CtsVcnTestCases"
+  abi: "arm64-v8a"
+  runtime_millis: 0
+  done: true
+  passed: 0
+  total_tests: 0
+  reason {
+    msg: "Module CtsVcnTestCases is skipped by module controller."
+  }
+  failed_tests: 0
+  warning_tests: 0
+  skipped: true
+}
 attribute {
   key: "start"
   value: "1711615870156"

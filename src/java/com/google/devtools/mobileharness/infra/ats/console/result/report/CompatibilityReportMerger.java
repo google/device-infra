@@ -52,11 +52,13 @@ import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyRe
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.infra.ats.console.util.tradefed.TestRecordProtoUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.TestStatus;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommonUtil;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -128,10 +130,7 @@ public class CompatibilityReportMerger {
     List<ParseResult> parseResults = parseResultBundles(resultBundles);
     return ParseResult.of(
         /* originalReportFile= */ Optional.empty(),
-        mergeParsedReports(parseResults, skipDeviceInfo),
-        parseResults.stream()
-            .flatMap(parseResult -> parseResult.skippedModuleIds().stream())
-            .collect(toImmutableSet()));
+        mergeParsedReports(parseResults, skipDeviceInfo));
   }
 
   /**
@@ -184,13 +183,12 @@ public class CompatibilityReportMerger {
 
     ImmutableList<Module> mergedModuleList = mergeModules(modules.build());
 
-    ImmutableList<Module> modulesWithoutModuleCheckers =
+    ImmutableList<Module> modulesForSummary =
         mergedModuleList.stream()
-            .filter(module -> !SuiteCommonUtil.isModuleChecker(module))
+            .filter(module -> !SuiteCommonUtil.isModuleChecker(module) && !module.getSkipped())
             .collect(toImmutableList());
-    int modulesDoneInSummary =
-        (int) modulesWithoutModuleCheckers.stream().filter(Module::getDone).count();
-    int modulesTotalInSummary = modulesWithoutModuleCheckers.size();
+    int modulesDoneInSummary = (int) modulesForSummary.stream().filter(Module::getDone).count();
+    int modulesTotalInSummary = modulesForSummary.size();
 
     Summary summary =
         Summary.newBuilder()
@@ -240,7 +238,7 @@ public class CompatibilityReportMerger {
   private static Optional<Module> mergeModulesWithSameNameAndAbi(List<Module> modules) {
     if (modules.isEmpty()) {
       return Optional.empty();
-    } else if (modules.size() == 1) {
+    } else if (modules.size() == 1 || modules.stream().allMatch(Module::getSkipped)) {
       return Optional.of(modules.get(0));
     }
 
@@ -567,15 +565,13 @@ public class CompatibilityReportMerger {
       throws MobileHarnessException {
     Path xmlReportFile = resultBundle.xmlReportFile();
     Optional<Result> report = reportParser.parse(xmlReportFile, /* shallow= */ false);
-    ImmutableSet<String> skippedModuleIds = ImmutableSet.of();
     if (report.isPresent()) {
       boolean hadDeviceNotAvailableException = false;
       // Insert the metadata from the test record (if present) to the report.
       if (resultBundle.testRecordFile().isPresent()) {
         Optional<TestRecord> testRecord = readTestRecord(resultBundle.testRecordFile().get());
         if (testRecord.isPresent()) {
-          report = Optional.of(insertMetadataFromTestRecord(report.get(), testRecord.get()));
-          skippedModuleIds = getSkippedModuleIds(testRecord.get());
+          report = Optional.of(insertDataFromTestRecord(report.get(), testRecord.get()));
           hadDeviceNotAvailableException =
               testRecord.get().getDebugInfo().getTrace().contains("DeviceNotAvailableException");
         }
@@ -588,13 +584,13 @@ public class CompatibilityReportMerger {
       if (report.get().getModuleInfoCount() == 0 && hadDeviceNotAvailableException) {
         logger.atInfo().log(
             "Tradefed generated result file with no module info due to DeviceNotAvailableException."
-                + " Inserting modules %s (and skipping %s).",
-            resultBundle.modules(), skippedModuleIds);
+                + " Inserting modules %s.",
+            resultBundle.modules());
         report = Optional.of(insertModulesToResult(report.get(), resultBundle.modules()));
       }
     }
 
-    return ParseResult.of(Optional.of(xmlReportFile), report, skippedModuleIds);
+    return ParseResult.of(Optional.of(xmlReportFile), report);
   }
 
   @VisibleForTesting
@@ -626,46 +622,66 @@ public class CompatibilityReportMerger {
   }
 
   @VisibleForTesting
-  static Result insertMetadataFromTestRecord(Result report, TestRecord testRecord) {
-    // The metrics map - Map<TestRecord ID, Map<Metric Key, Metric Value>> from the test
-    // record.
+  static Result insertDataFromTestRecord(Result report, TestRecord testRecord) {
+    // The metrics map - Map<TestRecord ID, Map<Metric Key, Metric Value>> from the test record.
     Map<String, Map<String, Metric>> metricsMap = new LinkedHashMap<>();
     generateTestRecordMetricsMap(testRecord, metricsMap);
+    HashSet<String> skippedModuleIds = new HashSet<>(getSkippedModuleIds(testRecord));
 
     Result.Builder reportBuilder = report.toBuilder();
-    List<Module> modules = reportBuilder.getModuleInfoList();
-    reportBuilder.clearModuleInfo();
-    for (Module module : modules) {
-      String moduleName = String.format("%s %s", module.getAbi(), module.getName());
-      Module.Builder builder = module.toBuilder();
-      Map<String, Metric> metrics = metricsMap.get(moduleName);
+    // Update existing modules with metrics from TestRecord.
+    for (Module.Builder builder : reportBuilder.getModuleInfoBuilderList()) {
+      String moduleId = AbiUtil.createId(builder.getAbi(), builder.getName());
+      // Remove the module from the skipped set.
+      skippedModuleIds.remove(moduleId);
+
+      Map<String, Metric> metrics = metricsMap.get(moduleId);
       if (metrics != null) {
         Metric prepTimeMetric = metrics.get(TestRecordProtoUtil.METRIC_KEY_PREP_TIME);
-        if (prepTimeMetric != null) {
-          builder.setPrepTimeMillis(prepTimeMetric.getMeasurements().getSingleInt());
-        }
         Metric tearDownTimeMetric = metrics.get(TestRecordProtoUtil.METRIC_KEY_TEARDOWN_TIME);
-        if (tearDownTimeMetric != null) {
-          builder.setTeardownTimeMillis(tearDownTimeMetric.getMeasurements().getSingleInt());
+        if (prepTimeMetric != null || tearDownTimeMetric != null) {
+          if (prepTimeMetric != null) {
+            builder.setPrepTimeMillis(prepTimeMetric.getMeasurements().getSingleInt());
+          }
+          if (tearDownTimeMetric != null) {
+            builder.setTeardownTimeMillis(tearDownTimeMetric.getMeasurements().getSingleInt());
+          }
         }
       }
-      reportBuilder.addModuleInfo(builder.build());
     }
+
+    // Add skipped modules that are not in the report.
+    for (String skippedModuleId : skippedModuleIds) {
+      ImmutableList<String> abiAndName = AbiUtil.parseId(skippedModuleId);
+      if (abiAndName.size() == 2) {
+        reportBuilder.addModuleInfo(
+            createSkippedModule(
+                abiAndName.get(0),
+                abiAndName.get(1),
+                String.format("Module %s is skipped by module controller.", abiAndName.get(1))));
+      }
+    }
+
     return reportBuilder.build();
   }
 
   /** Gets the skipped module ids (abi module_name) from the test record. */
-  @VisibleForTesting
   static ImmutableSet<String> getSkippedModuleIds(TestRecord testRecord) {
     return testRecord.getChildrenList().stream()
         .map(ChildReference::getInlineTestRecord)
+        .filter(moduleRecord -> !moduleRecord.getTestRecordId().isEmpty())
+        .collect(Collectors.groupingBy(TestRecord::getTestRecordId))
+        .entrySet()
+        .stream()
         .filter(
-            moduleRecord ->
-                !moduleRecord.getTestRecordId().isEmpty()
-                    // Module is skipped if it has no children and no failure.
-                    && moduleRecord.getChildrenList().isEmpty()
-                    && !moduleRecord.hasDebugInfo())
-        .map(TestRecord::getTestRecordId)
+            entry ->
+                entry.getValue().stream()
+                    .allMatch(
+                        moduleRecord ->
+                            // Module is skipped if all test records has no children and no failure.
+                            moduleRecord.getChildrenList().isEmpty()
+                                && !moduleRecord.hasDebugInfo()))
+        .map(Map.Entry::getKey)
         .collect(toImmutableSet());
   }
 
@@ -685,6 +701,16 @@ public class CompatibilityReportMerger {
     for (ChildReference child : testRecord.getChildrenList()) {
       generateTestRecordMetricsMap(child.getInlineTestRecord(), metricsMap);
     }
+  }
+
+  public static Module createSkippedModule(String abi, String name, String reason) {
+    return Module.newBuilder()
+        .setAbi(abi)
+        .setName(name)
+        .setDone(true)
+        .setSkipped(true)
+        .setReason(Reason.newBuilder().setMsg(reason))
+        .build();
   }
 
   /** Parses multiple Mobly reports syncly. */
@@ -743,25 +769,14 @@ public class CompatibilityReportMerger {
 
     /** Creates a {@link ParseResult}. */
     public static ParseResult of(Optional<Path> originalReportFile, Optional<Result> report) {
-      return new AutoValue_CompatibilityReportMerger_ParseResult(
-          originalReportFile, report, ImmutableSet.of());
+      return new AutoValue_CompatibilityReportMerger_ParseResult(originalReportFile, report);
     }
 
-    public static ParseResult of(
-        Optional<Path> originalReportFile,
-        Optional<Result> report,
-        ImmutableSet<String> skippedModuleIds) {
-      return new AutoValue_CompatibilityReportMerger_ParseResult(
-          originalReportFile, report, skippedModuleIds);
-    }
-
+    /** Path to the original report file. */
     public abstract Optional<Path> originalReportFile();
 
     /** The parsed report. */
     public abstract Optional<Result> report();
-
-    /** Skipped module ids in the report. */
-    public abstract ImmutableSet<String> skippedModuleIds();
   }
 
   /**

@@ -16,17 +16,22 @@
 load("@rules_java//java:defs.bzl", "java_library")
 load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "suite_test",
     testonly = 1,
     srcs = glob(["*.java"]),
     deps = [
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:abi",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:module_arg",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_result_reporter",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_test_filter",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_version",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_stats_helper",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",

@@ -121,8 +121,7 @@ public class RetryReportMerger {
       @Nullable String previousSessionResultDirName,
       @Nullable RetryType retryType,
       @Nullable Result retryResult,
-      ImmutableList<String> passedInModules,
-      ImmutableSet<String> skippedModuleIds)
+      ImmutableList<String> passedInModules)
       throws MobileHarnessException {
     Preconditions.checkState(previousSessionIndex != null || previousSessionResultDirName != null);
     // Loads the previous session result and its subplan used for the retry
@@ -142,7 +141,7 @@ public class RetryReportMerger {
     if (!passedInModules.isEmpty()) {
       retryArgs.setPassedInModules(ImmutableSet.copyOf(passedInModules));
     }
-    return mergeReportsHelper(retryArgs.build(), previousResult, retryResult, skippedModuleIds);
+    return mergeReportsHelper(retryArgs.build(), previousResult, retryResult);
   }
 
   /**
@@ -161,8 +160,7 @@ public class RetryReportMerger {
       String previousSessionId,
       @Nullable RetryType retryType,
       @Nullable Result retryResult,
-      ImmutableList<String> passedInModules,
-      ImmutableSet<String> skippedModuleIds)
+      ImmutableList<String> passedInModules)
       throws MobileHarnessException {
     // Loads the previous session result and its subplan used for the retry
     Result previousResult = previousResultLoader.loadPreviousResult(resultsDir, previousSessionId);
@@ -174,23 +172,18 @@ public class RetryReportMerger {
     if (!passedInModules.isEmpty()) {
       retryArgs.setPassedInModules(ImmutableSet.copyOf(passedInModules));
     }
-    return mergeReportsHelper(retryArgs.build(), previousResult, retryResult, skippedModuleIds);
+    return mergeReportsHelper(retryArgs.build(), previousResult, retryResult);
   }
 
   private MergedResult mergeReportsHelper(
-      RetryArgs retryArgs,
-      Result previousResult,
-      @Nullable Result retryResult,
-      ImmutableSet<String> skippedModuleIds)
+      RetryArgs retryArgs, Result previousResult, @Nullable Result retryResult)
       throws MobileHarnessException {
     SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs);
     logger.atInfo().log("Merging previous result and retry result [RetryArgs: %s]", retryArgs);
     long startTime = clock.instant().toEpochMilli();
     try {
       return MergedResult.of(
-          doMergeReports(previousResult, subPlan, retryResult, skippedModuleIds),
-          previousResult,
-          retryResult);
+          doMergeReports(previousResult, subPlan, retryResult), previousResult, retryResult);
     } finally {
       logger.atInfo().log(
           "Done merging previous result and retry result, took %s [RetryArgs: %s]",
@@ -199,10 +192,7 @@ public class RetryReportMerger {
   }
 
   private Result doMergeReports(
-      Result previousResult,
-      SubPlan retrySubPlan,
-      @Nullable Result retryResult,
-      ImmutableSet<String> skippedModuleIds) {
+      Result previousResult, SubPlan retrySubPlan, @Nullable Result retryResult) {
     Result.Builder mergedResult = Result.newBuilder();
     // If the previous result was ran with some filters given by the user command, reflect them in
     // the merged report too.
@@ -279,13 +269,6 @@ public class RetryReportMerger {
         retrySubPlan.getNonTfExcludeFiltersMultimap();
 
     for (Module moduleFromPrevSession : previousResult.getModuleInfoList()) {
-      // If the module is in the previous result but skipped in the retry session, remove it from
-      // the merged result.
-      String moduleId =
-          AbiUtil.createId(moduleFromPrevSession.getAbi(), moduleFromPrevSession.getName());
-      if (!modulesFromRetry.containsKey(moduleId) && skippedModuleIds.contains(moduleId)) {
-        continue;
-      }
       mergedResult.addModuleInfo(
           createMergedModule(
               moduleFromPrevSession,
@@ -306,7 +289,7 @@ public class RetryReportMerger {
     int modulesTotalInSummary = 0;
     for (Module module :
         mergedResult.getModuleInfoList().stream()
-            .filter(module -> !SuiteCommonUtil.isModuleChecker(module))
+            .filter(module -> !SuiteCommonUtil.isModuleChecker(module) && !module.getSkipped())
             .collect(toImmutableList())) {
       if (module.getDone()) {
         modulesDoneInSummary++;
@@ -408,10 +391,11 @@ public class RetryReportMerger {
       Module moduleFromRetry,
       Set<String> matchedRetryIncludeTestFilters,
       Set<String> matchedRetryExcludeTestFilters) {
-    if (matchedRetryIncludeTestFilters.contains(SubPlan.ALL_TESTS_IN_MODULE)
-        && matchedRetryIncludeTestFilters.size() == 1
-        && matchedRetryExcludeTestFilters.isEmpty()) {
-      // Try best to determine if the entire module was retried.
+    if ((matchedRetryIncludeTestFilters.contains(SubPlan.ALL_TESTS_IN_MODULE)
+            && matchedRetryIncludeTestFilters.size() == 1
+            && matchedRetryExcludeTestFilters.isEmpty())
+        || moduleFromRetry.getSkipped()) {
+      // Try best to determine if the entire module was retried or skipped.
       return moduleFromRetry;
     }
     Module.Builder mergedModuleBuilder =
