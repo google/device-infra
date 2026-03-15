@@ -20,6 +20,9 @@ load("@protobuf//bazel:py_proto_library.bzl", "py_proto_library")
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
+        "//devtools/mobileharness/infra/mcp/labmgnt/proto:__pkg__",
+        "//java/com/google/devtools/mobileharness/infra/mcp/labmgnt/service:__pkg__",
+        "//javatests/com/google/devtools/mobileharness/infra/mcp/labmgnt/service:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/monitoring:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/monitoring:__pkg__",
         "//wireless/android/sdlc:__subpackages__",
@@ -46,4 +49,9 @@ py_proto_library(
 proto_library(
     name = "record_proto",
     srcs = ["record.proto"],
+)
+
+java_proto_library(
+    name = "record_java_proto",
+    deps = [":record_proto"],
 )
