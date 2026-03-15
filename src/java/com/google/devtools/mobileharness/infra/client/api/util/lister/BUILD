@@ -18,6 +18,7 @@ load("@rules_java//java:defs.bzl", "java_library")
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
+        "//java/com/google/devtools/mobileharness/service/gateway:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api/util/lister:__pkg__",
     ],
