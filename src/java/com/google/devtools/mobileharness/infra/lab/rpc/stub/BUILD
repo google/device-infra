@@ -44,3 +44,17 @@ java_library(
         "@maven//:com_google_errorprone_error_prone_annotations",
     ],
 )
+
+java_library(
+    name = "device_ops",
+    srcs = [
+        "DeviceOpsStub.java",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/common/metrics/stability/rpc:exception",
+        "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
+        "//src/java/com/google/wireless/qa/mobileharness/lab/proto:device_ops_serv_java_proto",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)

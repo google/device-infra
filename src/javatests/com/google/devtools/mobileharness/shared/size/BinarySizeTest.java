@@ -55,7 +55,7 @@ public class BinarySizeTest {
           "base_olc_server",
           31_750_000L,
           "ats_olc_server",
-          39_950_000L,
+          40_050_000L,
           "ats_olc_server_local_mode",
           41_950_000L,
           "lab_server",

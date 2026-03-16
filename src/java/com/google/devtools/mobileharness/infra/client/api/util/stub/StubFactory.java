@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.client.api.util.stub;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import com.google.devtools.mobileharness.infra.lab.rpc.stub.DeviceOpsStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.ExecTestStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.PrepareTestStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
@@ -33,6 +34,8 @@ public interface StubFactory {
   ExecTestStub createExecTestStub(StubConfiguration stubConfiguration);
 
   PrepareTestStub createPrepareTestStub(StubConfiguration stubConfiguration);
+
+  DeviceOpsStub createDeviceOpsStub(StubConfiguration stubConfiguration);
 
   VersionStub createVersionStub(StubConfiguration stubConfiguration);
 
