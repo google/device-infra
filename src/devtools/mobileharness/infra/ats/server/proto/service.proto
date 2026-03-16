@@ -156,6 +156,10 @@ message CommandDetail {
   optional int64 passed_test_count = 8;
   optional int64 failed_test_count = 9;
   optional int64 total_test_count = 10;
+
+  // This is used to render MTT's "failed_test_run_count".
+  // "failed_test_run_count" is defined as the number of test modules with error
+  // message in MTT's test_result_handler.py.
   optional int64 failed_module_count = 17;
   optional google.protobuf.Timestamp start_time = 11;
   optional google.protobuf.Timestamp end_time = 12;

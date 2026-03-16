@@ -1267,6 +1267,7 @@ public final class NewMultiCommandRequestHandlerTest {
                     .setPassed(10)
                     .setFailed(0)
                     .setModulesTotal(1)
+                    .setModulesDone(1)
                     .build())
             .addModuleInfo(
                 ReportProto.Module.newBuilder().setName("module1").setFailedTests(0).build())
@@ -1311,9 +1312,14 @@ public final class NewMultiCommandRequestHandlerTest {
                     .setPassed(5)
                     .setFailed(5)
                     .setModulesTotal(1)
+                    .setModulesDone(0)
                     .build())
             .addModuleInfo(
-                ReportProto.Module.newBuilder().setName("module1").setFailedTests(5).build())
+                ReportProto.Module.newBuilder()
+                    .setName("module1")
+                    .setFailedTests(5)
+                    .setReason(ReportProto.Reason.newBuilder().setMsg("error message").build())
+                    .build())
             .build();
 
     mockProcessResult(result);
@@ -1331,6 +1337,64 @@ public final class NewMultiCommandRequestHandlerTest {
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
     assertThat(commandDetail.getId()).isEqualTo(commandId);
     assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
+  }
+
+  @Test
+  public void handleResultProcessing_failResult_allModulesDone_notCountedAsFailed()
+      throws Exception {
+    setUpPassingJobAndTestResults();
+    ReportProto.Result result =
+        ReportProto.Result.newBuilder()
+            .setSummary(
+                ReportProto.Summary.newBuilder()
+                    .setPassed(5)
+                    .setFailed(5)
+                    .setModulesTotal(1)
+                    .setModulesDone(1)
+                    .build())
+            .addModuleInfo(
+                ReportProto.Module.newBuilder().setName("module1").setFailedTests(5).build())
+            .build();
+
+    mockProcessResult(result);
+    HandleResultProcessingResult handleResultProcessingResult =
+        createJobAndHandleResultProcessing(request);
+
+    assertThat(handleResultProcessingResult.commandDetails()).hasSize(1);
+    CommandDetail commandDetail =
+        handleResultProcessingResult.commandDetails().values().iterator().next();
+    assertThat(commandDetail.getFailedModuleCount()).isEqualTo(0);
+  }
+
+  @Test
+  public void handleResultProcessing_failResult_oneModuleNotDone_countedAsFailed()
+      throws Exception {
+    setUpPassingJobAndTestResults();
+    ReportProto.Result result =
+        ReportProto.Result.newBuilder()
+            .setSummary(
+                ReportProto.Summary.newBuilder()
+                    .setPassed(10)
+                    .setFailed(0)
+                    .setModulesTotal(1)
+                    .setModulesDone(0)
+                    .build())
+            .addModuleInfo(
+                ReportProto.Module.newBuilder()
+                    .setName("module1")
+                    .setFailedTests(0)
+                    .setReason(ReportProto.Reason.newBuilder().setMsg("error message").build())
+                    .build())
+            .build();
+
+    mockProcessResult(result);
+    HandleResultProcessingResult handleResultProcessingResult =
+        createJobAndHandleResultProcessing(request);
+
+    assertThat(handleResultProcessingResult.commandDetails()).hasSize(1);
+    CommandDetail commandDetail =
+        handleResultProcessingResult.commandDetails().values().iterator().next();
+    assertThat(commandDetail.getFailedModuleCount()).isEqualTo(1);
   }
 
   @Test
