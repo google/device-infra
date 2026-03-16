@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
+package com.google.devtools.mobileharness.fe.v6.service.shared;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
@@ -35,7 +35,7 @@ import javax.inject.Singleton;
 
 /** Factory for creating a list of {@link SubDeviceInfo} from device dimensions. */
 @Singleton
-final class SubDeviceInfoListFactory {
+public class SubDeviceInfoListFactory {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -53,7 +53,7 @@ final class SubDeviceInfoListFactory {
    * @return A list of SubDeviceInfo if the device is a testbed and dimensions can be decoded,
    *     otherwise an empty list.
    */
-  ImmutableList<SubDeviceInfo> create(ImmutableMap<String, String> dimensions) {
+  public ImmutableList<SubDeviceInfo> create(ImmutableMap<String, String> dimensions) {
     Optional<String> encodedSubDeviceDimensions =
         Optional.ofNullable(dimensions.get(TestbedDeviceSpec.SUBDEVICE_DIMENSIONS_KEY));
 

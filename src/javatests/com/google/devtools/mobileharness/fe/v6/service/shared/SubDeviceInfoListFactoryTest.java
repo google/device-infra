@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
+package com.google.devtools.mobileharness.fe.v6.service.shared;
 
 import static com.google.common.truth.Truth.assertThat;
 
