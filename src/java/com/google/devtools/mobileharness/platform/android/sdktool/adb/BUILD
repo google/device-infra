@@ -159,7 +159,6 @@ java_library(
     name = "usb_device_locator",
     srcs = ["UsbDeviceLocator.java"],
     visibility = [
-        "//:omnilab_fusion",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/container:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemspec:__pkg__",
