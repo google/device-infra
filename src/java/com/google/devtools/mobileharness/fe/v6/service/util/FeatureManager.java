@@ -54,4 +54,11 @@ public class FeatureManager {
     // Controlled by the startup flag AND only available in Google internal builds.
     return Flags.instance().feEnableDeviceScreenshot.getNonNull() && environment.isGoogleInternal();
   }
+
+  /** Checks if the device configuration feature is enabled. */
+  public boolean isDeviceConfigurationEnabled() {
+    // Controlled by the startup flag AND only available in Google internal builds.
+    return Flags.instance().feEnableDeviceConfiguration.getNonNull()
+        && environment.isGoogleInternal();
+  }
 }
