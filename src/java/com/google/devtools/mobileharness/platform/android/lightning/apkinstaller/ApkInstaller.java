@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.app.AndroidAppVersion;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
+import com.google.devtools.mobileharness.platform.android.lightning.bundletool.Bundletool;
 import com.google.devtools.mobileharness.platform.android.lightning.shared.SharedLogUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.shared.SharedPropertyUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
@@ -108,6 +109,8 @@ public class ApkInstaller {
 
   private final Aapt aapt;
 
+  private final Bundletool bundletool;
+
   private final AndroidSystemSpecUtil systemSpecUtil;
 
   private final AndroidSystemSettingUtil systemSettingUtil;
@@ -124,6 +127,7 @@ public class ApkInstaller {
     this(
         new ChecksumUtil(Hashing.md5()),
         new Aapt(/* enableAaptOutputCache= */ true),
+        new Bundletool(),
         new AndroidSystemSpecUtil(),
         new AndroidSystemSettingUtil(),
         new AndroidPackageManagerUtil(),
@@ -136,6 +140,7 @@ public class ApkInstaller {
   ApkInstaller(
       ChecksumUtil md5Util,
       Aapt aapt,
+      Bundletool bundletool,
       AndroidSystemSpecUtil systemSpecUtil,
       AndroidSystemSettingUtil systemSettingUtil,
       AndroidPackageManagerUtil androidPackageManagerUtil,
@@ -144,12 +149,56 @@ public class ApkInstaller {
       Sleeper sleeper) {
     this.md5Util = md5Util;
     this.aapt = aapt;
+    this.bundletool = bundletool;
     this.systemSpecUtil = systemSpecUtil;
     this.systemSettingUtil = systemSettingUtil;
     this.androidPackageManagerUtil = androidPackageManagerUtil;
     this.androidFileUtil = androidFileUtil;
     this.androidUserUtil = androidUserUtil;
     this.sleeper = sleeper;
+  }
+
+  /**
+   * Installs a list of packages in the given order.
+   *
+   * @param device the device to install the packages to
+   * @param installables the packages to install
+   * @param log the optional log collector for observability
+   * @throws MobileHarnessException if any package fails to install
+   * @throws InterruptedException if current thread gets interrupted
+   */
+  public void install(
+      Device device, ImmutableList<Installable> installables, @Nullable LogCollector<?> log)
+      throws MobileHarnessException, InterruptedException {
+    for (Installable installable : installables) {
+      install(device, installable, log);
+    }
+  }
+
+  /**
+   * Installs one package.
+   *
+   * @param device the device to install the package to
+   * @param installable the package to install
+   * @param log the optional log collector for observability
+   * @throws MobileHarnessException if an issue occurs during installation
+   * @throws InterruptedException if current thread gets interrupted
+   */
+  public void install(Device device, Installable installable, @Nullable LogCollector<?> log)
+      throws MobileHarnessException, InterruptedException {
+    if (installable instanceof ApkSet apkSet) {
+      bundletool.installApks(apkSet.toInstallApksArgs(device.getDeviceId()));
+    } else {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_APK_INSTALLER_UNKNOWN_INSTALLABLE_ERROR,
+          "Unsupported Installable type: " + installable.getClass().getSimpleName());
+    }
+    SharedLogUtil.logMsg(
+        logger,
+        log,
+        "Successfully installed package %s on device %s",
+        installable,
+        device.getDeviceId());
   }
 
   /**

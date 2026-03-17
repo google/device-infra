@@ -80,6 +80,15 @@ public class Bundletool {
     this(systemUtil, adb, aapt, commandExecutor, UNPACKED_BUNDLETOOL_PATH_SUPPLIER);
   }
 
+  /**
+   * @deprecated Needed for backwards compatibility for non-Guice based usage. Will be removed after
+   *     all usages are migrated to Guice.
+   */
+  @Deprecated
+  public Bundletool() {
+    this(new SystemUtil(), new Adb(), new Aapt(), new CommandExecutor());
+  }
+
   @VisibleForTesting
   public Bundletool(
       SystemUtil systemUtil, Adb adb, Aapt aapt, CommandExecutor commandExecutor, Path bundletool) {

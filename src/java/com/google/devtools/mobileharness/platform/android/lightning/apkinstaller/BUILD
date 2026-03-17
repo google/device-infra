@@ -22,6 +22,8 @@ java_library(
     srcs = [
         "ApkInstallArgs.java",
         "ApkInstaller.java",
+        "ApkSet.java",
+        "Installable.java",
     ],
     visibility = [
         "//:deviceinfra_all_pkg",
@@ -31,6 +33,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/app:version",
         "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/bundletool",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/shared:shared_log_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/shared:shared_property_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:android_package_manager_util",
@@ -46,7 +49,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/checksum",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:aapt",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
@@ -56,7 +58,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
         "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
 )
