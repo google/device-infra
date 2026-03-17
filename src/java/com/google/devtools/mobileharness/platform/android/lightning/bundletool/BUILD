@@ -25,6 +25,8 @@ java_library(
     visibility = [
         "//:deviceinfra_all_pkg",
         "//:omnilab_fusion",
+        "//java/com/google/play/boq/marketing/email/delivery/service/clients:__pkg__",
+        "//javatests/com/google/play/boq/marketing/email/delivery/service/clients:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
