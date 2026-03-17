@@ -181,7 +181,6 @@ java_library(
     srcs = ["RunCommandHandler.java"],
     visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__"],
     deps = [
-        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -195,7 +194,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_constants",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_info_provider",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_type",

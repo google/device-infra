@@ -319,6 +319,9 @@ public class CompatibilityReportCreator {
 
     // Modules
     for (Module module : report.getModuleInfoList()) {
+      if (module.getSkipped()) {
+        continue;
+      }
       boolean isNonTfModule = module.getIsNonTfModule();
       serializer.startTag(NS, XmlConstants.MODULE_TAG);
       serializer.attribute(NS, XmlConstants.NAME_ATTR, module.getName());

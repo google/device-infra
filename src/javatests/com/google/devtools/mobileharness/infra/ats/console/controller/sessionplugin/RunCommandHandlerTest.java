@@ -28,7 +28,6 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
@@ -154,7 +153,7 @@ public final class RunCommandHandlerTest {
         .thenReturn(Optional.of(TIMESTAMP_DIR_NAME));
 
     when(compatibilityReportMerger.mergeResultBundles(anyList(), anyBoolean()))
-        .thenReturn(ParseResult.of(Optional.empty(), Optional.empty(), ImmutableSet.of()));
+        .thenReturn(ParseResult.of(Optional.empty(), Optional.empty()));
 
     runCommandHandler =
         new RunCommandHandler(
