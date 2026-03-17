@@ -32,6 +32,7 @@ java_library(
         ":info",
         ":install_cmd_args",
         ":list_packages_args",
+        ":package_manager_errors",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",
@@ -93,6 +94,17 @@ java_library(
     name = "constants",
     srcs = [
         "Constants.java",
+    ],
+)
+
+java_library(
+    name = "package_manager_errors",
+    srcs = [
+        "PackageManagerErrors.java",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "@maven//:com_google_guava_guava",
     ],
 )
 
