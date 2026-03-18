@@ -25,7 +25,7 @@ option java_multiple_files = true;
 option java_outer_classname = "AndroidFlashGkiDecoratorSpecProto";
 
 // Specs for {@link AndroidFlashGkiDecoratorSpec}
-// Next tag: 26
+// Next tag: 27
 message AndroidFlashGkiDecoratorSpec {
   extend DecoratorSpec {
     optional AndroidFlashGkiDecoratorSpec ext = 1015;
@@ -148,5 +148,10 @@ message AndroidFlashGkiDecoratorSpec {
       help: "The key algorithm to sign the boot image when add_hash_footer is enabled."
     },
     default = "SHA256_RSA4096"
+  ];
+
+  optional bool disable_verification = 26 [
+    (field_detail) = { help: "Whether to disable verification." },
+    default = false
   ];
 }
