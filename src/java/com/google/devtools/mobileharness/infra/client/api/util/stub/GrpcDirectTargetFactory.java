@@ -104,6 +104,13 @@ final class GrpcDirectTargetFactory
   }
 
   @Override
+  public CloudFileTransferGrpcStub.FutureInterface createCloudFileTransferFutureInterface(
+      StubConfiguration stubConfiguration) {
+    return directTargetConfigures.createStubInterface(
+        CloudFileTransferGrpcStub::newFutureInterface, stubConfiguration);
+  }
+
+  @Override
   public com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabInfoGrpcStub
           .FutureInterface
       createSharedLabInfoFutureInterface(StubConfiguration stubConfiguration) {

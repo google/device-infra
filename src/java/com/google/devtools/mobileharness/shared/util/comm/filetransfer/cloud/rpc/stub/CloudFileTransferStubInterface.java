@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.stub;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.DownloadGcsFileRequest;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.GetFileRequest;
@@ -53,6 +54,9 @@ public interface CloudFileTransferStubInterface {
       UploadFileRequest request, @Nullable String impersonationUser) throws MobileHarnessException {
     return uploadGcsFile(request);
   }
+
+  /** Uploads file specified in {@code request} from peer side asynchronously. */
+  ListenableFuture<UploadFileResponse> uploadGcsFileAsync(UploadFileRequest request);
 
   /** Lists files in directory specified in {@code request} from peer side. */
   ListFilesResponse listFiles(ListFilesRequest request) throws MobileHarnessException;
@@ -98,6 +102,13 @@ public interface CloudFileTransferStubInterface {
     return startUploadingFile(request, initialTimeout);
   }
 
+  /**
+   * Starts uploading file specified in {@code request} from peer side asynchronously, and returns
+   * the process id.
+   */
+  ListenableFuture<StartUploadingFileResponse> startUploadingFileAsync(
+      UploadFileRequest request, Duration initialTimeout);
+
   /** Gets status of process {@code processId} from peer side. */
   @CanIgnoreReturnValue
   GetProcessStatusResponse getProcessStatus(String processId) throws MobileHarnessException;
@@ -108,6 +119,9 @@ public interface CloudFileTransferStubInterface {
       String processId, @Nullable String impersonationUser) throws MobileHarnessException {
     return getProcessStatus(processId);
   }
+
+  /** Gets status of process {@code processId} from peer side asynchronously. */
+  ListenableFuture<GetProcessStatusResponse> getProcessStatusAsync(String processId);
 
   /** Saves file content specified in {@code request} to server directly. */
   @CanIgnoreReturnValue

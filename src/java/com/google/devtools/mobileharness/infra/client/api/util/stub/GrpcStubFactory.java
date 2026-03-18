@@ -61,7 +61,9 @@ final class GrpcStubFactory implements StubFactory {
       StubConfiguration stubConfiguration) {
     return new CloudFileTransferGrpcStub(
         getBlockingInterfaceFactory(stubConfiguration)
-            .createCloudFileTransferBlockingInterface(stubConfiguration));
+            .createCloudFileTransferBlockingInterface(stubConfiguration),
+        getFutureInterfaceFactory(stubConfiguration)
+            .createCloudFileTransferFutureInterface(stubConfiguration));
   }
 
   @Override

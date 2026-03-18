@@ -397,6 +397,7 @@ public class GcsFileManager {
    * @param fileOrDir file or directory to upload
    * @param zipStoreOnly whether pack all file together without any compression
    * @param zipTimeout the timeout of the zip operation in milliseconds; empty means default timeout
+   * @param checksum the checksum of the directory; empty means it need to calculate the checksum
    * @return information of the uploading
    */
   public ExecutionInfo upload(

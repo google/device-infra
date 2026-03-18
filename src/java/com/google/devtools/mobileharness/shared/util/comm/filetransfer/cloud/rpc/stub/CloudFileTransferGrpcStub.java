@@ -21,6 +21,7 @@ import static com.google.devtools.mobileharness.shared.util.comm.filetransfer.cl
 import static com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.stub.CloudFileTransferStubUtils.createStartUploadingFileRequest;
 import static com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.stub.CloudFileTransferStubUtils.getRpcExceptionWrapper;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -41,6 +42,7 @@ import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.pro
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.UploadFileRequest;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.UploadFileResponse;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransferServiceGrpc;
+import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransferServiceGrpc.CloudFileTransferServiceFutureStub;
 import com.google.devtools.mobileharness.shared.util.comm.stub.GrpcDirectTargetConfigures;
 import io.grpc.Channel;
 import java.time.Duration;
@@ -49,13 +51,15 @@ import java.time.Duration;
 public class CloudFileTransferGrpcStub implements CloudFileTransferStubInterface {
 
   private final BlockingInterface stub;
+  private final FutureInterface futureStub;
 
   public CloudFileTransferGrpcStub(Channel channel) {
-    this(newBlockingInterface(channel));
+    this(newBlockingInterface(channel), newFutureInterface(channel));
   }
 
-  public CloudFileTransferGrpcStub(BlockingInterface stub) {
+  public CloudFileTransferGrpcStub(BlockingInterface stub, FutureInterface futureStub) {
     this.stub = stub;
+    this.futureStub = futureStub;
   }
 
   @Override
@@ -77,6 +81,13 @@ public class CloudFileTransferGrpcStub implements CloudFileTransferStubInterface
     } catch (GrpcExceptionWithErrorId e) {
       throw wrapper.mobileHarnessException(e);
     }
+  }
+
+  @Override
+  public ListenableFuture<UploadFileResponse> uploadGcsFileAsync(UploadFileRequest request) {
+    RpcExceptionWrapper wrapper = getRpcExceptionWrapper(request);
+    return GrpcStubUtil.invokeAsync(
+        futureStub::uploadFile, request, wrapper.errorId(), wrapper.message());
   }
 
   @Override
@@ -107,6 +118,19 @@ public class CloudFileTransferGrpcStub implements CloudFileTransferStubInterface
   }
 
   @Override
+  public ListenableFuture<StartUploadingFileResponse> startUploadingFileAsync(
+      UploadFileRequest request, Duration initialTimeout) {
+    StartUploadingFileRequest startUploadingFileRequest =
+        createStartUploadingFileRequest(request, initialTimeout);
+    RpcExceptionWrapper wrapper = getRpcExceptionWrapper(startUploadingFileRequest);
+    return GrpcStubUtil.invokeAsync(
+        futureStub::startUploadingFile,
+        startUploadingFileRequest,
+        wrapper.errorId(),
+        wrapper.message());
+  }
+
+  @Override
   public StartDownloadingGcsFileResponse startDownloadingGcsFile(
       DownloadGcsFileRequest request, Duration initialTimeout) throws MobileHarnessException {
     StartDownloadingGcsFileRequest startDownloadingGcsFileRequest =
@@ -133,6 +157,14 @@ public class CloudFileTransferGrpcStub implements CloudFileTransferStubInterface
     } catch (GrpcExceptionWithErrorId e) {
       throw wrapper.mobileHarnessException(e);
     }
+  }
+
+  @Override
+  public ListenableFuture<GetProcessStatusResponse> getProcessStatusAsync(String processId) {
+    GetProcessStatusRequest request = createGetProcessStatusRequest(processId);
+    RpcExceptionWrapper wrapper = getRpcExceptionWrapper(request);
+    return GrpcStubUtil.invokeAsync(
+        futureStub::getProcessStatus, request, wrapper.errorId(), wrapper.message());
   }
 
   @Override
@@ -177,9 +209,36 @@ public class CloudFileTransferGrpcStub implements CloudFileTransferStubInterface
     GetFileResponse getFile(GetFileRequest request);
   }
 
+  /** Interface for {@link CloudFileTransferServiceFutureStub}. */
+  public static interface FutureInterface {
+    ListenableFuture<DownloadGcsFileResponse> downloadGcsFile(DownloadGcsFileRequest request);
+
+    ListenableFuture<UploadFileResponse> uploadFile(UploadFileRequest request);
+
+    ListenableFuture<ListFilesResponse> listFiles(ListFilesRequest request);
+
+    ListenableFuture<StartUploadingFileResponse> startUploadingFile(
+        StartUploadingFileRequest request);
+
+    ListenableFuture<StartDownloadingGcsFileResponse> startDownloadingGcsFile(
+        StartDownloadingGcsFileRequest request);
+
+    ListenableFuture<GetProcessStatusResponse> getProcessStatus(GetProcessStatusRequest request);
+
+    ListenableFuture<SaveFileResponse> saveFile(SaveFileRequest request);
+
+    ListenableFuture<GetFileResponse> getFile(GetFileRequest request);
+  }
+
   /** Creates a {@link BlockingInterface} from a {@link Channel}. */
   public static BlockingInterface newBlockingInterface(Channel channel) {
     return GrpcDirectTargetConfigures.newBlockingInterface(
         CloudFileTransferServiceGrpc.newBlockingStub(channel), BlockingInterface.class);
+  }
+
+  /** Creates a {@link FutureInterface} from a {@link Channel}. */
+  public static FutureInterface newFutureInterface(Channel channel) {
+    return GrpcDirectTargetConfigures.newBlockingInterface(
+        CloudFileTransferServiceGrpc.newFutureStub(channel), FutureInterface.class);
   }
 }
