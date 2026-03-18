@@ -289,7 +289,8 @@ public final class RetryGeneratorTest {
     assertThat(Multimaps.asMap(subPlanExcludeFiltersMultimap))
         .containsExactly(
             "arm64-v8a Module2", ImmutableSet.of("ALL"),
-            "armeabi-v7a Module5", ImmutableSet.of("TestClass1#Test1", "TestClass4#Test1"));
+            "armeabi-v7a Module5", ImmutableSet.of("TestClass1#Test1", "TestClass4#Test1"),
+            "armeabi-v7a FakeModule", ImmutableSet.of("FakeTestClass#Test1"));
 
     assertThat(Multimaps.asMap(subPlan.getNonTfIncludeFiltersMultimap()))
         .containsExactly("arm64-v8a Module3", ImmutableSet.of("ALL", "TestClass1#Test2"));
@@ -690,5 +691,54 @@ public final class RetryGeneratorTest {
         .containsExactly("Module", ImmutableSet.of("ALL", "TestClass"));
     assertThat(Multimaps.asMap(subPlan.getExcludeFiltersMultimap()))
         .containsExactly("Module", ImmutableSet.of("TestClass#Test1"));
+  }
+
+  @org.junit.Test
+  public void generateRetrySubPlan_preservePreviousResultExcludeFilters() throws Exception {
+    Path resultsDir = Path.of("/path/to/results_dir");
+    int previousSessionIndex = 0;
+    when(previousResultLoader.loadPreviousResult(
+            resultsDir, previousSessionIndex, /* previousSessionResultDirName= */ null))
+        .thenReturn(
+            Result.newBuilder()
+                .addModuleInfo(
+                    Module.newBuilder()
+                        .setAbi("armeabi-v7a")
+                        .setName("Module")
+                        .setDone(true)
+                        .addTestCase(
+                            TestCase.newBuilder()
+                                .setName("TestClass")
+                                .addTest(Test.newBuilder().setName("Test1").setResult("fail"))))
+                .addModuleInfo(
+                    Module.newBuilder()
+                        .setAbi("arm64-v8a")
+                        .setName("Module2")
+                        .setDone(true)
+                        .addTestCase(
+                            TestCase.newBuilder()
+                                .setName("TestClass")
+                                .addTest(Test.newBuilder().setName("Test1").setResult("fail"))))
+                .addExcludeFilter("FakeModule")
+                .addExcludeFilter("arm64-v8a FakeModule2")
+                .addExcludeFilter("armeabi-v7a Module")
+                .addExcludeFilter("Module2")
+                .build());
+
+    SubPlan subPlan =
+        retryGenerator.generateRetrySubPlan(
+            RetryArgs.builder()
+                .setResultsDir(resultsDir)
+                .setPreviousSessionIndex(previousSessionIndex)
+                .build());
+
+    assertThat(Multimaps.asMap(subPlan.getExcludeFiltersMultimap()))
+        .containsExactly(
+            "FakeModule", ImmutableSet.of("ALL"),
+            "arm64-v8a FakeModule2", ImmutableSet.of("ALL"));
+    assertThat(Multimaps.asMap(subPlan.getNonTfExcludeFiltersMultimap()))
+        .containsExactly(
+            "FakeModule", ImmutableSet.of("ALL"),
+            "arm64-v8a FakeModule2", ImmutableSet.of("ALL"));
   }
 }

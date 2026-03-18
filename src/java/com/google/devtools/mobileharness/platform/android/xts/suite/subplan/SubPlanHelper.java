@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryResultHelper;
 import java.util.Optional;
@@ -52,8 +53,13 @@ public class SubPlanHelper {
       ImmutableSet<SuiteTestFilter> prevResultExcludeFilters,
       ImmutableSet<String> passedInModules) {
     SubPlan subPlan = new SubPlan();
+    ImmutableSet.Builder<String> includedModuleNamesBuilder = ImmutableSet.builder();
     for (Module module : previousResult.getModuleInfoList()) {
       boolean isNonTfModule = module.getIsNonTfModule();
+      // Both the base module name and expanded module name are collected
+      includedModuleNamesBuilder
+          .add(module.getName())
+          .add(AbiUtil.createId(module.getAbi(), module.getName()));
       // Always add the include filter for the module, and rely on below to determine whether to
       // add the exclude filter, or include filter for specific tests.
       // Note: For include and exclude filters passed to TF via subplan, its handling priority is:
@@ -135,6 +141,23 @@ public class SubPlanHelper {
             subPlan, String.format("%s %s", module.getAbi(), module.getName()), isNonTfModule);
       }
     }
+
+    ImmutableSet<String> includedModuleNames = includedModuleNamesBuilder.build();
+    // Add exclude filters in prevResultExcludeFilters if the module are not in the previousResult
+    // These modules may be implicitly included by the test plan and need to be excluded in retry
+    for (SuiteTestFilter prevResultExcludeFilter : prevResultExcludeFilters) {
+      String moduleNameToCheck =
+          prevResultExcludeFilter.abi().isPresent()
+              ? AbiUtil.createId(
+                  prevResultExcludeFilter.abi().get(), prevResultExcludeFilter.moduleName())
+              : prevResultExcludeFilter.moduleName();
+      if (!includedModuleNames.contains(moduleNameToCheck)) {
+        // Not sure if the exclude filter is for TF or non-TF module, add to both
+        subPlan.addExcludeFilter(prevResultExcludeFilter.filterString());
+        subPlan.addNonTfExcludeFilter(prevResultExcludeFilter.filterString());
+      }
+    }
+
     // Need to retrieve the test plan from the COMMAND_LINE_ARGS in the previous result
     Optional<Attribute> commandLineArgs =
         previousResult.getAttributeList().stream()

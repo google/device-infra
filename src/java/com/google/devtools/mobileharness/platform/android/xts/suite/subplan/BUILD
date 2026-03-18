@@ -82,6 +82,7 @@ java_library(
         ":sub_plan",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:abi_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_test_filter",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_result_helper",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
