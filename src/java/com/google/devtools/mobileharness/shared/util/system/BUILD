@@ -32,6 +32,7 @@ java_library(
     visibility = [
         "//:deviceinfra_pkg",
         "//:omnilab_fusion",
+        "//java/com/google/wearables/qa/wac/mhplugins/getbasebuild:__subpackages__",
     ],
     deps = [
         ":memory_info",
