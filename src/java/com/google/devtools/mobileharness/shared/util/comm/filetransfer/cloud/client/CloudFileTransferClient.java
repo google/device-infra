@@ -18,16 +18,13 @@ package com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.cl
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.grpc.Status.Code.DEADLINE_EXCEEDED;
-import static java.util.Arrays.stream;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
-import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
@@ -89,10 +86,6 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
 
   /** Interval to get a process status. */
   private static final Duration GET_PROCESS_STATUS_INTERVAL = Duration.ofSeconds(5);
-
-  /** Non local file types that is writable. */
-  private static final ImmutableSet<RemoteFileType> NON_LOCAL_WRITABLE_FILE_TYPE =
-      ImmutableSet.of();
 
   /** Thread pool to sending/receiving file from peer side. */
   private final ExecutorService threadPool =
@@ -390,16 +383,12 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
    */
   @CanIgnoreReturnValue
   public long getFile(Path remote, Path local) throws MobileHarnessException, InterruptedException {
-    if (!isWritableFileType(local)) {
-      throw new MobileHarnessException(
-          InfraErrorId.FT_LOCAL_FILE_NOT_WRITABLE, "Doesn't support to write to file " + local);
-    }
     FileTransferEvent.Builder event =
         FileTransferEvent.builder().setStart(Instant.now()).setType(ExecutionType.GET);
     logger.atInfo().log("Getting file: %s", local);
     // Only deleting existing dst single file but not directory
     if (isFileExists(local)) {
-      removeLocalFileOrDir(local);
+      removeFileOrDir(local);
     }
 
     FileOperationStatus result = getFileDirectlyIfSmall(remote, local);
@@ -489,27 +478,21 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
   /** Copies file {@code src} to {@code dest} in force. */
   private void replaceFile(Path src, Path dest, boolean deleteSrc)
       throws MobileHarnessException, InterruptedException {
-    if (isLocalFileType(dest)) {
-      if (deleteSrc) {
-        // Move receivedFile to destination file directly.
-        if (localFileUtil.isFileOrDirExist(dest)) {
-          localFileUtil.removeFileOrDir(dest);
-        }
-        localFileUtil.moveFileOrDir(src, dest);
-      } else {
-        localFileUtil.copyFileOrDir(src, dest);
+    if (deleteSrc) {
+      // Move receivedFile to destination file directly.
+      if (localFileUtil.isFileOrDirExist(dest)) {
+        localFileUtil.removeFileOrDir(dest);
       }
-      return;
+      localFileUtil.moveFileOrDir(src, dest);
+    } else {
+      localFileUtil.copyFileOrDir(src, dest);
     }
   }
 
   /** Merges {@code srcDir} into {@code destDir}. */
   private void mergeDir(Path srcDir, Path destDir)
       throws MobileHarnessException, InterruptedException {
-    if (isLocalFileType(destDir)) {
-      localFileUtil.mergeDir(srcDir, destDir);
-      return;
-    }
+    localFileUtil.mergeDir(srcDir, destDir);
   }
 
   private static CompressOptions toCompressOptions(FileTransferParameters params) {
@@ -708,23 +691,6 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
     }
   }
 
-  /** Returns true if {@code file} is a writable file type. */
-  private boolean isWritableFileType(Path file) {
-    boolean isNonLocal =
-        stream(RemoteFileType.values()).anyMatch(t -> file.toString().startsWith(t.prefix()));
-    if (isNonLocal) {
-      return NON_LOCAL_WRITABLE_FILE_TYPE.stream()
-          .anyMatch(t -> file.toString().startsWith(t.prefix()));
-    }
-    // Local file.
-    return true;
-  }
-
-  /** Returns true if {@code file} is a writable file type. */
-  private boolean isLocalFileType(Path file) {
-    return stream(RemoteFileType.values()).noneMatch(t -> file.startsWith(t.prefix()));
-  }
-
   /** {@inheritDoc} */
   @Override
   public long downloadFile(String remote, String local)
@@ -754,36 +720,21 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
     return localFileUtil.isDirExist(local);
   }
 
-  private long getFileSize(Path file)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+  private long getFileSize(Path file) throws MobileHarnessException {
     return localFileUtil.getFileSize(file);
   }
 
-  private List<Path> listFilesForPath(Path local)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
-    return listFilesForLocalPath(local);
-  }
-
-  private ImmutableList<Path> listFilesForLocalPath(Path local)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+  private ImmutableList<Path> listFilesForPath(Path local) throws MobileHarnessException {
     return localFileUtil.listFiles(local.toString(), true).stream()
         .map(File::toPath)
         .collect(toImmutableList());
   }
 
-  private byte[] readBytes(Path local)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
-    return readLocalBytes(local);
-  }
-
-  private byte[] readLocalBytes(Path local)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+  private byte[] readBytes(Path local) throws MobileHarnessException {
     return localFileUtil.readBinaryFile(local.toString());
   }
 
-  private void removeLocalFileOrDir(Path local)
-      throws InterruptedException,
-          com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+  private void removeFileOrDir(Path local) throws MobileHarnessException, InterruptedException {
     localFileUtil.removeFileOrDir(local);
   }
 
@@ -791,8 +742,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
     return localFileUtil.isFileExist(local);
   }
 
-  private void prepareParentDir(Path local)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+  private void prepareParentDir(Path local) throws MobileHarnessException {
     localFileUtil.prepareParentDir(local);
   }
 }

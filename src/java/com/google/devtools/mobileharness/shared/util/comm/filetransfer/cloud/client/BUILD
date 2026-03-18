@@ -35,7 +35,6 @@ java_library(
         "//src/devtools/mobileharness/shared/util/comm/filetransfer/common/proto:file_info_java_proto",
         "//src/devtools/mobileharness/shared/util/comm/filetransfer/common/proto:tagged_file_metadata_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/rpc:exception",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/file/remote/constant:remote_file_type",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/base",
