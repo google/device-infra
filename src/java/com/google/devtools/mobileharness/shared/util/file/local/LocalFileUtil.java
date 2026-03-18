@@ -1146,18 +1146,25 @@ public class LocalFileUtil {
    *
    * @param dirPath the absolute directory path
    * @param recursively whether to scan the sub-directories recursively
-   * @param fileFilter filter for the sub-files
+   * @param dirResultFilter filter for the sub-directories. If the filter accepts a directory, the
+   *     directory will be returned in the result.
+   * @param dirRecursionFilter filter for the sub-directories. If the filter accepts a directory,
+   *     its sub-directories will be scanned recursively (if {@code recursively} is true).
    * @throws MobileHarnessException if the given path doesn't exist or is a file, not a directory
    */
-  public List<String> listDirs(String dirPath, boolean recursively, @Nullable FileFilter fileFilter)
+  public List<String> listDirs(
+      String dirPath,
+      boolean recursively,
+      @Nullable FileFilter dirResultFilter,
+      @Nullable FileFilter dirRecursionFilter)
       throws MobileHarnessException {
     List<String> dirs = new ArrayList<>();
     for (File subDir : listDirs(dirPath)) {
-      if (fileFilter == null || fileFilter.accept(subDir)) {
+      if (dirResultFilter == null || dirResultFilter.accept(subDir)) {
         dirs.add(subDir.getAbsolutePath());
       }
-      if (recursively) {
-        dirs.addAll(listDirs(subDir.getAbsolutePath(), true, fileFilter));
+      if (recursively && (dirRecursionFilter == null || dirRecursionFilter.accept(subDir))) {
+        dirs.addAll(listDirs(subDir.getAbsolutePath(), true, dirResultFilter, dirRecursionFilter));
       }
     }
     return dirs;
