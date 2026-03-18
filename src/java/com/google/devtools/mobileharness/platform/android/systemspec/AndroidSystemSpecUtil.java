@@ -286,6 +286,20 @@ public class AndroidSystemSpecUtil {
     }
   }
 
+  /** Gets the SDK version of device. */
+  public int getDeviceSdkVersion(String serial)
+      throws MobileHarnessException, InterruptedException {
+    String sdkVersionRaw = adbUtil.getProperty(serial, AndroidProperty.SDK_VERSION);
+    try {
+      return Integer.parseInt(sdkVersionRaw);
+    } catch (NumberFormatException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_SYSTEM_SPEC_INVALID_SDK_VERSION,
+          String.format("Unrecognized SDK version: %s.", sdkVersionRaw),
+          e);
+    }
+  }
+
   /**
    * Gets ICCID of the device.
    *
