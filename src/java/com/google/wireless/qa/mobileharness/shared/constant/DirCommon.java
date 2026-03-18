@@ -31,6 +31,11 @@ public final class DirCommon {
   public static final String KEY_NAME_OF_TEST_GEN_FILE_DIR_RELATIVE_PATH =
       GenDir.KEY_NAME_OF_TEST_GEN_FILE_DIR_RELATIVE_PATH;
 
+  /**
+   * The file name prefix for the lock file to indicate if AndroidFlashstationDecorator is running.
+   */
+  public static final String FLASHSTATION_LOCK_FILE_NAME = "omnilab_flashstation_";
+
   /** Returns the public directory. */
   public static String getPublicDirRoot() {
     return Flags.instance().publicDir.getNonNull();
