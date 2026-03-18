@@ -17,4 +17,8 @@
 package com.google.devtools.mobileharness.platform.android.lightning.apkinstaller;
 
 /** A package that can be installed on a device. */
-public sealed interface Installable permits ApkSet {}
+public sealed interface Installable permits ApkSet {
+
+  /** Whether to uninstall and retry installation if the 1st attempt fails. */
+  boolean allowUninstallAndRetry();
+}

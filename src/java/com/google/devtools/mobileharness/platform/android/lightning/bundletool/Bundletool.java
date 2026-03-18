@@ -34,12 +34,20 @@ import com.google.devtools.mobileharness.shared.util.command.CommandTimeoutExcep
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.protobuf.CodedInputStream;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.WireFormat;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipException;
+import java.util.zip.ZipFile;
 import javax.inject.Inject;
 
 /** Wrapper for Bundletool binary. */
@@ -134,6 +142,56 @@ public class Bundletool {
   public void installApks(InstallApksArgs args)
       throws MobileHarnessException, InterruptedException {
     run(args.toBundletoolCommand(adb.getAdbPath()), args.commandTimeout());
+  }
+
+  /**
+   * Extracts the package name from an APK Set (.apks) file.
+   *
+   * @param apksPath path to the .apks file
+   * @return the package name extracted from the toc.pb file within the APK Set
+   * @throws MobileHarnessException if the package name cannot be extracted or a file operation
+   *     fails
+   */
+  public String getPackageNameFromApks(Path apksPath) throws MobileHarnessException {
+    // Bundletool has no command to get the package name from an APK Set, and we don't want to take
+    // a dependency on the bundletool library, rather include the binary as a resource.
+    // The proto type of the toc.pb file is BuildApksResult, so we can just parse the binary
+    // proto and extract the field at position 4 containing the package name.
+    final int packageNameTag = (4 << 3) | WireFormat.WIRETYPE_LENGTH_DELIMITED;
+    try (ZipFile zipFile = new ZipFile(apksPath.toFile())) {
+      ZipEntry tocEntry = zipFile.getEntry("toc.pb");
+      if (tocEntry == null) {
+        throw new MobileHarnessException(
+            AndroidErrorId.ANDROID_BUNDLETOOL_EXTRACT_PACKAGE_NAME_PARSING_ERROR,
+            "toc.pb, containing the package name, not found in " + apksPath);
+      }
+      try (InputStream inputStream = zipFile.getInputStream(tocEntry)) {
+        CodedInputStream codedInputStream = CodedInputStream.newInstance(inputStream);
+        while (!codedInputStream.isAtEnd()) {
+          int tag = codedInputStream.readTag();
+          if (tag == 0) {
+            break;
+          }
+          if (tag == packageNameTag) {
+            return codedInputStream.readString();
+          }
+          codedInputStream.skipField(tag);
+        }
+      }
+    } catch (ZipException | InvalidProtocolBufferException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_BUNDLETOOL_EXTRACT_PACKAGE_NAME_PARSING_ERROR,
+          "Failed to parse package name from toc.pb in " + apksPath,
+          e);
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_BUNDLETOOL_EXTRACT_PACKAGE_NAME_IO_ERROR,
+          "Failed to read package name from toc.pb in " + apksPath,
+          e);
+    }
+    throw new MobileHarnessException(
+        AndroidErrorId.ANDROID_BUNDLETOOL_EXTRACT_PACKAGE_NAME_PARSING_ERROR,
+        "Package name not found in " + apksPath);
   }
 
   /**

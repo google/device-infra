@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.platform.android.packagemanager;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
+import javax.annotation.Nullable;
 
 /** Error codes and handling for Android's package manager. */
 public final class PackageManagerErrors {
@@ -153,13 +155,26 @@ public final class PackageManagerErrors {
    */
   public static void throwIfUnrecoverableUserError(String errorText, String packageName)
       throws MobileHarnessException {
+    throwIfUnrecoverableUserError(errorText, packageName, null);
+  }
+
+  /**
+   * Throws an exception for well-known installation errors detected in the Package Manager error
+   * output, otherwise does nothing.
+   *
+   * <p>These are errors that are not recoverable by retrying the installation.
+   */
+  public static void throwIfUnrecoverableUserError(
+      String errorText, String packageName, @Nullable Throwable cause)
+      throws MobileHarnessException {
     for (ErrorDetail errorDetail : BAD_USER_CONFIG_INSTALL_FAILURES) {
       if (errorText.contains(errorDetail.packageManagerError())) {
         throw new MobileHarnessException(
             errorDetail.errorId(),
             String.format(
                 "Failed to install %s due to error %s: %s",
-                packageName, errorDetail.packageManagerError(), errorDetail.helpText()));
+                packageName, errorDetail.packageManagerError(), errorDetail.helpText()),
+            cause);
       }
     }
   }
@@ -173,14 +188,43 @@ public final class PackageManagerErrors {
    */
   public static void throwIfPostRetryUserError(String errorText, String packageName)
       throws MobileHarnessException {
+    throwIfPostRetryUserError(errorText, packageName, null);
+  }
+
+  /**
+   * Throws an exception for well-known installation errors detected in the Package Manager error
+   * output, otherwise does nothing.
+   *
+   * <p>For additional cases of {@link #throwIfUnrecoverableUserError} after installation retries,
+   * or cases where no retry is attempted.
+   */
+  public static void throwIfPostRetryUserError(
+      String errorText, String packageName, @Nullable Throwable cause)
+      throws MobileHarnessException {
     for (ErrorDetail errorDetail : BAD_NO_RETRY_USER_CONFIG_INSTALL_FAILURES) {
       if (errorText.contains(errorDetail.packageManagerError())) {
         throw new MobileHarnessException(
             errorDetail.errorId(),
             String.format(
                 "Failed to install %s due to error %s: %s",
-                packageName, errorDetail.packageManagerError(), errorDetail.helpText()));
+                packageName, errorDetail.packageManagerError(), errorDetail.helpText()),
+            cause);
       }
+    }
+  }
+
+  /**
+   * Throws a generic exception for installation errors detected in the Package Manager error
+   * output.
+   */
+  public static void throwInstallationError(String message, @Nullable Throwable cause)
+      throws MobileHarnessException {
+    if (DeviceUtil.inSharedLab()) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_ERROR_IN_SHARED_LAB, message, cause);
+    } else {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_ERROR_IN_SATELLITE_LAB, message, cause);
     }
   }
 

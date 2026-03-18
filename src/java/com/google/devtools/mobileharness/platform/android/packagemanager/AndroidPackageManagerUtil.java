@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.platform.android.packagemanager;
 
+import static com.google.devtools.mobileharness.platform.android.packagemanager.PackageManagerErrors.throwInstallationError;
 import static com.google.devtools.mobileharness.shared.util.command.LineCallback.does;
 import static java.util.stream.Collectors.toCollection;
 
@@ -1347,8 +1348,8 @@ public class AndroidPackageManagerUtil {
       }
     } catch (MobileHarnessException e) {
       output = e.getMessage();
-      PackageManagerErrors.throwIfUnrecoverableUserError(output, packageMap.values().toString());
-      PackageManagerErrors.throwIfPostRetryUserError(output, packageMap.values().toString());
+      PackageManagerErrors.throwIfUnrecoverableUserError(output, packageMap.values().toString(), e);
+      PackageManagerErrors.throwIfPostRetryUserError(output, packageMap.values().toString(), e);
       throwInstallationError("install command killed", e);
     }
 
@@ -1882,17 +1883,6 @@ public class AndroidPackageManagerUtil {
             .splitToStream(output)
             .allMatch(
                 line -> line.startsWith(OUTPUT_SUCCESS) || line.startsWith(SESSION_CREATION_START));
-  }
-
-  private void throwInstallationError(String message, @Nullable Throwable cause)
-      throws MobileHarnessException {
-    if (DeviceUtil.inSharedLab()) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_ERROR_IN_SHARED_LAB, message, cause);
-    } else {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_ERROR_IN_SATELLITE_LAB, message, cause);
-    }
   }
 
   /**

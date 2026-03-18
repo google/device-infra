@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.platform.android.lightning.shared.Share
 import com.google.devtools.mobileharness.platform.android.lightning.shared.SharedPropertyUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.InstallCmdArgs;
+import com.google.devtools.mobileharness.platform.android.packagemanager.PackageManagerErrors;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.shared.constant.PackageConstants;
@@ -159,49 +160,6 @@ public class ApkInstaller {
   }
 
   /**
-   * Installs a list of packages in the given order.
-   *
-   * @param device the device to install the packages to
-   * @param installables the packages to install
-   * @param log the optional log collector for observability
-   * @throws MobileHarnessException if any package fails to install
-   * @throws InterruptedException if current thread gets interrupted
-   */
-  public void install(
-      Device device, ImmutableList<Installable> installables, @Nullable LogCollector<?> log)
-      throws MobileHarnessException, InterruptedException {
-    for (Installable installable : installables) {
-      install(device, installable, log);
-    }
-  }
-
-  /**
-   * Installs one package.
-   *
-   * @param device the device to install the package to
-   * @param installable the package to install
-   * @param log the optional log collector for observability
-   * @throws MobileHarnessException if an issue occurs during installation
-   * @throws InterruptedException if current thread gets interrupted
-   */
-  public void install(Device device, Installable installable, @Nullable LogCollector<?> log)
-      throws MobileHarnessException, InterruptedException {
-    if (installable instanceof ApkSet apkSet) {
-      bundletool.installApks(apkSet.toInstallApksArgs(device.getDeviceId()));
-    } else {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_APK_INSTALLER_UNKNOWN_INSTALLABLE_ERROR,
-          "Unsupported Installable type: " + installable.getClass().getSimpleName());
-    }
-    SharedLogUtil.logMsg(
-        logger,
-        log,
-        "Successfully installed package %s on device %s",
-        installable,
-        device.getDeviceId());
-  }
-
-  /**
    * DO NOT use this method in any Lab Plugins.
    *
    * <p>Checks version info of an installed package. Will cache the version info in cache. If you
@@ -303,6 +261,74 @@ public class ApkInstaller {
           "Clearing device %s property '%s' which has value %s",
           device.getDeviceId(), propertyName, installedApkMd5);
       device.setProperty(propertyName, null);
+    }
+  }
+
+  /**
+   * Installs a list of packages in the given order.
+   *
+   * @param device the device to install the packages to
+   * @param installables the packages to install
+   * @param log the optional log collector for observability
+   * @throws MobileHarnessException if any package fails to install
+   * @throws InterruptedException if current thread gets interrupted
+   */
+  public void install(
+      Device device, ImmutableList<Installable> installables, @Nullable LogCollector<?> log)
+      throws MobileHarnessException, InterruptedException {
+    for (Installable installable : installables) {
+      install(device, installable, log);
+    }
+  }
+
+  /**
+   * Installs one package.
+   *
+   * @param device the device to install the package to
+   * @param installable the package to install
+   * @param log the optional log collector for observability
+   * @throws MobileHarnessException if an issue occurs during installation
+   * @throws InterruptedException if current thread gets interrupted
+   */
+  public void install(Device device, Installable installable, @Nullable LogCollector<?> log)
+      throws MobileHarnessException, InterruptedException {
+    String packageName = getPackageName(installable);
+
+    try {
+      doInstall(device, installable, packageName, log);
+      return;
+    } catch (MobileHarnessException e) {
+      PackageManagerErrors.throwIfUnrecoverableUserError(e.getMessage(), packageName, e);
+      if (!installable.allowUninstallAndRetry()) {
+        PackageManagerErrors.throwIfPostRetryUserError(e.getMessage(), packageName, e);
+        PackageManagerErrors.throwInstallationError(
+            String.format("Failed to install package %s", packageName), e);
+      }
+      SharedLogUtil.logMsg(
+          logger,
+          Level.WARNING,
+          log,
+          e,
+          "Failed to install package %s. Attempting to uninstall and retry.",
+          packageName);
+    }
+
+    try {
+      // Although a package can be installed for specific users, Android maintains only a single
+      // instance of the package binary on the device. Therefore, only uninstalling for all users
+      // makes sure that the package is not installed on the device and a retry can succeed.
+      androidPackageManagerUtil.uninstallApk(device.getDeviceId(), packageName);
+    } catch (MobileHarnessException e) {
+      SharedLogUtil.logMsg(logger, Level.WARNING, log, e, "Ignoring failure to uninstall package.");
+    }
+
+    try {
+      doInstall(device, installable, packageName, log);
+    } catch (MobileHarnessException e) {
+      PackageManagerErrors.throwIfUnrecoverableUserError(e.getMessage(), packageName, e);
+      PackageManagerErrors.throwIfPostRetryUserError(e.getMessage(), packageName, e);
+      PackageManagerErrors.throwInstallationError(
+          String.format("Failed to install package %s twice", packageName), e);
     }
   }
 
@@ -799,6 +825,33 @@ public class ApkInstaller {
           "Failed to get current user ID with exception %s", e.getMessage());
     }
     return Optional.of("0");
+  }
+
+  private String getPackageName(Installable installable) throws MobileHarnessException {
+    if (installable instanceof ApkSet apkSet) {
+      return bundletool.getPackageNameFromApks(apkSet.apks());
+    }
+    throw new MobileHarnessException(
+        AndroidErrorId.ANDROID_APK_INSTALLER_UNKNOWN_INSTALLABLE_ERROR,
+        "Unsupported Installable type: " + installable.getClass().getSimpleName());
+  }
+
+  private void doInstall(
+      Device device, Installable installable, String packageName, @Nullable LogCollector<?> log)
+      throws MobileHarnessException, InterruptedException {
+    if (installable instanceof ApkSet apkSet) {
+      bundletool.installApks(apkSet.toInstallApksArgs(device.getDeviceId()));
+    } else {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_APK_INSTALLER_UNKNOWN_INSTALLABLE_ERROR,
+          "Unsupported Installable type: " + installable.getClass().getSimpleName());
+    }
+    SharedLogUtil.logMsg(
+        logger,
+        log,
+        "Successfully installed package %s on device %s",
+        packageName,
+        device.getDeviceId());
   }
 
   /**
