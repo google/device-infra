@@ -447,15 +447,16 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
     // Android build tools provided by Mobile Harness, including fastboot and mke2fs.
     getSdkToolDir(fastboot.getFastbootPath(), "fastboot").ifPresent(paths::add);
 
+    // Add venv bin before system path to avoid conflict with system python.
+    Path venvPath = getVenvBinPath(testInfo);
+    if (venvPath != null) {
+      paths.add(venvPath.toString());
+    }
+
     // System PATH
     String systemPath = systemUtil.getEnv("PATH");
     if (systemPath != null) {
       paths.add(systemPath);
-    }
-
-    Path venvPath = getVenvBinPath(testInfo);
-    if (venvPath != null) {
-      paths.add(venvPath.toString());
     }
 
     String path = Joiner.on(':').join(paths.build());
