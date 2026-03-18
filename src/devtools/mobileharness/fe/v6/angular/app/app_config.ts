@@ -1,8 +1,4 @@
-import {
-  HttpClient,
-  provideHttpClient,
-  withInterceptors,
-} from '@angular/common/http';
+import {provideHttpClient, withInterceptors} from '@angular/common/http';
 import {
   ApplicationConfig,
   importProvidersFrom,
@@ -36,13 +32,11 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([authInterceptor])),
     {
       provide: DEVICE_SERVICE,
-      useFactory: (route: ActivatedRoute, http: HttpClient) => {
+      useFactory: (route: ActivatedRoute) => {
         const useFakeData = route.snapshot.queryParams['fake_data'] === 'true';
-        return useFakeData
-          ? new FakeDeviceService()
-          : new HttpDeviceService(http);
+        return useFakeData ? new FakeDeviceService() : new HttpDeviceService();
       },
-      deps: [ActivatedRoute, HttpClient],
+      deps: [ActivatedRoute],
     },
     {
       provide: HOST_SERVICE,
@@ -54,13 +48,11 @@ export const appConfig: ApplicationConfig = {
     },
     {
       provide: CONFIG_SERVICE,
-      useFactory: (route: ActivatedRoute, http: HttpClient) => {
+      useFactory: (route: ActivatedRoute) => {
         const useFakeData = route.snapshot.queryParams['fake_data'] === 'true';
-        return useFakeData
-          ? new FakeConfigService()
-          : new HttpConfigService(http);
+        return useFakeData ? new FakeConfigService() : new HttpConfigService();
       },
-      deps: [ActivatedRoute, HttpClient],
+      deps: [ActivatedRoute],
     },
     provideAnimations(),
     {

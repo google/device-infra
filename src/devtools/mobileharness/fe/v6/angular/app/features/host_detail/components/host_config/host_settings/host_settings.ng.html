@@ -68,7 +68,7 @@
           @case ('host-permissions') {
             <app-host-permissions
               workflow="settings"
-              [(permissions)]="hostConfig.permissions"
+              [(permissions)]="hostConfig.permissions!"
               [uiStatus]="hostPermissionsUiStatus"
             ></app-host-permissions>
           }
@@ -90,7 +90,7 @@
               "
               [description]="'Manage permissions for devices on this host.'"
               [hostTooltipText]="tooltipText()"
-              [(permissions)]="deviceConfig.permissions"
+              [(permissions)]="deviceConfig.permissions!"
               [uiStatus]="permissionsUiStatus"
             ></app-permissions>
           }
@@ -110,7 +110,7 @@
             <app-wifi
               type="host"
               workflow="settings"
-              [(wifi)]="deviceConfig.wifi"
+              [(wifi)]="deviceConfig.wifi!"
               [uiStatus]="wifiUiStatus"
             ></app-wifi>
           }
@@ -124,7 +124,7 @@
                   : 'Shared Device Config: Dimensions'
               "
               [tooltipText]="tooltipText()"
-              [(dimensions)]="deviceConfig.dimensions"
+              [(dimensions)]="deviceConfig.dimensions!"
               [uiStatus]="dimensionsUiStatus"
               (hasError)="hasError = $event"
             ></app-dimensions>
@@ -138,14 +138,14 @@
                   : 'Shared Device Config: Stability & Reboot'
               "
               [hostTooltipText]="tooltipText()"
-              [(settings)]="deviceConfig.settings"
+              [(settings)]="deviceConfig.settings!"
               [uiStatus]="settingsUiStatus"
             ></app-stability>
           }
           @case ('device-discovery') {
             <app-device-discovery
               workflow="settings"
-              [(deviceDiscovery)]="hostConfig.deviceDiscovery"
+              [(deviceDiscovery)]="hostConfig.deviceDiscovery!"
               [uiStatus]="deviceDiscoveryUiStatus"
               (hasError)="hasError = $event"
             ></app-device-discovery>
@@ -153,7 +153,7 @@
           @case ('host-properties') {
             <app-host-properties
               workflow="settings"
-              [(properties)]="hostConfig.hostProperties"
+              [(properties)]="hostConfig.hostProperties!"
               [uiStatus]="config.uiStatus.hostProperties"
             ></app-host-properties>
           }

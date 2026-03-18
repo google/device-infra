@@ -24,7 +24,7 @@ describe('Wifi Component', () => {
     }).compileComponents();
     fixture = TestBed.createComponent(Wifi);
     component = fixture.componentInstance;
-    component.wifi = SCENARIO_IN_SERVICE_IDLE.config!.wifi;
+    component.wifi = SCENARIO_IN_SERVICE_IDLE.config!.wifi!;
     fixture.detectChanges();
   });
 

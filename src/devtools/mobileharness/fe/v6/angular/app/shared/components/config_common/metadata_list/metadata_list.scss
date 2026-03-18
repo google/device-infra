@@ -137,12 +137,22 @@
   width: 100%;
 
   ::ng-deep .mat-mdc-text-field-wrapper {
-     background-color: white;
+    background-color: white;
+
+    &.mdc-text-field--disabled {
+      background-color: #f1f5f9;
+    }
   }
 
-  ::ng-deep .mdc-text-field--disabled {
-     background-color: #f1f5f9;
-  }
+  @include mat.form-field-overrides((
+    filled-disabled-container-color: #f1f5f9,
+    filled-disabled-input-text-color: #475569,
+    outlined-disabled-input-text-color: #475569,
+  ));
+
+  @include mat.select-overrides((
+    disabled-trigger-text-color: #475569,
+  ));
 }
 
 .metadata-list-row input.error {

@@ -10,19 +10,17 @@ describe('Dimensions Component', () => {
   let fixture: ComponentFixture<Dimensions>;
   let component: Dimensions;
   beforeEach(async () => {
-    await TestBed
-        .configureTestingModule({
-          imports: [
-            Dimensions,
-            NoopAnimationsModule,  // This makes test faster and more stable.
-          ],
-          providers: [provideRouter([])],
-        })
-        .compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [
+        Dimensions,
+        NoopAnimationsModule, // This makes test faster and more stable.
+      ],
+      providers: [provideRouter([])],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(Dimensions);
     component = fixture.componentInstance;
-    component.dimensions = SCENARIO_IN_SERVICE_IDLE.config!.dimensions;
+    component.dimensions = SCENARIO_IN_SERVICE_IDLE.config!.dimensions!;
     fixture.detectChanges();
   });
 

@@ -82,6 +82,7 @@ export class FakeConfigService extends ConfigService {
 
   override checkDeviceWritePermission(
     deviceId: string,
+    universe?: string,
   ): Observable<CheckDeviceWritePermissionResult> {
     const scenario = this.mockDeviceScenarios.find((s) => s.id === deviceId);
     if (!scenario || !scenario.config) {
@@ -89,8 +90,9 @@ export class FakeConfigService extends ConfigService {
       return of({hasPermission: true, userName: CURRENT_USER});
     }
 
-    const hasPermission =
-      scenario.config.permissions.owners.includes(CURRENT_USER);
+    const hasPermission = (scenario.config.permissions?.owners || []).includes(
+      CURRENT_USER,
+    );
     return of({hasPermission, userName: CURRENT_USER});
   }
 
@@ -123,7 +125,7 @@ export class FakeConfigService extends ConfigService {
     switch (request.section) {
       case ConfigSection.PERMISSIONS:
         if (
-          !request.config.permissions.owners.includes(CURRENT_USER) &&
+          !(request.config.permissions?.owners || []).includes(CURRENT_USER) &&
           !request.options?.overrideSelfLockout
         ) {
           return of({success: false, error: {code: 'SELF_LOCKOUT_DETECTED'}});
@@ -193,6 +195,7 @@ export class FakeConfigService extends ConfigService {
 
   override checkHostWritePermission(
     hostName: string,
+    universe?: string,
   ): Observable<CheckHostWritePermissionResult> {
     // For fake service, always grant permission to the current user.
     return of({hasPermission: true, userName: CURRENT_USER});

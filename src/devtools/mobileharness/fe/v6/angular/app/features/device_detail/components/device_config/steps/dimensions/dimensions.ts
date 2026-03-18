@@ -4,8 +4,10 @@ import {
   Component,
   EventEmitter,
   Input,
+  OnChanges,
   OnInit,
   Output,
+  SimpleChanges,
 } from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
@@ -27,7 +29,7 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, MetadataList, MatIconModule, MatTooltipModule],
 })
-export class Dimensions implements OnInit {
+export class Dimensions implements OnInit, OnChanges {
   @Input() type: 'device' | 'host' = 'device';
   @Input() workflow: 'wizard' | 'settings' = 'wizard';
   @Input() uiStatus: MetadataUiStatus = {
@@ -38,15 +40,15 @@ export class Dimensions implements OnInit {
   @Input() tooltipText = '';
 
   @Input() dimensions: {
-    supported: DeviceDimension[];
-    required: DeviceDimension[];
+    supported?: DeviceDimension[];
+    required?: DeviceDimension[];
   } = {
     supported: [],
     required: [],
   };
   @Output() readonly dimensionsChange = new EventEmitter<{
-    supported: DeviceDimension[];
-    required: DeviceDimension[];
+    supported?: DeviceDimension[];
+    required?: DeviceDimension[];
   }>();
   @Output() readonly hasError = new EventEmitter<boolean>();
 
@@ -79,6 +81,27 @@ export class Dimensions implements OnInit {
   ];
 
   ngOnInit() {}
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['dimensions']) {
+      this.dimensions = {
+        supported: this.dimensions.supported || [],
+        required: this.dimensions.required || [],
+      };
+    }
+  }
+
+  onMetadataListChange(
+    type: 'supported' | 'required',
+    list: DeviceDimension[],
+  ) {
+    if (type === 'supported') {
+      this.dimensions.supported = list;
+    } else {
+      this.dimensions.required = list;
+    }
+
+    this.dimensionsChange.emit(this.dimensions);
+  }
 
   onHasErrorChanged(type: 'supported' | 'required', hasError: boolean) {
     if (type === 'supported') {

@@ -296,8 +296,8 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
   // Dimension related functions
   private initFlatDimensions(): void {
     this.flatDimensions = [];
-    this.flattenDimensions(this.device.dimensions.supported, 'supported');
-    this.flattenDimensions(this.device.dimensions.required, 'required');
+    this.flattenDimensions(this.device.dimensions?.supported, 'supported');
+    this.flattenDimensions(this.device.dimensions?.required, 'required');
   }
 
   private flattenDimensions(

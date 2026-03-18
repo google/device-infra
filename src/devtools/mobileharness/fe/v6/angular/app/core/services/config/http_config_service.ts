@@ -7,6 +7,7 @@ import {
   CheckDeviceWritePermissionResult,
   DeviceConfig,
   GetDeviceConfigResult,
+  GetRecommendedWifiResponse,
   RecommendedWifi,
   UpdateDeviceConfigRequest,
   UpdateDeviceConfigResult,
@@ -14,10 +15,12 @@ import {
 import {
   CheckHostWritePermissionResult,
   GetHostConfigResult,
+  GetHostDefaultDeviceConfigResponse,
   UpdateHostConfigRequest,
   UpdateHostConfigResult,
 } from '../../models/host_config_models';
 
+import {map} from 'rxjs/operators';
 import {ConfigService} from './config_service';
 
 /** An implementation of the ConfigService that uses HTTP to fetch data. */
@@ -25,12 +28,10 @@ import {ConfigService} from './config_service';
 export class HttpConfigService extends ConfigService {
   private readonly appData: AppData = inject(APP_DATA);
   private readonly apiUrl = `${this.appData.labConsoleServerUrl}/v6`;
+  private readonly http = inject(HttpClient);
 
-  private readonly http: HttpClient;
-
-  constructor(http: HttpClient) {
+  constructor() {
     super();
-    this.http = http;
   }
 
   // ===== Device Config Methods =====
@@ -45,9 +46,11 @@ export class HttpConfigService extends ConfigService {
 
   override checkDeviceWritePermission(
     deviceId: string,
+    universe?: string,
   ): Observable<CheckDeviceWritePermissionResult> {
-    return this.http.get<CheckDeviceWritePermissionResult>(
+    return this.http.post<CheckDeviceWritePermissionResult>(
       `${this.apiUrl}/devices/${deviceId}/config:checkWritePermission`,
+      {id: deviceId, universe},
     );
   }
 
@@ -55,15 +58,17 @@ export class HttpConfigService extends ConfigService {
     request: UpdateDeviceConfigRequest,
   ): Observable<UpdateDeviceConfigResult> {
     return this.http.post<UpdateDeviceConfigResult>(
-      `${this.apiUrl}/devices/${request.deviceId}/config`,
+      `${this.apiUrl}/devices/${request.deviceId}/config:update`,
       request,
     );
   }
 
   override getRecommendedWifi(): Observable<RecommendedWifi[]> {
-    return this.http.get<RecommendedWifi[]>(
-      `${this.apiUrl}/configs/wifi/recommendations`,
-    );
+    return this.http
+      .get<GetRecommendedWifiResponse>(
+        `${this.apiUrl}/configs/wifi/recommendations`,
+      )
+      .pipe(map((response) => response.recommendations || []));
   }
 
   // ===== Host Config Methods =====
@@ -71,9 +76,12 @@ export class HttpConfigService extends ConfigService {
   override getHostDefaultDeviceConfig(
     hostName: string,
   ): Observable<DeviceConfig | null> {
-    return this.http.get<DeviceConfig | null>(
-      `${this.apiUrl}/hosts/${hostName}/defaultDeviceConfig`,
-    );
+    return this.http
+      .post<GetHostDefaultDeviceConfigResponse>(
+        `${this.apiUrl}/hosts/${hostName}:getDefaultDeviceConfig`,
+        {},
+      )
+      .pipe(map((response) => response.deviceConfig || null));
   }
 
   override getHostConfig(hostName: string): Observable<GetHostConfigResult> {
@@ -84,9 +92,11 @@ export class HttpConfigService extends ConfigService {
 
   override checkHostWritePermission(
     hostName: string,
+    universe?: string,
   ): Observable<CheckHostWritePermissionResult> {
-    return this.http.get<CheckHostWritePermissionResult>(
+    return this.http.post<CheckHostWritePermissionResult>(
       `${this.apiUrl}/hosts/${hostName}/config:checkWritePermission`,
+      {hostName, universe},
     );
   }
 
@@ -94,7 +104,7 @@ export class HttpConfigService extends ConfigService {
     request: UpdateHostConfigRequest,
   ): Observable<UpdateHostConfigResult> {
     return this.http.post<UpdateHostConfigResult>(
-      `${this.apiUrl}/hosts/${request.hostName}/config`,
+      `${this.apiUrl}/hosts/${request.hostName}/config:update`,
       request,
     );
   }

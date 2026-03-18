@@ -50,7 +50,7 @@ const OVERVIEW: DeviceOverview = {
     batteryLevel: null,
     network: {},
   },
-  permissions: CONFIG.permissions,
+  permissions: CONFIG.permissions!,
   capabilities: {
     supportedDrivers: ['MoblyTest'],
     supportedDecorators: [],

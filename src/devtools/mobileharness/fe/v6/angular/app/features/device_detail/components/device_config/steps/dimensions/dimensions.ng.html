@@ -57,7 +57,8 @@
         emptyMessage="No dimensions of this type have been added."
         addButtonLabel="Add Dimension"
         [columns]="dimensionColumns"
-        [(metadataList)]="dimensions.supported"
+        [(metadataList)]="dimensions.supported!"
+        (metadataListChange)="onMetadataListChange('supported', $event)"
         (hasError)="onHasErrorChanged('supported', $event)"
         [uiStatus]="uiStatus"
       ></app-metadata-list>
@@ -91,7 +92,8 @@
         emptyMessage="No dimensions of this type have been added."
         addButtonLabel="Add Dimension"
         [columns]="dimensionColumns"
-        [(metadataList)]="dimensions.required"
+        [(metadataList)]="dimensions.required!"
+        (metadataListChange)="onMetadataListChange('required', $event)"
         (hasError)="onHasErrorChanged('required', $event)"
         [uiStatus]="uiStatus"
       ></app-metadata-list>

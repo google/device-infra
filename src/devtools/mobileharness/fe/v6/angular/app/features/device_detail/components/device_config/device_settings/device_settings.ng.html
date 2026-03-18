@@ -10,7 +10,7 @@
       <mat-icon>more_vert</mat-icon>
     </button>
     <mat-menu #menu="matMenu">
-      <button mat-menu-item (click)="reset()">
+      <button mat-menu-item (click)="reset()" [disabled]="!hasPermission()">
         <mat-icon>delete_sweep</mat-icon>
         <span class="config-menu-text">Clear All & Start Over</span>
       </button>
@@ -37,37 +37,50 @@
           @case (ConfigSection.PERMISSIONS) {
             <app-permissions
               workflow="settings"
-              [(permissions)]="newConfig.permissions"
+              [(permissions)]="newConfig.permissions!"
+              [uiStatus]="uiStatus.permissions"
             ></app-permissions>
           }
           @case (ConfigSection.WIFI) {
-            <app-wifi workflow="settings" [(wifi)]="newConfig.wifi"></app-wifi>
+            <app-wifi
+              workflow="settings"
+              [(wifi)]="newConfig.wifi!"
+              [uiStatus]="uiStatus.wifi"
+            ></app-wifi>
           }
           @case (ConfigSection.DIMENSIONS) {
             <app-dimensions
               workflow="settings"
-              [(dimensions)]="newConfig.dimensions"
+              [(dimensions)]="newConfig.dimensions!"
               (hasError)="hasError = $event"
+              [uiStatus]="{sectionStatus: uiStatus.dimensions}"
             ></app-dimensions>
           }
           @case (ConfigSection.STABILITY) {
-            <app-stability [(settings)]="newConfig.settings"></app-stability>
+            <app-stability
+              [(settings)]="newConfig.settings!"
+              [uiStatus]="uiStatus.settings"
+            ></app-stability>
           }
         }
       </div>
 
-      <app-footer [param]="{deviceId: deviceId, hostName: ''}" class="main-footer">
+      <app-footer
+        [param]="{deviceId: deviceId, hostName: ''}"
+        class="main-footer"
+        (onPermissionChange)="handlePermissionChange($event)"
+      >
         <ng-container footer-buttons>
           <button
             class="discard-button"
-            [disabled]="!isCategoryDirty(activeSection())"
+            [disabled]="!isCategoryDirty(activeSection()) || !hasPermission()"
             (click)="discard()"
           >
             Discard Changes
           </button>
           <button
             class="save-button"
-            [disabled]="!isCategoryDirty(activeSection()) || hasError || saving()"
+            [disabled]="!isCategoryDirty(activeSection()) || hasError || saving() || !hasPermission()"
             (click)="save()"
           >
             @if (saving()) {

@@ -17,32 +17,34 @@ describe('Footer Component', () => {
 
   beforeEach(async () => {
     mockConfigService.checkDeviceWritePermission.and.returnValue(
-        of({hasPermission: true, userName: 'derekchen'}),
+      of({hasPermission: true, userName: 'derekchen'}),
     );
     mockConfigService.checkHostWritePermission.and.returnValue(
-        of({hasPermission: true, userName: 'derekchen'}),
+      of({hasPermission: true, userName: 'derekchen'}),
     );
 
-    await TestBed
-        .configureTestingModule({
-          imports: [
-            Footer,
-            NoopAnimationsModule,  // This makes test faster and more stable.
-          ],
-          providers: [
-            provideRouter([]),
-            {provide: CONFIG_SERVICE, useValue: mockConfigService},
-          ],
-        })
-        .compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [
+        Footer,
+        NoopAnimationsModule, // This makes test faster and more stable.
+      ],
+      providers: [
+        provideRouter([]),
+        {provide: CONFIG_SERVICE, useValue: mockConfigService},
+      ],
+    }).compileComponents();
 
     fixture = TestBed.createComponent(Footer);
     component = fixture.componentInstance;
+    component.param = {deviceId: 'test_device', hostName: '', universe: ''};
     fixture.detectChanges();
   });
 
   it('should be created', () => {
     expect(component).toBeTruthy();
-    expect(mockConfigService.checkDeviceWritePermission).toHaveBeenCalled();
+    expect(mockConfigService.checkDeviceWritePermission).toHaveBeenCalledWith(
+      'test_device',
+      '',
+    );
   });
 });

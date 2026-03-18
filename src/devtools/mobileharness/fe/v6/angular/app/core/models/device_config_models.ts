@@ -23,11 +23,11 @@ export declare interface PermissionInfo {
    * including changing its configuration.
    * Usernames are typically without domain. Group names are as defined in the system.
    */
-  owners: string[];
+  owners?: string[];
   /**
    * List of users or groups who are allowed to execute tests on the device.
    */
-  executors: string[];
+  executors?: string[];
 }
 
 /**
@@ -58,6 +58,13 @@ export declare interface RecommendedWifi {
 }
 
 /**
+ * The response object for fetching recommended Wi-Fi networks.
+ */
+export declare interface GetRecommendedWifiResponse {
+  recommendations: RecommendedWifi[];
+}
+
+/**
  * Settings related to device stability and reboot behavior during testing.
  */
 export declare interface StabilitySettings {
@@ -78,21 +85,21 @@ export declare interface StabilitySettings {
  * in the UI.
  */
 export declare interface DeviceConfig {
-  permissions: PermissionInfo;
-  wifi: WifiConfig;
-  dimensions: {
+  permissions?: PermissionInfo;
+  wifi?: WifiConfig;
+  dimensions?: {
     /**
      * Dimensions that describe the device's capabilities or attributes.
      * Jobs can request these to target devices.
      */
-    supported: DeviceDimension[];
+    supported?: DeviceDimension[];
     /**
      * Dimensions that a job MUST specify to be allocated this device.
      * Used to reserve devices for specific pools or purposes.
      */
-    required: DeviceDimension[];
+    required?: DeviceDimension[];
   };
-  settings: StabilitySettings;
+  settings?: StabilitySettings;
 }
 
 /**

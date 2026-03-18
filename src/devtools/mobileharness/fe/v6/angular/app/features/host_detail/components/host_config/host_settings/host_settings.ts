@@ -17,7 +17,7 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatTooltipModule} from '@angular/material/tooltip';
-import {delay, finalize, tap} from 'rxjs/operators';
+import {finalize, tap} from 'rxjs/operators';
 
 import {
   ConfigSection,
@@ -419,7 +419,8 @@ export class HostSettings implements OnInit {
         ...this.config.hostConfig.deviceConfig!,
         permissions: {
           owners: this.config.hostConfig.permissions.hostAdmins,
-          executors: this.config.hostConfig.deviceConfig!.permissions.executors,
+          executors:
+            this.config.hostConfig.deviceConfig?.permissions?.executors || [],
         },
       }) as DeviceConfig;
       this.hostConfig = objectUtils.deepCopy(
@@ -619,7 +620,6 @@ export class HostSettings implements OnInit {
         tap(() => {
           this.saving.set(true);
         }),
-        delay(1000),
         finalize(() => {
           this.saving.set(false);
         }),

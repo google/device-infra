@@ -45,6 +45,7 @@ export abstract class ConfigService {
    */
   abstract checkDeviceWritePermission(
     deviceId: string,
+    universe?: string,
   ): Observable<CheckDeviceWritePermissionResult>;
 
   /**
@@ -89,6 +90,7 @@ export abstract class ConfigService {
    */
   abstract checkHostWritePermission(
     hostName: string,
+    universe?: string,
   ): Observable<CheckHostWritePermissionResult>;
 
   /**

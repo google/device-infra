@@ -1,6 +1,10 @@
 @use '../../../styles/configuration' as config;
 @use '../../../styles/common';
 
+:host {
+  @include config.default-overrides();
+}
+
 .add-button {
   @include common.shared-button('secondary');
 }

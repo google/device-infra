@@ -31,7 +31,7 @@ import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatTableDataSource, MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {RouterLink} from '@angular/router';
-import {delay, map, tap} from 'rxjs/operators';
+import {map, tap} from 'rxjs/operators';
 
 import {
   HealthState,
@@ -388,7 +388,7 @@ export class HostOverviewPage implements OnInit, OnChanges {
     this.isSavingFlags.set(true);
     this.hostService
       .updatePassThroughFlags(this.host.hostName, this.editedFlags)
-      .pipe(delay(2000), takeUntilDestroyed(this.destroyRef))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {
           this.host.labServer.passThroughFlags = this.editedFlags;
@@ -525,7 +525,6 @@ export class HostOverviewPage implements OnInit, OnChanges {
         devices.map((d) => d.id),
       )
       .pipe(
-        delay(1000),
         tap(() => {
           const decommissionedIds = new Set(devices.map((d) => d.id));
           this.deviceDataSource.data = this.deviceDataSource.data.filter(

@@ -66,4 +66,15 @@ describe('HttpHostService', () => {
     expect(req.request.method).toBe('GET');
     req.flush({deviceSummaries: mockDeviceSummaries});
   });
+
+  it('should update pass through flags via POST to correct URL', () => {
+    service.updatePassThroughFlags('test-host', '--flag').subscribe();
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/hosts/test-host/updatePassThroughFlags',
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({flags: '--flag'});
+    req.flush({});
+  });
 });

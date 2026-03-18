@@ -1,5 +1,9 @@
 @use '../../../../../../shared/styles/configuration' as config;
 
+:host {
+  @include config.default-overrides();
+}
+
 .stability-container {
   letter-spacing: normal;
 

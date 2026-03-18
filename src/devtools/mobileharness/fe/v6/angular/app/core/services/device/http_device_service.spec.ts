@@ -1,10 +1,9 @@
-import {HttpClient, provideHttpClient} from '@angular/common/http';
+import {provideHttpClient} from '@angular/common/http';
 import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import {TestBed} from '@angular/core/testing';
-
 import {APP_DATA, AppData} from '../../models/app_data';
 import {DeviceOverviewPageData} from '../../models/device_overview';
 import {
@@ -31,9 +30,7 @@ describe('HttpDeviceService', () => {
         {provide: APP_DATA, useValue: mockAppData},
         {
           provide: DEVICE_SERVICE,
-          useFactory: (http: HttpClient, appData: AppData) =>
-            new HttpDeviceService(http),
-          deps: [HttpClient, APP_DATA],
+          useClass: HttpDeviceService,
         },
       ],
     });
@@ -144,5 +141,25 @@ describe('HttpDeviceService', () => {
     );
     expect(req.request.method).toBe('POST');
     req.flush(mockStats);
+  });
+
+  it('should take screenshot via POST to :takeScreenshot', () => {
+    service.takeScreenshot('test-device').subscribe();
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/devices/test-device:takeScreenshot',
+    );
+    expect(req.request.method).toBe('POST');
+    req.flush({screenshotUrl: 'http://image.com'});
+  });
+
+  it('should get testbed config via POST to :getTestbedConfig', () => {
+    service.getTestbedConfig('test-device').subscribe();
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/devices/test-device:getTestbedConfig',
+    );
+    expect(req.request.method).toBe('POST');
+    req.flush({id: 'test-device'});
   });
 });

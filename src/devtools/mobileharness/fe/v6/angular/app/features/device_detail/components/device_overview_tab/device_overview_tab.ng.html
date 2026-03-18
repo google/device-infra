@@ -84,15 +84,13 @@
         <dl class="detail-list-grid">
           <dt>Type</dt>
           <dd class="chip-grid-container">
-            @if (device.healthAndActivity.deviceTypes.length > 0) {
               @for (type of device.healthAndActivity.deviceTypes; track $index) {
                 <div
                   [class]="'type-chip ' + (type.isAbnormal ? 'type-chip-abnormal' : 'type-chip-normal')"
                 >
                   {{ type.type }}
                 </div>
-              }
-            } @else {
+              } @empty {
               <span class="no-types">No types detected</span>
             }
           </dd>

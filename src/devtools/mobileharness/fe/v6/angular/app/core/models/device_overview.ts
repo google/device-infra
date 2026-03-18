@@ -30,7 +30,7 @@ export declare interface DeviceOverview {
   basicInfo: BasicDeviceInfo;
 
   /** Permissions defining who can own and execute tests on the device. */
-  permissions: PermissionInfo;
+  permissions?: PermissionInfo;
 
   /** Lists of supported drivers and decorators for the device. */
   capabilities: CapabilitiesInfo;
@@ -39,7 +39,7 @@ export declare interface DeviceOverview {
    * Device dimensions used for test scheduling, grouped by their source.
    * Dimensions are key-value pairs, where a key can have multiple values.
    */
-  dimensions: Dimensions;
+  dimensions?: Dimensions;
 
   /**
    * Additional device properties, as a simple key-value map.

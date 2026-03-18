@@ -1,5 +1,14 @@
 import {CommonModule} from '@angular/common';
-import {ChangeDetectionStrategy, Component, EventEmitter, Input, OnInit, Output} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  EventEmitter,
+  Input,
+  OnChanges,
+  OnInit,
+  Output,
+  SimpleChanges,
+} from '@angular/core';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
 // import {MatAutocompleteModule} from '@angular/material/autocomplete';
 import {MatButtonModule} from '@angular/material/button';
@@ -17,13 +26,11 @@ export interface MetadataColumn {
   columnDef: string;
   header: string;
   cell: string;
-  type: 'input'|'select'|'action';
-  inputType?: 'text'|'number'|'email'|
-      'password';  // Only used when type is 'input'.
-  defaultValue?: string|
-      (() => string);  // function default value is for generating default value
-                       // with dynamic date.
-  options?: string[];  // Only used when type is 'select'.
+  type: 'input' | 'select' | 'action';
+  inputType?: 'text' | 'number' | 'email' | 'password'; // Only used when type is 'input'.
+  defaultValue?: string | (() => string); // function default value is for generating default value
+  // with dynamic date.
+  options?: string[]; // Only used when type is 'select'.
   placeholder?: string;
   required?: boolean;
 }
@@ -36,8 +43,10 @@ declare interface EditabilityOverride {
  * The UI status of the metadata list.
  */
 export interface MetadataUiStatus {
-  sectionStatus:
-      {visible: boolean; editability?: {editable: boolean; reason?: string};};
+  sectionStatus: {
+    visible: boolean;
+    editability?: {editable: boolean; reason?: string};
+  };
   itemEditabilityOverrides?: EditabilityOverride;
 }
 
@@ -64,7 +73,9 @@ export interface MetadataUiStatus {
     SafeHtmlPipe,
   ],
 })
-export class MetadataList<T extends Record<keyof T, string>> implements OnInit {
+export class MetadataList<T extends Record<keyof T, string>>
+  implements OnInit, OnChanges
+{
   @Input()
   uiStatus: MetadataUiStatus = {
     sectionStatus: {visible: true, editability: {editable: true, reason: ''}},
@@ -98,13 +109,25 @@ export class MetadataList<T extends Record<keyof T, string>> implements OnInit {
   errorMessage: string[] = [];
 
   ngOnInit() {
+    this.updateColumns();
+    this.validate();
+  }
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['columns']) {
+      this.updateColumns();
+    }
+    if (changes['metadataList']) {
+      this.validate();
+    }
+  }
+
+  private updateColumns() {
     this.columns = [...this.columns];
     this.displayedColumns = [
       ...this.columns.map((col) => col.columnDef),
       ...this.endColumns,
     ];
-
-    this.validate();
   }
 
   add() {
@@ -112,8 +135,9 @@ export class MetadataList<T extends Record<keyof T, string>> implements OnInit {
     this.columns.forEach((column) => {
       if (column.defaultValue) {
         (newRow as Record<string, string>)[column.cell] =
-            typeof column.defaultValue === 'function' ? column.defaultValue() :
-                                                        column.defaultValue;
+          typeof column.defaultValue === 'function'
+            ? column.defaultValue()
+            : column.defaultValue;
       } else {
         (newRow as Record<string, string>)[column.cell] = '';
       }
@@ -133,7 +157,7 @@ export class MetadataList<T extends Record<keyof T, string>> implements OnInit {
     // indexes should be decreased by 1.
     if (!this.uiStatus.itemEditabilityOverrides) return;
     const oldOverrides: EditabilityOverride =
-        this.uiStatus.itemEditabilityOverrides;
+      this.uiStatus.itemEditabilityOverrides;
     const newOverrides: EditabilityOverride = {};
     for (const key of Object.keys(oldOverrides)) {
       const numericKey = Number(key);
@@ -187,8 +211,9 @@ export class MetadataList<T extends Record<keyof T, string>> implements OnInit {
 
     let missingFieldsError = '';
     if (missingFields.size > 0) {
-      missingFieldsError = `${
-          Array.from(missingFields).join(', ')} field(s) are required. <br />`;
+      missingFieldsError = `${Array.from(missingFields).join(
+        ', ',
+      )} field(s) are required. <br />`;
     }
 
     return missingFieldsError;
@@ -205,7 +230,7 @@ export class MetadataList<T extends Record<keyof T, string>> implements OnInit {
       const duplicateError = this.duplicate(i);
       if (duplicateError) {
         this.errorMessage[i] +=
-            'Duplicate data. Please remove one of the duplicates.';
+          'Duplicate data. Please remove one of the duplicates.';
       }
     }
 

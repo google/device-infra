@@ -213,3 +213,10 @@ export declare interface CheckHostWritePermissionResult {
   hasPermission: boolean;
   userName?: string;
 }
+
+/**
+ * The response object for fetching host default device configuration.
+ */
+export declare interface GetHostDefaultDeviceConfigResponse {
+  deviceConfig: DeviceConfig | null;
+}

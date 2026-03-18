@@ -28,11 +28,10 @@ import {DeviceService} from './device_service';
 export class HttpDeviceService extends DeviceService {
   private readonly appData: AppData = inject(APP_DATA);
   private readonly apiUrl = `${this.appData.labConsoleServerUrl}/v6/devices`;
-  private readonly http: HttpClient;
+  private readonly http = inject(HttpClient);
 
-  constructor(http: HttpClient) {
+  constructor() {
     super();
-    this.http = http;
   }
 
   override getDeviceOverview(id: string): Observable<DeviceOverviewPageData> {
@@ -113,7 +112,7 @@ export class HttpDeviceService extends DeviceService {
 
   override takeScreenshot(id: string): Observable<TakeScreenshotResponse> {
     return this.http.post<TakeScreenshotResponse>(
-      `${this.apiUrl}/${id}:screenshot`,
+      `${this.apiUrl}/${id}:takeScreenshot`,
       {},
     );
   }
@@ -150,6 +149,9 @@ export class HttpDeviceService extends DeviceService {
   // }
 
   override getTestbedConfig(id: string): Observable<TestbedConfig> {
-    return this.http.get<TestbedConfig>(`${this.apiUrl}/${id}/testbedConfig`);
+    return this.http.post<TestbedConfig>(
+      `${this.apiUrl}/${id}:getTestbedConfig`,
+      {},
+    );
   }
 }

@@ -1,19 +1,45 @@
 import {CommonModule} from '@angular/common';
-import {AfterViewInit, ChangeDetectionStrategy, Component, inject, OnInit, signal, TemplateRef, ViewChild} from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  OnInit,
+  signal,
+  TemplateRef,
+  ViewChild,
+} from '@angular/core';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
-import {MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef} from '@angular/material/dialog';
+import {
+  MAT_DIALOG_DATA,
+  MatDialog,
+  MatDialogModule,
+  MatDialogRef,
+} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatStepperModule} from '@angular/material/stepper';
 import {MatTableModule} from '@angular/material/table';
-import {delay, finalize, tap} from 'rxjs/operators';
+import {finalize, tap} from 'rxjs/operators';
 
-import type {DeviceConfig, DeviceDimension} from '../../../../../core/models/device_config_models';
-import {ConfigSection, UpdateDeviceConfigRequest} from '../../../../../core/models/device_config_models';
+import type {
+  DeviceConfig,
+  DeviceDimension,
+} from '../../../../../core/models/device_config_models';
+import {
+  ConfigSection,
+  UpdateDeviceConfigRequest,
+} from '../../../../../core/models/device_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
-import {ReviewTable, type ReviewTableRow} from '../../../../../shared/components/config_common/review_table/review_table';
-import {WizardStep, WizardStepper} from '../../../../../shared/components/config_common/wizard_stepper/wizard_stepper';
+import {
+  ReviewTable,
+  type ReviewTableRow,
+} from '../../../../../shared/components/config_common/review_table/review_table';
+import {
+  WizardStep,
+  WizardStepper,
+} from '../../../../../shared/components/config_common/wizard_stepper/wizard_stepper';
 import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/confirm_dialog';
 import {Dimensions} from '../steps/dimensions/dimensions';
 import {Permissions} from '../steps/permissions/permissions';
@@ -141,86 +167,89 @@ export class DeviceWizard implements OnInit, AfterViewInit {
     return row.type === 'data';
   }
   covertToReviewTable() {
-    const supportDimensions = this.config.dimensions.supported.filter(
-        (item) => !(!item.name && !item.value),
+    const supportDimensions = (this.config.dimensions?.supported || []).filter(
+      (item) => !(!item.name && !item.value),
     );
-    const requiredDimensions = this.config.dimensions.required.filter(
-        (item) => !(!item.name && !item.value),
+    const requiredDimensions = (this.config.dimensions?.required || []).filter(
+      (item) => !(!item.name && !item.value),
     );
+    const owners = this.config.permissions?.owners || [];
+    const executors = this.config.permissions?.executors || [];
     this.dataSource = [
       {type: 'title', feature: 'Permissions'},
       {
         type: 'data',
         feature: 'Owners',
-        value: this.config.permissions.owners.length > 0 ?
-            this.config.permissions.owners.join(', ') :
-            'None',
+        value: owners.length > 0 ? owners.join(', ') : 'None',
       },
       {
         type: 'data',
         feature: 'Executors',
-        value: this.config.permissions.executors.length > 0 ?
-            this.config.permissions.executors.join(', ') :
-            'None',
+        value: executors.length > 0 ? executors.join(', ') : 'None',
       },
       {type: 'title', feature: 'Wi-Fi'},
       {
         type: 'data',
         feature: 'Type',
-        value: !this.config.wifi.type || this.config.wifi.type === 'none' ?
-            'None' :
-            this.config.wifi.type,
+        value:
+          !this.config.wifi?.type || this.config.wifi.type === 'none'
+            ? 'None'
+            : this.config.wifi.type,
       },
-      {type: 'data', feature: 'SSID', value: this.config.wifi.ssid || 'None'},
+      {type: 'data', feature: 'SSID', value: this.config.wifi?.ssid || 'None'},
       {
         type: 'data',
         feature: 'Hidden Network',
-        value: this.config.wifi.scanSsid ? 'Yes' : 'No',
+        value: this.config.wifi?.scanSsid ? 'Yes' : 'No',
       },
       {type: 'title', feature: 'Dimensions'},
       {
         type: 'data',
         feature: 'Supported Dimensions',
-        value: supportDimensions.length > 0 ?
-            supportDimensions
+        value:
+          supportDimensions.length > 0
+            ? supportDimensions
                 .map(
-                    (s: DeviceDimension) =>
-                        `<div class="review-dim-value"><strong>${
-                            s.name}</strong>: ${s.value}</div>`,
-                    )
-                .join('') :
-            'None',
+                  (s: DeviceDimension) =>
+                    `<div class="review-dim-value"><strong>${
+                      s.name
+                    }</strong>: ${s.value}</div>`,
+                )
+                .join('')
+            : 'None',
       },
       {
         type: 'data',
         feature: 'Required Dimensions',
-        value: requiredDimensions.length > 0 ?
-            requiredDimensions
+        value:
+          requiredDimensions.length > 0
+            ? requiredDimensions
                 .map(
-                    (r: DeviceDimension) =>
-                        `<div class="review-dim-value"><strong>${
-                            r.name}</strong>: ${r.value}</div>`,
-                    )
-                .join('') :
-            'None',
+                  (r: DeviceDimension) =>
+                    `<div class="review-dim-value"><strong>${
+                      r.name
+                    }</strong>: ${r.value}</div>`,
+                )
+                .join('')
+            : 'None',
       },
     ];
     if (this.data.source === 'copy') {
       this.dataSource.push(
-          {
-            type: 'title',
-            feature: 'Stability & Reboot',
-          },
-          {
-            type: 'data',
-            feature: 'Max Consecutive Failures',
-            value: this.config.settings.maxConsecutiveFail,
-          },
-          {
-            type: 'data',
-            feature: 'Max Tests between Reboots',
-            value: this.config.settings.maxConsecutiveTest,
-          },
+        {
+          type: 'title',
+          feature: 'Stability & Reboot',
+        },
+        {
+          type: 'data',
+          feature: 'Max Consecutive Failures',
+          value: this.config.settings?.maxConsecutiveFail,
+        },
+        {
+          type: 'data',
+          feature: 'Max Tests between Reboots',
+          value: this.config.settings?.maxConsecutiveTest,
+        },
       );
     }
   }
@@ -234,32 +263,32 @@ export class DeviceWizard implements OnInit, AfterViewInit {
       options: {overrideSelfLockout},
     };
 
-    this.configService.updateDeviceConfig(request)
-        .pipe(
-            tap(() => {
-              if (this.data.source === 'copy') {
-                this.verifying.set(true);
-              } else {
-                this.stepper.verifying.set(true);
-              }
-            }),
-            delay(1000),
-            finalize(() => {
-              if (this.data.source === 'copy') {
-                this.verifying.set(false);
-              } else {
-                this.stepper.verifying.set(false);
-              }
-            }),
-            )
-        .subscribe((result) => {
-          if (!result.success) {
-            this.error(result.error?.code);
-            return;
+    this.configService
+      .updateDeviceConfig(request)
+      .pipe(
+        tap(() => {
+          if (this.data.source === 'copy') {
+            this.verifying.set(true);
+          } else {
+            this.stepper.verifying.set(true);
           }
+        }),
+        finalize(() => {
+          if (this.data.source === 'copy') {
+            this.verifying.set(false);
+          } else {
+            this.stepper.verifying.set(false);
+          }
+        }),
+      )
+      .subscribe((result) => {
+        if (!result.success) {
+          this.error(result.error?.code);
+          return;
+        }
 
-          this.success();
-        });
+        this.success();
+      });
   }
 
   success() {
@@ -270,14 +299,14 @@ export class DeviceWizard implements OnInit, AfterViewInit {
       primaryButtonLabel: 'OK',
     };
     this.dialog
-        .open(ConfirmDialog, {
-          data: dialogData,
-          disableClose: true,
-        })
-        .afterClosed()
-        .subscribe(() => {
-          this.dialogRef.close(true);
-        });
+      .open(ConfirmDialog, {
+        data: dialogData,
+        disableClose: true,
+      })
+      .afterClosed()
+      .subscribe(() => {
+        this.dialogRef.close(true);
+      });
   }
 
   error(errorCode?: string) {
@@ -286,9 +315,9 @@ export class DeviceWizard implements OnInit, AfterViewInit {
       return;
     }
 
-    const errorMessage = errorCode ?
-        ` with error code ${errorCode}. Please try again.` :
-        '. Please try again.';
+    const errorMessage = errorCode
+      ? ` with error code ${errorCode}. Please try again.`
+      : '. Please try again.';
     const dialogData = {
       title: 'Configuration Failed',
       content: `Your configuration has failed to save` + errorMessage,
@@ -306,7 +335,7 @@ export class DeviceWizard implements OnInit, AfterViewInit {
     const dialogData = {
       title: 'Permission Warning',
       content:
-          'The new owners list does not contain your username, and you are not a member of any of the specified owner groups. Proceeding will remove your ability to configure this device in the future.',
+        'The new owners list does not contain your username, and you are not a member of any of the specified owner groups. Proceeding will remove your ability to configure this device in the future.',
       type: 'warning',
       primaryButtonLabel: 'Proceed Anyway',
       secondaryButtonLabel: 'Go Back',

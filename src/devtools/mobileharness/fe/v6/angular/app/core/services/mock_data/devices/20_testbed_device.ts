@@ -61,7 +61,7 @@ export const MOCK_OVERVIEW_TESTBED_DEVICE: DeviceOverview = {
     batteryLevel: null,
     network: {},
   },
-  permissions: MOCK_CONFIG_TESTBED_DEVICE.permissions,
+  permissions: MOCK_CONFIG_TESTBED_DEVICE.permissions!,
   capabilities: {
     supportedDrivers: [
       'AcidRemoteDriver',

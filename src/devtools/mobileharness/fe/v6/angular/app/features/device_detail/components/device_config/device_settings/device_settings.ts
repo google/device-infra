@@ -18,9 +18,10 @@ import {
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
-import {delay, finalize, tap} from 'rxjs/operators';
+import {finalize, tap} from 'rxjs/operators';
 
 import type {
+  CheckDeviceWritePermissionResult,
   DeviceConfig,
   DeviceConfigUiStatus,
 } from '../../../../../core/models/device_config_models';
@@ -39,10 +40,23 @@ import {Stability} from '../steps/stability/stability';
 import {Wifi} from '../steps/wifi/wifi';
 
 const DEFAULT_DEVICE_CONFIG_UI_STATUS: DeviceConfigUiStatus = {
-  permissions: {visible: true, editability: {editable: true}},
-  wifi: {visible: true, editability: {editable: true}},
-  dimensions: {visible: true, editability: {editable: true}},
-  settings: {visible: true, editability: {editable: true}},
+  permissions: {visible: true, editability: {editable: false}},
+  wifi: {visible: true, editability: {editable: false}},
+  dimensions: {visible: true, editability: {editable: false}},
+  settings: {visible: true, editability: {editable: false}},
+};
+
+const DEFAULT_DEVICE_CONFIG: DeviceConfig = {
+  permissions: {
+    owners: [],
+    executors: [],
+  },
+  wifi: {type: 'none', ssid: 'GoogleGuest', psk: '', scanSsid: false},
+  dimensions: {supported: [], required: []},
+  settings: {
+    maxConsecutiveFail: 5,
+    maxConsecutiveTest: 10000,
+  },
 };
 
 /**
@@ -86,19 +100,51 @@ export class DeviceSettings implements OnInit {
   private readonly configService = inject(CONFIG_SERVICE);
 
   @Input() deviceId = '';
+
+  configInternal: DeviceConfig = DEFAULT_DEVICE_CONFIG;
+
+  /**
+   * Input for the device configuration.
+   * If any of the main sections are missing, they are filled with defaults.
+   */
   @Input()
-  config: DeviceConfig = {
-    permissions: {
-      owners: [],
-      executors: [],
-    },
-    wifi: {type: 'none', ssid: 'GoogleGuest', psk: '', scanSsid: false},
-    dimensions: {supported: [], required: []},
-    settings: {
-      maxConsecutiveFail: 5,
-      maxConsecutiveTest: 10000,
-    },
-  };
+  set config(value: Partial<DeviceConfig>) {
+    this.configInternal = {
+      permissions: {
+        owners:
+          value.permissions?.owners ??
+          DEFAULT_DEVICE_CONFIG.permissions?.owners ??
+          [],
+        executors:
+          value.permissions?.executors ??
+          DEFAULT_DEVICE_CONFIG.permissions?.executors ??
+          [],
+      },
+      wifi: value.wifi ?? DEFAULT_DEVICE_CONFIG.wifi,
+      dimensions: {
+        supported:
+          value.dimensions?.supported ??
+          DEFAULT_DEVICE_CONFIG.dimensions?.supported ??
+          [],
+        required:
+          value.dimensions?.required ??
+          DEFAULT_DEVICE_CONFIG.dimensions?.required ??
+          [],
+      },
+      settings: {
+        maxConsecutiveFail:
+          value.settings?.maxConsecutiveFail ??
+          DEFAULT_DEVICE_CONFIG.settings!.maxConsecutiveFail,
+        maxConsecutiveTest:
+          value.settings?.maxConsecutiveTest ??
+          DEFAULT_DEVICE_CONFIG.settings!.maxConsecutiveTest,
+      },
+    };
+  }
+
+  get config(): DeviceConfig {
+    return this.configInternal;
+  }
 
   uiStatusInternal: DeviceConfigUiStatus = DEFAULT_DEVICE_CONFIG_UI_STATUS;
 
@@ -115,6 +161,26 @@ export class DeviceSettings implements OnInit {
   }
 
   get uiStatus(): DeviceConfigUiStatus {
+    if (!this.hasPermission()) {
+      return {
+        permissions: {
+          visible: this.uiStatusInternal.permissions.visible,
+          editability: {editable: false},
+        },
+        wifi: {
+          visible: this.uiStatusInternal.wifi.visible,
+          editability: {editable: false},
+        },
+        dimensions: {
+          visible: this.uiStatusInternal.dimensions.visible,
+          editability: {editable: false},
+        },
+        settings: {
+          visible: this.uiStatusInternal.settings.visible,
+          editability: {editable: false},
+        },
+      };
+    }
     return this.uiStatusInternal;
   }
 
@@ -167,6 +233,7 @@ export class DeviceSettings implements OnInit {
   hasError = false;
 
   saving = signal<boolean>(false);
+  hasPermission = signal<boolean>(false);
 
   ngOnInit() {
     console.log('ngOnInit');
@@ -231,17 +298,17 @@ export class DeviceSettings implements OnInit {
 
   isCategoryDirty(category: ConfigSection) {
     let newDimensions = {
-      supported: this.newConfig.dimensions.supported,
-      required: this.newConfig.dimensions.required,
+      supported: this.newConfig.dimensions?.supported,
+      required: this.newConfig.dimensions?.required,
     };
 
     if (category === ConfigSection.DIMENSIONS) {
-      const supportDimensions = this.newConfig.dimensions.supported.filter(
-        (item) => !(!item.name && !item.value),
-      );
-      const requiredDimensions = this.newConfig.dimensions.required.filter(
-        (item) => !(!item.name && !item.value),
-      );
+      const supportDimensions = (
+        this.newConfig.dimensions?.supported || []
+      ).filter((item) => !(!item.name && !item.value));
+      const requiredDimensions = (
+        this.newConfig.dimensions?.required || []
+      ).filter((item) => !(!item.name && !item.value));
 
       newDimensions = {
         supported: supportDimensions,
@@ -265,6 +332,10 @@ export class DeviceSettings implements OnInit {
     return (
       JSON.stringify(originalMap[category]) !== JSON.stringify(newMap[category])
     );
+  }
+
+  handlePermissionChange(result: CheckDeviceWritePermissionResult) {
+    this.hasPermission.set(result.hasPermission);
   }
 
   selfLockout() {
@@ -344,7 +415,6 @@ export class DeviceSettings implements OnInit {
         tap(() => {
           this.saving.set(true);
         }),
-        delay(1000),
         finalize(() => {
           this.saving.set(false);
         }),

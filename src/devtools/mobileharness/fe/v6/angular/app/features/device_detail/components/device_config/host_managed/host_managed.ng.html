@@ -1,4 +1,8 @@
-<app-dialog title="Host-Managed Configuration" [param]="{deviceId: deviceId, hostName: ''}">
+<app-dialog
+  title="Host-Managed Configuration"
+  [param]="{deviceId: deviceId, hostName: hostName}"
+  footerType="normal"
+>
   <mat-dialog-content class="host-managed-content">
     <p class="host-managed-description">
       <strong class="font-semibold">This device inherits its configuration from its host.</strong>
@@ -12,23 +16,29 @@
       <div class="host-managed-config-list">
         <div>
           <strong>Owners:</strong>
-          @for (owner of hostDefaultConfig.permissions.owners; track owner) {
+          @for (owner of hostDefaultConfig.permissions?.owners; track owner) {
             <div class="break-all">{{ owner }}</div>
+          } @empty {
+            <div class="break-all">N/A</div>
           }
         </div>
         <div>
           <strong>Wi-Fi:</strong>
-          <div class="break-all">{{ hostDefaultConfig.wifi.ssid }}</div>
+          <div class="break-all">{{ hostDefaultConfig.wifi?.ssid || 'N/A' }}</div>
         </div>
         <div>
           <strong>Supported Dimensions:</strong>
-          @for (dimension of hostDefaultConfig.dimensions.supported; track dimension) {
+          @for (dimension of hostDefaultConfig.dimensions?.supported; track dimension) {
             <div class="break-all">{{ dimension.name }}: {{ dimension.value }}</div>
+          } @empty {
+            <div class="break-all">N/A</div>
           }
         </div>
         <div>
           <strong>Max Consecutive Failures:</strong>
-          {{ hostDefaultConfig.settings.maxConsecutiveFail }}
+          <div class="break-all">
+            {{ hostDefaultConfig.settings?.maxConsecutiveFail || 'N/A' }}
+          </div>
         </div>
       </div>
     </div>

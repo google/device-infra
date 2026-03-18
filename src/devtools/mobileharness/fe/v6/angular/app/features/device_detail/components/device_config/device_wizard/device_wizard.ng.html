@@ -13,17 +13,17 @@
         workflow="wizard"
         title="Permissions"
         description="Let's start by setting up who can manage and use this device."
-        [(permissions)]="config.permissions"
+        [(permissions)]="config.permissions!"
       >
       </app-permissions>
     </ng-template>
     <ng-template #wifi>
-      <app-wifi [(wifi)]="config.wifi" workflow="wizard"></app-wifi>
+      <app-wifi [(wifi)]="config.wifi!" workflow="wizard"></app-wifi>
     </ng-template>
     <ng-template #dimensions>
       <app-dimensions
         workflow="wizard"
-        [(dimensions)]="config.dimensions"
+        [(dimensions)]="config.dimensions!"
         (hasError)="hasError = $event; errorStep = $event ? 'dimensions' : ''"
       ></app-dimensions>
     </ng-template>

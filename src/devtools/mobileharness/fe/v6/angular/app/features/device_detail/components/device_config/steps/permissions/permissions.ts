@@ -52,7 +52,7 @@ export class Permissions implements OnInit, OnChanges {
       definition: '',
       icon: '',
       iconTitle: '',
-      users: this.permissions.owners,
+      users: this.permissions.owners || [],
       emptyLabel: 'None added.',
       placeholder: 'Add user or group...',
       editable: true,
@@ -63,7 +63,7 @@ export class Permissions implements OnInit, OnChanges {
       definition: '',
       icon: '',
       iconTitle: '',
-      users: this.permissions.executors,
+      users: this.permissions.executors || [],
       emptyLabel: 'None added.',
       placeholder: 'Add user or group...',
       editable: true,
@@ -86,10 +86,10 @@ export class Permissions implements OnInit, OnChanges {
               : "Owners have full control over the device, including changing its configuration and executing tests. Can be a user (e.g., 'derekchen') or a group (e.g., 'gmm-prebuild').",
           icon: '',
           iconTitle: '',
-          users: this.permissions.owners,
+          users: this.permissions.owners || [],
           emptyLabel: 'None added.',
           placeholder: 'Add user or group...',
-          editable: true,
+          editable: this.uiStatus.editability?.editable ?? true,
         },
         {
           type: 'executors',
@@ -100,10 +100,10 @@ export class Permissions implements OnInit, OnChanges {
               : 'Executors can only execute tests on the device.',
           icon: '',
           iconTitle: '',
-          users: this.permissions.executors,
+          users: this.permissions.executors || [],
           emptyLabel: 'None added.',
           placeholder: 'Add user or group...',
-          editable: true,
+          editable: this.uiStatus.editability?.editable ?? true,
         },
       ];
     }
@@ -122,7 +122,7 @@ export class Permissions implements OnInit, OnChanges {
             this.workflow === 'wizard'
               ? 'Device owners must be the same as Host Admins in this configuration.'
               : 'Device owners must be the same as the Host Admins and are managed in the Host Permissions section.',
-          users: this.permissions.owners,
+          users: this.permissions.owners || [],
           placeholder: '',
           emptyLabel: 'Matches Host Admins.',
           editable: false,
@@ -138,7 +138,7 @@ export class Permissions implements OnInit, OnChanges {
               : 'Executors can run tests on devices but cannot change their configuration.',
           emptyLabel: 'None added.',
           placeholder: 'Add executors...',
-          users: this.permissions.executors,
+          users: this.permissions.executors || [],
           editable: this.uiStatus.editability?.editable || false,
         },
       ];
@@ -146,9 +146,14 @@ export class Permissions implements OnInit, OnChanges {
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    if (changes['permissions']) {
-      this.PERMISSIONS[0].users = changes['permissions'].currentValue.owners;
-      this.PERMISSIONS[1].users = changes['permissions'].currentValue.executors;
+    if (changes['permissions'] || changes['uiStatus']) {
+      this.generate();
+      if (changes['permissions']) {
+        this.PERMISSIONS[0].users =
+          changes['permissions'].currentValue.owners || [];
+        this.PERMISSIONS[1].users =
+          changes['permissions'].currentValue.executors || [];
+      }
     }
   }
 }
