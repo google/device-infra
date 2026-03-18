@@ -51,6 +51,7 @@ public class LogEntryUtil {
 
   private static final String LABEL_HOST_NAME = "host_name";
   private static final String LABEL_ENV = "env";
+  private static final String LABEL_THREAD_ID = "thread_id";
 
   /** The map from google logger level to stackdriver logger level. */
   private static final ImmutableMap<Level, LogSeverity> LOG_LEVEL_MAP =
@@ -120,6 +121,8 @@ public class LogEntryUtil {
     if (logEnvironment != LogEnvironment.UNKNOWN) {
       labels.put(LABEL_ENV, logEnvironment.getName());
     }
+    labels.put(LABEL_THREAD_ID, String.valueOf(logRecord.getLongThreadID()));
+
     String textPayLoad = logRecord.getMessage();
     Throwable throwable = logRecord.getThrown();
     if (throwable != null) {
