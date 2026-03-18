@@ -285,8 +285,9 @@ class AmInstrumentationParser(
     listeners.forEach { it.testEnded(testResult) }
   }
 
-  private fun reportInstrumentationFailed(message: String) =
-    listeners.forEach { it.instrumentationFailed(message) }
+  private fun reportInstrumentationFailed(message: String) = listeners.forEach {
+    it.instrumentationFailed(message)
+  }
 
   private fun reportInstrumentationEnded(result: InstrumentationResult) {
     instrumentationEndedReported = true
