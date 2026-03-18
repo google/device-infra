@@ -1,0 +1,6 @@
+go 1.25
+
+use (
+  ./src/devtools/rbe
+  ./src/devtools/mobileharness/shared/util/comm/dualconduit
+)

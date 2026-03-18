@@ -19,6 +19,7 @@ bazel_dep(name = "rules_java", version = "8.14.0")
 bazel_dep(name = "rules_jvm_external", version = "6.7")
 bazel_dep(name = "rules_kotlin", version = "2.1.0")
 bazel_dep(name = "rules_license", version = "1.0.0")
+bazel_dep(name = "rules_pkg", version = "1.2.0")
 bazel_dep(name = "rules_python", version = "1.6.0")
 bazel_dep(name = "rules_swift", version = "2.1.1")
 
@@ -59,7 +60,7 @@ bazel_dep(name = "gazelle", version = "0.45.0", repo_name = "bazel_gazelle")
 
 go_deps = use_extension("@bazel_gazelle//:extensions.bzl", "go_deps")
 go_deps.from_file(
-    go_mod = "//src/devtools/rbe:go.mod",
+    go_work = "//:go.work",
 )
 go_deps.module_override(
     patch_strip = 1,
@@ -91,6 +92,20 @@ inject_repo(
     "grpc",
     "protobuf",
 )
+
+#######
+# OCI #
+#######
+bazel_dep(name = "rules_oci", version = "2.3.0")
+
+oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
+oci.pull(
+    name = "distroless_static",
+    digest = "sha256:47b2d72ff90843eb8a768b5c2f89b40741843b639d065b9b937b07cd59b479c6",
+    image = "gcr.io/distroless/static-debian13",
+    platforms = ["linux/amd64"],
+)
+use_repo(oci, "distroless_static", "distroless_static_linux_amd64")
 
 #########
 # Maven #
