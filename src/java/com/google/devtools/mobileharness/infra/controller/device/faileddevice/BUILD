@@ -25,7 +25,6 @@ java_library(
         "FailedDeviceTable.java",
     ],
     visibility = [
-        "//:omnilab_fusion",
         "//java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
