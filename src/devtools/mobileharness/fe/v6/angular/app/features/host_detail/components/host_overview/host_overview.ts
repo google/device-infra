@@ -41,6 +41,7 @@ import {
 import {
   DaemonServerStatus,
   DeviceSummary,
+  DiagnosticLink,
   HostConnectivityStatus,
   LabServerActivity,
   type HostOverview,
@@ -331,15 +332,13 @@ export class HostOverviewPage implements OnInit, OnChanges {
 
   // --- Lab Server Card ---
 
-  getLogUrl(type: 'lab' | 'daemon'): string {
-
-    return '';
-  }
-
-  // leave an empty string for OSS to avoid compiler error.
-  getTradefedLogUrl(): string {
-
-    return '';
+  getDiagnosticLinks(
+    category: 'OVERVIEW' | 'LAB_SERVER' | 'DAEMON_SERVER',
+  ): DiagnosticLink[] {
+    return (
+      this.host.diagnosticLinks?.filter((link) => link.category === category) ??
+      []
+    );
   }
 
   getStatusSemantic(status: HostConnectivityStatus | DaemonServerStatus) {

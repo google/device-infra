@@ -20,9 +20,11 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -36,9 +38,12 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostReleaseInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DiagnosticLink;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DiagnosticLink.Category;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverview;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
+import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -65,6 +70,7 @@ public final class GetHostOverviewHandlerTest {
 
   @Bind @Mock private LabInfoProvider labInfoProvider;
   @Bind @Mock private HostAuxiliaryInfoProvider hostAuxiliaryInfoProvider;
+  @Bind @Mock private Environment environment;
 
   @Bind private ListeningExecutorService executorService = newDirectExecutorService();
 
@@ -81,6 +87,9 @@ public final class GetHostOverviewHandlerTest {
         .thenReturn(immediateFuture(Optional.empty()));
     when(hostAuxiliaryInfoProvider.getPassThroughFlags(any()))
         .thenReturn(immediateFuture(Optional.empty()));
+    when(hostAuxiliaryInfoProvider.getDiagnosticLinks(anyString(), any()))
+        .thenReturn(immediateFuture(ImmutableList.of()));
+    when(environment.isGoogleInternal()).thenReturn(true);
   }
 
   @Test
@@ -217,6 +226,121 @@ public final class GetHostOverviewHandlerTest {
     assertThat(overview.getLabServer().getPassThroughFlags()).isEqualTo(passThroughFlags);
   }
 
+  @Test
+  public void getHostOverview_diagnosticLinks() throws Exception {
+    String mtaasHost = "test.mtaas.google.com";
+    GetHostOverviewRequest mtaasRequest =
+        GetHostOverviewRequest.newBuilder().setHostName(mtaasHost).build();
+    mockLabInfoWithIp("1.2.3.4");
+    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(mtaasHost)))
+        .thenReturn(
+            immediateFuture(
+                Optional.of(
+                    HostReleaseInfo.builder().setLabType(Optional.of("FUSION_LAB")).build())));
+
+    when(hostAuxiliaryInfoProvider.getDiagnosticLinks(eq(mtaasHost), any()))
+        .thenReturn(
+            immediateFuture(
+                ImmutableList.of(
+                    DiagnosticLink.newBuilder()
+                        .setLabel("View Log")
+                        .setCategory(Category.LAB_SERVER)
+                        .setUrl("logs/viewer?advancedFilter=encoded%20filter%3Dval")
+                        .build(),
+                    DiagnosticLink.newBuilder()
+                        .setLabel("View Log")
+                        .setCategory(Category.DAEMON_SERVER)
+                        .build(),
+                    DiagnosticLink.newBuilder()
+                        .setLabel("View STATUSZ")
+                        .setUrl("mtaas.omnilab.goog/test/statusz")
+                        .setCategory(Category.OVERVIEW)
+                        .build())));
+
+    HostOverview overview = Futures.getDone(getHostOverviewHandler.getHostOverview(mtaasRequest));
+
+    assertThat(overview.getDiagnosticLinksList()).hasSize(3);
+
+    // Lab Server Log
+    assertThat(overview.getDiagnosticLinks(0).getLabel()).isEqualTo("View Log");
+    assertThat(overview.getDiagnosticLinks(0).getCategory()).isEqualTo(Category.LAB_SERVER);
+    assertThat(overview.getDiagnosticLinks(0).getUrl()).contains("logs/viewer?advancedFilter=");
+
+    // Daemon Server Log
+    assertThat(overview.getDiagnosticLinks(1).getLabel()).isEqualTo("View Log");
+    assertThat(overview.getDiagnosticLinks(1).getCategory()).isEqualTo(Category.DAEMON_SERVER);
+
+    // statusz
+    assertThat(overview.getDiagnosticLinks(2).getLabel()).isEqualTo("View STATUSZ");
+    assertThat(overview.getDiagnosticLinks(2).getUrl()).contains("mtaas.omnilab.goog/test/statusz");
+    assertThat(overview.getDiagnosticLinks(2).getCategory()).isEqualTo(Category.OVERVIEW);
+  }
+
+  @Test
+  public void getHostOverview_statuszLink_visibility() throws Exception {
+    mockLabInfoWithIp("1.2.3.4");
+
+    // Case 1: mtaas.google.com + FUSION_LAB -> Included
+    String mtaasHost = "host.mtaas.google.com";
+    when(hostAuxiliaryInfoProvider.getDiagnosticLinks(eq(mtaasHost), any()))
+        .thenReturn(
+            immediateFuture(
+                ImmutableList.of(DiagnosticLink.newBuilder().setLabel("View STATUSZ").build())));
+    HostOverview overview1 =
+        Futures.getDone(
+            getHostOverviewHandler.getHostOverview(
+                GetHostOverviewRequest.newBuilder().setHostName(mtaasHost).build()));
+    assertThat(
+            overview1.getDiagnosticLinksList().stream()
+                .anyMatch(link -> link.getLabel().equals("View STATUSZ")))
+        .isTrue();
+
+    // Case 2: NOT mtaas.google.com + FUSION_LAB -> Excluded (Mock Provider to return empty)
+    String otherHost = "host.other.google.com";
+    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(otherHost)))
+        .thenReturn(
+            immediateFuture(
+                Optional.of(
+                    HostReleaseInfo.builder().setLabType(Optional.of("FUSION_LAB")).build())));
+    when(hostAuxiliaryInfoProvider.getDiagnosticLinks(eq(otherHost), any()))
+        .thenReturn(immediateFuture(ImmutableList.of()));
+    HostOverview overview2 =
+        Futures.getDone(
+            getHostOverviewHandler.getHostOverview(
+                GetHostOverviewRequest.newBuilder().setHostName(otherHost).build()));
+    assertThat(
+            overview2.getDiagnosticLinksList().stream()
+                .anyMatch(link -> link.getLabel().equals("View STATUSZ")))
+        .isFalse();
+
+    // Case 3: mtaas.google.com + NOT FUSION_LAB -> Excluded (Mock Provider to return empty)
+    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(mtaasHost)))
+        .thenReturn(
+            immediateFuture(
+                Optional.of(
+                    HostReleaseInfo.builder().setLabType(Optional.of("MH_ATE_LAB")).build())));
+    when(hostAuxiliaryInfoProvider.getDiagnosticLinks(eq(mtaasHost), any()))
+        .thenReturn(immediateFuture(ImmutableList.of()));
+    HostOverview overview3 =
+        Futures.getDone(
+            getHostOverviewHandler.getHostOverview(
+                GetHostOverviewRequest.newBuilder().setHostName(mtaasHost).build()));
+    assertThat(
+            overview3.getDiagnosticLinksList().stream()
+                .anyMatch(link -> link.getLabel().equals("View STATUSZ")))
+        .isFalse();
+  }
+
+  @Test
+  public void getHostOverview_externalEnvironment_noDiagnosticLinks() throws Exception {
+    when(environment.isGoogleInternal()).thenReturn(false);
+    mockLabInfoWithIp("1.2.3.4");
+
+    HostOverview overview = Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST));
+
+    assertThat(overview.getDiagnosticLinksList()).isEmpty();
+  }
+
   private void mockLabInfoWithProperty(String key, String value) {
     GetLabInfoResponse response =
         GetLabInfoResponse.newBuilder()
@@ -236,6 +360,22 @@ public final class GetHostOverviewHandlerTest {
                                                                 HostProperty.newBuilder()
                                                                     .setKey(key)
                                                                     .setValue(value))))))))
+            .build();
+    when(labInfoProvider.getLabInfoAsync(any(), any())).thenReturn(immediateFuture(response));
+  }
+
+  private void mockLabInfoWithIp(String ip) {
+    GetLabInfoResponse response =
+        GetLabInfoResponse.newBuilder()
+            .setLabQueryResult(
+                LabQueryResult.newBuilder()
+                    .setLabView(
+                        LabView.newBuilder()
+                            .addLabData(
+                                LabData.newBuilder()
+                                    .setLabInfo(
+                                        LabInfo.newBuilder()
+                                            .setLabLocator(LabLocator.newBuilder().setIp(ip))))))
             .build();
     when(labInfoProvider.getLabInfoAsync(any(), any())).thenReturn(immediateFuture(response));
   }

@@ -40,6 +40,27 @@ message HostOverview {
   map<string, string> properties = 6;
   // OS of the host machine, e.g., "gLinux", "macOS".
   string os = 7;
+  // Links to diagnostic tools (logs, statusz, etc.).
+  repeated DiagnosticLink diagnostic_links = 8;
+}
+
+// Represents a link to a diagnostic tool or log.
+message DiagnosticLink {
+  enum Category {
+    CATEGORY_UNSPECIFIED = 0;
+    // Display in the Overview card.
+    OVERVIEW = 1;
+    // Display in the Lab Server card.
+    LAB_SERVER = 2;
+    // Display in the Daemon Server card.
+    DAEMON_SERVER = 3;
+  }
+  // The display text for the link, e.g., "Tradefed Log".
+  string label = 1;
+  // The full URL of the diagnostic tool.
+  string url = 2;
+  // Which section of the UI to display this link in.
+  Category category = 3;
 }
 
 // Host-level connectivity status with OmniLab master.

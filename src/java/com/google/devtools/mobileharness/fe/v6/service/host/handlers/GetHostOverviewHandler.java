@@ -39,6 +39,7 @@ import com.google.devtools.mobileharness.fe.v6.service.host.util.HostConnectivit
 import com.google.devtools.mobileharness.fe.v6.service.host.util.HostTypes;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.LabActivities;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DiagnosticLink;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostConnectivityStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverview;
@@ -46,6 +47,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
+import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -82,12 +84,22 @@ public final class GetHostOverviewHandler {
     ListenableFuture<Optional<String>> passThroughFlagsFuture =
         hostAuxiliaryInfoProvider.getPassThroughFlags(hostName);
 
-    return Futures.whenAllSucceed(labInfoFuture, hostReleaseInfoFuture, passThroughFlagsFuture)
+    ListenableFuture<List<DiagnosticLink>> logLinksFuture =
+        Futures.transformAsync(
+            hostReleaseInfoFuture,
+            hostReleaseInfoOpt ->
+                hostAuxiliaryInfoProvider.getDiagnosticLinks(
+                    hostName, hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType)),
+            executor);
+
+    return Futures.whenAllSucceed(
+            labInfoFuture, hostReleaseInfoFuture, passThroughFlagsFuture, logLinksFuture)
         .call(
             () -> {
               GetLabInfoResponse labInfoResponse = Futures.getDone(labInfoFuture);
               Optional<HostReleaseInfo> hostReleaseInfoOpt = Futures.getDone(hostReleaseInfoFuture);
               Optional<String> passThroughFlagsOpt = Futures.getDone(passThroughFlagsFuture);
+              List<DiagnosticLink> diagnosticLinks = Futures.getDone(logLinksFuture);
 
               Optional<LabInfo> labInfoOpt =
                   labInfoResponse.getLabQueryResult().getLabView().getLabDataList().stream()
@@ -95,7 +107,7 @@ public final class GetHostOverviewHandler {
                       .findFirst();
 
               return buildHostOverview(
-                  hostName, labInfoOpt, hostReleaseInfoOpt, passThroughFlagsOpt);
+                  hostName, labInfoOpt, hostReleaseInfoOpt, passThroughFlagsOpt, diagnosticLinks);
             },
             executor);
   }
@@ -126,7 +138,8 @@ public final class GetHostOverviewHandler {
       String hostName,
       Optional<LabInfo> labInfoOpt,
       Optional<HostReleaseInfo> hostReleaseInfoOpt,
-      Optional<String> passThroughFlagsOpt) {
+      Optional<String> passThroughFlagsOpt,
+      List<DiagnosticLink> diagnosticLinks) {
     HostOverview.Builder builder = HostOverview.newBuilder().setHostName(hostName);
 
     ImmutableMap<String, String> properties =
@@ -149,6 +162,7 @@ public final class GetHostOverviewHandler {
         .addAllLabTypeDisplayNames(HostTypes.determineLabTypeDisplayNames(labInfoOpt, labTypeOpt))
         .setLabServer(buildLabServerInfo(labInfoOpt, hostReleaseInfoOpt, passThroughFlagsOpt))
         .setDaemonServer(buildDaemonServerInfo(hostReleaseInfoOpt))
+        .addAllDiagnosticLinks(diagnosticLinks)
         .build();
   }
 

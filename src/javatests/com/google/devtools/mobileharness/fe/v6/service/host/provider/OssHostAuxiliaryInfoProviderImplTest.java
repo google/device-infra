@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.fe.v6.service.host.provider;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -41,5 +42,11 @@ public final class OssHostAuxiliaryInfoProviderImplTest {
   @Test
   public void getPassThroughFlags_returnsEmpty() throws Exception {
     assertThat(ossHostAuxiliaryInfoProviderImpl.getPassThroughFlags("host").get()).isEmpty();
+  }
+
+  @Test
+  public void getDiagnosticLinks_returnsEmpty() throws Exception {
+    assertThat(ossHostAuxiliaryInfoProviderImpl.getDiagnosticLinks("host", Optional.empty()).get())
+        .isEmpty();
   }
 }

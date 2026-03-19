@@ -168,6 +168,28 @@ export declare interface DeviceSummary {
 }
 
 /**
+ * Semantic state of the diagnostic link category.
+ * Frontend uses this to determine where to display the link.
+ */
+export type DiagnosticLinkCategory =
+  | 'OVERVIEW'
+  | 'LAB_SERVER'
+  | 'DAEMON_SERVER';
+
+/**
+ * Represents a link to a diagnostic tool or log.
+ * Corresponds to DiagnosticLink in host_resources.proto.
+ */
+export declare interface DiagnosticLink {
+  /** The display text for the link, e.g., "Tradefed Log". */
+  readonly label: string;
+  /** The full URL of the diagnostic tool. */
+  readonly url: string;
+  /** Which section of the UI to display this link in. */
+  readonly category: DiagnosticLinkCategory;
+}
+
+/**
  * Response for GetHostDeviceSummaries API.
  */
 export declare interface GetHostDeviceSummariesResponse {
@@ -207,6 +229,8 @@ export declare interface HostOverview {
   readonly properties: {[key: string]: string};
   /** OS of the host machine, e.g., "gLinux", "macOS". */
   readonly os: string;
+  /** Links to diagnostic tools (logs, statusz, etc.). */
+  readonly diagnosticLinks?: DiagnosticLink[];
 }
 
 /**

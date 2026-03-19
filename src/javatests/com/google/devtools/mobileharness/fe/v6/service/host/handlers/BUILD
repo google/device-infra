@@ -39,6 +39,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/handlers",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:testbed_device_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:device_model_java_proto",

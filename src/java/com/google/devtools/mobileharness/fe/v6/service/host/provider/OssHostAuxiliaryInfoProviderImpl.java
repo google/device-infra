@@ -18,7 +18,10 @@ package com.google.devtools.mobileharness.fe.v6.service.host.provider;
 
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DiagnosticLink;
+import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
 
@@ -36,5 +39,11 @@ public class OssHostAuxiliaryInfoProviderImpl implements HostAuxiliaryInfoProvid
   @Override
   public ListenableFuture<Optional<String>> getPassThroughFlags(String hostName) {
     return immediateFuture(Optional.empty());
+  }
+
+  @Override
+  public ListenableFuture<List<DiagnosticLink>> getDiagnosticLinks(
+      String hostName, Optional<String> labType) {
+    return immediateFuture(ImmutableList.of());
   }
 }

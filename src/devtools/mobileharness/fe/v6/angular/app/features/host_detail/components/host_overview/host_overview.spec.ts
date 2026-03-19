@@ -38,6 +38,7 @@ describe('HostOverview Component', () => {
       'encryption-state': 'encrypted',
     },
     os: 'gLinux',
+    diagnosticLinks: [],
   };
 
   let fixture: ComponentFixture<HostOverviewPage>;

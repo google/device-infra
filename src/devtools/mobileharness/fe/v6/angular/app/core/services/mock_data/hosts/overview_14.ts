@@ -7,7 +7,7 @@ const overview: HostOverview = {
   hostName: 'at1-ab7.atc.google.com',
   ip: '2001:4860:1016:3:8aae:ddff:fe0b:a998',
   os: 'Linux',
-  labTypeDisplayNames: ['Satellite Lab', 'ATE Lab'],
+  labTypeDisplayNames: ['Satellite Lab', 'ATE Lab', 'Fusion Lab'],
   labServer: {
     connectivity: {
       state: 'RUNNING',
@@ -54,6 +54,31 @@ const overview: HostOverview = {
     'root_disk_space': '455G',
     'tradefed_version': '14824683',
   },
+  diagnosticLinks: [
+    {
+      'label': 'View Log',
+      'url':
+        'https://pantheon.corp.example.com/logs/viewer?advancedFilter=logName%3D%22projects%2Fudcluster-logging%2Flogs%2Flab_server%22%20labels.host_name%3D%22dockerized-tf-seo-ks01%22&project=udcluster-logging',
+      'category': 'LAB_SERVER',
+    },
+    {
+      'label': 'View Log',
+      'url':
+        'https://pantheon.corp.example.com/logs/viewer?advancedFilter=logName%3D%22projects%2Fudcluster-logging%2Flogs%2Fdaemon%22%20labels.host_name%3D%22dockerized-tf-seo-ks01%22&project=udcluster-logging',
+      'category': 'DAEMON_SERVER',
+    },
+    {
+      'label': 'View Tradefed Log',
+      'url':
+        'https://pantheon.corp.example.com/logs/viewer?advancedFilter=resource.type%3D%22gce_instance%22%20resource.labels.instance_id%3D%22dockerized-tf-seo-ks01%22&project=tradefed-satellite-lab',
+      'category': 'OVERVIEW',
+    },
+    {
+      'label': 'View STATUSZ',
+      'url': 'https://iad65.corp.example.com/mt806-im11/statusz',
+      'category': 'OVERVIEW',
+    },
+  ],
 };
 
 const deviceSummaries: DeviceSummary[] = [

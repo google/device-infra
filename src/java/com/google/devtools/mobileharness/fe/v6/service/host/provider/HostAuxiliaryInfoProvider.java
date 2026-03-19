@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.fe.v6.service.host.provider;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DiagnosticLink;
+import java.util.List;
 import java.util.Optional;
 
 /** Provides auxiliary information about hosts, such as release info and pass-through flags. */
@@ -27,4 +29,8 @@ public interface HostAuxiliaryInfoProvider {
 
   /** Fetches the legacy pass-through flags for the lab server. */
   ListenableFuture<Optional<String>> getPassThroughFlags(String hostName);
+
+  /** Fetches the diagnostic links for the host. */
+  ListenableFuture<List<DiagnosticLink>> getDiagnosticLinks(
+      String hostName, Optional<String> labType);
 }
