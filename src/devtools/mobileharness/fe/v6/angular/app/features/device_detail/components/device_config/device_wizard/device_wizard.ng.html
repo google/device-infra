@@ -5,6 +5,7 @@
     [WIZARD_STEPS]="WIZARD_STEPS_NEW"
     [nextStepDisabled]="hasError && errorStep === currentStep()"
     [currentStep]="currentStep()"
+    [param]="{deviceId: data.deviceId, hostName: '', universe: data.universe}"
     (currentStepChange)="onCurrentStepChange($event)"
     (apply)="submit()"
   >
@@ -42,6 +43,7 @@
     title="Review Configuration"
     subtitle="For device: {{ data.deviceId }}"
     width="72rem"
+    [param]="{deviceId: data.deviceId, hostName: '', universe: data.universe}"
     (onPermissionChange)="applyChangesDisabled.set(!$event.hasPermission)"
   >
     <main class="step-content">

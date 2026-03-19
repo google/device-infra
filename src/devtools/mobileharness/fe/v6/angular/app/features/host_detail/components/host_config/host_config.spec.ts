@@ -10,6 +10,8 @@ import {of} from 'rxjs';
 
 import {CONFIG_SERVICE} from '../../../../core/services/config/config_service';
 
+import {HostConfig as HostConfigModel} from '../../../../core/models/host_config_models';
+import {normalizeHostConfig} from '../../../../core/utils/host_config_utils';
 import {HostConfig} from './host_config';
 
 describe('HostConfig Component', () => {
@@ -56,12 +58,12 @@ describe('HostConfig Component', () => {
     // expect(fixture.nativeElement.querySelector('app-host-empty')).toBeTruthy();
   });
 
-  it('should convert NODEVICE_CONFIG_MODE_UNSPECIFIEDNE to PER_DEVICE', () => {
+  it('should convert DEVICE_CONFIG_MODE_UNSPECIFIED to PER_DEVICE', () => {
     mockGetHostConfig.and.returnValue(
       of({
-        hostConfig: {
-          deviceConfigMode: 'NODEVICE_CONFIG_MODE_UNSPECIFIEDNE',
-          permissions: {hostAdmins: [], sshAccess: []},
+        hostConfig: normalizeHostConfig({
+          deviceConfigMode: 'DEVICE_CONFIG_MODE_UNSPECIFIED',
+          permissions: {hostAdmins: []},
           deviceConfig: {
             permissions: {owners: [], executors: []},
             wifi: {type: 'none', ssid: '', psk: '', scanSsid: false},
@@ -77,10 +79,9 @@ describe('HostConfig Component', () => {
             overSshDevices: [],
             manekiSpecs: [],
           },
-        },
+        } as Partial<HostConfigModel>),
         uiStatus: {
           hostAdmins: {visible: true},
-          sshAccess: {visible: true},
           deviceConfigMode: {visible: true},
           deviceConfig: {visible: true},
           hostProperties: {sectionStatus: {visible: true}},

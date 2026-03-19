@@ -17,6 +17,7 @@ import {
   UpdateHostConfigRequest,
   UpdateHostConfigResult,
 } from '../../models/host_config_models';
+import {normalizeHostConfig} from '../../utils/host_config_utils';
 import {MOCK_DEVICE_SCENARIOS, MOCK_HOST_SCENARIOS} from '../mock_data';
 import {MockDeviceScenario, MockHostScenario} from '../mock_data/models';
 import {ConfigService} from './config_service';
@@ -100,7 +101,7 @@ export class FakeConfigService extends ConfigService {
     request: UpdateDeviceConfigRequest,
   ): Observable<UpdateDeviceConfigResult> {
     const scenarioIndex = this.mockDeviceScenarios.findIndex(
-      (s) => s.id === request.deviceId,
+      (s) => s.id === request.id,
     );
     if (scenarioIndex === -1) {
       return of({
@@ -190,7 +191,11 @@ export class FakeConfigService extends ConfigService {
         () => new Error(`Host with name '${hostName}' not found in mock data.`),
       );
     }
-    return of(deepCopy(scenario.hostConfigResult));
+    const result = deepCopy(scenario.hostConfigResult);
+    if (result.hostConfig) {
+      result.hostConfig = normalizeHostConfig(result.hostConfig);
+    }
+    return of(result);
   }
 
   override checkHostWritePermission(

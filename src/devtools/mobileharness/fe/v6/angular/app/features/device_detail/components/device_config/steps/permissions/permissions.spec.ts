@@ -19,7 +19,7 @@ describe('Permissions Component', () => {
     }).compileComponents();
     fixture = TestBed.createComponent(Permissions);
     component = fixture.componentInstance;
-    component.permissions = SCENARIO_IN_SERVICE_IDLE.config!.permissions!;
+    component.permissions = SCENARIO_IN_SERVICE_IDLE.config!.permissions || {};
     fixture.detectChanges();
   });
 

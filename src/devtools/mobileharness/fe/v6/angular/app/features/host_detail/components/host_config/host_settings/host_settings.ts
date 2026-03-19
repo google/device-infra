@@ -17,7 +17,7 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatTooltipModule} from '@angular/material/tooltip';
-import {finalize, tap} from 'rxjs/operators';
+import {finalize} from 'rxjs/operators';
 
 import {
   ConfigSection,
@@ -90,7 +90,6 @@ export class HostSettings implements OnInit {
     hostConfig: undefined,
     uiStatus: {
       hostAdmins: {visible: true, editability: {editable: true}},
-      sshAccess: {visible: true, editability: {editable: true}},
       deviceConfigMode: {visible: true, editability: {editable: true}},
       deviceConfig: {
         sectionStatus: {visible: true, editability: {editable: true}},
@@ -109,9 +108,7 @@ export class HostSettings implements OnInit {
       type: 'item',
       icon: 'security',
       label: 'Host Permissions',
-      visibility: () =>
-        this.config.uiStatus.hostAdmins.visible ||
-        this.config.uiStatus.sshAccess.visible,
+      visibility: () => this.config.uiStatus.hostAdmins.visible,
     },
     {
       id: 'device-config',
@@ -191,7 +188,6 @@ export class HostSettings implements OnInit {
   // permissions in the UI.
   hostPermissionsUiStatus = {
     hostAdmins: this.config.uiStatus.hostAdmins,
-    sshAccess: this.config.uiStatus.sshAccess,
   };
 
   // Dimensions UI status.
@@ -263,7 +259,6 @@ export class HostSettings implements OnInit {
   hostConfig: HostConfig = {
     permissions: {
       hostAdmins: [],
-      sshAccess: [],
     },
     deviceConfigMode: 'PER_DEVICE',
     deviceConfig: this.deviceConfig,
@@ -439,7 +434,6 @@ export class HostSettings implements OnInit {
   initializeUIStatus() {
     this.hostPermissionsUiStatus = {
       hostAdmins: this.config.uiStatus.hostAdmins,
-      sshAccess: this.config.uiStatus.sshAccess,
     };
 
     this.dimensionsUiStatus = {
@@ -614,12 +608,10 @@ export class HostSettings implements OnInit {
       options: {overrideSelfLockout: selfLockout},
     };
 
+    this.saving.set(true);
     this.configService
       .updateHostConfig(request)
       .pipe(
-        tap(() => {
-          this.saving.set(true);
-        }),
         finalize(() => {
           this.saving.set(false);
         }),

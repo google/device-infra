@@ -11,7 +11,6 @@ import {
 const HOST_CONFIG: HostConfig = {
   permissions: {
     hostAdmins: ['admin1', 'derekchen'],
-    sshAccess: [],
   },
   deviceConfigMode: 'PER_DEVICE',
   // deviceConfig is undefined

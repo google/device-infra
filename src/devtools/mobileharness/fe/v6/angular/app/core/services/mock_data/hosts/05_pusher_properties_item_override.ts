@@ -18,7 +18,6 @@ const DEFAULT_DEVICE_CONFIG: DeviceConfig = {
 const HOST_CONFIG: HostConfig = {
   permissions: {
     hostAdmins: ['admin1', 'derekchen'],
-    sshAccess: [],
   },
   deviceConfigMode: 'PER_DEVICE',
   deviceConfig: DEFAULT_DEVICE_CONFIG,

@@ -17,10 +17,12 @@ import {
 } from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
-import {finalize, tap} from 'rxjs/operators';
+import {finalize} from 'rxjs/operators';
 
+import {DEFAULT_HOST_CONFIG} from '../../../../../core/constants/host_config_constants';
 import {HostConfig} from '../../../../../core/models/host_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
+import {normalizeHostConfig} from '../../../../../core/utils/host_config_utils';
 import {Permissions} from '../../../../../features/device_detail/components/device_config/steps/permissions/permissions';
 import {Wifi} from '../../../../../features/device_detail/components/device_config/steps/wifi/wifi';
 import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
@@ -81,42 +83,9 @@ export class HostWizard implements OnInit, AfterViewInit {
   currentStep = signal('host-permissions');
 
   readonly hostConfig = signal<HostConfig>(
-    this.data.config || {
-      permissions: {
-        hostAdmins: [],
-        sshAccess: [],
-      },
-      deviceConfigMode: 'PER_DEVICE',
-      deviceConfig: {
-        permissions: {
-          owners: [],
-          executors: [],
-        },
-        wifi: {
-          type: 'none',
-          ssid: 'GoogleGuest',
-          psk: '',
-          scanSsid: false,
-        },
-        dimensions: {
-          supported: [],
-          required: [],
-        },
-        settings: {
-          maxConsecutiveFail: 5,
-          maxConsecutiveTest: 10000,
-        },
-      },
-      hostProperties: [],
-      deviceDiscovery: {
-        monitoredDeviceUuids: [],
-        testbedUuids: [],
-        miscDeviceUuids: [],
-        overTcpIps: [],
-        overSshDevices: [],
-        manekiSpecs: [],
-      },
-    },
+    this.data.config
+      ? normalizeHostConfig(this.data.config)
+      : DEFAULT_HOST_CONFIG,
   );
 
   // used for review & submit step
@@ -197,14 +166,6 @@ export class HostWizard implements OnInit, AfterViewInit {
         value:
           this.hostConfig().permissions.hostAdmins.length > 0
             ? this.hostConfig().permissions.hostAdmins.join(', ')
-            : 'None',
-      },
-      {
-        type: 'data',
-        feature: 'SSH Access',
-        value:
-          this.hostConfig().permissions.sshAccess.length > 0
-            ? this.hostConfig().permissions.sshAccess.join(', ')
             : 'None',
       },
       {type: 'title', feature: 'Device Config Mode'},
@@ -434,19 +395,18 @@ export class HostWizard implements OnInit, AfterViewInit {
       },
     });
 
+    if (this.data.source === 'copy') {
+      this.verifying.set(true);
+    } else {
+      this.stepper.verifying.set(true);
+    }
+
     this.configService
       .updateHostConfig({
         hostName: this.data.hostName,
         config: this.hostConfig(),
       })
       .pipe(
-        tap(() => {
-          if (this.data.source === 'copy') {
-            this.verifying.set(true);
-          } else {
-            this.stepper.verifying.set(true);
-          }
-        }),
         finalize(() => {
           if (this.data.source === 'copy') {
             this.verifying.set(false);

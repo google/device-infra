@@ -5,11 +5,13 @@
     <app-device-empty
       [deviceId]="data.deviceId"
       [hostName]="data.hostName"
+      [universe]="data.universe"
       title="This device has an empty configuration. Choose how to begin."
     ></app-device-empty>
   } @else {
     <app-device-settings
       [deviceId]="data.deviceId"
+      [universe]="data.universe || ''"
       [config]="configResult.deviceConfig"
       [uiStatus]="configResult.uiStatus"
     ></app-device-settings>

@@ -16,7 +16,7 @@
       <td mat-cell *matCellDef="let element; let i = dataIndex">
         @if (column.type === 'input') {
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="form-field"
-            [class.mat-form-field-error]="(duplicate(i) && errorMessage[i] )|| (column.required && !element[column.cell])" >
+            [class.mat-form-field-error]="(duplicate(i) && errorMessage[i] )|| (column.required && !element[column.cell]) || (column.pattern && !isPatternValid(element[column.cell], column.pattern))" >
             <input
               matInput
               [type]="column.inputType || 'text'"
@@ -47,7 +47,7 @@
               "
             >
               @for (option of column.options; track $index) {
-                <mat-option [value]="option">{{ option }}</mat-option>
+                <mat-option [value]="option.value">{{ option.label }}</mat-option>
               }
             </mat-select>
           </mat-form-field>

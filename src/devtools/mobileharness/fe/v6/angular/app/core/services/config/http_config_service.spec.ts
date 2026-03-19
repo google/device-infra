@@ -12,6 +12,7 @@ import {
   UpdateDeviceConfigRequest,
 } from '../../models/device_config_models';
 import {UpdateHostConfigRequest} from '../../models/host_config_models';
+import {normalizeDeviceConfig} from '../../utils/device_config_utils';
 import {CONFIG_SERVICE} from './config_service';
 import {HttpConfigService} from './http_config_service';
 
@@ -66,7 +67,7 @@ describe('HttpConfigService', () => {
 
   it('should update device config via POST to :update', () => {
     const mockRequest = {
-      deviceId: 'test-device',
+      id: 'test-device',
     } as unknown as UpdateDeviceConfigRequest;
     service.updateDeviceConfig(mockRequest).subscribe();
 
@@ -123,9 +124,10 @@ describe('HttpConfigService', () => {
   });
 
   it('should get host default device config via POST and map from object', () => {
-    const mockConfig = {id: 'test-config'} as unknown as DeviceConfig;
+    const mockConfig: DeviceConfig = {permissions: {owners: ['admin']}};
+    const expectedConfig = normalizeDeviceConfig(mockConfig);
     service.getHostDefaultDeviceConfig('test-host').subscribe((config) => {
-      expect(config).toEqual(mockConfig);
+      expect(config).toEqual(expectedConfig);
     });
 
     const req = httpMock.expectOne(

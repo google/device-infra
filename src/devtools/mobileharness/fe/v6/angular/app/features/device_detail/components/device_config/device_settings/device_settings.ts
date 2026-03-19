@@ -18,8 +18,12 @@ import {
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
-import {finalize, tap} from 'rxjs/operators';
+import {finalize} from 'rxjs/operators';
 
+import {
+  DEFAULT_DEVICE_CONFIG,
+  DEFAULT_DEVICE_CONFIG_UI_STATUS,
+} from '../../../../../core/constants/device_config_constants';
 import type {
   CheckDeviceWritePermissionResult,
   DeviceConfig,
@@ -30,6 +34,10 @@ import {
   UpdateDeviceConfigRequest,
 } from '../../../../../core/models/device_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
+import {
+  normalizeDeviceConfig,
+  normalizeDeviceConfigUiStatus,
+} from '../../../../../core/utils/device_config_utils';
 import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
 import {Footer} from '../../../../../shared/components/config_common/footer/footer';
 import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/confirm_dialog';
@@ -38,26 +46,6 @@ import {Dimensions} from '../steps/dimensions/dimensions';
 import {Permissions} from '../steps/permissions/permissions';
 import {Stability} from '../steps/stability/stability';
 import {Wifi} from '../steps/wifi/wifi';
-
-const DEFAULT_DEVICE_CONFIG_UI_STATUS: DeviceConfigUiStatus = {
-  permissions: {visible: true, editability: {editable: false}},
-  wifi: {visible: true, editability: {editable: false}},
-  dimensions: {visible: true, editability: {editable: false}},
-  settings: {visible: true, editability: {editable: false}},
-};
-
-const DEFAULT_DEVICE_CONFIG: DeviceConfig = {
-  permissions: {
-    owners: [],
-    executors: [],
-  },
-  wifi: {type: 'none', ssid: 'GoogleGuest', psk: '', scanSsid: false},
-  dimensions: {supported: [], required: []},
-  settings: {
-    maxConsecutiveFail: 5,
-    maxConsecutiveTest: 10000,
-  },
-};
 
 /**
  * Component for displaying the device configuration settings dialog.
@@ -95,11 +83,13 @@ export class DeviceSettings implements OnInit {
   private readonly dialogData = inject(MAT_DIALOG_DATA, {optional: true}) as {
     deviceId: string;
     config: DeviceConfig;
+    universe?: string;
   } | null;
 
   private readonly configService = inject(CONFIG_SERVICE);
 
   @Input() deviceId = '';
+  @Input() universe = '';
 
   configInternal: DeviceConfig = DEFAULT_DEVICE_CONFIG;
 
@@ -109,37 +99,7 @@ export class DeviceSettings implements OnInit {
    */
   @Input()
   set config(value: Partial<DeviceConfig>) {
-    this.configInternal = {
-      permissions: {
-        owners:
-          value.permissions?.owners ??
-          DEFAULT_DEVICE_CONFIG.permissions?.owners ??
-          [],
-        executors:
-          value.permissions?.executors ??
-          DEFAULT_DEVICE_CONFIG.permissions?.executors ??
-          [],
-      },
-      wifi: value.wifi ?? DEFAULT_DEVICE_CONFIG.wifi,
-      dimensions: {
-        supported:
-          value.dimensions?.supported ??
-          DEFAULT_DEVICE_CONFIG.dimensions?.supported ??
-          [],
-        required:
-          value.dimensions?.required ??
-          DEFAULT_DEVICE_CONFIG.dimensions?.required ??
-          [],
-      },
-      settings: {
-        maxConsecutiveFail:
-          value.settings?.maxConsecutiveFail ??
-          DEFAULT_DEVICE_CONFIG.settings!.maxConsecutiveFail,
-        maxConsecutiveTest:
-          value.settings?.maxConsecutiveTest ??
-          DEFAULT_DEVICE_CONFIG.settings!.maxConsecutiveTest,
-      },
-    };
+    this.configInternal = normalizeDeviceConfig(value as DeviceConfig);
   }
 
   get config(): DeviceConfig {
@@ -150,14 +110,7 @@ export class DeviceSettings implements OnInit {
 
   @Input()
   set uiStatus(value: Partial<DeviceConfigUiStatus> | undefined) {
-    if (!value) {
-      this.uiStatusInternal = DEFAULT_DEVICE_CONFIG_UI_STATUS;
-      return;
-    }
-    this.uiStatusInternal = {
-      ...DEFAULT_DEVICE_CONFIG_UI_STATUS,
-      ...value,
-    };
+    this.uiStatusInternal = normalizeDeviceConfigUiStatus(value);
   }
 
   get uiStatus(): DeviceConfigUiStatus {
@@ -240,6 +193,7 @@ export class DeviceSettings implements OnInit {
     if (this.dialogData) {
       this.deviceId = this.dialogData.deviceId || this.deviceId;
       this.config = this.dialogData.config || this.config;
+      this.universe = this.dialogData.universe || this.universe;
     }
 
     this.originalConfig = objectUtils.deepCopy(this.config) as DeviceConfig;
@@ -272,7 +226,6 @@ export class DeviceSettings implements OnInit {
         primaryButtonLabel: 'Discard and Switch',
         secondaryButtonLabel: 'Stay Here',
       };
-
       const unsaveDialogRef = this.dialog.open(ConfirmDialog, {
         data: dialogData,
         disableClose: true,
@@ -293,7 +246,11 @@ export class DeviceSettings implements OnInit {
   }
 
   reset() {
-    this.dialogRef.close({action: 'reset', deviceId: this.deviceId});
+    this.dialogRef.close({
+      action: 'reset',
+      deviceId: this.deviceId,
+      universe: this.universe,
+    });
   }
 
   isCategoryDirty(category: ConfigSection) {
@@ -400,21 +357,20 @@ export class DeviceSettings implements OnInit {
   }
 
   save(selfLockout = false) {
+    this.saving.set(true);
     const section = this.activeSection();
 
     const request: UpdateDeviceConfigRequest = {
-      deviceId: this.deviceId,
+      id: this.deviceId,
       config: this.newConfig,
       section,
       options: {overrideSelfLockout: selfLockout},
+      universe: this.universe,
     };
 
     this.configService
       .updateDeviceConfig(request)
       .pipe(
-        tap(() => {
-          this.saving.set(true);
-        }),
         finalize(() => {
           this.saving.set(false);
         }),

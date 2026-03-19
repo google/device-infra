@@ -17,6 +17,7 @@ import {MatInputModule} from '@angular/material/input';
 import {MatSelectModule} from '@angular/material/select';
 import {MatTableModule} from '@angular/material/table';
 
+import {SelectOption} from 'app/core/models/host_config_models';
 import {SafeHtmlPipe} from '../../../pipes/safe_html_pipe';
 
 /**
@@ -30,9 +31,11 @@ export interface MetadataColumn {
   inputType?: 'text' | 'number' | 'email' | 'password'; // Only used when type is 'input'.
   defaultValue?: string | (() => string); // function default value is for generating default value
   // with dynamic date.
-  options?: string[]; // Only used when type is 'select'.
+  options?: SelectOption[]; // Only used when type is 'select'.
   placeholder?: string;
   required?: boolean;
+  pattern?: string;
+  patternError?: string;
 }
 
 declare interface EditabilityOverride {
@@ -232,9 +235,42 @@ export class MetadataList<T extends Record<keyof T, string>>
         this.errorMessage[i] +=
           'Duplicate data. Please remove one of the duplicates.';
       }
+
+      const patternError = this.checkPattern(i);
+      if (patternError) {
+        this.errorMessage[i] += patternError;
+      }
     }
 
     this.hasError.emit(this.errorMessage.some((error) => error !== ''));
+  }
+
+  checkPattern(index: number): string {
+    const patternColumns = this.columns.filter((column) => column.pattern);
+    if (patternColumns.length === 0) return '';
+
+    const errors = new Set<string>();
+    const metadata = this.metadataList[index];
+    patternColumns.forEach((column) => {
+      const value = metadata[column.cell as keyof T];
+      if (value && !new RegExp(column.pattern!).test(value)) {
+        errors.add(
+          column.patternError || `Invalid format for field ${column.header}.`,
+        );
+      }
+    });
+
+    let patternError = '';
+    if (errors.size > 0) {
+      patternError = `${Array.from(errors).join('<br />')} <br />`;
+    }
+
+    return patternError;
+  }
+
+  isPatternValid(value: string, pattern: string): boolean {
+    if (!value || !pattern) return true;
+    return new RegExp(pattern).test(value);
   }
 
   showErrorRow = (index: number, row: T) => {

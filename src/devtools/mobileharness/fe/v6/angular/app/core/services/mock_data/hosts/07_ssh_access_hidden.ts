@@ -1,4 +1,4 @@
-/** @fileoverview Mock host scenario with sshAccess section hidden. */
+/** @fileoverview Mock host scenario with minimal hidden features. */
 
 import {DeviceConfig} from '../../../models/device_config_models';
 import {HostConfig} from '../../../models/host_config_models';
@@ -6,7 +6,6 @@ import {MockHostScenario} from '../models';
 import {
   createDefaultHostOverview,
   createDefaultUiStatus,
-  createPartStatus,
 } from './ui_status_utils';
 
 const DEFAULT_DEVICE_CONFIG: DeviceConfig = {
@@ -19,7 +18,6 @@ const DEFAULT_DEVICE_CONFIG: DeviceConfig = {
 const HOST_CONFIG: HostConfig = {
   permissions: {
     hostAdmins: ['admin1', 'derekchen'],
-    sshAccess: [],
   },
   deviceConfigMode: 'PER_DEVICE',
   deviceConfig: DEFAULT_DEVICE_CONFIG,
@@ -35,11 +33,10 @@ const HOST_CONFIG: HostConfig = {
 };
 
 const UI_STATUS = createDefaultUiStatus();
-UI_STATUS.sshAccess = createPartStatus(false);
 
 export const SCENARIO_HOST_SSH_HIDDEN: MockHostScenario = {
   hostName: 'host-ssh-hidden.example.com',
-  scenarioName: '7. SSH Access Hidden',
+  scenarioName: '7. Minimal Hidden Features',
   overview: createDefaultHostOverview('host-ssh-hidden.example.com'),
   deviceSummaries: [],
   hostConfigResult: {

@@ -18,7 +18,6 @@ const DEFAULT_DEVICE_CONFIG: DeviceConfig = {
 const HOST_CONFIG: HostConfig = {
   permissions: {
     hostAdmins: ['admin1', 'derekchen'],
-    sshAccess: [],
   },
   deviceConfigMode: 'PER_DEVICE',
   deviceConfig: DEFAULT_DEVICE_CONFIG,
@@ -35,7 +34,6 @@ const HOST_CONFIG: HostConfig = {
 
 const uiStatus = createDefaultUiStatus();
 uiStatus.hostAdmins = {visible: false};
-uiStatus.sshAccess = {visible: false};
 uiStatus.deviceDiscovery = {visible: false};
 uiStatus.hostProperties = {sectionStatus: {visible: false}};
 uiStatus.deviceConfig = {

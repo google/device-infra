@@ -9,26 +9,25 @@ import {
 } from './device_config_models';
 
 /**
- * Defines a principal (user or group) allowed to SSH as a specific login user.
- */
-export declare interface SshPrincipal {
-  loginUser: string; // The username on the host machine (e.g., 'root', 'mobileharness')
-  principals: string[]; // List of users or MDB groups allowed to assume the loginUser role
-}
-
-/**
  * Permissions for the host.
  */
 export declare interface HostPermissions {
   hostAdmins: string[]; // Users/groups who can edit this host config
-  sshAccess: SshPrincipal[]; // Defines SSH access rules. Will be [] if no rules are set.
+}
+
+/**
+ * Interface for a select option with label and value.
+ */
+export interface SelectOption {
+  label: string;
+  value: string;
 }
 
 /**
  * Device configuration mode for the host.
  */
 export type DeviceConfigMode =
-  | 'NODEVICE_CONFIG_MODE_UNSPECIFIEDNE'
+  | 'DEVICE_CONFIG_MODE_UNSPECIFIED'
   | 'PER_DEVICE'
   | 'SHARED';
 
@@ -128,7 +127,6 @@ export declare interface HostDeviceConfigUiStatus {
 export declare interface HostConfigUiStatus {
   // Corresponds to parts within the HOST_PERMISSIONS section
   hostAdmins: PartStatus;
-  sshAccess: PartStatus;
 
   // Corresponds to the DEVICE_CONFIG_MODE section
   deviceConfigMode: PartStatus;

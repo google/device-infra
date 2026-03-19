@@ -18,7 +18,6 @@ const SHARED_DEVICE_CONFIG: DeviceConfig = {
 const HOST_CONFIG: HostConfig = {
   permissions: {
     hostAdmins: ['admin1', 'derekchen'],
-    sshAccess: [],
   },
   deviceConfigMode: 'SHARED',
   deviceConfig: SHARED_DEVICE_CONFIG,

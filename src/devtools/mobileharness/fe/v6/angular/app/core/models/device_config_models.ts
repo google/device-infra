@@ -193,9 +193,10 @@ export enum ConfigSection {
  * Interface for the request object used when updating a device's configuration.
  */
 export declare interface UpdateDeviceConfigRequest {
-  deviceId: string;
+  id: string;
   config: DeviceConfig;
   section: ConfigSection;
   options?: {overrideSelfLockout?: boolean};
+  universe?: string;
 }
 

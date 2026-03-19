@@ -1,5 +1,10 @@
 import {CommonModule} from '@angular/common';
-import {ChangeDetectionStrategy, Component, inject, OnInit} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  OnInit,
+} from '@angular/core';
 import {MAT_DIALOG_DATA} from '@angular/material/dialog';
 
 import {CONFIG_SERVICE} from '../../../../core/services/config/config_service';
@@ -19,17 +24,13 @@ import {HostManaged} from './host_managed/host_managed';
   templateUrl: './device_config.ng.html',
   styleUrl: './device_config.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    CommonModule,
-    HostManaged,
-    DeviceEmpty,
-    DeviceSettings,
-  ],
+  imports: [CommonModule, HostManaged, DeviceEmpty, DeviceSettings],
 })
 export class DeviceConfig implements OnInit {
   readonly data = inject<{
     deviceId: string;
     hostName: string;
+    universe?: string;
   }>(MAT_DIALOG_DATA);
   private readonly configService = inject(CONFIG_SERVICE);
 

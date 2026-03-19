@@ -1,6 +1,15 @@
 import {StepperSelectionEvent} from '@angular/cdk/stepper';
 import {CommonModule} from '@angular/common';
-import {ChangeDetectionStrategy, Component, EventEmitter, Input, OnInit, Output, signal, TemplateRef} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  EventEmitter,
+  Input,
+  OnInit,
+  Output,
+  signal,
+  TemplateRef,
+} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {MatButtonModule} from '@angular/material/button';
 import {MatDialogModule} from '@angular/material/dialog';
@@ -42,12 +51,19 @@ export interface WizardStep {
 })
 export class WizardStepper implements OnInit {
   @Input() title = '';
-  @Input() type: 'device'|'host' = 'device';
+  @Input() type: 'device' | 'host' = 'device';
   @Input() width = '72rem';
 
-  @Input() footerType: 'normal'|'permission-check'|'none' = 'permission-check';
+  @Input() footerType: 'normal' | 'permission-check' | 'none' =
+    'permission-check';
 
   @Input() WIZARD_STEPS: WizardStep[] = [];
+
+  @Input()
+  param: {deviceId: string; hostName: string; universe?: string} = {
+    deviceId: '',
+    hostName: '',
+  };
 
   @Input() nextStepDisabled = false;
   @Input() applyChangesDisabled = false;
@@ -65,7 +81,7 @@ export class WizardStepper implements OnInit {
 
   ngOnInit() {
     this.currentStepIndex.set(
-        this.WIZARD_STEPS.findIndex((step) => step.id === this.currentStep),
+      this.WIZARD_STEPS.findIndex((step) => step.id === this.currentStep),
     );
 
     this.subtitle.set(this.getSubtitle());

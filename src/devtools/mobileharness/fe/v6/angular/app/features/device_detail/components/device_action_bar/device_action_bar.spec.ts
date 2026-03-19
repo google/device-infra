@@ -2,6 +2,7 @@ import {ChangeDetectorRef} from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {MatDialog} from '@angular/material/dialog';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
+import {provideRouter} from '@angular/router';
 import {of} from 'rxjs';
 import {DeviceOverviewPageData} from '../../../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
@@ -97,6 +98,7 @@ describe('DeviceActionBar', () => {
     await TestBed.configureTestingModule({
       imports: [DeviceActionBar, NoopAnimationsModule],
       providers: [
+        provideRouter([]),
         {provide: DEVICE_SERVICE, useValue: deviceService},
         {provide: HOST_SERVICE, useValue: hostService},
         {provide: SnackBarService, useValue: snackBarService},

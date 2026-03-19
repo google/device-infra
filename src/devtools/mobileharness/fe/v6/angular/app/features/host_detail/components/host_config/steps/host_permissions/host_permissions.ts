@@ -15,7 +15,6 @@ import {EntryChip} from '../../../../../../shared/components/config_common/entry
 
 interface HostPermissionsUiStatus {
   hostAdmins: PartStatus;
-  sshAccess: PartStatus;
 }
 
 /**
@@ -34,12 +33,10 @@ export class HostPermissionList implements OnInit {
   @Input() workflow: 'wizard' | 'settings' = 'wizard';
   @Input() uiStatus: HostPermissionsUiStatus = {
     hostAdmins: {visible: true, editability: {editable: true}},
-    sshAccess: {visible: true, editability: {editable: true}},
   };
 
   @Input() permissions: HostPermissions = {
     hostAdmins: [],
-    sshAccess: [],
   };
   @Output() readonly permissionsChange = new EventEmitter<string[]>();
 

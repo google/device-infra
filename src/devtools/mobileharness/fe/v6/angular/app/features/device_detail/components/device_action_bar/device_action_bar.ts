@@ -12,6 +12,7 @@ import {MatDialog} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
 import {MatTooltipModule} from '@angular/material/tooltip';
+import {ActivatedRoute} from '@angular/router';
 import {Observable} from 'rxjs';
 import {finalize} from 'rxjs/operators';
 import {
@@ -54,6 +55,7 @@ export class DeviceActionBar {
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(SnackBarService);
   private readonly environment = inject(Environment);
+  private readonly route = inject(ActivatedRoute);
 
   @Input({required: true}) pageData!: DeviceOverviewPageData;
 
@@ -76,6 +78,10 @@ export class DeviceActionBar {
 
   get hostName() {
     return this.pageData.overview.host.name;
+  }
+
+  get universe() {
+    return this.route.snapshot.queryParamMap.get('universe') || '';
   }
 
   readonly onConfiguration = this.openConfiguration.bind(this);
@@ -125,8 +131,9 @@ export class DeviceActionBar {
   openConfiguration(): void {
     const deviceId = this.deviceId;
     const hostName = this.hostName;
+    const universe = this.universe;
     const dialogRef = this.dialog.open(DeviceConfig, {
-      data: {deviceId, hostName},
+      data: {deviceId, hostName, universe},
       autoFocus: false,
     });
 
@@ -136,7 +143,7 @@ export class DeviceActionBar {
       }
 
       if (result.action === 'reset') {
-        this.resetConfiguration(result.deviceId, hostName);
+        this.resetConfiguration(result.deviceId, hostName, result.universe);
         return;
       }
 
@@ -146,12 +153,13 @@ export class DeviceActionBar {
     });
   }
 
-  resetConfiguration(deviceId: string, hostName: string) {
+  resetConfiguration(deviceId: string, hostName: string, universe?: string) {
     this.dialog
       .open(DeviceEmpty, {
         data: {
           deviceId,
           hostName,
+          universe,
           title:
             'You are about to clear the existing configuration for this device. Your current settings will be discarded. Please choose how you want to proceed.',
         },
@@ -167,6 +175,7 @@ export class DeviceActionBar {
           result.action,
           result.deviceId,
           result.config,
+          result.universe,
         );
       });
   }
@@ -175,6 +184,7 @@ export class DeviceActionBar {
     action: string,
     deviceId: string,
     config: DeviceConfig | null,
+    universe?: string,
   ) {
     // the configuration UI has more features in google internal,
     // thus we need a Wizard to guide the user to complete the configuration.
@@ -182,12 +192,12 @@ export class DeviceActionBar {
     // thus we can directly use the HostSettings component.
     if (this.environment.isGoogleInternal()) {
       this.dialog.open(DeviceWizard, {
-        data: {source: action, deviceId, config},
+        data: {source: action, deviceId, config, universe},
         autoFocus: false,
       });
     } else {
       const dialogRef = this.dialog.open(DeviceSettings, {
-        data: {deviceId, config},
+        data: {deviceId, config, universe},
         autoFocus: false,
       });
 
@@ -196,7 +206,11 @@ export class DeviceActionBar {
           return;
         }
         if (result.action === 'reset') {
-          this.resetConfiguration(result.deviceId, this.hostName);
+          this.resetConfiguration(
+            result.deviceId,
+            this.hostName,
+            result.universe,
+          );
         }
       });
     }

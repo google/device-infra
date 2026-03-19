@@ -35,12 +35,6 @@ const DEFAULT_CONFIG: DeviceConfig = {
 const HOST_CONFIG: HostConfig = {
   permissions: {
     hostAdmins: ['host-admin', 'derekchen'],
-    sshAccess: [
-      {
-        loginUser: 'mobileharness',
-        principals: ['mobileharness', 'derekchen'],
-      },
-    ],
   },
   deviceConfigMode: 'PER_DEVICE',
   deviceConfig: DEFAULT_CONFIG,

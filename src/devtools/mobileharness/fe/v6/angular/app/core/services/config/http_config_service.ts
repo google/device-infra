@@ -1,6 +1,7 @@
 import {HttpClient} from '@angular/common/http';
 import {inject, Injectable} from '@angular/core';
 import {Observable} from 'rxjs';
+import {map} from 'rxjs/operators';
 
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
@@ -19,8 +20,11 @@ import {
   UpdateHostConfigRequest,
   UpdateHostConfigResult,
 } from '../../models/host_config_models';
-
-import {map} from 'rxjs/operators';
+import {
+  normalizeDeviceConfig,
+  normalizeDeviceConfigUiStatus,
+} from '../../utils/device_config_utils';
+import {normalizeHostConfig as normalize} from '../../utils/host_config_utils';
 import {ConfigService} from './config_service';
 
 /** An implementation of the ConfigService that uses HTTP to fetch data. */
@@ -39,9 +43,15 @@ export class HttpConfigService extends ConfigService {
   override getDeviceConfig(
     deviceId: string,
   ): Observable<GetDeviceConfigResult> {
-    return this.http.get<GetDeviceConfigResult>(
-      `${this.apiUrl}/devices/${deviceId}/config`,
-    );
+    return this.http
+      .get<GetDeviceConfigResult>(`${this.apiUrl}/devices/${deviceId}/config`)
+      .pipe(
+        map((result) => {
+          result.deviceConfig = normalizeDeviceConfig(result.deviceConfig!);
+          result.uiStatus = normalizeDeviceConfigUiStatus(result.uiStatus);
+          return result;
+        }),
+      );
   }
 
   override checkDeviceWritePermission(
@@ -58,7 +68,7 @@ export class HttpConfigService extends ConfigService {
     request: UpdateDeviceConfigRequest,
   ): Observable<UpdateDeviceConfigResult> {
     return this.http.post<UpdateDeviceConfigResult>(
-      `${this.apiUrl}/devices/${request.deviceId}/config:update`,
+      `${this.apiUrl}/devices/${request.id}/config:update`,
       request,
     );
   }
@@ -81,13 +91,22 @@ export class HttpConfigService extends ConfigService {
         `${this.apiUrl}/hosts/${hostName}:getDefaultDeviceConfig`,
         {},
       )
-      .pipe(map((response) => response.deviceConfig || null));
+      .pipe(
+        map((response) => normalizeDeviceConfig(response.deviceConfig || null)),
+      );
   }
 
   override getHostConfig(hostName: string): Observable<GetHostConfigResult> {
-    return this.http.get<GetHostConfigResult>(
-      `${this.apiUrl}/hosts/${hostName}/config`,
-    );
+    return this.http
+      .get<GetHostConfigResult>(`${this.apiUrl}/hosts/${hostName}/config`)
+      .pipe(
+        map((result) => {
+          if (result.hostConfig) {
+            result.hostConfig = normalize(result.hostConfig);
+          }
+          return result;
+        }),
+      );
   }
 
   override checkHostWritePermission(

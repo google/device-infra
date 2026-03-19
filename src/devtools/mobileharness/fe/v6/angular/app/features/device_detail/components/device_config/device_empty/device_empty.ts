@@ -1,7 +1,18 @@
 import {CommonModule} from '@angular/common';
-import {ChangeDetectionStrategy, Component, inject, Input, OnInit, signal} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  Input,
+  OnInit,
+  signal,
+} from '@angular/core';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
-import {MAT_DIALOG_DATA, MatDialogModule, MatDialogRef} from '@angular/material/dialog';
+import {
+  MAT_DIALOG_DATA,
+  MatDialogModule,
+  MatDialogRef,
+} from '@angular/material/dialog';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatIconModule} from '@angular/material/icon';
 import {MatInputModule} from '@angular/material/input';
@@ -35,14 +46,19 @@ import {Dialog} from '../../../../../shared/components/config_common/dialog/dial
   ],
 })
 export class DeviceEmpty implements OnInit {
-  readonly data = inject<{deviceId: string; hostName: string; title: string;}>(
-      MAT_DIALOG_DATA);
+  readonly data = inject<{
+    deviceId: string;
+    hostName: string;
+    universe?: string;
+    title: string;
+  }>(MAT_DIALOG_DATA);
   private readonly dialogRef = inject(MatDialogRef<DeviceEmpty>);
 
   private readonly configService = inject(CONFIG_SERVICE);
 
   @Input() deviceId = this.data.deviceId;
   @Input() hostName = this.data.hostName;
+  @Input() universe = this.data.universe;
   @Input() title = this.data.title;
 
   hostMissing = signal(false);
@@ -57,21 +73,26 @@ export class DeviceEmpty implements OnInit {
     this.openWizard('new', null);
   }
 
-  openWizard(source: 'new'|'copy', config: DeviceConfig|null) {
-    this.dialogRef.close(
-        {action: source, deviceId: this.data.deviceId, config});
+  openWizard(source: 'new' | 'copy', config: DeviceConfig | null) {
+    this.dialogRef.close({
+      action: source,
+      deviceId: this.data.deviceId,
+      universe: this.universe,
+      config,
+    });
   }
 
   copyFromHost() {
-    this.configService.getHostDefaultDeviceConfig(this.hostName)
-        .subscribe((defaultConfig) => {
-          if (!defaultConfig) {
-            this.hostMissing.set(true);
-            return;
-          }
+    this.configService
+      .getHostDefaultDeviceConfig(this.hostName)
+      .subscribe((defaultConfig) => {
+        if (!defaultConfig) {
+          this.hostMissing.set(true);
+          return;
+        }
 
-          this.openWizard('copy', defaultConfig);
-        });
+        this.openWizard('copy', defaultConfig);
+      });
   }
 
   copyFromAnotherDevice() {
@@ -88,7 +109,7 @@ export class DeviceEmpty implements OnInit {
       next: (config) => {
         if (!config) {
           this.copyFromAnotherErrorMessage.set(
-              `Device UUID not found or has no configuration.`,
+            `Device UUID not found or has no configuration.`,
           );
           return;
         }

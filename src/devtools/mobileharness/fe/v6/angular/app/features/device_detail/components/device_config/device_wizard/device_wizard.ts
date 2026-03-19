@@ -20,8 +20,9 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatStepperModule} from '@angular/material/stepper';
 import {MatTableModule} from '@angular/material/table';
-import {finalize, tap} from 'rxjs/operators';
+import {finalize} from 'rxjs/operators';
 
+import {DEFAULT_DEVICE_CONFIG} from '../../../../../core/constants/device_config_constants';
 import type {
   DeviceConfig,
   DeviceDimension,
@@ -89,23 +90,7 @@ export class DeviceWizard implements OnInit, AfterViewInit {
 
   currentStep = signal<string>('permissions');
 
-  config: DeviceConfig = {
-    permissions: {
-      owners: [],
-      executors: [],
-    },
-    wifi: {
-      type: 'none',
-      ssid: 'GoogleGuest',
-      psk: '',
-      scanSsid: false,
-    },
-    dimensions: {supported: [], required: []},
-    settings: {
-      maxConsecutiveFail: 0,
-      maxConsecutiveTest: 0,
-    },
-  };
+  config: DeviceConfig = DEFAULT_DEVICE_CONFIG;
 
   // used for dimensions step duplicate check
   hasError = false;
@@ -256,23 +241,23 @@ export class DeviceWizard implements OnInit, AfterViewInit {
 
   // used for apply changes button
   submit(overrideSelfLockout = false) {
+    if (this.data.source === 'copy') {
+      this.verifying.set(true);
+    } else {
+      this.stepper.verifying.set(true);
+    }
+
     const request: UpdateDeviceConfigRequest = {
-      deviceId: this.data.deviceId,
+      id: this.data.deviceId,
       config: this.config,
       section: ConfigSection.ALL,
       options: {overrideSelfLockout},
+      universe: this.data.universe,
     };
 
     this.configService
       .updateDeviceConfig(request)
       .pipe(
-        tap(() => {
-          if (this.data.source === 'copy') {
-            this.verifying.set(true);
-          } else {
-            this.stepper.verifying.set(true);
-          }
-        }),
         finalize(() => {
           if (this.data.source === 'copy') {
             this.verifying.set(false);

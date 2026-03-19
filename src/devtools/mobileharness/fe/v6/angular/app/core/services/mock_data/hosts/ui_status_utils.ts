@@ -19,7 +19,6 @@ const VISIBLE_EDITABLE: PartStatus = {visible: true, editability: EDITABLE};
 export function createDefaultUiStatus(): HostConfigUiStatus {
   return {
     hostAdmins: {...VISIBLE_EDITABLE},
-    sshAccess: {...VISIBLE_EDITABLE},
     deviceConfigMode: {...VISIBLE_EDITABLE},
     deviceConfig: {
       sectionStatus: {...VISIBLE_EDITABLE},
