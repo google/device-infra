@@ -1,0 +1,65 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.shared.util.comm.dualconduit;
+
+option go_package = "github.com/google/deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/pb;pb";
+
+message EstablishConduitRequest {
+  enum ConduitType {
+    CONDUIT_TYPE_UNSPECIFIED = 0;
+    CONDUIT_TYPE_FORWARD = 1;
+    CONDUIT_TYPE_REVERSE = 2;
+  }
+  enum Protocol {
+    PROTOCOL_UNSPECIFIED = 0;
+    PROTOCOL_TCP = 1;
+    PROTOCOL_GRPC = 2;
+  }
+  ConduitType type = 1;
+  bool auto_reconnect = 2;
+  // Service name to identify the service.
+  string service_name = 3;
+  // The protocol of the backend service (e.g., grpc, tcp).
+  Protocol protocol = 4;
+  // The destination endpoint of the backend service.
+  string destination_endpoint = 5;
+  // The local entry port opened on the RQ side. If not set, a random port will
+  // be used. You should always specify this field for forward conduits.
+  int32 entry_port = 6;
+}
+
+message ServiceLocator {
+  oneof locator {
+    string xds_address = 1;
+    string hostname_port = 2;
+  }
+}
+
+message EstablishConduitResponse {
+  string conduit_id = 1;
+  // The service locator for the dynamically generated proxy (used if REVERSE).
+  // For example, if registered with Envoy, this could be an xds address.
+  ServiceLocator service_locator = 2;
+}
+
+message TeardownConduitRequest {
+  string conduit_id = 1;
+}
+
+message TeardownConduitResponse {}
