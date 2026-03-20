@@ -188,6 +188,9 @@ message DeviceOverviewPageData {
 message TakeScreenshotRequest {
   // The device ID.
   string id = 1;
+
+  // The universe the device belongs to.
+  string universe = 2;
 }
 
 // Response for TakeScreenshot.
@@ -202,6 +205,9 @@ message TakeScreenshotResponse {
 message GetLogcatRequest {
   // The device ID.
   string id = 1;
+
+  // The universe the device belongs to.
+  string universe = 2;
 }
 
 // Response for GetLogcat.
@@ -218,6 +224,8 @@ message QuarantineDeviceRequest {
   string id = 1;
   // The duration to quarantine the device in hours.
   int32 duration_hours = 2;
+  // The universe the device belongs to.
+  string universe = 3;
 }
 
 // Response for QuarantineDevice.
@@ -230,6 +238,8 @@ message QuarantineDeviceResponse {
 message UnquarantineDeviceRequest {
   // The device ID.
   string id = 1;
+  // The universe the device belongs to.
+  string universe = 2;
 }
 
 // Response for UnquarantineDevice.
