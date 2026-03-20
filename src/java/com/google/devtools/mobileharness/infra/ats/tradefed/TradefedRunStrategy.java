@@ -109,4 +109,13 @@ public interface TradefedRunStrategy {
    * @param testInfo the test info
    */
   Path getGenFileDir(TestInfo testInfo) throws MobileHarnessException;
+
+  /**
+   * Returns a list of extra JVM flags to use.
+   *
+   * @param workDir the working directory for the test run
+   */
+  default ImmutableList<String> getExtraJvmFlags(Path workDir) {
+    return ImmutableList.of();
+  }
 }

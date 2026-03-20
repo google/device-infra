@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.tradefed;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -29,6 +30,7 @@ import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.TradefedTestDriverSpec;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Path;
 import java.util.function.Predicate;
 import org.junit.Before;
@@ -36,6 +38,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -66,6 +69,9 @@ public final class NonXtsRunStrategyTest {
 
     verify(localFileUtil).prepareDir(WORK_DIR);
     verify(localFileUtil).grantFileOrDirFullAccess(WORK_DIR);
+    Path tfTmpDir = WORK_DIR.resolve("tf_tmp");
+    verify(localFileUtil).prepareDir(tfTmpDir);
+    verify(localFileUtil).grantFileOrDirFullAccess(tfTmpDir);
   }
 
   @Test
@@ -102,6 +108,24 @@ public final class NonXtsRunStrategyTest {
             WORK_DIR, TradefedTestDriverSpec.getDefaultInstance(), device, "/path/to/env");
 
     assertThat(env).containsExactly("PATH", "/path/to/env", "TF_WORK_DIR", WORK_DIR.toString());
+  }
+
+  @Test
+  public void getEnvironment_withTfHostConfig() throws Exception {
+    flags.setAllFlags(ImmutableMap.of("tradefed_host_config", "/path/to/host-config.xml"));
+
+    ImmutableMap<String, String> env =
+        nonXtsRunStrategy.getEnvironment(
+            WORK_DIR, TradefedTestDriverSpec.getDefaultInstance(), device, "/path/to/env");
+
+    assertThat(env)
+        .containsExactly(
+            "PATH",
+            "/path/to/env",
+            "TF_WORK_DIR",
+            WORK_DIR.toString(),
+            "TF_GLOBAL_CONFIG",
+            "/path/to/host-config.xml");
   }
 
   @Test
@@ -163,9 +187,35 @@ public final class NonXtsRunStrategyTest {
   }
 
   @Test
+  public void getLogsDirInWorkDir_withHostLog() throws Exception {
+    Path hostLog = WORK_DIR.resolve("some_dir/host_log_123.txt");
+    ArgumentCaptor<DirectoryStream.Filter<Path>> filterCaptor =
+        ArgumentCaptor.forClass(DirectoryStream.Filter.class);
+    when(localFileUtil.listFilePaths(eq(WORK_DIR), eq(true), filterCaptor.capture()))
+        .thenReturn(ImmutableList.of(hostLog));
+
+    assertThat(nonXtsRunStrategy.getLogsDirInWorkDir(WORK_DIR).toString())
+        .isEqualTo(WORK_DIR.resolve("some_dir").toString());
+
+    DirectoryStream.Filter<Path> filter = filterCaptor.getValue();
+    assertThat(filter.accept(Path.of("host_log_123.txt"))).isTrue();
+    assertThat(filter.accept(Path.of("host_log_"))).isFalse();
+    assertThat(filter.accept(Path.of("host_log_.txt"))).isTrue();
+    assertThat(filter.accept(Path.of("host_log_abc.txt"))).isTrue();
+    assertThat(filter.accept(Path.of("other_log.txt"))).isFalse();
+    assertThat(filter.accept(Path.of("host_log_123.log"))).isFalse();
+  }
+
+  @Test
   public void getGenFileDir_success() throws Exception {
     when(testInfo.getGenFileDir()).thenReturn("/path/to/gen");
     assertThat(nonXtsRunStrategy.getGenFileDir(testInfo).toString())
         .isEqualTo(Path.of("/path/to/gen", "non-xts-gen-files").toString());
+  }
+
+  @Test
+  public void getExtraJvmFlags_success() {
+    assertThat(nonXtsRunStrategy.getExtraJvmFlags(WORK_DIR))
+        .containsExactly("-Djava.io.tmpdir=" + WORK_DIR.resolve("tf_tmp"));
   }
 }

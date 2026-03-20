@@ -33,6 +33,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.TradefedTestDriverSpec;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 
@@ -42,6 +43,7 @@ public final class NonXtsRunStrategy implements TradefedRunStrategy {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
   private static final String TF_PATH_KEY = "TF_PATH";
   private static final String CONSOLE_CLASS = "com.android.tradefed.command.Console";
+  private static final String TF_TMP_DIR = "tf_tmp";
   private static final SystemUtil SYSTEM_UTIL = new SystemUtil();
   private final LocalFileUtil localFileUtil;
 
@@ -54,6 +56,9 @@ public final class NonXtsRunStrategy implements TradefedRunStrategy {
       throws MobileHarnessException {
     localFileUtil.prepareDir(workDir);
     localFileUtil.grantFileOrDirFullAccess(workDir);
+    Path tfTmpDir = workDir.resolve(TF_TMP_DIR);
+    localFileUtil.prepareDir(tfTmpDir);
+    localFileUtil.grantFileOrDirFullAccess(tfTmpDir);
   }
 
   @Override
@@ -82,7 +87,10 @@ public final class NonXtsRunStrategy implements TradefedRunStrategy {
     Map<String, String> environmentToTradefedConsole = new HashMap<>();
     environmentToTradefedConsole.put("PATH", envPath);
     environmentToTradefedConsole.put("TF_WORK_DIR", workDir.toString());
-    if (device.hasDimension(Dimension.Name.DEVICE_CLASS_NAME, "AndroidJitEmulator")) {
+    if (!Flags.instance().tradefedHostConfig.getNonNull().isEmpty()) {
+      environmentToTradefedConsole.put(
+          "TF_GLOBAL_CONFIG", Flags.instance().tradefedHostConfig.getNonNull());
+    } else if (device.hasDimension(Dimension.Name.DEVICE_CLASS_NAME, "AndroidJitEmulator")) {
       environmentToTradefedConsole.put(
           "TF_GLOBAL_CONFIG", AndroidJitEmulatorUtil.getHostConfigPath());
     }
@@ -136,11 +144,31 @@ public final class NonXtsRunStrategy implements TradefedRunStrategy {
 
   @Override
   public Path getLogsDirInWorkDir(Path workDir) {
+    // Resolve the output directory in the TF tmp dir.
+    try {
+      List<Path> hostLogs =
+          localFileUtil.listFilePaths(
+              workDir,
+              /* recursively= */ true,
+              path ->
+                  path.getFileName().toString().startsWith("host_log_")
+                      && path.getFileName().toString().endsWith(".txt"));
+      if (!hostLogs.isEmpty()) {
+        return hostLogs.get(0).getParent();
+      }
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log("Failed to find host log file.");
+    }
     return workDir.resolve("logs");
   }
 
   @Override
   public Path getGenFileDir(TestInfo testInfo) throws MobileHarnessException {
     return Path.of(testInfo.getGenFileDir(), "non-xts-gen-files");
+  }
+
+  @Override
+  public ImmutableList<String> getExtraJvmFlags(Path workDir) {
+    return ImmutableList.of(String.format("-Djava.io.tmpdir=%s", workDir.resolve(TF_TMP_DIR)));
   }
 }

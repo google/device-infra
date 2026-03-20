@@ -2447,6 +2447,14 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> tradefedCurlDownloadLimitRate = tradefedCurlDownloadLimitRateDefault;
 
+  private static final Flag<String> tradefedHostConfigDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--tradefed_host_config",
+      description = "The host config xml file for tradefed to use.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> tradefedHostConfig = tradefedHostConfigDefault;
+
   private static final Flag<Boolean> transferResourcesFromControllerDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(

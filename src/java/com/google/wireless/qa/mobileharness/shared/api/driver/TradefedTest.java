@@ -408,6 +408,7 @@ public class TradefedTest extends BaseDriver
               "-javaagent:%s=%s:%s",
               getTradefedAgentFilePath(), runtimeInfoFilePath, testModuleResultsFilePath));
     }
+    jvmFlagsBuilder.addAll(tradefedRunStrategy.getExtraJvmFlags(workDir));
 
     ImmutableList<String> runCommandArgs = getTradefedRunCommandArgs(spec, env, testInfo);
     String classpath =
