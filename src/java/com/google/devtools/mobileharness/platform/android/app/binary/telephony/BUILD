@@ -26,15 +26,11 @@ package(
 
 android_binary(
     name = "TelephonyUtility",
-    testonly = 1,
     srcs = glob(["*.java"]),
     # This apk's package name is reused (instead of renamed to the mobileharness path) so that we
     # avoid having to potentially allowlist the new package to install on devices.
     custom_package = "android.telephony.utility",
     manifest = "AndroidManifest.xml",
     deps = [
-        "@maven//:androidx_test_core",
-        "@maven//:androidx_test_ext_junit",
-        "@maven//:androidx_test_runner",
     ],
 )

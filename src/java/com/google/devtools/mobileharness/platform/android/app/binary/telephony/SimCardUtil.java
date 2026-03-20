@@ -16,8 +16,7 @@
 
 package android.telephony.utility;
 
-import static org.junit.Assert.assertNotNull;
-
+import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
 import android.os.Bundle;
@@ -25,24 +24,15 @@ import android.se.omapi.Reader;
 import android.se.omapi.SEService;
 import android.se.omapi.SEService.OnConnectedListener;
 import android.telephony.TelephonyManager;
-import androidx.test.core.app.ApplicationProvider;
-import androidx.test.platform.app.InstrumentationRegistry;
-import androidx.test.runner.AndroidJUnit4;
+import android.util.Log;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.Executor;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 
-/**
- * Instrumentation test that allows to get some telephony states.
- *
- * <p>If TelephonyManager does not exist or is not supported, a test failure will be reported
- */
-@RunWith(AndroidJUnit4.class)
-public class SimCardUtil {
+/** Utility to get some telephony states. */
+public class SimCardUtil extends Instrumentation {
+
+  private static final String TAG = "SimCardUtil";
 
   private static final String SIM_STATE = "sim_state";
   private static final String CARRIER_PRIVILEGES = "has_carried_privileges";
@@ -67,53 +57,59 @@ public class SimCardUtil {
         }
       };
 
-  @Before
-  public void setUp() throws Exception {
-    mSeService =
-        new SEService(
-            ApplicationProvider.getApplicationContext(), new SynchronousExecutor(), mListener);
-    mConnectionTimer = new Timer();
-    mConnectionTimer.schedule(mTimerTask, SERVICE_CONNECTION_TIME_OUT);
+  @Override
+  public void onCreate(Bundle arguments) {
+    super.onCreate(arguments);
+    start();
   }
 
-  @Test
-  public void getSimCardInformation() throws Exception {
-    // Context of the app under test.
-    Context context = ApplicationProvider.getApplicationContext();
-    Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
-
-    TelephonyManager tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-    assertNotNull(tm);
-
+  @Override
+  public void onStart() {
+    super.onStart();
     Bundle returnBundle = new Bundle();
-    // Sim card - SIM_STATE_READY 5
-    int state = tm.getSimState();
-    returnBundle.putInt(SIM_STATE, state);
 
-    // UICC check
-    boolean carrierPrivileges = tm.hasCarrierPrivileges();
-    returnBundle.putBoolean(CARRIER_PRIVILEGES, carrierPrivileges);
+    try {
+      Context context = getContext();
 
-    // Secured element check
-    if (waitForConnection()) {
-      Reader[] readers = mSeService.getReaders();
-      for (Reader reader : readers) {
-        returnBundle.putBoolean(SECURED_ELEMENT, reader.isSecureElementPresent());
-        returnBundle.putBoolean(SE_SERVICE, reader.getSEService() != null);
+      mSeService = new SEService(context, new SynchronousExecutor(), mListener);
+      mConnectionTimer = new Timer();
+      mConnectionTimer.schedule(mTimerTask, SERVICE_CONNECTION_TIME_OUT);
+
+      TelephonyManager tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+      if (tm == null) {
+        throw new Exception("TelephonyManager is null");
       }
-    } else {
-      returnBundle.putBoolean(SECURED_ELEMENT, false);
-      returnBundle.putBoolean(SE_SERVICE, false);
-    }
-    SendToInstrumentation.sendBundle(instrumentation, returnBundle);
-  }
 
-  @After
-  public void tearDown() throws Exception {
-    if (mSeService != null && mSeService.isConnected()) {
-      mSeService.shutdown();
-      mConnected = false;
+      // Sim card - SIM_STATE_READY 5
+      int state = tm.getSimState();
+      returnBundle.putInt(SIM_STATE, state);
+
+      // UICC check
+      boolean carrierPrivileges = tm.hasCarrierPrivileges();
+      returnBundle.putBoolean(CARRIER_PRIVILEGES, carrierPrivileges);
+
+      // Secured element check
+      if (waitForConnection()) {
+        Reader[] readers = mSeService.getReaders();
+        for (Reader reader : readers) {
+          returnBundle.putBoolean(SECURED_ELEMENT, reader.isSecureElementPresent());
+          returnBundle.putBoolean(SE_SERVICE, reader.getSEService() != null);
+        }
+      } else {
+        returnBundle.putBoolean(SECURED_ELEMENT, false);
+        returnBundle.putBoolean(SE_SERVICE, false);
+      }
+    } catch (Exception e) {
+      Log.e(TAG, "Failed to get SIM information", e);
+      returnBundle.putString("error", e.getMessage());
+    } finally {
+      if (mSeService != null && mSeService.isConnected()) {
+        mSeService.shutdown();
+        mConnected = false;
+      }
     }
+
+    finish(Activity.RESULT_OK, returnBundle);
   }
 
   private boolean waitForConnection() {

@@ -8,7 +8,7 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
 
-    <instrumentation android:name="androidx.test.runner.AndroidJUnitRunner"
+    <instrumentation android:name=".SimCardUtil"
                      android:targetPackage="android.telephony.utility"
                      android:label="Helper to get the sim card state">
     </instrumentation>

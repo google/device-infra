@@ -46,7 +46,7 @@ public class TelephonyHelper {
       "/com/google/devtools/mobileharness/platform/android/app/binary/telephony/TelephonyUtility.apk";
   private static final String TELEPHONY_UTIL_PACKAGE_NAME = "android.telephony.utility";
   private static final String TELEPHONY_UTIL_CLASS_NAME = ".SimCardUtil";
-  private static final String AJUR_RUNNER = "androidx.test.runner.AndroidJUnitRunner";
+  private static final String INSTRUMENTATION_RUNNER = TELEPHONY_UTIL_CLASS_NAME;
 
   private static final Pattern INSTRUMENTATION_STATUS_PATTERN =
       Pattern.compile("INSTRUMENTATION_STATUS: (\\w+)=(.*)");
@@ -185,8 +185,8 @@ public class TelephonyHelper {
               /* deviceSdkVersion= */ null,
               AndroidInstrumentationSetting.create(
                   TELEPHONY_UTIL_PACKAGE_NAME,
-                  AJUR_RUNNER,
-                  TELEPHONY_UTIL_PACKAGE_NAME + TELEPHONY_UTIL_CLASS_NAME,
+                  INSTRUMENTATION_RUNNER,
+                  /* className= */ null,
                   /* otherOptions= */ null,
                   /* async= */ false,
                   /* showRawResults= */ false,
