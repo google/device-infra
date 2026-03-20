@@ -183,7 +183,18 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
         "Sending file: %s, checksum: %s, relative path: %s", local, checksum, relativePath);
     long fileSize;
     boolean isCached;
-    if (isFileExists(Path.of(local)) || localFileUtil.isDirExist(local)) {
+    if (checksum != null && gcsFileManager.fileExistAndFresh(Path.of(checksum))) {
+      logger.atInfo().log(
+          "Remote file %s is already cached as %s in GCS. Let lab server download it directly.",
+          local, checksum);
+      fileSize = gcsFileManager.getGcsFileSize(Path.of(checksum));
+      isCached = true;
+      downloadGcsFileToServer(
+          metadata,
+          checksum,
+          relativePath,
+          /* isCompressed= */ gcsFileManager.isCompressed(Path.of(checksum)));
+    } else if (isFileExists(Path.of(local)) || localFileUtil.isDirExist(local)) {
       FileOperationStatus result =
           sendDirectlyIfSmall(metadata, Path.of(local), checksum, relativePath);
       if (result.isFinished()) {
@@ -201,17 +212,6 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
         downloadGcsFileToServer(
             metadata, executionInfo.checksum(), relativePath, /* isCompressed= */ dirExists(local));
       }
-    } else if (checksum != null && gcsFileManager.fileExistAndFresh(Path.of(checksum))) {
-      logger.atInfo().log(
-          "Remote file %s is already cached as %s in GCS. Let lab server download it directly.",
-          local, checksum);
-      fileSize = gcsFileManager.getGcsFileSize(Path.of(checksum));
-      isCached = true;
-      downloadGcsFileToServer(
-          metadata,
-          checksum,
-          relativePath,
-          /* isCompressed= */ gcsFileManager.isCompressed(Path.of(checksum)));
     } else {
       throw new MobileHarnessException(
           InfraErrorId.FT_FILE_NOT_EXIST,
@@ -238,9 +238,9 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
   @Override
   public boolean isSendable(String path, @Nullable String checksum)
       throws MobileHarnessException, InterruptedException {
-    return isFileExists(Path.of(path))
-        || localFileUtil.isDirExist(path)
-        || (checksum != null && gcsFileManager.fileExistAndFresh(Path.of(checksum)));
+    return (checksum != null && gcsFileManager.fileExistAndFresh(Path.of(checksum)))
+        || isFileExists(Path.of(path))
+        || localFileUtil.isDirExist(path);
   }
 
   /**
