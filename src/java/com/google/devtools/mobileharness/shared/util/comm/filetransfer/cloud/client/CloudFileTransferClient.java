@@ -490,11 +490,10 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
   private void replaceFile(Path src, Path dest, boolean deleteSrc)
       throws MobileHarnessException, InterruptedException {
     if (isLocalFileType(dest)) {
+      if (localFileUtil.isFileOrDirExist(dest)) {
+        localFileUtil.removeFileOrDir(dest);
+      }
       if (deleteSrc) {
-        // Move receivedFile to destination file directly.
-        if (localFileUtil.isFileOrDirExist(dest)) {
-          localFileUtil.removeFileOrDir(dest);
-        }
         localFileUtil.moveFileOrDir(src, dest);
       } else {
         localFileUtil.copyFileOrDir(src, dest);
