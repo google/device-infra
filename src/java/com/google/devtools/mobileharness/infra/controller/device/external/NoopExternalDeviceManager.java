@@ -66,9 +66,4 @@ public class NoopExternalDeviceManager implements ExternalDeviceManager {
   public boolean isManagingDeviceLifeCycle() {
     return false;
   }
-
-  @Override
-  public boolean isManagingDeviceRecovery() {
-    return false;
-  }
 }

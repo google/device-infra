@@ -70,9 +70,6 @@ public interface ExternalDeviceManager extends DrainHandler {
   /** Gets whether this external DM manages device life cycle. */
   boolean isManagingDeviceLifeCycle();
 
-  /** Gets whether the external DM recovers unhealthy devices. */
-  boolean isManagingDeviceRecovery();
-
   /** The device status. */
   enum DeviceStatus {
     UNKNOWN,

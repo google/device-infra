@@ -371,8 +371,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
         needReboot =
             needReboot
                 && !disableDeviceReboot()
-                && (!externalDeviceManager.isManagingDeviceLifeCycle()
-                    || (!initialized && !externalDeviceManager.isManagingDeviceRecovery()));
+                && (!externalDeviceManager.isManagingDeviceLifeCycle() || !initialized);
 
         try {
           // Always reboot the device if force to do so.
@@ -694,8 +693,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
       logger.atWarning().withCause(e).log("Failed to initialize device");
       initialized = false;
       postDeviceErrorEvent(e);
-      if (DeviceUtil.isFailedDeviceCreationEnabled()
-          && !externalDeviceManager.isManagingDeviceRecovery()) {
+      if (DeviceUtil.isFailedDeviceCreationEnabled()) {
         transformToFailedDevice();
       }
       throw e;
