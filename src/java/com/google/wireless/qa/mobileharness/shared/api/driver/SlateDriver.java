@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -43,6 +44,10 @@ import javax.inject.Inject;
 @DriverAnnotation(help = "Running SLATE tests.")
 public class SlateDriver extends BaseDriver implements SpecConfigable<SlateDriverSpec> {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  @ParamAnnotation(
+      help = "Path to override report output directory. Default is testInfo.getGenFileDir().")
+  public static final String PARAM_OUTPUT_BASE_DIR = "output_base_dir";
 
   private final CommandExecutor cmdExecutor;
   private final LocalFileUtil localFileUtil;
@@ -100,17 +105,11 @@ public class SlateDriver extends BaseDriver implements SpecConfigable<SlateDrive
             binaryPath, deviceSerial, target);
 
     // 4. Prepare Output Directory
-    String logDirName = String.format("SlateDriver_test_%s", testInfo.locator().getId());
-    Path outputDir = Path.of(testInfo.getGenFileDir()).resolve(logDirName);
-    try {
-      Files.createDirectories(outputDir);
-    } catch (IOException e) {
-      testInfo
-          .log()
-          .atWarning()
-          .alsoTo(logger)
-          .log("Failed to create log directory: %s", e.getMessage());
+    String outputBaseDir = testInfo.jobInfo().params().get(PARAM_OUTPUT_BASE_DIR);
+    if (outputBaseDir == null) {
+      outputBaseDir = testInfo.getGenFileDir();
     }
+    Path outputDir = Path.of(outputBaseDir);
 
     // 5. Execute
     Path logFile = outputDir.resolve("slate_run.log");
@@ -124,6 +123,7 @@ public class SlateDriver extends BaseDriver implements SpecConfigable<SlateDrive
       if (configPath != null) {
         args.add("--config", configPath);
       }
+      args.add("--output_base_dir", outputBaseDir);
       ImmutableList<String> argsList = args.build();
 
       int timeoutMins = spec.getTimeoutMins() > 0 ? spec.getTimeoutMins() : 60;
