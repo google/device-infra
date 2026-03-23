@@ -38,6 +38,9 @@ dcon_blaze_to_bazel_transforms = [
     dcon_build_file_replace("//third_party/golang/grpc", "@org_golang_google_grpc//:grpc"),
     dcon_build_file_replace("//third_party/golang/grpc/codes", "@org_golang_google_grpc//codes"),
     dcon_build_file_replace("//third_party/golang/grpc/status", "@org_golang_google_grpc//status"),
+    dcon_build_file_replace("//third_party/golang/github_com/rsocket/rsocket_go/v/v0/payload", "@com_github_rsocket_rsocket_go//payload"),
+    dcon_build_file_replace("//third_party/golang/github_com/rsocket/rsocket_go/v/v0/rx/flux", "@com_github_rsocket_rsocket_go//rx/flux"),
+    dcon_build_file_replace("//third_party/golang/github_com/rsocket/rsocket_go/v/v0/rx", "@com_github_rsocket_rsocket_go//rx"),
 ]
 
 dcon_go_imports_map = {
@@ -46,4 +49,7 @@ dcon_go_imports_map = {
     "google3/third_party/golang/grpc/grpc": "google.golang.org/grpc",
     "google3/third_party/golang/grpc/codes/codes": "google.golang.org/grpc/codes",
     "google3/third_party/golang/grpc/status/status": "google.golang.org/grpc/status",
+    "google3/third_party/golang/github_com/rsocket/rsocket_go/v/v0/payload/payload": "github.com/rsocket/rsocket-go/payload",
+    "google3/third_party/golang/github_com/rsocket/rsocket_go/v/v0/rx/rx": "github.com/rsocket/rsocket-go/rx",
+    "google3/third_party/golang/github_com/rsocket/rsocket_go/v/v0/rx/flux/flux": "github.com/rsocket/rsocket-go/rx/flux",
 }
