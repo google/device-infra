@@ -28,8 +28,6 @@ import java.nio.channels.FileLock;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
-import java.time.Instant;
-import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 /**
@@ -162,6 +160,14 @@ public class XtsTradefedTestModuleResultsMonitor {
     }
   }
 
+  /** Called when a test run ends execution. */
+  public void onTestRunEnded(String invocationId, Duration elapsedTime) {
+    Invocation invocation = runningInvocations.get(invocationId);
+    if (invocation != null) {
+      invocation.onTestRunEnded(elapsedTime);
+    }
+  }
+
   /**
    * Called when a test event occurs.
    *
@@ -229,32 +235,28 @@ public class XtsTradefedTestModuleResultsMonitor {
         module1.duration().plus(module2.duration()));
   }
 
-  /** Represents the state of module execution within a single Tradefed invocation. */
   private static class Invocation {
 
-    private final List<ModuleProgress> modules = new CopyOnWriteArrayList<>();
+    private final ConcurrentHashMap<Long, ModuleProgress> threadModules = new ConcurrentHashMap<>();
+    private final List<ModuleProgress> completedModules = new CopyOnWriteArrayList<>();
 
     private Invocation() {}
 
-    private ModuleProgress getLastModule() {
-      int size = modules.size();
-      return size == 0 ? null : modules.get(size - 1);
-    }
-
     private void onModuleStart(String moduleId) {
-      modules.add(new ModuleProgress(moduleId, /* isRunning= */ true));
+      ModuleProgress module = new ModuleProgress(moduleId, /* isRunning= */ true);
+      threadModules.put(currentThreadId(), module);
     }
 
     private void onModuleEnd() {
-      ModuleProgress lastModule = getLastModule();
+      ModuleProgress lastModule = threadModules.remove(currentThreadId());
       if (lastModule != null && lastModule.isRunning.get()) {
         lastModule.isRunning.set(false);
-        lastModule.duration.set(Duration.between(lastModule.startTime, Instant.now()));
+        completedModules.add(lastModule);
       }
     }
 
     private void onTestRunStarted(String runName, int testCount) {
-      ModuleProgress lastModule = getLastModule();
+      ModuleProgress lastModule = threadModules.get(currentThreadId());
       if (lastModule != null && lastModule.isRunning.get()) {
         if (lastModule.startedRuns.add(runName)) {
           lastModule.testsExpected.addAndGet(testCount);
@@ -262,8 +264,15 @@ public class XtsTradefedTestModuleResultsMonitor {
       }
     }
 
+    private void onTestRunEnded(Duration elapsedTime) {
+      ModuleProgress lastModule = threadModules.get(currentThreadId());
+      if (lastModule != null && lastModule.isRunning.get()) {
+        lastModule.accumulatedRunDurationMs.addAndGet(elapsedTime.toMillis());
+      }
+    }
+
     private void onTestEvent(String eventType, String testId) {
-      ModuleProgress lastModule = getLastModule();
+      ModuleProgress lastModule = threadModules.get(currentThreadId());
       if (lastModule == null || !lastModule.isRunning.get()) {
         return;
       }
@@ -286,11 +295,21 @@ public class XtsTradefedTestModuleResultsMonitor {
     }
 
     private List<ModuleInfo> getModules() {
-      List<ModuleInfo> currentModules = new ArrayList<>(modules.size());
-      for (ModuleProgress module : modules) {
+      List<ModuleInfo> currentModules =
+          new ArrayList<>(threadModules.size() + completedModules.size());
+      for (ModuleProgress module : threadModules.values()) {
+        currentModules.add(module.toModuleInfo());
+      }
+      for (ModuleProgress module : completedModules) {
         currentModules.add(module.toModuleInfo());
       }
       return currentModules;
+    }
+
+    @SuppressWarnings(
+        "deprecation") // Not using the #threadId() method since it's only available in Java 19+.
+    private static long currentThreadId() {
+      return Thread.currentThread().getId();
     }
   }
 
@@ -302,8 +321,7 @@ public class XtsTradefedTestModuleResultsMonitor {
     private final Set<String> completedTests = ConcurrentHashMap.newKeySet();
     private final Set<String> failedTests = ConcurrentHashMap.newKeySet();
     private final Set<String> skippedTests = ConcurrentHashMap.newKeySet();
-    private final Instant startTime = InstantSource.system().instant();
-    private final AtomicReference<Duration> duration = new AtomicReference<>(Duration.ZERO);
+    private final AtomicLong accumulatedRunDurationMs = new AtomicLong(0);
 
     private ModuleProgress(String id, boolean isRunning) {
       this.id = id;
@@ -313,9 +331,6 @@ public class XtsTradefedTestModuleResultsMonitor {
     private ModuleInfo toModuleInfo() {
       int testsPassed =
           Math.max(0, completedTests.size() - failedTests.size() - skippedTests.size());
-      if (isRunning.get()) {
-        duration.set(Duration.between(startTime, Instant.now()));
-      }
       return new ModuleInfo(
           id,
           isRunning.get(),
@@ -324,7 +339,7 @@ public class XtsTradefedTestModuleResultsMonitor {
           failedTests.size(),
           testsPassed,
           skippedTests.size(),
-          duration.get());
+          Duration.ofMillis(accumulatedRunDurationMs.get()));
     }
   }
 }

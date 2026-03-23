@@ -31,6 +31,7 @@ import java.lang.instrument.Instrumentation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.agent.builder.AgentBuilder.Default;
@@ -225,6 +226,13 @@ public class TradefedInvocationAgent {
                     invocationId,
                     /* runName= */ (String) args[0],
                     /* testCount= */ (Integer) args[1]);
+          }
+        }
+        case "testRunEnded" -> {
+          // `testRunEnded` accepts `long elapsedTime` and `HashMap<String, Metric> runMetrics`.
+          if (invocationId != null && args.length >= 1 && args[0] instanceof Long) {
+            XtsTradefedTestModuleResultsMonitor.getInstance()
+                .onTestRunEnded(invocationId, /* elapsedTime= */ Duration.ofMillis((Long) args[0]));
           }
         }
         case "testStarted",

@@ -23,6 +23,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -215,6 +216,7 @@ public class XtsTradefedTestModuleResultsMonitorTest {
     assertThat(module.testsFailed()).isEqualTo(1);
     assertThat(module.testsPassed()).isEqualTo(0);
 
+    monitor.onTestRunEnded("inv-1", Duration.ofMillis(12345L));
     monitor.onModuleEnd("inv-1");
     doUpdateMethod.invoke(monitor, resultsFile);
 
@@ -222,6 +224,7 @@ public class XtsTradefedTestModuleResultsMonitorTest {
     results = XtsTradefedTestModuleResults.decodeFromString(content);
     module = results.runningModules().get("test-module-id");
     assertThat(module.isRunning()).isFalse();
+    assertThat(module.duration()).isEqualTo(Duration.ofMillis(12345L));
   }
 
   @Test
@@ -235,6 +238,7 @@ public class XtsTradefedTestModuleResultsMonitorTest {
     monitor.onTestRunStarted("inv-1", "run-1", 1);
     monitor.onTestEvent("inv-1", "testStarted", "test-1");
     monitor.onTestEvent("inv-1", "testEnded", "test-1");
+    monitor.onTestRunEnded("inv-1", Duration.ofSeconds(2));
     monitor.onModuleEnd("inv-1");
 
     // Invocation 2: 1 fail, 2 expected (total)
@@ -245,6 +249,7 @@ public class XtsTradefedTestModuleResultsMonitorTest {
     monitor.onTestEvent("inv-2", "testStarted", "test-2");
     monitor.onTestEvent("inv-2", "testFailed", "test-2");
     // test-2 not ended yet in this invocation
+    monitor.onTestRunEnded("inv-2", Duration.ofSeconds(3));
     monitor.onModuleEnd("inv-2");
 
     // Force an update
@@ -269,5 +274,6 @@ public class XtsTradefedTestModuleResultsMonitorTest {
     assertThat(mergedModule.testsCompleted()).isEqualTo(1); // Only test-1 ended
     assertThat(mergedModule.testsFailed()).isEqualTo(1); // test-2 failed
     assertThat(mergedModule.testsPassed()).isEqualTo(1); // test-1 passed
+    assertThat(mergedModule.duration()).isEqualTo(Duration.ofSeconds(5)); // 2s + 3s
   }
 }
