@@ -25,7 +25,7 @@ option java_multiple_files = true;
 option java_outer_classname = "AndroidFlashGkiDecoratorSpecProto";
 
 // Specs for {@link AndroidFlashGkiDecoratorSpec}
-// Next tag: 27
+// Next tag: 28
 message AndroidFlashGkiDecoratorSpec {
   extend DecoratorSpec {
     optional AndroidFlashGkiDecoratorSpec ext = 1015;
@@ -153,5 +153,10 @@ message AndroidFlashGkiDecoratorSpec {
   optional bool disable_verification = 26 [
     (field_detail) = { help: "Whether to disable verification." },
     default = false
+  ];
+
+  optional bool flash_logical_partition_first = 27 [
+    (field_detail) = { help: "Whether to flash logical partition first." },
+    default = true
   ];
 }
