@@ -16,17 +16,13 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.step.android;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.LinkedHashMultimap;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.io.Files;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
@@ -62,8 +58,8 @@ import java.io.File;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -161,205 +157,116 @@ public class InstallApkStep implements InstallApkStepConstants {
 
     String deviceId = device.getDeviceId();
     JobInfo jobInfo = testInfo.jobInfo();
-    Set<String> buildApks = new LinkedHashSet<>();
+    InstallCoordinator coordinator = new InstallCoordinator(testInfo, aapt);
 
-    // Makes sure the first apk in 'build_apk' will still be the first element of buildApks.
-    addApks(buildApks, jobBuildApks, testInfo);
-    addApks(buildApks, testInfo.files().get(TAG_BUILD_APK), testInfo);
-    addApks(buildApks, testInfo.files().get(TAG_EXTRA_APK), testInfo);
-    addApks(buildApks, getExtraApks(spec, jobInfo), testInfo);
+    // Makes sure the first apk in 'build_apk' will still be the first element inserted.
+    coordinator.addApks(jobBuildApks);
+    coordinator.addApks(testInfo.files().get(TAG_BUILD_APK));
+    coordinator.addApks(testInfo.files().get(TAG_EXTRA_APK));
+    coordinator.addApks(getExtraApks(spec, jobInfo));
+
     String extraFileTags = spec.getInstallApkExtraFileTags();
     for (String fileTag : Splitter.on(',').split(extraFileTags)) {
       testInfo.log().atInfo().alsoTo(logger).log("Get extra tag %s", fileTag);
-      addApks(buildApks, testInfo.files().get(fileTag), testInfo);
-      addApks(buildApks, jobInfo.files().get(fileTag), testInfo);
+      coordinator.addApks(testInfo.files().get(fileTag));
+      coordinator.addApks(jobInfo.files().get(fileTag));
     }
 
-    ImmutableSet<String> dexMetadataFiles = getDexMetadataFiles(spec, testInfo);
-    if (!dexMetadataFiles.isEmpty()) {
-      testInfo.log().atInfo().alsoTo(logger).log("Add dex metadata files %s", dexMetadataFiles);
-    }
-    ImmutableMap<String, String> dexMetadataFilesByNameMap =
-        getDexMetadataFilesByName(dexMetadataFiles);
-    Set<String> matchedDexMetadataFiles = new HashSet<>();
+    coordinator.addDexMetadataFiles(getDexMetadataFiles(spec, testInfo));
 
-    Optional<Duration> installTimeout = Optional.empty();
-    if (spec.hasInstallApkTimeoutSec()) {
-      long installTimeoutSec = spec.getInstallApkTimeoutSec();
-      installTimeout = Optional.of(Duration.ofSeconds(installTimeoutSec));
-      testInfo
-          .log()
-          .atInfo()
-          .alsoTo(logger)
-          .log(
-              "Parsed install APK timeout from job: %s sec, Device ID = %s",
-              installTimeoutSec, deviceId);
-    }
+    coordinator
+        .getFirstPackageName()
+        .ifPresent(
+            packageName -> {
+              if (testInfo.properties().get(ApkInfo.MAIN_PACKAGE_NAME) == null) {
+                testInfo.properties().add(ApkInfo.MAIN_PACKAGE_NAME, packageName);
+                testInfo.properties().add(AppInfo.AUT_ID, packageName);
+              }
+            });
 
-    int deviceSdkVersion = systemSettingManager.getDeviceSdkVersion(device);
-    boolean broadcastInstallMessage = spec.getBroadcastInstallMessage();
-    boolean grantPermissionsOnInstall = spec.getGrantPermissionsOnInstall();
-    boolean skipGmsDowngrade = spec.getSkipGmsDowngrade();
-    boolean clearGmsAppData = spec.getClearGmsAppData();
-    boolean forceInstallApks = spec.getForceInstallApks();
-    boolean bypassLowTargetSdkBlock = spec.getBypassLowTargetSdkBlock();
-
-    SetMultimap<String, String> allPackages = LinkedHashMultimap.create();
-    Set<String> allPackageNames = new HashSet<>();
-    for (String buildApk : buildApks) {
-      // Gets the package name from the build apks.
-      String buildPackageName = aapt.getApkPackageName(buildApk);
-      if (forceInstallApks && !allPackageNames.contains(buildPackageName)) {
-        apkInstaller.clearInstalledApkProperty(device, buildPackageName);
-      }
-      if (testInfo.properties().get(ApkInfo.MAIN_PACKAGE_NAME) == null) {
-        testInfo.properties().add(ApkInfo.MAIN_PACKAGE_NAME, buildPackageName);
-        testInfo.properties().add(AppInfo.AUT_ID, buildPackageName);
-      }
-      allPackages.put(buildPackageName, buildApk);
-      allPackageNames.add(buildPackageName);
-    }
-
-    boolean hasSplitPackages =
-        allPackages.keySet().stream().anyMatch(pkg -> allPackages.get(pkg).size() > 1);
-    if (hasSplitPackages && deviceSdkVersion < AndroidVersion.LOLLIPOP.getStartSdkVersion()) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_INSTALL_APK_STEP_INSTALL_NOT_SUPPORTED,
-          String.format(
-              "The packages %s contain multiple apks with the same package name."
-                  + "If it is your intention to install split apks, please make"
-                  + " sure the device SDK version is >= 21.",
-              allPackages));
-    }
-
-    // Install GMS if provided in build apks. GMS Core is installed first because it creates
+    // Install GMS if provided in inputs. GMS Core is installed first because it creates
     // new permissions. APKs that define permissions must precede the APKs that use them.
     // b/149046112 b/36941003
-    if (allPackages.containsKey(PackageConstants.PACKAGE_NAME_GMS)) {
-      Set<String> packages = allPackages.get(PackageConstants.PACKAGE_NAME_GMS);
-      ImmutableList.Builder<String> apkPaths = ImmutableList.builder();
-      ImmutableList.Builder<String> dexMetadataPaths = ImmutableList.builder();
-
-      for (String apkPath : packages) {
-        apkPaths.add(apkPath);
-        Optional<String> dexMetadataFile =
-            getMatchingDexMetadataFile(apkPath, dexMetadataFilesByNameMap);
-        dexMetadataFile.ifPresent(matchedDexMetadataFiles::add);
-        dexMetadataFile.ifPresent(dexMetadataPaths::add);
+    if (!coordinator.orderToFront(PackageConstants.PACKAGE_NAME_GMS)) {
+      if (testInfo
+          .jobInfo()
+          .params()
+          .getBool(
+              InstallApkStepConstants.PARAM_CHECK_INSTALLED_GMS_CORE_VERSION,
+              /* defaultValue= */ true)) {
+        apkInstaller.checkInstalledAppVersion(
+            testInfo, deviceId, PackageConstants.PACKAGE_NAME_GMS);
       }
+    }
 
-      Optional<Duration> sleepAfterInstall = Optional.empty();
-      if (spec.hasSleepAfterInstallGmsSec()) {
-        long sleepAfterInstallGmsSec = spec.getSleepAfterInstallGmsSec();
-        sleepAfterInstall = Optional.of(Duration.ofSeconds(sleepAfterInstallGmsSec));
-        testInfo
-            .log()
-            .atInfo()
-            .alsoTo(logger)
-            .log(
-                "Parsed sleep after install GMS from job: %s sec, Device ID = %s",
-                sleepAfterInstallGmsSec, deviceId);
+    Optional<Duration> sleepAfterInstallGms =
+        spec.hasSleepAfterInstallGmsSec()
+            ? Optional.of(Duration.ofSeconds(spec.getSleepAfterInstallGmsSec()))
+            : Optional.empty();
+    Optional<Duration> installTimeout =
+        spec.hasInstallApkTimeoutSec()
+            ? Optional.of(Duration.ofSeconds(spec.getInstallApkTimeoutSec()))
+            : Optional.empty();
+    int deviceSdkVersion = systemSettingManager.getDeviceSdkVersion(device);
+
+    if (deviceSdkVersion < AndroidVersion.LOLLIPOP.getStartSdkVersion()) {
+      ImmutableList<String> splits =
+          coordinator.getAllPackages().stream()
+              .filter(PackageToInstall::isSplitApk)
+              .map(pkg -> pkg.packageName)
+              .collect(toImmutableList());
+      if (!splits.isEmpty()) {
+        throw new MobileHarnessException(
+            AndroidErrorId.ANDROID_INSTALL_APK_STEP_INSTALL_NOT_SUPPORTED,
+            String.format(
+                "The packages %s contain multiple apks with the same package name."
+                    + "If it is your intention to install split apks, please make"
+                    + " sure the device SDK version is >= 21.",
+                splits));
       }
+    }
 
+    for (PackageToInstall pkg : coordinator.getAllPackages()) {
       installApk(
           device,
           deviceSdkVersion,
-          PackageConstants.PACKAGE_NAME_GMS,
-          apkPaths.build(),
-          dexMetadataPaths.build(),
+          pkg,
           testInfo,
-          broadcastInstallMessage,
-          skipGmsDowngrade,
-          clearGmsAppData,
-          grantPermissionsOnInstall,
-          bypassLowTargetSdkBlock,
+          spec,
           installTimeout,
-          sleepAfterInstall);
-    } else if (testInfo
-        .jobInfo()
-        .params()
-        .getBool(
-            InstallApkStepConstants.PARAM_CHECK_INSTALLED_GMS_CORE_VERSION,
-            /* defaultValue= */ true)) {
-      // Gets Gms version if it is not in build apks.
-      apkInstaller.checkInstalledAppVersion(testInfo, deviceId, PackageConstants.PACKAGE_NAME_GMS);
-    }
-
-    // Install non-GMS packages.
-
-    for (Map.Entry<String, Collection<String>> entry : allPackages.asMap().entrySet()) {
-      String packageName = entry.getKey();
-      Collection<String> packages = entry.getValue();
-
-      if (packageName.equals(PackageConstants.PACKAGE_NAME_GMS)) {
-        continue;
-      }
-
-      ImmutableList.Builder<String> apkPaths = ImmutableList.builder();
-      ImmutableList.Builder<String> dexMetadataPaths = ImmutableList.builder();
-
-      for (String apkPath : packages) {
-        apkPaths.add(apkPath);
-        Optional<String> dexMetadataFile =
-            getMatchingDexMetadataFile(apkPath, dexMetadataFilesByNameMap);
-        dexMetadataFile.ifPresent(matchedDexMetadataFiles::add);
-        dexMetadataFile.ifPresent(dexMetadataPaths::add);
-      }
-
-      installApk(
-          device,
-          deviceSdkVersion,
-          packageName,
-          apkPaths.build(),
-          dexMetadataPaths.build(),
-          testInfo,
-          broadcastInstallMessage,
-          skipGmsDowngrade,
-          clearGmsAppData,
-          grantPermissionsOnInstall,
-          bypassLowTargetSdkBlock,
-          installTimeout,
-          Optional.empty());
-    }
-
-    if (!matchedDexMetadataFiles.equals(dexMetadataFiles)) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_INSTALL_APK_STEP_DEX_METADATA_WITHOUT_APK,
-          String.format(
-              "Dex metadata files %s did not match any installed apks. Each dex metadata file must"
-                  + " be installed with an apk with the same file name.",
-              Sets.difference(dexMetadataFiles, matchedDexMetadataFiles)));
+          pkg.packageName.equals(PackageConstants.PACKAGE_NAME_GMS)
+              ? sleepAfterInstallGms
+              : Optional.empty());
     }
 
     if (spec.getRebootAfterAllBuildApksInstallation()) {
       rebootDevice(testInfo, device);
     }
 
-    return new ArrayList<>(allPackageNames);
+    return coordinator.getAllPackages().stream()
+        .map(pkg -> pkg.packageName)
+        .collect(toImmutableList());
   }
 
   private void installApk(
       Device device,
       int deviceSdkVersion,
-      String packageName,
-      ImmutableList<String> apkPaths,
-      ImmutableList<String> dexMetadataPaths,
+      PackageToInstall pkg,
       TestInfo testInfo,
-      boolean broadcastInstallMessage,
-      boolean skipGmsDowngrade,
-      boolean clearGmsAppData,
-      boolean grantPermissionsOnInstall,
-      boolean bypassLowTargetSdkBlock,
+      InstallApkStepSpec spec,
       Optional<Duration> installTimeout,
       Optional<Duration> sleepAfterInstall)
       throws MobileHarnessException, InterruptedException {
     String deviceId = device.getDeviceId();
+    if (spec.getForceInstallApks()) {
+      apkInstaller.clearInstalledApkProperty(device, pkg.packageName);
+    }
     try {
-      if (broadcastInstallMessage) {
+      if (spec.getBroadcastInstallMessage()) {
         try {
           testMessageUtil.sendMessageToTest(
               testInfo,
-              AppInstallEventUtil.createStartMessage(device.getDimensions(), packageName));
+              AppInstallEventUtil.createStartMessage(device.getDimensions(), pkg.packageName));
         } catch (MobileHarnessException e) {
           testInfo
               .log()
@@ -369,21 +276,21 @@ public class InstallApkStep implements InstallApkStepConstants {
               .log("Failed to broadcast message for starting installing app");
         }
       }
-      boolean isGms = packageName.equals(PackageConstants.PACKAGE_NAME_GMS);
+      boolean isGms = pkg.packageName.equals(PackageConstants.PACKAGE_NAME_GMS);
 
       // Installs APKs.
       ApkInstallArgs.Builder installArgsBuilder =
           ApkInstallArgs.builder()
-              .addAllApkPaths(apkPaths)
-              .addAllDexMetadataPaths(dexMetadataPaths)
-              .setSkipDowngrade(isGms && skipGmsDowngrade)
-              .setClearAppData(isGms && clearGmsAppData)
-              .setGrantPermissions(grantPermissionsOnInstall)
-              .setBypassLowTargetSdkBlock(bypassLowTargetSdkBlock);
-      if (isGms && shouldSkipGmsCompatibilityCheck(testInfo, apkPaths.get(0))) {
+              .addAllApkPaths(pkg.apkPaths)
+              .addAllDexMetadataPaths(pkg.dexMetadataPaths)
+              .setSkipDowngrade(isGms && spec.getSkipGmsDowngrade())
+              .setClearAppData(isGms && spec.getClearGmsAppData())
+              .setGrantPermissions(spec.getGrantPermissionsOnInstall())
+              .setBypassLowTargetSdkBlock(spec.getBypassLowTargetSdkBlock());
+      if (isGms && shouldSkipGmsCompatibilityCheck(testInfo, pkg.apkPaths.get(0))) {
         installArgsBuilder.setSkipGmsCompatCheck(true);
       }
-      if (PackageConstants.ANDROIDX_SERVICES_APK_PACKAGE_NAMES.contains(packageName)) {
+      if (PackageConstants.ANDROIDX_SERVICES_APK_PACKAGE_NAMES.contains(pkg.packageName)) {
         installArgsBuilder.setForceQueryable(true);
       }
       installTimeout.ifPresent(installArgsBuilder::setInstallTimeout);
@@ -399,24 +306,24 @@ public class InstallApkStep implements InstallApkStepConstants {
           .log()
           .atInfo()
           .alsoTo(logger)
-          .log("Installed package: %s, Device ID = %s", packageName, deviceId);
+          .log("Installed package: %s, Device ID = %s", pkg.packageName, deviceId);
 
-      if (packageName.equals(PackageConstants.PACKAGE_NAME_TEST_SERVICES_APK)
+      if (pkg.packageName.equals(PackageConstants.PACKAGE_NAME_TEST_SERVICES_APK)
           && deviceSdkVersion >= AndroidVersion.ANDROID_11.getStartSdkVersion()) {
         // Enable MANAGE_EXTERNAL_STORAGE for test services apk to grant AndroidTestUtil permission
         // to access files (b/170517865)
         systemSettingUtil.setPackageOperationMode(
-            deviceId, packageName, APP_OP_MANAGE_EXTERNAL_STORAGE, AppOperationMode.ALLOW);
+            deviceId, pkg.packageName, APP_OP_MANAGE_EXTERNAL_STORAGE, AppOperationMode.ALLOW);
       }
 
-      apkInstaller.checkInstalledAppVersion(testInfo, deviceId, packageName);
-      checkSizeInfo(testInfo, packageName, apkPaths);
+      apkInstaller.checkInstalledAppVersion(testInfo, deviceId, pkg.packageName);
+      checkSizeInfo(testInfo, pkg.packageName, pkg.apkPaths);
     } finally {
-      if (broadcastInstallMessage) {
+      if (spec.getBroadcastInstallMessage()) {
         try {
           testMessageUtil.sendMessageToTest(
               testInfo,
-              AppInstallEventUtil.createFinishMessage(device.getDimensions(), packageName));
+              AppInstallEventUtil.createFinishMessage(device.getDimensions(), pkg.packageName));
         } catch (MobileHarnessException e) {
           testInfo
               .log()
@@ -426,13 +333,6 @@ public class InstallApkStep implements InstallApkStepConstants {
               .log("Failed to broadcast message for finishing installing app");
         }
       }
-    }
-  }
-
-  private static void addApks(Set<String> buildApks, Set<String> apksToAdd, TestInfo testInfo) {
-    if (!apksToAdd.isEmpty()) {
-      testInfo.log().atInfo().alsoTo(logger).log("Add apks %s to install.", apksToAdd);
-      buildApks.addAll(apksToAdd);
     }
   }
 
@@ -540,29 +440,6 @@ public class InstallApkStep implements InstallApkStepConstants {
     return outputPaths.build();
   }
 
-  private static String getFileNameForDexMetadataMatching(String filePath) {
-    return Files.getNameWithoutExtension(filePath);
-  }
-
-  private static ImmutableMap<String, String> getDexMetadataFilesByName(Set<String> filePaths)
-      throws MobileHarnessException {
-    try {
-      return filePaths.stream()
-          .collect(toImmutableMap(InstallApkStep::getFileNameForDexMetadataMatching, f -> f));
-    } catch (IllegalArgumentException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_INSTALL_APK_STEP_DEX_METADATA_CONFLICT,
-          String.format("Multiple dex metadata files with the same name: %s", filePaths),
-          e);
-    }
-  }
-
-  private static Optional<String> getMatchingDexMetadataFile(
-      String apkPath, Map<String, String> dexMetadataFilesByName) {
-    return Optional.ofNullable(
-        dexMetadataFilesByName.get(getFileNameForDexMetadataMatching(apkPath)));
-  }
-
   /** Reboots devices, and blocked current thread until it is finished. */
   @VisibleForTesting
   void rebootDevice(TestInfo testInfo, Device device)
@@ -626,6 +503,139 @@ public class InstallApkStep implements InstallApkStepConstants {
       throws InterruptedException {
     for (String packageName : packages) {
       apkInstaller.uninstallApk(device, packageName, /* logFailures= */ true, testInfo.log());
+    }
+  }
+
+  private static class PackageToInstall {
+
+    private final String packageName;
+    private final ArrayList<String> apkPaths = new ArrayList<>();
+    private final ArrayList<String> dexMetadataPaths = new ArrayList<>();
+
+    PackageToInstall(String packageName) {
+      this.packageName = packageName;
+    }
+
+    boolean isSplitApk() {
+      return apkPaths.size() > 1;
+    }
+  }
+
+  /**
+   * Consolidates a collection of APK and dex metadata files to install, into a list of {@link
+   * PackageToInstall}s.
+   */
+  private static class InstallCoordinator {
+
+    private final List<PackageToInstall> allPackages = new ArrayList<>();
+    private final Map<String, PackageToInstall> packageNameToPackage = new HashMap<>();
+    private final Map<String, PackageToInstall> dexMetadataKeyToPackage = new HashMap<>();
+    private final Set<String> seenApkPaths = new HashSet<>();
+    private final Map<String, String> seenDexMetadataKeys = new HashMap<>();
+    private final TestInfo testInfo;
+    private final Aapt aapt;
+
+    InstallCoordinator(TestInfo testInfo, Aapt aapt) {
+      this.testInfo = testInfo;
+      this.aapt = aapt;
+    }
+
+    void addApks(Collection<String> apkPaths) throws MobileHarnessException, InterruptedException {
+      for (String apkPath : apkPaths) {
+        addApk(apkPath);
+      }
+      if (!apkPaths.isEmpty()) {
+        testInfo.log().atInfo().alsoTo(logger).log("Add apks for install: %s.", apkPaths);
+      }
+    }
+
+    private void addApk(String apkPath) throws MobileHarnessException, InterruptedException {
+      if (!seenApkPaths.add(apkPath)) {
+        // Duplicates are allowed to keep backward compatibility.
+        return;
+      }
+
+      String packageName = aapt.getApkPackageName(apkPath);
+
+      PackageToInstall pkg = packageNameToPackage.get(packageName);
+      if (pkg == null) {
+        pkg = new PackageToInstall(packageName);
+        allPackages.add(pkg);
+        packageNameToPackage.put(packageName, pkg);
+      }
+
+      pkg.apkPaths.add(apkPath);
+      dexMetadataKeyToPackage.put(getDexMetadataKeyFromPath(apkPath), pkg);
+    }
+
+    /**
+     * Adds dex metadata files to existing packages.
+     *
+     * <p>Should be called after {@link #addApks}, as each dex metadata file must match an existing
+     * apk.
+     */
+    void addDexMetadataFiles(Collection<String> dexMetadataPaths)
+        throws MobileHarnessException, InterruptedException {
+      for (String dexMetadataPath : dexMetadataPaths) {
+        addDexMetadataFile(dexMetadataPath);
+      }
+      if (!dexMetadataPaths.isEmpty()) {
+        testInfo
+            .log()
+            .atInfo()
+            .alsoTo(logger)
+            .log("Add dex metadata files for install: %s.", dexMetadataPaths);
+      }
+    }
+
+    private void addDexMetadataFile(String dexMetadataPath) throws MobileHarnessException {
+      String key = getDexMetadataKeyFromPath(dexMetadataPath);
+      PackageToInstall pkg = dexMetadataKeyToPackage.get(key);
+      if (pkg == null) {
+        throw new MobileHarnessException(
+            AndroidErrorId.ANDROID_INSTALL_APK_STEP_DEX_METADATA_WITHOUT_APK,
+            String.format(
+                "Dex metadata file %s did not match any installed apks. Each dex metadata file must"
+                    + " be installed with an apk with the same file name.",
+                dexMetadataPath));
+      }
+      if (seenDexMetadataKeys.containsKey(key)) {
+        throw new MobileHarnessException(
+            AndroidErrorId.ANDROID_INSTALL_APK_STEP_DEX_METADATA_CONFLICT,
+            String.format(
+                "Multiple dex metadata files with the same name: %s is conflicting with %s.",
+                dexMetadataPath, seenDexMetadataKeys.get(key)));
+      }
+      seenDexMetadataKeys.put(key, dexMetadataPath);
+      pkg.dexMetadataPaths.add(dexMetadataPath);
+    }
+
+    private static String getDexMetadataKeyFromPath(String filePath) {
+      return Files.getNameWithoutExtension(filePath);
+    }
+
+    /**
+     * Orders the package with the given package name to the front of the packages list.
+     *
+     * @return true if the package was in the packages list
+     */
+    @CanIgnoreReturnValue
+    boolean orderToFront(String packageName) {
+      PackageToInstall packageToInstall = packageNameToPackage.get(packageName);
+      if (packageToInstall == null) {
+        return false;
+      }
+      allPackages.remove(packageToInstall);
+      allPackages.add(0, packageToInstall);
+      return true;
+    }
+
+    Optional<String> getFirstPackageName() {
+      return allPackages.isEmpty() ? Optional.empty() : Optional.of(allPackages.get(0).packageName);
+    }
+
+    List<PackageToInstall> getAllPackages() {
+      return allPackages;
     }
   }
 }

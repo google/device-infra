@@ -482,6 +482,8 @@ public class ApkInstaller {
 
     // Sleep a while to wait system idle (b/169651299)
     if (installArgs.sleepAfterInstall().isPresent()) {
+      SharedLogUtil.logMsg(
+          logger, log, "Sleep for %s after installation", installArgs.sleepAfterInstall().get());
       sleeper.sleep(installArgs.sleepAfterInstall().get());
     }
 
