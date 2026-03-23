@@ -61,9 +61,4 @@ public class NoopExternalDeviceManager implements ExternalDeviceManager {
   public Map<Dimension.Name, Optional<String>> getExtraDimensions(String deviceId) {
     return ImmutableMap.of();
   }
-
-  @Override
-  public boolean isManagingDeviceLifeCycle() {
-    return false;
-  }
 }

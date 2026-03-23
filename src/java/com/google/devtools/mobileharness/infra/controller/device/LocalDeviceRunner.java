@@ -368,10 +368,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
                   /* allowUnavailableDevice= */ false)) {
         device.tearDown();
 
-        needReboot =
-            needReboot
-                && !disableDeviceReboot()
-                && (!externalDeviceManager.isManagingDeviceLifeCycle() || !initialized);
+        needReboot = needReboot && !disableDeviceReboot();
 
         try {
           // Always reboot the device if force to do so.

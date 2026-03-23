@@ -67,9 +67,6 @@ public interface ExternalDeviceManager extends DrainHandler {
    */
   Map<Dimension.Name, Optional<String>> getExtraDimensions(String deviceId);
 
-  /** Gets whether this external DM manages device life cycle. */
-  boolean isManagingDeviceLifeCycle();
-
   /** The device status. */
   enum DeviceStatus {
     UNKNOWN,
@@ -86,7 +83,7 @@ public interface ExternalDeviceManager extends DrainHandler {
     NEAR_IDLE,
   }
 
-  /** Represents a device reservation. */
+  /** A reservation of a device in an {@link ExternalDeviceManager}. */
   interface DeviceReservation extends AutoCloseable {
     @Override
     void close();
