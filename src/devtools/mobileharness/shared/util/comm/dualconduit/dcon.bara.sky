@@ -35,9 +35,10 @@ def dcon_build_file_replace(before_target, after_target):
     )
 
 dcon_blaze_to_bazel_transforms = [
-    dcon_build_file_replace("//third_party/golang/grpc", "@org_golang_google_grpc//:grpc"),
     dcon_build_file_replace("//third_party/golang/grpc/codes", "@org_golang_google_grpc//codes"),
+    dcon_build_file_replace("//third_party/golang/grpc/reflection", "@org_golang_google_grpc//reflection"),
     dcon_build_file_replace("//third_party/golang/grpc/status", "@org_golang_google_grpc//status"),
+    dcon_build_file_replace("//third_party/golang/grpc", "@org_golang_google_grpc//:grpc"),
     dcon_build_file_replace("//third_party/golang/github_com/rsocket/rsocket_go/v/v0/payload", "@com_github_rsocket_rsocket_go//payload"),
     dcon_build_file_replace("//third_party/golang/github_com/rsocket/rsocket_go/v/v0/rx/flux", "@com_github_rsocket_rsocket_go//rx/flux"),
     dcon_build_file_replace("//third_party/golang/github_com/rsocket/rsocket_go/v/v0/rx", "@com_github_rsocket_rsocket_go//rx"),
@@ -46,7 +47,10 @@ dcon_blaze_to_bazel_transforms = [
 dcon_go_imports_map = {
     "google3/third_party/deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dual_conduit_service_go_grpc": "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/pbgrpc",
     "google3/third_party/deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dual_conduit_go_proto": "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/pb",
+    "google3/third_party/deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld/helloworld_service_go_grpc": "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld/proto/grpc",
+    "google3/third_party/deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld/helloworld_go_proto": "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld/proto",
     "google3/third_party/golang/grpc/grpc": "google.golang.org/grpc",
+    "google3/third_party/golang/grpc/reflection/reflection": "google.golang.org/grpc/reflection",
     "google3/third_party/golang/grpc/codes/codes": "google.golang.org/grpc/codes",
     "google3/third_party/golang/grpc/status/status": "google.golang.org/grpc/status",
     "google3/third_party/golang/github_com/rsocket/rsocket_go/v/v0/payload/payload": "github.com/rsocket/rsocket-go/payload",
