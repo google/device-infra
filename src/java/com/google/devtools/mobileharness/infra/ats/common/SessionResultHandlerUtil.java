@@ -539,8 +539,7 @@ public class SessionResultHandlerUtil {
           Path testRecordProtoDir = resultDir.resolve("proto");
           localFileUtil.prepareDir(testRecordProtoDir);
           for (Path testRecordProtoFile : testRecordProtoFiles) {
-            localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-                testRecordProtoFile, testRecordProtoDir, ImmutableList.of("-rf"));
+            localFileUtil.copyFileOrDir(testRecordProtoFile, testRecordProtoDir);
           }
         }
       }
@@ -679,15 +678,13 @@ public class SessionResultHandlerUtil {
                   List<Path> innovationDetails =
                       localFileUtil.listFilesOrDirs(logFileOrDir, path -> true);
                   for (Path fileOrDir : innovationDetails) {
-                    localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-                        fileOrDir, invocationDir, ImmutableList.of("-rf"));
+                    localFileUtil.copyFileOrDir(fileOrDir, invocationDir);
                   }
                 } else {
                   logger.atInfo().log(
                       "Copying tradefed test log relevant file/dir [%s] into dir [%s]",
                       logFileOrDir, invocationDir);
-                  localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-                      logFileOrDir, invocationDir, ImmutableList.of("-rf"));
+                  localFileUtil.copyFileOrDir(logFileOrDir, invocationDir);
                 }
               }
             }
@@ -696,8 +693,7 @@ public class SessionResultHandlerUtil {
       } else {
         logger.atInfo().log(
             "Copying tradefed test log relevant file/dir [%s] into dir [%s]", genFile, testLogDir);
-        localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-            genFile, testLogDir, ImmutableList.of("-rf"));
+        localFileUtil.copyFileOrDir(genFile, testLogDir);
       }
     }
   }
@@ -759,8 +755,7 @@ public class SessionResultHandlerUtil {
             logger.atInfo().log(
                 "Copying tradefed test result relevant file/dir [%s] into tmp dir [%s]",
                 resultFileOrDir, tmpTestResultDir);
-            localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-                resultFileOrDir, tmpTestResultDir, ImmutableList.of("-rf"));
+            localFileUtil.copyFileOrDir(resultFileOrDir, tmpTestResultDir);
           }
           // Copy the needed TF result files to the result dir being zipped
           for (Path resultFileOrDir : resultFilesOrDirs) {
@@ -775,8 +770,7 @@ public class SessionResultHandlerUtil {
             logger.atInfo().log(
                 "Copying tradefed test result relevant file/dir [%s] into dir [%s]",
                 resultFileOrDir, resultDirInZip);
-            localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-                resultFileOrDir, resultDirInZip, ImmutableList.of("-rf"));
+            localFileUtil.copyFileOrDir(resultFileOrDir, resultDirInZip);
           }
         }
       }
@@ -859,8 +853,7 @@ public class SessionResultHandlerUtil {
       logger.atInfo().log(
           "Copying non-tradefed test log relevant file/dir [%s] into dir [%s]",
           genFile, testLogDir);
-      localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-          genFile, testLogDir, ImmutableList.of("-rf"));
+      localFileUtil.copyFileOrDir(genFile, testLogDir);
     }
   }
 
@@ -945,8 +938,7 @@ public class SessionResultHandlerUtil {
       logger.atInfo().log(
           "Copying non-tradefed test result relevant file [%s] into dir [%s]",
           moblyTestResultFile, testResultDir.get());
-      localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-          moblyTestResultFile, testResultDir.get(), ImmutableList.of("-rf"));
+      localFileUtil.copyFileOrDir(moblyTestResultFile, testResultDir.get());
       updateNonTradefedTestResult(
           nonTradefedTestResultBuilder,
           moblyTestResultFile.getFileName().toString(),
@@ -957,8 +949,7 @@ public class SessionResultHandlerUtil {
     for (String path : moblyRootResultDirs) {
       logger.atInfo().log(
           "Copying non-tradefed test result relevant dir [%s] into dir [%s]", path, rootResultDir);
-      localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-          Path.of(path), rootResultDir, ImmutableList.of("-rf"));
+      localFileUtil.copyFileOrDir(Path.of(path), rootResultDir);
     }
 
     return Optional.of(nonTradefedTestResultBuilder.build());
