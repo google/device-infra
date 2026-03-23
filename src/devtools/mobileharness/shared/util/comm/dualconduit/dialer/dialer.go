@@ -10,6 +10,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 
 	pb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/pb"
@@ -34,7 +35,8 @@ func (s *DialerServer) TeardownConduit(ctx context.Context, req *pb.TeardownCond
 }
 
 var (
-	port = flag.Int("port", 50051, "The server port")
+	port  = flag.Int("port", 50051, "The server port")
+	debug = flag.Bool("debug", false, "turn on debug mode")
 )
 
 func main() {
@@ -46,6 +48,9 @@ func main() {
 
 	s := grpc.NewServer()
 	pbgrpc.RegisterDualConduitServiceServer(s, &DialerServer{})
+	if *debug {
+		reflection.Register(s)
+	}
 
 	log.Printf("Dialer gRPC server listening on %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {

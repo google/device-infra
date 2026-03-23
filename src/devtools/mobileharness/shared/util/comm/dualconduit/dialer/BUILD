@@ -30,6 +30,7 @@ go_binary(
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_service_go_grpc",
         "@org_golang_google_grpc//:grpc",
         "@org_golang_google_grpc//codes",
+        "@org_golang_google_grpc//reflection",
         "@org_golang_google_grpc//status",
     ],
 )

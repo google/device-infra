@@ -18,7 +18,7 @@ syntax = "proto3";
 
 package mobileharness.shared.util.comm.dualconduit;
 
-option go_package = "github.com/google/deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/pb;pb";
+option go_package = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/pb;pb";
 
 message EstablishConduitRequest {
   enum ConduitType {
