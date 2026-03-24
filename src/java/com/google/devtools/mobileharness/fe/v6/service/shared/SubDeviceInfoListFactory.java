@@ -17,7 +17,9 @@
 package com.google.devtools.mobileharness.fe.v6.service.shared;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -27,6 +29,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceType;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.SubDeviceInfo;
 import com.google.protobuf.ExtensionRegistry;
 import com.google.wireless.qa.mobileharness.shared.api.spec.TestbedDeviceSpec;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.proto.Device.SubDeviceDimensions;
 import java.util.Base64;
 import java.util.Optional;
@@ -103,6 +106,57 @@ public class SubDeviceInfoListFactory {
                             ABNORMAL_TYPE_KEYWORDS.stream().anyMatch(strPair.getValue()::contains))
                         .build())
             .collect(toImmutableList()));
+
+    // Create a dimension map
+    ImmutableMap<String, String> dimensionMap =
+        subDevice.getDeviceDimensionList().stream()
+            .collect(
+                toImmutableMap(
+                    d -> Ascii.toLowerCase(d.getName()),
+                    d -> d.getValue(),
+                    (existing, replacement) -> replacement));
+
+    // Extract info using direct mapping.
+    Optional.ofNullable(dimensionMap.get(Dimension.Name.MODEL.lowerCaseName()))
+        .ifPresent(subDeviceInfoBuilder::setModel);
+
+    // Version extraction with fallback.
+    String version =
+        Optional.ofNullable(dimensionMap.get(Dimension.Name.RELEASE_VERSION.lowerCaseName()))
+            .orElseGet(() -> dimensionMap.get(Dimension.Name.SOFTWARE_VERSION.lowerCaseName()));
+    if (version != null) {
+      subDeviceInfoBuilder.setVersion(version);
+    }
+
+    // Battery level.
+    Optional.ofNullable(dimensionMap.get(Dimension.Name.BATTERY_LEVEL.lowerCaseName()))
+        .map(v -> tryParseInt(v, -1))
+        .ifPresent(subDeviceInfoBuilder::setBatteryLevel);
+
+    // Network info.
+    Optional<Integer> wifiRssi =
+        Optional.ofNullable(dimensionMap.get(Dimension.Name.WIFI_RSSI.lowerCaseName()))
+            .map(v -> tryParseInt(v, 0));
+    Optional<Boolean> hasInternet =
+        Optional.ofNullable(dimensionMap.get(Dimension.Name.INTERNET.lowerCaseName()))
+            .map(Boolean::parseBoolean);
+
+    if (wifiRssi.isPresent() || hasInternet.isPresent()) {
+      wifiRssi.ifPresent(subDeviceInfoBuilder.getNetworkBuilder()::setWifiRssi);
+      hasInternet.ifPresent(subDeviceInfoBuilder.getNetworkBuilder()::setHasInternet);
+    }
+
+    // Remote control info will be populated by the caller using
+    // SubDeviceRemoteControlEligibilityChecker in handlers.
+
     return subDeviceInfoBuilder.build();
+  }
+
+  private static int tryParseInt(String value, int defaultValue) {
+    try {
+      return Integer.parseInt(value);
+    } catch (NumberFormatException e) {
+      return defaultValue;
+    }
   }
 }

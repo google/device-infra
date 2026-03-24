@@ -264,6 +264,7 @@ public final class GetHostDeviceSummariesHandlerTest {
                     .newBuilder()
                     .setName("model")
                     .setValue("pixel 5"))
+            .setModel("pixel 5")
             .build();
     assertThat(response.getDeviceSummaries(0).getSubDevices(0)).isEqualTo(expectedSubDeviceInfo);
   }
