@@ -167,9 +167,10 @@ public class MoblyReportParser {
       ImmutableMultimap.Builder<String, MoblyTestEntry> testEntriesMapBuilder =
           ImmutableMultimap.builder();
       int failedTestsInModule = 0;
+      MoblyTestEntry testEntry = null;
       for (MoblyYamlDocEntry moblyDocEntry : moblyDocEntries) {
         if (moblyDocEntry instanceof MoblyTestEntry) {
-          MoblyTestEntry testEntry = (MoblyTestEntry) moblyDocEntry;
+          testEntry = (MoblyTestEntry) moblyDocEntry;
           runtime +=
               max(testEntry.getEndTime().orElse(0L) - testEntry.getBeginTime().orElse(0L), 0L);
           testEntriesMapBuilder.put(testEntry.getTestClass(), testEntry);
@@ -185,12 +186,14 @@ public class MoblyReportParser {
           // Do not handle other MoblyYamlDocEntry at this moment.
         }
       }
+
+      MoblyTestEntryConverter converter =
+          getMoblyTestEntryConverter(moblyReportInfo.moblyTestEntryConverterClass());
+
       moduleBuilder
           .setRuntimeMillis(runtime)
-          .addAllTestCase(
-              getTestCases(
-                  testEntriesMapBuilder.build(),
-                  getMoblyTestEntryConverter(moblyReportInfo.moblyTestEntryConverterClass())));
+          .setDone(moduleBuilder.getDone() && converter.isModuleDone(testEntry))
+          .addAllTestCase(getTestCases(testEntriesMapBuilder.build(), converter));
       if (moblyReportInfo.moblyTestEntryConverterClass().isPresent()) {
         // Recalculate counts in module if the converter is specified.
         int passedTests = 0;

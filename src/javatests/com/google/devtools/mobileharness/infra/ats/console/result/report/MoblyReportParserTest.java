@@ -209,8 +209,8 @@ public final class MoblyReportParserTest {
   public void parseMoblyTestResult_betocqConverter() throws Exception {
     String summaryFile =
         TestRunfilesUtil.getRunfilesLocation(
-            "result/report/testdata/mobly/abort/test_summary.yaml");
-    Optional<Result> res1 =
+            "result/report/testdata/mobly/betocq/test_summary.yaml");
+    Optional<Result> res =
         moblyReportParser.parseMoblyTestResult(
             MoblyReportInfo.of(
                 "mobly-package-name",
@@ -223,9 +223,9 @@ public final class MoblyReportParserTest {
                 Optional.of(Path.of(MODULE_RESULT_FILE_PASS)),
                 Optional.of(
                     "com.google.devtools.mobileharness.infra.ats.console.result.report.moblytestentryconverter.contrib.BetocqTestEntryConverter")));
-    assertThat(res1).isPresent();
-    Result report1 = res1.get();
-    assertThat(report1.getSummary())
+    assertThat(res).isPresent();
+    Result report = res.get();
+    assertThat(report.getSummary())
         .isEqualTo(
             Summary.newBuilder()
                 .setPassed(0)
@@ -234,16 +234,48 @@ public final class MoblyReportParserTest {
                 .setModulesDone(1)
                 .setModulesTotal(1)
                 .build());
-    assertThat(report1.getModuleInfoList()).hasSize(1);
-    assertThat(report1.getModuleInfo(0).getTestCaseList()).hasSize(2);
-    assertThat(report1.getModuleInfo(0).getTestCase(0).getTestList()).hasSize(3);
-    assertThat(report1.getModuleInfo(0).getTestCase(0).getTest(0).getResult()).isEqualTo("IGNORED");
-    assertThat(report1.getModuleInfo(0).getTestCase(0).getTest(1).getResult()).isEqualTo("IGNORED");
-    assertThat(report1.getModuleInfo(0).getTestCase(0).getTest(2).getResult()).isEqualTo("warning");
-    assertThat(report1.getModuleInfo(0).getTestCase(1).getTestList()).hasSize(4);
-    assertThat(report1.getModuleInfo(0).getTestCase(1).getTest(0).getResult()).isEqualTo("fail");
-    assertThat(report1.getModuleInfo(0).getTestCase(1).getTest(1).getResult()).isEqualTo("fail");
-    assertThat(report1.getModuleInfo(0).getTestCase(1).getTest(2).getResult()).isEqualTo("warning");
-    assertThat(report1.getModuleInfo(0).getTestCase(1).getTest(3).getResult()).isEqualTo("warning");
+    assertThat(report.getModuleInfoList()).hasSize(1);
+    assertThat(report.getModuleInfo(0).getTestCaseList()).hasSize(2);
+    assertThat(report.getModuleInfo(0).getTestCase(0).getTestList()).hasSize(3);
+    assertThat(report.getModuleInfo(0).getTestCase(0).getTest(0).getResult()).isEqualTo("IGNORED");
+    assertThat(report.getModuleInfo(0).getTestCase(0).getTest(1).getResult()).isEqualTo("IGNORED");
+    assertThat(report.getModuleInfo(0).getTestCase(0).getTest(2).getResult()).isEqualTo("warning");
+    assertThat(report.getModuleInfo(0).getTestCase(1).getTestList()).hasSize(4);
+    assertThat(report.getModuleInfo(0).getTestCase(1).getTest(0).getResult()).isEqualTo("fail");
+    assertThat(report.getModuleInfo(0).getTestCase(1).getTest(1).getResult()).isEqualTo("fail");
+    assertThat(report.getModuleInfo(0).getTestCase(1).getTest(2).getResult()).isEqualTo("warning");
+    assertThat(report.getModuleInfo(0).getTestCase(1).getTest(3).getResult()).isEqualTo("warning");
+  }
+
+  @Test
+  public void parseMoblyTestResult_withTestAbortAll() throws Exception {
+    String summaryFile =
+        TestRunfilesUtil.getRunfilesLocation(
+            "result/report/testdata/mobly/abort_all/test_summary.yaml");
+    Optional<Result> res =
+        moblyReportParser.parseMoblyTestResult(
+            MoblyReportInfo.of(
+                "mobly-package-name",
+                "module-abi",
+                "module-parameter",
+                Optional.of(Path.of(summaryFile)),
+                Optional.of(Path.of(RESULT_ATTR_FILE)),
+                Optional.of(DEVICE_BUILD_FINGERPRINT),
+                Optional.of(Path.of(BUILD_ATTR_FILE)),
+                Optional.of(Path.of(MODULE_RESULT_FILE_PASS)),
+                Optional.empty()));
+    assertThat(res).isPresent();
+    Result report = res.get();
+    assertThat(report.getSummary())
+        .isEqualTo(
+            Summary.newBuilder()
+                .setPassed(0)
+                .setFailed(2)
+                .setWarning(0)
+                .setModulesDone(0)
+                .setModulesTotal(1)
+                .build());
+    assertThat(report.getModuleInfoList()).hasSize(1);
+    assertThat(report.getModuleInfo(0).getDone()).isFalse();
   }
 }

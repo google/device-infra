@@ -29,4 +29,16 @@ public interface MoblyTestEntryConverter {
    * @return the converted {@link Test}
    */
   Test convert(MoblyTestEntry testEntry);
+
+  /**
+   * Determines whether the module is done based on the last Mobly test entry.
+   *
+   * @param lastTestEntry the last Mobly test entry in the summary file
+   * @return true if the module should be treated as done, false otherwise
+   */
+  default boolean isModuleDone(MoblyTestEntry lastTestEntry) {
+    return lastTestEntry == null
+        || lastTestEntry.getTerminationSignalType().isEmpty()
+        || !lastTestEntry.getTerminationSignalType().get().equals("TestAbortAll");
+  }
 }

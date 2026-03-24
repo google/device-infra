@@ -1,0 +1,49 @@
+---
+Requested Tests:
+- test_hello_world2_1
+- test_hello_world2_2
+Type: TestNameList
+...
+---
+Begin Time: 1765357221894
+Details: null
+End Time: 1765357235896
+Extra Errors: {}
+Extras: null
+Parent: null
+Result: FAIL
+Retry Parent: null
+Signature: test_hello_world2_1-1765357221894
+Stacktrace: "Aborting all tests due to 5G AP is not ready for this test."
+Termination Signal Type: TestAbortAll
+Test Class: HelloWorldTest2
+Test Name: test_hello_world2_1
+Type: Record
+UID: null
+...
+---
+Begin Time: 1765357235896
+Details: null
+End Time: 1765357235898
+Extra Errors: {}
+Extras: null
+Parent: null
+Result: FAIL
+Retry Parent: null
+Signature: test_hello_world2_2-1765357235896
+Stacktrace: "Aborting all tests due to 5G AP is not ready for this test."
+Termination Signal Type: TestAbortAll
+Test Class: HelloWorldTest2
+Test Name: test_hello_world2_2
+Type: Record
+UID: null
+...
+---
+Error: 0
+Executed: 2
+Failed: 1
+Passed: 0
+Requested: 2
+Skipped: 1
+Type: Summary
+...
