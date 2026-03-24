@@ -51,7 +51,6 @@ public abstract class DetectionResult {
     DHCP,
     EMBEDDED_LINUX,
     EMULATOR,
-    EVB_BOARD,
     FAILED,
     FASTBOOT,
     FUCHSIA,

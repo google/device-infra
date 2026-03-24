@@ -44,10 +44,6 @@ public enum MoblySubdeviceType {
       /* jsonTypeName= */ "AndroidDesktopExecutorDevice",
       /* jsonIdKey= */ "id",
       /* mhClassName= */ "AndroidDesktopExecutorDevice"),
-  EVB_BOARD_DEVICE(
-      /* jsonTypeName= */ "EvbBoardDevice",
-      /* jsonIdKey= */ "id",
-      /* mhClassName= */ "EvbBoardDevice"),
   FITBIT_DEVICE(
       /* jsonTypeName= */ "FitbitDevice",
       /* jsonIdKey= */ "serial",
