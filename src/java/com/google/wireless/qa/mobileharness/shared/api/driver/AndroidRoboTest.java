@@ -196,6 +196,8 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
             Duration.ofSeconds(spec.getCrawlTimeoutSecs()).plus(CLI_EXECUTION_PADDING_TIMEOUT);
         Command command =
             Command.of(javaBinary, argsBuilder.build())
+                .workDir(testInfo.getTmpFileDir())
+                .extraEnv("TMPDIR", testInfo.getTmpFileDir())
                 // Allowed Exit codes for CLI.
                 // 0 -> PASS, 1 -> SKIP, 2 -> FAIL, 3 -> ERROR
                 .successExitCodes(0, 1, 2, 3)

@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.appcrawler.PostProcessor;
 import com.google.devtools.mobileharness.platform.android.appcrawler.PreProcessor;
 import com.google.devtools.mobileharness.platform.android.appcrawler.UtpBinariesExtractor;
+import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.testing.FakeCommandResult;
@@ -53,6 +54,8 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -72,6 +75,8 @@ public class AndroidRoboTestTest {
   @Mock private CommandExecutor commandExecutor;
   @Mock private CommandProcess commandProcess;
   @Mock private PostProcessor postProcessor;
+
+  @Captor private ArgumentCaptor<Command> commandCaptor;
 
   private JobInfo jobInfo;
   private Device device;
@@ -127,7 +132,12 @@ public class AndroidRoboTestTest {
 
     assertThat(testInfo.properties().get(ANDROID_ROBO_TEST_TEST_START_EPOCH_MS)).isEqualTo("2");
 
-    verify(commandExecutor).start(any());
+    // Need to capture because Command#equals() does not compare environment variables
+    verify(commandExecutor).start(commandCaptor.capture());
+    Command command = commandCaptor.getValue();
+    assertThat(command.getWorkDirectory().get().toString()).isEqualTo(testInfo.getTmpFileDir());
+    assertThat(command.getExtraEnvironment()).containsEntry("TMPDIR", testInfo.getTmpFileDir());
+
     verify(commandProcess).await(any());
 
     assertThat(testInfo.properties().get(ANDROID_ROBO_TEST_TEST_END_EPOCH_MS)).isEqualTo("3");
