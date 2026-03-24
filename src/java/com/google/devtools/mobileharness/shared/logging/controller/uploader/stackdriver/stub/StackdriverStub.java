@@ -26,10 +26,8 @@ import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithEr
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.shared.logging.annotation.Annotations.StackdriverSecretFileName;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ClientInterceptorFactory;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.Inject;
@@ -54,22 +52,16 @@ public class StackdriverStub {
 
   private final AtomicBoolean isInitialized = new AtomicBoolean();
 
-  private final String secretFileName;
-
-  private final ResUtil resUtil;
-
   private final LocalFileUtil fileUtil;
 
   @VisibleForTesting volatile LoggingServiceV2BlockingStub loggingServiceV2BlockingStub;
 
   @Inject
-  StackdriverStub(ResUtil resUtil, @StackdriverSecretFileName String secretFileName) {
-    this(resUtil, secretFileName, new LocalFileUtil());
+  StackdriverStub() {
+    this(new LocalFileUtil());
   }
 
-  StackdriverStub(ResUtil resUtil, String secretFileName, LocalFileUtil fileUtil) {
-    this.resUtil = resUtil;
-    this.secretFileName = secretFileName;
+  StackdriverStub(LocalFileUtil fileUtil) {
     this.fileUtil = fileUtil;
   }
 

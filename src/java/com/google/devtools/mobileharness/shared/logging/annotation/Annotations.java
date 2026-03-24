@@ -27,10 +27,5 @@ public final class Annotations {
   @Retention(RetentionPolicy.RUNTIME)
   public @interface LocalFileHandler {}
 
-  /** Annotation for binding the Stackdriver secret file name. */
-  @Qualifier
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface StackdriverSecretFileName {}
-
   private Annotations() {}
 }

@@ -30,7 +30,7 @@ import java.util.Optional;
  *   .setFileLogger("/foo/bar/daemon_log_dir")
  *   .setLogProject(LogProject.Daemon)
  *   .setLogEnvironment(LogEnvironment.PROD)
- *   .setLogUploaderParameters(StackdriverLogUploaderParameters.of(LogProject.Daemon));
+ *   .setLogUploaderParameters(StackdriverLogUploaderParameters.create());
  *   </code><</pre>
  *
  * <p>Example 2, Upload the logs to specified server, but don't store them locally.
