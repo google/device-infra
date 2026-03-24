@@ -192,6 +192,7 @@ public final class RunCommandHandlerTest {
             .setMaxBatteryTemperature(30)
             .setMinSdkLevel(32)
             .setMaxSdkLevel(35)
+            .setEnableTokenSharding(true)
             .build();
 
     SessionRequestInfo sessionRequestInfo = runCommandHandler.generateSessionRequestInfo(command);
@@ -224,6 +225,7 @@ public final class RunCommandHandlerTest {
     assertThat(sessionRequestInfo.maxBatteryTemperature()).hasValue(30);
     assertThat(sessionRequestInfo.minSdkLevel()).hasValue(32);
     assertThat(sessionRequestInfo.maxSdkLevel()).hasValue(35);
+    assertThat(sessionRequestInfo.enableTokenSharding()).isTrue();
   }
 
   @Test

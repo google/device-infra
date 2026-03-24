@@ -378,6 +378,7 @@ class RunCommandHandler {
       builder.setIsMoblyResultstoreUploadEnabled(true);
     }
     builder.setEnableDefaultLogs(runCommand.getEnableDefaultLogs());
+    builder.setEnableTokenSharding(runCommand.getEnableTokenSharding());
 
     sessionInfo
         .getSessionProperty(SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID)
