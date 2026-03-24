@@ -100,20 +100,20 @@ public class SlateDriver extends BaseDriver implements SpecConfigable<SlateDrive
             binaryPath, deviceSerial, target);
 
     // 4. Prepare Output Directory
-    String logDirName = String.format("SlateDriver_test_%s", testInfo.locator().getId());
-    Path outputDir = Path.of(testInfo.getGenFileDir()).resolve(logDirName);
+    String genFileDir = testInfo.getGenFileDir();
+    Path slateHistoryDir = Path.of(genFileDir, "slate_history");
     try {
-      Files.createDirectories(outputDir);
-    } catch (IOException e) {
+      localFileUtil.prepareDir(slateHistoryDir.toString());
+    } catch (MobileHarnessException e) {
       testInfo
           .log()
           .atWarning()
           .alsoTo(logger)
-          .log("Failed to create log directory: %s", e.getMessage());
+          .log("Failed to prepare slate history directory %s: %s", slateHistoryDir, e.getMessage());
     }
 
     // 5. Execute
-    Path logFile = outputDir.resolve("slate_run.log");
+    Path logFile = Path.of(genFileDir).resolve("slate_run.log");
     final StringBuilder logBuilder = new StringBuilder();
     try (BufferedWriter writer =
         Files.newBufferedWriter(logFile, StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
@@ -124,6 +124,7 @@ public class SlateDriver extends BaseDriver implements SpecConfigable<SlateDrive
       if (configPath != null) {
         args.add("--config", configPath);
       }
+      args.add("--output_base_dir", slateHistoryDir.toString());
       ImmutableList<String> argsList = args.build();
 
       int timeoutMins = spec.getTimeoutMins() > 0 ? spec.getTimeoutMins() : 60;
