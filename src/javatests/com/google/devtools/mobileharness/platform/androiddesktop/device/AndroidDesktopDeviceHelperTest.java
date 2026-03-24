@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.command.testing.FakeCommandResult;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
+import java.util.Map;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -81,6 +82,28 @@ public class AndroidDesktopDeviceHelperTest {
     verify(mockBaseDevice).updateDimension("label-pool", "foo");
     verify(mockBaseDevice).updateDimension("label-servo_state", "WORKING");
     verify(mockBaseDevice).updateDimension("state_a", "VALUE_A");
+  }
+
+  @Test
+  public void getDeviceDimensions_validJson_returnsDimensions()
+      throws MobileHarnessException, InterruptedException {
+    // GIVEN
+    String jsonOutput =
+        "{\"Dimensions\": {\"label-board\": [\"test_board\"], \"label-model\":"
+            + " [\"test_model\"], \"label-sku\": [\"test_sku\"]}}";
+    CommandResult commandResult = FakeCommandResult.of(jsonOutput, "", 0);
+    when(mockCommandExecutor.exec(any(Command.class))).thenReturn(commandResult);
+
+    // WHEN
+    Map<String, String> dimensions = androidDesktopDeviceHelper.getDeviceDimensions(DEVICE_ID);
+
+    // THEN
+    assertThat(dimensions).containsEntry("label-board", "test_board");
+    assertThat(dimensions).containsEntry("label-model", "test_model");
+    assertThat(dimensions).containsEntry("label-sku", "test_sku");
+    assertThat(dimensions).containsEntry("board", "test_board");
+    assertThat(dimensions).containsEntry("model", "test_model");
+    assertThat(dimensions).containsEntry("sku", "test_sku");
   }
 
   @Test

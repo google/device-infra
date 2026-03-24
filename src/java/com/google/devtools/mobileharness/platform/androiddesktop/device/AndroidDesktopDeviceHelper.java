@@ -41,6 +41,7 @@ import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -140,48 +141,37 @@ public class AndroidDesktopDeviceHelper {
     return updateDimensionsFromJsonObject(device, schedulingLabels);
   }
 
+  /** Returns dimensions of the given device. */
+  public Map<String, String> getDeviceDimensions(String deviceId)
+      throws MobileHarnessException, InterruptedException {
+    JsonElement schedulingLabels = getSchedulingLabels(deviceId);
+    Map<String, List<String>> labels = extractDimensions(schedulingLabels);
+    Map<String, String> dimensions = new HashMap<>();
+    for (Map.Entry<String, List<String>> entry : labels.entrySet()) {
+      for (String value : entry.getValue()) {
+        dimensions.put(entry.getKey(), value);
+      }
+    }
+
+    // Maps label-board and label-model to board and model dimensions.
+    dimensions.put("board", dimensions.getOrDefault("label-board", "unknown"));
+    dimensions.put("model", dimensions.getOrDefault("label-model", "unknown"));
+    dimensions.put("sku", dimensions.getOrDefault("label-sku", "unknown"));
+
+    return dimensions;
+  }
+
   private boolean updateDimensionsFromJsonObject(BaseDevice device, JsonElement schedulingLabels) {
     boolean hasDimensionChange = false;
     try {
-      Set<Map.Entry<String, JsonElement>> entries = new HashSet<>();
-      if (schedulingLabels != null
-          && !schedulingLabels.isJsonNull()
-          && schedulingLabels.isJsonObject()) {
-        JsonObject schedulingLabelsJsonObject = schedulingLabels.getAsJsonObject();
-        JsonElement dimensionsElement = schedulingLabelsJsonObject.get("Dimensions");
-        JsonElement stateElement = schedulingLabelsJsonObject.get("State");
-
-        if (dimensionsElement != null && dimensionsElement.isJsonObject()) {
-          entries.addAll(dimensionsElement.getAsJsonObject().entrySet());
-        }
-        if (stateElement != null && stateElement.isJsonObject()) {
-          entries.addAll(stateElement.getAsJsonObject().entrySet());
-        }
-
-        // Iterate over the Set using the enhanced for loop
-        for (Map.Entry<String, JsonElement> entry : entries) {
-          String key = entry.getKey();
-          JsonElement value = entry.getValue();
-          if (value.isJsonArray()) {
-            JsonArray array = value.getAsJsonArray();
-            List<String> valuesList = new ArrayList<>();
-            for (int i = 0; i < array.size(); i++) {
-              JsonElement element = array.get(i);
-              if (element != null && element.isJsonPrimitive()) {
-                valuesList.add(element.getAsString());
-              }
-            }
-            if (!valuesList.isEmpty()) {
-              hasDimensionChange |= device.updateDimension(key, valuesList.toArray(new String[0]));
-            } else {
-              logger.atWarning().log("Ignoring empty array scheduling labels for key: %s", key);
-            }
-          } else if (value.isJsonPrimitive()) {
-            hasDimensionChange |= device.updateDimension(key, value.getAsString());
-          }
-        }
-      } else {
+      Map<String, List<String>> labels = extractDimensions(schedulingLabels);
+      if (labels.isEmpty()) {
         logger.atWarning().log("Ignoring null or non-object scheduling labels");
+        return false;
+      }
+      for (Map.Entry<String, List<String>> entry : labels.entrySet()) {
+        hasDimensionChange |=
+            device.updateDimension(entry.getKey(), entry.getValue().toArray(new String[0]));
       }
     } catch (
         @SuppressWarnings("CatchingUnchecked")
@@ -189,6 +179,46 @@ public class AndroidDesktopDeviceHelper {
       logger.atWarning().withCause(e).log("Failed to update dimensions from json object");
     }
     return hasDimensionChange;
+  }
+
+  private Map<String, List<String>> extractDimensions(JsonElement schedulingLabels) {
+    Map<String, List<String>> dimensions = new HashMap<>();
+    if (schedulingLabels != null
+        && !schedulingLabels.isJsonNull()
+        && schedulingLabels.isJsonObject()) {
+      JsonObject schedulingLabelsJsonObject = schedulingLabels.getAsJsonObject();
+      JsonElement dimensionsElement = schedulingLabelsJsonObject.get("Dimensions");
+      JsonElement stateElement = schedulingLabelsJsonObject.get("State");
+
+      Set<Map.Entry<String, JsonElement>> entries = new HashSet<>();
+      if (dimensionsElement != null && dimensionsElement.isJsonObject()) {
+        entries.addAll(dimensionsElement.getAsJsonObject().entrySet());
+      }
+      if (stateElement != null && stateElement.isJsonObject()) {
+        entries.addAll(stateElement.getAsJsonObject().entrySet());
+      }
+
+      for (Map.Entry<String, JsonElement> entry : entries) {
+        String key = entry.getKey();
+        JsonElement value = entry.getValue();
+        List<String> values = new ArrayList<>();
+        if (value.isJsonArray()) {
+          JsonArray array = value.getAsJsonArray();
+          for (int i = 0; i < array.size(); i++) {
+            JsonElement element = array.get(i);
+            if (element != null && element.isJsonPrimitive()) {
+              values.add(element.getAsString());
+            }
+          }
+        } else if (value.isJsonPrimitive()) {
+          values.add(value.getAsString());
+        }
+        if (!values.isEmpty()) {
+          dimensions.put(key, values);
+        }
+      }
+    }
+    return dimensions;
   }
 
   public String getDeviceDutState(String deviceId)
