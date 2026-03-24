@@ -19,10 +19,7 @@ load("@rules_java//java:defs.bzl", "java_library")
 
 java_library(
     name = "device_daemon_apk_info",
-    visibility = [
-        "//:deviceinfra_all_pkg",
-        "//:omnilab_fusion",
-    ],
+    visibility = ["//:deviceinfra_all_pkg"],
     exports = [
         ":device_daemon_apk_info_interface",
         ":device_daemon_apk_info_provider",
