@@ -39,6 +39,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 /**
@@ -77,6 +79,11 @@ public class AndroidProcessUtil {
   /** ADB shell dumpsys command for dumping service info. Should fill with: package name. */
   @VisibleForTesting
   static final String ADB_SHELL_TEMPLATE_DUMP_SYS_SERVICE = "dumpsys activity services -p %s";
+
+  /** ADB shell command for finding the main launcher activity. Should fill with: package name. */
+  @VisibleForTesting
+  static final String ADB_SHELL_TEMPLATE_RESOLVE_ACTIVITY =
+      "cmd package resolve-activity --brief -c android.intent.category.LAUNCHER %s";
 
   /** ADB shell command for checking state of a specific service */
   @VisibleForTesting static final String ADB_SHELL_TEMPLATE_SERVICE_CHECK = "service check %s";
@@ -256,6 +263,49 @@ public class AndroidProcessUtil {
           AndroidErrorId.ANDROID_PROCESS_DUMPSYS_SERVICE_ERROR, e.getMessage(), e);
     }
     return output.contains("packageName=" + packageName);
+  }
+
+  /**
+   * Resolves the default launch activity for a package.
+   *
+   * @param serial device serial number
+   * @param packageName package name to resolve activity for
+   * @return activity name
+   * @throws MobileHarnessException if activity resolution fails or no launch activity is found
+   * @throws InterruptedException if command execution is interrupted
+   */
+  public String resolveDefaultActivity(String serial, String packageName)
+      throws MobileHarnessException, InterruptedException {
+    String command = String.format(ADB_SHELL_TEMPLATE_RESOLVE_ACTIVITY, packageName);
+
+    // Expected output:
+    // priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=true
+    // com.google.android.youtube.tv/com.google.android.apps.youtube.tv.activity.ShellActivity
+    String output;
+    try {
+      output = adb.runShellWithRetry(serial, command);
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PROCESS_RESOLVE_ACTIVITY_ERROR,
+          "Failed to execute resolve-activity command for package " + packageName,
+          e);
+    }
+    if (output.contains("No activity found") || output.trim().isEmpty()) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PROCESS_RESOLVE_ACTIVITY_ERROR,
+          "No launch activity found for package " + packageName);
+    }
+
+    Pattern pattern = Pattern.compile(Pattern.quote(packageName) + "/([^\\s/]+)");
+    Matcher matcher = pattern.matcher(output);
+
+    if (matcher.find()) {
+      return matcher.group(1);
+    } else {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PROCESS_RESOLVE_ACTIVITY_ERROR,
+          "Failed to parse resolve-activity output: " + output);
+    }
   }
 
   /**
