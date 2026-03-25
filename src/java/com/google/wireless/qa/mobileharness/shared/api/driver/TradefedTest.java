@@ -54,6 +54,9 @@ import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDir
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedTestModuleResultsMessage;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo.TradefedInvocation;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil.XtsTradefedRuntimeInfoFileDetail;
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -131,6 +134,10 @@ public class TradefedTest extends BaseDriver
   private static final String TF_AGENT_RESOURCE_PATH =
       "/com/google/devtools/mobileharness/platform/android/xts/agent/tradefed_invocation_agent_deploy.jar";
 
+  /** Error identifiers from Tradefed that should trigger a device provisioning/repair. */
+  private static final ImmutableSet<String> PROVISION_TRIGGER_ERROR_IDS =
+      ImmutableSet.of("DEVICE_UNAVAILABLE", "DEVICE_UNRESPONSIVE", "ERROR_AFTER_FLASHING");
+
   private final CommandExecutor cmdExecutor;
   private final LocalFileUtil localFileUtil;
   private final SystemUtil systemUtil;
@@ -143,9 +150,12 @@ public class TradefedTest extends BaseDriver
   private final ResUtil resUtil;
   private final Clock clock;
   private final XtsCommandUtil xtsCommandUtil;
+  private final XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil;
   private final String testId;
   private TradefedRunStrategy tradefedRunStrategy;
   private final TestMessageUtil testMessageUtil;
+
+  private final AtomicBoolean deviceErrorForProvisioningDetected = new AtomicBoolean(false);
 
   private final Object tfProcessLock = new Object();
 
@@ -171,6 +181,7 @@ public class TradefedTest extends BaseDriver
       ResUtil resUtil,
       Clock clock,
       XtsCommandUtil xtsCommandUtil,
+      XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil,
       TestMessageUtil testMessageUtil) {
     super(device, testInfo);
     this.cmdExecutor = cmdExecutor;
@@ -188,11 +199,13 @@ public class TradefedTest extends BaseDriver
     this.resUtil = resUtil;
     this.clock = clock;
     this.xtsCommandUtil = xtsCommandUtil;
+    this.xtsTradefedRuntimeInfoFileUtil = xtsTradefedRuntimeInfoFileUtil;
     this.testMessageUtil = testMessageUtil;
   }
 
   @Override
   public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    deviceErrorForProvisioningDetected.set(false);
     TradefedTestDriverSpec spec = testInfo.jobInfo().combinedSpec(this);
     String xtsType = Strings.emptyToNull(spec.getXtsType());
     tradefedRunStrategy =
@@ -234,9 +247,54 @@ public class TradefedTest extends BaseDriver
       setTestResult(testInfo, tfExitCode.orElse(null));
       addTestResultPropertiesToJob(workDir, xtsType, testInfo);
     } finally {
+      handleDeviceErrorForProvisioning(testInfo);
       scheduledThreadPool.shutdown();
       CompositeDeviceUtil.uncacheTestbed(getDevice());
       postTest(workDir, testInfo);
+    }
+  }
+
+  private void handleDeviceErrorForProvisioning(TestInfo testInfo) {
+    if (Flags.instance().enableXtsTradefedInvocationAgent.getNonNull()) {
+      checkDeviceErrorFromRuntimeInfo(testInfo);
+    }
+    if (deviceErrorForProvisioningDetected.get()) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("Device error detected during Tradefed invocation. Signal for provision.");
+      testInfo.properties().add("device_error_for_provisioning_detected", "true");
+      testInfo.properties().add("needs_provision_repair", "true");
+    }
+  }
+
+  private void checkDeviceErrorFromRuntimeInfo(TestInfo testInfo) {
+    try {
+      Path runtimeInfoFilePath =
+          Path.of(testInfo.getGenFileDir()).resolve(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_NAME);
+      if (!localFileUtil.isFileExist(runtimeInfoFilePath)) {
+        return;
+      }
+
+      Optional<XtsTradefedRuntimeInfoFileDetail> fileDetail =
+          xtsTradefedRuntimeInfoFileUtil.readInfo(
+              runtimeInfoFilePath, /* lastModifiedTime= */ null);
+
+      if (fileDetail.isPresent()) {
+        List<TradefedInvocation> invocations = fileDetail.get().runtimeInfo().invocations();
+        for (TradefedInvocation invocation : invocations) {
+          String errorMessage = invocation.errorMessage();
+          if (!errorMessage.isEmpty()
+              && PROVISION_TRIGGER_ERROR_IDS.stream().anyMatch(errorMessage::contains)) {
+            deviceErrorForProvisioningDetected.set(true);
+            return;
+          }
+        }
+      }
+    } catch (MobileHarnessException | IOException | RuntimeException | Error e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to read Tradefed runtime info of test %s", testInfo.locator().getId());
     }
   }
 
@@ -536,15 +594,19 @@ public class TradefedTest extends BaseDriver
           "Failed to operate TF output file " + tfOutputPath,
           e);
     } catch (CommandFailureException e) {
+      String message = e.getMessage();
+      if (PROVISION_TRIGGER_ERROR_IDS.stream().anyMatch(message::contains)) {
+        deviceErrorForProvisioningDetected.set(true);
+      }
       testInfo
           .resultWithCause()
           .setNonPassing(
               TestResult.ERROR,
               MobileHarnessExceptionFactory.createUserFacingException(
                   AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR,
-                  "Failed to run Tradefed command: " + e.getMessage(),
+                  "Failed to run Tradefed command: " + message,
                   e));
-      return Optional.of(e.result().exitCode());
+      return Optional.ofNullable(e.result()).map(CommandResult::exitCode);
     } catch (CommandTimeoutException e) {
       testInfo
           .resultWithCause()
@@ -554,7 +616,7 @@ public class TradefedTest extends BaseDriver
                   AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_TIMEOUT,
                   "Tradefed run command timed out.",
                   e));
-      return Optional.of(e.result().exitCode());
+      return Optional.ofNullable(e.result()).map(CommandResult::exitCode);
     } catch (InterruptedException e) {
       testInfo.log().atWarning().alsoTo(logger).log("Tradefed was interrupted.");
       throw e;

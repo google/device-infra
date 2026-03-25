@@ -271,6 +271,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_command_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_constants",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/runtime:xts_tradefed_runtime_info",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/runtime:xts_tradefed_runtime_info_file_util",
         "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
