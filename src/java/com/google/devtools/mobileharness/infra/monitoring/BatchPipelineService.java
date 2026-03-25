@@ -60,8 +60,8 @@ public class BatchPipelineService<T extends Message> extends AbstractScheduledSe
 
   @Override
   protected void shutDown() throws MobileHarnessException {
-    puller.tearDown();
     pusher.tearDown();
+    puller.tearDown();
   }
 
   @Override
