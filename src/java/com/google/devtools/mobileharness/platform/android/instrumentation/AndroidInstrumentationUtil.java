@@ -912,7 +912,11 @@ public class AndroidInstrumentationUtil {
           if (isMultiUserSpecialCase && !skipClearMediaProviderForMultiUserCase) {
             // Based on b/406931839#comment3, try to force sync. But for case in b/447394794, users
             // want to skip this step.
-            String forceSyncCommand = "pm clear com.google.android.providers.media.module";
+            String forceSyncCommand =
+                "pm clear "
+                    + (sdkVersion <= AndroidVersion.ANDROID_12L.getEndSdkVersion()
+                        ? "com.android.providers.media.module"
+                        : "com.google.android.providers.media.module");
             try {
               String output = adb.runShell(serial, forceSyncCommand);
               logger.atInfo().log(
