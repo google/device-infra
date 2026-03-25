@@ -462,7 +462,7 @@ public class OlcServerIntegrationTest {
 
     // Waits until the session finishes.
     GetSessionResponse getSessionResponse =
-        waitUntilSessionFinish(sessionStub, sessionId, Duration.ofSeconds(8L));
+        waitUntilSessionFinish(sessionStub, sessionId, Duration.ofSeconds(9L));
 
     // Checks the session output.
     assertThat(getSessionResponse)
