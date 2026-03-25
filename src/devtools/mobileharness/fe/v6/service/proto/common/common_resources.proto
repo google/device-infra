@@ -35,3 +35,15 @@ message DeviceDimension {
   string name = 1;
   string value = 2;
 }
+
+// State of an action button.
+message ActionButtonState {
+  // whether the button is enabled
+  bool enabled = 1;
+  // whether the button is visible
+  bool visible = 2;
+  // tooltip of the button when hovered
+  string tooltip = 3;
+  // whether the button is ready to show to users
+  bool is_ready = 4;
+}

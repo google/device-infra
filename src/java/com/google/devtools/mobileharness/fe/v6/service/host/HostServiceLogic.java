@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.fe.v6.service.host;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.CanRolloutRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.CanRolloutResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionHostRequest;
@@ -84,4 +86,6 @@ public interface HostServiceLogic {
   ListenableFuture<RestartLabServerResponse> restartLabServer(RestartLabServerRequest request);
 
   ListenableFuture<StopLabServerResponse> stopLabServer(StopLabServerRequest request);
+
+  ListenableFuture<CanRolloutResponse> canRollout(CanRolloutRequest request);
 }
