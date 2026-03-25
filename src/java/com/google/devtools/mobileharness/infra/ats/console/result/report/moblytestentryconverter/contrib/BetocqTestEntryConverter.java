@@ -35,7 +35,16 @@ import java.util.Optional;
 public class BetocqTestEntryConverter implements MoblyTestEntryConverter {
 
   private static final ImmutableSet<String> FAILURE_TERMINATION_SIGNAL_TYPES =
-      ImmutableSet.of("TestAbortAll", "ProtocolError");
+      ImmutableSet.of(
+          "TestAbortAll",
+          "ProtocolError",
+          "AdbError",
+          "WifiApNotReadyError",
+          "PythonVersionError",
+          "DeviceRegistrationError",
+          "UnrootedDeviceError",
+          "MissingConfigError",
+          "SnippetDisconnectionError");
 
   public BetocqTestEntryConverter() {}
 
