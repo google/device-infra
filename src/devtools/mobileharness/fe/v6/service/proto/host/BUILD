@@ -45,6 +45,7 @@ proto_library(
     deps = [
         ":host_resources_proto",
         "@googleapis//google/api:annotations_proto",
+        "@protobuf//:timestamp_proto",
     ],
 )
 

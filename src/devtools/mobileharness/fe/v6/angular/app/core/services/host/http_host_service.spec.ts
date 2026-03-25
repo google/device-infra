@@ -6,7 +6,18 @@ import {
 import {TestBed} from '@angular/core/testing';
 
 import {APP_DATA, AppData} from '../../models/app_data';
-import {DeviceSummary, HostOverview} from '../../models/host_overview';
+import {
+  DecommissionHostResponse,
+  GetHostDebugInfoResponse,
+  HostHeaderInfo,
+  HostReleaseConfig,
+  PopularFlag,
+} from '../../models/host_action';
+import {
+  DeviceSummary,
+  HostOverview,
+  HostOverviewPageData,
+} from '../../models/host_overview';
 
 import {HOST_SERVICE} from './host_service';
 import {HttpHostService} from './http_host_service';
@@ -17,6 +28,7 @@ describe('HttpHostService', () => {
   const mockAppData: AppData = {
     labConsoleServerUrl: 'http://testdomain.com',
   } as AppData;
+
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
@@ -32,25 +44,53 @@ describe('HttpHostService', () => {
     service = TestBed.inject(HOST_SERVICE) as HttpHostService;
     httpMock = TestBed.inject(HttpTestingController);
   });
+
   afterEach(() => {
     httpMock.verify();
   });
+
   it('should be created', () => {
     expect(service).toBeTruthy();
   });
-  it('should retrieve a host overview', () => {
-    const mockHostOverview: HostOverview = {
+
+  it('should retrieve a host header info', () => {
+    const mockHeaderInfo: HostHeaderInfo = {
       hostName: 'test-host',
-      // Add other properties as needed
-    } as HostOverview;
+      actions: {
+        configuration: {enabled: true, visible: true, tooltip: ''},
+        debug: {enabled: true, visible: true, tooltip: ''},
+        deploy: {enabled: true, visible: true, tooltip: ''},
+        start: {enabled: true, visible: true, tooltip: ''},
+        restart: {enabled: true, visible: true, tooltip: ''},
+        stop: {enabled: true, visible: true, tooltip: ''},
+        decommission: {enabled: false, visible: true, tooltip: ''},
+        updatePassThroughFlags: {enabled: true, visible: true, tooltip: ''},
+        release: {enabled: true, visible: true, tooltip: ''},
+      },
+    };
+    service.getHostHeaderInfo('test-host').subscribe((info) => {
+      expect(info).toEqual(mockHeaderInfo);
+    });
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/hosts/test-host/header-info',
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush(mockHeaderInfo);
+  });
+
+  it('should retrieve a host overview', () => {
+    const mockOverviewData: HostOverviewPageData = {
+      headerInfo: {hostName: 'test-host'} as HostHeaderInfo,
+      overviewContent: {hostName: 'test-host'} as HostOverview,
+    };
     service.getHostOverview('test-host').subscribe((overview) => {
-      expect(overview).toEqual(mockHostOverview);
+      expect(overview).toEqual(mockOverviewData);
     });
     const req = httpMock.expectOne(
       'http://testdomain.com/v6/hosts/test-host/overview',
     );
     expect(req.request.method).toBe('GET');
-    req.flush(mockHostOverview);
+    req.flush(mockOverviewData);
   });
 
   it('should retrieve host device summaries', () => {
@@ -67,14 +107,76 @@ describe('HttpHostService', () => {
     req.flush({deviceSummaries: mockDeviceSummaries});
   });
 
-  it('should update pass through flags via POST to correct URL', () => {
-    service.updatePassThroughFlags('test-host', '--flag').subscribe();
+  it('should retrieve host debug info', () => {
+    const mockDebugInfo: GetHostDebugInfoResponse = {
+      results: [],
+      timestamp: '2025-11-19T14:59:33Z',
+    };
+    service.getHostDebugInfo('test-host').subscribe((info) => {
+      expect(info).toEqual(mockDebugInfo);
+    });
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/hosts/test-host/debug-info',
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush(mockDebugInfo);
+  });
 
+  it('should retrieve popular flags', () => {
+    const mockPopularFlags: PopularFlag[] = [{name: 'flag1'} as PopularFlag];
+    service.getPopularFlags('test-host').subscribe((flags) => {
+      expect(flags).toEqual(mockPopularFlags);
+    });
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/hosts/test-host/popular-flags',
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush(mockPopularFlags);
+  });
+
+  it('should update pass-through flags', () => {
+    service.updatePassThroughFlags('test-host', '--new-flag').subscribe();
     const req = httpMock.expectOne(
       'http://testdomain.com/v6/hosts/test-host/updatePassThroughFlags',
     );
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({flags: '--flag'});
+    expect(req.request.body).toEqual({flags: '--new-flag'});
+    req.flush({});
+  });
+
+  it('should retrieve release configs', () => {
+    const mockConfigs: HostReleaseConfig[] = [
+      {name: 'config1'} as HostReleaseConfig,
+    ];
+    service.getReleaseConfigs('test-host').subscribe((configs) => {
+      expect(configs).toEqual(mockConfigs);
+    });
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/hosts/test-host/release-configs',
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush(mockConfigs);
+  });
+
+  it('should decommission host', () => {
+    const mockResponse: DecommissionHostResponse = {};
+    service.decommissionHost('test-host').subscribe((res) => {
+      expect(res).toEqual(mockResponse);
+    });
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/hosts/test-host:decommission',
+    );
+    expect(req.request.method).toBe('POST');
+    req.flush(mockResponse);
+  });
+
+  it('should decommission missing devices', () => {
+    service.decommissionMissingDevices('test-host', ['device-1']).subscribe();
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/hosts/test-host/decommissionMissingDevices',
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({deviceControlIds: ['device-1']});
     req.flush({});
   });
 });

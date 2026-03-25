@@ -7,6 +7,7 @@ const overview: HostOverview = {
   hostName: 'host-f-6.example.com',
   ip: '192.168.5.105',
   os: 'gLinux',
+    canUpgrade: false,
   labTypeDisplayNames: ['Satellite Lab', 'M&M', 'Shared Lab'],
   labServer: {
     connectivity: {

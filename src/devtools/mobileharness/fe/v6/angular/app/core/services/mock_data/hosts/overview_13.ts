@@ -7,6 +7,7 @@ const overview: HostOverview = {
   hostName: 'decommission-test-host.prod.example.com',
   ip: '192.168.13.113',
   os: 'gLinux',
+    canUpgrade: false,
   labTypeDisplayNames: ['Satellite Lab'],
   labServer: {
     connectivity: {

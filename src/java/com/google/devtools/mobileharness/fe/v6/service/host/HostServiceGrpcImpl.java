@@ -20,12 +20,22 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionHostRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionHostResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionMissingDevicesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionMissingDevicesResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDebugInfoRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDebugInfoResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostHeaderInfoRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverview;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetPopularFlagsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetPopularFlagsResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetReleaseConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetReleaseConfigsResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostServiceGrpc;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesResponse;
@@ -47,8 +57,20 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
   }
 
   @Override
+  public void getHostHeaderInfo(
+      GetHostHeaderInfoRequest request, StreamObserver<HostHeaderInfo> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::getHostHeaderInfo,
+        executor,
+        HostServiceGrpc.getServiceDescriptor(),
+        HostServiceGrpc.getGetHostHeaderInfoMethod());
+  }
+
+  @Override
   public void getHostOverview(
-      GetHostOverviewRequest request, StreamObserver<HostOverview> responseObserver) {
+      GetHostOverviewRequest request, StreamObserver<HostOverviewPageData> responseObserver) {
     GrpcServiceUtil.invokeAsync(
         request,
         responseObserver,
@@ -72,6 +94,30 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
   }
 
   @Override
+  public void getHostDebugInfo(
+      GetHostDebugInfoRequest request, StreamObserver<GetHostDebugInfoResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::getHostDebugInfo,
+        executor,
+        HostServiceGrpc.getServiceDescriptor(),
+        HostServiceGrpc.getGetHostDebugInfoMethod());
+  }
+
+  @Override
+  public void getPopularFlags(
+      GetPopularFlagsRequest request, StreamObserver<GetPopularFlagsResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::getPopularFlags,
+        executor,
+        HostServiceGrpc.getServiceDescriptor(),
+        HostServiceGrpc.getGetPopularFlagsMethod());
+  }
+
+  @Override
   public void updatePassThroughFlags(
       UpdatePassThroughFlagsRequest request,
       StreamObserver<UpdatePassThroughFlagsResponse> responseObserver) {
@@ -82,6 +128,19 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
         executor,
         HostServiceGrpc.getServiceDescriptor(),
         HostServiceGrpc.getUpdatePassThroughFlagsMethod());
+  }
+
+  @Override
+  public void getReleaseConfigs(
+      GetReleaseConfigsRequest request,
+      StreamObserver<GetReleaseConfigsResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::getReleaseConfigs,
+        executor,
+        HostServiceGrpc.getServiceDescriptor(),
+        HostServiceGrpc.getGetReleaseConfigsMethod());
   }
 
   @Override
@@ -121,5 +180,17 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
         executor,
         HostServiceGrpc.getServiceDescriptor(),
         HostServiceGrpc.getRemoteControlDevicesMethod());
+  }
+
+  @Override
+  public void decommissionHost(
+      DecommissionHostRequest request, StreamObserver<DecommissionHostResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::decommissionHost,
+        executor,
+        HostServiceGrpc.getServiceDescriptor(),
+        HostServiceGrpc.getDecommissionHostMethod());
   }
 }

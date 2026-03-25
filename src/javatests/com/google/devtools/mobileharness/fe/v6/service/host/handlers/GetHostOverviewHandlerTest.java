@@ -42,6 +42,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.DiagnosticLink
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DiagnosticLink.Category;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverview;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
@@ -94,9 +95,9 @@ public final class GetHostOverviewHandlerTest {
 
   @Test
   public void getHostOverview_noData_returnsUnknown() throws Exception {
-    ListenableFuture<HostOverview> result = getHostOverviewHandler.getHostOverview(REQUEST);
+    ListenableFuture<HostOverviewPageData> result = getHostOverviewHandler.getHostOverview(REQUEST);
 
-    HostOverview overview = Futures.getDone(result);
+    HostOverview overview = Futures.getDone(result).getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Unknown");
     assertThat(overview.getHostName()).isEqualTo(HOST_NAME);
   }
@@ -109,7 +110,8 @@ public final class GetHostOverviewHandlerTest {
                 Optional.of(
                     HostReleaseInfo.builder().setLabType(Optional.of("FUSION_LAB")).build())));
 
-    HostOverview overview = Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST));
+    HostOverview overview =
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST)).getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Fusion Lab");
   }
 
@@ -121,7 +123,8 @@ public final class GetHostOverviewHandlerTest {
                 Optional.of(
                     HostReleaseInfo.builder().setLabType(Optional.of("SHARED_LAB")).build())));
 
-    HostOverview overview = Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST));
+    HostOverview overview =
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST)).getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Core Lab");
   }
 
@@ -129,7 +132,8 @@ public final class GetHostOverviewHandlerTest {
   public void getHostOverview_labType_core_fromProp() throws Exception {
     mockLabInfoWithProperty("lab_type", "core");
 
-    HostOverview overview = Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST));
+    HostOverview overview =
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST)).getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Core Lab");
   }
 
@@ -137,7 +141,8 @@ public final class GetHostOverviewHandlerTest {
   public void getHostOverview_labType_slaas() throws Exception {
     mockLabInfoWithProperty("lab_type", "slaas");
 
-    HostOverview overview = Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST));
+    HostOverview overview =
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST)).getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Satellite Lab (SLaaS)");
   }
 
@@ -145,7 +150,8 @@ public final class GetHostOverviewHandlerTest {
   public void getHostOverview_labType_satellite_fromProp() throws Exception {
     mockLabInfoWithProperty("lab_type", "satellite");
 
-    HostOverview overview = Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST));
+    HostOverview overview =
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST)).getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Satellite Lab");
   }
 
@@ -157,7 +163,8 @@ public final class GetHostOverviewHandlerTest {
                 Optional.of(
                     HostReleaseInfo.builder().setLabType(Optional.of("MH_ATE_LAB")).build())));
 
-    HostOverview overview = Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST));
+    HostOverview overview =
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST)).getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList())
         .containsExactly("Satellite Lab", "ATE Lab")
         .inOrder();
@@ -173,7 +180,8 @@ public final class GetHostOverviewHandlerTest {
                         .setLabType(Optional.of("RIEMANN_FIELD_LAB"))
                         .build())));
 
-    HostOverview overview = Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST));
+    HostOverview overview =
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST)).getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList())
         .containsExactly("Satellite Lab", "Riemann Field Lab")
         .inOrder();
@@ -207,7 +215,8 @@ public final class GetHostOverviewHandlerTest {
             .build();
     when(labInfoProvider.getLabInfoAsync(any(), any())).thenReturn(immediateFuture(response));
 
-    HostOverview overview = Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST));
+    HostOverview overview =
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST)).getOverviewContent();
 
     assertThat(overview.getIp()).isEqualTo("1.2.3.4");
     assertThat(overview.getOs()).isEqualTo("Linux");
@@ -221,7 +230,8 @@ public final class GetHostOverviewHandlerTest {
     when(hostAuxiliaryInfoProvider.getPassThroughFlags(eq(HOST_NAME)))
         .thenReturn(immediateFuture(Optional.of(passThroughFlags)));
 
-    HostOverview overview = Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST));
+    HostOverview overview =
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST)).getOverviewContent();
 
     assertThat(overview.getLabServer().getPassThroughFlags()).isEqualTo(passThroughFlags);
   }
@@ -257,7 +267,8 @@ public final class GetHostOverviewHandlerTest {
                         .setCategory(Category.OVERVIEW)
                         .build())));
 
-    HostOverview overview = Futures.getDone(getHostOverviewHandler.getHostOverview(mtaasRequest));
+    HostOverview overview =
+        Futures.getDone(getHostOverviewHandler.getHostOverview(mtaasRequest)).getOverviewContent();
 
     assertThat(overview.getDiagnosticLinksList()).hasSize(3);
 
@@ -288,8 +299,9 @@ public final class GetHostOverviewHandlerTest {
                 ImmutableList.of(DiagnosticLink.newBuilder().setLabel("View STATUSZ").build())));
     HostOverview overview1 =
         Futures.getDone(
-            getHostOverviewHandler.getHostOverview(
-                GetHostOverviewRequest.newBuilder().setHostName(mtaasHost).build()));
+                getHostOverviewHandler.getHostOverview(
+                    GetHostOverviewRequest.newBuilder().setHostName(mtaasHost).build()))
+            .getOverviewContent();
     assertThat(
             overview1.getDiagnosticLinksList().stream()
                 .anyMatch(link -> link.getLabel().equals("View STATUSZ")))
@@ -306,8 +318,9 @@ public final class GetHostOverviewHandlerTest {
         .thenReturn(immediateFuture(ImmutableList.of()));
     HostOverview overview2 =
         Futures.getDone(
-            getHostOverviewHandler.getHostOverview(
-                GetHostOverviewRequest.newBuilder().setHostName(otherHost).build()));
+                getHostOverviewHandler.getHostOverview(
+                    GetHostOverviewRequest.newBuilder().setHostName(otherHost).build()))
+            .getOverviewContent();
     assertThat(
             overview2.getDiagnosticLinksList().stream()
                 .anyMatch(link -> link.getLabel().equals("View STATUSZ")))
@@ -323,8 +336,9 @@ public final class GetHostOverviewHandlerTest {
         .thenReturn(immediateFuture(ImmutableList.of()));
     HostOverview overview3 =
         Futures.getDone(
-            getHostOverviewHandler.getHostOverview(
-                GetHostOverviewRequest.newBuilder().setHostName(mtaasHost).build()));
+                getHostOverviewHandler.getHostOverview(
+                    GetHostOverviewRequest.newBuilder().setHostName(mtaasHost).build()))
+            .getOverviewContent();
     assertThat(
             overview3.getDiagnosticLinksList().stream()
                 .anyMatch(link -> link.getLabel().equals("View STATUSZ")))
@@ -336,7 +350,8 @@ public final class GetHostOverviewHandlerTest {
     when(environment.isGoogleInternal()).thenReturn(false);
     mockLabInfoWithIp("1.2.3.4");
 
-    HostOverview overview = Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST));
+    HostOverview overview =
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST)).getOverviewContent();
 
     assertThat(overview.getDiagnosticLinksList()).isEmpty();
   }

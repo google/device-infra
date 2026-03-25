@@ -41,8 +41,11 @@ import com.google.devtools.mobileharness.fe.v6.service.host.util.LabActivities;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DiagnosticLink;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostActions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostConnectivityStatus;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverview;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
@@ -71,7 +74,7 @@ public final class GetHostOverviewHandler {
     this.executor = executor;
   }
 
-  public ListenableFuture<HostOverview> getHostOverview(GetHostOverviewRequest request) {
+  public ListenableFuture<HostOverviewPageData> getHostOverview(GetHostOverviewRequest request) {
     logger.atInfo().log("Getting host overview for %s", request.getHostName());
     String hostName = request.getHostName();
 
@@ -106,8 +109,25 @@ public final class GetHostOverviewHandler {
                       .map(LabData::getLabInfo)
                       .findFirst();
 
-              return buildHostOverview(
-                  hostName, labInfoOpt, hostReleaseInfoOpt, passThroughFlagsOpt, diagnosticLinks);
+              HostOverview overview =
+                  buildHostOverview(
+                      hostName,
+                      labInfoOpt,
+                      hostReleaseInfoOpt,
+                      passThroughFlagsOpt,
+                      diagnosticLinks);
+
+              // TODO: Implement actual logic for can_upgrade.
+              HostHeaderInfo headerInfo =
+                  HostHeaderInfo.newBuilder()
+                      .setHostName(hostName)
+                      .setActions(HostActions.getDefaultInstance())
+                      .build();
+
+              return HostOverviewPageData.newBuilder()
+                  .setHeaderInfo(headerInfo)
+                  .setOverviewContent(overview)
+                  .build();
             },
             executor);
   }
@@ -156,6 +176,9 @@ public final class GetHostOverviewHandler {
     labInfoOpt.ifPresent(labInfo -> builder.setIp(labInfo.getLabLocator().getIp()));
 
     builder.setOs(properties.getOrDefault("host_os", "Unknown"));
+
+    // TODO: Implement actual logic for can_upgrade.
+    builder.setCanUpgrade(true);
 
     Optional<String> labTypeOpt = hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType);
     return builder

@@ -10,6 +10,7 @@ import {
   TestResultStats,
 } from '../../models/device_stats';
 import {GetHostConfigResult} from '../../models/host_config_models';
+import {HostActions} from '../../models/host_action';
 import {DeviceSummary, HostOverview} from '../../models/host_overview';
 
 /**
@@ -48,4 +49,5 @@ export interface MockHostScenario {
   defaultDeviceConfig: DeviceConfig | null;
   overview?: HostOverview;
   deviceSummaries?: DeviceSummary[];
+  actions?: HostActions;
 }

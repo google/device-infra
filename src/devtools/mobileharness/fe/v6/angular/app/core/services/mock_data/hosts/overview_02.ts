@@ -7,6 +7,7 @@ const overview: HostOverview = {
   hostName: 'host-b-2.example.com',
   ip: '192.168.2.102',
   os: 'gLinux',
+  canUpgrade: true,
   labTypeDisplayNames: ['Satellite Lab'],
   labServer: {
     connectivity: {
@@ -55,7 +56,7 @@ const deviceSummaries: DeviceSummary[] = [
 /** Mock host overview data. */
 export const OVERVIEW_02: MockHostScenario = {
   hostName: 'host-b-2.example.com',
-  scenarioName: 'Overview 2: Unconfigured Satellite Host',
+  scenarioName: 'Overview 2: Unconfigured Satellite Host (Update Pending)',
   overview,
   deviceSummaries,
   hostConfigResult: {
@@ -63,4 +64,15 @@ export const OVERVIEW_02: MockHostScenario = {
     uiStatus: createDefaultUiStatus(),
   },
   defaultDeviceConfig: null,
+  actions: {
+    configuration: {enabled: true, visible: true, tooltip: 'Open configuration'},
+    debug: {enabled: true, visible: true, tooltip: 'Open debug terminal'},
+    deploy: {enabled: true, visible: true, tooltip: 'Deploy new release'},
+    start: {enabled: false, visible: false, tooltip: 'Server already started'},
+    restart: {enabled: true, visible: true, tooltip: 'Restart lab server'},
+    stop: {enabled: true, visible: true, tooltip: 'Stop lab server'},
+    decommission: {enabled: false, visible: true, tooltip: 'Host is not missing'},
+    updatePassThroughFlags: {enabled: true, visible: true, tooltip: 'Edit flags'},
+    release: {enabled: true, visible: true, tooltip: 'View release notes'},
+  },
 };

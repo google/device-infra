@@ -7,6 +7,7 @@
  */
 
 import {HealthState, SubDeviceInfo} from './device_overview';
+import {HostHeaderInfo} from './host_action';
 
 
 /**
@@ -231,6 +232,8 @@ export declare interface HostOverview {
   readonly os: string;
   /** Links to diagnostic tools (logs, statusz, etc.). */
   readonly diagnosticLinks?: DiagnosticLink[];
+  /** Whether a newer release version is available for this host. */
+  readonly canUpgrade: boolean;
 }
 
 /**
@@ -415,5 +418,13 @@ export declare interface RemoteControlDevicesRequest {
  */
 export declare interface RemoteControlDevicesResponse {
   sessions: Array<{deviceId: string; sessionUrl: string}>;
+}
+
+/**
+ * Represents the data needed for the host detail page overview tab.
+ */
+export declare interface HostOverviewPageData {
+  readonly headerInfo: HostHeaderInfo;
+  readonly overviewContent: HostOverview;
 }
 

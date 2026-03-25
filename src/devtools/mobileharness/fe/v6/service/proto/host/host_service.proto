@@ -19,6 +19,7 @@ syntax = "proto3";
 package devtools.mobileharness.fe.v6.service.proto.host;
 
 import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/host/host_resources.proto";
 
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.host";
@@ -27,8 +28,15 @@ option java_outer_classname = "HostServiceProto";
 
 // Service definition for host-related operations.
 service HostService {
+  // Retrieves basic information for host header and action bar.
+  rpc GetHostHeaderInfo(GetHostHeaderInfoRequest) returns (HostHeaderInfo) {
+    option (google.api.http) = {
+      get: "/v6/hosts/{host_name}/header-info"
+    };
+  }
+
   // Retrieves the detailed overview data for a specific host by its name.
-  rpc GetHostOverview(GetHostOverviewRequest) returns (HostOverview) {
+  rpc GetHostOverview(GetHostOverviewRequest) returns (HostOverviewPageData) {
     option (google.api.http) = {
       get: "/v6/hosts/{host_name}/overview"
     };
@@ -42,12 +50,36 @@ service HostService {
     };
   }
 
+  // Retrieves diagnostic information from the host.
+  rpc GetHostDebugInfo(GetHostDebugInfoRequest)
+      returns (GetHostDebugInfoResponse) {
+    option (google.api.http) = {
+      get: "/v6/hosts/{host_name}/debug-info"
+    };
+  }
+
+  // Retrieves popular pass-through flags for a host.
+  rpc GetPopularFlags(GetPopularFlagsRequest)
+      returns (GetPopularFlagsResponse) {
+    option (google.api.http) = {
+      get: "/v6/hosts/{host_name}/popular-flags"
+    };
+  }
+
   // Updates the pass through flags for a specific host.
   rpc UpdatePassThroughFlags(UpdatePassThroughFlagsRequest)
       returns (UpdatePassThroughFlagsResponse) {
     option (google.api.http) = {
       post: "/v6/hosts/{host_name}/updatePassThroughFlags"
       body: "*"
+    };
+  }
+
+  // Retrieves release configurations for a host.
+  rpc GetReleaseConfigs(GetReleaseConfigsRequest)
+      returns (GetReleaseConfigsResponse) {
+    option (google.api.http) = {
+      get: "/v6/hosts/{host_name}/release-configs"
     };
   }
 
@@ -77,6 +109,20 @@ service HostService {
       body: "*"
     };
   }
+
+  // Decommissions a missing host and all its associated devices.
+  rpc DecommissionHost(DecommissionHostRequest)
+      returns (DecommissionHostResponse) {
+    option (google.api.http) = {
+      post: "/v6/hosts/{host_name}:decommission"
+      body: "*"
+    };
+  }
+}
+
+// Request message for GetHostHeaderInfo.
+message GetHostHeaderInfoRequest {
+  string host_name = 1;
 }
 
 // Request message for GetHostOverview.
@@ -97,6 +143,27 @@ message GetHostDeviceSummariesResponse {
   repeated DeviceSummary device_summaries = 1;
 }
 
+// Request message for GetHostDebugInfo.
+message GetHostDebugInfoRequest {
+  string host_name = 1;
+}
+
+// Result of diagnostic command collection.
+message GetHostDebugInfoResponse {
+  repeated CommandResult results = 1;
+  google.protobuf.Timestamp timestamp = 2;
+}
+
+// Request message for GetPopularFlags.
+message GetPopularFlagsRequest {
+  string host_name = 1;
+}
+
+// Response message for GetPopularFlags.
+message GetPopularFlagsResponse {
+  repeated PopularFlag flags = 1;
+}
+
 // Request message for UpdatePassThroughFlags.
 message UpdatePassThroughFlagsRequest {
   // The unique name of the host.
@@ -107,6 +174,16 @@ message UpdatePassThroughFlagsRequest {
 
 // Response message for UpdatePassThroughFlags.
 message UpdatePassThroughFlagsResponse {}
+
+// Request message for GetReleaseConfigs.
+message GetReleaseConfigsRequest {
+  string host_name = 1;
+}
+
+// Response message for GetReleaseConfigs.
+message GetReleaseConfigsResponse {
+  repeated HostReleaseConfig configs = 1;
+}
 
 // Request message for DecommissionMissingDevices.
 message DecommissionMissingDevicesRequest {
@@ -170,3 +247,12 @@ message RemoteControlDevicesResponse {
   }
   repeated SessionResult sessions = 1;
 }
+
+// Request message for DecommissionHost.
+message DecommissionHostRequest {
+  // The unique name of the host.
+  string host_name = 1;
+}
+
+// Response message for DecommissionHost.
+message DecommissionHostResponse {}

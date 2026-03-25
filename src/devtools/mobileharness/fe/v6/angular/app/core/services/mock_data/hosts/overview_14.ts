@@ -7,7 +7,8 @@ const overview: HostOverview = {
   hostName: 'at1-ab7.atc.google.com',
   ip: '2001:4860:1016:3:8aae:ddff:fe0b:a998',
   os: 'Linux',
-  labTypeDisplayNames: ['Satellite Lab', 'ATE Lab', 'Fusion Lab'],
+  labTypeDisplayNames: ['Satellite Lab', 'ATE Lab'],
+  canUpgrade: false,
   labServer: {
     connectivity: {
       state: 'RUNNING',

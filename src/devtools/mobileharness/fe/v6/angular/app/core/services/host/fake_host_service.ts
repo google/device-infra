@@ -2,13 +2,20 @@ import {Injectable} from '@angular/core';
 import {Observable, of, throwError} from 'rxjs';
 
 import {
+  DecommissionHostResponse,
+  GetHostDebugInfoResponse,
+  HostHeaderInfo,
+  HostReleaseConfig,
+  PopularFlag,
+} from '../../models/host_action';
+import {
   CheckRemoteControlEligibilityResponse,
   DeviceEligibilityResult,
   DeviceProxyType,
   DeviceTarget,
   EligibilityStatus,
   GetHostDeviceSummariesResponse,
-  HostOverview,
+  HostOverviewPageData,
   RemoteControlDevicesRequest,
   RemoteControlDevicesResponse,
 } from '../../models/host_overview';
@@ -27,17 +34,55 @@ export class FakeHostService extends HostService {
     super();
   }
 
+  override getHostHeaderInfo(hostName: string): Observable<HostHeaderInfo> {
+    const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    const actions = scenario?.actions || {
+      configuration: {enabled: true, visible: true, tooltip: ''},
+      debug: {enabled: true, visible: true, tooltip: ''},
+      deploy: {enabled: true, visible: true, tooltip: ''},
+      start: {enabled: true, visible: true, tooltip: ''},
+      restart: {enabled: true, visible: true, tooltip: ''},
+      stop: {enabled: true, visible: true, tooltip: ''},
+      decommission: {enabled: false, visible: true, tooltip: ''},
+      updatePassThroughFlags: {enabled: true, visible: true, tooltip: ''},
+      release: {enabled: true, visible: true, tooltip: ''},
+    };
+
+    return of({
+      hostName,
+      actions,
+    });
+  }
+
   /**
    * Retrieves the detailed overview data for a specific host by its name
    * from the mock dataset.
    * @param hostName The name of the host.
-   * @returns An Observable emitting the HostOverview data if found,
+   * @return An Observable emitting the HostOverviewPageData if found,
    *          or an error Observable if not found.
    */
-  override getHostOverview(hostName: string): Observable<HostOverview> {
+  override getHostOverview(hostName: string): Observable<HostOverviewPageData> {
     const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
     if (scenario && scenario.overview) {
-      return of(scenario.overview);
+      const actions = scenario.actions || {
+        configuration: {enabled: true, visible: true, tooltip: ''},
+        debug: {enabled: true, visible: true, tooltip: ''},
+        deploy: {enabled: true, visible: true, tooltip: ''},
+        start: {enabled: true, visible: true, tooltip: ''},
+        restart: {enabled: true, visible: true, tooltip: ''},
+        stop: {enabled: true, visible: true, tooltip: ''},
+        decommission: {enabled: false, visible: true, tooltip: ''},
+        updatePassThroughFlags: {enabled: true, visible: true, tooltip: ''},
+        release: {enabled: true, visible: true, tooltip: ''},
+      };
+
+      return of({
+        headerInfo: {
+          hostName,
+          actions,
+        },
+        overviewContent: scenario.overview,
+      });
     } else {
       return throwError(
         () =>
@@ -58,6 +103,47 @@ export class FakeHostService extends HostService {
     return of({deviceSummaries: []});
   }
 
+  override getHostDebugInfo(
+    hostName: string,
+  ): Observable<GetHostDebugInfoResponse> {
+    return of({
+      results: [
+        {
+          command: 'adb devices -l',
+          stdout: 'List of devices attached\n8070cdc device usb:1-5',
+          stderr: '',
+        },
+        {
+          command: 'lsusb',
+          stdout:
+            'Bus 001 Device 002: ID 18d1:4ee2 Google Inc. Nexus/Pixel Device (MTP + debug)',
+          stderr: '',
+        },
+      ],
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  override getPopularFlags(hostName: string): Observable<PopularFlag[]> {
+    return of([
+      {
+        name: 'No Mute Android',
+        description: 'Disables muting of Android devices',
+        cmd: '--nomute_android',
+      },
+      {
+        name: 'No Binary Log',
+        description: 'Disables binary logging to save space',
+        cmd: '--nobinarylog',
+      },
+      {
+        name: 'Enable Linux Device',
+        description: 'Enables support for Linux devices',
+        cmd: '--enable_linux_device',
+      },
+    ]);
+  }
+
   override updatePassThroughFlags(
     hostName: string,
     flags: string,
@@ -74,6 +160,33 @@ export class FakeHostService extends HostService {
           ),
       );
     }
+  }
+
+  override getReleaseConfigs(
+    hostName: string,
+  ): Observable<HostReleaseConfig[]> {
+    return of([
+      {
+        name: 'MH_SATELLITE_LAB',
+        version: '4.349.0',
+        port: {protocol: 'grpc', portNumber: 9994},
+        syncCMD: [
+          'sudo systemctl stop mobileharness-lab',
+          'sudo /usr/bin/mh_lab_installer --version 4.349.0',
+        ],
+        asyncCMD: ['sudo systemctl start mobileharness-lab'],
+      },
+      {
+        name: 'MH_SATELLITE_LAB',
+        version: '4.348.0',
+        port: {protocol: 'grpc', portNumber: 9994},
+        syncCMD: [
+          'sudo systemctl stop mobileharness-lab',
+          'sudo /usr/bin/mh_lab_installer --version 4.348.0',
+        ],
+        asyncCMD: ['sudo systemctl start mobileharness-lab'],
+      },
+    ]);
   }
 
   override decommissionMissingDevices(
@@ -326,5 +439,19 @@ export class FakeHostService extends HostService {
       })),
     };
     return of(response);
+  }
+
+  override decommissionHost(
+    hostName: string,
+  ): Observable<DecommissionHostResponse> {
+    const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    if (scenario) {
+      // Simulate success if host is found in mock data.
+      return of({});
+    } else {
+      return throwError(
+        () => new Error(`Host with '${hostName}' not found in mock data.`),
+      );
+    }
   }
 }

@@ -4,10 +4,17 @@ import {Observable} from 'rxjs';
 
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
+  DecommissionHostResponse,
+  GetHostDebugInfoResponse,
+  HostHeaderInfo,
+  HostReleaseConfig,
+  PopularFlag,
+} from '../../models/host_action';
+import {
   CheckRemoteControlEligibilityResponse,
   DeviceTarget,
   GetHostDeviceSummariesResponse,
-  HostOverview,
+  HostOverviewPageData,
   RemoteControlDevicesRequest,
   RemoteControlDevicesResponse,
 } from '../../models/host_overview';
@@ -25,8 +32,16 @@ export class HttpHostService extends HostService {
     super();
   }
 
-  override getHostOverview(hostName: string): Observable<HostOverview> {
-    return this.http.get<HostOverview>(`${this.apiUrl}/${hostName}/overview`);
+  override getHostHeaderInfo(hostName: string): Observable<HostHeaderInfo> {
+    return this.http.get<HostHeaderInfo>(
+      `${this.apiUrl}/${hostName}/header-info`,
+    );
+  }
+
+  override getHostOverview(hostName: string): Observable<HostOverviewPageData> {
+    return this.http.get<HostOverviewPageData>(
+      `${this.apiUrl}/${hostName}/overview`,
+    );
   }
 
   override getHostDeviceSummaries(
@@ -34,6 +49,20 @@ export class HttpHostService extends HostService {
   ): Observable<GetHostDeviceSummariesResponse> {
     return this.http.get<GetHostDeviceSummariesResponse>(
       `${this.apiUrl}/${hostName}/devices`,
+    );
+  }
+
+  override getHostDebugInfo(
+    hostName: string,
+  ): Observable<GetHostDebugInfoResponse> {
+    return this.http.get<GetHostDebugInfoResponse>(
+      `${this.apiUrl}/${hostName}/debug-info`,
+    );
+  }
+
+  override getPopularFlags(hostName: string): Observable<PopularFlag[]> {
+    return this.http.get<PopularFlag[]>(
+      `${this.apiUrl}/${hostName}/popular-flags`,
     );
   }
 
@@ -46,6 +75,14 @@ export class HttpHostService extends HostService {
       {
         flags,
       },
+    );
+  }
+
+  override getReleaseConfigs(
+    hostName: string,
+  ): Observable<HostReleaseConfig[]> {
+    return this.http.get<HostReleaseConfig[]>(
+      `${this.apiUrl}/${hostName}/release-configs`,
     );
   }
 
@@ -80,6 +117,15 @@ export class HttpHostService extends HostService {
     return this.http.post<RemoteControlDevicesResponse>(
       `${this.apiUrl}/${hostName}/remoteControlDevices`,
       req,
+    );
+  }
+
+  override decommissionHost(
+    hostName: string,
+  ): Observable<DecommissionHostResponse> {
+    return this.http.post<DecommissionHostResponse>(
+      `${this.apiUrl}/${hostName}:decommission`,
+      {},
     );
   }
 }

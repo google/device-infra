@@ -1,11 +1,17 @@
 import {InjectionToken} from '@angular/core';
 import {Observable} from 'rxjs';
-
+import {
+  DecommissionHostResponse,
+  GetHostDebugInfoResponse,
+  HostHeaderInfo,
+  HostReleaseConfig,
+  PopularFlag,
+} from '../../models/host_action';
 import {
   CheckRemoteControlEligibilityResponse,
   DeviceTarget,
   GetHostDeviceSummariesResponse,
-  HostOverview,
+  HostOverviewPageData,
   RemoteControlDevicesRequest,
   RemoteControlDevicesResponse,
 } from '../../models/host_overview';
@@ -20,9 +26,14 @@ export const HOST_SERVICE = new InjectionToken<HostService>('HostService');
  */
 export abstract class HostService {
   /**
+   * Retrieves basic information for host header and action bar.
+   */
+  abstract getHostHeaderInfo(hostName: string): Observable<HostHeaderInfo>;
+
+  /**
    * Retrieves the detailed overview data for a specific host by its name.
    */
-  abstract getHostOverview(hostName: string): Observable<HostOverview>;
+  abstract getHostOverview(hostName: string): Observable<HostOverviewPageData>;
 
   /**
    * Retrieves device summaries for a specific host.
@@ -32,12 +43,29 @@ export abstract class HostService {
   ): Observable<GetHostDeviceSummariesResponse>;
 
   /**
+   * Retrieves diagnostic information from the host.
+   */
+  abstract getHostDebugInfo(
+    hostName: string,
+  ): Observable<GetHostDebugInfoResponse>;
+
+  /**
+   * Retrieves popular pass-through flags for a host.
+   */
+  abstract getPopularFlags(hostName: string): Observable<PopularFlag[]>;
+
+  /**
    * Updates the pass through flags for a specific host.
    */
   abstract updatePassThroughFlags(
     hostName: string,
     flags: string,
   ): Observable<void>;
+
+  /**
+   * Retrieves release configurations for a host.
+   */
+  abstract getReleaseConfigs(hostName: string): Observable<HostReleaseConfig[]>;
 
   /**
    * Decommissions missing devices on a specific host.
@@ -70,4 +98,13 @@ export abstract class HostService {
     hostName: string,
     req: RemoteControlDevicesRequest,
   ): Observable<RemoteControlDevicesResponse>;
+
+  /**
+   * Decommissions a missing host and all its associated devices.
+   * @param hostName The name of the host.
+   * @return An Observable emitting the DecommissionHostResponse.
+   */
+  abstract decommissionHost(
+    hostName: string,
+  ): Observable<DecommissionHostResponse>;
 }

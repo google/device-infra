@@ -19,12 +19,22 @@ package com.google.devtools.mobileharness.fe.v6.service.host;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionHostRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionHostResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionMissingDevicesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionMissingDevicesResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDebugInfoRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDebugInfoResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostHeaderInfoRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverview;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetPopularFlagsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetPopularFlagsResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetReleaseConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetReleaseConfigsResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsRequest;
@@ -32,13 +42,21 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThro
 
 /** Interface for the core logic of the Host Service. */
 public interface HostServiceLogic {
-  ListenableFuture<HostOverview> getHostOverview(GetHostOverviewRequest request);
+  ListenableFuture<HostHeaderInfo> getHostHeaderInfo(GetHostHeaderInfoRequest request);
+
+  ListenableFuture<HostOverviewPageData> getHostOverview(GetHostOverviewRequest request);
 
   ListenableFuture<GetHostDeviceSummariesResponse> getHostDeviceSummaries(
       GetHostDeviceSummariesRequest request);
 
+  ListenableFuture<GetHostDebugInfoResponse> getHostDebugInfo(GetHostDebugInfoRequest request);
+
+  ListenableFuture<GetPopularFlagsResponse> getPopularFlags(GetPopularFlagsRequest request);
+
   ListenableFuture<UpdatePassThroughFlagsResponse> updatePassThroughFlags(
       UpdatePassThroughFlagsRequest request);
+
+  ListenableFuture<GetReleaseConfigsResponse> getReleaseConfigs(GetReleaseConfigsRequest request);
 
   ListenableFuture<DecommissionMissingDevicesResponse> decommissionMissingDevices(
       DecommissionMissingDevicesRequest request);
@@ -48,4 +66,6 @@ public interface HostServiceLogic {
 
   ListenableFuture<RemoteControlDevicesResponse> remoteControlDevices(
       RemoteControlDevicesRequest request);
+
+  ListenableFuture<DecommissionHostResponse> decommissionHost(DecommissionHostRequest request);
 }

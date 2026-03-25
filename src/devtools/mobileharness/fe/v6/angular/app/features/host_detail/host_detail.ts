@@ -73,8 +73,9 @@ export class HostDetail implements OnInit, OnDestroy {
       }
 
       return this.hostService.getHostOverview(hostName).pipe(
-        map((hostOverview) => ({
-          host: hostOverview,
+        map((hostOverviewPageData) => ({
+          // TODO: Apart from the overview content, we also need to return the header info.
+          host: hostOverviewPageData.overviewContent,
         })),
         catchError((err) => {
           console.error(`Error fetching host ${hostName}:`, err);

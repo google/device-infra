@@ -39,6 +39,7 @@ describe('HostOverview Component', () => {
     },
     os: 'gLinux',
     diagnosticLinks: [],
+    canUpgrade: false,
   };
 
   let fixture: ComponentFixture<HostOverviewPage>;

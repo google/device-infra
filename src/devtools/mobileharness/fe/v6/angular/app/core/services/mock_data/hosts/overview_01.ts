@@ -38,6 +38,7 @@ const overview: HostOverview = {
   hostName: 'host-a-1.example.com',
   ip: '192.168.1.101',
   os: 'gLinux',
+    canUpgrade: false,
   labTypeDisplayNames: [
     'Satellite Lab',
     'SLaaS',

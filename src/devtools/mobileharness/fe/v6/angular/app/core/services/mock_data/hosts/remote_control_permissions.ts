@@ -17,6 +17,7 @@ function createHostOverview(
     hostName: name,
     ip: '192.168.1.1',
     os: 'gLinux',
+    canUpgrade: false,
     labTypeDisplayNames: ['Satellite Lab'],
     labServer: {
       connectivity: {

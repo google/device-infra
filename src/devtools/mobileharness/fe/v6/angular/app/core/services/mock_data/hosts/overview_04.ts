@@ -7,6 +7,7 @@ const overview: HostOverview = {
   hostName: 'host-d-4.example.com',
   ip: '192.168.3.103',
   os: 'gLinux',
+  canUpgrade: false,
   labTypeDisplayNames: ['Satellite Lab'],
   labServer: {
     connectivity: {
@@ -61,7 +62,7 @@ const deviceSummaries: DeviceSummary[] = [
 /** Mock host overview data. */
 export const OVERVIEW_04: MockHostScenario = {
   hostName: 'host-d-4.example.com',
-  scenarioName: 'Overview 4: Offline (Server Stopped)',
+  scenarioName: 'Overview 4: Offline (Server Stopped, Decommission Enabled)',
   overview,
   deviceSummaries,
   hostConfigResult: {
@@ -69,4 +70,15 @@ export const OVERVIEW_04: MockHostScenario = {
     uiStatus: createDefaultUiStatus(),
   },
   defaultDeviceConfig: null,
+  actions: {
+    configuration: {enabled: false, visible: false, tooltip: 'Host is offline'},
+    debug: {enabled: false, visible: false, tooltip: 'Host is offline'},
+    deploy: {enabled: false, visible: false, tooltip: 'Host is offline'},
+    start: {enabled: false, visible: false, tooltip: 'Host is offline'},
+    restart: {enabled: false, visible: false, tooltip: 'Host is offline'},
+    stop: {enabled: false, visible: false, tooltip: 'Host is offline'},
+    decommission: {enabled: true, visible: true, tooltip: 'Remove this host from system'},
+    updatePassThroughFlags: {enabled: false, visible: false, tooltip: 'Host is offline'},
+    release: {enabled: false, visible: false, tooltip: 'Host is offline'},
+  },
 };

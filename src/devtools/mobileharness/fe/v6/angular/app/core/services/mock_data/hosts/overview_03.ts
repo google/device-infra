@@ -7,6 +7,7 @@ const overview: HostOverview = {
   hostName: 'core-host-c-3.example.com',
   ip: '10.0.1.50',
   os: 'gLinux',
+    canUpgrade: false,
   labTypeDisplayNames: ['Core Lab'],
   labServer: {
     connectivity: {

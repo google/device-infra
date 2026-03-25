@@ -23,12 +23,23 @@ import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostDevi
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostOverviewHandler;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionHostRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionHostResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionMissingDevicesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionMissingDevicesResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDebugInfoRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDebugInfoResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostHeaderInfoRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverview;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetPopularFlagsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetPopularFlagsResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetReleaseConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetReleaseConfigsResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostActions;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsRequest;
@@ -52,7 +63,17 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   }
 
   @Override
-  public ListenableFuture<HostOverview> getHostOverview(GetHostOverviewRequest request) {
+  public ListenableFuture<HostHeaderInfo> getHostHeaderInfo(GetHostHeaderInfoRequest request) {
+    // TODO: Implement this method.
+    return immediateFuture(
+        HostHeaderInfo.newBuilder()
+            .setHostName(request.getHostName())
+            .setActions(HostActions.getDefaultInstance())
+            .build());
+  }
+
+  @Override
+  public ListenableFuture<HostOverviewPageData> getHostOverview(GetHostOverviewRequest request) {
     return getHostOverviewHandler.getHostOverview(request);
   }
 
@@ -63,10 +84,30 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   }
 
   @Override
+  public ListenableFuture<GetHostDebugInfoResponse> getHostDebugInfo(
+      GetHostDebugInfoRequest request) {
+    // TODO: Implement this method.
+    return immediateFuture(GetHostDebugInfoResponse.getDefaultInstance());
+  }
+
+  @Override
+  public ListenableFuture<GetPopularFlagsResponse> getPopularFlags(GetPopularFlagsRequest request) {
+    // TODO: Implement this method.
+    return immediateFuture(GetPopularFlagsResponse.getDefaultInstance());
+  }
+
+  @Override
   public ListenableFuture<UpdatePassThroughFlagsResponse> updatePassThroughFlags(
       UpdatePassThroughFlagsRequest request) {
     // TODO: Implement this method.
     return immediateFuture(UpdatePassThroughFlagsResponse.getDefaultInstance());
+  }
+
+  @Override
+  public ListenableFuture<GetReleaseConfigsResponse> getReleaseConfigs(
+      GetReleaseConfigsRequest request) {
+    // TODO: Implement this method.
+    return immediateFuture(GetReleaseConfigsResponse.getDefaultInstance());
   }
 
   @Override
@@ -88,5 +129,12 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
       RemoteControlDevicesRequest request) {
     // TODO: Implement this method.
     return immediateFuture(RemoteControlDevicesResponse.getDefaultInstance());
+  }
+
+  @Override
+  public ListenableFuture<DecommissionHostResponse> decommissionHost(
+      DecommissionHostRequest request) {
+    // TODO: Implement this method.
+    return immediateFuture(DecommissionHostResponse.getDefaultInstance());
   }
 }
