@@ -201,3 +201,117 @@ func TestRxConn_ToFlux_Backpressure(t *testing.T) {
 		t.Fatalf("timeout waiting for 200 bytes, only received %d", received)
 	}
 }
+
+func TestRxConn_Wait_CloseFromFluxFirst(t *testing.T) {
+	clientSide, serverSide := net.Pipe()
+
+	rxConnObj, err := New(serverSide)
+	if err != nil {
+		t.Fatalf("Failed to create rxConn: %v", err)
+	}
+	ctx := t.Context()
+
+	fTo := rxConnObj.ToFlux(ctx)
+
+	stopFrom := make(chan struct{})
+	fFrom := flux.Create(func(subCtx context.Context, sink flux.Sink) {
+		select {
+		case <-subCtx.Done():
+		case <-stopFrom:
+		}
+		sink.Complete()
+	})
+
+	fTo.Subscribe(ctx)
+	go rxConnObj.FromFlux(ctx, fFrom)
+
+	waitDone := make(chan struct{})
+	go func() {
+		rxConnObj.Wait()
+		close(waitDone)
+	}()
+
+	select {
+	case <-waitDone:
+		t.Fatal("Wait() returned prematurely before pumps were stopped")
+	case <-time.After(100 * time.Millisecond):
+		// Expected to block
+	}
+
+	// 1. Close FromFlux only (half-close)
+	close(stopFrom)
+
+	select {
+	case <-waitDone:
+		t.Fatal("Wait() returned prematurely after only FromFlux stopped")
+	case <-time.After(100 * time.Millisecond):
+		// Expected to STILL block since ToFlux is still running
+	}
+
+	// 2. Close ToFlux
+	clientSide.Close()
+
+	select {
+	case <-waitDone:
+		// Success, both are closed
+	case <-time.After(time.Second):
+		t.Fatal("Wait() blocked even after both pumps stopped")
+	}
+}
+
+func TestRxConn_Wait_CloseToFluxFirst(t *testing.T) {
+	clientSide, serverSide := net.Pipe()
+
+	rxConnObj, err := New(serverSide)
+	if err != nil {
+		t.Fatalf("Failed to create rxConn: %v", err)
+	}
+	ctx := t.Context()
+
+	fTo := rxConnObj.ToFlux(ctx)
+
+	stopFrom := make(chan struct{})
+	fFrom := flux.Create(func(subCtx context.Context, sink flux.Sink) {
+		select {
+		case <-subCtx.Done():
+		case <-stopFrom:
+		}
+		sink.Complete()
+	})
+
+	fTo.Subscribe(ctx)
+	go rxConnObj.FromFlux(ctx, fFrom)
+
+	waitDone := make(chan struct{})
+	go func() {
+		rxConnObj.Wait()
+		close(waitDone)
+	}()
+
+	select {
+	case <-waitDone:
+		t.Fatal("Wait() returned prematurely before pumps were stopped")
+	case <-time.After(100 * time.Millisecond):
+		// Expected to block
+	}
+
+	// 1. Close ToFlux only (half-close)
+	clientSide.Close()
+
+	select {
+	case <-waitDone:
+		t.Fatal("Wait() returned prematurely after only ToFlux stopped")
+	case <-time.After(100 * time.Millisecond):
+		// Expected to STILL block since FromFlux is still running
+	}
+
+	// 2. Close FromFlux
+	close(stopFrom)
+
+	select {
+	case <-waitDone:
+		// Success, both are closed
+	case <-time.After(time.Second):
+		t.Fatal("Wait() blocked even after both pumps stopped")
+	}
+}

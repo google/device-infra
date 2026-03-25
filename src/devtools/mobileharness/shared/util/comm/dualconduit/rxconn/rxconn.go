@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"net"
+	"sync"
 
 	"github.com/rsocket/rsocket-go/payload"
 	"github.com/rsocket/rsocket-go/rx/flux"
@@ -14,6 +15,7 @@ import (
 // Conn bridges a standard network connection with reactive streams.
 type Conn struct {
 	conn net.Conn
+	wg   sync.WaitGroup
 }
 
 // New creates a new Conn bridging the active network connection to reactive fluxes.
@@ -31,6 +33,7 @@ func (c *Conn) ToFlux(ctx context.Context) flux.Flux {
 	upstreamChan := make(chan []byte, 32)
 	errChan := make(chan error, 1)
 
+	c.wg.Add(1)
 	return flux.Create(func(subscriberCtx context.Context, sink flux.Sink) {
 		// 1. The TCP Read Pump
 		go func() {
@@ -62,6 +65,7 @@ func (c *Conn) ToFlux(ctx context.Context) flux.Flux {
 
 		// 2. RSocket Flux Generator
 		go func() {
+			defer c.wg.Done()
 			for {
 				select {
 				case <-ctx.Done():
@@ -94,6 +98,7 @@ func (c *Conn) ToFlux(ctx context.Context) flux.Flux {
 
 // FromFlux subscribes to the Flux and writes to the active socket.
 func (c *Conn) FromFlux(ctx context.Context, incomingFlux flux.Flux) {
+	c.wg.Add(1)
 	// The incomingFlux is provided by the RSocket RequestChannel handler
 	incomingFlux.Subscribe(ctx,
 		rx.OnNext(func(p payload.Payload) error {
@@ -110,14 +115,21 @@ func (c *Conn) FromFlux(ctx context.Context, incomingFlux flux.Flux) {
 			return nil
 		}),
 		rx.OnComplete(func() {
+			defer c.wg.Done()
 			// Remote sent EOF via RSocket. We mirror the FIN locally.
 			if cw, ok := c.conn.(interface{ CloseWrite() error }); ok {
 				_ = cw.CloseWrite()
 			}
 		}),
 		rx.OnError(func(err error) {
+			defer c.wg.Done()
 			// Remote dropped abruptly. Kill the local socket.
 			_ = c.conn.Close()
 		}),
 	)
+}
+
+// Wait blocks until both the ToFlux and FromFlux pipes have completed operations.
+func (c *Conn) Wait() {
+	c.wg.Wait()
 }
