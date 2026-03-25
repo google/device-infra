@@ -96,12 +96,15 @@ public class LocalDeviceDispatch {
 
   private final ExternalDeviceManager externalDeviceManager;
 
+  private final java.util.function.Supplier<Boolean> drainingSupplier;
+
   public LocalDeviceDispatch(
       List<Class<? extends Dispatcher>> dispatcherClasses,
       LocalDeviceManager deviceManager,
       ExecutorService threadPool,
       EventBus globalInternalBus,
-      ExternalDeviceManager externalDeviceManager) {
+      ExternalDeviceManager externalDeviceManager,
+      java.util.function.Supplier<Boolean> drainingSupplier) {
     this.dispatcherClasses = ImmutableList.copyOf(dispatcherClasses);
     this.deviceManager = deviceManager;
     this.labStat = StatManager.getInstance().getOrCreateLabStat(LabLocator.LOCALHOST.ip());
@@ -111,6 +114,7 @@ public class LocalDeviceDispatch {
     this.dispatchers = new ArrayList<>();
     this.dispatcherToDevice = new HashMap<>();
     this.externalDeviceManager = externalDeviceManager;
+    this.drainingSupplier = drainingSupplier;
   }
 
   @VisibleForTesting
@@ -120,7 +124,8 @@ public class LocalDeviceDispatch {
       LocalDeviceManager deviceManager,
       ExecutorService threadPool,
       EventBus globalInternalBus,
-      ExternalDeviceManager externalDeviceManager) {
+      ExternalDeviceManager externalDeviceManager,
+      java.util.function.Supplier<Boolean> drainingSupplier) {
     this.dispatcherClasses = ImmutableList.of();
     this.deviceManager = deviceManager;
     this.labStat = StatManager.getInstance().getOrCreateLabStat(LabLocator.LOCALHOST.ip());
@@ -130,6 +135,7 @@ public class LocalDeviceDispatch {
     this.dispatchers = dispatchers;
     this.dispatcherToDevice = dispatcherToDevice;
     this.externalDeviceManager = externalDeviceManager;
+    this.drainingSupplier = drainingSupplier;
   }
 
   @SuppressWarnings("FloggerLogWithCause")
@@ -287,7 +293,8 @@ public class LocalDeviceDispatch {
                 dispatchResult.deviceType(),
                 globalInternalBus,
                 deviceStat,
-                externalDeviceManager);
+                externalDeviceManager,
+                drainingSupplier);
         Future<?> future =
             threadPool.submit(
                 threadRenaming(

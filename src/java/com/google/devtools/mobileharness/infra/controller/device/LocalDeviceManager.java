@@ -98,7 +98,12 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
     this.detectors = detectors;
     this.localDeviceDispatch =
         new LocalDeviceDispatch(
-            dispatchers, this, threadPool, globalInternalEventBus, externalDeviceManager);
+            dispatchers,
+            this,
+            threadPool,
+            globalInternalEventBus,
+            externalDeviceManager,
+            inDrainingMode::get);
     this.keepGoing = keepGoing;
   }
 
