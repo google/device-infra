@@ -34,7 +34,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceActions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceType;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionButtonState;

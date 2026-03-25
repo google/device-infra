@@ -17,7 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
