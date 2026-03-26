@@ -95,6 +95,8 @@ public final class CompatibilityReportParserTest {
                 .setKey("command_line_args")
                 .setValue("cts -s 12241FDD4002Z6")
                 .build(),
+            Attribute.newBuilder().setKey("csr_default").setValue("default").build(),
+            Attribute.newBuilder().setKey("csr_strongbox").setValue("strongbox").build(),
             Attribute.newBuilder()
                 .setKey("device_kernel_info")
                 .setValue(
@@ -169,6 +171,8 @@ public final class CompatibilityReportParserTest {
                 .setKey("command_line_args")
                 .setValue("cts -s 12241FDD4002Z6")
                 .build(),
+            Attribute.newBuilder().setKey("csr_default").setValue("default").build(),
+            Attribute.newBuilder().setKey("csr_strongbox").setValue("strongbox").build(),
             Attribute.newBuilder()
                 .setKey("device_kernel_info")
                 .setValue(

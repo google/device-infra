@@ -51,6 +51,7 @@ public final class XmlConstants {
   public static final String DEVICE_KERNEL_INFO_ATTR = "device_kernel_info";
   public static final String SYSTEM_IMG_INFO_ATTR = "system_img_info";
   public static final String VENDOR_IMG_INFO_ATTR = "vendor_img_info";
+  public static final String ADB_VERSION_ATTR = "adb_version";
 
   // <RunHistory> element
   public static final String RUN_HISTORY_TAG = "RunHistory";

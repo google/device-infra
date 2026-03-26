@@ -256,6 +256,10 @@ public final class CompatibilityReportMergerTest {
                     "google/bramble/bramble:UpsideDownCake/UP1A.220722.002/8859461:userdebug/dev-keys")
                 .addAttribute(
                     Attribute.newBuilder()
+                        .setKey("adb_version")
+                        .setValue("1.0.41 install path: /usr/bin/adb"))
+                .addAttribute(
+                    Attribute.newBuilder()
                         .setKey("device_kernel_info")
                         .setValue(
                             "Linux localhost 5.10.149-android13-4-693040-g6422af733678-ab9739629 #1"
@@ -548,6 +552,34 @@ public final class CompatibilityReportMergerTest {
 
     assertThat(mergedReport).isPresent();
     assertThat(mergedReport.get().getBuild()).isEqualTo(BuildInfo.getDefaultInstance());
+  }
+
+  @Test
+  public void mergeReports_withOneReport_keepsSelectedAttributes() throws Exception {
+    Optional<Result> res =
+        reportMerger.mergeXmlReports(
+            ImmutableList.of(Path.of(CTS_TEST_RESULT_XML)), /* skipDeviceInfo= */ false);
+
+    assertThat(res).isPresent();
+    assertThat(res.get().getBuild().getAttributeList())
+        .containsExactly(
+            Attribute.newBuilder()
+                .setKey("adb_version")
+                .setValue("1.0.41 install path: /usr/bin/adb")
+                .build(),
+            Attribute.newBuilder().setKey("csr_default").setValue("default").build(),
+            Attribute.newBuilder().setKey("csr_strongbox").setValue("strongbox").build(),
+            Attribute.newBuilder()
+                .setKey("device_kernel_info")
+                .setValue(
+                    "Linux localhost 5.10.149-android13-4-693040-g6422af733678-ab9739629 #1"
+                        + " SMP PREEMPT Fri Mar 10 01:44:38 UTC 2023 aarch64 Toybox")
+                .build(),
+            Attribute.newBuilder()
+                .setKey("build_fingerprint")
+                .setValue(
+                    "google/bramble/bramble:UpsideDownCake/UP1A.220722.002/8859461:userdebug/dev-keys")
+                .build());
   }
 
   @Test

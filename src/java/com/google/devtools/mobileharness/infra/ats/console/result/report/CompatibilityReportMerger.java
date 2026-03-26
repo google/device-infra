@@ -82,7 +82,8 @@ public class CompatibilityReportMerger {
       ImmutableSet.of(
           XmlConstants.DEVICE_KERNEL_INFO_ATTR,
           XmlConstants.SYSTEM_IMG_INFO_ATTR,
-          XmlConstants.VENDOR_IMG_INFO_ATTR);
+          XmlConstants.VENDOR_IMG_INFO_ATTR,
+          XmlConstants.ADB_VERSION_ATTR);
 
   private final ListeningExecutorService threadPool;
   private final CompatibilityReportParser reportParser;
@@ -160,8 +161,8 @@ public class CompatibilityReportMerger {
     if (reports.isEmpty()) {
       return Optional.empty();
     } else if (reports.size() == 1) {
-      // No need to merge
-      return Optional.of(reports.get(0));
+      // Update build info but no need to merge
+      return Optional.of(reports.get(0).toBuilder().setBuild(getNewBuildInfo(reports)).build());
     }
 
     ImmutableList.Builder<Run> runs = ImmutableList.builder();
@@ -453,6 +454,7 @@ public class CompatibilityReportMerger {
             .filter(
                 attr ->
                     attr.getKey().startsWith("build_")
+                        || attr.getKey().startsWith("csr_")
                         || EXTRA_BUILD_INFO_ATTR_TO_KEPT.contains(attr.getKey()))
             .collect(toImmutableList());
 
