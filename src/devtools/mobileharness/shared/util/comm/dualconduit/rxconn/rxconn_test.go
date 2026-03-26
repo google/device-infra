@@ -315,3 +315,43 @@ func TestRxConn_Wait_CloseToFluxFirst(t *testing.T) {
 		t.Fatal("Wait() blocked even after both pumps stopped")
 	}
 }
+
+func TestRxConn_ToFlux_ReadTimeout(t *testing.T) {
+	clientSide, serverSide := net.Pipe()
+	defer clientSide.Close()
+	defer serverSide.Close()
+
+	rxConnObj, err := New(serverSide)
+	if err != nil {
+		t.Fatalf("Failed to create rxConn: %v", err)
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+
+	f := rxConnObj.ToFlux(ctx)
+	receivedChan := make(chan string, 1)
+
+	f.Subscribe(ctx, rx.OnNext(func(p payload.Payload) error {
+		receivedChan <- string(p.Data())
+		return nil
+	}))
+
+	// Wait for 1.5 seconds without sending anything to force a read timeout inside ToFlux
+	time.Sleep(1500 * time.Millisecond)
+
+	// Now send data after the timeout occurred
+	go func() {
+		if _, err := clientSide.Write([]byte("after_timeout")); err != nil {
+			t.Errorf("Failed to write to clientSide: %v", err)
+		}
+	}()
+
+	select {
+	case data := <-receivedChan:
+		if data != "after_timeout" {
+			t.Errorf("Got data %q, want %q", data, "after_timeout")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Timeout waiting for data after read timeout recovery")
+	}
+}
