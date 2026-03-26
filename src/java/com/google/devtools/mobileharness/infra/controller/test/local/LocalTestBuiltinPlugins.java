@@ -88,7 +88,7 @@ class LocalTestBuiltinPlugins {
                   "com.google.devtools.mobileharness.platform.android.xts.plugin.XtsDeviceCompatibilityChecker"),
               EventScope.INTERNAL_PLUGIN));
     }
-    if (isMoblyResultstoreUploadEnabled(testInfo)) {
+    if (isMoblyResultstoreUploadEnabled(testInfo.jobInfo())) {
       builtinPluginsBuilder.add(
           PluginItem.create(
               createBuiltinPlugin(
@@ -144,12 +144,12 @@ class LocalTestBuiltinPlugins {
         .orElse(false);
   }
 
-  private static boolean isMoblyResultstoreUploadEnabled(TestInfo testInfo) {
-    return testInfo
-        .jobInfo()
-        .properties()
-        .getBoolean(XtsConstants.IS_MOBLY_RESULTSTORE_UPLOAD_ENABLED)
-        .orElse(false);
+  private static boolean isMoblyResultstoreUploadEnabled(JobInfo jobInfo) {
+    return jobInfo
+            .properties()
+            .getBoolean(XtsConstants.IS_MOBLY_RESULTSTORE_UPLOAD_ENABLED)
+            .orElse(false)
+        || jobInfo.params().getBool(XtsConstants.IS_MOBLY_RESULTSTORE_UPLOAD_ENABLED, false);
   }
 
   private static boolean isAtsFileServerUploaderEnabled(TestInfo testInfo) {
