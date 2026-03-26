@@ -28,7 +28,6 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
     ],
     deps = [
         ":abi",
@@ -75,11 +74,7 @@ java_library(
 java_library(
     name = "abi",
     srcs = ["Abi.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
-    ],
+    visibility = ["//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__"],
     deps = ["//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value"],
 )
 
