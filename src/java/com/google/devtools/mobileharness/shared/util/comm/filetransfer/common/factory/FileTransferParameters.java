@@ -27,9 +27,6 @@ import java.time.Duration;
 @AutoValue
 public abstract class FileTransferParameters {
 
-  /** Default zip timeout. */
-  public static final Duration DEFAULT_ZIP_TIMEOUT = Duration.ofMinutes(10);
-
   /** Default value of parameters. */
   public static final FileTransferParameters DEFAULT = builder().build();
 
@@ -64,7 +61,7 @@ public abstract class FileTransferParameters {
   public static Builder builder() {
     return new AutoValue_FileTransferParameters.Builder()
         .setZipStoreOnly(false)
-        .setZipTimeout(DEFAULT_ZIP_TIMEOUT)
+        .setZipTimeout(FileTransferConstant.getZipTimeout())
         .setUploadShardSize(FileTransferConstant.uploadShardSize())
         .setDownloadShardSize(FileTransferConstant.downloadShardSize())
         .setSmallFileSize(FileTransferConstant.getSmallFileSize())

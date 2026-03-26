@@ -625,6 +625,14 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> cloudFileTransferUploadShardSize = cloudFileTransferUploadShardSizeDefault;
 
+  private static final Flag<Integer> cloudFileTransferZipTimeoutDefault = Flag.value(200);
+
+  @com.beust.jcommander.Parameter(
+      names = "--cloud_file_transfer_zip_timeout",
+      description = "Timeout for zipping files. Default is 10 minutes.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> cloudFileTransferZipTimeout = cloudFileTransferZipTimeoutDefault;
+
   private static final Flag<Integer> cloudFileTransferDownloadShardSizeDefault = Flag.value(200);
 
   @com.beust.jcommander.Parameter(

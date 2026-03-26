@@ -27,6 +27,9 @@ public final class FileTransferConstant {
 
   private static final int KILO_BYTE = 1 << 10;
 
+  /** Default zip timeout. */
+  public static final Duration DEFAULT_ZIP_TIMEOUT = Duration.ofMinutes(10);
+
   public static Duration getCloudCacheTtl() {
     return Flags.instance().fileTransferCloudCacheTtl.getNonNull();
   }
@@ -62,6 +65,10 @@ public final class FileTransferConstant {
 
   public static long getSmallFileSize() {
     return Flags.instance().cloudFileTransferSmallFileSizeKb.getNonNull() * KILO_BYTE;
+  }
+
+  public static Duration getZipTimeout() {
+    return Flags.instance().cloudFileTransferZipTimeout.getNonNull();
   }
 
   private FileTransferConstant() {}
