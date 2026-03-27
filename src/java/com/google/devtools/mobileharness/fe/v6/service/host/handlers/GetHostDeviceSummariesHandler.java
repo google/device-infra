@@ -18,28 +18,35 @@ package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.joining;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.HealthAndActivityBuilder;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceType;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.RemoteControlInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DeviceHealthState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DeviceSummary;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesResponse;
+import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceInfoUtil;
 import com.google.devtools.mobileharness.fe.v6.service.shared.SubDeviceInfoListFactory;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
+import com.google.devtools.mobileharness.fe.v6.service.shared.remotecontrol.RemoteControlEligibilityChecker;
+import com.google.devtools.mobileharness.fe.v6.service.shared.remotecontrol.RemoteControlEligibilityContext;
+import com.google.devtools.mobileharness.fe.v6.service.shared.remotecontrol.RemoteControlEligibilityResult;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
-import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -55,6 +62,7 @@ public final class GetHostDeviceSummariesHandler {
   private final LabInfoProvider labInfoProvider;
   private final HealthAndActivityBuilder healthAndActivityBuilder;
   private final SubDeviceInfoListFactory subDeviceInfoListFactory;
+  private final RemoteControlEligibilityChecker remoteControlEligibilityChecker;
   private final ListeningExecutorService executor;
 
   @Inject
@@ -62,10 +70,12 @@ public final class GetHostDeviceSummariesHandler {
       LabInfoProvider labInfoProvider,
       HealthAndActivityBuilder healthAndActivityBuilder,
       SubDeviceInfoListFactory subDeviceInfoListFactory,
+      RemoteControlEligibilityChecker remoteControlEligibilityChecker,
       ListeningExecutorService executor) {
     this.labInfoProvider = labInfoProvider;
     this.healthAndActivityBuilder = healthAndActivityBuilder;
     this.subDeviceInfoListFactory = subDeviceInfoListFactory;
+    this.remoteControlEligibilityChecker = remoteControlEligibilityChecker;
     this.executor = executor;
   }
 
@@ -94,21 +104,7 @@ public final class GetHostDeviceSummariesHandler {
     HealthAndActivityInfo healthAndActivityInfo =
         healthAndActivityBuilder.buildHealthAndActivityInfo(deviceInfo);
 
-    ImmutableMap<String, String> dimensions =
-        Stream.concat(
-                deviceInfo
-                    .getDeviceFeature()
-                    .getCompositeDimension()
-                    .getSupportedDimensionList()
-                    .stream(),
-                deviceInfo
-                    .getDeviceFeature()
-                    .getCompositeDimension()
-                    .getRequiredDimensionList()
-                    .stream())
-            .collect(
-                toImmutableMap(
-                    DeviceDimension::getName, DeviceDimension::getValue, (v1, v2) -> v1));
+    ImmutableMap<String, String> dimensions = DeviceInfoUtil.getDimensions(deviceInfo);
 
     String requiredDims =
         deviceInfo.getDeviceFeature().getCompositeDimension().getRequiredDimensionList().stream()
@@ -135,8 +131,43 @@ public final class GetHostDeviceSummariesHandler {
 
     // If it is a testbed device, decode sub-device information.
     boolean isTestbed = deviceInfo.getDeviceFeature().getTypeList().contains("TestbedDevice");
-    if (isTestbed) { // Only attempt to decode sub-devices for testbeds
-      deviceSummaryBuilder.addAllSubDevices(subDeviceInfoListFactory.create(dimensions));
+    if (isTestbed) {
+      deviceSummaryBuilder.addAllSubDevices(
+          subDeviceInfoListFactory.create(dimensions).stream()
+              .map(
+                  subDeviceInfo -> {
+                    RemoteControlEligibilityContext context =
+                        RemoteControlEligibilityContext.builder()
+                            .setIsMultipleSelection(false)
+                            .setIsSubDevice(true)
+                            .setDeviceStatus(deviceInfo.getDeviceStatus())
+                            .setDrivers(
+                                ImmutableSet.copyOf(deviceInfo.getDeviceFeature().getDriverList()))
+                            .setTypes(
+                                subDeviceInfo.getTypesList().stream()
+                                    .map(DeviceType::getType)
+                                    .collect(toImmutableSet()))
+                            .setDimensions(
+                                subDeviceInfo.getDimensionsList().stream()
+                                    .collect(
+                                        toImmutableMap(
+                                            DeviceDimension::getName,
+                                            DeviceDimension::getValue,
+                                            (v1, v2) -> v1)))
+                            .build();
+
+                    RemoteControlEligibilityResult result =
+                        remoteControlEligibilityChecker.checkEligibility(context);
+
+                    RemoteControlInfo remoteControlInfo =
+                        RemoteControlInfo.newBuilder()
+                            .setIsSupported(result.isEligible())
+                            .setUnsupportedReason(result.reasonMessage().orElse(""))
+                            .build();
+
+                    return subDeviceInfo.toBuilder().setRemoteControl(remoteControlInfo).build();
+                  })
+              .collect(toImmutableList()));
     }
 
     return deviceSummaryBuilder.build();

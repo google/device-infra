@@ -13,7 +13,6 @@ import {
   inject,
   Input,
   OnChanges,
-  OnInit,
   signal,
   SimpleChanges,
 } from '@angular/core';
@@ -156,7 +155,7 @@ const STATUS_SEMANTIC_MAP: Record<string, {icon: string; colorClass: string}> =
     OverflowList,
   ],
 })
-export class HostOverviewPage implements OnInit, OnChanges {
+export class HostOverviewPage implements OnChanges {
   private readonly dialog = inject(MatDialog);
   private readonly hostService = inject(HOST_SERVICE);
   private readonly remoteControlService = inject(RemoteControlService);
@@ -318,10 +317,6 @@ export class HostOverviewPage implements OnInit, OnChanges {
       label: 'Host Properties',
     },
   ];
-
-  ngOnInit() {
-    this.loadDevices();
-  }
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['host']) {

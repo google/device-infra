@@ -37,12 +37,12 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceType;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthState;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.SubDeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DeviceHealthState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DeviceSummary;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
+import com.google.devtools.mobileharness.fe.v6.service.shared.remotecontrol.RemoteControlEligibilityChecker;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -102,6 +102,11 @@ public final class GetHostDeviceSummariesHandlerTest {
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
   @Bind @Mock private LabInfoProvider labInfoProvider;
+
+  @Bind
+  private RemoteControlEligibilityChecker remoteControlEligibilityChecker =
+      new RemoteControlEligibilityChecker();
+
   @Bind private ListeningExecutorService executorService = newDirectExecutorService();
   @Bind private InstantSource instantSource = InstantSource.fixed(NOW);
 
@@ -247,25 +252,63 @@ public final class GetHostDeviceSummariesHandlerTest {
     GetHostDeviceSummariesResponse response =
         getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST).get();
 
-    assertThat(response.getDeviceSummariesList()).hasSize(1);
     assertThat(response.getDeviceSummaries(0).getId()).isEqualTo("testbed_device");
     assertThat(response.getDeviceSummaries(0).getSubDevicesList()).hasSize(1);
-    SubDeviceInfo expectedSubDeviceInfo =
-        SubDeviceInfo.newBuilder()
-            .setId("sub_device_1")
-            .addTypes(DeviceType.newBuilder().setType("AndroidRealDevice").setIsAbnormal(false))
-            .addDimensions(
-                com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
-                    .newBuilder()
-                    .setName("mh_device_type")
-                    .setValue("AndroidRealDevice"))
-            .addDimensions(
-                com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
-                    .newBuilder()
-                    .setName("model")
-                    .setValue("pixel 5"))
-            .setModel("pixel 5")
+  }
+
+  @Test
+  public void getHostDeviceSummaries_withDuplicateSubDeviceDimensions_success() throws Exception {
+    SubDeviceDimensions subDeviceDimensions =
+        SubDeviceDimensions.newBuilder()
+            .addSubDeviceDimension(
+                SubDeviceDimensions.SubDeviceDimension.newBuilder()
+                    .setDeviceId("sub_device_1")
+                    .addDeviceDimension(StrPair.newBuilder().setName("dim1").setValue("val1"))
+                    .addDeviceDimension(StrPair.newBuilder().setName("dim1").setValue("val2")))
             .build();
-    assertThat(response.getDeviceSummaries(0).getSubDevices(0)).isEqualTo(expectedSubDeviceInfo);
+    String encodedSubDeviceDimensions =
+        Base64.getEncoder().encodeToString(subDeviceDimensions.toByteArray());
+    DeviceInfo testbedDeviceInfo =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("testbed_device"))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .addType("TestbedDevice")
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder()
+                                    .setName(TestbedDeviceSpec.SUBDEVICE_DIMENSIONS_KEY)
+                                    .setValue(encodedSubDeviceDimensions))))
+            .build();
+    when(labInfoProvider.getLabInfoAsync(any(), any()))
+        .thenReturn(
+            immediateFuture(
+                GetLabInfoResponse.newBuilder()
+                    .setLabQueryResult(
+                        LabQueryResult.newBuilder()
+                            .setLabView(
+                                LabView.newBuilder()
+                                    .addLabData(
+                                        LabData.newBuilder()
+                                            .setDeviceList(
+                                                DeviceList.newBuilder()
+                                                    .addDeviceInfo(testbedDeviceInfo)))))
+                    .build()));
+
+    GetHostDeviceSummariesResponse response =
+        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST).get();
+
+    assertThat(response.getDeviceSummariesList()).hasSize(1);
+    assertThat(response.getDeviceSummaries(0).getSubDevicesCount()).isEqualTo(1);
+    // The merge function (v1, v2) -> v1 should keep "val1"
+    assertThat(response.getDeviceSummaries(0).getSubDevices(0).getDimensionsList())
+        .contains(
+            com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
+                .newBuilder()
+                .setName("dim1")
+                .setValue("val1")
+                .build());
   }
 }

@@ -147,7 +147,7 @@ public class SubDeviceInfoListFactory {
     }
 
     // Remote control info will be populated by the caller using
-    // SubDeviceRemoteControlEligibilityChecker in handlers.
+    // RemoteControlEligibilityChecker in handlers.
 
     return subDeviceInfoBuilder.build();
   }
