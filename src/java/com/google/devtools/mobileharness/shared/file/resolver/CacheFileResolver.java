@@ -250,7 +250,7 @@ public class CacheFileResolver extends AbstractFileResolver {
 
   @Override
   protected Set<ResolveResult> preBatchProcess(List<ResolveSource> resolveSources)
-      throws MobileHarnessException, InterruptedException {
+      throws MobileHarnessException, InterruptedException, ExecutionException {
     Set<ResolveResult> resolveResults = super.preBatchProcess(resolveSources);
     for (ResolveResult resolveResult : resolveResults) {
       localCache.addResolveResult(resolveResult, instantSource.instant());

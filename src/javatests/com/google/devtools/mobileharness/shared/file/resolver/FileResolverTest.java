@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.Resol
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
 import org.junit.Rule;
@@ -134,7 +135,8 @@ public class FileResolverTest {
   }
 
   @Test
-  public void preBatchProcess() throws MobileHarnessException, InterruptedException {
+  public void preBatchProcess()
+      throws MobileHarnessException, InterruptedException, ExecutionException {
     resolver =
         new FileResolverUnderTest(
             MoreExecutors.newDirectExecutorService(), source -> source.path().equals("/a/b"));
