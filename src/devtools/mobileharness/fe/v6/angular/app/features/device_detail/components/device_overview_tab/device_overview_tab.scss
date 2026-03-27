@@ -21,6 +21,17 @@
   display: none;
 }
 
+.operation-button.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+
+  a {
+    background-color: #f1f3f4;
+    color: #70757a;
+    pointer-events: none;
+  }
+}
+
 // Health & Activity Card
 .health-summary {
   display: flex;

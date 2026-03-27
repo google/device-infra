@@ -214,7 +214,12 @@
         id="overview-subdevices"
         title="Sub-Devices ({{device.subDevices.length}})">
 
-        <div operations class="operation-button">
+        <div
+          operations
+          class="operation-button"
+          [class.disabled]="!testbedConfig()?.yamlContent"
+          [matTooltip]="!testbedConfig()?.yamlContent ? 'No testbed configuration record found in database for this device.' : ''"
+        >
           <a (click)="showTestbedConfig($event)">
             <mat-icon>article</mat-icon>
             <span class="operation-text">View Testbed YAML</span>

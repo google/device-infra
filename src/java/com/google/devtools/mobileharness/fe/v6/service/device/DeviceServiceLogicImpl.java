@@ -21,6 +21,7 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.GetDeviceHeaderInfoHandler;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.GetDeviceOverviewHandler;
+import com.google.devtools.mobileharness.fe.v6.service.device.handlers.GetTestbedConfigHandler;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHeaderInfoRequest;
@@ -50,13 +51,16 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
 
   private final GetDeviceOverviewHandler getDeviceOverviewHandler;
   private final GetDeviceHeaderInfoHandler getDeviceHeaderInfoHandler;
+  private final GetTestbedConfigHandler getTestbedConfigHandler;
 
   @Inject
   DeviceServiceLogicImpl(
       GetDeviceOverviewHandler getDeviceOverviewHandler,
-      GetDeviceHeaderInfoHandler getDeviceHeaderInfoHandler) {
+      GetDeviceHeaderInfoHandler getDeviceHeaderInfoHandler,
+      GetTestbedConfigHandler getTestbedConfigHandler) {
     this.getDeviceOverviewHandler = getDeviceOverviewHandler;
     this.getDeviceHeaderInfoHandler = getDeviceHeaderInfoHandler;
+    this.getTestbedConfigHandler = getTestbedConfigHandler;
   }
 
   @Override
@@ -121,7 +125,6 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
 
   @Override
   public ListenableFuture<TestbedConfig> getTestbedConfig(GetTestbedConfigRequest request) {
-    // TODO: Implement this method.
-    return immediateFuture(TestbedConfig.getDefaultInstance());
+    return getTestbedConfigHandler.getTestbedConfig(request);
   }
 }

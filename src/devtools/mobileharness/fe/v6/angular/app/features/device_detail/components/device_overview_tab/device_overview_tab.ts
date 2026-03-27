@@ -27,6 +27,7 @@ import {
   DimensionSourceGroup,
   HealthState,
   SubDeviceInfo,
+  TestbedConfig,
 } from '../../../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
 import {Environment} from '../../../../core/services/environment';
@@ -114,6 +115,7 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
   filteredDecorators = signal<string[]>([]);
 
   isSubDeviceCollapsible = signal(true);
+  testbedConfig = signal<TestbedConfig | undefined>(undefined);
 
   // Sub-device filtering
   subDeviceDimensionSearchTerms: Record<string, string> = {};
@@ -133,6 +135,10 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
       this.updateCollapsibleBasedOnScreenWidth(
         this.breakpointObserver.isMatched('(min-width: 1440px)'),
       );
+
+      if (this.device.subDevices && this.device.subDevices.length > 0) {
+        this.loadTestbedConfig();
+      }
     }
   }
 
@@ -411,9 +417,16 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
     this.decoratorsSearchSubject.next(this.decoratorsSearchTerm);
   }
 
+  loadTestbedConfig() {
+    this.deviceService.getTestbedConfig(this.device.id).subscribe((config) => {
+      this.testbedConfig.set(config);
+    });
+  }
+
   showTestbedConfig(event: MouseEvent) {
     event.stopPropagation();
-    this.deviceService.getTestbedConfig(this.device.id).subscribe((config) => {
+    const config = this.testbedConfig();
+    if (config && config.yamlContent) {
       this.dialog.open(TestbedConfigViewer, {
         width: '800px',
         data: {
@@ -424,7 +437,7 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
         autoFocus: false,
         panelClass: 'testbed-config-dialog-panel',
       });
-    });
+    }
   }
 
   getFilteredSubDeviceDimensions(sub: SubDeviceInfo): DeviceDimension[] {

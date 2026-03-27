@@ -149,9 +149,6 @@ export class HttpDeviceService extends DeviceService {
   // }
 
   override getTestbedConfig(id: string): Observable<TestbedConfig> {
-    return this.http.post<TestbedConfig>(
-      `${this.apiUrl}/${id}:getTestbedConfig`,
-      {},
-    );
+    return this.http.get<TestbedConfig>(`${this.apiUrl}/${id}/testbed-config`);
   }
 }

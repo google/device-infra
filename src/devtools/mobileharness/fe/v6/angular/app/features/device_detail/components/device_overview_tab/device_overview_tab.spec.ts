@@ -128,7 +128,7 @@ describe('DeviceOverviewTab Component', () => {
         {
           provide: DEVICE_SERVICE,
           useValue: {
-            getTestbedConfig: () => of({}),
+            getTestbedConfig: () => of({yamlContent: '', codeSearchLink: ''}),
           },
         },
       ],
@@ -316,5 +316,33 @@ describe('DeviceOverviewTab Component', () => {
   it('should return network_wifi_1_bar signal icon and Weak quality text when wifi rssi is -105', async () => {
     expect(component.getWifiSignalIcon(-105)).toEqual('network_wifi_1_bar');
     expect(component.getWifiQualityText(-105)).toEqual('Weak');
+  });
+
+  it('should load testbed config and disable button if empty', async () => {
+    fixture.detectChanges();
+    expect(component.testbedConfig()).toEqual({
+      yamlContent: '',
+      codeSearchLink: '',
+    });
+
+    const button = fixture.debugElement.query(
+      By.css('#overview-subdevices .operation-button'),
+    );
+    expect(button.nativeElement.classList.contains('disabled')).toBeTrue();
+  });
+
+  it('should enable button if testbed config is not empty', async () => {
+    // Override the mock for this test
+    spyOn(TestBed.inject(DEVICE_SERVICE), 'getTestbedConfig').and.returnValue(
+      of({yamlContent: 'some content', codeSearchLink: 'some-link'}),
+    );
+
+    component.loadTestbedConfig();
+    fixture.detectChanges();
+
+    const button = fixture.debugElement.query(
+      By.css('#overview-subdevices .operation-button'),
+    );
+    expect(button.nativeElement.classList.contains('disabled')).toBeFalse();
   });
 });

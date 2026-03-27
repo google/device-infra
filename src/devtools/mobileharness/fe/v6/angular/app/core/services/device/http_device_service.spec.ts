@@ -153,13 +153,13 @@ describe('HttpDeviceService', () => {
     req.flush({screenshotUrl: 'http://image.com'});
   });
 
-  it('should get testbed config via POST to :getTestbedConfig', () => {
+  it('should get testbed config via GET to :testbed-config', () => {
     service.getTestbedConfig('test-device').subscribe();
 
     const req = httpMock.expectOne(
-      'http://testdomain.com/v6/devices/test-device:getTestbedConfig',
+      'http://testdomain.com/v6/devices/test-device/testbed-config',
     );
-    expect(req.request.method).toBe('POST');
+    expect(req.request.method).toBe('GET');
     req.flush({id: 'test-device'});
   });
 });
