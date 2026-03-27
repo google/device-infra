@@ -25,7 +25,7 @@ option java_multiple_files = true;
 option java_outer_classname = "AndroidFlashGkiDecoratorSpecProto";
 
 // Specs for {@link AndroidFlashGkiDecoratorSpec}
-// Next tag: 29
+// Next tag: 30
 message AndroidFlashGkiDecoratorSpec {
   extend DecoratorSpec {
     optional AndroidFlashGkiDecoratorSpec ext = 1015;
@@ -162,6 +162,13 @@ message AndroidFlashGkiDecoratorSpec {
 
   optional bool validate_device_kernel_version = 28 [
     (field_detail) = { help: "Whether to validate the device kernel version." },
+    default = true
+  ];
+
+  optional bool validate_kernel_version_patch_level = 29 [
+    (field_detail) = {
+      help: "Whether to validate kernel version patch level."
+    },
     default = true
   ];
 }
