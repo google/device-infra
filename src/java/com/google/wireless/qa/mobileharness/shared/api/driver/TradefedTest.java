@@ -57,6 +57,7 @@ import com.google.devtools.mobileharness.platform.android.xts.message.proto.Test
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo.TradefedInvocation;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil.XtsTradefedRuntimeInfoFileDetail;
+import com.google.devtools.mobileharness.platform.androiddesktop.device.AndroidDesktopDeviceHelper;
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -82,6 +83,7 @@ import com.google.protobuf.TextFormat.ParseException;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.api.CompositeDeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDesktopExecutorDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;
@@ -154,6 +156,7 @@ public class TradefedTest extends BaseDriver
   private final String testId;
   private TradefedRunStrategy tradefedRunStrategy;
   private final TestMessageUtil testMessageUtil;
+  private final AndroidDesktopDeviceHelper androidDesktopDeviceHelper;
 
   private final AtomicBoolean deviceErrorForProvisioningDetected = new AtomicBoolean(false);
 
@@ -182,7 +185,8 @@ public class TradefedTest extends BaseDriver
       Clock clock,
       XtsCommandUtil xtsCommandUtil,
       XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil,
-      TestMessageUtil testMessageUtil) {
+      TestMessageUtil testMessageUtil,
+      AndroidDesktopDeviceHelper androidDesktopDeviceHelper) {
     super(device, testInfo);
     this.cmdExecutor = cmdExecutor;
     this.localFileUtil = localFileUtil;
@@ -201,6 +205,7 @@ public class TradefedTest extends BaseDriver
     this.xtsCommandUtil = xtsCommandUtil;
     this.xtsTradefedRuntimeInfoFileUtil = xtsTradefedRuntimeInfoFileUtil;
     this.testMessageUtil = testMessageUtil;
+    this.androidDesktopDeviceHelper = androidDesktopDeviceHelper;
   }
 
   @Override
@@ -827,7 +832,7 @@ public class TradefedTest extends BaseDriver
 
   private ImmutableList<String> getTradefedRunCommandArgs(
       TradefedTestDriverSpec spec, Map<String, String> envVars, TestInfo testInfo)
-      throws MobileHarnessException {
+      throws MobileHarnessException, InterruptedException {
     ImmutableList.Builder<String> tradefedRunCommand =
         ImmutableList.<String>builder().add("run", "commandAndExit");
 
@@ -913,8 +918,26 @@ public class TradefedTest extends BaseDriver
     } else {
       getDeviceIds().forEach(serial -> tradefedRunCommand.add("-s", serial));
     }
-
+    appendInvocationDataFromHelper(tradefedRunCommand);
     return tradefedRunCommand.build();
+  }
+
+  private void appendInvocationDataFromHelper(ImmutableList.Builder<String> tradefedRunCommand)
+      throws MobileHarnessException, InterruptedException {
+    // AndroidDesktopExecutorDevice currently does not support CompositeDevice or Multi-Dut devices.
+    // We will revisit this for tradefed when we address b/475282063.
+    if (!(getDevice() instanceof AndroidDesktopExecutorDevice)) {
+      return;
+    }
+
+    Map<String, String> dimensions =
+        androidDesktopDeviceHelper.getDeviceDimensions(getDevice().getDeviceId());
+    dimensions.forEach((key, value) -> addInvocationData(tradefedRunCommand, key, value));
+  }
+
+  private void addInvocationData(
+      ImmutableList.Builder<String> tradefedRunCommand, String key, String value) {
+    tradefedRunCommand.add("--invocation-data").add(String.format("%s=%s", key, value));
   }
 
   private static ImmutableList<String> getExtraRunCommandArgs(TradefedTestDriverSpec spec) {
