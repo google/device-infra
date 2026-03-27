@@ -6,10 +6,15 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/rsocket/rsocket-go/payload"
 	"github.com/rsocket/rsocket-go/rx/flux"
 	"github.com/rsocket/rsocket-go/rx"
+)
+
+const (
+	readTimeout = 1 * time.Second
 )
 
 // Conn bridges a standard network connection with reactive streams.
@@ -40,23 +45,34 @@ func (c *Conn) ToFlux(ctx context.Context) flux.Flux {
 			defer close(upstreamChan)
 			for {
 				buf := make([]byte, 32*1024)
-				// Note: net.Conn.Read can block forever if no data and no deadline.
-				// In a real implementation, we might set read deadlines periodically to check subscriberCtx.Done()
+				// Set a periodic read deadline to check for context cancellation
+				_ = c.conn.SetReadDeadline(time.Now().Add(readTimeout))
+
 				n, err := c.conn.Read(buf)
 				if n > 0 {
 					select {
 					case upstreamChan <- buf[:n]:
-					// ctx: The outer context passed to ToFlux. Tells us if the application cancelled the operation.
 					case <-ctx.Done():
 						errChan <- ctx.Err()
 						return
-					// subscriberCtx: The internal context managed by RSocket for this subscriber. Tells us if the subscriber unsubscribed.
 					case <-subscriberCtx.Done():
 						errChan <- subscriberCtx.Err()
 						return
 					}
 				}
 				if err != nil {
+					if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+						select {
+						case <-ctx.Done():
+							errChan <- ctx.Err()
+							return
+						case <-subscriberCtx.Done():
+							errChan <- subscriberCtx.Err()
+							return
+						default:
+							continue
+						}
+					}
 					errChan <- err
 					return
 				}
