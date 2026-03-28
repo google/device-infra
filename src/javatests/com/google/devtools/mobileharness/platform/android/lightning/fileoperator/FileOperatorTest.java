@@ -609,7 +609,7 @@ public final class FileOperatorTest {
     when(androidFileUtil.getPushedFileOrDirFinalDestinationPathOnDevice(
             DEVICE_ID, sdkVersion, srcPathOnHost, desPathOnDevice))
         .thenReturn(desFinalPathOnDevice);
-    when(androidFileUtil.isFileOrDirExisted(DEVICE_ID, desPathOnDevice))
+    when(androidFileUtil.isFileOrDirExisted(DEVICE_ID, desFinalPathOnDevice))
         .thenReturn(fileExistedOnDevice);
 
     fileOperator.pushFileOrDir(

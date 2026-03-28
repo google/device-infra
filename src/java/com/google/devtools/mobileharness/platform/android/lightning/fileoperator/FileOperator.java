@@ -65,6 +65,8 @@ public class FileOperator {
 
   private final AndroidSystemSettingUtil systemSettingUtil;
 
+  private record CachedPushedTarget(String propertyKey, String destinationPathOnDevice) {}
+
   public FileOperator() {
     this(
         new ChecksumUtil(Hashing.md5()),
@@ -194,8 +196,9 @@ public class FileOperator {
     boolean cacheFiles = isCacheFilesEnabled(desPathOnDevice);
     if (cacheFiles) {
       // TODO: Create a new class to provide APIs to handle caching pushed dirs/files
-      propertyKey =
+      CachedPushedTarget cachedPushedTarget =
           getPushedTargetCachedPropertyKey(deviceId, sdkVersion, srcPathOnHost, desPathOnDevice);
+      propertyKey = cachedPushedTarget.propertyKey();
       if (propertyKey.isEmpty()) {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_FILE_OPERATOR_ILLEGAL_ARGUMENT,
@@ -205,7 +208,8 @@ public class FileOperator {
       // Checks whether the file/dir has been pushed.
       md5 = md5Util.fingerprint(srcPathOnHost);
       if (md5.equals(device.getProperty(propertyKey))) {
-        if (!androidFileUtil.isFileOrDirExisted(deviceId, desPathOnDevice)) {
+        if (!androidFileUtil.isFileOrDirExisted(
+            deviceId, cachedPushedTarget.destinationPathOnDevice())) {
           // Best effort to detect cached path was removed. In case of folder it only checks that
           // the folder exists, not files inside. In case of file it only checks that the file
           // exists but doesn't calculate the md5 checksum of the file on the device.
@@ -387,7 +391,7 @@ public class FileOperator {
    * @return {@code String} for propertyKey, or empty string if failed to get pushed file/dir's
    *     destination path on device
    */
-  private String getPushedTargetCachedPropertyKey(
+  private CachedPushedTarget getPushedTargetCachedPropertyKey(
       String serial, int sdkVersion, String srcPathOnHost, String desPathOnDevice)
       throws MobileHarnessException, InterruptedException {
     String desFinalPathOnDevice =
@@ -397,11 +401,13 @@ public class FileOperator {
       logger.atWarning().log(
           "Cannot get pushed target (src:%s|des:%s) cached property key for device %s.",
           srcPathOnHost, desPathOnDevice, serial);
-      return "";
+      return new CachedPushedTarget(/* propertyKey= */ "", /* destinationPathOnDevice= */ "");
     }
 
     // Uses the actual result path of adb push as the property key
-    return DEVICE_PROP_PREFIX_PUSHED_FILE_OR_DIR + desFinalPathOnDevice;
+    return new CachedPushedTarget(
+        /* propertyKey= */ DEVICE_PROP_PREFIX_PUSHED_FILE_OR_DIR + desFinalPathOnDevice,
+        /* destinationPathOnDevice= */ desFinalPathOnDevice);
   }
 
   private static boolean isCacheFilesEnabled(String desPathOnDevice) {
