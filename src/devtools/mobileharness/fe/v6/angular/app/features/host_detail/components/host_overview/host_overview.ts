@@ -37,6 +37,7 @@ import {
   type DeviceDimension,
   type SubDeviceInfo,
 } from '../../../../core/models/device_overview';
+import type {HostActions} from '../../../../core/models/host_action';
 import {
   DaemonServerStatus,
   DeviceSummary,
@@ -168,6 +169,7 @@ export class HostOverviewPage implements OnChanges {
   readonly isGoogleInternal = this.environment.isGoogleInternal();
 
   @Input({required: true}) host!: HostOverview;
+  @Input() actions?: HostActions;
 
   readonly isAteHost = computed(() => {
     return this.host.labTypeDisplayNames.some((name) =>
@@ -350,6 +352,10 @@ export class HostOverviewPage implements OnChanges {
       duration,
       tooltip: status.tooltip,
     };
+  }
+
+  onUpgrade() {
+    this.snackBar.showInfo(`Release action triggered for ${this.host.hostName}`);
   }
 
   getLabActivitySemantic(activity: LabServerActivity) {

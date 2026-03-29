@@ -1,21 +1,25 @@
 @use '@angular/material' as mat;
-@use  '../../../../shared/styles/overview.scss' as overview;
+@use '../../../../shared/styles/overview.scss' as overview;
 
 :host {
   font-family: overview.$labconsole-font;
 
-  @include mat.table-overrides((
-    row-item-label-text-font: overview.$labconsole-font,
-  ));
+  @include mat.table-overrides(
+    (
+      row-item-label-text-font: overview.$labconsole-font,
+    )
+  );
 
-  @include mat.checkbox-overrides((
-    touch-target-size: 36px,
-    state-layer-size: 36px,
-    selected-icon-color: #1967d2,
-    selected-checkmark-color: #fff,
-    selected-hover-icon-color: #1967d2,
-    selected-focus-icon-color: #1967d2,
-  ));
+  @include mat.checkbox-overrides(
+    (
+      touch-target-size: 36px,
+      state-layer-size: 36px,
+      selected-icon-color: #1967d2,
+      selected-checkmark-color: #fff,
+      selected-hover-icon-color: #1967d2,
+      selected-focus-icon-color: #1967d2,
+    )
+  );
 }
 
 .grid-tight {
@@ -113,13 +117,13 @@
 }
 
 .device-loading-bar {
-  @include mat.progress-bar-overrides((
-    active-indicator-color: #1967d2,
-    track-color: #e8f0fe,
-  ));
+  @include mat.progress-bar-overrides(
+    (
+      active-indicator-color: #1967d2,
+      track-color: #e8f0fe,
+    )
+  );
 }
-
-
 
 .edit-flags-button {
   width: 1rem;
@@ -153,8 +157,6 @@
   font-style: italic;
   padding: 0 0.25rem;
 }
-
-
 
 // Styles for Pass Through Flags inline editing
 .flags-edit-container {
@@ -228,7 +230,7 @@
 
     &:hover:not(:disabled) {
       background-color: #d2e3fc;
-      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, .05);
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     }
 
     .button-spinner {
@@ -364,10 +366,10 @@
     background-color: rgb(243, 244, 246);
   }
 
-  .sticky-start-header, .sticky-end-header {
+  .sticky-start-header,
+  .sticky-end-header {
     background-color: #f3f4f6;
   }
-
 
   // .sticky-start {
   //   box-shadow: inset -1px 0 #e5e7eb;
@@ -409,8 +411,6 @@
     display: flex;
     align-items: center;
   }
-
-
 
   .type-count {
     font-size: 0.75rem;
@@ -606,5 +606,51 @@
         background-color: #93c5fd;
       }
     }
+  }
+}
+
+.upgrade-version-button {
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #5f6368;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #e5e7eb;
+    color: #1a73e8;
+  }
+
+  mat-icon {
+    font-size: 1.125rem;
+    height: 1.125rem;
+    width: 1.125rem;
+  }
+}
+
+.m3-chip-suggestion {
+  display: inline-block;
+  background-color: #e8f0fe;
+  color: #1967d2;
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.4;
+  border: 1px solid #d2e3fc;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+
+  &:hover {
+    background-color: #d2e3fc;
+    border-color: #1967d2;
   }
 }

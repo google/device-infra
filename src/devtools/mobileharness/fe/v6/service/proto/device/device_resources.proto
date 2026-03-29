@@ -42,8 +42,7 @@ message DeviceOverview {
   BasicDeviceInfo basic_info = 4;
 
   // Permissions defining who can own and execute tests on the device.
-  devtools.mobileharness.fe.v6.service.proto.common.PermissionInfo permissions =
-      5;
+  common.PermissionInfo permissions = 5;
 
   // Lists of supported drivers and decorators for the device.
   CapabilitiesInfo capabilities = 6;
@@ -187,8 +186,7 @@ message CapabilitiesInfo {
 
 // Represents a group of dimensions from a single source.
 message DimensionSourceGroup {
-  repeated devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
-      dimensions = 1;
+  repeated common.DeviceDimension dimensions = 1;
 }
 
 // Device dimensions, categorized into 'supported' and 'required'.
@@ -203,8 +201,7 @@ message Dimensions {
 message SubDeviceInfo {
   string id = 1;
   repeated DeviceType types = 2;
-  repeated devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
-      dimensions = 3;
+  repeated common.DeviceDimension dimensions = 3;
 
   // Model of the sub-device.
   string model = 4;
@@ -224,14 +221,6 @@ message TestbedConfig {
   string code_search_link = 2;
 }
 
-// State of an action button in device header.
-message ActionButtonState {
-  bool enabled = 1;
-  bool visible = 2;
-  string tooltip = 3;
-  bool is_ready = 4;
-}
-
 // Parameters for flash action button.
 message FlashButtonParams {
   string device_type = 1;
@@ -240,7 +229,7 @@ message FlashButtonParams {
 
 // State of flash action button.
 message FlashActionButtonState {
-  ActionButtonState state = 1;
+  common.ActionButtonState state = 1;
   FlashButtonParams params = 2;
 }
 
@@ -252,12 +241,12 @@ message QuarantineInfo {
 
 // Actions for device header.
 message DeviceActions {
-  ActionButtonState screenshot = 1;
-  ActionButtonState logcat = 2;
+  common.ActionButtonState screenshot = 1;
+  common.ActionButtonState logcat = 2;
   FlashActionButtonState flash = 3;
-  ActionButtonState remote_control = 4;
-  ActionButtonState quarantine = 5;
-  ActionButtonState configuration = 6;
+  common.ActionButtonState remote_control = 4;
+  common.ActionButtonState quarantine = 5;
+  common.ActionButtonState configuration = 6;
 }
 
 // Information for device header.

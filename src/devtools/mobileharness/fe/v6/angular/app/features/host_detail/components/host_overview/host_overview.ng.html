@@ -82,52 +82,75 @@
         }
 
         <dt>Version</dt>
-        <dd>{{ host.labServer.version }}</dd>
-
-        <dt>Pass Through Flags
-          <mat-icon
-            class="cursor-help"
-            matTooltip="Flags passed directly to the lab server instance on startup for custom configuration."
-            >help_outline</mat-icon
-          >
-        </dt>
-        <dd [class.grid-tight-dd]="!isEditingFlags()">
-          @if(isEditingFlags()) {
-            <div class="flags-edit-container">
-              <textarea
-                [(ngModel)]="editedFlags"
-                class="flags-textarea"
-                rows="5"
-                placeholder="Enter flags..."
-              ></textarea>
-              <div class="flags-edit-actions">
-                <button (click)="cancelEditFlags()" class="flags-edit-button cancel" [disabled]="isSavingFlags()">Cancel</button>
-                <button (click)="saveFlags()" class="flags-edit-button save" [disabled]="isSavingFlags()">
-                  @if (isSavingFlags()) {
-                    <mat-progress-spinner mode="indeterminate" diameter="16" class="button-spinner"></mat-progress-spinner>
-                    Saving...
-                  } @else {
-                    Save
-                  }
-                </button>
-              </div>
-            </div>
-          } @else {
-            @if (host.labServer.passThroughFlags) {
-              <div class="monospace-block">{{ host.labServer.passThroughFlags }}</div>
-            } @else {
-              <span class="text-gray-500">None</span>
-            }
-            <!-- <button
-              mat-icon-button
-              (click)="startEditFlags()"
-              title="Edit Pass Through Flags"
-              class="edit-flags-button"
+        <dd>
+          {{ host.labServer.version }}
+          @if (host.canUpgrade) {
+            <button
+              class="upgrade-version-button"
+              [matTooltip]="actions?.release?.tooltip || ''"
+              (click)="onUpgrade()"
             >
-              <mat-icon>edit</mat-icon>
-            </button> -->
+              <mat-icon>upgrade</mat-icon>
+            </button>
+            <button
+              class="m3-chip-suggestion"
+              [matTooltip]="actions?.release?.tooltip || ''"
+              (click)="onUpgrade()"
+            >
+              Update available
+            </button>
           }
         </dd>
+
+        @if (actions?.updatePassThroughFlags?.visible) {
+          <dt>Pass Through Flags
+            <mat-icon
+              class="cursor-help"
+              matTooltip="Flags passed directly to the lab server instance on startup for custom configuration."
+              >help_outline</mat-icon
+            >
+          </dt>
+          <dd [class.grid-tight-dd]="!isEditingFlags()">
+            @if(isEditingFlags()) {
+              <div class="flags-edit-container">
+                <textarea
+                  [(ngModel)]="editedFlags"
+                  class="flags-textarea"
+                  rows="5"
+                  placeholder="Enter flags..."
+                ></textarea>
+                <div class="flags-edit-actions">
+                  <button (click)="cancelEditFlags()" class="flags-edit-button cancel" [disabled]="isSavingFlags()">Cancel</button>
+                  <button (click)="saveFlags()" class="flags-edit-button save"
+                    [disabled]="isSavingFlags() || !actions?.updatePassThroughFlags?.enabled"
+                    [matTooltip]="actions?.updatePassThroughFlags?.tooltip || ''">
+                    @if (isSavingFlags()) {
+                      <mat-progress-spinner mode="indeterminate" diameter="16" class="button-spinner"></mat-progress-spinner>
+                      Saving...
+                    } @else {
+                      Save
+                    }
+                  </button>
+                </div>
+              </div>
+            } @else {
+              @if (host.labServer.passThroughFlags) {
+                <div class="monospace-block">{{ host.labServer.passThroughFlags }}</div>
+              } @else {
+                <span class="text-gray-500">None</span>
+              }
+              <button
+                mat-icon-button
+                (click)="startEditFlags()"
+                [matTooltip]="actions?.updatePassThroughFlags?.tooltip || ''"
+                class="edit-flags-button"
+                [disabled]="!actions?.updatePassThroughFlags?.enabled"
+              >
+                <mat-icon>edit</mat-icon>
+              </button>
+            }
+          </dd>
+        }
       </dl>
     </div>
   </app-info-card>

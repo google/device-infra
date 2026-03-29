@@ -21,6 +21,8 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostDeviceSummariesHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostOverviewHandler;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.CanRolloutRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.CanRolloutResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionHostRequest;
@@ -170,5 +172,11 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   public ListenableFuture<StopLabServerResponse> stopLabServer(StopLabServerRequest request) {
     // TODO: Implement this method.
     return immediateFuture(StopLabServerResponse.getDefaultInstance());
+  }
+
+  @Override
+  public ListenableFuture<CanRolloutResponse> canRollout(CanRolloutRequest request) {
+    // TODO: Implement this method.
+    return immediateFuture(CanRolloutResponse.getDefaultInstance());
   }
 }
