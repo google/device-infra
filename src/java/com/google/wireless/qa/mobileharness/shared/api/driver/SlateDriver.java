@@ -114,7 +114,6 @@ public class SlateDriver extends BaseDriver implements SpecConfigable<SlateDrive
 
     // 5. Execute
     Path logFile = Path.of(genFileDir).resolve("slate_run.log");
-    final StringBuilder logBuilder = new StringBuilder();
     try (BufferedWriter writer =
         Files.newBufferedWriter(logFile, StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
       testInfo.log().atInfo().alsoTo(logger).log("SlateDriver: Writing logs to %s", logFile);
@@ -140,11 +139,11 @@ public class SlateDriver extends BaseDriver implements SpecConfigable<SlateDrive
               .onStdout(
                   LineCallback.does(
                       line -> {
-                        logBuilder.append(line).append("\n");
                         testInfo.log().atInfo().alsoTo(logger).log("Slate Output: %s", line);
                         try {
                           writer.write(line);
                           writer.newLine();
+                          writer.flush();
                         } catch (IOException e) {
                           testInfo
                               .log()
