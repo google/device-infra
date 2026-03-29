@@ -386,6 +386,10 @@ export class HostOverviewPage implements OnChanges {
     };
   }
 
+  onUpgrade() {
+    this.showComingSoonPopup('Release');
+  }
+
   getLabActivitySemantic(activity: LabServerActivity) {
     const config = LAB_ACTIVITY_SEMANTIC_MAP[activity.state];
     return {

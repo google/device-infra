@@ -129,7 +129,25 @@
         }
 
         <dt>Version</dt>
-        <dd>{{ host.labServer.version || 'N/A' }}</dd>
+        <dd>
+          {{ host.labServer.version || 'N/A' }}
+          @if (host.canUpgrade) {
+            <button
+              class="upgrade-version-button"
+              [matTooltip]="host.labServer.actions?.release?.tooltip || ''"
+              (click)="onUpgrade()"
+            >
+              <mat-icon>upgrade</mat-icon>
+            </button>
+            <button
+              class="m3-chip-suggestion"
+              [matTooltip]="host.labServer.actions?.release?.tooltip || ''"
+              (click)="onUpgrade()"
+            >
+              Update available
+            </button>
+          }
+        </dd>
 
         <!-- we use the button state of release action to determine whether to show the pass through flags -->
         @if (host.labServer.actions?.release; as updateFlags) {

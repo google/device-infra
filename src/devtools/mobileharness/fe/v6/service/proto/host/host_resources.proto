@@ -19,6 +19,7 @@ syntax = "proto3";
 package devtools.mobileharness.fe.v6.service.proto.host;
 
 import "google/protobuf/timestamp.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/common/common_resources.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/device/device_resources.proto";
 
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.host";
@@ -82,17 +83,17 @@ message HostHeaderInfo {
 // Represents the state of action buttons for a host.
 message HostActions {
   // TODO: Use a common type for action button state.
-  device.ActionButtonState configuration = 1;
-  device.ActionButtonState debug = 2;
-  device.ActionButtonState decommission = 3;
+  common.ActionButtonState configuration = 1;
+  common.ActionButtonState debug = 2;
+  common.ActionButtonState decommission = 3;
 }
 
 // Represents the state of action buttons for a lab server.
 message LabServerActions {
-  device.ActionButtonState release = 1;
-  device.ActionButtonState start = 3;
-  device.ActionButtonState restart = 4;
-  device.ActionButtonState stop = 5;
+  common.ActionButtonState release = 1;
+  common.ActionButtonState start = 3;
+  common.ActionButtonState restart = 4;
+  common.ActionButtonState stop = 5;
 
   reserved 2, 6;
 }

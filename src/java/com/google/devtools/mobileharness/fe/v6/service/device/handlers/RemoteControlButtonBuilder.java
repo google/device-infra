@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.IneligibilityReasonCode;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceInfoUtil;
 import com.google.devtools.mobileharness.fe.v6.service.shared.SubDeviceInfoListFactory;
