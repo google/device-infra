@@ -4,13 +4,15 @@ import {Observable} from 'rxjs';
 
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
+  CanRolloutResult,
   DecommissionHostResponse,
-  ReleaseLabServerRequest,
-  ReleaseLabServerResponse,
   GetHostDebugInfoResponse,
   HostHeaderInfo,
   HostReleaseConfig,
+  HostRolloutAction,
   PopularFlag,
+  ReleaseLabServerRequest,
+  ReleaseLabServerResponse,
   RestartLabServerResponse,
   StartLabServerResponse,
   StopLabServerResponse,
@@ -162,12 +164,22 @@ export class HttpHostService extends HostService {
     );
   }
 
-  override stopLabServer(
-    hostName: string,
-  ): Observable<StopLabServerResponse> {
+  override stopLabServer(hostName: string): Observable<StopLabServerResponse> {
     return this.http.post<StopLabServerResponse>(
       `${this.apiUrl}/${hostName}:stop`,
       {},
+    );
+  }
+
+  override canRollout(
+    hostName: string,
+    action: HostRolloutAction,
+  ): Observable<CanRolloutResult> {
+    return this.http.get<CanRolloutResult>(
+      `${this.apiUrl}/${hostName}:can-rollout`,
+      {
+        params: {action},
+      },
     );
   }
 }

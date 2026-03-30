@@ -45,7 +45,7 @@ export class FakeDeviceService extends DeviceService {
    * Retrieves the detailed overview data for a specific device by its ID
    * from the mock dataset.
    * @param id The unique identifier of the device.
-   * @returns An Observable emitting the DeviceOverview data if found,
+   * @return An Observable emitting the DeviceOverview data if found,
    *          or an error Observable if not found.
    */
   override getDeviceOverview(id: string): Observable<DeviceOverviewPageData> {
@@ -58,7 +58,7 @@ export class FakeDeviceService extends DeviceService {
     } else {
       return throwError(
         () => new Error(`Device with ID '${id}' not found in mock data.`),
-      );
+      ).pipe(delay(1000));
     }
   }
 
@@ -69,7 +69,7 @@ export class FakeDeviceService extends DeviceService {
     } else {
       return throwError(
         () => new Error(`Device with ID '${id}' not found in mock data.`),
-      );
+      ).pipe(delay(1000));
     }
   }
 
@@ -199,11 +199,11 @@ export class FakeDeviceService extends DeviceService {
       return of({
         yamlContent: scenario.testbedConfig?.yamlContent || '',
         codeSearchLink: scenario.testbedConfig?.codeSearchLink || '',
-      });
+      }).pipe(delay(1000));
     } else {
       return throwError(
         () => new Error(`Device with ID '${id}' not found in mock data.`),
-      );
+      ).pipe(delay(1000));
     }
   }
 

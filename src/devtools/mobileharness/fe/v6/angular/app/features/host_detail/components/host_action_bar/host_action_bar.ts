@@ -10,15 +10,17 @@ import {MatDialog} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
 import {MatTooltipModule} from '@angular/material/tooltip';
-import {ActionButtonState} from '../../../../core/models/action_common';
-import {HostActions} from '../../../../core/models/host_action';
-import type {HostOverviewPageData} from '../../../../core/models/host_overview';
-import {Environment} from '../../../../core/services/environment';
-import {SnackBarService} from '../../../../shared/services/snackbar_service';
+import {ActionButtonState} from 'app/core/models/action_common';
+import {HostActions} from 'app/core/models/host_action';
+import type {HostOverviewPageData} from 'app/core/models/host_overview';
+import {Environment} from 'app/core/services/environment';
+import {SnackBarService} from 'app/shared/services/snackbar_service';
+
 import {HostConfig} from '../host_config/host_config';
 import {HostEmpty} from '../host_config/host_empty/host_empty';
 import {HostSettings} from '../host_config/host_settings/host_settings';
 import {HostWizard} from '../host_config/host_wizard/host_wizard';
+import {HostDecommissionDialog} from '../host_decommission_dialog/host_decommission_dialog';
 
 /**
  * Component for the action bar in the host detail page header.
@@ -144,9 +146,10 @@ export class HostActionBar {
   };
 
   readonly onDecommission = () => {
-    this.snackBar.showInfo(
-      `Decommission action triggered for ${this.hostName}`,
-    );
+    this.dialog.open(HostDecommissionDialog, {
+      data: {hostName: this.hostName},
+      autoFocus: false,
+    });
   };
 
   readonly onUpdatePassThroughFlags = () => {

@@ -1,0 +1,65 @@
+<div class="confirm-dialog-container">
+  <div class="confirm-dialog-content">
+    <div class="confirm-dialog-header">
+      <div class="confirm-dialog-icon-wrapper danger-icon-bg">
+        <mat-icon class="confirm-dialog-icon danger-icon">delete_sweep</mat-icon>
+      </div>
+      <div class="confirm-dialog-title-wrapper">
+        <h3 class="confirm-dialog-title">Decommission Host?</h3>
+        <div class="confirm-dialog-subtitle">
+          This host is reported as missing. Decommissioning it will delete its record permanently from MobileHarness for host:
+        </div>
+      </div>
+    </div>
+
+    <div class="confirm-dialog-summary-card">
+      <div class="summary-card-row">
+        <span class="summary-card-label">Target Host</span>
+        <span class="summary-card-value target-host-value">{{ data.hostName }}</span>
+      </div>
+      <div class="summary-card-row">
+        <span class="summary-card-label">Operation</span>
+        <span class="summary-card-badge">Decommission</span>
+      </div>
+    </div>
+
+    <div class="confirm-dialog-info-message">
+      <div class="info-message-icon-wrapper">
+        <mat-icon class="info-message-icon">lightbulb</mat-icon>
+      </div>
+      <div class="info-message-text">
+        <p class="info-message-title">Important Note</p>
+        <span>This action cannot be undone.</span>
+      </div>
+    </div>
+
+    <p class="confirm-dialog-question">Are you sure you want to proceed?</p>
+  </div>
+
+  <div class="confirm-dialog-actions">
+    <button
+      mat-button
+      class="secondary-button"
+      (click)="onCancel()"
+      [disabled]="isDecommissioning()"
+    >
+      Cancel
+    </button>
+    <button
+      mat-flat-button
+      class="primary-button"
+      (click)="onConfirm()"
+      [disabled]="isDecommissioning()"
+    >
+      <div class="button-content">
+        @if (isDecommissioning()) {
+          <mat-progress-spinner mode="indeterminate" diameter="20"></mat-progress-spinner>
+          <span>Decommissioning...</span>
+        } @else {
+          <mat-icon>delete_sweep</mat-icon>
+          <span>Decommission</span>
+        }
+      </div>
+    </button>
+  </div>
+</div>

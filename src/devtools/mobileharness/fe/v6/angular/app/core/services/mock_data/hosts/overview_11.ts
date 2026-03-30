@@ -70,4 +70,9 @@ export const OVERVIEW_11: MockHostScenario = {
   },
   defaultDeviceConfig: null,
   actions: createHostActions('RUNNING', false),
+  canRollout: {
+    canRollout: true,
+    needUpgrade: true,
+    message: '',
+  },
 };

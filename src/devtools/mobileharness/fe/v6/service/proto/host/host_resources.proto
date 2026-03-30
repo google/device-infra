@@ -19,11 +19,67 @@ syntax = "proto3";
 package devtools.mobileharness.fe.v6.service.proto.host;
 
 import "google/protobuf/timestamp.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/common/common_resources.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/device/device_resources.proto";
 
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.host";
 option java_multiple_files = true;
 option java_outer_classname = "HostResourcesProto";
+
+// Data required to render the host detail page header and action bar.
+message HostHeaderInfo {
+  string host_name = 1;
+  HostActions actions = 2;
+}
+
+// Represents the state of action buttons for a host.
+message HostActions {
+  common.ActionButtonState configuration = 1;
+  common.ActionButtonState debug = 2;
+  common.ActionButtonState deploy = 3;
+  common.ActionButtonState start = 4;
+  common.ActionButtonState restart = 5;
+  common.ActionButtonState stop = 6;
+  common.ActionButtonState decommission = 7;
+  common.ActionButtonState update_pass_through_flags = 8;
+  common.ActionButtonState release = 9;
+}
+
+// Result of a single diagnostic command.
+message CommandResult {
+  string command = 1;
+  string stdout = 2;
+  string stderr = 3;
+}
+
+// Represents a popular or recommended pass-through flag.
+message PopularFlag {
+  string name = 1;
+  string description = 2;
+  string cmd = 3;
+}
+
+// A preset configuration for pass-through flags.
+message FlagPreset {
+  string label = 1;
+  string value = 2;
+  string description = 3;
+}
+
+// Configuration for a specific Lab Server release.
+message HostReleaseConfig {
+  string name = 1;
+  string version = 2;
+  ReleasePort port = 3;
+  repeated string sync_cmd = 4;
+  repeated string async_cmd = 5;
+}
+
+// Port configuration for a release.
+message ReleasePort {
+  string protocol = 1;
+  int32 port_number = 2;
+}
 
 // Represents the comprehensive data required to render the Host Detail Page's
 // overview section.
@@ -69,62 +125,6 @@ message DiagnosticLink {
 message HostOverviewPageData {
   HostHeaderInfo header_info = 1;
   HostOverview overview_content = 2;
-}
-
-// Data required to render the host detail page header and action bar.
-message HostHeaderInfo {
-  string host_name = 1;
-  HostActions actions = 2;
-}
-
-// Represents the state of action buttons for a host.
-message HostActions {
-  // TODO: Use a common type for action button state.
-  device.ActionButtonState configuration = 1;
-  device.ActionButtonState debug = 2;
-  device.ActionButtonState deploy = 3;
-  device.ActionButtonState start = 4;
-  device.ActionButtonState restart = 5;
-  device.ActionButtonState stop = 6;
-  device.ActionButtonState decommission = 7;
-  device.ActionButtonState update_pass_through_flags = 8;
-  device.ActionButtonState release = 9;
-}
-
-// Result of a single diagnostic command.
-message CommandResult {
-  string command = 1;
-  string stdout = 2;
-  string stderr = 3;
-}
-
-// Represents a popular or recommended pass-through flag.
-message PopularFlag {
-  string name = 1;
-  string description = 2;
-  string cmd = 3;
-}
-
-// A preset configuration for pass-through flags.
-message FlagPreset {
-  string label = 1;
-  string value = 2;
-  string description = 3;
-}
-
-// Configuration for a specific Lab Server release.
-message HostReleaseConfig {
-  string name = 1;
-  string version = 2;
-  ReleasePort port = 3;
-  repeated string sync_cmd = 4;
-  repeated string async_cmd = 5;
-}
-
-// Port configuration for a release.
-message ReleasePort {
-  string protocol = 1;
-  int32 port_number = 2;
 }
 
 // Host-level connectivity status with OmniLab master.
