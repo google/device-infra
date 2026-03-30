@@ -24,6 +24,7 @@ go_library(
     name = "conduit",
     srcs = [
         "conduit.go",
+        "manager.go",
     ],
     deps = [
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_go_proto",
@@ -35,6 +36,7 @@ go_test(
     name = "conduit_test",
     srcs = [
         "conduit_test.go",
+        "manager_test.go",
     ],
     embed = [":conduit"],
     deps = [
