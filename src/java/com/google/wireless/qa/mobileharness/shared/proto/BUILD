@@ -81,13 +81,14 @@ proto_library(
     visibility = [
     ],
     deps = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_proto",
+        ":common_proto",
     ],
 )
 
 java_proto_library(
     name = "device_model_java_proto",
     visibility = [
+        "//:omnilab_fusion",
         "//src/devtools/mobileharness/fe/v6:visibility",
         "//src/java/com/google/devtools/mobileharness/platform/testbed:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:__pkg__",

@@ -161,6 +161,10 @@ java_library(
 java_library(
     name = "testbed_device_spec",
     srcs = ["TestbedDeviceSpec.java"],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
+    ],
 )
 
 java_library(
