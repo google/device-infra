@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.GroupedDe
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.DeviceView;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.DeviceHeaderInfoBuilder;
+import com.google.devtools.mobileharness.fe.v6.service.device.handlers.LogcatActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.TestbedConfigBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
@@ -70,6 +71,7 @@ public final class DeviceServiceLogicImplTest {
   @Bind @Mock private ConfigurationProvider configurationProvider;
   @Bind @Mock private TestbedConfigBuilder testbedConfigBuilder;
   @Bind @Mock private DeviceHeaderInfoBuilder deviceHeaderInfoBuilder;
+  @Bind @Mock private LogcatActionHelper logcatActionHelper;
   @Bind @Mock private SubDeviceInfoListFactory subDeviceInfoListFactory;
   @Bind @Mock private InstantSource instantSource;
   @Bind private final ListeningExecutorService executor = MoreExecutors.newDirectExecutorService();

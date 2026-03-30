@@ -22,8 +22,15 @@ package(
 
 java_library(
     name = "handlers",
-    srcs = glob(["*.java"]),
+    srcs = glob(
+        ["*.java"],
+        exclude = [
+            "LogcatActionHelper.java",
+            "NoOpLogcatActionHelper.java",
+        ],
+    ),
     deps = [
+        ":logcat_action_helper",
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
@@ -43,5 +50,17 @@ java_library(
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "logcat_action_helper",
+    srcs = [
+        "LogcatActionHelper.java",
+        "NoOpLogcatActionHelper.java",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/device:device_service_java_proto",
+        "@maven//:com_google_guava_guava",
     ],
 )

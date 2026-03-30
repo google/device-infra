@@ -218,6 +218,8 @@ message GetLogcatResponse {
   string log_url = 1;
   // The time when the logcat was captured.
   google.protobuf.Timestamp captured_at = 2;
+  // The error message if any.
+  string error_msg = 3;
 }
 
 // Request for QuarantineDevice.

@@ -55,9 +55,11 @@ java_library(
     visibility = [
         "//java/com/google/devtools/mobileharness/fe/v6/service:__subpackages__",
         "//javatests/com/google/devtools/mobileharness/fe/v6/service:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/serverlocator:__pkg__",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/relay:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/client/api/util/stub:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/fe/v6/service:__subpackages__",
     ],
     deps = [
         "//src/devtools/mobileharness/shared/util/comm/stub:stub_configuration_java_proto",

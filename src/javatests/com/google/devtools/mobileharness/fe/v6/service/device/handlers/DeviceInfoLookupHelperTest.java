@@ -27,6 +27,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.GroupedDevices;
@@ -59,7 +60,10 @@ public final class DeviceInfoLookupHelperTest {
 
   @Test
   public void lookUpDeviceInfoAsync_success() throws Exception {
-    DeviceInfo expectedDeviceInfo = DeviceInfo.getDefaultInstance();
+    DeviceInfo expectedDeviceInfo =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId(DEVICE_ID))
+            .build();
     GetLabInfoResponse labInfoResponse =
         GetLabInfoResponse.newBuilder()
             .setLabQueryResult(
@@ -82,15 +86,13 @@ public final class DeviceInfoLookupHelperTest {
     assertThat(deviceInfoFuture.get()).isEqualTo(expectedDeviceInfo);
     verify(labInfoProvider).getLabInfoAsync(labInfoRequestCaptor.capture(), eq(UNIVERSE));
     GetLabInfoRequest capturedRequest = labInfoRequestCaptor.getValue();
-    // Verifies that deviceViewRequest is set in the request. This is critical because without it,
-    // the backend will not return the DeviceView in the response, and then
-    // getDeviceInfoFromResponse() will find nothing.
+
     assertThat(capturedRequest.getLabQuery().hasDeviceViewRequest()).isTrue();
     assertThat(capturedRequest.getLabQuery().getDeviceViewRequest()).isEqualToDefaultInstance();
   }
 
   @Test
-  public void lookUpDeviceInfoAsync_notFound() throws Exception {
+  public void lookUpDeviceInfoAsync_deviceNotFound_throwsException() throws Exception {
     GetLabInfoResponse labInfoResponse =
         GetLabInfoResponse.newBuilder()
             .setLabQueryResult(
