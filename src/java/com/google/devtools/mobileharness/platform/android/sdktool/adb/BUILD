@@ -160,7 +160,6 @@ java_library(
     srcs = ["UsbDeviceLocator.java"],
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/container:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemspec:__pkg__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/systemspec:__pkg__",
