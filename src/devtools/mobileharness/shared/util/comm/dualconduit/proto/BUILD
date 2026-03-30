@@ -32,7 +32,7 @@ proto_library(
 
 go_proto_library(
     name = "dual_conduit_go_proto",
-    importpath = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/pb",
+    importpath = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb",
     proto = ":dual_conduit_proto",
 )
 
@@ -49,7 +49,7 @@ proto_library(
 go_proto_library(
     name = "dual_conduit_service_go_grpc",
     compilers = ["@rules_go//proto:go_grpc"],
-    importpath = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/pbgrpc",
+    importpath = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconsvcpb",
     proto = ":dual_conduit_service_proto",
     deps = [":dual_conduit_go_proto"],
 )

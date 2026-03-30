@@ -13,23 +13,23 @@ import (
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 
-	pb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/pb"
-	pbgrpc "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/pbgrpc"
+	dconpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb"
+	dconsvcpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconsvcpb"
 )
 
 // DialerServer is the skeleton implementation of the DualConduitService.
 type DialerServer struct {
-	pbgrpc.UnimplementedDualConduitServiceServer
+	dconsvcpb.UnimplementedDualConduitServiceServer
 }
 
 // EstablishConduit handles the gRPC request to establish a forward/reverse conduit.
-func (s *DialerServer) EstablishConduit(ctx context.Context, req *pb.EstablishConduitRequest) (*pb.EstablishConduitResponse, error) {
+func (s *DialerServer) EstablishConduit(ctx context.Context, req *dconpb.EstablishConduitRequest) (*dconpb.EstablishConduitResponse, error) {
 	log.Printf("Received EstablishConduit request: %+v", req)
 	return nil, status.Errorf(codes.Unimplemented, "method EstablishConduit not implemented")
 }
 
 // TeardownConduit handles the gRPC request to tear down a conduit.
-func (s *DialerServer) TeardownConduit(ctx context.Context, req *pb.TeardownConduitRequest) (*pb.TeardownConduitResponse, error) {
+func (s *DialerServer) TeardownConduit(ctx context.Context, req *dconpb.TeardownConduitRequest) (*dconpb.TeardownConduitResponse, error) {
 	log.Printf("Received TeardownConduit request: %+v", req)
 	return nil, status.Errorf(codes.Unimplemented, "method TeardownConduit not implemented")
 }
@@ -47,7 +47,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	pbgrpc.RegisterDualConduitServiceServer(s, &DialerServer{})
+	dconsvcpb.RegisterDualConduitServiceServer(s, &DialerServer{})
 	if *debug {
 		reflection.Register(s)
 	}

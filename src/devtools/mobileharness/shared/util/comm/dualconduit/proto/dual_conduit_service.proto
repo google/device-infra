@@ -20,7 +20,7 @@ package mobileharness.shared.util.comm.dualconduit;
 
 import "src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dual_conduit.proto";
 
-option go_package = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/pbgrpc;pbgrpc";
+option go_package = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconsvcpb;dconsvcpb";
 
 service DualConduitService {
   // Establishes a conduit.

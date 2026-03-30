@@ -35,7 +35,7 @@ proto_library(
 
 go_proto_library(
     name = "helloworld_go_proto",
-    importpath = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld/proto",
+    importpath = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld/proto/helloworldpb",
     proto = ":helloworld_proto",
 )
 
@@ -52,7 +52,7 @@ proto_library(
 go_proto_library(
     name = "helloworld_service_go_grpc",
     compilers = ["@rules_go//proto:go_grpc"],
-    importpath = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld/proto/grpc",
+    importpath = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld/proto/helloworldsvcpb",
     proto = ":helloworld_service_proto",
     visibility = ["//visibility:public"],
     deps = [":helloworld_go_proto"],
