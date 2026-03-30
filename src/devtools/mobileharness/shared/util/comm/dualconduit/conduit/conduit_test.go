@@ -12,13 +12,13 @@ import (
 )
 
 func TestConduitCloseViaPumpCtx(t *testing.T) {
-	parentCtx, cancel := context.WithCancel(t.Context())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	removed := make(chan struct{})
 	mrs := newMockRSocket()
 
-	c := New(parentCtx, "test-id", nil, mrs, func() {
+	c := New(ctx, "test-id", nil, mrs, func() {
 		close(removed)
 	})
 
@@ -53,13 +53,13 @@ func TestConduitCloseViaPumpCtx(t *testing.T) {
 }
 
 func TestConduitCloseViaRSocket(t *testing.T) {
-	parentCtx, cancel := context.WithCancel(t.Context())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	removed := make(chan struct{})
 	mrs := newMockRSocket()
 
-	c := New(parentCtx, "test-id2", nil, mrs, func() {
+	c := New(ctx, "test-id2", nil, mrs, func() {
 		close(removed)
 	})
 
@@ -83,13 +83,13 @@ func TestConduitCloseViaRSocket(t *testing.T) {
 }
 
 func TestConduitExplicitClose(t *testing.T) {
-	parentCtx, cancel := context.WithCancel(t.Context())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	removed := false
 	mrs := newMockRSocket()
 
-	c := New(parentCtx, "test-id3", nil, mrs, func() {
+	c := New(ctx, "test-id3", nil, mrs, func() {
 		removed = true
 	})
 
@@ -121,13 +121,13 @@ func TestConduitExplicitClose(t *testing.T) {
 }
 
 func TestConduitCloseIdempotent(t *testing.T) {
-	parentCtx, cancel := context.WithCancel(t.Context())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
 	removedCount := 0
 	mrs := newMockRSocket()
 
-	c := New(parentCtx, "test-id4", nil, mrs, func() {
+	c := New(ctx, "test-id4", nil, mrs, func() {
 		removedCount++
 	})
 

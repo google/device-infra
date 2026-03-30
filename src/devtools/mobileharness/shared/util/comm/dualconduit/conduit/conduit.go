@@ -30,8 +30,8 @@ func (c *Conduit) Context() context.Context {
 }
 
 // New creates the tunnel and sets up the bidirectional lifecycle bridge.
-func New(parentCtx context.Context, id string, meta *dconpb.EstablishConduitRequest, rs rsocket.CloseableRSocket, onRemove func()) *Conduit {
-	pumpCtx, cancel := context.WithCancel(parentCtx)
+func New(ctx context.Context, id string, meta *dconpb.EstablishConduitRequest, rs rsocket.CloseableRSocket, onRemove func()) *Conduit {
+	pumpCtx, cancel := context.WithCancel(ctx)
 	c := &Conduit{
 		ID:       id,
 		metadata: meta,
