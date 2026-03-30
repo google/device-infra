@@ -42,11 +42,15 @@ dcon_blaze_to_bazel_transforms = [
     dcon_build_file_replace("//third_party/golang/github_com/rsocket/rsocket_go/v/v0/payload", "@com_github_rsocket_rsocket_go//payload"),
     dcon_build_file_replace("//third_party/golang/github_com/rsocket/rsocket_go/v/v0/rx/flux", "@com_github_rsocket_rsocket_go//rx/flux"),
     dcon_build_file_replace("//third_party/golang/github_com/rsocket/rsocket_go/v/v0/rx", "@com_github_rsocket_rsocket_go//rx"),
+    dcon_build_file_replace("//third_party/golang/github_com/rsocket/rsocket_go/v/v0/core", "@com_github_rsocket_rsocket_go//core"),
+    dcon_build_file_replace("//third_party/deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit/rxconn", "//src/devtools/mobileharness/shared/util/comm/dualconduit/rxconn"),
+    dcon_build_file_replace("//third_party/golang/github_com/rsocket/rsocket_go/v/v0:rsocket", "@com_github_rsocket_rsocket_go//:rsocket-go"),
 ]
 
 dcon_go_imports_map = {
     "google3/third_party/deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dual_conduit_service_go_grpc": "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconsvcpb",
     "google3/third_party/deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dual_conduit_go_proto": "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb",
+    "google3/third_party/deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit/rxconn/rxconn": "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/rxconn",
     "google3/third_party/deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld/helloworld_service_go_grpc": "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld/proto/helloworldsvcpb",
     "google3/third_party/deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld/helloworld_go_proto": "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld/proto/helloworldpb",
     "google3/third_party/golang/grpc/grpc": "google.golang.org/grpc",
@@ -54,6 +58,8 @@ dcon_go_imports_map = {
     "google3/third_party/golang/grpc/codes/codes": "google.golang.org/grpc/codes",
     "google3/third_party/golang/grpc/status/status": "google.golang.org/grpc/status",
     "google3/third_party/golang/github_com/rsocket/rsocket_go/v/v0/payload/payload": "github.com/rsocket/rsocket-go/payload",
+    "google3/third_party/golang/github_com/rsocket/rsocket_go/v/v0/rsocket": "github.com/rsocket/rsocket-go",
     "google3/third_party/golang/github_com/rsocket/rsocket_go/v/v0/rx/rx": "github.com/rsocket/rsocket-go/rx",
     "google3/third_party/golang/github_com/rsocket/rsocket_go/v/v0/rx/flux/flux": "github.com/rsocket/rsocket-go/rx/flux",
+    "google3/third_party/golang/github_com/rsocket/rsocket_go/v/v0/rx/mono/mono": "github.com/rsocket/rsocket-go/rx/mono",
 }
