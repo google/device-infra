@@ -16,9 +16,13 @@
 
 package com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb;
 
+import static com.google.common.base.StandardSystemProperty.JAVA_IO_TMPDIR;
+
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.base.Suppliers;
+import com.google.common.base.Utf8;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.initializer.AdbInitializer;
@@ -36,10 +40,15 @@ import com.google.devtools.mobileharness.shared.util.command.CommandStartExcepti
 import com.google.devtools.mobileharness.shared.util.command.CommandTimeoutException;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.command.Timeout;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import java.io.File;
+import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -70,6 +79,22 @@ public class Adb {
   static final Duration RETRY_INTERVAL = Flags.instance().adbCommandRetryInterval.getNonNull();
 
   @VisibleForTesting final Sleeper sleeper = Sleeper.defaultSleeper();
+
+  // Max length of a command that be run via adb is 4090, i.e.,
+  // The adb protocol limit is 1024*4 for API below 24.
+  // For shell commands, the format is 'shell:<command>'
+  // The maximum supported limit is 4090 (4096 - 6)(UTF-8).
+  // We can update the limit to higher once we don't support SDK<=23.
+  private static final int MAX_ADB_SHELL_COMMAND_SIZE = 4090;
+
+  /** Shell binary on Android device. */
+  private static final String SHELL_BINARY = "/system/bin/sh";
+
+  /** The prefix of the temporary script file on the device. */
+  private static final String DEVICE_SCRIPT_PREFIX = "adb_shell_command_";
+
+  /** The directory to store the temporary script file on the device. */
+  private static final String DEVICE_TEMP_DIR = "/data/local/tmp/";
 
   private final Supplier<AdbParam> adbParamSupplier;
 
@@ -476,7 +501,19 @@ public class Adb {
     if (command == null || command.length == 0) {
       return "";
     }
-    return run(serial, ArrayUtils.addAll(new String[] {"shell"}, command), timeout, lineCallback);
+
+    long commandUtf8Length = getCommandUtf8Length(command);
+    if (commandUtf8Length <= MAX_ADB_SHELL_COMMAND_SIZE) {
+      return run(serial, ArrayUtils.addAll(new String[] {"shell"}, command), timeout, lineCallback);
+    }
+
+    // If the command is longer than MAX_ADB_SHELL_COMMAND_SIZE, we need to put the command in a
+    // script file on the device and execute the script file.
+    logger.atInfo().log(
+        "Command length %d exceeds the limit %d, using a script file.",
+        commandUtf8Length, MAX_ADB_SHELL_COMMAND_SIZE);
+
+    return runShellWithScript(serial, command, timeout, lineCallback);
   }
 
   /**
@@ -774,6 +811,67 @@ public class Adb {
     public LineCallback.Response onLine(String line) {
       Adb.logger.atInfo().log("%s%s", tag, line);
       return LineCallback.Response.empty();
+    }
+  }
+
+  private String runShellWithScript(
+      String serial,
+      String[] command,
+      @Nullable Duration timeout,
+      @Nullable LineCallback lineCallback)
+      throws MobileHarnessException, InterruptedException {
+
+    String[] shellArgs;
+    String[] commandForScript = command;
+    if (command.length > 0 && command[0].equals("-x")) {
+      commandForScript = Arrays.copyOfRange(command, 1, command.length);
+      shellArgs = new String[] {"shell", "-x"};
+    } else {
+      shellArgs = new String[] {"shell"};
+    }
+
+    String deviceScriptPath = pushCommandAsScript(serial, commandForScript);
+    try {
+      return run(
+          serial,
+          ArrayUtils.addAll(shellArgs, SHELL_BINARY, deviceScriptPath),
+          timeout,
+          lineCallback);
+    } finally {
+      try {
+        var unused = run(serial, new String[] {"shell", "rm", deviceScriptPath});
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to remove temporary script file %s on device %s", deviceScriptPath, serial);
+      }
+    }
+  }
+
+  private long getCommandUtf8Length(String[] command) {
+    long commandUtf8Length = Math.max(0, command.length - 1);
+    for (String element : command) {
+      commandUtf8Length += Utf8.encodedLength(element);
+    }
+    return commandUtf8Length;
+  }
+
+  private String pushCommandAsScript(String serial, String[] command)
+      throws MobileHarnessException, InterruptedException {
+    String deviceScriptPath = null;
+    // Assume that the command args are quoted properly.
+    String fullCommand = Joiner.on(" ").join(command);
+    LocalFileUtil localFileUtil = new LocalFileUtil();
+    String localScriptPath =
+        localFileUtil
+            .createTempFile(Path.of(JAVA_IO_TMPDIR.value()), DEVICE_SCRIPT_PREFIX, ".sh")
+            .toString();
+    try {
+      localFileUtil.writeToFile(localScriptPath, fullCommand);
+      deviceScriptPath = PathUtil.join(DEVICE_TEMP_DIR, new File(localScriptPath).getName());
+      String unused = run(serial, new String[] {"push", localScriptPath, deviceScriptPath});
+      return deviceScriptPath;
+    } finally {
+      localFileUtil.removeFileOrDir(localScriptPath);
     }
   }
 }
