@@ -77,16 +77,20 @@ public abstract class GcsUtil {
 
   /** Thread pool for uploading/downloading GSC file in parellel. */
   protected static final class Holder {
-    static final ListeningExecutorService threadpool =
+    static final ListeningExecutorService copyFileToCloudThreadpool =
         ThreadPools.createStandardThreadPoolWithMaxSize(
-            "gcs-util", Flags.instance().gcsUtilThreads.getNonNull());
+            "gcs-util-copy-file-to-cloud", Flags.instance().gcsUtilThreads.getNonNull());
+    static final ListeningExecutorService copyFileToLocalThreadpool =
+        ThreadPools.createStandardThreadPoolWithMaxSize(
+            "gcs-util-copy-file-to-local", Flags.instance().gcsUtilThreads.getNonNull());
 
     static {
       ShutdownHookManager.getInstance()
           .addShutdownHook(
               () -> {
                 logger.atInfo().log("Shutting down GcsUtil thread pool.");
-                threadpool.shutdownNow();
+                copyFileToCloudThreadpool.shutdownNow();
+                copyFileToLocalThreadpool.shutdownNow();
               },
               "gcs-util-shutdown");
     }
@@ -412,6 +416,7 @@ public abstract class GcsUtil {
 
     String shardNamePrefix =
         String.format(".%s.%s", localFile.getFileName(), Integer.toUnsignedLong(random.nextInt()));
+    Instant startTime = currentTime();
     List<ListenableFuture<?>> results = new ArrayList<>();
     List<Path> shards = new ArrayList<>();
     for (int i = 0; i < shardCount; i++) {
@@ -421,7 +426,7 @@ public abstract class GcsUtil {
       shards.add(localFileShard);
 
       results.add(
-          Holder.threadpool.submit(
+          Holder.copyFileToLocalThreadpool.submit(
               () -> {
                 copyFileToLocal(gcsFile, localFileShard, from, size);
                 return null;
@@ -432,7 +437,8 @@ public abstract class GcsUtil {
     try {
       future.get();
       logger.atInfo().log(
-          "Downloaded the gcs file %s with %s shards to %s", gcsFile, shards.size(), localFile);
+          "Downloaded the gcs file %s with %s shards to %s in %s",
+          gcsFile, shards.size(), localFile, Duration.between(startTime, currentTime()));
 
       for (int i = 1; i < shards.size(); i++) {
         localFileUtil.appendToFile(shards.get(i), shards.get(0));
@@ -664,6 +670,8 @@ public abstract class GcsUtil {
       throws MobileHarnessException, InterruptedException {
     String fileInfo =
         String.format("local %s to gs://%s/%s", localFile, storageParams.bucketName, gcsFile);
+
+    Instant startTime = currentTime();
     logger.atInfo().log("Uploading %s", fileInfo);
     retryIfMeetQuotaOrNetworkIssue(
         () -> {
@@ -677,7 +685,7 @@ public abstract class GcsUtil {
           return null;
         },
         "copy " + fileInfo);
-    logger.atInfo().log("Uploaded %s", fileInfo);
+    logger.atInfo().log("Uploaded %s in %s", fileInfo, Duration.between(startTime, currentTime()));
   }
 
   /**
@@ -699,6 +707,7 @@ public abstract class GcsUtil {
         String.format(
             "%s [%s, %s) to gs://%s/%s",
             localFile, from, from + size, storageParams.bucketName, gcsFile);
+    Instant startTime = currentTime();
     logger.atInfo().log("Uploading %s", fileInfo);
     retryIfMeetQuotaOrNetworkIssue(
         () -> {
@@ -718,8 +727,6 @@ public abstract class GcsUtil {
             }
 
             InputStreamContent contentStream = new InputStreamContent("text/plain", in);
-            // There is a regression if not specify the length or use -1 (its default value), the
-            // entire upload speed is slow down dramatically.
             contentStream.setLength(size);
             copyContentStreamToCloud(contentStream, metadata);
             return null;
@@ -729,7 +736,7 @@ public abstract class GcsUtil {
           }
         },
         "upload " + fileInfo);
-    logger.atInfo().log("Uploaded %s", fileInfo);
+    logger.atInfo().log("Uploaded %s in %s", fileInfo, Duration.between(startTime, currentTime()));
   }
 
   // TODO: Make it private.
@@ -785,6 +792,7 @@ public abstract class GcsUtil {
     logger.atInfo().log(
         "Uploading local %s to gs://%s/%s in %s shards,",
         localFile, storageParams.bucketName, gcsFile, shardCount);
+    Instant startTime = currentTime();
     String gcsShardNamePrefix =
         String.format(".%s.%s", gcsFile.getFileName(), Long.toUnsignedString(random.nextLong()));
 
@@ -798,7 +806,7 @@ public abstract class GcsUtil {
       gcsShards.add(gcsShard);
 
       results.add(
-          Holder.threadpool.submit(
+          Holder.copyFileToCloudThreadpool.submit(
               () -> {
                 partialCopyFileToCloud(localFile, from, size, gcsShard);
                 return null;
@@ -806,14 +814,19 @@ public abstract class GcsUtil {
     }
 
     ListenableFuture<?> future =
-        Futures.whenAllSucceed(results).call(() -> null, Holder.threadpool);
+        Futures.whenAllSucceed(results).call(() -> null, Holder.copyFileToCloudThreadpool);
     try {
       future.get();
 
       compose(gcsFile, true, gcsShards, contentType);
       logger.atInfo().log(
-          "Uploaded local %s to gs://%s/%s in %s shards,",
-          localFile, storageParams.bucketName, gcsFile, shardCount);
+          "Uploaded local %s to gs://%s/%s in %s shards in %s",
+          localFile,
+          storageParams.bucketName,
+          gcsFile,
+          shardCount,
+          Duration.between(startTime, currentTime()));
+
     } catch (InterruptedException e) {
       throw e;
     } catch (Throwable e) {
@@ -915,11 +928,14 @@ public abstract class GcsUtil {
     ArrayList<String> exceptions = new ArrayList<>();
     int sleepSecond = 1;
     MobileHarnessException lastException = null;
+    Instant startTime = currentTime();
     for (int i = 0; i < MAX_ATTEMPTS; i++) {
       try {
         R response = m.call();
         if (i > 0) {
-          logger.atInfo().log("Finish to %s in %d attempts", actionInfo, i + 1);
+          logger.atInfo().log(
+              "Finish to %s in %d attempts in %s",
+              actionInfo, i + 1, Duration.between(startTime, currentTime()));
         }
         return response;
       } catch (MobileHarnessException e) {
