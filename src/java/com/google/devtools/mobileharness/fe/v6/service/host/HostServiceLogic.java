@@ -35,8 +35,16 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetReleaseConf
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetReleaseConfigsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.ReleaseLabServerRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.ReleaseLabServerResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.RestartLabServerRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.RestartLabServerResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.StartLabServerRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.StartLabServerResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.StopLabServerRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.StopLabServerResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsResponse;
 
@@ -68,4 +76,12 @@ public interface HostServiceLogic {
       RemoteControlDevicesRequest request);
 
   ListenableFuture<DecommissionHostResponse> decommissionHost(DecommissionHostRequest request);
+
+  ListenableFuture<ReleaseLabServerResponse> releaseLabServer(ReleaseLabServerRequest request);
+
+  ListenableFuture<StartLabServerResponse> startLabServer(StartLabServerRequest request);
+
+  ListenableFuture<RestartLabServerResponse> restartLabServer(RestartLabServerRequest request);
+
+  ListenableFuture<StopLabServerResponse> stopLabServer(StopLabServerRequest request);
 }

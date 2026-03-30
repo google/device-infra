@@ -1,5 +1,6 @@
 import {ActionButtonState} from './device_action';
 
+
 /**
  * Represents the state of action buttons for a host.
  */
@@ -81,3 +82,39 @@ export declare interface ReleasePort {
  * Response for DecommissionHost API.
  */
 export declare interface DecommissionHostResponse {}
+
+/**
+ * Response for those rollout action
+ */
+export declare interface RolloutResponse {
+  readonly trackingUrl: string;
+}
+
+/**
+ * Response for ReleaseLabServer API.
+ */
+export declare interface ReleaseLabServerResponse extends RolloutResponse {}
+
+/**
+ * Response for StartLabServer API.
+ */
+export declare interface StartLabServerResponse extends RolloutResponse {}
+
+/**
+ * Response for RestartLabServer API.
+ */
+export declare interface RestartLabServerResponse extends RolloutResponse {}
+
+/**
+ * Response for StopLabServer API.
+ */
+export declare interface StopLabServerResponse extends RolloutResponse {}
+
+/**
+ * Request for ReleaseLabServer API.
+ */
+export declare interface ReleaseLabServerRequest {
+  readonly version: string;
+  readonly flags?: string;
+}
+

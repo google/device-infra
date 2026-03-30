@@ -8,10 +8,15 @@ import {TestBed} from '@angular/core/testing';
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
   DecommissionHostResponse,
+  ReleaseLabServerRequest,
+  ReleaseLabServerResponse,
   GetHostDebugInfoResponse,
   HostHeaderInfo,
   HostReleaseConfig,
   PopularFlag,
+  RestartLabServerResponse,
+  StartLabServerResponse,
+  StopLabServerResponse,
 } from '../../models/host_action';
 import {
   DeviceSummary,
@@ -178,5 +183,66 @@ describe('HttpHostService', () => {
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({deviceControlIds: ['device-1']});
     req.flush({});
+  });
+
+  it('should deploy host release', () => {
+    const mockReq: ReleaseLabServerRequest = {
+      version: '1.2.3',
+      flags: '--foo',
+    };
+    const mockResponse: ReleaseLabServerResponse = {
+      trackingUrl: 'http://tracking.url',
+    };
+    service.releaseLabServer('test-host', mockReq).subscribe((res) => {
+      expect(res).toEqual(mockResponse);
+    });
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/hosts/test-host:deploy',
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(mockReq);
+    req.flush(mockResponse);
+  });
+
+  it('should start host server', () => {
+    const mockResponse: StartLabServerResponse = {
+      trackingUrl: 'http://tracking.url',
+    };
+    service.startLabServer('test-host').subscribe((res) => {
+      expect(res).toEqual(mockResponse);
+    });
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/hosts/test-host:start',
+    );
+    expect(req.request.method).toBe('POST');
+    req.flush(mockResponse);
+  });
+
+  it('should restart host server', () => {
+    const mockResponse: RestartLabServerResponse = {
+      trackingUrl: 'http://tracking.url',
+    };
+    service.restartLabServer('test-host').subscribe((res) => {
+      expect(res).toEqual(mockResponse);
+    });
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/hosts/test-host:restart',
+    );
+    expect(req.request.method).toBe('POST');
+    req.flush(mockResponse);
+  });
+
+  it('should stop host server', () => {
+    const mockResponse: StopLabServerResponse = {
+      trackingUrl: 'http://tracking.url',
+    };
+    service.stopLabServer('test-host').subscribe((res) => {
+      expect(res).toEqual(mockResponse);
+    });
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/hosts/test-host:stop',
+    );
+    expect(req.request.method).toBe('POST');
+    req.flush(mockResponse);
   });
 });

@@ -37,8 +37,16 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetReleaseConf
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostServiceGrpc;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.ReleaseLabServerRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.ReleaseLabServerResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.RestartLabServerRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.RestartLabServerResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.StartLabServerRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.StartLabServerResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.StopLabServerRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.StopLabServerResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsResponse;
 import io.grpc.stub.StreamObserver;
@@ -192,5 +200,53 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
         executor,
         HostServiceGrpc.getServiceDescriptor(),
         HostServiceGrpc.getDecommissionHostMethod());
+  }
+
+  @Override
+  public void releaseLabServer(
+      ReleaseLabServerRequest request, StreamObserver<ReleaseLabServerResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::releaseLabServer,
+        executor,
+        HostServiceGrpc.getServiceDescriptor(),
+        HostServiceGrpc.getReleaseLabServerMethod());
+  }
+
+  @Override
+  public void startLabServer(
+      StartLabServerRequest request, StreamObserver<StartLabServerResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::startLabServer,
+        executor,
+        HostServiceGrpc.getServiceDescriptor(),
+        HostServiceGrpc.getStartLabServerMethod());
+  }
+
+  @Override
+  public void restartLabServer(
+      RestartLabServerRequest request, StreamObserver<RestartLabServerResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::restartLabServer,
+        executor,
+        HostServiceGrpc.getServiceDescriptor(),
+        HostServiceGrpc.getRestartLabServerMethod());
+  }
+
+  @Override
+  public void stopLabServer(
+      StopLabServerRequest request, StreamObserver<StopLabServerResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::stopLabServer,
+        executor,
+        HostServiceGrpc.getServiceDescriptor(),
+        HostServiceGrpc.getStopLabServerMethod());
   }
 }

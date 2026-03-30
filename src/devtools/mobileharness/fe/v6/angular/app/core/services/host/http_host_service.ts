@@ -5,10 +5,15 @@ import {Observable} from 'rxjs';
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
   DecommissionHostResponse,
+  ReleaseLabServerRequest,
+  ReleaseLabServerResponse,
   GetHostDebugInfoResponse,
   HostHeaderInfo,
   HostReleaseConfig,
   PopularFlag,
+  RestartLabServerResponse,
+  StartLabServerResponse,
+  StopLabServerResponse,
 } from '../../models/host_action';
 import {
   CheckRemoteControlEligibilityResponse,
@@ -125,6 +130,43 @@ export class HttpHostService extends HostService {
   ): Observable<DecommissionHostResponse> {
     return this.http.post<DecommissionHostResponse>(
       `${this.apiUrl}/${hostName}:decommission`,
+      {},
+    );
+  }
+
+  override releaseLabServer(
+    hostName: string,
+    req: ReleaseLabServerRequest,
+  ): Observable<ReleaseLabServerResponse> {
+    return this.http.post<ReleaseLabServerResponse>(
+      `${this.apiUrl}/${hostName}:deploy`,
+      req,
+    );
+  }
+
+  override startLabServer(
+    hostName: string,
+  ): Observable<StartLabServerResponse> {
+    return this.http.post<StartLabServerResponse>(
+      `${this.apiUrl}/${hostName}:start`,
+      {},
+    );
+  }
+
+  override restartLabServer(
+    hostName: string,
+  ): Observable<RestartLabServerResponse> {
+    return this.http.post<RestartLabServerResponse>(
+      `${this.apiUrl}/${hostName}:restart`,
+      {},
+    );
+  }
+
+  override stopLabServer(
+    hostName: string,
+  ): Observable<StopLabServerResponse> {
+    return this.http.post<StopLabServerResponse>(
+      `${this.apiUrl}/${hostName}:stop`,
       {},
     );
   }

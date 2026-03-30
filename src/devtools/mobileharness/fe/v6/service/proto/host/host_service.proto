@@ -118,6 +118,42 @@ service HostService {
       body: "*"
     };
   }
+
+  // Deploys a specific Lab Server release version to a host.
+  rpc ReleaseLabServer(ReleaseLabServerRequest)
+      returns (ReleaseLabServerResponse) {
+    option (google.api.http) = {
+      post: "/v6/hosts/{host_name}:deploy"
+      body: "*"
+    };
+  }
+
+  // Starts the lab server process on the host with same release version and
+  // latest flags.
+  rpc StartLabServer(StartLabServerRequest) returns (StartLabServerResponse) {
+    option (google.api.http) = {
+      post: "/v6/hosts/{host_name}:start"
+      body: "*"
+    };
+  }
+
+  // Restarts the lab server process on the host with same release version and
+  // latest flags.
+  rpc RestartLabServer(RestartLabServerRequest)
+      returns (RestartLabServerResponse) {
+    option (google.api.http) = {
+      post: "/v6/hosts/{host_name}:restart"
+      body: "*"
+    };
+  }
+
+  // Stops the lab server process on the host.
+  rpc StopLabServer(StopLabServerRequest) returns (StopLabServerResponse) {
+    option (google.api.http) = {
+      post: "/v6/hosts/{host_name}:stop"
+      body: "*"
+    };
+  }
 }
 
 // Request message for GetHostHeaderInfo.
@@ -256,3 +292,49 @@ message DecommissionHostRequest {
 
 // Response message for DecommissionHost.
 message DecommissionHostResponse {}
+
+// Request message for ReleaseLabServer.
+message ReleaseLabServerRequest {
+  string host_name = 1;
+  string version = 2;
+  string flags = 3;
+}
+
+// Request message for StartLabServer.
+message StartLabServerRequest {
+  string host_name = 1;
+}
+
+// Request message for StopLabServer.
+message StopLabServerRequest {
+  string host_name = 1;
+}
+
+// Request message for RestartLabServer.
+message RestartLabServerRequest {
+  string host_name = 1;
+}
+
+// Response for ReleaseLabServer API.
+message ReleaseLabServerResponse {
+  // The tracking URL for the rollout.
+  string tracking_url = 1;
+}
+
+// Response for StartLabServer API.
+message StartLabServerResponse {
+  // The tracking URL for the rollout.
+  string tracking_url = 1;
+}
+
+// Response for RestartLabServer API.
+message RestartLabServerResponse {
+  // The tracking URL for the rollout.
+  string tracking_url = 1;
+}
+
+// Response for StopLabServer API.
+message StopLabServerResponse {
+  // The tracking URL for the rollout.
+  string tracking_url = 1;
+}

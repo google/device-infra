@@ -2,10 +2,15 @@ import {InjectionToken} from '@angular/core';
 import {Observable} from 'rxjs';
 import {
   DecommissionHostResponse,
+  ReleaseLabServerRequest,
+  ReleaseLabServerResponse,
   GetHostDebugInfoResponse,
   HostHeaderInfo,
   HostReleaseConfig,
   PopularFlag,
+  RestartLabServerResponse,
+  StartLabServerResponse,
+  StopLabServerResponse,
 } from '../../models/host_action';
 import {
   CheckRemoteControlEligibilityResponse,
@@ -107,4 +112,31 @@ export abstract class HostService {
   abstract decommissionHost(
     hostName: string,
   ): Observable<DecommissionHostResponse>;
+
+  /**
+   * Deploys a specific Lab Server release version to a host.
+   */
+  abstract releaseLabServer(
+    hostName: string,
+    req: ReleaseLabServerRequest,
+  ): Observable<ReleaseLabServerResponse>;
+
+  /**
+   * Starts the lab server process on the host with same release version and
+   * latest flags.
+   */
+  abstract startLabServer(hostName: string): Observable<StartLabServerResponse>;
+
+  /**
+   * Restarts the lab server process on the host with same release version and
+   * latest flags.
+   */
+  abstract restartLabServer(
+    hostName: string,
+  ): Observable<RestartLabServerResponse>;
+
+  /**
+   * Stops the lab server process on the host.
+   */
+  abstract stopLabServer(hostName: string): Observable<StopLabServerResponse>;
 }

@@ -3,10 +3,15 @@ import {Observable, of, throwError} from 'rxjs';
 
 import {
   DecommissionHostResponse,
+  ReleaseLabServerRequest,
+  ReleaseLabServerResponse,
   GetHostDebugInfoResponse,
   HostHeaderInfo,
   HostReleaseConfig,
   PopularFlag,
+  RestartLabServerResponse,
+  StartLabServerResponse,
+  StopLabServerResponse,
 } from '../../models/host_action';
 import {
   CheckRemoteControlEligibilityResponse,
@@ -453,5 +458,42 @@ export class FakeHostService extends HostService {
         () => new Error(`Host with '${hostName}' not found in mock data.`),
       );
     }
+  }
+
+  override releaseLabServer(
+    hostName: string,
+    req: ReleaseLabServerRequest,
+  ): Observable<ReleaseLabServerResponse> {
+    return of({
+      trackingUrl:
+        'https://rollouts.corp.example.com/rollouts/prodchange-rollout/abc%2F123%2Frrui',
+    });
+  }
+
+  override startLabServer(
+    hostName: string,
+  ): Observable<StartLabServerResponse> {
+    return of({
+      trackingUrl:
+        'https://rollouts.corp.example.com/rollouts/prodchange-rollout/start%2F123',
+    });
+  }
+
+  override restartLabServer(
+    hostName: string,
+  ): Observable<RestartLabServerResponse> {
+    return of({
+      trackingUrl:
+        'https://rollouts.corp.example.com/rollouts/prodchange-rollout/restart%2F123',
+    });
+  }
+
+  override stopLabServer(
+    hostName: string,
+  ): Observable<StopLabServerResponse> {
+    return of({
+      trackingUrl:
+        'https://rollouts.corp.example.com/rollouts/prodchange-rollout/stop%2F123',
+    });
   }
 }
