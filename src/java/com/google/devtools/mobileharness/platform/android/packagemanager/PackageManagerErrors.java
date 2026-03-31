@@ -30,6 +30,10 @@ public final class PackageManagerErrors {
   private static final ImmutableList<ErrorDetail> BAD_USER_CONFIG_INSTALL_FAILURES =
       ImmutableList.of(
           new ErrorDetail(
+              "INSTALL_FAILED_CONFLICTING_PROVIDER",
+              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_CONFLICTING_PROVIDER,
+              "Package conflicts with an installed package providing the same provider authority"),
+          new ErrorDetail(
               "INSTALL_FAILED_CPU_ABI_INCOMPATIBLE",
               AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_CPU_ABI_INCOMPATIBLE,
               "Package contains native code, but non is compatible with the device's ABI"),
