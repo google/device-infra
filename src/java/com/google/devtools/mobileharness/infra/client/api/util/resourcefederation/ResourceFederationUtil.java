@@ -54,8 +54,19 @@ public final class ResourceFederationUtil {
   /**
    * Gets the resource federation from the job info if it contains a valid master server locator.
    */
-  public static Optional<ResourceFederation> findResourceFederation(JobInfo jobInfo) {
+  public static Optional<ResourceFederation> findResourceFederation(
+      JobInfo jobInfo, String internalMasterSpec) {
     return getMasterServerLocator(jobInfo).map(ResourceFederationUtil::toResourceFederationForAts);
+  }
+
+  /**
+   * Gets the resource federation from the job infos if they all have the same valid master server
+   * locator, or if hybrid mode is enabled.
+   */
+  public static Optional<ResourceFederation> findResourceFederation(
+      Collection<JobInfo> jobInfos, String internalMasterSpec) {
+    return findCommonMasterLocator(jobInfos)
+        .map(ResourceFederationUtil::toResourceFederationForAts);
   }
 
   /**

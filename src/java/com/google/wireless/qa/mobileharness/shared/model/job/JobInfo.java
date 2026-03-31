@@ -138,7 +138,7 @@ public class JobInfo extends JobScheduleUnit {
       help =
           "Container mode preference for testing/debugging/backward-compatibility."
               + " See the enum ContainerModePreference. Case is ignored. By default, it is"
-              + "ContainerModePreference.NON_CONTAINER.\n")
+              + " ContainerModePreference.NON_CONTAINER.\n")
   public static final String PARAM_CONTAINER_MODE_PREFERENCE = "container_mode_preference";
 
   @ParamAnnotation(
@@ -190,6 +190,15 @@ public class JobInfo extends JobScheduleUnit {
               + " to be set correctly to run jobs on these endpoints. Mobile Harness client will"
               + " set them automatically if they are not set by users.")
   public static final String PARAM_MASTER_CLOUD_ENDPOINT = "master_cloud_endpoint";
+
+  @ParamAnnotation(
+      required = false,
+      help =
+          "Whether to use hybrid mode for allocation and lab. If true, device allocation (Master)"
+              + " will use the internal spec, while lab connection will use the external proxy "
+              + "defined by master_cloud_endpoint if specified.")
+  public static final String PARAM_USE_HYBRID_MODE_FOR_ALLOCATION_AND_LAB =
+      "use_hybrid_mode_for_allocation_and_lab";
 
   @ParamAnnotation(
       required = false,
