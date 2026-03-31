@@ -51,8 +51,6 @@ java_library(
     name = "container_device_cache",
     srcs = ["ContainerDeviceCache.java"],
     visibility = [
-        # Do NOT add visibility here.
-        # This target should only be used by MH infra only right before passing through devices.
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__pkg__",
     ],
     deps = [
