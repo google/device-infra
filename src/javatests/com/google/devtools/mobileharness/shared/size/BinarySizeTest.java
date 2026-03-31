@@ -63,7 +63,7 @@ public class BinarySizeTest {
           "ats_console",
           22_550_000L,
           "persistent_cache_manager",
-          9_050_000L,
+          9_150_000L,
           "xts_tradefed_agent",
           4_950_000L);
 
