@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -166,7 +167,8 @@ public class AndroidFileUtil {
   @VisibleForTesting static final String OUTPUT_NO_SPACE = "No space left on device";
 
   /** Short timeout for quick operations. */
-  @VisibleForTesting static final Duration SHORT_COMMAND_TIMEOUT = Duration.ofSeconds(5);
+  @VisibleForTesting
+  static final Duration SHORT_COMMAND_TIMEOUT = Flags.instance().adbShortCommandTimeout.get();
 
   /** The string of "Filesystem". */
   private static final String STRING_FILESYSTEM = "Filesystem";

@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.command.linecallback.ScanSignalOutputCallback;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -141,7 +142,8 @@ public class AndroidAdbUtil {
   private static final Pattern GETPROP_LINE_PATTERN = Pattern.compile("\\[(.+?)\\]: \\[(.+?)\\]");
 
   /** Short timeout for quick operations. */
-  @VisibleForTesting static final Duration SHORT_COMMAND_TIMEOUT = Duration.ofSeconds(5);
+  @VisibleForTesting
+  static final Duration SHORT_COMMAND_TIMEOUT = Flags.instance().adbShortCommandTimeout.get();
 
   private static final Splitter TOKEN_SPLITTER =
       Splitter.on(CharMatcher.whitespace()).omitEmptyStrings();

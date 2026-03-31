@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.WaitArgs;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.shared.constant.Splitters;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import java.time.Clock;
 import java.time.Duration;
@@ -229,7 +230,8 @@ public class AndroidSystemSettingUtil {
   @VisibleForTesting static final String PROP_VALUE_DISABLE_DEX_PRE_VERIFICATION = "v=n,o=v";
 
   /** Short duration to run adb command to fail faster. */
-  @VisibleForTesting static final Duration SHORT_COMMAND_TIMEOUT = Duration.ofSeconds(5);
+  @VisibleForTesting
+  static final Duration SHORT_COMMAND_TIMEOUT = Flags.instance().adbShortCommandTimeout.get();
 
   /** SQL string to delete everything from overrides. */
   @VisibleForTesting static final String SQL_CLEAR_GSERVICE_OVERRIDE = "DELETE FROM overrides";

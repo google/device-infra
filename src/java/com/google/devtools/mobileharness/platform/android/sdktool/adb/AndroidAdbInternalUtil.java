@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.platform.android.shared.constant.Device
 import com.google.devtools.mobileharness.platform.android.shared.constant.Splitters;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.AndroidEmulatorIds;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -102,7 +103,8 @@ public class AndroidAdbInternalUtil {
   public static final String OUTPUT_USB_ID_TOKEN = "usb:";
 
   /** Short timeout for quick operations. */
-  private static final Duration SHORT_COMMAND_TIMEOUT = Duration.ofSeconds(5);
+  private static final Duration SHORT_COMMAND_TIMEOUT =
+      Flags.instance().adbShortCommandTimeout.get();
 
   /** Android SDK ADB command line tools executor. */
   private final Adb adb;

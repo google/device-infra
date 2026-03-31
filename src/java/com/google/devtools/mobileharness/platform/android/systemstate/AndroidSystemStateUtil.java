@@ -194,7 +194,8 @@ public class AndroidSystemStateUtil {
   @VisibleForTesting static final String OUTPUT_BROADCAST_SUCCESS = "Broadcast completed: result=0";
 
   /** Short timeout for quick operations. */
-  @VisibleForTesting static final Duration SHORT_COMMAND_TIMEOUT = Duration.ofSeconds(5);
+  @VisibleForTesting
+  static final Duration SHORT_COMMAND_TIMEOUT = Flags.instance().adbShortCommandTimeout.get();
 
   @VisibleForTesting
   static final String RESET_VIA_TEST_HARNESS_SCREEN_LOCKED_ERROR = "there is a lock screen";

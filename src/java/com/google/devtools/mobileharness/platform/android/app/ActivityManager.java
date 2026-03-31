@@ -23,6 +23,7 @@ import com.google.common.base.Splitter;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.time.Duration;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -31,7 +32,8 @@ import java.util.regex.Pattern;
 /** Utility methods for controlling the activity manager (am) of Android devices/emulators. */
 public class ActivityManager {
   /** Short timeout for quick operations. */
-  @VisibleForTesting static final Duration ADB_SHELL_TIMEOUT = Duration.ofSeconds(30);
+  @VisibleForTesting
+  static final Duration SHORT_TIMEOUT = Flags.instance().adbShortCommandTimeout.get();
 
   /** Adb shell command to get config. */
   @VisibleForTesting static final String ADB_SHELL_GET_CONFIG = "am get-config";
@@ -75,7 +77,7 @@ public class ActivityManager {
   public Locale getLocale(String serial) throws MobileHarnessException, InterruptedException {
     String output = "";
     try {
-      output = adb.runShellWithRetry(serial, ADB_SHELL_GET_CONFIG, ADB_SHELL_TIMEOUT).trim();
+      output = adb.runShellWithRetry(serial, ADB_SHELL_GET_CONFIG, SHORT_TIMEOUT).trim();
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_AM_GET_LOCALE_ERROR,

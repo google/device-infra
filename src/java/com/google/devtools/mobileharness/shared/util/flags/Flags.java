@@ -134,6 +134,15 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> adbMaxNoDeviceDetectionRounds = adbMaxNoDeviceDetectionRoundsDefault;
 
+  private static final Flag<Duration> adbShortCommandTimeoutDefault =
+      DurationFlag.value(Duration.ofSeconds(5L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--adb_short_command_timeout",
+      description = "Timeout for quick ADB commands. Default is 5 seconds.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> adbShortCommandTimeout = adbShortCommandTimeoutDefault;
+
   private static final Flag<Boolean> addRequiredDimensionForPartnerSharedPoolDefault =
       Flag.value(false);
 
