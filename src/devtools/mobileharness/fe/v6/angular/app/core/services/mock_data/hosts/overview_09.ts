@@ -1,7 +1,7 @@
 import {DeviceSummary, HostOverview} from '../../../models/host_overview';
 import {MockHostScenario} from '../models';
 
-import {createDefaultUiStatus} from './ui_status_utils';
+import {createDefaultUiStatus, createHostActions} from './ui_status_utils';
 
 const overview: HostOverview = {
   hostName: 'host-i-9.example.com',
@@ -69,4 +69,5 @@ export const OVERVIEW_09: MockHostScenario = {
     uiStatus: createDefaultUiStatus(),
   },
   defaultDeviceConfig: null,
+  actions: createHostActions('RUNNING', false),
 };

@@ -6,7 +6,11 @@ import {
   HostConfigUiStatus,
 } from '../../../models/host_config_models';
 import {MockHostScenario} from '../models';
-import {createDefaultHostOverview, createPartStatus} from './ui_status_utils';
+import {
+  createDefaultHostOverview,
+  createHostActions,
+  createPartStatus,
+} from './ui_status_utils';
 
 const DEFAULT_DEVICE_CONFIG: DeviceConfig = {
   permissions: {owners: ['admin1'], executors: ['user1']},
@@ -58,4 +62,5 @@ export const SCENARIO_HOST_PUSHER_ALL: MockHostScenario = {
     uiStatus: UI_STATUS,
   },
   defaultDeviceConfig: DEFAULT_DEVICE_CONFIG,
+  actions: createHostActions(),
 };

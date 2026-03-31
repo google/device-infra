@@ -1,4 +1,4 @@
-import {ActionButtonState} from './device_action';
+import {ActionButtonState} from './action_common';
 
 
 /**

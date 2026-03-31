@@ -1,7 +1,7 @@
 import {DeviceSummary, HostOverview} from '../../../models/host_overview';
 import {MockHostScenario} from '../models';
 
-import {createDefaultUiStatus} from './ui_status_utils';
+import {createDefaultUiStatus, createHostActions} from './ui_status_utils';
 
 const overview: HostOverview = {
   hostName: 'host-d-4.example.com',
@@ -70,15 +70,5 @@ export const OVERVIEW_04: MockHostScenario = {
     uiStatus: createDefaultUiStatus(),
   },
   defaultDeviceConfig: null,
-  actions: {
-    configuration: {enabled: false, visible: false, tooltip: 'Host is offline'},
-    debug: {enabled: false, visible: false, tooltip: 'Host is offline'},
-    deploy: {enabled: false, visible: false, tooltip: 'Host is offline'},
-    start: {enabled: false, visible: false, tooltip: 'Host is offline'},
-    restart: {enabled: false, visible: false, tooltip: 'Host is offline'},
-    stop: {enabled: false, visible: false, tooltip: 'Host is offline'},
-    decommission: {enabled: true, visible: true, tooltip: 'Remove this host from system'},
-    updatePassThroughFlags: {enabled: false, visible: false, tooltip: 'Host is offline'},
-    release: {enabled: false, visible: false, tooltip: 'Host is offline'},
-  },
+  actions: createHostActions('MISSING', false),
 };

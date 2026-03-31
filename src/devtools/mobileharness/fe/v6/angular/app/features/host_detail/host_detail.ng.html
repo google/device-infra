@@ -6,7 +6,8 @@
         <p>{{ data.error }}</p>
         <a routerLink="/dev/device-harness" class="m3-button">Back to Harness</a>
       </div>
-    } @else if (data.host; as host) {
+    } @else if (data.hostOverviewPageData; as pageData) {
+      @let host = pageData.overviewContent;
       <div class="main-card">
         <header class="card-header">
           <div class="header-host-id">
@@ -14,94 +15,7 @@
             <span>({{ host.ip }})</span>
           </div>
 
-          <!-- TODO: Remove visibility hidden once the UI is ready. -->
-          <div class="header-actions">
-            <!-- 2xl view -->
-            <div class="header-actions-2xl">
-              <button class="m3-action-button filled" (click)="openConfiguration(host.hostName)">
-                <mat-icon>settings</mat-icon>Configuration
-              </button>
-              <div style="visibility: hidden">
-                <button class="m3-action-button filled" (click)="releaseLabServer(host.hostName)">
-                  <mat-icon>upgrade</mat-icon>Release Lab Server
-                </button>
-                <button class="m3-action-button filled" (click)="stopLabServer(host.hostName)">
-                  <mat-icon>stop_circle</mat-icon>Stop Lab Server
-                </button>
-                <button class="m3-action-button filled" (click)="debugHost(host.hostName)">
-                  <mat-icon>bug_report</mat-icon>Debug
-                </button>
-                <button class="m3-action-button filled">
-                  <mat-icon>article</mat-icon>Advanced Logs
-                </button>
-              </div>
-            </div>
-            <!-- xl view -->
-            <div class="header-actions-xl">
-              <button class="m3-action-button filled" (click)="openConfiguration(host.hostName)">
-                <mat-icon>settings</mat-icon>Configuration
-              </button>
-              <div style="visibility: hidden">
-                <button class="m3-action-button filled" (click)="releaseLabServer(host.hostName)">
-                  <mat-icon>upgrade</mat-icon>Release Lab Server
-                </button>
-                <button class="m3-action-button filled" (click)="stopLabServer(host.hostName)">
-                  <mat-icon>stop_circle</mat-icon>Stop Lab Server
-                </button>
-                <button
-                  class="m3-action-button transparent dropdown-trigger"
-                  [matMenuTriggerFor]="moreMenu"
-                >
-                  <span>More</span>
-                  <mat-icon>expand_more</mat-icon>
-                </button>
-                <mat-menu #moreMenu="matMenu">
-                  <button mat-menu-item>
-                    <mat-icon class="dropdown-mat-icon">bug_report</mat-icon>
-                    <span>Debug</span>
-                  </button>
-                  <button mat-menu-item>
-                    <mat-icon class="dropdown-mat-icon">article</mat-icon>
-                    <span>Advanced Logs</span>
-                  </button>
-                </mat-menu>
-              </div>
-            </div>
-            <!-- sm view -->
-            <div class="header-actions-sm">
-              <button class="m3-action-button filled" (click)="openConfiguration(host.hostName)">
-                <mat-icon>settings</mat-icon>Configuration
-              </button>
-
-              <div style="visibility: hidden">
-                <button
-                  class="m3-action-button transparent dropdown-trigger"
-                  [matMenuTriggerFor]="actionsMenu"
-                >
-                  <span>More</span>
-                  <mat-icon>expand_more</mat-icon>
-                </button>
-                <mat-menu #actionsMenu="matMenu">
-                  <button mat-menu-item>
-                    <mat-icon class="dropdown-mat-icon">upgrade</mat-icon>
-                    <span>Release Lab Server</span>
-                  </button>
-                  <button mat-menu-item>
-                    <mat-icon class="dropdown-mat-icon">stop_circle</mat-icon>
-                    <span>Stop Lab Server</span>
-                  </button>
-                  <button mat-menu-item>
-                    <mat-icon class="dropdown-mat-icon">bug_report</mat-icon>
-                    <span>Debug</span>
-                  </button>
-                  <button mat-menu-item>
-                    <mat-icon class="dropdown-mat-icon">article</mat-icon>
-                    <span>Advanced Logs</span>
-                  </button>
-                </mat-menu>
-              </div>
-            </div>
-          </div>
+          <app-host-action-bar [pageData]="pageData"></app-host-action-bar>
         </header>
 
         <div class="card-body">

@@ -4,6 +4,7 @@ import {MockHostScenario} from '../models';
 import {
   createDefaultHostOverview,
   createDefaultUiStatus,
+  createHostActions,
 } from './ui_status_utils';
 
 export const SCENARIO_HOST_NO_CONFIG: MockHostScenario = {
@@ -16,4 +17,5 @@ export const SCENARIO_HOST_NO_CONFIG: MockHostScenario = {
     uiStatus: createDefaultUiStatus(),
   },
   defaultDeviceConfig: null,
+  actions: createHostActions(),
 };

@@ -6,7 +6,7 @@ import {
   HostOverview,
 } from '../../../models/host_overview';
 import {MockHostScenario} from '../models';
-import {createDefaultUiStatus} from './ui_status_utils';
+import {createDefaultUiStatus, createHostActions} from './ui_status_utils';
 
 // Helper to create a basic HostOverview
 function createHostOverview(
@@ -155,6 +155,7 @@ export const SCENARIO_RC_ALL_VALID: MockHostScenario = {
   deviceSummaries: DEVICES_ALL_VALID,
   hostConfigResult: {hostConfig: undefined, uiStatus: createDefaultUiStatus()},
   defaultDeviceConfig: null,
+  actions: createHostActions(),
 };
 
 // 2. Mixed Status & Capabilities (Some IDLE, some BUSY, some ERROR, some RC-unsupported)
@@ -258,6 +259,7 @@ export const SCENARIO_RC_MIXED_ALL: MockHostScenario = {
   deviceSummaries: DEVICES_MIXED_ALL,
   hostConfigResult: {hostConfig: undefined, uiStatus: createDefaultUiStatus()},
   defaultDeviceConfig: null,
+  actions: createHostActions(),
 };
 
 // 4. Proxy Mismatch (To test error handling when proxy does not match)
@@ -329,4 +331,5 @@ export const SCENARIO_RC_PROXY_MISMATCH: MockHostScenario = {
   deviceSummaries: DEVICES_PROXY_MISMATCH,
   hostConfigResult: {hostConfig: undefined, uiStatus: createDefaultUiStatus()},
   defaultDeviceConfig: null,
+  actions: createHostActions(),
 };

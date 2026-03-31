@@ -6,6 +6,7 @@ import {MockHostScenario} from '../models';
 import {
   createDefaultHostOverview,
   createDefaultUiStatus,
+  createHostActions,
   createPartStatus,
 } from './ui_status_utils';
 
@@ -46,4 +47,5 @@ export const SCENARIO_HOST_DISCOVERY_HIDDEN: MockHostScenario = {
     uiStatus: UI_STATUS,
   },
   defaultDeviceConfig: DEFAULT_DEVICE_CONFIG,
+  actions: createHostActions(),
 };

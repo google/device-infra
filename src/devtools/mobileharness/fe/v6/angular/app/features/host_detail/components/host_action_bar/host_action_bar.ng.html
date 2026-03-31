@@ -1,0 +1,264 @@
+<div class="header-actions">
+  <!-- 2xl view -->
+  <div class="header-actions-2xl">
+    <ng-container *ngTemplateOutlet="actionItem; context: {
+      key: 'configuration',
+      icon: 'settings',
+      label: 'Configuration',
+      handler: onConfiguration,
+      mode: 'button',
+      suffix: '2xl'
+    }"></ng-container>
+
+    <ng-container *ngTemplateOutlet="actionItem; context: {
+      key: 'release',
+      icon: 'upgrade',
+      label: 'Release Lab Server',
+      handler: onRelease,
+      mode: 'button',
+      suffix: '2xl'
+    }"></ng-container>
+
+    <ng-container *ngTemplateOutlet="actionItem; context: {
+      key: 'restart',
+      icon: 'restart_alt',
+      label: 'Restart Server',
+      handler: onRestart,
+      mode: 'button',
+      suffix: '2xl'
+    }"></ng-container>
+
+    <ng-container *ngTemplateOutlet="actionItem; context: {
+      key: 'decommission',
+      icon: 'delete_sweep',
+      label: 'Decommission',
+      handler: onDecommission,
+      mode: 'button',
+      suffix: '2xl',
+      customClass: 'decommission-btn'
+    }"></ng-container>
+
+    <!-- Divider -->
+    <div class="border-l border-gray-300 h-6 mx-2 self-center"></div>
+
+    <ng-container *ngTemplateOutlet="actionItem; context: {
+      key: 'start',
+      icon: 'play_arrow',
+      label: 'Start Server',
+      handler: onStart,
+      mode: 'button',
+      suffix: '2xl'
+    }"></ng-container>
+
+    <ng-container *ngTemplateOutlet="actionItem; context: {
+      key: 'stop',
+      icon: 'stop_circle',
+      label: 'Stop Server',
+      handler: onStop,
+      mode: 'button',
+      suffix: '2xl'
+    }"></ng-container>
+
+    <ng-container *ngTemplateOutlet="actionItem; context: {
+      key: 'debug',
+      icon: 'bug_report',
+      label: 'Debug',
+      handler: onDebug,
+      mode: 'button',
+      suffix: '2xl'
+    }"></ng-container>
+  </div>
+
+  <!-- xl view -->
+  <div class="header-actions-xl">
+    <ng-container *ngTemplateOutlet="actionItem; context: {
+      key: 'configuration',
+      icon: 'settings',
+      label: 'Configuration',
+      handler: onConfiguration,
+      mode: 'button',
+      suffix: 'xl'
+    }"></ng-container>
+
+    <ng-container *ngTemplateOutlet="actionItem; context: {
+      key: 'release',
+      icon: 'upgrade',
+      label: 'Release',
+      handler: onRelease,
+      mode: 'button',
+      suffix: 'xl'
+    }"></ng-container>
+
+    <ng-container *ngTemplateOutlet="actionItem; context: {
+      key: 'restart',
+      icon: 'restart_alt',
+      label: 'Restart',
+      handler: onRestart,
+      mode: 'button',
+      suffix: 'xl'
+    }"></ng-container>
+
+    @if (hasXlMoreMenuItems()) {
+      <button
+        class="m3-action-button transparent dropdown-trigger"
+        [matMenuTriggerFor]="moreMenu"
+        matTooltip="Show more actions"
+      >
+        <span>More</span>
+        <mat-icon>expand_more</mat-icon>
+      </button>
+      <mat-menu #moreMenu="matMenu">
+        <ng-container *ngTemplateOutlet="actionItem; context: {
+          key: 'start',
+          icon: 'play_arrow',
+          label: 'Start Server',
+          handler: onStart,
+          mode: 'menu',
+          suffix: 'xl'
+        }"></ng-container>
+
+        <ng-container *ngTemplateOutlet="actionItem; context: {
+          key: 'stop',
+          icon: 'stop_circle',
+          label: 'Stop Server',
+          handler: onStop,
+          mode: 'menu',
+          suffix: 'xl'
+        }"></ng-container>
+
+        <ng-container *ngTemplateOutlet="actionItem; context: {
+          key: 'debug',
+          icon: 'bug_report',
+          label: 'Debug',
+          handler: onDebug,
+          mode: 'menu',
+          suffix: 'xl'
+        }"></ng-container>
+
+        <ng-container *ngTemplateOutlet="actionItem; context: {
+          key: 'decommission',
+          icon: 'delete_sweep',
+          label: 'Decommission',
+          handler: onDecommission,
+          mode: 'menu',
+          suffix: 'xl'
+        }"></ng-container>
+      </mat-menu>
+    }
+  </div>
+
+  <!-- small view -->
+  <div class="header-actions-sm">
+    <ng-container *ngTemplateOutlet="actionItem; context: {
+      key: 'configuration',
+      icon: 'settings',
+      label: 'Configuration',
+      handler: onConfiguration,
+      mode: 'button',
+      suffix: 'sm'
+    }"></ng-container>
+
+    @if (hasSmActionMenuItems()) {
+      <button
+        class="m3-action-button transparent dropdown-trigger"
+        [matMenuTriggerFor]="actionsMenu"
+        matTooltip="Show more actions"
+      >
+        <span>Take Action</span>
+        <mat-icon>expand_more</mat-icon>
+      </button>
+      <mat-menu #actionsMenu="matMenu">
+        <ng-container *ngTemplateOutlet="actionItem; context: {
+          key: 'release',
+          icon: 'upgrade',
+          label: 'Release Lab Server',
+          handler: onRelease,
+          mode: 'menu',
+          suffix: 'sm'
+        }"></ng-container>
+
+        <ng-container *ngTemplateOutlet="actionItem; context: {
+          key: 'start',
+          icon: 'play_arrow',
+          label: 'Start Server',
+          handler: onStart,
+          mode: 'menu',
+          suffix: 'sm'
+        }"></ng-container>
+
+        <ng-container *ngTemplateOutlet="actionItem; context: {
+          key: 'restart',
+          icon: 'restart_alt',
+          label: 'Restart Server',
+          handler: onRestart,
+          mode: 'menu',
+          suffix: 'sm'
+        }"></ng-container>
+
+        <ng-container *ngTemplateOutlet="actionItem; context: {
+          key: 'stop',
+          icon: 'stop_circle',
+          label: 'Stop Server',
+          handler: onStop,
+          mode: 'menu',
+          suffix: 'sm'
+        }"></ng-container>
+
+        <ng-container *ngTemplateOutlet="actionItem; context: {
+          key: 'debug',
+          icon: 'bug_report',
+          label: 'Debug',
+          handler: onDebug,
+          mode: 'menu',
+          suffix: 'sm'
+        }"></ng-container>
+
+        <ng-container *ngTemplateOutlet="actionItem; context: {
+          key: 'decommission',
+          icon: 'delete_sweep',
+          label: 'Decommission',
+          handler: onDecommission,
+          mode: 'menu',
+          suffix: 'sm'
+        }"></ng-container>
+      </mat-menu>
+    }
+  </div>
+</div>
+
+<ng-template #actionItem
+  let-key="key"
+  let-icon="icon"
+  let-label="label"
+  let-handler="handler"
+  let-mode="mode"
+  let-suffix="suffix"
+  let-customClass="customClass"
+>
+  @let action = getAction(key);
+  @if (action?.visible) {
+    @if (mode === 'button') {
+      <button
+        class="m3-action-button filled"
+        [class]="customClass"
+        (click)="handler()"
+        [disabled]="!action?.enabled"
+        [matTooltip]="action?.tooltip || ''"
+        [attr.data-testid]="key + '-button-' + suffix"
+      >
+        <mat-icon>{{icon}}</mat-icon>{{label}}
+      </button>
+    } @else {
+      <button
+        mat-menu-item
+        (click)="handler()"
+        [disabled]="!action?.enabled"
+        [matTooltip]="action?.tooltip || ''"
+        [attr.data-testid]="key + '-menu-item-' + suffix"
+      >
+        <mat-icon class="dropdown-mat-icon">{{icon}}</mat-icon>
+        <span>{{label}}</span>
+      </button>
+    }
+  }
+</ng-template>

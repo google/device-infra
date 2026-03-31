@@ -7,7 +7,7 @@
 import {DeviceConfig} from '../../../models/device_config_models';
 import {HostConfig} from '../../../models/host_config_models';
 import {MockHostScenario} from '../models';
-import {createDefaultUiStatus} from './ui_status_utils';
+import {createDefaultUiStatus, createHostActions} from './ui_status_utils';
 
 const HOST_NAME = 'host-z.example.com';
 
@@ -62,4 +62,5 @@ export const SCENARIO_HOST_Z_PROD: MockHostScenario = {
     uiStatus: createDefaultUiStatus(),
   },
   defaultDeviceConfig: DEFAULT_CONFIG,
+  actions: createHostActions(),
 };

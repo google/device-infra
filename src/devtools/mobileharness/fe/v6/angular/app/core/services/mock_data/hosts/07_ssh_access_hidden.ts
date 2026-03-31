@@ -6,6 +6,7 @@ import {MockHostScenario} from '../models';
 import {
   createDefaultHostOverview,
   createDefaultUiStatus,
+  createHostActions,
 } from './ui_status_utils';
 
 const DEFAULT_DEVICE_CONFIG: DeviceConfig = {
@@ -44,4 +45,5 @@ export const SCENARIO_HOST_SSH_HIDDEN: MockHostScenario = {
     uiStatus: UI_STATUS,
   },
   defaultDeviceConfig: DEFAULT_DEVICE_CONFIG,
+  actions: createHostActions(),
 };

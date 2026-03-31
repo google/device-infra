@@ -6,6 +6,7 @@ import {MockHostScenario} from '../models';
 import {
   createDefaultHostOverview,
   createDefaultUiStatus,
+  createHostActions,
 } from './ui_status_utils';
 
 const SHARED_DEVICE_CONFIG: DeviceConfig = {
@@ -42,4 +43,5 @@ export const SCENARIO_HOST_SHARED_MODE: MockHostScenario = {
     uiStatus: createDefaultUiStatus(),
   },
   defaultDeviceConfig: null, // No default in SHARED mode
+  actions: createHostActions('RUNNING', true),
 };

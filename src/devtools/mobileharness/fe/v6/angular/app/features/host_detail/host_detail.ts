@@ -8,7 +8,6 @@ import {
   OnInit,
 } from '@angular/core';
 import {MatButtonModule} from '@angular/material/button';
-import {MatDialog} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
 import {Title} from '@angular/platform-browser';
@@ -16,17 +15,13 @@ import {ActivatedRoute, RouterModule} from '@angular/router';
 import {combineLatest, Observable, of, ReplaySubject} from 'rxjs';
 import {catchError, map, switchMap, takeUntil} from 'rxjs/operators';
 
-import {type HostOverview} from '../../core/models/host_overview';
-import {Environment} from '../../core/services/environment';
+import {HostOverviewPageData} from '../../core/models/host_overview';
 import {HOST_SERVICE} from '../../core/services/host/host_service';
-import {HostConfig} from './components/host_config/host_config';
-import {HostEmpty} from './components/host_config/host_empty/host_empty';
-import {HostSettings} from './components/host_config/host_settings/host_settings';
-import {HostWizard} from './components/host_config/host_wizard/host_wizard';
+import {HostActionBar} from './components/host_action_bar/host_action_bar';
 import {HostOverviewPage} from './components/host_overview/host_overview';
 
 interface HostPageData {
-  host: HostOverview | null;
+  hostOverviewPageData: HostOverviewPageData | null;
   error?: string;
 }
 
@@ -44,6 +39,7 @@ interface HostPageData {
     MatIconModule,
     MatButtonModule,
     HostOverviewPage,
+    HostActionBar,
     MatMenuModule,
     RouterModule,
   ],
@@ -56,9 +52,7 @@ export class HostDetail implements OnInit, OnDestroy {
 
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly route = inject(ActivatedRoute);
-  private readonly dialog = inject(MatDialog);
   private readonly hostService = inject(HOST_SERVICE);
-  private readonly environment = inject(Environment);
   private readonly titleService = inject(Title);
   private readonly destroyed = new ReplaySubject<void>(1);
 
@@ -67,20 +61,19 @@ export class HostDetail implements OnInit, OnDestroy {
     switchMap((hostName: string | null) => {
       if (!hostName) {
         return of<HostPageData>({
-          host: null,
+          hostOverviewPageData: null,
           error: 'No host name provided in the route.',
         });
       }
 
       return this.hostService.getHostOverview(hostName).pipe(
         map((hostOverviewPageData) => ({
-          // TODO: Apart from the overview content, we also need to return the header info.
-          host: hostOverviewPageData.overviewContent,
+          hostOverviewPageData,
         })),
         catchError((err) => {
           console.error(`Error fetching host ${hostName}:`, err);
           return of<HostPageData>({
-            host: null,
+            hostOverviewPageData: null,
             error: `Failed to load host data for host: ${hostName}. ${err.message || ''}`,
           });
         }),
@@ -113,94 +106,5 @@ export class HostDetail implements OnInit, OnDestroy {
     this.destroyed.next();
     this.destroyed.complete();
     this.titleService.setTitle(`OmniLab Console`);
-  }
-
-  resetConfiguration(hostName: string) {
-    this.dialog
-      .open(HostEmpty, {
-        data: {
-          hostName,
-          title:
-            'You are about to clear the existing configuration for this host. Your current settings will be discarded. Please choose how you want to proceed.',
-        },
-        autoFocus: false,
-      })
-      .afterClosed()
-      .subscribe((result) => {
-        if (!result) {
-          return;
-        }
-
-        this.createOrCopyConfiguration(
-          result.action,
-          result.hostName,
-          result.config,
-        );
-      });
-  }
-
-  createOrCopyConfiguration(
-    action: string,
-    hostName: string,
-    config: HostConfig,
-  ) {
-    // the configuration UI has more features in google internal,
-    // thus we need a Wizard to guide the user to complete the configuration.
-    // While for OSS, the configuration UI is simpler
-    // thus we can directly use the HostSettings component.
-    if (this.environment.isGoogleInternal()) {
-      this.dialog.open(HostWizard, {
-        data: {hostName, source: action, config},
-        autoFocus: false,
-      });
-    } else {
-      const dialogRef = this.dialog.open(HostSettings, {
-        data: {hostName, config},
-        autoFocus: false,
-      });
-
-      dialogRef.afterClosed().subscribe((result) => {
-        if (!result) {
-          return;
-        }
-        if (result.action === 'reset') {
-          this.resetConfiguration(result.hostName);
-        }
-      });
-    }
-  }
-
-  openConfiguration(hostName: string) {
-    const dialogRef = this.dialog.open(HostConfig, {
-      data: {hostName},
-      autoFocus: false,
-    });
-
-    dialogRef.afterClosed().subscribe((result) => {
-      if (!result) {
-        return;
-      }
-
-      if (result.action === 'reset') {
-        this.resetConfiguration(result.hostName);
-        return;
-      }
-
-      if (result.action === 'new' || result.action === 'copy') {
-        this.createOrCopyConfiguration(result.action, hostName, result.config);
-      }
-    });
-  }
-
-  releaseLabServer(hostName: string) {
-    // TODO: implement release lab server logic.
-  }
-
-  stopLabServer(hostName: string) {
-    // TODO: implement stop lab server logic.
-  }
-
-  debugHost(hostName: string) {
-    // TODO: implement debug host logic.
   }
 }

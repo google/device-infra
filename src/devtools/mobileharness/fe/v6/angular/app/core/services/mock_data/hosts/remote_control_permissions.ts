@@ -6,7 +6,7 @@ import {
   HostOverview,
 } from '../../../models/host_overview';
 import {MockHostScenario} from '../models';
-import {createDefaultUiStatus} from './ui_status_utils';
+import {createDefaultUiStatus, createHostActions} from './ui_status_utils';
 
 // Helper to create a basic HostOverview
 function createHostOverview(
@@ -114,4 +114,5 @@ export const SCENARIO_RC_PERMISSIONS_ALL: MockHostScenario = {
   deviceSummaries: DEVICES_PERMISSIONS_ALL,
   hostConfigResult: {hostConfig: undefined, uiStatus: createDefaultUiStatus()},
   defaultDeviceConfig: null,
+  actions: createHostActions(),
 };

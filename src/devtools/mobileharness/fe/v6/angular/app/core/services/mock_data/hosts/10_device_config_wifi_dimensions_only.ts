@@ -6,6 +6,7 @@ import {MockHostScenario} from '../models';
 import {
   createDefaultHostOverview,
   createDefaultUiStatus,
+  createHostActions,
 } from './ui_status_utils';
 
 const DEFAULT_DEVICE_CONFIG: DeviceConfig = {
@@ -63,4 +64,5 @@ export const SCENARIO_HOST_DEVICE_CONFIG_WIFI_DIMENSIONS_ONLY: MockHostScenario 
       uiStatus,
     },
     defaultDeviceConfig: DEFAULT_DEVICE_CONFIG,
+    actions: createHostActions(),
   };

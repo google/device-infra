@@ -15,8 +15,8 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 import {ActivatedRoute} from '@angular/router';
 import {Observable} from 'rxjs';
 import {finalize} from 'rxjs/operators';
+import {ActionButtonState} from '../../../../core/models/action_common';
 import {
-  ActionButtonState,
   DeviceActions,
   LogcatDialogData,
   QuarantineDialogData,

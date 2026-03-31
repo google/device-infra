@@ -1,3 +1,5 @@
+import {ActionButtonState} from './action_common';
+
 /**
  * Information about the host machine.
  */
@@ -7,15 +9,6 @@ export declare interface HostInfo {
   /** The IP address of the lab server. */
   ip: string;
   // Future additions could include a link to the host's detail page.
-}
-
-/**
- * State of an action button in device header.
- */
-export declare interface ActionButtonState {
-  enabled: boolean;
-  visible: boolean;
-  tooltip: string;
 }
 
 /**

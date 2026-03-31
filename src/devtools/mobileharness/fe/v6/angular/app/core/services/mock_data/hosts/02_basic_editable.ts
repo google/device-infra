@@ -6,6 +6,7 @@ import {MockHostScenario} from '../models';
 import {
   createDefaultHostOverview,
   createDefaultUiStatus,
+  createHostActions,
 } from './ui_status_utils';
 
 const DEFAULT_DEVICE_CONFIG: DeviceConfig = {
@@ -42,4 +43,5 @@ export const SCENARIO_HOST_BASIC_EDITABLE: MockHostScenario = {
     uiStatus: createDefaultUiStatus(),
   },
   defaultDeviceConfig: DEFAULT_DEVICE_CONFIG,
+  actions: createHostActions(),
 };
