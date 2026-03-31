@@ -19,7 +19,8 @@ package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
-import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -28,15 +29,18 @@ import javax.inject.Singleton;
 @Singleton
 class LogcatButtonBuilder {
 
-  private final FeatureManager featureManager;
+  private final FeatureManagerFactory featureManagerFactory;
+  private final FeatureReadiness featureReadiness;
 
   @Inject
-  LogcatButtonBuilder(FeatureManager featureManager) {
-    this.featureManager = featureManager;
+  LogcatButtonBuilder(
+      FeatureManagerFactory featureManagerFactory, FeatureReadiness featureReadiness) {
+    this.featureManagerFactory = featureManagerFactory;
+    this.featureReadiness = featureReadiness;
   }
 
-  public ActionButtonState build(DeviceInfo deviceInfo) {
-    if (!featureManager.isDeviceLogcatButtonEnabled()) {
+  public ActionButtonState build(DeviceInfo deviceInfo, String universe) {
+    if (!featureManagerFactory.create(universe).isDeviceLogcatFeatureEnabled()) {
       return ActionButtonState.newBuilder().setVisible(false).build();
     }
 
@@ -54,7 +58,10 @@ class LogcatButtonBuilder {
         deviceInfo.getDeviceFeature().getCompositeDimension().getRequiredDimensionList().stream()
             .anyMatch(d -> d.getName().equals("pool") && d.getValue().equals("shared"));
 
-    ActionButtonState.Builder stateBuilder = ActionButtonState.newBuilder().setVisible(true);
+    ActionButtonState.Builder stateBuilder =
+        ActionButtonState.newBuilder()
+            .setVisible(true)
+            .setIsReady(featureReadiness.isDeviceLogcatReady());
 
     if (isDeviceMissing || isSharedDevice) {
       stateBuilder

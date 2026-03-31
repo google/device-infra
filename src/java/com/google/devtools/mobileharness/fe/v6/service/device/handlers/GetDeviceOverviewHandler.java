@@ -147,18 +147,21 @@ public final class GetDeviceOverviewHandler {
         deviceDataLoader.loadDeviceData(deviceId, universe),
         deviceData -> {
           logger.atInfo().log("Building DeviceOverview for %s", key);
-          return buildDeviceOverviewPageData(deviceId, deviceData);
+          return buildDeviceOverviewPageData(deviceId, deviceData, universe);
         },
         executor);
   }
 
   private DeviceOverviewPageData buildDeviceOverviewPageData(
-      String deviceId, DeviceData deviceData) {
+      String deviceId, DeviceData deviceData, String universe) {
     DeviceInfo deviceInfo = deviceData.deviceInfo();
 
     DeviceHeaderInfo headerInfo =
         deviceHeaderInfoBuilder.buildDeviceHeaderInfo(
-            deviceInfo, Optional.of(deviceData.effectiveDeviceConfig()), deviceData.rawLabConfig());
+            deviceInfo,
+            Optional.of(deviceData.effectiveDeviceConfig()),
+            deviceData.rawLabConfig(),
+            universe);
 
     DeviceOverview overview = buildDeviceOverview(deviceId, deviceData, headerInfo);
     return DeviceOverviewPageData.newBuilder()

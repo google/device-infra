@@ -56,7 +56,8 @@ public class DeviceHeaderInfoBuilder {
   public DeviceHeaderInfo buildDeviceHeaderInfo(
       DeviceInfo deviceInfo,
       Optional<DeviceConfig> unusedDeviceConfigOpt,
-      Optional<LabConfig> unusedLabConfigOpt) {
+      Optional<LabConfig> unusedLabConfigOpt,
+      String universe) {
     return DeviceHeaderInfo.newBuilder()
         .setId(deviceInfo.getDeviceLocator().getId())
         .setHost(
@@ -77,12 +78,12 @@ public class DeviceHeaderInfoBuilder {
         // TODO: Fill device actions.
         .setActions(
             DeviceActions.newBuilder()
-                .setScreenshot(screenshotButtonBuilder.build(deviceInfo))
-                .setLogcat(logcatButtonBuilder.build(deviceInfo))
-                .setFlash(flashButtonBuilder.build(deviceInfo))
+                .setScreenshot(screenshotButtonBuilder.build(deviceInfo, universe))
+                .setLogcat(logcatButtonBuilder.build(deviceInfo, universe))
+                .setFlash(flashButtonBuilder.build(deviceInfo, universe))
                 .setRemoteControl(RemoteControlButtonBuilder.build(deviceInfo))
-                .setQuarantine(quarantineButtonBuilder.build(deviceInfo))
-                .setConfiguration(configurationButtonBuilder.build(deviceInfo)))
+                .setQuarantine(quarantineButtonBuilder.build(deviceInfo, universe))
+                .setConfiguration(configurationButtonBuilder.build(deviceInfo, universe)))
         .build();
   }
 }

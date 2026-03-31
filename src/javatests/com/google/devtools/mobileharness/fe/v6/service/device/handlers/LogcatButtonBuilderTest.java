@@ -26,6 +26,8 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -37,27 +39,32 @@ import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class LogcatButtonBuilderTest {
+  private static final String UNIVERSE = "google_1p";
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
+  @Mock private FeatureManagerFactory featureManagerFactory;
   @Mock private FeatureManager featureManager;
+  @Mock private FeatureReadiness featureReadiness;
 
   private LogcatButtonBuilder logcatButtonBuilder;
 
   @Before
   public void setUp() {
-    logcatButtonBuilder = new LogcatButtonBuilder(featureManager);
-    when(featureManager.isDeviceLogcatButtonEnabled()).thenReturn(true);
+    logcatButtonBuilder = new LogcatButtonBuilder(featureManagerFactory, featureReadiness);
+    when(featureManagerFactory.create(UNIVERSE)).thenReturn(featureManager);
+    when(featureManager.isDeviceLogcatFeatureEnabled()).thenReturn(true);
+    when(featureReadiness.isDeviceLogcatReady()).thenReturn(true);
   }
 
   @Test
   public void build_logcatDisabled_invisible() {
-    when(featureManager.isDeviceLogcatButtonEnabled()).thenReturn(false);
+    when(featureManager.isDeviceLogcatFeatureEnabled()).thenReturn(false);
     DeviceInfo deviceInfo =
         DeviceInfo.newBuilder()
             .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
             .setDeviceStatus(DeviceStatus.IDLE)
             .build();
-    assertThat(logcatButtonBuilder.build(deviceInfo).getVisible()).isFalse();
+    assertThat(logcatButtonBuilder.build(deviceInfo, UNIVERSE).getVisible()).isFalse();
   }
 
   @Test
@@ -66,7 +73,7 @@ public final class LogcatButtonBuilderTest {
         DeviceInfo.newBuilder()
             .setDeviceFeature(DeviceFeature.newBuilder().addType("IosDevice"))
             .build();
-    assertThat(logcatButtonBuilder.build(deviceInfo).getVisible()).isFalse();
+    assertThat(logcatButtonBuilder.build(deviceInfo, UNIVERSE).getVisible()).isFalse();
   }
 
   @Test
@@ -76,7 +83,7 @@ public final class LogcatButtonBuilderTest {
             .setDeviceFeature(
                 DeviceFeature.newBuilder().addType("AndroidRealDevice").addType("TestbedDevice"))
             .build();
-    assertThat(logcatButtonBuilder.build(deviceInfo).getVisible()).isFalse();
+    assertThat(logcatButtonBuilder.build(deviceInfo, UNIVERSE).getVisible()).isFalse();
   }
 
   @Test
@@ -86,7 +93,7 @@ public final class LogcatButtonBuilderTest {
             .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
             .setDeviceStatus(DeviceStatus.MISSING)
             .build();
-    ActionButtonState state = logcatButtonBuilder.build(deviceInfo);
+    ActionButtonState state = logcatButtonBuilder.build(deviceInfo, UNIVERSE);
     assertThat(state.getVisible()).isTrue();
     assertThat(state.getEnabled()).isFalse();
   }
@@ -103,7 +110,7 @@ public final class LogcatButtonBuilderTest {
                             .addRequiredDimension(
                                 DeviceDimension.newBuilder().setName("pool").setValue("shared"))))
             .build();
-    ActionButtonState state = logcatButtonBuilder.build(deviceInfo);
+    ActionButtonState state = logcatButtonBuilder.build(deviceInfo, UNIVERSE);
     assertThat(state.getVisible()).isTrue();
     assertThat(state.getEnabled()).isFalse();
   }
@@ -115,8 +122,20 @@ public final class LogcatButtonBuilderTest {
             .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
             .setDeviceStatus(DeviceStatus.IDLE)
             .build();
-    ActionButtonState state = logcatButtonBuilder.build(deviceInfo);
+    ActionButtonState state = logcatButtonBuilder.build(deviceInfo, UNIVERSE);
     assertThat(state.getVisible()).isTrue();
     assertThat(state.getEnabled()).isTrue();
+  }
+
+  @Test
+  public void build_logcatNotReady_isReadyFalse() {
+    when(featureReadiness.isDeviceLogcatReady()).thenReturn(false);
+    DeviceInfo deviceInfo =
+        DeviceInfo.newBuilder()
+            .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .build();
+    ActionButtonState state = logcatButtonBuilder.build(deviceInfo, UNIVERSE);
+    assertThat(state.getIsReady()).isFalse();
   }
 }

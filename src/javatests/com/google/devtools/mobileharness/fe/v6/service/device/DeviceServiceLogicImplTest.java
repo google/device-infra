@@ -98,7 +98,7 @@ public final class DeviceServiceLogicImplTest {
 
     when(deviceDataLoader.loadDeviceData(anyString(), anyString()))
         .thenReturn(immediateFuture(deviceData));
-    when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(any(), any(), any()))
+    when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(any(), any(), any(), anyString()))
         .thenReturn(DeviceHeaderInfo.getDefaultInstance());
     when(instantSource.instant()).thenReturn(Instant.now());
 
@@ -130,7 +130,7 @@ public final class DeviceServiceLogicImplTest {
 
     when(configurationProvider.getDeviceConfig(anyString(), anyString()))
         .thenReturn(immediateFuture(Optional.empty()));
-    when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(any(), any(), any()))
+    when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(any(), any(), any(), anyString()))
         .thenReturn(DeviceHeaderInfo.getDefaultInstance());
 
     DeviceHeaderInfo response = deviceServiceLogicImpl.getDeviceHeaderInfo(request).get();

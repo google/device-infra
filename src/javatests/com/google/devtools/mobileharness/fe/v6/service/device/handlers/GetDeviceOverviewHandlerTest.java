@@ -173,7 +173,7 @@ public final class GetDeviceOverviewHandlerTest {
     // By default, assume Config Service is available but returns nothing
     when(configurationProvider.getLabConfig(any(), any()))
         .thenReturn(immediateFuture(Optional.of(LabConfig.getDefaultInstance())));
-    when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(any(), any(), any()))
+    when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(any(), any(), any(), anyString()))
         .thenReturn(
             DeviceHeaderInfo.newBuilder()
                 .setId(DEVICE_ID)

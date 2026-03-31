@@ -64,15 +64,15 @@ public final class DeviceHeaderInfoBuilderTest {
   @Before
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
-    when(flashButtonBuilder.build(any(DeviceInfo.class)))
+    when(flashButtonBuilder.build(any(DeviceInfo.class), any(String.class)))
         .thenReturn(FlashActionButtonState.getDefaultInstance());
-    when(logcatButtonBuilder.build(any(DeviceInfo.class)))
+    when(logcatButtonBuilder.build(any(DeviceInfo.class), any(String.class)))
         .thenReturn(ActionButtonState.getDefaultInstance());
-    when(quarantineButtonBuilder.build(any(DeviceInfo.class)))
+    when(quarantineButtonBuilder.build(any(DeviceInfo.class), any(String.class)))
         .thenReturn(ActionButtonState.getDefaultInstance());
-    when(screenshotButtonBuilder.build(any(DeviceInfo.class)))
+    when(screenshotButtonBuilder.build(any(DeviceInfo.class), any(String.class)))
         .thenReturn(ActionButtonState.getDefaultInstance());
-    when(configurationButtonBuilder.build(any(DeviceInfo.class)))
+    when(configurationButtonBuilder.build(any(DeviceInfo.class), any(String.class)))
         .thenReturn(ActionButtonState.getDefaultInstance());
   }
 
@@ -111,7 +111,7 @@ public final class DeviceHeaderInfoBuilderTest {
 
     assertThat(
             deviceHeaderInfoBuilder.buildDeviceHeaderInfo(
-                deviceInfo, Optional.empty(), Optional.empty()))
+                deviceInfo, Optional.empty(), Optional.empty(), "google_1p"))
         .isEqualTo(expectedHeaderInfo);
   }
 
@@ -142,7 +142,7 @@ public final class DeviceHeaderInfoBuilderTest {
 
     assertThat(
             deviceHeaderInfoBuilder.buildDeviceHeaderInfo(
-                deviceInfo, Optional.empty(), Optional.empty()))
+                deviceInfo, Optional.empty(), Optional.empty(), "google_1p"))
         .isEqualTo(expectedHeaderInfo);
   }
 }

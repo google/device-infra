@@ -26,6 +26,8 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -37,57 +39,62 @@ import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class FlashButtonBuilderTest {
+  private static final String UNIVERSE = "google_1p";
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
+  @Mock private FeatureManagerFactory featureManagerFactory;
   @Mock private FeatureManager featureManager;
+  @Mock private FeatureReadiness featureReadiness;
 
   private FlashButtonBuilder flashButtonBuilder;
 
   @Before
   public void setUp() {
-    flashButtonBuilder = new FlashButtonBuilder(featureManager);
+    flashButtonBuilder = new FlashButtonBuilder(featureManagerFactory, featureReadiness);
+    when(featureManagerFactory.create(UNIVERSE)).thenReturn(featureManager);
+    when(featureReadiness.isDeviceFlashingReady()).thenReturn(true);
   }
 
   @Test
   public void build_whenDeviceFlashingDisabled_shouldBeInvisible() {
-    when(featureManager.isDeviceFlashingEnabled()).thenReturn(false);
+    when(featureManager.isDeviceFlashingFeatureEnabled()).thenReturn(false);
     DeviceInfo deviceInfo = DeviceInfo.getDefaultInstance();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo);
+    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, UNIVERSE);
 
     assertThat(state.getState().getVisible()).isFalse();
   }
 
   @Test
   public void build_whenDeviceFlashingDisabled_forAndroidDevice_shouldBeInvisible() {
-    when(featureManager.isDeviceFlashingEnabled()).thenReturn(false);
+    when(featureManager.isDeviceFlashingFeatureEnabled()).thenReturn(false);
     DeviceInfo deviceInfo =
         DeviceInfo.newBuilder()
             .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
             .setDeviceStatus(DeviceStatus.IDLE)
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo);
+    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, UNIVERSE);
 
     assertThat(state.getState().getVisible()).isFalse();
   }
 
   @Test
   public void build_whenNotFlashableDevice_shouldBeInvisible() {
-    when(featureManager.isDeviceFlashingEnabled()).thenReturn(true);
+    when(featureManager.isDeviceFlashingFeatureEnabled()).thenReturn(true);
     DeviceInfo deviceInfo =
         DeviceInfo.newBuilder()
             .setDeviceFeature(DeviceFeature.newBuilder().addType("IosRealDevice"))
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo);
+    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, UNIVERSE);
 
     assertThat(state.getState().getVisible()).isFalse();
   }
 
   @Test
   public void build_whenSharedDevice_shouldBeVisibleAndDisabled() {
-    when(featureManager.isDeviceFlashingEnabled()).thenReturn(true);
+    when(featureManager.isDeviceFlashingFeatureEnabled()).thenReturn(true);
     DeviceInfo deviceInfo =
         DeviceInfo.newBuilder()
             .setDeviceFeature(
@@ -100,7 +107,7 @@ public final class FlashButtonBuilderTest {
             .setDeviceStatus(DeviceStatus.IDLE)
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo);
+    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, UNIVERSE);
 
     assertThat(state.getState().getVisible()).isTrue();
     assertThat(state.getState().getEnabled()).isFalse();
@@ -110,7 +117,7 @@ public final class FlashButtonBuilderTest {
 
   @Test
   public void build_whenTestbedDevice_shouldBeVisibleAndDisabled() {
-    when(featureManager.isDeviceFlashingEnabled()).thenReturn(true);
+    when(featureManager.isDeviceFlashingFeatureEnabled()).thenReturn(true);
     DeviceInfo deviceInfo =
         DeviceInfo.newBuilder()
             .setDeviceFeature(
@@ -118,7 +125,7 @@ public final class FlashButtonBuilderTest {
             .setDeviceStatus(DeviceStatus.IDLE)
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo);
+    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, UNIVERSE);
 
     assertThat(state.getState().getVisible()).isTrue();
     assertThat(state.getState().getEnabled()).isFalse();
@@ -128,14 +135,14 @@ public final class FlashButtonBuilderTest {
 
   @Test
   public void build_whenSatelliteDeviceIdle_shouldBeVisibleAndEnabled() {
-    when(featureManager.isDeviceFlashingEnabled()).thenReturn(true);
+    when(featureManager.isDeviceFlashingFeatureEnabled()).thenReturn(true);
     DeviceInfo deviceInfo =
         DeviceInfo.newBuilder()
             .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
             .setDeviceStatus(DeviceStatus.IDLE)
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo);
+    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, UNIVERSE);
 
     assertThat(state.getState().getVisible()).isTrue();
     assertThat(state.getState().getEnabled()).isTrue();
@@ -144,14 +151,14 @@ public final class FlashButtonBuilderTest {
 
   @Test
   public void build_whenSatelliteDeviceBusy_shouldBeVisibleAndDisabled() {
-    when(featureManager.isDeviceFlashingEnabled()).thenReturn(true);
+    when(featureManager.isDeviceFlashingFeatureEnabled()).thenReturn(true);
     DeviceInfo deviceInfo =
         DeviceInfo.newBuilder()
             .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
             .setDeviceStatus(DeviceStatus.BUSY)
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo);
+    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, UNIVERSE);
 
     assertThat(state.getState().getVisible()).isTrue();
     assertThat(state.getState().getEnabled()).isFalse();
@@ -162,17 +169,32 @@ public final class FlashButtonBuilderTest {
 
   @Test
   public void build_withAndroidFlashableDevice_shouldBeVisibleAndEnabled() {
-    when(featureManager.isDeviceFlashingEnabled()).thenReturn(true);
+    when(featureManager.isDeviceFlashingFeatureEnabled()).thenReturn(true);
     DeviceInfo deviceInfo =
         DeviceInfo.newBuilder()
             .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidFlashableDevice"))
             .setDeviceStatus(DeviceStatus.IDLE)
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo);
+    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, UNIVERSE);
 
     assertThat(state.getState().getVisible()).isTrue();
     assertThat(state.getState().getEnabled()).isTrue();
     assertThat(state.getState().getTooltip()).isEqualTo("Flash the device");
+  }
+
+  @Test
+  public void build_whenFlashingNotReady_shouldSetIsReadyFalse() {
+    when(featureManager.isDeviceFlashingFeatureEnabled()).thenReturn(true);
+    when(featureReadiness.isDeviceFlashingReady()).thenReturn(false);
+    DeviceInfo deviceInfo =
+        DeviceInfo.newBuilder()
+            .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .build();
+
+    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, UNIVERSE);
+
+    assertThat(state.getState().getIsReady()).isFalse();
   }
 }

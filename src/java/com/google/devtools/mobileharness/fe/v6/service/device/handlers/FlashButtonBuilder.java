@@ -21,7 +21,8 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionButtonState;
-import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -30,15 +31,18 @@ import javax.inject.Singleton;
 @Singleton
 public class FlashButtonBuilder {
 
-  private final FeatureManager featureManager;
+  private final FeatureManagerFactory featureManagerFactory;
+  private final FeatureReadiness featureReadiness;
 
   @Inject
-  FlashButtonBuilder(FeatureManager featureManager) {
-    this.featureManager = featureManager;
+  FlashButtonBuilder(
+      FeatureManagerFactory featureManagerFactory, FeatureReadiness featureReadiness) {
+    this.featureManagerFactory = featureManagerFactory;
+    this.featureReadiness = featureReadiness;
   }
 
-  public FlashActionButtonState build(DeviceInfo deviceInfo) {
-    if (!featureManager.isDeviceFlashingEnabled()) {
+  public FlashActionButtonState build(DeviceInfo deviceInfo, String universe) {
+    if (!featureManagerFactory.create(universe).isDeviceFlashingFeatureEnabled()) {
       return FlashActionButtonState.newBuilder()
           .setState(ActionButtonState.newBuilder().setVisible(false))
           .build();
@@ -66,7 +70,10 @@ public class FlashButtonBuilder {
 
     FlashActionButtonState.Builder stateBuilder =
         FlashActionButtonState.newBuilder()
-            .setState(ActionButtonState.newBuilder().setVisible(true));
+            .setState(
+                ActionButtonState.newBuilder()
+                    .setVisible(true)
+                    .setIsReady(featureReadiness.isDeviceFlashingReady()));
 
     if (isSharedDevice || isTestBed) {
       stateBuilder

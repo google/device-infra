@@ -19,7 +19,8 @@ package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 import com.google.common.base.Ascii;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
-import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -27,15 +28,18 @@ import javax.inject.Singleton;
 @Singleton
 class QuarantineButtonBuilder {
 
-  private final FeatureManager featureManager;
+  private final FeatureManagerFactory featureManagerFactory;
+  private final FeatureReadiness featureReadiness;
 
   @Inject
-  QuarantineButtonBuilder(FeatureManager featureManager) {
-    this.featureManager = featureManager;
+  QuarantineButtonBuilder(
+      FeatureManagerFactory featureManagerFactory, FeatureReadiness featureReadiness) {
+    this.featureManagerFactory = featureManagerFactory;
+    this.featureReadiness = featureReadiness;
   }
 
-  public ActionButtonState build(DeviceInfo deviceInfo) {
-    if (!featureManager.isDeviceQuarantineEnabled()) {
+  public ActionButtonState build(DeviceInfo deviceInfo, String universe) {
+    if (!featureManagerFactory.create(universe).isDeviceQuarantineFeatureEnabled()) {
       return ActionButtonState.newBuilder().setVisible(false).build();
     }
 
@@ -44,7 +48,7 @@ class QuarantineButtonBuilder {
             .anyMatch(
                 dim ->
                     dim.getDimension().getName().equals("quarantined")
-                        && Ascii.toLowerCase(dim.getDimension().getValue()).equals("true"));
+                        && Ascii.equalsIgnoreCase(dim.getDimension().getValue(), "true"));
 
     String tooltip =
         isQuarantined
@@ -53,6 +57,7 @@ class QuarantineButtonBuilder {
 
     return ActionButtonState.newBuilder()
         .setVisible(true)
+        .setIsReady(featureReadiness.isDeviceQuarantineReady())
         .setEnabled(true)
         .setTooltip(tooltip)
         .build();

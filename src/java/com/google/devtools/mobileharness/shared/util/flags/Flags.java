@@ -1470,45 +1470,13 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> feConnectToConfigServer = feConnectToConfigServerDefault;
 
-  private static final Flag<Boolean> feEnableDeviceFlashingDefault = Flag.value(false);
+  private static final Flag<Boolean> feEnableConfigurationDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
-      names = "--fe_enable_device_flashing",
-      description = "Enables the device flashing button in the Mobile Harness FE UI.",
+      names = "--fe_enable_configuration",
+      description = "Enables the device configuration feature in the Mobile Harness FE UI.",
       converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> feEnableDeviceFlashing = feEnableDeviceFlashingDefault;
-
-  private static final Flag<Boolean> feEnableDeviceLogcatDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--fe_enable_device_logcat",
-      description = "Enables the device logcat button in the Mobile Harness FE UI.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> feEnableDeviceLogcat = feEnableDeviceLogcatDefault;
-
-  private static final Flag<Boolean> feEnableDeviceQuarantineDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--fe_enable_device_quarantine",
-      description = "Enables the device quarantine button in the Mobile Harness FE UI.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> feEnableDeviceQuarantine = feEnableDeviceQuarantineDefault;
-
-  private static final Flag<Boolean> feEnableDeviceScreenshotDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--fe_enable_device_screenshot",
-      description = "Enables the device screenshot button in the Mobile Harness FE UI.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> feEnableDeviceScreenshot = feEnableDeviceScreenshotDefault;
-
-  private static final Flag<Boolean> feEnableDeviceConfigurationDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--fe_enable_device_configuration",
-      description = "Enables the device configuration button in the Mobile Harness FE UI.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> feEnableDeviceConfiguration = feEnableDeviceConfigurationDefault;
+  public Flag<Boolean> feEnableConfiguration = feEnableConfigurationDefault;
 
   private static final Flag<Integer> feGrpcPortDefault = Flag.value(8080);
 

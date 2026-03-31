@@ -20,7 +20,8 @@ import com.google.common.base.Ascii;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
-import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -28,15 +29,18 @@ import javax.inject.Singleton;
 @Singleton
 class ScreenshotButtonBuilder {
 
-  private final FeatureManager featureManager;
+  private final FeatureManagerFactory featureManagerFactory;
+  private final FeatureReadiness featureReadiness;
 
   @Inject
-  ScreenshotButtonBuilder(FeatureManager featureManager) {
-    this.featureManager = featureManager;
+  ScreenshotButtonBuilder(
+      FeatureManagerFactory featureManagerFactory, FeatureReadiness featureReadiness) {
+    this.featureManagerFactory = featureManagerFactory;
+    this.featureReadiness = featureReadiness;
   }
 
-  public ActionButtonState build(DeviceInfo deviceInfo) {
-    if (!featureManager.isDeviceScreenshotEnabled()) {
+  public ActionButtonState build(DeviceInfo deviceInfo, String universe) {
+    if (!featureManagerFactory.create(universe).isDeviceScreenshotFeatureEnabled()) {
       return ActionButtonState.newBuilder().setVisible(false).build();
     }
 
@@ -49,15 +53,18 @@ class ScreenshotButtonBuilder {
                     dimension.getName().equals("screenshot_able")
                         && Ascii.equalsIgnoreCase(dimension.getValue(), "true"));
 
+    boolean isReady = featureReadiness.isDeviceScreenshotReady();
     if (!isDeviceMissing && isScreenshotSupported) {
       return ActionButtonState.newBuilder()
           .setVisible(true)
+          .setIsReady(isReady)
           .setEnabled(true)
           .setTooltip("Take screenshot of the device")
           .build();
     } else {
       return ActionButtonState.newBuilder()
           .setVisible(true)
+          .setIsReady(isReady)
           .setEnabled(false)
           .setTooltip(
               "It's only supported to take a screenshot when the device is not missing and the "

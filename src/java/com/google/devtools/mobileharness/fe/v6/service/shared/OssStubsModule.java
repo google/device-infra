@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.providers.Configur
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.NoOpConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.oss.OssLabInfoProviderImpl;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.MasterStubAnnotation.GrpcStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabInfoGrpcStubModule;
@@ -68,6 +69,7 @@ public final class OssStubsModule extends AbstractModule {
     }
 
     install(new FactoryModuleBuilder().build(ConfigServiceCapabilityFactory.class));
+    install(new FactoryModuleBuilder().build(FeatureManagerFactory.class));
 
     bind(LabInfoProvider.class).to(OssLabInfoProviderImpl.class).in(Singleton.class);
     bind(HostAuxiliaryInfoProvider.class).to(OssHostAuxiliaryInfoProviderImpl.class);

@@ -24,16 +24,11 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
-import com.google.devtools.mobileharness.api.query.proto.FilterProto;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHeaderInfoRequest;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
-import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
-import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -69,28 +64,8 @@ public final class GetDeviceHeaderInfoHandler {
 
     // 1. Fetch DeviceInfo
     logger.atInfo().log("Fetching DeviceInfo for %s", key);
-    ListenableFuture<GetLabInfoResponse> getLabInfoResponseFuture =
-        labInfoProvider.getLabInfoAsync(createGetLabInfoRequest(deviceId), universe);
-
     ListenableFuture<DeviceInfo> deviceInfoFuture =
-        Futures.transform(
-            getLabInfoResponseFuture,
-            response -> {
-              logger.atInfo().log("Received DeviceInfo response for %s", key);
-              return response
-                  .getLabQueryResult()
-                  .getDeviceView()
-                  .getGroupedDevices()
-                  .getDeviceList()
-                  .getDeviceInfoList()
-                  .stream()
-                  .findFirst()
-                  .orElseThrow(
-                      () ->
-                          new RuntimeException(
-                              "Device not found: " + deviceId + " in universe: " + universe));
-            },
-            executor);
+        DeviceInfoLookupHelper.lookUpDeviceInfoAsync(labInfoProvider, deviceId, universe, executor);
 
     // 2. Start ConfigProvider fetches early
     logger.atInfo().log("Fetching DeviceConfig for %s", key);
@@ -133,7 +108,7 @@ public final class GetDeviceHeaderInfoHandler {
                   deviceConfigOpt -> {
                     logger.atInfo().log("Building DeviceHeaderInfo for %s", key);
                     return deviceHeaderInfoBuilder.buildDeviceHeaderInfo(
-                        deviceInfo, deviceConfigOpt, labConfigOpt);
+                        deviceInfo, deviceConfigOpt, labConfigOpt, universe);
                   },
                   executor);
             },
@@ -149,28 +124,5 @@ public final class GetDeviceHeaderInfoHandler {
                         p ->
                             p.getKey().equals("device_config_mode") && p.getValue().equals("host")))
         .orElse(false);
-  }
-
-  private GetLabInfoRequest createGetLabInfoRequest(String deviceId) {
-    return GetLabInfoRequest.newBuilder()
-        .setLabQuery(
-            LabQuery.newBuilder()
-                .setFilter(
-                    Filter.newBuilder()
-                        .setDeviceFilter(
-                            FilterProto.DeviceFilter.newBuilder()
-                                .addDeviceMatchCondition(
-                                    FilterProto.DeviceFilter.DeviceMatchCondition.newBuilder()
-                                        .setDeviceUuidMatchCondition(
-                                            FilterProto.DeviceFilter.DeviceMatchCondition
-                                                .DeviceUuidMatchCondition.newBuilder()
-                                                .setCondition(
-                                                    FilterProto.StringMatchCondition.newBuilder()
-                                                        .setInclude(
-                                                            FilterProto.StringMatchCondition.Include
-                                                                .newBuilder()
-                                                                .addExpected(deviceId)))))))
-                .setDeviceViewRequest(LabQuery.DeviceViewRequest.getDefaultInstance()))
-        .build();
   }
 }

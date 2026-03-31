@@ -26,6 +26,8 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -37,36 +39,43 @@ import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class ScreenshotButtonBuilderTest {
+  private static final String UNIVERSE = "google_1p";
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
+  @Mock private FeatureManagerFactory featureManagerFactory;
   @Mock private FeatureManager featureManager;
+  @Mock private FeatureReadiness featureReadiness;
 
   private ScreenshotButtonBuilder screenshotButtonBuilder;
 
   @Before
   public void setUp() {
-    screenshotButtonBuilder = new ScreenshotButtonBuilder(featureManager);
-    when(featureManager.isDeviceScreenshotEnabled()).thenReturn(true);
+    screenshotButtonBuilder = new ScreenshotButtonBuilder(featureManagerFactory, featureReadiness);
+    when(featureManagerFactory.create(UNIVERSE)).thenReturn(featureManager);
+    when(featureManager.isDeviceScreenshotFeatureEnabled()).thenReturn(true);
+    when(featureReadiness.isDeviceScreenshotReady()).thenReturn(true);
   }
 
   @Test
   public void build_screenshotDisabled_invisible() {
-    when(featureManager.isDeviceScreenshotEnabled()).thenReturn(false);
-    assertThat(screenshotButtonBuilder.build(DeviceInfo.getDefaultInstance()).getVisible())
+    when(featureManager.isDeviceScreenshotFeatureEnabled()).thenReturn(false);
+    assertThat(
+            screenshotButtonBuilder.build(DeviceInfo.getDefaultInstance(), UNIVERSE).getVisible())
         .isFalse();
   }
 
   @Test
   public void build_missingDevice_visibleAndDisabled() {
     DeviceInfo deviceInfo = DeviceInfo.newBuilder().setDeviceStatus(DeviceStatus.MISSING).build();
-    ActionButtonState state = screenshotButtonBuilder.build(deviceInfo);
+    ActionButtonState state = screenshotButtonBuilder.build(deviceInfo, UNIVERSE);
     assertThat(state.getVisible()).isTrue();
     assertThat(state.getEnabled()).isFalse();
   }
 
   @Test
   public void build_screenshotNotSupported_visibleAndDisabled() {
-    ActionButtonState state = screenshotButtonBuilder.build(DeviceInfo.getDefaultInstance());
+    ActionButtonState state =
+        screenshotButtonBuilder.build(DeviceInfo.getDefaultInstance(), UNIVERSE);
     assertThat(state.getVisible()).isTrue();
     assertThat(state.getEnabled()).isFalse();
   }
@@ -85,8 +94,27 @@ public final class ScreenshotButtonBuilderTest {
                                     .setName("screenshot_able")
                                     .setValue("true"))))
             .build();
-    ActionButtonState state = screenshotButtonBuilder.build(deviceInfo);
+    ActionButtonState state = screenshotButtonBuilder.build(deviceInfo, UNIVERSE);
     assertThat(state.getVisible()).isTrue();
     assertThat(state.getEnabled()).isTrue();
+  }
+
+  @Test
+  public void build_screenshotNotReady_isReadyFalse() {
+    when(featureReadiness.isDeviceScreenshotReady()).thenReturn(false);
+    DeviceInfo deviceInfo =
+        DeviceInfo.newBuilder()
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder()
+                                    .setName("screenshot_able")
+                                    .setValue("true"))))
+            .build();
+    ActionButtonState state = screenshotButtonBuilder.build(deviceInfo, UNIVERSE);
+    assertThat(state.getIsReady()).isFalse();
   }
 }

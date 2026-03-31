@@ -229,6 +229,7 @@ message ActionButtonState {
   bool enabled = 1;
   bool visible = 2;
   string tooltip = 3;
+  bool is_ready = 4;
 }
 
 // Parameters for flash action button.

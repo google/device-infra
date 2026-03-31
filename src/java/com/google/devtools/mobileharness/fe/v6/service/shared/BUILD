@@ -41,6 +41,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:no_op_configuration_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers/oss:oss_lab_info_provider_impl",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:annotation",
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:lab_info",
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub/grpc:lab_info",

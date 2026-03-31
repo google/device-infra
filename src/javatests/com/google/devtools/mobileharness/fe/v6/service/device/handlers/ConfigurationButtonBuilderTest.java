@@ -22,6 +22,7 @@ import static org.mockito.Mockito.when;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -33,30 +34,37 @@ import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class ConfigurationButtonBuilderTest {
+  private static final String UNIVERSE = "google_1p";
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
+  @Mock private FeatureManagerFactory featureManagerFactory;
   @Mock private FeatureManager featureManager;
 
   private ConfigurationButtonBuilder configurationButtonBuilder;
 
   @Before
   public void setUp() {
-    configurationButtonBuilder = new ConfigurationButtonBuilder(featureManager);
+    configurationButtonBuilder = new ConfigurationButtonBuilder(featureManagerFactory);
+    when(featureManagerFactory.create(UNIVERSE)).thenReturn(featureManager);
   }
 
   @Test
   public void build_configurationDisabled_invisible() {
-    when(featureManager.isDeviceConfigurationEnabled()).thenReturn(false);
+    when(featureManager.isConfigurationFeatureEnabled()).thenReturn(false);
 
-    assertThat(configurationButtonBuilder.build(DeviceInfo.getDefaultInstance()).getVisible())
+    assertThat(
+            configurationButtonBuilder
+                .build(DeviceInfo.getDefaultInstance(), UNIVERSE)
+                .getVisible())
         .isFalse();
   }
 
   @Test
   public void build_configurationEnabled_visibleEnabledWithTooltip() {
-    when(featureManager.isDeviceConfigurationEnabled()).thenReturn(true);
+    when(featureManager.isConfigurationFeatureEnabled()).thenReturn(true);
 
-    ActionButtonState state = configurationButtonBuilder.build(DeviceInfo.getDefaultInstance());
+    ActionButtonState state =
+        configurationButtonBuilder.build(DeviceInfo.getDefaultInstance(), UNIVERSE);
 
     assertThat(state.getVisible()).isTrue();
     assertThat(state.getEnabled()).isTrue();

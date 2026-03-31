@@ -33,169 +33,103 @@ import org.mockito.junit.MockitoRule;
 public final class FeatureManagerTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
-  @Rule public final SetFlagsOss flags = new SetFlagsOss(); // Use SetFlagsOss
+  @Rule public final SetFlagsOss flags = new SetFlagsOss();
 
   @Mock private Environment mockEnvironment;
 
-  // No @After method needed, SetFlagsOss handles reset.
+  // --- Scenario 1: Internal (1P), google_1p universe ---
 
   @Test
-  public void isDeviceFlashingEnabled_googleInternal_flagTrue_returnsTrue() {
+  public void isDeviceFlashingFeatureEnabled_internal_google1p_returnsTrue() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    flags.setAllFlags(ImmutableMap.of("fe_enable_device_flashing", "true"));
-    FeatureManager featureManager = new FeatureManager(mockEnvironment);
-    assertThat(featureManager.isDeviceFlashingEnabled()).isTrue();
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, "google_1p");
+    assertThat(featureManager.isDeviceFlashingFeatureEnabled()).isTrue();
   }
 
   @Test
-  public void isDeviceFlashingEnabled_googleInternal_flagFalse_returnsFalse() {
+  public void isConfigurationFeatureEnabled_scenario1_flagTrue_returnsTrue() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    flags.setAllFlags(ImmutableMap.of("fe_enable_device_flashing", "false"));
-    FeatureManager featureManager = new FeatureManager(mockEnvironment);
-    assertThat(featureManager.isDeviceFlashingEnabled()).isFalse();
+    flags.setAllFlags(ImmutableMap.of("fe_enable_configuration", "true"));
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, "google_1p");
+    assertThat(featureManager.isConfigurationFeatureEnabled()).isTrue();
   }
 
   @Test
-  public void isDeviceFlashingEnabled_oss_flagTrue_returnsFalse() {
+  public void isConfigurationFeatureEnabled_scenario1_flagFalse_returnsFalse() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
+    flags.setAllFlags(ImmutableMap.of("fe_enable_configuration", "false"));
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, "google_1p");
+    assertThat(featureManager.isConfigurationFeatureEnabled()).isFalse();
+  }
+
+  // --- Scenario 2: Internal (1P), non-google_1p universe ---
+
+  @Test
+  public void isDeviceFlashingFeatureEnabled_internal_nonGoogle1p_returnsFalse() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, "xiaomi");
+    assertThat(featureManager.isDeviceFlashingFeatureEnabled()).isFalse();
+  }
+
+  @Test
+  public void isConfigurationFeatureEnabled_scenario2_flagTrue_returnsFalse() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
+    flags.setAllFlags(ImmutableMap.of("fe_enable_configuration", "true"));
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, "xiaomi");
+    assertThat(featureManager.isConfigurationFeatureEnabled()).isFalse();
+  }
+
+  // --- Scenario 3: OSS / ATS, Any universe ---
+
+  @Test
+  public void isDeviceFlashingFeatureEnabled_oss_returnsFalse() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(false);
-    flags.setAllFlags(ImmutableMap.of("fe_enable_device_flashing", "true"));
-    FeatureManager featureManager = new FeatureManager(mockEnvironment);
-    assertThat(featureManager.isDeviceFlashingEnabled()).isFalse();
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, "xiaomi");
+    assertThat(featureManager.isDeviceFlashingFeatureEnabled()).isFalse();
   }
 
   @Test
-  public void isDeviceFlashingEnabled_oss_flagFalse_returnsFalse() {
+  public void isConfigurationFeatureEnabled_scenario3_flagTrue_returnsTrue() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(false);
-    flags.setAllFlags(ImmutableMap.of("fe_enable_device_flashing", "false"));
-    FeatureManager featureManager = new FeatureManager(mockEnvironment);
-    assertThat(featureManager.isDeviceFlashingEnabled()).isFalse();
+    flags.setAllFlags(ImmutableMap.of("fe_enable_configuration", "true"));
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, "xiaomi");
+    assertThat(featureManager.isConfigurationFeatureEnabled()).isTrue();
   }
 
   @Test
-  public void isDeviceFlashingEnabled_flagNotSet_defaultsToFalse() {
-    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    // Flag fe_enable_device_flashing is not set, defaults to false.
-    FeatureManager featureManager = new FeatureManager(mockEnvironment);
-    assertThat(featureManager.isDeviceFlashingEnabled()).isFalse();
-  }
-
-  @Test
-  public void isDeviceLogcatButtonEnabled_googleInternal_flagTrue_returnsTrue() {
-    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    flags.setAllFlags(ImmutableMap.of("fe_enable_device_logcat", "true"));
-    FeatureManager featureManager = new FeatureManager(mockEnvironment);
-    assertThat(featureManager.isDeviceLogcatButtonEnabled()).isTrue();
-  }
-
-  @Test
-  public void isDeviceLogcatButtonEnabled_googleInternal_flagFalse_returnsFalse() {
-    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    flags.setAllFlags(ImmutableMap.of("fe_enable_device_logcat", "false"));
-    FeatureManager featureManager = new FeatureManager(mockEnvironment);
-    assertThat(featureManager.isDeviceLogcatButtonEnabled()).isFalse();
-  }
-
-  @Test
-  public void isDeviceLogcatButtonEnabled_oss_flagTrue_returnsFalse() {
+  public void isConfigurationFeatureEnabled_scenario3_flagFalse_returnsFalse() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(false);
-    flags.setAllFlags(ImmutableMap.of("fe_enable_device_logcat", "true"));
-    FeatureManager featureManager = new FeatureManager(mockEnvironment);
-    assertThat(featureManager.isDeviceLogcatButtonEnabled()).isFalse();
+    flags.setAllFlags(ImmutableMap.of("fe_enable_configuration", "false"));
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, "xiaomi");
+    assertThat(featureManager.isConfigurationFeatureEnabled()).isFalse();
+  }
+
+  // --- Other features (Logcat, Quarantine, Screenshot) following similar logic ---
+
+  @Test
+  public void otherFeatures_internal_google1p_returnsTrue() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, "google_1p");
+    assertThat(featureManager.isDeviceLogcatFeatureEnabled()).isTrue();
+    assertThat(featureManager.isDeviceQuarantineFeatureEnabled()).isTrue();
+    assertThat(featureManager.isDeviceScreenshotFeatureEnabled()).isTrue();
   }
 
   @Test
-  public void isDeviceLogcatButtonEnabled_oss_flagFalse_returnsFalse() {
+  public void otherFeatures_internal_nonGoogle1p_returnsFalse() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, "xiaomi");
+    assertThat(featureManager.isDeviceLogcatFeatureEnabled()).isFalse();
+    assertThat(featureManager.isDeviceQuarantineFeatureEnabled()).isFalse();
+    assertThat(featureManager.isDeviceScreenshotFeatureEnabled()).isFalse();
+  }
+
+  @Test
+  public void otherFeatures_oss_returnsFalse() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(false);
-    flags.setAllFlags(ImmutableMap.of("fe_enable_device_logcat", "false"));
-    FeatureManager featureManager = new FeatureManager(mockEnvironment);
-    assertThat(featureManager.isDeviceLogcatButtonEnabled()).isFalse();
-  }
-
-  @Test
-  public void isDeviceLogcatButtonEnabled_flagNotSet_defaultsToFalse() {
-    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    // Flag fe_enable_device_logcat is not set, defaults to false.
-    FeatureManager featureManager = new FeatureManager(mockEnvironment);
-    assertThat(featureManager.isDeviceLogcatButtonEnabled()).isFalse();
-  }
-
-  @Test
-  public void isDeviceQuarantineEnabled_googleInternal_flagTrue_returnsTrue() {
-    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    flags.setAllFlags(ImmutableMap.of("fe_enable_device_quarantine", "true"));
-    FeatureManager featureManager = new FeatureManager(mockEnvironment);
-    assertThat(featureManager.isDeviceQuarantineEnabled()).isTrue();
-  }
-
-  @Test
-  public void isDeviceQuarantineEnabled_googleInternal_flagFalse_returnsFalse() {
-    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    flags.setAllFlags(ImmutableMap.of("fe_enable_device_quarantine", "false"));
-    FeatureManager featureManager = new FeatureManager(mockEnvironment);
-    assertThat(featureManager.isDeviceQuarantineEnabled()).isFalse();
-  }
-
-  @Test
-  public void isDeviceQuarantineEnabled_oss_flagTrue_returnsFalse() {
-    when(mockEnvironment.isGoogleInternal()).thenReturn(false);
-    flags.setAllFlags(ImmutableMap.of("fe_enable_device_quarantine", "true"));
-    FeatureManager featureManager = new FeatureManager(mockEnvironment);
-    assertThat(featureManager.isDeviceQuarantineEnabled()).isFalse();
-  }
-
-  @Test
-  public void isDeviceQuarantineEnabled_oss_flagFalse_returnsFalse() {
-    when(mockEnvironment.isGoogleInternal()).thenReturn(false);
-    flags.setAllFlags(ImmutableMap.of("fe_enable_device_quarantine", "false"));
-    FeatureManager featureManager = new FeatureManager(mockEnvironment);
-    assertThat(featureManager.isDeviceQuarantineEnabled()).isFalse();
-  }
-
-  @Test
-  public void isDeviceQuarantineEnabled_flagNotSet_defaultsToFalse() {
-    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    // Flag fe_enable_device_quarantine is not set, defaults to false.
-    FeatureManager featureManager = new FeatureManager(mockEnvironment);
-    assertThat(featureManager.isDeviceQuarantineEnabled()).isFalse();
-  }
-
-  @Test
-  public void isDeviceScreenshotEnabled_googleInternal_flagTrue_returnsTrue() {
-    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    flags.setAllFlags(ImmutableMap.of("fe_enable_device_screenshot", "true"));
-    FeatureManager featureManager = new FeatureManager(mockEnvironment);
-    assertThat(featureManager.isDeviceScreenshotEnabled()).isTrue();
-  }
-
-  @Test
-  public void isDeviceScreenshotEnabled_googleInternal_flagFalse_returnsFalse() {
-    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    flags.setAllFlags(ImmutableMap.of("fe_enable_device_screenshot", "false"));
-    FeatureManager featureManager = new FeatureManager(mockEnvironment);
-    assertThat(featureManager.isDeviceScreenshotEnabled()).isFalse();
-  }
-
-  @Test
-  public void isDeviceScreenshotEnabled_oss_flagTrue_returnsFalse() {
-    when(mockEnvironment.isGoogleInternal()).thenReturn(false);
-    flags.setAllFlags(ImmutableMap.of("fe_enable_device_screenshot", "true"));
-    FeatureManager featureManager = new FeatureManager(mockEnvironment);
-    assertThat(featureManager.isDeviceScreenshotEnabled()).isFalse();
-  }
-
-  @Test
-  public void isDeviceScreenshotEnabled_oss_flagFalse_returnsFalse() {
-    when(mockEnvironment.isGoogleInternal()).thenReturn(false);
-    flags.setAllFlags(ImmutableMap.of("fe_enable_device_screenshot", "false"));
-    FeatureManager featureManager = new FeatureManager(mockEnvironment);
-    assertThat(featureManager.isDeviceScreenshotEnabled()).isFalse();
-  }
-
-  @Test
-  public void isDeviceScreenshotEnabled_flagNotSet_defaultsToFalse() {
-    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    // Flag fe_enable_device_screenshot is not set, defaults to false.
-    FeatureManager featureManager = new FeatureManager(mockEnvironment);
-    assertThat(featureManager.isDeviceScreenshotEnabled()).isFalse();
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, "google_1p");
+    assertThat(featureManager.isDeviceLogcatFeatureEnabled()).isFalse();
+    assertThat(featureManager.isDeviceQuarantineFeatureEnabled()).isFalse();
+    assertThat(featureManager.isDeviceScreenshotFeatureEnabled()).isFalse();
   }
 }
