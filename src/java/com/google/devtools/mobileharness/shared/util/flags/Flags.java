@@ -1263,6 +1263,16 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableMoblyResultstoreUpload = enableMoblyResultstoreUploadDefault;
 
+  private static final Flag<Boolean> enableOlcPublisherExtendedDeviceInfoDefault =
+      Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_olc_publisher_extended_device_info",
+      description = "Whether to enable extended device info in OLC publisher.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableOlcPublisherExtendedDeviceInfo =
+      enableOlcPublisherExtendedDeviceInfoDefault;
+
   private static final Flag<Boolean> enableParisDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
@@ -1364,6 +1374,16 @@ public class Flags {
       description = "Whether to enable trace span processor. Default is true.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableTraceSpanProcessor = enableTraceSpanProcessorDefault;
+
+  private static final Flag<Boolean> enableWranglerAgentDummyAllocationDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_wrangler_agent_dummy_allocation",
+      description =
+          "Whether to enable dummy allocation (always return success without OLC communication).",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableWranglerAgentDummyAllocation =
+      enableWranglerAgentDummyAllocationDefault;
 
   private static final Flag<Boolean> enableXtsDynamicDownloaderDefault = Flag.value(false);
 
