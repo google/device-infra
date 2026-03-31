@@ -31,7 +31,6 @@ java_proto_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc:__subpackages__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/util:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client:__subpackages__",
     ],
     deps = [":mode_setting_proto"],
@@ -47,9 +46,7 @@ proto_library(
 
 java_proto_library(
     name = "sandbox_setting_java_proto",
-    visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
+    visibility = ["//visibility:private"],
     deps = [":sandbox_setting_proto"],
 )
 
