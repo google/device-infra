@@ -583,14 +583,15 @@ public final class CompatibilityReportMergerTest {
   }
 
   @Test
-  public void insertModulesToResult_success() {
+  public void insertUnexecutedModulesIntoResult_success() {
     Result result = Result.getDefaultInstance();
     ImmutableList<TradefedResultBundle.ModuleInfo> modules =
         ImmutableList.of(
             TradefedResultBundle.ModuleInfo.of("abi1", "module1"),
             TradefedResultBundle.ModuleInfo.of("abi2", "module2"));
 
-    Result updatedResult = CompatibilityReportMerger.insertModulesToResult(result, modules);
+    Result updatedResult =
+        CompatibilityReportMerger.insertUnexecutedModulesIntoResult(result, modules);
 
     assertThat(updatedResult.getModuleInfoList()).hasSize(2);
     assertThat(updatedResult.getModuleInfo(0).getName()).isEqualTo("module1");
