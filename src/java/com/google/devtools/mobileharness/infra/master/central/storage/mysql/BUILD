@@ -17,10 +17,6 @@ load("@rules_java//java:defs.bzl", "java_library")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
-    ],
 )
 
 java_library(
@@ -49,6 +45,11 @@ java_library(
     srcs = [
         "MySqlLabRepository.java",
     ],
+    visibility = [
+        "//javatests/com/google/devtools/mobileharness/infra/master/central:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
+    ],
     deps = [
         ":lab_table_client",
         "//src/devtools/mobileharness/infra/master/central/proto:lab_java_proto",
@@ -66,6 +67,11 @@ java_library(
     name = "lab_table_client",
     srcs = [
         "MySqlLabTableClient.java",
+    ],
+    visibility = [
+        "//javatests/com/google/devtools/mobileharness/infra/master/central:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
     ],
     deps = [
         "//src/devtools/mobileharness/infra/master/central/proto:lab_java_proto",

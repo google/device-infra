@@ -17,17 +17,17 @@ load("@rules_java//java:defs.bzl", "java_library")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/shared/storage/transaction:__subpackages__",
-    ],
 )
 
 java_library(
     name = "mysql_transaction_context",
     srcs = [
         "MySqlTransactionContext.java",
+    ],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/shared/storage/transaction:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/storage/transaction:transaction_context",
@@ -38,6 +38,11 @@ java_library(
     name = "mysql_transaction_runner",
     srcs = [
         "MySqlTransactionRunner.java",
+    ],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/shared/storage/transaction:__subpackages__",
     ],
     deps = [
         ":mysql_transaction_context",
