@@ -479,6 +479,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDriver("AndroidInstrumentation");
     device.addSupportedDriver("AndroidNativeBin");
     device.addSupportedDriver("AndroidRoboTest");
+    device.addSupportedDriver("AndroidTestLoopTest");
     device.addSupportedDriver("MoblyTest");
     device.addSupportedDriver("NoOpDriver");
     device.addSupportedDriver("SlateDriver");

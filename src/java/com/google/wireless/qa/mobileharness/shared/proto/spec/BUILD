@@ -45,6 +45,7 @@ proto_library(
         ":android_show_instruction_decorator_spec_proto",
         ":android_switch_language_decorator_spec_proto",
         ":android_switch_user_decorator_spec_proto",
+        ":android_test_loop_test_spec_proto",
         ":base_spec_proto",
         ":install_apk_step_spec_proto",
         ":job_spec_proto",
@@ -425,6 +426,25 @@ cc_proto_library(
 java_proto_library(
     name = "android_robo_test_spec_java_proto",
     deps = [":android_robo_test_spec_proto"],
+)
+
+proto_library(
+    name = "android_test_loop_test_spec_proto",
+    srcs = ["driver/android_test_loop_test_spec.proto"],
+    deps = [
+        ":base_spec_proto",
+        "@protobuf//:duration_proto",
+    ],
+)
+
+cc_proto_library(
+    name = "android_test_loop_test_spec_cc_proto",
+    deps = [":android_test_loop_test_spec_proto"],
+)
+
+java_proto_library(
+    name = "android_test_loop_test_spec_java_proto",
+    deps = [":android_test_loop_test_spec_proto"],
 )
 
 proto_library(
