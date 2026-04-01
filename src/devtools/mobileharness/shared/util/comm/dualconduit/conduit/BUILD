@@ -25,10 +25,14 @@ go_library(
     srcs = [
         "conduit.go",
         "manager.go",
+        "pump.go",
     ],
+    importpath = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/conduit",
     deps = [
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_go_proto",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/rxconn",
         "@com_github_rsocket_rsocket_go//:rsocket-go",
+        "@com_github_rsocket_rsocket_go//rx/flux",
     ],
 )
 
@@ -37,6 +41,7 @@ go_test(
     srcs = [
         "conduit_test.go",
         "manager_test.go",
+        "pump_test.go",
     ],
     embed = [":conduit"],
     deps = [
