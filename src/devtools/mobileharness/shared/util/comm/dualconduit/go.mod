@@ -4,6 +4,7 @@ go 1.25
 
 require (
 	github.com/rsocket/rsocket-go v0.8.16
+	golang.org/x/oauth2 v0.29.0
 	google.golang.org/grpc v1.67.3
 	google.golang.org/protobuf v1.36.3
 )
