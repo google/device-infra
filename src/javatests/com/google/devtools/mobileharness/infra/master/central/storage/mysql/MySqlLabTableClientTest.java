@@ -161,4 +161,44 @@ public final class MySqlLabTableClientTest {
             () -> mySqlLabTableClient.updateLabServerCondition(LAB_LOCATOR, true, mockConnection));
     assertThat(exception).hasMessageThat().contains("Failed to update LabServerCondition");
   }
+
+  @Test
+  public void removeLab_success() throws Exception {
+    when(mockPreparedStatement.executeUpdate()).thenReturn(1);
+
+    mySqlLabTableClient.removeLab(LAB_LOCATOR, mockConnection);
+
+    verify(mockPreparedStatement).setString(1, LAB_ID);
+  }
+
+  @Test
+  public void removeLab_sqlException() throws Exception {
+    when(mockPreparedStatement.executeUpdate()).thenThrow(new SQLException("DB error"));
+
+    MobileHarnessException exception =
+        assertThrows(
+            MobileHarnessException.class,
+            () -> mySqlLabTableClient.removeLab(LAB_LOCATOR, mockConnection));
+    assertThat(exception).hasMessageThat().contains("Failed to remove lab");
+  }
+
+  @Test
+  public void clearLabServer_success() throws Exception {
+    when(mockPreparedStatement.executeUpdate()).thenReturn(1);
+
+    mySqlLabTableClient.clearLabServer(LAB_LOCATOR, mockConnection);
+
+    verify(mockPreparedStatement).setString(1, LAB_ID);
+  }
+
+  @Test
+  public void clearLabServer_sqlException() throws Exception {
+    when(mockPreparedStatement.executeUpdate()).thenThrow(new SQLException("DB error"));
+
+    MobileHarnessException exception =
+        assertThrows(
+            MobileHarnessException.class,
+            () -> mySqlLabTableClient.clearLabServer(LAB_LOCATOR, mockConnection));
+    assertThat(exception).hasMessageThat().contains("Failed to clear lab server");
+  }
 }

@@ -30,6 +30,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
         "//src/java/com/google/devtools/mobileharness/infra/master/central/storage/mysql:lab_repository",
         "//src/java/com/google/devtools/mobileharness/infra/master/central/storage/mysql:lab_table_client",
+        "//src/java/com/google/devtools/mobileharness/infra/master/central/storage/mysql:my_sql_device_table_client",
         "//src/java/com/google/devtools/mobileharness/shared/storage/transaction:transaction_context",
         "//src/java/com/google/devtools/mobileharness/shared/storage/transaction/mysql:mysql_transaction_context",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",

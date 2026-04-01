@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.master.central.storage.mysql;
 
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
+import com.google.devtools.mobileharness.infra.master.central.model.lab.LabDao;
 import com.google.devtools.mobileharness.infra.master.central.proto.Lab.LabServerCondition;
 import com.google.devtools.mobileharness.infra.master.central.storage.lab.LabRepository;
 import com.google.devtools.mobileharness.shared.storage.transaction.TransactionContext;
@@ -51,6 +52,30 @@ public final class MySqlLabRepository implements LabRepository {
     MySqlTransactionContext context = castContext(transactionContext);
     mySqlLabTableClient.updateLabServerCondition(labLocator, isMissing, context.getConnection());
     return this;
+  }
+
+  @Override
+  public LabDao getLab(
+      LabLocator labLocator, TransactionContext transactionContext, boolean readDevices)
+      throws MobileHarnessException {
+    MySqlTransactionContext context = castContext(transactionContext);
+    Optional<LabServerCondition> condition =
+        mySqlLabTableClient.getLabServerCondition(labLocator, context.getConnection());
+    return LabDao.create(labLocator, Optional.empty(), condition);
+  }
+
+  @Override
+  public void removeLab(LabLocator labLocator, TransactionContext transactionContext)
+      throws MobileHarnessException {
+    MySqlTransactionContext context = castContext(transactionContext);
+    mySqlLabTableClient.removeLab(labLocator, context.getConnection());
+  }
+
+  @Override
+  public void clearLabServer(LabLocator labLocator, TransactionContext transactionContext)
+      throws MobileHarnessException {
+    MySqlTransactionContext context = castContext(transactionContext);
+    mySqlLabTableClient.clearLabServer(labLocator, context.getConnection());
   }
 
   private MySqlTransactionContext castContext(TransactionContext context) {

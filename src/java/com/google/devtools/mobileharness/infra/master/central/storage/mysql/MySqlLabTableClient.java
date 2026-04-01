@@ -106,4 +106,37 @@ public class MySqlLabTableClient {
     }
     return this;
   }
+
+  /** Removes the lab from the table. */
+  public void removeLab(LabLocator labLocator, Connection connection)
+      throws MobileHarnessException {
+    String sql = String.format("DELETE FROM %s WHERE %s = ?", TABLE_NAME, COL_LAB_ID);
+    try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+      preparedStatement.setString(1, labLocator.getId());
+      preparedStatement.executeUpdate();
+    } catch (SQLException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.DATABASE_TABLE_DELETE_ERROR,
+          "Failed to remove lab " + labLocator.getId(),
+          e);
+    }
+  }
+
+  /** Clears the lab server condition (sets to NULL). */
+  public void clearLabServer(LabLocator labLocator, Connection connection)
+      throws MobileHarnessException {
+    String sql =
+        String.format(
+            "UPDATE %s SET %s = NULL WHERE %s = ?",
+            TABLE_NAME, COL_LAB_SERVER_CONDITION, COL_LAB_ID);
+    try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+      preparedStatement.setString(1, labLocator.getId());
+      preparedStatement.executeUpdate();
+    } catch (SQLException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.DATABASE_TABLE_UPDATE_ERROR,
+          "Failed to clear lab server for " + labLocator.getId(),
+          e);
+    }
+  }
 }

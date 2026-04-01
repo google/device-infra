@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.master.central.storage.lab;
 
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
+import com.google.devtools.mobileharness.infra.master.central.model.lab.LabDao;
 import com.google.devtools.mobileharness.infra.master.central.proto.Lab.LabServerCondition;
 import com.google.devtools.mobileharness.shared.storage.transaction.TransactionContext;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -38,5 +39,25 @@ public interface LabRepository {
   @CanIgnoreReturnValue
   public LabRepository updateLabServerCondition(
       LabLocator labLocator, boolean isMissing, TransactionContext context)
+      throws MobileHarnessException;
+
+  /**
+   * Reads the information of one lab from the lab table.
+   *
+   * @param readDevices if true, will also read the device info from device repository.
+   * @throws MobileHarnessException if lab not found
+   * @throws NullPointerException if the lab IP/hostname or device column value is null
+   * @throws IllegalArgumentException if the column name is ambiguous or the column does not exist
+   * @throws IllegalStateException if parsing failed state check. Currently does not check
+   *     out.isInitialized.
+   */
+  public LabDao getLab(LabLocator labLocator, TransactionContext context, boolean readDevices)
+      throws MobileHarnessException;
+
+  /** Removes the lab from the repository. */
+  void removeLab(LabLocator labLocator, TransactionContext context) throws MobileHarnessException;
+
+  /** Clears the lab server condition (sets to null/empty). */
+  void clearLabServer(LabLocator labLocator, TransactionContext context)
       throws MobileHarnessException;
 }

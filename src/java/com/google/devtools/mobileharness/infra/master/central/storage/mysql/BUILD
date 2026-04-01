@@ -17,14 +17,15 @@ load("@rules_java//java:defs.bzl", "java_library")
 
 package(
     default_applicable_licenses = ["//:license"],
+    default_visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
+    ],
 )
 
 java_library(
     name = "storage_module",
     srcs = ["CentralStorageMySqlModule.java"],
-    visibility = [
-        "//java/com/google/devtools/mobileharness/infra/master/central:__subpackages__",
-    ],
     deps = [
         ":lab_repository",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -45,16 +46,12 @@ java_library(
     srcs = [
         "MySqlLabRepository.java",
     ],
-    visibility = [
-        "//javatests/com/google/devtools/mobileharness/infra/master/central:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
-    ],
     deps = [
         ":lab_table_client",
         "//src/devtools/mobileharness/infra/master/central/proto:lab_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
+        "//src/java/com/google/devtools/mobileharness/infra/master/central/model/lab",
         "//src/java/com/google/devtools/mobileharness/infra/master/central/storage/lab:lab_repository",
         "//src/java/com/google/devtools/mobileharness/shared/storage/transaction:transaction_context",
         "//src/java/com/google/devtools/mobileharness/shared/storage/transaction/mysql:mysql_transaction_context",
@@ -68,11 +65,6 @@ java_library(
     srcs = [
         "MySqlLabTableClient.java",
     ],
-    visibility = [
-        "//javatests/com/google/devtools/mobileharness/infra/master/central:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
-    ],
     deps = [
         "//src/devtools/mobileharness/infra/master/central/proto:lab_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -82,5 +74,29 @@ java_library(
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:javax_inject_jsr330_api",
         "@protobuf//:protobuf_java",
+    ],
+)
+
+java_library(
+    name = "my_sql_device_table_client",
+    srcs = ["MySqlDeviceTableClient.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "my_sql_device_repository",
+    srcs = ["MySqlDeviceRepository.java"],
+    deps = [
+        ":my_sql_device_table_client",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
+        "//src/java/com/google/devtools/mobileharness/infra/master/central/storage/lab:device_repository",
+        "//src/java/com/google/devtools/mobileharness/shared/storage/transaction:transaction_context",
+        "//src/java/com/google/devtools/mobileharness/shared/storage/transaction/mysql:mysql_transaction_context",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
