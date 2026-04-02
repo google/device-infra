@@ -17,12 +17,19 @@ load("@rules_go//go:def.bzl", "go_library")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = ["//src/devtools/mobileharness/shared/util/comm/dualconduit/transport:__subpackages__"],
+    default_visibility = [
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/cmd:__subpackages__",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/tests:__pkg__",
+    ],
 )
 
 go_library(
-    name = "auth",
-    srcs = ["auth.go"],
-    importpath = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/auth",
-    deps = ["@org_golang_x_oauth2//google"],
+    name = "transport",
+    srcs = ["transport.go"],
+    importpath = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/transport",
+    deps = [
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/auth",
+        "@com_github_rsocket_rsocket_go//:rsocket-go",
+        "@com_github_rsocket_rsocket_go//core/transport",
+    ],
 )
