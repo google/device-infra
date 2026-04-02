@@ -32,6 +32,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_logcat_monitoring_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_network_activity_logging_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_robo_test_job_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_test_loop_test_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:mobly_aosp_test_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:tradefed_test_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
@@ -41,11 +42,13 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_logcat_monitoring_decorator_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_network_activity_logging_decorator_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_robo_test_spec_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_test_loop_test_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:job_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:tradefed_test_spec_java_proto",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
+        "@protobuf//:protobuf_java_util",
     ],
 )
 

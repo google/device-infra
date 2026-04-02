@@ -613,6 +613,18 @@ public interface PropertyName {
       ANDROID_ROBO_TEST_TEST_END_EPOCH_MS,
     }
 
+    /** AndroidTestLoopTest property name constants. */
+    public enum AndroidTestLoopTest implements PropertyName {
+      /** End time of the scenario testing in AndroidTestLoopTest. */
+      ANDROID_TEST_LOOP_TEST_END_EPOCH_MS,
+
+      /** Start time of the scenario testing in AndroidTestLoopTest. */
+      ANDROID_TEST_LOOP_TEST_START_EPOCH_MS,
+
+      /** Failure message of the scenario testing in AndroidTestLoopTest. */
+      ANDROID_TEST_LOOP_FAILURE_MESSAGE,
+    }
+
     /** IosGoogleAccountDecorator property name constants. */
     public enum IosGoogleAccountDecorator implements PropertyName {
 
