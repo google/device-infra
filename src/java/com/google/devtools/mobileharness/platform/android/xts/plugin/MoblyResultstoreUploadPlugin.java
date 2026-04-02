@@ -19,15 +19,20 @@ package com.google.devtools.mobileharness.platform.android.xts.plugin;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException;
+import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException.DesiredTestResult;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyPythonVenvUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndingEvent;
+import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin.PluginType;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.nio.file.Path;
 import java.time.Duration;
 
@@ -58,6 +63,48 @@ public final class MoblyResultstoreUploadPlugin {
     this.moblyPythonVenvUtil = moblyPythonVenvUtil;
     this.commandExecutor = commandExecutor;
     this.localFileUtil = localFileUtil;
+  }
+
+  @Subscribe
+  public void onTestStarting(TestStartingEvent event)
+      throws SkipTestException, InterruptedException {
+    TestInfo testInfo = event.getTest();
+    testInfo.log().atInfo().alsoTo(logger).log("Verifying Resultstore upload prerequisites.");
+
+    try {
+      commandExecutor.run(Command.of("which", "gcloud"));
+    } catch (CommandException e) {
+      testInfo
+          .log()
+          .atWarning()
+          .withCause(e)
+          .alsoTo(logger)
+          .log("gcloud is not installed on the host.");
+      throw SkipTestException.create(
+          "gcloud is not installed on the host. Follow"
+              + " https://github.com/android/mobly-android-partner-tools/blob/main/README.md#first-time-setup"
+              + " to install gcloud and set up authentication",
+          DesiredTestResult.ERROR,
+          ExtErrorId.MOBLY_RESULTSTORE_UPLOAD_PRECHECK_FAILED);
+    }
+
+    try {
+      commandExecutor.run(
+          Command.of("gcloud", "auth", "application-default", "print-access-token"));
+    } catch (CommandException e) {
+      testInfo
+          .log()
+          .atWarning()
+          .withCause(e)
+          .alsoTo(logger)
+          .log("Failed to get gcloud auth token.");
+      throw SkipTestException.create(
+          "Failed to get gcloud auth token. Follow"
+              + " https://github.com/android/mobly-android-partner-tools/blob/main/README.md#first-time-setup"
+              + " to set up gcloud auth",
+          DesiredTestResult.ERROR,
+          ExtErrorId.MOBLY_RESULTSTORE_UPLOAD_PRECHECK_FAILED);
+    }
   }
 
   @Subscribe

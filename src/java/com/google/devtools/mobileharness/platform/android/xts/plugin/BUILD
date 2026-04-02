@@ -15,6 +15,8 @@
 
 load("@rules_java//java:defs.bzl", "java_library")
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "non_tradefed_report_generator",
     srcs = ["NonTradefedReportGenerator.java"],
@@ -93,12 +95,14 @@ java_library(
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:mobly_python_venv_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:client_test_events",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/plugin",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
     ],
 )
