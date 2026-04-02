@@ -36,7 +36,6 @@ java_library(
     name = "local_device_provider",
     srcs = ["LocalDeviceProvider.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
     deps = [
         ":device_provider",
@@ -53,7 +52,6 @@ java_library(
     name = "allocated_device_provider",
     srcs = ["AllocatedDeviceProvider.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
     deps = [
         ":device_provider",
