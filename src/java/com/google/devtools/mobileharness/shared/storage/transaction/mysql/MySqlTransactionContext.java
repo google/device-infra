@@ -23,6 +23,7 @@ import java.sql.Connection;
 public final class MySqlTransactionContext implements TransactionContext {
 
   private final Connection connection;
+  private final StringBuilder attemptLog = new StringBuilder();
 
   public MySqlTransactionContext(Connection connection) {
     this.connection = connection;
@@ -30,5 +31,10 @@ public final class MySqlTransactionContext implements TransactionContext {
 
   public Connection getConnection() {
     return connection;
+  }
+
+  @Override
+  public StringBuilder attemptLog() {
+    return attemptLog;
   }
 }

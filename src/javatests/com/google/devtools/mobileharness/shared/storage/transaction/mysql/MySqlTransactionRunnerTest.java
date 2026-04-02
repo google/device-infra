@@ -242,4 +242,23 @@ public final class MySqlTransactionRunnerTest {
     verify(connection, never()).commit();
     verify(connection, never()).close();
   }
+
+  @Test
+  public void run_workerThrowsException_includesAttemptLogInErrorMessage() throws Exception {
+    MobileHarnessException exception =
+        new MobileHarnessException(BasicErrorId.DATABASE_TABLE_READ_ERROR, "Worker failed");
+    when(worker.doWork(any()))
+        .thenAnswer(
+            invocation -> {
+              MySqlTransactionContext context = invocation.getArgument(0);
+              context.attemptLog().append("Some log message");
+              throw exception;
+            });
+
+    MobileHarnessException thrown =
+        assertThrows(
+            MobileHarnessException.class, () -> transactionRunner.run(TRANSACTION_CONFIG, worker));
+
+    assertThat(thrown).hasMessageThat().contains("Some log message");
+  }
 }

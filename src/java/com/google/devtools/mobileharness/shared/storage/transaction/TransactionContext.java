@@ -16,5 +16,8 @@
 
 package com.google.devtools.mobileharness.shared.storage.transaction;
 
-/** Marker interface for transaction context, to be implemented by each specific Database type. */
-public interface TransactionContext {}
+/** Interface for transaction context, to be implemented by each specific Database type. */
+public interface TransactionContext {
+  /** Returns the log builder for the current attempt. */
+  StringBuilder attemptLog();
+}

@@ -44,14 +44,19 @@ public final class MySqlTransactionRunner implements TransactionRunner {
       throws MobileHarnessException {
     Stopwatch stopwatch = Stopwatch.createStarted();
     Connection connection = null;
+    MySqlTransactionContext context = null;
     try {
       connection = databaseConnections.getConnection();
       // Disable auto-commit to manually control transaction boundaries.
       connection.setAutoCommit(false);
-      MySqlTransactionContext context = new MySqlTransactionContext(connection);
+      context = new MySqlTransactionContext(connection);
       R result = worker.doWork(context);
       connection.commit();
-      logger.atInfo().log("Successfully %s (elapsed=%s)", config.description(), stopwatch.stop());
+      logger.atInfo().log(
+          "Successfully %s (elapsed=%s)%s",
+          config.description(),
+          stopwatch.stop(),
+          context.attemptLog().length() > 0 ? "\nAttempt log:\n" + context.attemptLog() : "");
       return result;
     } catch (SQLException | MobileHarnessException e) {
       if (connection != null) {
@@ -63,7 +68,13 @@ public final class MySqlTransactionRunner implements TransactionRunner {
       }
       throw new MobileHarnessException(
           config.errorId(),
-          String.format("Failed to %s (elapsed=%s)", config.description(), stopwatch.stop()),
+          String.format(
+              "Failed to %s (elapsed=%s)%s",
+              config.description(),
+              stopwatch.stop(),
+              context != null && context.attemptLog().length() > 0
+                  ? "\nAttempt log:\n" + context.attemptLog()
+                  : ""),
           e);
     } finally {
       if (connection != null) {
