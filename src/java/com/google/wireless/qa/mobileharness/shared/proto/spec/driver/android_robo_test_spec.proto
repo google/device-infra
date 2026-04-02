@@ -61,15 +61,6 @@ message AndroidRoboTestSpec {
   optional int32 crawl_timeout_secs = 9
       [(field_detail) = { help: "Timeout of the crawl in seconds." }];
 
-  enum RoboscriptRecorder {
-    NONE = 0;
-    TEXT = 1;
-    WEB = 2;
-  }
-
-  optional RoboscriptRecorder roboscript_recorder = 10
-      [(field_detail) = { help: "Roboscript recorder type." }, default = NONE];
-
   optional bool record_crawl = 11 [(field_detail) = { help: "Record crawl." }];
 
   repeated string crawler_flags = 12
@@ -122,5 +113,5 @@ message AndroidRoboTestSpec {
     (field_detail) = { help: "Project name to override for internal users." }
   ];
 
-  reserved 1, 15;
+  reserved 1, 10, 15;
 }
