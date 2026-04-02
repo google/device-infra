@@ -17,10 +17,13 @@
 package com.google.devtools.mobileharness.infra.master.central.storage.mysql;
 
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
+import com.google.devtools.mobileharness.infra.master.central.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.infra.master.central.storage.lab.DeviceRepository;
 import com.google.devtools.mobileharness.shared.storage.transaction.TransactionContext;
 import com.google.devtools.mobileharness.shared.storage.transaction.mysql.MySqlTransactionContext;
+import java.util.Optional;
 import javax.inject.Inject;
 
 /** MySQL implementation of {@link DeviceRepository}. */
@@ -38,6 +41,22 @@ public final class MySqlDeviceRepository implements DeviceRepository {
       throws MobileHarnessException {
     MySqlTransactionContext context = castContext(transactionContext);
     return mySqlDeviceTableClient.hasDevice(labLocator, context.getConnection());
+  }
+
+  @Override
+  public Optional<DeviceCondition> getDeviceCondition(
+      DeviceLocator deviceLocator, TransactionContext transactionContext)
+      throws MobileHarnessException {
+    MySqlTransactionContext context = castContext(transactionContext);
+    return mySqlDeviceTableClient.getDeviceCondition(deviceLocator, context.getConnection());
+  }
+
+  @Override
+  public void updateDeviceCondition(
+      DeviceLocator deviceLocator, DeviceCondition condition, TransactionContext transactionContext)
+      throws MobileHarnessException {
+    MySqlTransactionContext context = castContext(transactionContext);
+    mySqlDeviceTableClient.updateDeviceCondition(deviceLocator, condition, context.getConnection());
   }
 
   private MySqlTransactionContext castContext(TransactionContext context) {

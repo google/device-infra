@@ -43,6 +43,7 @@ java_library(
         "DeviceRepository.java",
     ],
     deps = [
+        "//src/devtools/mobileharness/infra/master/central/proto:device_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
         "//src/java/com/google/devtools/mobileharness/shared/storage/transaction:transaction_context",

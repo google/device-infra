@@ -17,13 +17,25 @@
 package com.google.devtools.mobileharness.infra.master.central.storage.lab;
 
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
+import com.google.devtools.mobileharness.infra.master.central.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.shared.storage.transaction.TransactionContext;
+import java.util.Optional;
 
 /** Interface for device repository. */
 public interface DeviceRepository {
 
   /** Checks whether there is any device in the lab. */
   boolean hasDevice(LabLocator labLocator, TransactionContext context)
+      throws MobileHarnessException;
+
+  /** Gets the condition of a device. */
+  Optional<DeviceCondition> getDeviceCondition(
+      DeviceLocator deviceLocator, TransactionContext context) throws MobileHarnessException;
+
+  /** Updates the condition of a device. */
+  void updateDeviceCondition(
+      DeviceLocator deviceLocator, DeviceCondition condition, TransactionContext context)
       throws MobileHarnessException;
 }

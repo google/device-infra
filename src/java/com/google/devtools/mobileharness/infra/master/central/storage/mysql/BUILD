@@ -81,9 +81,13 @@ java_library(
     name = "my_sql_device_table_client",
     srcs = ["MySqlDeviceTableClient.java"],
     deps = [
+        "//src/devtools/mobileharness/infra/master/central/proto:device_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_extension_registry",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:javax_inject_jsr330_api",
+        "@protobuf//:protobuf_java",
     ],
 )
 
@@ -92,6 +96,7 @@ java_library(
     srcs = ["MySqlDeviceRepository.java"],
     deps = [
         ":my_sql_device_table_client",
+        "//src/devtools/mobileharness/infra/master/central/proto:device_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
         "//src/java/com/google/devtools/mobileharness/infra/master/central/storage/lab:device_repository",

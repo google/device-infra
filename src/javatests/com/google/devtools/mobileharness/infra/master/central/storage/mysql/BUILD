@@ -25,6 +25,8 @@ java_library(
     name = "mysql",
     srcs = glob(["*.java"]),
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/infra/master/central/proto:device_java_proto",
         "//src/devtools/mobileharness/infra/master/central/proto:lab_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
