@@ -75,6 +75,9 @@ public final class GetHostOverviewHandler {
   }
 
   public ListenableFuture<HostOverviewPageData> getHostOverview(GetHostOverviewRequest request) {
+    // TODO: - dafeng - Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     logger.atInfo().log("Getting host overview for %s", request.getHostName());
     String hostName = request.getHostName();
 

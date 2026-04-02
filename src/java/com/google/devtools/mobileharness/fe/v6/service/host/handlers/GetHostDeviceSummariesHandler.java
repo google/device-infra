@@ -82,6 +82,9 @@ public final class GetHostDeviceSummariesHandler {
   /** Gets host device summaries. */
   public ListenableFuture<GetHostDeviceSummariesResponse> getHostDeviceSummaries(
       GetHostDeviceSummariesRequest request) {
+    // TODO: - dafeng - Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     GetLabInfoRequest getLabInfoRequest = createGetLabInfoRequest(request.getHostName());
     return Futures.transform(
         labInfoProvider.getLabInfoAsync(getLabInfoRequest, ""),

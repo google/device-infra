@@ -35,6 +35,9 @@ public final class DecommissionMissingDevicesHandler {
 
   public ListenableFuture<DecommissionMissingDevicesResponse> decommissionMissingDevices(
       DecommissionMissingDevicesRequest request) {
+    // TODO: Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     logger.atInfo().log(
         "Decommissioning missing devices for host %s: %s",
         request.getHostName(), request.getDeviceIdsList());

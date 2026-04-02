@@ -35,6 +35,9 @@ public final class CheckRemoteControlEligibilityHandler {
 
   public ListenableFuture<CheckRemoteControlEligibilityResponse> checkRemoteControlEligibility(
       CheckRemoteControlEligibilityRequest request) {
+    // TODO: Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     logger.atInfo().log("Checking remote control eligibility for host %s", request.getHostName());
 
     // TODO: Implement real logic.

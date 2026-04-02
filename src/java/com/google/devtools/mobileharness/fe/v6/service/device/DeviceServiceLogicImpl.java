@@ -83,6 +83,9 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
   @Override
   public ListenableFuture<HealthinessStats> getDeviceHealthinessStats(
       GetDeviceHealthinessStatsRequest request) {
+    // TODO: Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     // TODO: Implement this method.
     return immediateFuture(HealthinessStats.getDefaultInstance());
   }
@@ -90,6 +93,9 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
   @Override
   public ListenableFuture<TestResultStats> getDeviceTestResultStats(
       GetDeviceTestResultStatsRequest request) {
+    // TODO: Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     // TODO: Implement this method.
     return immediateFuture(TestResultStats.getDefaultInstance());
   }
@@ -97,12 +103,18 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
   @Override
   public ListenableFuture<RecoveryTaskStats> getDeviceRecoveryTaskStats(
       GetDeviceRecoveryTaskStatsRequest request) {
+    // TODO: Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     // TODO: Implement this method.
     return immediateFuture(RecoveryTaskStats.getDefaultInstance());
   }
 
   @Override
   public ListenableFuture<TakeScreenshotResponse> takeScreenshot(TakeScreenshotRequest request) {
+    // TODO: Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     // TODO: Implement this method.
     return immediateFuture(TakeScreenshotResponse.getDefaultInstance());
   }
@@ -115,6 +127,9 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
   @Override
   public ListenableFuture<QuarantineDeviceResponse> quarantineDevice(
       QuarantineDeviceRequest request) {
+    // TODO: Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     // TODO: Implement this method.
     return immediateFuture(QuarantineDeviceResponse.getDefaultInstance());
   }
@@ -122,6 +137,9 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
   @Override
   public ListenableFuture<UnquarantineDeviceResponse> unquarantineDevice(
       UnquarantineDeviceRequest request) {
+    // TODO: Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     // TODO: Implement this method.
     return immediateFuture(UnquarantineDeviceResponse.getDefaultInstance());
   }

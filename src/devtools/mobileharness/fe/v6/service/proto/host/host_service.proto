@@ -159,18 +159,27 @@ service HostService {
 // Request message for GetHostHeaderInfo.
 message GetHostHeaderInfoRequest {
   string host_name = 1;
+
+  // The universe of the host.
+  string universe = 2;
 }
 
 // Request message for GetHostOverview.
 message GetHostOverviewRequest {
   // The unique name of the host.
   string host_name = 1;
+
+  // The universe of the host.
+  string universe = 2;
 }
 
 // Request message for GetHostDeviceSummaries.
 message GetHostDeviceSummariesRequest {
   // The unique name of the host.
   string host_name = 1;
+
+  // The universe of the host.
+  string universe = 2;
 }
 
 // Response message for GetHostDeviceSummaries.
@@ -182,6 +191,9 @@ message GetHostDeviceSummariesResponse {
 // Request message for GetHostDebugInfo.
 message GetHostDebugInfoRequest {
   string host_name = 1;
+
+  // The universe of the host.
+  string universe = 2;
 }
 
 // Result of diagnostic command collection.
@@ -193,6 +205,9 @@ message GetHostDebugInfoResponse {
 // Request message for GetPopularFlags.
 message GetPopularFlagsRequest {
   string host_name = 1;
+
+  // The universe of the host.
+  string universe = 2;
 }
 
 // Response message for GetPopularFlags.
@@ -206,6 +221,9 @@ message UpdatePassThroughFlagsRequest {
   string host_name = 1;
   // The new pass through flags.
   string flags = 2;
+
+  // The universe of the host.
+  string universe = 3;
 }
 
 // Response message for UpdatePassThroughFlags.
@@ -214,6 +232,9 @@ message UpdatePassThroughFlagsResponse {}
 // Request message for GetReleaseConfigs.
 message GetReleaseConfigsRequest {
   string host_name = 1;
+
+  // The universe of the host.
+  string universe = 2;
 }
 
 // Response message for GetReleaseConfigs.
@@ -227,6 +248,9 @@ message DecommissionMissingDevicesRequest {
   string host_name = 1;
   // The list of device IDs to decommission.
   repeated string device_ids = 2;
+
+  // The universe of the host.
+  string universe = 3;
 }
 
 // Response message for DecommissionMissingDevices.
@@ -249,6 +273,9 @@ message CheckRemoteControlEligibilityRequest {
 
   // The list of device targets to check.
   repeated DeviceTarget targets = 3;
+
+  // The universe of the host.
+  string universe = 4;
 }
 
 // Response for remote control eligibility check.
@@ -272,6 +299,9 @@ message RemoteControlDevicesRequest {
   string video_resolution = 5;
   string max_video_size = 6;
   FlashOptions flash_options = 7;
+
+  // The universe of the host.
+  string universe = 8;
 }
 
 // Response containing results of remote control session startup.
@@ -288,6 +318,9 @@ message RemoteControlDevicesResponse {
 message DecommissionHostRequest {
   // The unique name of the host.
   string host_name = 1;
+
+  // The universe of the host.
+  string universe = 2;
 }
 
 // Response message for DecommissionHost.
@@ -298,21 +331,33 @@ message ReleaseLabServerRequest {
   string host_name = 1;
   string version = 2;
   string flags = 3;
+
+  // The universe of the host.
+  string universe = 4;
 }
 
 // Request message for StartLabServer.
 message StartLabServerRequest {
   string host_name = 1;
+
+  // The universe of the host.
+  string universe = 2;
 }
 
 // Request message for StopLabServer.
 message StopLabServerRequest {
   string host_name = 1;
+
+  // The universe of the host.
+  string universe = 2;
 }
 
 // Request message for RestartLabServer.
 message RestartLabServerRequest {
   string host_name = 1;
+
+  // The universe of the host.
+  string universe = 2;
 }
 
 // Response for ReleaseLabServer API.

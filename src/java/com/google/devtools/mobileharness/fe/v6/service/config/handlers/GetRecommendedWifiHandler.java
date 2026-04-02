@@ -35,6 +35,9 @@ public final class GetRecommendedWifiHandler {
 
   public ListenableFuture<GetRecommendedWifiResponse> getRecommendedWifi(
       GetRecommendedWifiRequest request) {
+    // TODO: Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     logger.atInfo().log("GetRecommendedWifiRequest: %s", request);
     // TODO: Implement real logic.
     return immediateFuture(GetRecommendedWifiResponse.getDefaultInstance());

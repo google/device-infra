@@ -72,6 +72,10 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
 
   @Override
   public ListenableFuture<HostHeaderInfo> getHostHeaderInfo(GetHostHeaderInfoRequest request) {
+    // TODO: - dafeng - Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
+
     // TODO: Implement this method.
     return immediateFuture(
         HostHeaderInfo.newBuilder()
@@ -94,12 +98,18 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   @Override
   public ListenableFuture<GetHostDebugInfoResponse> getHostDebugInfo(
       GetHostDebugInfoRequest request) {
+    // TODO: Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     // TODO: Implement this method.
     return immediateFuture(GetHostDebugInfoResponse.getDefaultInstance());
   }
 
   @Override
   public ListenableFuture<GetPopularFlagsResponse> getPopularFlags(GetPopularFlagsRequest request) {
+    // TODO: Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     // TODO: Implement this method.
     return immediateFuture(GetPopularFlagsResponse.getDefaultInstance());
   }
@@ -107,6 +117,9 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   @Override
   public ListenableFuture<UpdatePassThroughFlagsResponse> updatePassThroughFlags(
       UpdatePassThroughFlagsRequest request) {
+    // TODO: Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     // TODO: Implement this method.
     return immediateFuture(UpdatePassThroughFlagsResponse.getDefaultInstance());
   }
@@ -114,6 +127,9 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   @Override
   public ListenableFuture<GetReleaseConfigsResponse> getReleaseConfigs(
       GetReleaseConfigsRequest request) {
+    // TODO: Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     // TODO: Implement this method.
     return immediateFuture(GetReleaseConfigsResponse.getDefaultInstance());
   }
@@ -121,6 +137,9 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   @Override
   public ListenableFuture<DecommissionMissingDevicesResponse> decommissionMissingDevices(
       DecommissionMissingDevicesRequest request) {
+    // TODO: Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     // TODO: Implement this method.
     return immediateFuture(DecommissionMissingDevicesResponse.getDefaultInstance());
   }
@@ -128,6 +147,9 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   @Override
   public ListenableFuture<CheckRemoteControlEligibilityResponse> checkRemoteControlEligibility(
       CheckRemoteControlEligibilityRequest request) {
+    // TODO: Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     // TODO: Implement this method.
     return immediateFuture(CheckRemoteControlEligibilityResponse.getDefaultInstance());
   }
@@ -135,6 +157,9 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   @Override
   public ListenableFuture<RemoteControlDevicesResponse> remoteControlDevices(
       RemoteControlDevicesRequest request) {
+    // TODO: Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     // TODO: Implement this method.
     return immediateFuture(RemoteControlDevicesResponse.getDefaultInstance());
   }
@@ -142,6 +167,9 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   @Override
   public ListenableFuture<DecommissionHostResponse> decommissionHost(
       DecommissionHostRequest request) {
+    // TODO: Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     // TODO: Implement this method.
     return immediateFuture(DecommissionHostResponse.getDefaultInstance());
   }
@@ -149,12 +177,18 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   @Override
   public ListenableFuture<ReleaseLabServerResponse> releaseLabServer(
       ReleaseLabServerRequest request) {
+    // TODO: Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     // TODO: Implement this method.
     return immediateFuture(ReleaseLabServerResponse.getDefaultInstance());
   }
 
   @Override
   public ListenableFuture<StartLabServerResponse> startLabServer(StartLabServerRequest request) {
+    // TODO: Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     // TODO: Implement this method.
     return immediateFuture(StartLabServerResponse.getDefaultInstance());
   }
@@ -162,12 +196,18 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   @Override
   public ListenableFuture<RestartLabServerResponse> restartLabServer(
       RestartLabServerRequest request) {
+    // TODO: Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     // TODO: Implement this method.
     return immediateFuture(RestartLabServerResponse.getDefaultInstance());
   }
 
   @Override
   public ListenableFuture<StopLabServerResponse> stopLabServer(StopLabServerRequest request) {
+    // TODO: Use the universe parameter.
+    @SuppressWarnings("unused")
+    String universe = request.getUniverse();
     // TODO: Implement this method.
     return immediateFuture(StopLabServerResponse.getDefaultInstance());
   }
