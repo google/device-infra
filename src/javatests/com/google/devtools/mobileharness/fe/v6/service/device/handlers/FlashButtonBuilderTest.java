@@ -24,6 +24,8 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.SelfUniverse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
@@ -39,7 +41,8 @@ import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class FlashButtonBuilderTest {
-  private static final String UNIVERSE = "google_1p";
+  private static final Universe SELF_UNIVERSE =
+      Universe.newBuilder().setSelfUniverse(SelfUniverse.getDefaultInstance()).build();
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Mock private FeatureManagerFactory featureManagerFactory;
@@ -51,7 +54,7 @@ public final class FlashButtonBuilderTest {
   @Before
   public void setUp() {
     flashButtonBuilder = new FlashButtonBuilder(featureManagerFactory, featureReadiness);
-    when(featureManagerFactory.create(UNIVERSE)).thenReturn(featureManager);
+    when(featureManagerFactory.create(SELF_UNIVERSE)).thenReturn(featureManager);
     when(featureReadiness.isDeviceFlashingReady()).thenReturn(true);
   }
 
@@ -60,7 +63,7 @@ public final class FlashButtonBuilderTest {
     when(featureManager.isDeviceFlashingFeatureEnabled()).thenReturn(false);
     DeviceInfo deviceInfo = DeviceInfo.getDefaultInstance();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, UNIVERSE);
+    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
 
     assertThat(state.getState().getVisible()).isFalse();
   }
@@ -74,7 +77,7 @@ public final class FlashButtonBuilderTest {
             .setDeviceStatus(DeviceStatus.IDLE)
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, UNIVERSE);
+    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
 
     assertThat(state.getState().getVisible()).isFalse();
   }
@@ -87,7 +90,7 @@ public final class FlashButtonBuilderTest {
             .setDeviceFeature(DeviceFeature.newBuilder().addType("IosRealDevice"))
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, UNIVERSE);
+    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
 
     assertThat(state.getState().getVisible()).isFalse();
   }
@@ -107,7 +110,7 @@ public final class FlashButtonBuilderTest {
             .setDeviceStatus(DeviceStatus.IDLE)
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, UNIVERSE);
+    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
 
     assertThat(state.getState().getVisible()).isTrue();
     assertThat(state.getState().getEnabled()).isFalse();
@@ -125,7 +128,7 @@ public final class FlashButtonBuilderTest {
             .setDeviceStatus(DeviceStatus.IDLE)
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, UNIVERSE);
+    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
 
     assertThat(state.getState().getVisible()).isTrue();
     assertThat(state.getState().getEnabled()).isFalse();
@@ -142,7 +145,7 @@ public final class FlashButtonBuilderTest {
             .setDeviceStatus(DeviceStatus.IDLE)
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, UNIVERSE);
+    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
 
     assertThat(state.getState().getVisible()).isTrue();
     assertThat(state.getState().getEnabled()).isTrue();
@@ -158,7 +161,7 @@ public final class FlashButtonBuilderTest {
             .setDeviceStatus(DeviceStatus.BUSY)
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, UNIVERSE);
+    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
 
     assertThat(state.getState().getVisible()).isTrue();
     assertThat(state.getState().getEnabled()).isFalse();
@@ -176,7 +179,7 @@ public final class FlashButtonBuilderTest {
             .setDeviceStatus(DeviceStatus.IDLE)
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, UNIVERSE);
+    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
 
     assertThat(state.getState().getVisible()).isTrue();
     assertThat(state.getState().getEnabled()).isTrue();
@@ -193,7 +196,7 @@ public final class FlashButtonBuilderTest {
             .setDeviceStatus(DeviceStatus.IDLE)
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, UNIVERSE);
+    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
 
     assertThat(state.getState().getIsReady()).isFalse();
   }

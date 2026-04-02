@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import javax.inject.Inject;
@@ -33,7 +34,7 @@ class ConfigurationButtonBuilder {
     this.featureManagerFactory = featureManagerFactory;
   }
 
-  public ActionButtonState build(DeviceInfo deviceInfo, String universe) {
+  public ActionButtonState build(DeviceInfo deviceInfo, Universe universe) {
     if (!featureManagerFactory.create(universe).isConfigurationFeatureEnabled()) {
       return ActionButtonState.newBuilder().setVisible(false).build();
     }

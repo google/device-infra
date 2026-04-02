@@ -21,7 +21,6 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -36,6 +35,8 @@ import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigService
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.PermissionInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.SelfUniverse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfig.Dimensions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfigSection;
@@ -70,6 +71,9 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public final class UpdateDeviceConfigHandlerTest {
 
+  private static final Universe SELF_UNIVERSE =
+      Universe.newBuilder().setSelfUniverse(SelfUniverse.getDefaultInstance()).build();
+
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
   @Bind @Mock private ConfigurationProvider configurationProvider;
@@ -85,7 +89,9 @@ public final class UpdateDeviceConfigHandlerTest {
   @Before
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
-    when(configServiceCapabilityFactory.create(anyString())).thenReturn(configServiceCapability);
+    when(configServiceCapabilityFactory.create(any(Universe.class)))
+        .thenReturn(configServiceCapability);
+    when(configServiceCapability.isConfigServiceAvailable()).thenReturn(true);
     when(environment.isAts()).thenReturn(false);
   }
 
@@ -101,7 +107,9 @@ public final class UpdateDeviceConfigHandlerTest {
             .build();
 
     UpdateDeviceConfigResponse response =
-        updateDeviceConfigHandler.updateDeviceConfig(request, Optional.empty()).get();
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.empty())
+            .get();
 
     assertThat(response.getSuccess()).isFalse();
     assertThat(response.getError().getCode()).isEqualTo(UpdateError.Code.VALIDATION_ERROR);
@@ -130,7 +138,7 @@ public final class UpdateDeviceConfigHandlerTest {
             .setBasicConfig(
                 BasicDeviceConfig.newBuilder().addAllOwner(ImmutableList.of("owner1")).build())
             .build();
-    when(deviceDataLoader.loadDeviceData(deviceId, universe))
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
         .thenReturn(
             immediateFuture(
                 DeviceData.create(
@@ -139,17 +147,20 @@ public final class UpdateDeviceConfigHandlerTest {
                     ManagementMode.PER_DEVICE,
                     Optional.empty(),
                     Optional.of(existingConfig))));
-    when(configurationProvider.getDeviceConfig(deviceId, universe))
+    when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
         .thenReturn(immediateFuture(Optional.of(existingConfig)));
-    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(universe)))
+    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
     UpdateDeviceConfigResponse response =
-        updateDeviceConfigHandler.updateDeviceConfig(request, Optional.empty()).get();
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.empty())
+            .get();
 
     assertThat(response.getSuccess()).isTrue();
     ArgumentCaptor<Device.DeviceConfig> captor = ArgumentCaptor.forClass(Device.DeviceConfig.class);
-    verify(configurationProvider).updateDeviceConfig(eq(deviceId), captor.capture(), eq(universe));
+    verify(configurationProvider)
+        .updateDeviceConfig(eq(deviceId), captor.capture(), eq(SELF_UNIVERSE));
     Device.DeviceConfig updatedConfig = captor.getValue();
     assertThat(updatedConfig.getBasicConfig().getOwnerList()).containsExactly("owner1");
     assertThat(updatedConfig.getBasicConfig().getDefaultWifi().getSsid()).isEqualTo("new_ssid");
@@ -166,7 +177,9 @@ public final class UpdateDeviceConfigHandlerTest {
             .build();
 
     UpdateDeviceConfigResponse response =
-        updateDeviceConfigHandler.updateDeviceConfig(request, Optional.empty()).get();
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.empty())
+            .get();
 
     assertThat(response.getSuccess()).isFalse();
     assertThat(response.getError().getMessage())
@@ -197,7 +210,7 @@ public final class UpdateDeviceConfigHandlerTest {
             .setBasicConfig(
                 BasicDeviceConfig.newBuilder().addAllOwner(ImmutableList.of("owner1")).build())
             .build();
-    when(deviceDataLoader.loadDeviceData(deviceId, universe))
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
         .thenReturn(
             immediateFuture(
                 DeviceData.create(
@@ -206,17 +219,20 @@ public final class UpdateDeviceConfigHandlerTest {
                     ManagementMode.PER_DEVICE,
                     Optional.empty(),
                     Optional.of(existingConfig))));
-    when(configurationProvider.getDeviceConfig(deviceId, universe))
+    when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
         .thenReturn(immediateFuture(Optional.of(existingConfig)));
-    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(universe)))
+    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
     UpdateDeviceConfigResponse response =
-        updateDeviceConfigHandler.updateDeviceConfig(request, Optional.empty()).get();
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.empty())
+            .get();
 
     assertThat(response.getSuccess()).isTrue();
     ArgumentCaptor<Device.DeviceConfig> captor = ArgumentCaptor.forClass(Device.DeviceConfig.class);
-    verify(configurationProvider).updateDeviceConfig(eq(deviceId), captor.capture(), eq(universe));
+    verify(configurationProvider)
+        .updateDeviceConfig(eq(deviceId), captor.capture(), eq(SELF_UNIVERSE));
     Device.DeviceConfig updatedConfig = captor.getValue();
     // Owners should NOT be updated in ATS when section is ALL
     assertThat(updatedConfig.getBasicConfig().getOwnerList()).containsExactly("owner1");
@@ -235,7 +251,7 @@ public final class UpdateDeviceConfigHandlerTest {
             .setSection(DeviceConfigSection.WIFI)
             .build();
 
-    when(deviceDataLoader.loadDeviceData(deviceId, universe))
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
         .thenReturn(
             immediateFuture(
                 DeviceData.create(
@@ -247,7 +263,9 @@ public final class UpdateDeviceConfigHandlerTest {
                     Optional.empty())));
 
     UpdateDeviceConfigResponse response =
-        updateDeviceConfigHandler.updateDeviceConfig(request, Optional.empty()).get();
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.empty())
+            .get();
 
     assertThat(response.getSuccess()).isFalse();
     assertThat(response.getError().getCode()).isEqualTo(UpdateError.Code.VALIDATION_ERROR);
@@ -271,7 +289,7 @@ public final class UpdateDeviceConfigHandlerTest {
             .build();
 
     Device.DeviceConfig existingConfig = Device.DeviceConfig.getDefaultInstance();
-    when(deviceDataLoader.loadDeviceData(deviceId, universe))
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
         .thenReturn(
             immediateFuture(
                 DeviceData.create(
@@ -284,7 +302,9 @@ public final class UpdateDeviceConfigHandlerTest {
         .thenReturn(immediateFuture(false));
 
     UpdateDeviceConfigResponse response =
-        updateDeviceConfigHandler.updateDeviceConfig(request, Optional.of("user1")).get();
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.of("user1"))
+            .get();
 
     assertThat(response.getSuccess()).isFalse();
     assertThat(response.getError().getCode()).isEqualTo(UpdateError.Code.SELF_LOCKOUT_DETECTED);
@@ -308,7 +328,7 @@ public final class UpdateDeviceConfigHandlerTest {
             .build();
 
     Device.DeviceConfig existingConfig = Device.DeviceConfig.getDefaultInstance();
-    when(deviceDataLoader.loadDeviceData(deviceId, universe))
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
         .thenReturn(
             immediateFuture(
                 DeviceData.create(
@@ -317,13 +337,15 @@ public final class UpdateDeviceConfigHandlerTest {
                     ManagementMode.PER_DEVICE,
                     Optional.empty(),
                     Optional.of(existingConfig))));
-    when(configurationProvider.getDeviceConfig(deviceId, universe))
+    when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
         .thenReturn(immediateFuture(Optional.of(existingConfig)));
-    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(universe)))
+    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
     UpdateDeviceConfigResponse response =
-        updateDeviceConfigHandler.updateDeviceConfig(request, Optional.of("user1")).get();
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.of("user1"))
+            .get();
 
     assertThat(response.getSuccess()).isTrue();
   }
@@ -349,7 +371,7 @@ public final class UpdateDeviceConfigHandlerTest {
             .build();
 
     Device.DeviceConfig existingConfig = Device.DeviceConfig.getDefaultInstance();
-    when(deviceDataLoader.loadDeviceData(deviceId, universe))
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
         .thenReturn(
             immediateFuture(
                 DeviceData.create(
@@ -358,17 +380,20 @@ public final class UpdateDeviceConfigHandlerTest {
                     ManagementMode.PER_DEVICE,
                     Optional.empty(),
                     Optional.of(existingConfig))));
-    when(configurationProvider.getDeviceConfig(deviceId, universe))
+    when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
         .thenReturn(immediateFuture(Optional.of(existingConfig)));
-    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(universe)))
+    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
     UpdateDeviceConfigResponse response =
-        updateDeviceConfigHandler.updateDeviceConfig(request, Optional.empty()).get();
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.empty())
+            .get();
 
     assertThat(response.getSuccess()).isTrue();
     ArgumentCaptor<Device.DeviceConfig> captor = ArgumentCaptor.forClass(Device.DeviceConfig.class);
-    verify(configurationProvider).updateDeviceConfig(eq(deviceId), captor.capture(), eq(universe));
+    verify(configurationProvider)
+        .updateDeviceConfig(eq(deviceId), captor.capture(), eq(SELF_UNIVERSE));
     Device.DeviceConfig updatedConfig = captor.getValue();
     assertThat(updatedConfig.getBasicConfig().getMaxConsecutiveTest()).isEqualTo(Int32Value.of(10));
     assertThat(updatedConfig.getBasicConfig().getMaxConsecutiveFail()).isEqualTo(Int32Value.of(5));
@@ -394,7 +419,7 @@ public final class UpdateDeviceConfigHandlerTest {
             .build();
 
     Device.DeviceConfig existingConfig = Device.DeviceConfig.getDefaultInstance();
-    when(deviceDataLoader.loadDeviceData(deviceId, universe))
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
         .thenReturn(
             immediateFuture(
                 DeviceData.create(
@@ -403,17 +428,20 @@ public final class UpdateDeviceConfigHandlerTest {
                     ManagementMode.PER_DEVICE,
                     Optional.empty(),
                     Optional.of(existingConfig))));
-    when(configurationProvider.getDeviceConfig(deviceId, universe))
+    when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
         .thenReturn(immediateFuture(Optional.of(existingConfig)));
-    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(universe)))
+    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
     UpdateDeviceConfigResponse response =
-        updateDeviceConfigHandler.updateDeviceConfig(request, Optional.empty()).get();
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.empty())
+            .get();
 
     assertThat(response.getSuccess()).isTrue();
     ArgumentCaptor<Device.DeviceConfig> captor = ArgumentCaptor.forClass(Device.DeviceConfig.class);
-    verify(configurationProvider).updateDeviceConfig(eq(deviceId), captor.capture(), eq(universe));
+    verify(configurationProvider)
+        .updateDeviceConfig(eq(deviceId), captor.capture(), eq(SELF_UNIVERSE));
     Device.DeviceConfig updatedConfig = captor.getValue();
     assertThat(updatedConfig.getBasicConfig().getCompositeDimension().getSupportedDimensionList())
         .hasSize(1);
@@ -443,7 +471,7 @@ public final class UpdateDeviceConfigHandlerTest {
             .build();
 
     Device.DeviceConfig existingConfig = Device.DeviceConfig.getDefaultInstance();
-    when(deviceDataLoader.loadDeviceData(deviceId, universe))
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
         .thenReturn(
             immediateFuture(
                 DeviceData.create(
@@ -452,13 +480,15 @@ public final class UpdateDeviceConfigHandlerTest {
                     ManagementMode.PER_DEVICE,
                     Optional.empty(),
                     Optional.of(existingConfig))));
-    when(configurationProvider.getDeviceConfig(deviceId, universe))
+    when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
         .thenReturn(immediateFuture(Optional.of(existingConfig)));
-    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(universe)))
+    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
     UpdateDeviceConfigResponse response =
-        updateDeviceConfigHandler.updateDeviceConfig(request, Optional.of("user1")).get();
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.of("user1"))
+            .get();
 
     assertThat(response.getSuccess()).isTrue();
   }
@@ -481,7 +511,7 @@ public final class UpdateDeviceConfigHandlerTest {
             .build();
 
     Device.DeviceConfig existingConfig = Device.DeviceConfig.getDefaultInstance();
-    when(deviceDataLoader.loadDeviceData(deviceId, universe))
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
         .thenReturn(
             immediateFuture(
                 DeviceData.create(
@@ -490,13 +520,15 @@ public final class UpdateDeviceConfigHandlerTest {
                     ManagementMode.PER_DEVICE,
                     Optional.empty(),
                     Optional.of(existingConfig))));
-    when(configurationProvider.getDeviceConfig(deviceId, universe))
+    when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
         .thenReturn(immediateFuture(Optional.of(existingConfig)));
-    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(universe)))
+    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
     UpdateDeviceConfigResponse response =
-        updateDeviceConfigHandler.updateDeviceConfig(request, Optional.of("user1")).get();
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.of("user1"))
+            .get();
 
     assertThat(response.getSuccess()).isTrue();
   }
@@ -523,7 +555,7 @@ public final class UpdateDeviceConfigHandlerTest {
     com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig existingConfig =
         com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig
             .getDefaultInstance();
-    when(deviceDataLoader.loadDeviceData(deviceId, universe))
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
         .thenReturn(
             immediateFuture(
                 DeviceData.create(
@@ -532,20 +564,23 @@ public final class UpdateDeviceConfigHandlerTest {
                     ManagementMode.PER_DEVICE,
                     Optional.empty(),
                     Optional.of(existingConfig))));
-    when(configurationProvider.getDeviceConfig(deviceId, universe))
+    when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
         .thenReturn(immediateFuture(Optional.of(existingConfig)));
-    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(universe)))
+    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
     UpdateDeviceConfigResponse response =
-        updateDeviceConfigHandler.updateDeviceConfig(request, Optional.empty()).get();
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.empty())
+            .get();
 
     assertThat(response.getSuccess()).isTrue();
     ArgumentCaptor<com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig>
         captor =
             ArgumentCaptor.forClass(
                 com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig.class);
-    verify(configurationProvider).updateDeviceConfig(eq(deviceId), captor.capture(), eq(universe));
+    verify(configurationProvider)
+        .updateDeviceConfig(eq(deviceId), captor.capture(), eq(SELF_UNIVERSE));
     com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig updatedConfig =
         captor.getValue();
     assertThat(updatedConfig.getBasicConfig().getOwnerList()).containsExactly("new_owner");

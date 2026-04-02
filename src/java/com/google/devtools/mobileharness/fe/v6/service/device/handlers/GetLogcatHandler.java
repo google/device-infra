@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatResponse;
 import javax.inject.Inject;
@@ -33,7 +34,8 @@ public class GetLogcatHandler {
     this.logcatActionHelper = logcatActionHelper;
   }
 
-  public ListenableFuture<GetLogcatResponse> getLogcat(GetLogcatRequest request) {
-    return logcatActionHelper.getLogcat(request);
+  public ListenableFuture<GetLogcatResponse> getLogcat(
+      GetLogcatRequest request, Universe universe) {
+    return logcatActionHelper.getLogcat(request, universe);
   }
 }

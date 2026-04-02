@@ -22,6 +22,7 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import java.util.Optional;
 
 /** No-op implementation of {@link ConfigurationProvider}. */
@@ -29,25 +30,25 @@ public class NoOpConfigurationProvider implements ConfigurationProvider {
 
   @Override
   public ListenableFuture<Optional<DeviceConfig>> getDeviceConfig(
-      String deviceId, String universe) {
+      String deviceId, Universe universe) {
     return immediateFuture(Optional.empty());
   }
 
   @Override
-  public ListenableFuture<Optional<LabConfig>> getLabConfig(String hostName, String universe) {
+  public ListenableFuture<Optional<LabConfig>> getLabConfig(String hostName, Universe universe) {
     return immediateFuture(Optional.empty());
   }
 
   @Override
   public ListenableFuture<Void> updateDeviceConfig(
-      String deviceId, DeviceConfig deviceConfig, String universe) {
+      String deviceId, DeviceConfig deviceConfig, Universe universe) {
     return immediateFailedFuture(
         new UnsupportedOperationException("NoOpConfigurationProvider does not support updates"));
   }
 
   @Override
   public ListenableFuture<Void> updateLabConfig(
-      String hostName, LabConfig labConfig, String universe) {
+      String hostName, LabConfig labConfig, Universe universe) {
     return immediateFailedFuture(
         new UnsupportedOperationException("NoOpConfigurationProvider does not support updates"));
   }

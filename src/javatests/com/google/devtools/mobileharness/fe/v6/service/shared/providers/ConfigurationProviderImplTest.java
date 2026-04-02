@@ -20,7 +20,6 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -36,6 +35,7 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServ
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapability;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.DeviceConfigStub;
 import java.util.Optional;
@@ -64,7 +64,8 @@ public final class ConfigurationProviderImplTest {
 
   @Before
   public void setUp() {
-    when(configServiceCapabilityFactory.create(anyString())).thenReturn(configServiceCapability);
+    when(configServiceCapabilityFactory.create(any(Universe.class)))
+        .thenReturn(configServiceCapability);
     when(configServiceCapability.isConfigServiceAvailable()).thenReturn(true);
     when(environment.isGoogleInternal()).thenReturn(false);
 
@@ -82,7 +83,7 @@ public final class ConfigurationProviderImplTest {
         .thenReturn(immediateFuture(response));
 
     Optional<DeviceConfig> result =
-        configurationProvider.getDeviceConfig("device_id", "universe").get();
+        configurationProvider.getDeviceConfig("device_id", Universe.getDefaultInstance()).get();
 
     assertThat(result).isPresent();
     assertThat(result.get()).isEqualTo(deviceConfig);
@@ -96,7 +97,8 @@ public final class ConfigurationProviderImplTest {
     when(deviceConfigStub.getLabConfigAsync(any(), eq(false)))
         .thenReturn(immediateFuture(response));
 
-    Optional<LabConfig> result = configurationProvider.getLabConfig("host_name", "universe").get();
+    Optional<LabConfig> result =
+        configurationProvider.getLabConfig("host_name", Universe.getDefaultInstance()).get();
 
     assertThat(result).isPresent();
     assertThat(result.get()).isEqualTo(labConfig);
@@ -109,7 +111,9 @@ public final class ConfigurationProviderImplTest {
     when(deviceConfigStub.updateDeviceConfigsAsync(any(), eq(false)))
         .thenReturn(immediateFuture(response));
 
-    configurationProvider.updateDeviceConfig("device_id", deviceConfig, "universe").get();
+    configurationProvider
+        .updateDeviceConfig("device_id", deviceConfig, Universe.getDefaultInstance())
+        .get();
 
     verify(deviceConfigStub)
         .updateDeviceConfigsAsync(any(UpdateDeviceConfigsRequest.class), eq(false));
@@ -122,7 +126,9 @@ public final class ConfigurationProviderImplTest {
     when(deviceConfigStub.updateLabConfigAsync(any(), eq(false)))
         .thenReturn(immediateFuture(response));
 
-    configurationProvider.updateLabConfig("host_name", labConfig, "universe").get();
+    configurationProvider
+        .updateLabConfig("host_name", labConfig, Universe.getDefaultInstance())
+        .get();
 
     verify(deviceConfigStub).updateLabConfigAsync(any(UpdateLabConfigRequest.class), eq(false));
   }
@@ -132,7 +138,7 @@ public final class ConfigurationProviderImplTest {
     when(configServiceCapability.isConfigServiceAvailable()).thenReturn(false);
 
     Optional<DeviceConfig> result =
-        configurationProvider.getDeviceConfig("device_id", "universe").get();
+        configurationProvider.getDeviceConfig("device_id", Universe.getDefaultInstance()).get();
 
     assertThat(result).isEmpty();
   }
@@ -141,7 +147,8 @@ public final class ConfigurationProviderImplTest {
   public void getLabConfig_configServiceUnavailable_returnsEmpty() throws Exception {
     when(configServiceCapability.isConfigServiceAvailable()).thenReturn(false);
 
-    Optional<LabConfig> result = configurationProvider.getLabConfig("host_name", "universe").get();
+    Optional<LabConfig> result =
+        configurationProvider.getLabConfig("host_name", Universe.getDefaultInstance()).get();
 
     assertThat(result).isEmpty();
   }
@@ -152,7 +159,8 @@ public final class ConfigurationProviderImplTest {
 
     assertThat(
             configurationProvider
-                .updateDeviceConfig("device_id", DeviceConfig.getDefaultInstance(), "universe")
+                .updateDeviceConfig(
+                    "device_id", DeviceConfig.getDefaultInstance(), Universe.getDefaultInstance())
                 .get())
         .isNull();
   }
@@ -163,7 +171,8 @@ public final class ConfigurationProviderImplTest {
 
     assertThat(
             configurationProvider
-                .updateLabConfig("host_name", LabConfig.getDefaultInstance(), "universe")
+                .updateLabConfig(
+                    "host_name", LabConfig.getDefaultInstance(), Universe.getDefaultInstance())
                 .get())
         .isNull();
   }

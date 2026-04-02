@@ -26,6 +26,8 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Device.TempDimension;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.SelfUniverse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceActions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
@@ -50,6 +52,8 @@ import org.mockito.junit.MockitoRule;
 public final class DeviceHeaderInfoBuilderTest {
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
+  private static final Universe SELF_UNIVERSE =
+      Universe.newBuilder().setSelfUniverse(SelfUniverse.getDefaultInstance()).build();
   private static final String DEVICE_ID = "test_device_id";
   private static final String HOST_NAME = "test_host.google.com";
   private static final String IP = "192.168.1.1";
@@ -64,15 +68,15 @@ public final class DeviceHeaderInfoBuilderTest {
   @Before
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
-    when(flashButtonBuilder.build(any(DeviceInfo.class), any(String.class)))
+    when(flashButtonBuilder.build(any(DeviceInfo.class), any(Universe.class)))
         .thenReturn(FlashActionButtonState.getDefaultInstance());
-    when(logcatButtonBuilder.build(any(DeviceInfo.class), any(String.class)))
+    when(logcatButtonBuilder.build(any(DeviceInfo.class), any(Universe.class)))
         .thenReturn(ActionButtonState.getDefaultInstance());
-    when(quarantineButtonBuilder.build(any(DeviceInfo.class), any(String.class)))
+    when(quarantineButtonBuilder.build(any(DeviceInfo.class), any(Universe.class)))
         .thenReturn(ActionButtonState.getDefaultInstance());
-    when(screenshotButtonBuilder.build(any(DeviceInfo.class), any(String.class)))
+    when(screenshotButtonBuilder.build(any(DeviceInfo.class), any(Universe.class)))
         .thenReturn(ActionButtonState.getDefaultInstance());
-    when(configurationButtonBuilder.build(any(DeviceInfo.class), any(String.class)))
+    when(configurationButtonBuilder.build(any(DeviceInfo.class), any(Universe.class)))
         .thenReturn(ActionButtonState.getDefaultInstance());
   }
 
@@ -111,7 +115,7 @@ public final class DeviceHeaderInfoBuilderTest {
 
     assertThat(
             deviceHeaderInfoBuilder.buildDeviceHeaderInfo(
-                deviceInfo, Optional.empty(), Optional.empty(), "google_1p"))
+                deviceInfo, Optional.empty(), Optional.empty(), SELF_UNIVERSE))
         .isEqualTo(expectedHeaderInfo);
   }
 
@@ -142,7 +146,7 @@ public final class DeviceHeaderInfoBuilderTest {
 
     assertThat(
             deviceHeaderInfoBuilder.buildDeviceHeaderInfo(
-                deviceInfo, Optional.empty(), Optional.empty(), "google_1p"))
+                deviceInfo, Optional.empty(), Optional.empty(), SELF_UNIVERSE))
         .isEqualTo(expectedHeaderInfo);
   }
 }

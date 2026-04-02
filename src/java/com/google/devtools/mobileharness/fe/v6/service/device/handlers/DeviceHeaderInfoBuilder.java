@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceActions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HostInfo;
@@ -57,7 +58,7 @@ public class DeviceHeaderInfoBuilder {
       DeviceInfo deviceInfo,
       Optional<DeviceConfig> unusedDeviceConfigOpt,
       Optional<LabConfig> unusedLabConfigOpt,
-      String universe) {
+      Universe universe) {
     return DeviceHeaderInfo.newBuilder()
         .setId(deviceInfo.getDeviceLocator().getId())
         .setHost(

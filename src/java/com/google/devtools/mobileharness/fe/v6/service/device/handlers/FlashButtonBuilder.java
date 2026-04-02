@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
@@ -41,7 +42,7 @@ public class FlashButtonBuilder {
     this.featureReadiness = featureReadiness;
   }
 
-  public FlashActionButtonState build(DeviceInfo deviceInfo, String universe) {
+  public FlashActionButtonState build(DeviceInfo deviceInfo, Universe universe) {
     if (!featureManagerFactory.create(universe).isDeviceFlashingFeatureEnabled()) {
       return FlashActionButtonState.newBuilder()
           .setState(ActionButtonState.newBuilder().setVisible(false))

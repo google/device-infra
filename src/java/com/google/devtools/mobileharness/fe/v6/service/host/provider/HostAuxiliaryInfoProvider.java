@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.host.provider;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DiagnosticLink;
 import java.util.List;
 import java.util.Optional;
@@ -25,12 +26,13 @@ import java.util.Optional;
 public interface HostAuxiliaryInfoProvider {
 
   /** Fetches release information and host attributes from internal services. */
-  ListenableFuture<Optional<HostReleaseInfo>> getHostReleaseInfo(String hostName);
+  ListenableFuture<Optional<HostReleaseInfo>> getHostReleaseInfo(
+      String hostName, Universe universe);
 
   /** Fetches the legacy pass-through flags for the lab server. */
-  ListenableFuture<Optional<String>> getPassThroughFlags(String hostName);
+  ListenableFuture<Optional<String>> getPassThroughFlags(String hostName, Universe universe);
 
   /** Fetches the diagnostic links for the host. */
   ListenableFuture<List<DiagnosticLink>> getDiagnosticLinks(
-      String hostName, Optional<String> labType);
+      String hostName, Optional<String> labType, Universe universe);
 }

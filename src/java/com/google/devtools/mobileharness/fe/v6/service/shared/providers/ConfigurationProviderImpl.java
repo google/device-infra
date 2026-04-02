@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServ
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateLabConfigRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.DeviceConfigStub;
 import java.util.Optional;
@@ -60,7 +61,7 @@ public class ConfigurationProviderImpl implements ConfigurationProvider {
 
   @Override
   public ListenableFuture<Optional<DeviceConfig>> getDeviceConfig(
-      String deviceId, String universe) {
+      String deviceId, Universe universe) {
     if (!configServiceCapabilityFactory.create(universe).isConfigServiceAvailable()) {
       return immediateFuture(Optional.empty());
     }
@@ -76,7 +77,7 @@ public class ConfigurationProviderImpl implements ConfigurationProvider {
   }
 
   @Override
-  public ListenableFuture<Optional<LabConfig>> getLabConfig(String hostName, String universe) {
+  public ListenableFuture<Optional<LabConfig>> getLabConfig(String hostName, Universe universe) {
     if (!configServiceCapabilityFactory.create(universe).isConfigServiceAvailable()) {
       return immediateFuture(Optional.empty());
     }
@@ -90,7 +91,7 @@ public class ConfigurationProviderImpl implements ConfigurationProvider {
 
   @Override
   public ListenableFuture<Void> updateDeviceConfig(
-      String deviceId, DeviceConfig deviceConfig, String universe) {
+      String deviceId, DeviceConfig deviceConfig, Universe universe) {
     if (!configServiceCapabilityFactory.create(universe).isConfigServiceAvailable()) {
       return immediateVoidFuture();
     }
@@ -109,7 +110,7 @@ public class ConfigurationProviderImpl implements ConfigurationProvider {
 
   @Override
   public ListenableFuture<Void> updateLabConfig(
-      String hostName, LabConfig labConfig, String universe) {
+      String hostName, LabConfig labConfig, Universe universe) {
     if (!configServiceCapabilityFactory.create(universe).isConfigServiceAvailable()) {
       return immediateVoidFuture();
     }

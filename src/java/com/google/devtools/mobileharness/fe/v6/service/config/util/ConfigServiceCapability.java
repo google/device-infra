@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.config.util;
 
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfigUiStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.Editability;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostConfigUiStatus;
@@ -34,10 +35,10 @@ import com.google.inject.assistedinject.AssistedInject;
 public class ConfigServiceCapability {
 
   private final Environment environment;
-  private final String universe;
+  private final Universe universe;
 
   @AssistedInject
-  ConfigServiceCapability(Environment environment, @Assisted String universe) {
+  ConfigServiceCapability(Environment environment, @Assisted Universe universe) {
     this.environment = environment;
     this.universe = universe;
   }
@@ -45,7 +46,7 @@ public class ConfigServiceCapability {
   /** Returns true if the configuration service is available for the current context. */
   public boolean isConfigServiceAvailable() {
     if (environment.isGoogleInternal()) {
-      return universe.isEmpty() || universe.equals("google_1p");
+      return universe.hasSelfUniverse();
     }
 
     if (!Flags.instance().feConnectToConfigServer.get()) {
@@ -53,7 +54,7 @@ public class ConfigServiceCapability {
     }
 
     // OSS/ATS only supports the default context (empty universe).
-    return universe.isEmpty();
+    return universe.hasSelfUniverse();
   }
 
   /**
@@ -68,7 +69,10 @@ public class ConfigServiceCapability {
     if (environment.isGoogleInternal()) {
       throw new UnsupportedOperationException(
           String.format(
-              "Configuration operations are not currently supported for universe '%s'.", universe));
+              "Configuration operations are not currently supported for universe '%s'.",
+              universe.hasSelfUniverse()
+                  ? "self"
+                  : universe.getRoutedUniverse().getAtsControllerId()));
     }
 
     if (!Flags.instance().feConnectToConfigServer.getNonNull()) {

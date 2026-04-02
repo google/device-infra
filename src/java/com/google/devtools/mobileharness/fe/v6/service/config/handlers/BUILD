@@ -24,6 +24,7 @@ java_library(
     name = "get_device_config_handler",
     srcs = ["GetDeviceConfigHandler.java"],
     deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_converter",
@@ -40,6 +41,7 @@ java_library(
     srcs = ["CheckDeviceWritePermissionHandler.java"],
     deps = [
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/auth",
@@ -54,6 +56,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/deviceconfig/proto:basic_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_converter",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_service_capability",
@@ -71,6 +74,7 @@ java_library(
     name = "get_recommended_wifi_handler",
     srcs = ["GetRecommendedWifiHandler.java"],
     deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
@@ -83,6 +87,7 @@ java_library(
     srcs = ["GetHostDefaultDeviceConfigHandler.java"],
     deps = [
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_converter",
@@ -99,6 +104,7 @@ java_library(
     srcs = ["GetHostConfigHandler.java"],
     deps = [
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_converter",
@@ -115,6 +121,7 @@ java_library(
     srcs = ["CheckHostWritePermissionHandler.java"],
     deps = [
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_converter",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/auth",
@@ -131,6 +138,7 @@ java_library(
         "//src/devtools/mobileharness/api/deviceconfig/proto:basic_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_converter",

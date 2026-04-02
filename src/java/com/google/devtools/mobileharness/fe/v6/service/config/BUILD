@@ -34,6 +34,7 @@ java_library(
     srcs = ["ConfigServiceLogicImpl.java"],
     deps = [
         ":config_service_logic",
+        "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:check_device_write_permission_handler",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:check_host_write_permission_handler",
@@ -43,6 +44,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:get_recommended_wifi_handler",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:update_device_config_handler",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:update_host_config_handler",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],

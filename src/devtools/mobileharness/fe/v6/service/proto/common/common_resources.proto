@@ -35,3 +35,18 @@ message DeviceDimension {
   string name = 1;
   string value = 2;
 }
+
+// Represents the universe scope for routing and feature enablement.
+message Universe {
+  oneof type {
+    SelfUniverse self_universe = 1;
+    RoutedUniverse routed_universe = 2;
+  }
+}
+
+message SelfUniverse {}
+
+message RoutedUniverse {
+  // The ID of the ATS controller to route to.
+  string ats_controller_id = 1;
+}

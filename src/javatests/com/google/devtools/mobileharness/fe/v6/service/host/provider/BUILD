@@ -25,6 +25,7 @@ java_library(
     testonly = 1,
     srcs = glob(["*.java"]),
     deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/provider",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:junit_junit",

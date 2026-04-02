@@ -44,6 +44,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "@maven//:com_github_ben_manes_caffeine_caffeine",
@@ -60,6 +61,7 @@ java_library(
         "NoOpLogcatActionHelper.java",
     ],
     deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/device:device_service_java_proto",
         "@maven//:com_google_guava_guava",
     ],

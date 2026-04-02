@@ -24,6 +24,7 @@ java_library(
     name = "provider",
     srcs = glob(["*.java"]),
     deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "@maven//:com_google_guava_guava",

@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigConverter;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigResponse;
@@ -52,16 +53,16 @@ public final class GetHostDefaultDeviceConfigHandler {
   }
 
   public ListenableFuture<GetHostDefaultDeviceConfigResponse> getHostDefaultDeviceConfig(
-      GetHostDefaultDeviceConfigRequest request) {
+      GetHostDefaultDeviceConfigRequest request, Universe universe) {
     logger.atInfo().log("Getting host default device config for %s", request.getHostName());
     try {
-      configServiceCapabilityFactory.create(request.getUniverse()).checkConfigServiceAvailability();
+      configServiceCapabilityFactory.create(universe).checkConfigServiceAvailability();
     } catch (UnsupportedOperationException e) {
       return immediateFailedFuture(e);
     }
 
     return Futures.transform(
-        configurationProvider.getLabConfig(request.getHostName(), request.getUniverse()),
+        configurationProvider.getLabConfig(request.getHostName(), universe),
         labConfigOpt -> {
           if (labConfigOpt.isEmpty()) {
             return GetHostDefaultDeviceConfigResponse.getDefaultInstance();

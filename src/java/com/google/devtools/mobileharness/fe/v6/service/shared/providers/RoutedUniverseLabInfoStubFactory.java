@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.fe.v6.service.config.util;
+package com.google.devtools.mobileharness.fe.v6.service.shared.providers;
 
-import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.RoutedUniverse;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub;
+import java.util.Optional;
 
-/** Factory for creating {@link ConfigServiceCapability} instances. */
-public interface ConfigServiceCapabilityFactory {
-
-  ConfigServiceCapability create(Universe universe);
+/** Factory for providing {@link LabInfoStub} for routed universes. */
+public interface RoutedUniverseLabInfoStubFactory {
+  Optional<LabInfoStub> getLabInfoStub(RoutedUniverse routedUniverse);
 }

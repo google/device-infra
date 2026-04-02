@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.fe.v6.service.host.util.DaemonStatuses;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.HostConnectivityStatuses;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.HostTypes;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.LabActivities;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DiagnosticLink;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
@@ -74,28 +75,26 @@ public final class GetHostOverviewHandler {
     this.executor = executor;
   }
 
-  public ListenableFuture<HostOverviewPageData> getHostOverview(GetHostOverviewRequest request) {
-    // TODO: - dafeng - Use the universe parameter.
-    @SuppressWarnings("unused")
-    String universe = request.getUniverse();
+  public ListenableFuture<HostOverviewPageData> getHostOverview(
+      GetHostOverviewRequest request, Universe universe) {
     logger.atInfo().log("Getting host overview for %s", request.getHostName());
     String hostName = request.getHostName();
 
     ListenableFuture<GetLabInfoResponse> labInfoFuture =
-        labInfoProvider.getLabInfoAsync(createGetLabInfoRequest(hostName), "");
+        labInfoProvider.getLabInfoAsync(createGetLabInfoRequest(hostName), universe);
 
     ListenableFuture<Optional<HostReleaseInfo>> hostReleaseInfoFuture =
-        hostAuxiliaryInfoProvider.getHostReleaseInfo(hostName);
+        hostAuxiliaryInfoProvider.getHostReleaseInfo(hostName, universe);
 
     ListenableFuture<Optional<String>> passThroughFlagsFuture =
-        hostAuxiliaryInfoProvider.getPassThroughFlags(hostName);
+        hostAuxiliaryInfoProvider.getPassThroughFlags(hostName, universe);
 
     ListenableFuture<List<DiagnosticLink>> logLinksFuture =
         Futures.transformAsync(
             hostReleaseInfoFuture,
             hostReleaseInfoOpt ->
                 hostAuxiliaryInfoProvider.getDiagnosticLinks(
-                    hostName, hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType)),
+                    hostName, hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType), universe),
             executor);
 
     return Futures.whenAllSucceed(

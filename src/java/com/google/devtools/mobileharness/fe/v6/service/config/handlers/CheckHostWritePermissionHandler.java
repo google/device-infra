@@ -23,6 +23,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigConverter;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
@@ -51,14 +52,13 @@ public final class CheckHostWritePermissionHandler {
   }
 
   public ListenableFuture<CheckHostWritePermissionResponse> checkHostWritePermission(
-      CheckHostWritePermissionRequest request, Optional<String> username) {
+      CheckHostWritePermissionRequest request, Universe universe, Optional<String> username) {
     if (username.isEmpty()) {
       return immediateFuture(
           CheckHostWritePermissionResponse.newBuilder().setHasPermission(false).build());
     }
     String user = username.get();
     String hostName = request.getHostName();
-    String universe = request.getUniverse();
 
     return Futures.transformAsync(
         configurationProvider.getLabConfig(hostName, universe),

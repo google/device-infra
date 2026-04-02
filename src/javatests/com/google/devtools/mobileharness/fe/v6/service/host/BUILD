@@ -21,15 +21,23 @@ package(
 )
 
 java_library(
-    name = "tests",
+    name = "host",
     testonly = 1,
     srcs = glob(["*.java"]),
     deps = [
-        "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers/oss:oss_lab_info_provider_impl",
-        "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:lab_info",
+        "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/host:host_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/host:host_service_logic_impl",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/provider",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/remotecontrol",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
-        "@maven//:com_google_truth_extensions_truth_proto_extension",
+        "@maven//:com_google_inject_extensions_guice_testlib",
+        "@maven//:com_google_inject_guice",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
     ],
@@ -40,5 +48,5 @@ junit_test_suites(
     sizes = [
         "small",
     ],
-    deps = [":tests"],
+    deps = [":host"],
 )

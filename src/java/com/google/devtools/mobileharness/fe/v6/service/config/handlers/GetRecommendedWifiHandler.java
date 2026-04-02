@@ -20,6 +20,7 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiResponse;
 import javax.inject.Inject;
@@ -34,10 +35,7 @@ public final class GetRecommendedWifiHandler {
   GetRecommendedWifiHandler() {}
 
   public ListenableFuture<GetRecommendedWifiResponse> getRecommendedWifi(
-      GetRecommendedWifiRequest request) {
-    // TODO: Use the universe parameter.
-    @SuppressWarnings("unused")
-    String universe = request.getUniverse();
+      GetRecommendedWifiRequest request, Universe universe) {
     logger.atInfo().log("GetRecommendedWifiRequest: %s", request);
     // TODO: Implement real logic.
     return immediateFuture(GetRecommendedWifiResponse.getDefaultInstance());

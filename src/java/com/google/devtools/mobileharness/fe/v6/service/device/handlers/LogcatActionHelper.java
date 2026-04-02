@@ -17,11 +17,12 @@
 package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatResponse;
 
 /** Helper for {@link GetLogcatHandler}. */
 public interface LogcatActionHelper {
 
-  ListenableFuture<GetLogcatResponse> getLogcat(GetLogcatRequest request);
+  ListenableFuture<GetLogcatResponse> getLogcat(GetLogcatRequest request, Universe universe);
 }

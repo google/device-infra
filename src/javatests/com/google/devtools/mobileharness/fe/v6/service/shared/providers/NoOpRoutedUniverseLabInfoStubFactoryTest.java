@@ -16,13 +16,19 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.shared.providers;
 
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
-import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
-import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
+import static com.google.common.truth.Truth.assertThat;
 
-/** Provider for fetching LabInfo, with universe awareness. */
-public interface LabInfoProvider {
-  ListenableFuture<GetLabInfoResponse> getLabInfoAsync(
-      GetLabInfoRequest request, Universe universe);
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.RoutedUniverse;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
+
+@RunWith(JUnit4.class)
+public final class NoOpRoutedUniverseLabInfoStubFactoryTest {
+
+  @Test
+  public void getLabInfoStub_returnsEmpty() {
+    NoOpRoutedUniverseLabInfoStubFactory factory = new NoOpRoutedUniverseLabInfoStubFactory();
+    assertThat(factory.getLabInfoStub(RoutedUniverse.getDefaultInstance())).isEmpty();
+  }
 }

@@ -16,11 +16,12 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.util;
 
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.inject.assistedinject.Assisted;
 
 /** Factory for {@link FeatureManager}. */
 public interface FeatureManagerFactory {
 
   /** Creates a {@link FeatureManager} for the given universe. */
-  FeatureManager create(@Assisted String universe);
+  FeatureManager create(@Assisted Universe universe);
 }
