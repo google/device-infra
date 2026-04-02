@@ -59,6 +59,13 @@ public final class MySqlDeviceRepository implements DeviceRepository {
     mySqlDeviceTableClient.updateDeviceCondition(deviceLocator, condition, context.getConnection());
   }
 
+  @Override
+  public void removeDevice(DeviceLocator deviceLocator, TransactionContext transactionContext)
+      throws MobileHarnessException {
+    MySqlTransactionContext context = castContext(transactionContext);
+    mySqlDeviceTableClient.removeDevice(deviceLocator, context.getConnection());
+  }
+
   private MySqlTransactionContext castContext(TransactionContext context) {
     if (!(context instanceof MySqlTransactionContext mysqlTransactionContext)) {
       throw new IllegalArgumentException(

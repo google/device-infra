@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.shared.storage.transaction;
 
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /** Runner for transactions. */
 public interface TransactionRunner {
@@ -29,6 +30,7 @@ public interface TransactionRunner {
    * @return the result of the transaction
    * @throws MobileHarnessException if fails to run the transaction
    */
+  @CanIgnoreReturnValue
   public abstract <R> R run(TransactionConfig config, TransactionWorker<R> worker)
       throws MobileHarnessException;
 }

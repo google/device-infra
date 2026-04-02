@@ -38,4 +38,8 @@ public interface DeviceRepository {
   void updateDeviceCondition(
       DeviceLocator deviceLocator, DeviceCondition condition, TransactionContext context)
       throws MobileHarnessException;
+
+  /** Removes a device. */
+  void removeDevice(DeviceLocator deviceLocator, TransactionContext context)
+      throws MobileHarnessException;
 }

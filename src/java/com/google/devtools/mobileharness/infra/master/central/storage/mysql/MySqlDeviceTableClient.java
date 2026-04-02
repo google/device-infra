@@ -115,4 +115,20 @@ public class MySqlDeviceTableClient {
           e);
     }
   }
+
+  /** Removes a device. */
+  public void removeDevice(DeviceLocator deviceLocator, Connection connection)
+      throws MobileHarnessException {
+    String sql =
+        String.format(
+            "DELETE FROM %s WHERE %s = ? AND %s = ?", TABLE_NAME, COL_LAB_ID, COL_DEVICE_ID);
+    try (PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+      preparedStatement.setString(1, deviceLocator.labLocator().getId());
+      preparedStatement.setString(2, deviceLocator.id());
+      preparedStatement.executeUpdate();
+    } catch (SQLException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.DATABASE_TABLE_DELETE_ERROR, "Failed to delete device " + deviceLocator, e);
+    }
+  }
 }

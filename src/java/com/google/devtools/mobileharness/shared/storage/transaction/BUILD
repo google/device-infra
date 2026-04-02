@@ -41,6 +41,7 @@ java_library(
         ":transaction_config",
         ":transaction_worker",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "@maven//:com_google_errorprone_error_prone_annotations",
     ],
 )
 

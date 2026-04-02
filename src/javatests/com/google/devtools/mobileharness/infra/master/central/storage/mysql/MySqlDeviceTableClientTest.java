@@ -163,4 +163,22 @@ public final class MySqlDeviceTableClientTest {
             mySqlDeviceTableClient.updateDeviceCondition(
                 DEVICE_LOCATOR, DEVICE_CONDITION, mockConnection));
   }
+
+  @Test
+  public void removeDevice_success() throws Exception {
+    mySqlDeviceTableClient.removeDevice(DEVICE_LOCATOR, mockConnection);
+
+    verify(mockPreparedStatement).setString(1, LAB_ID);
+    verify(mockPreparedStatement).setString(2, DEVICE_ID);
+    verify(mockPreparedStatement).executeUpdate();
+  }
+
+  @Test
+  public void removeDevice_exception() throws Exception {
+    when(mockPreparedStatement.executeUpdate()).thenThrow(new SQLException("DB error"));
+
+    assertThrows(
+        MobileHarnessException.class,
+        () -> mySqlDeviceTableClient.removeDevice(DEVICE_LOCATOR, mockConnection));
+  }
 }
