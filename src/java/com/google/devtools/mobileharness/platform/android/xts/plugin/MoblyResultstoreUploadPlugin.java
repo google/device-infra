@@ -23,11 +23,14 @@ import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException.DesiredTestResult;
+import com.google.devtools.mobileharness.platform.testbed.mobly.MoblyConstant;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyPythonVenvUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndingEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin;
@@ -35,6 +38,9 @@ import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin.Plug
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import javax.annotation.Nullable;
 
 /** Lab plugin to upload Mobly test results to Resultstore. */
 @Plugin(type = PluginType.LAB)
@@ -46,6 +52,9 @@ public final class MoblyResultstoreUploadPlugin {
 
   private static final String MOBLY_ANDROID_PARTNER_TOOLS_PACKAGE = "mobly-android-partner-tools";
   private static final String RESULTS_UPLOADER_BIN = "results_uploader";
+
+  private static final Pattern RESULT_STORE_LINK_PATTERN =
+      Pattern.compile("(https?://btx\\.cloud\\.google\\.com/\\S+)");
 
   private final MoblyPythonVenvUtil moblyPythonVenvUtil;
   private final CommandExecutor commandExecutor;
@@ -109,14 +118,20 @@ public final class MoblyResultstoreUploadPlugin {
 
   @Subscribe
   public void onTestEnding(TestEndingEvent event) throws InterruptedException {
-    logger.atInfo().log("Starting Mobly result upload to Resultstore.");
+    TestInfo testInfo = event.getTest();
+    testInfo.log().atInfo().alsoTo(logger).log("Starting Mobly result upload to Resultstore.");
     Path genFileDir;
     Path tmpFileDir;
     try {
       genFileDir = Path.of(event.getTest().getGenFileDir());
       tmpFileDir = Path.of(event.getTest().getTmpFileDir());
     } catch (MobileHarnessException e) {
-      logger.atWarning().withCause(e).log("Failed to get test gen or tmp file dir.");
+      testInfo
+          .log()
+          .atWarning()
+          .withCause(e)
+          .alsoTo(logger)
+          .log("Failed to get test gen or tmp file dir.");
       return;
     }
 
@@ -137,20 +152,73 @@ public final class MoblyResultstoreUploadPlugin {
                   "--label",
                   event.getTest().locator().getId())
               .timeout(UPLOAD_TIMEOUT);
-      if (event.getTest().jobInfo().properties().has("xts-module-name")) {
-        uploadCmd =
-            uploadCmd.argsAppended(
-                "--label", event.getTest().jobInfo().properties().get("xts-module-name"));
+      String moduleName = event.getTest().jobInfo().properties().get("xts_module_name");
+      if (moduleName != null) {
+        uploadCmd = uploadCmd.argsAppended("--label", moduleName);
       }
       try {
-        commandExecutor.run(uploadCmd);
-        logger.atInfo().log("Successfully uploaded results to Resultstore.");
+        String stdout = commandExecutor.run(uploadCmd);
+        logger.atInfo().log("Resultstore upload stdout: %s", stdout);
+        String link = findResultStoreLink(stdout);
+        if (link != null) {
+          testInfo
+              .log()
+              .atInfo()
+              .alsoTo(logger)
+              .log("Successfully uploaded results to Resultstore. %s", link);
+          if (moduleName != null) {
+            saveLinkToJson(
+                link,
+                moduleName,
+                genFileDir.resolve(MoblyConstant.TestGenOutput.MOBLY_LOG_DIR),
+                testInfo);
+          }
+        }
       } catch (CommandException e) {
-        logger.atWarning().withCause(e).log("Failed to run results_uploader command.");
+        testInfo
+            .log()
+            .atWarning()
+            .withCause(e)
+            .alsoTo(logger)
+            .log("Failed to run results_uploader command.");
       }
     } catch (MobileHarnessException e) {
-      logger.atWarning().withCause(e).log(
-          "Failed to set up Python venv and install packages for result uploading.");
+      testInfo
+          .log()
+          .atWarning()
+          .withCause(e)
+          .alsoTo(logger)
+          .log("Failed to set up Python venv and install packages for result uploading.");
+    }
+  }
+
+  @Nullable
+  private String findResultStoreLink(String output) {
+    Matcher matcher = RESULT_STORE_LINK_PATTERN.matcher(output);
+    if (matcher.find()) {
+      return matcher.group(1);
+    }
+    return null;
+  }
+
+  private void saveLinkToJson(String link, String moduleName, Path moblyLogDir, TestInfo testInfo) {
+    Path reportLogDir = moblyLogDir.resolve("report-log-files");
+    try {
+      localFileUtil.prepareDir(reportLogDir);
+      Path reportLogFile = reportLogDir.resolve(moduleName + ".reportlog.json");
+
+      JsonObject jsonObject = new JsonObject();
+      jsonObject.addProperty("resultstore_link", link);
+      String jsonContent = new Gson().toJson(jsonObject);
+
+      localFileUtil.writeToFile(reportLogFile.toString(), jsonContent);
+    } catch (MobileHarnessException e) {
+      testInfo
+          .log()
+          .atWarning()
+          .withCause(e)
+          .alsoTo(logger)
+          .log("Failed to save ResultStore link to JSON file.");
     }
   }
 }

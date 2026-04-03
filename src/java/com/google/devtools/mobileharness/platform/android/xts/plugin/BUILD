@@ -96,6 +96,7 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly:mobly_constant",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:mobly_python_venv_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
@@ -103,6 +104,8 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:client_test_events",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/plugin",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_guava_guava",
     ],
 )
