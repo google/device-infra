@@ -16,14 +16,14 @@ func TestRxConn_ToFlux_EOF(t *testing.T) {
 	clientSide, serverSide := net.Pipe()
 	defer clientSide.Close()
 
-	rxConnObj, err := New(serverSide)
+	conn, err := New(serverSide)
 	if err != nil {
 		t.Fatalf("Failed to create rxConn: %v", err)
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
 	defer cancel()
 
-	f := rxConnObj.ToFlux(ctx)
+	f := conn.ToFlux(ctx)
 	resultChan := make(chan payload.Payload, 10)
 	errChan := make(chan error, 1)
 	doneChan := make(chan struct{})
@@ -74,13 +74,13 @@ func TestRxConn_ToFlux_ContextCancellation(t *testing.T) {
 	clientSide, serverSide := net.Pipe()
 	defer clientSide.Close()
 
-	rxConnObj, err := New(serverSide)
+	conn, err := New(serverSide)
 	if err != nil {
 		t.Fatalf("Failed to create rxConn: %v", err)
 	}
 	ctx, cancel := context.WithCancel(t.Context())
 
-	f := rxConnObj.ToFlux(ctx)
+	f := conn.ToFlux(ctx)
 	errChan := make(chan error, 1)
 
 	f.Subscribe(t.Context(),
@@ -107,7 +107,7 @@ func TestRxConn_FromFlux_DataAndEOFPropagation(t *testing.T) {
 	clientSide, serverSide := net.Pipe()
 	defer clientSide.Close()
 
-	rxConnObj, err := New(serverSide)
+	conn, err := New(serverSide)
 	if err != nil {
 		t.Fatalf("Failed to create rxConn: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestRxConn_FromFlux_DataAndEOFPropagation(t *testing.T) {
 	// Subscribe in a goroutine because FromFlux will synchronously write to the pipe,
 	// which blocks until the test reads from it below.
 	go func() {
-		rxConnObj.FromFlux(t.Context(), f)
+		conn.FromFlux(t.Context(), f)
 	}()
 
 	// Read from pipe to verify
@@ -149,14 +149,14 @@ func TestRxConn_ToFlux_Backpressure(t *testing.T) {
 	defer clientSide.Close()
 	defer serverSide.Close()
 
-	rxConnObj, err := New(serverSide)
+	conn, err := New(serverSide)
 	if err != nil {
 		t.Fatalf("Failed to create rxConn: %v", err)
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
 	defer cancel()
 
-	f := rxConnObj.ToFlux(ctx)
+	f := conn.ToFlux(ctx)
 
 	// We DON'T consume the flux immediately, forcing the upstream channel to fill up.
 	// The channel buffer is 32. We can send 32 bursts without blocking, then it should block.
@@ -205,13 +205,13 @@ func TestRxConn_ToFlux_Backpressure(t *testing.T) {
 func TestRxConn_Wait_CloseFromFluxFirst(t *testing.T) {
 	clientSide, serverSide := net.Pipe()
 
-	rxConnObj, err := New(serverSide)
+	conn, err := New(serverSide)
 	if err != nil {
 		t.Fatalf("Failed to create rxConn: %v", err)
 	}
 	ctx := t.Context()
 
-	fTo := rxConnObj.ToFlux(ctx)
+	fTo := conn.ToFlux(ctx)
 
 	stopFrom := make(chan struct{})
 	fFrom := flux.Create(func(subCtx context.Context, sink flux.Sink) {
@@ -223,11 +223,11 @@ func TestRxConn_Wait_CloseFromFluxFirst(t *testing.T) {
 	})
 
 	fTo.Subscribe(ctx)
-	go rxConnObj.FromFlux(ctx, fFrom)
+	go conn.FromFlux(ctx, fFrom)
 
 	waitDone := make(chan struct{})
 	go func() {
-		rxConnObj.Wait()
+		conn.Wait()
 		close(waitDone)
 	}()
 
@@ -262,13 +262,13 @@ func TestRxConn_Wait_CloseFromFluxFirst(t *testing.T) {
 func TestRxConn_Wait_CloseToFluxFirst(t *testing.T) {
 	clientSide, serverSide := net.Pipe()
 
-	rxConnObj, err := New(serverSide)
+	conn, err := New(serverSide)
 	if err != nil {
 		t.Fatalf("Failed to create rxConn: %v", err)
 	}
 	ctx := t.Context()
 
-	fTo := rxConnObj.ToFlux(ctx)
+	fTo := conn.ToFlux(ctx)
 
 	stopFrom := make(chan struct{})
 	fFrom := flux.Create(func(subCtx context.Context, sink flux.Sink) {
@@ -280,11 +280,11 @@ func TestRxConn_Wait_CloseToFluxFirst(t *testing.T) {
 	})
 
 	fTo.Subscribe(ctx)
-	go rxConnObj.FromFlux(ctx, fFrom)
+	go conn.FromFlux(ctx, fFrom)
 
 	waitDone := make(chan struct{})
 	go func() {
-		rxConnObj.Wait()
+		conn.Wait()
 		close(waitDone)
 	}()
 
@@ -313,5 +313,36 @@ func TestRxConn_Wait_CloseToFluxFirst(t *testing.T) {
 		// Success, both are closed
 	case <-time.After(time.Second):
 		t.Fatal("Wait() blocked even after both pumps stopped")
+	}
+}
+
+func TestRxConn_ToFlux_SingleSubscriberPolicy(t *testing.T) {
+	_, serverSide := net.Pipe()
+	defer serverSide.Close()
+
+	conn, err := New(serverSide)
+	if err != nil {
+		t.Fatalf("Failed to create rxConn: %v", err)
+	}
+	ctx := t.Context()
+
+	f := conn.ToFlux(ctx)
+
+	// Subscribe once
+	f.Subscribe(ctx)
+
+	// Subscribe second time - should fail
+	errChan := make(chan error, 1)
+	f.Subscribe(ctx, rx.OnError(func(err error) {
+		errChan <- err
+	}))
+
+	select {
+	case err := <-errChan:
+		if err.Error() != "ToFlux allows only one subscriber" {
+			t.Errorf("ToFlux() error = %q, want %q", err.Error(), "ToFlux allows only one subscriber")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for error on second subscription")
 	}
 }

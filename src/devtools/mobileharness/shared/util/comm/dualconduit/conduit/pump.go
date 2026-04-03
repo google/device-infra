@@ -72,7 +72,7 @@ func handleIngressConnection(c *Conduit, conn net.Conn) {
 
 // AcceptStream handles an incoming RSocket channel, dials the target service, and bridges the streams.
 // This implements the Responder Role.
-func AcceptStream(c *Conduit, destEndpoint string, incoming flux.Flux) flux.Flux {
+func AcceptStream(c *Conduit, destEndpoint string, downstream flux.Flux) flux.Flux {
 	conn, err := net.Dial("tcp", destEndpoint)
 	if err != nil {
 		return flux.Error(err)
@@ -86,8 +86,11 @@ func AcceptStream(c *Conduit, destEndpoint string, incoming flux.Flux) flux.Flux
 
 	streamCtx, cancel := context.WithCancel(c.Context())
 
-	// Read from RSocket and write to backend TCP.
-	rc.FromFlux(streamCtx, incoming)
+	// 1. Read from RSocket and write to backend TCP.
+	rc.FromFlux(streamCtx, downstream)
+
+	// 2. Read from backend TCP and send to RSocket.
+	upstream := rc.ToFlux(streamCtx)
 
 	// Clean up TCP connection when streaming finishes.
 	go func() {
@@ -96,6 +99,5 @@ func AcceptStream(c *Conduit, destEndpoint string, incoming flux.Flux) flux.Flux
 		conn.Close()
 	}()
 
-	// Read from backend TCP and send to RSocket.
-	return rc.ToFlux(streamCtx)
+	return upstream
 }

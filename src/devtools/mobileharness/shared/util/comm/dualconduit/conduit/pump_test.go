@@ -308,25 +308,25 @@ func TestCombinedLoopAndAccept(t *testing.T) {
 	defer conn.Close()
 
 	// 3. Simultaneously run an AcceptStream toward another local server
-	l2, err := net.Listen("tcp", "localhost:0")
+	lis2, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		t.Fatalf("Listen failed: %v", err)
 	}
-	defer l2.Close()
-	port2 := l2.Addr().(*net.TCPAddr).Port
+	defer lis2.Close()
+	port2 := lis2.Addr().(*net.TCPAddr).Port
 
 	go func() {
-		c, err := l2.Accept()
+		conn, err := lis2.Accept()
 		if err != nil {
 			if errors.Is(err, net.ErrClosed) {
 				return
 			}
-			t.Errorf("l2.Accept() got error: %v", err)
+			t.Errorf("lis2.Accept() got error: %v", err)
 			return
 		}
-		if c != nil {
-			c.Close()
-		}
+		defer conn.Close()
+
+		io.Copy(io.Discard, conn) // Drain unread data to avoid RST
 	}()
 
 	f := AcceptStream(c, fmt.Sprintf("localhost:%d", port2), flux.Just(payload.New([]byte("hello"), nil)))
@@ -334,7 +334,10 @@ func TestCombinedLoopAndAccept(t *testing.T) {
 		t.Fatalf("AcceptStream got nil, want non-nil flux")
 	}
 
-	// Wait, no panic = success
+	_, err = f.BlockLast(ctx)
+	if err != nil && !errors.Is(err, io.EOF) {
+		t.Fatalf("BlockLast failed: %v", err)
+	}
 }
 
 func TestHalfClose_Ingress_ClientCloseWrite(t *testing.T) {
@@ -344,19 +347,9 @@ func TestHalfClose_Ingress_ClientCloseWrite(t *testing.T) {
 	completed := make(chan struct{})
 	fakeRSocket := rsocket.NewAbstractSocket(
 		rsocket.RequestChannel(func(msgs flux.Flux) flux.Flux {
-			// Track when upstream is completed (client CloseWrite)
-			go func() {
-				_, err := msgs.BlockLast(ctx)
-				if err == nil {
-					close(completed)
-				}
-			}()
-			// Return downstream data slowly
-			f := flux.Create(func(ctx context.Context, sink flux.Sink) {
-				sink.Next(payload.New([]byte("delayed-response"), nil))
-				sink.Complete()
+			return msgs.DoOnComplete(func() {
+				close(completed)
 			})
-			return f
 		}),
 	)
 
@@ -390,8 +383,8 @@ func TestHalfClose_Ingress_ClientCloseWrite(t *testing.T) {
 		t.Fatalf("Unexpected read error: %v", err)
 	}
 
-	if string(buf[:n]) != "delayed-response" {
-		t.Fatalf("During half-close read got %q, want %q", string(buf[:n]), "delayed-response")
+	if string(buf[:n]) != "req" {
+		t.Fatalf("During half-close read got %q, want %q", string(buf[:n]), "req")
 	}
 
 	select {
@@ -411,8 +404,9 @@ func TestHalfClose_Egress_ServerCloseWrite(t *testing.T) {
 	defer l.Close()
 	port := l.Addr().(*net.TCPAddr).Port
 
-	var testPassed atomic.Int32
+	serverDone := make(chan struct{})
 	go func() {
+		defer close(serverDone)
 		conn, err := l.Accept()
 		if err != nil {
 			return
@@ -425,21 +419,21 @@ func TestHalfClose_Egress_ServerCloseWrite(t *testing.T) {
 
 		buf := make([]byte, 1024)
 		n, err := tcpConn.Read(buf) // Should get "req"
-		if err != nil {
+		if err != nil && err != io.EOF {
 			return
 		}
-		if string(buf[:n]) == "req" {
+		if n > 0 && string(buf[:n]) == "req" {
 			tcpConn.Write([]byte("response"))
 			// Trigger half-close from server end
 			tcpConn.CloseWrite()
 		}
 
-		// Wait to see if we get more data? Actually in Acceptance stream,
-		// remote already pushed all.
-		// Wait to observe EOF from client because RSocket complete propagated?
-		_, err = tcpConn.Read(buf)
-		if err == io.EOF {
-			testPassed.Store(1)
+		// Read remaining data until EOF if not already reached
+		if err != io.EOF {
+			_, err = tcpConn.Read(buf)
+		}
+		if err != io.EOF {
+			t.Errorf("Server side did not receive EOF, got %v", err)
 		}
 	}()
 
@@ -452,7 +446,7 @@ func TestHalfClose_Egress_ServerCloseWrite(t *testing.T) {
 
 	outFlux := AcceptStream(c, fmt.Sprintf("localhost:%d", port), f)
 
-	res, err := outFlux.BlockFirst(ctx)
+	res, err := outFlux.BlockLast(ctx)
 	if err != nil {
 		t.Fatalf("outFlux blockFirst error: %v", err)
 	}
@@ -462,7 +456,5 @@ func TestHalfClose_Egress_ServerCloseWrite(t *testing.T) {
 
 	// Since f completed, and rxconn mirrors EOF locally (CloseWrite on the dialed connection)
 	// the server should have read an EOF.
-	if testPassed.Load() != 1 {
-		t.Fatalf("Server side did not receive EOF (rxconn did not mirror Complete)")
-	}
+	<-serverDone // Wait for server to finish reading EOF and close
 }

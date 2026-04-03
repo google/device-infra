@@ -3,9 +3,11 @@ package rxconn
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net"
 	"sync"
+	"sync/atomic"
 
 	"github.com/rsocket/rsocket-go/payload"
 	"github.com/rsocket/rsocket-go/rx/flux"
@@ -14,8 +16,9 @@ import (
 
 // Conn bridges a standard network connection with reactive streams.
 type Conn struct {
-	conn net.Conn
-	wg   sync.WaitGroup
+	conn       net.Conn
+	wg         sync.WaitGroup
+	subscribed atomic.Bool // Guard to enforce the single-subscriber policy
 }
 
 // New creates a new Conn bridging the active network connection to reactive fluxes.
@@ -29,12 +32,26 @@ func New(conn net.Conn) (*Conn, error) {
 // ToFlux returns a Flux that reads from the underlying active socket.
 // The context controls pump lifecycle: cancellation tears down background pumps.
 // It may be used after ToFlux returns, as pumps are run in background goroutines.
+//
+// ToFlux enforces a single-subscriber policy using an atomic guard to prevent
+// multiple subscribers from corrupting the stream (net.Conn is stateful and
+// cannot be shared by multiple Read Pumps).
 func (c *Conn) ToFlux(ctx context.Context) flux.Flux {
-	upstreamChan := make(chan []byte, 32)
-	errChan := make(chan error, 1)
-
+	// Eager Tracking: Protect c.wg.Wait() immediately.
+	// This ensures that Wait() does not exit prematurely if the RSocket
+	// subscription is slightly delayed or happens after Wait() is called.
 	c.wg.Add(1)
 	return flux.Create(func(subscriberCtx context.Context, sink flux.Sink) {
+		if c.subscribed.Swap(true) {
+			sink.Error(errors.New("ToFlux allows only one subscriber"))
+			return
+		}
+
+		// Lazy Pumping: Initialize channels and start goroutines ONLY when
+		// a subscriber is ready.
+		upstreamChan := make(chan []byte, 32)
+		errChan := make(chan error, 1)
+
 		// 1. The TCP Read Pump
 		go func() {
 			defer close(upstreamChan)
