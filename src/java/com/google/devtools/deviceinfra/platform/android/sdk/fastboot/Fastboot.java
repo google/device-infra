@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.shared.util.quota.proto.Quota.QuotaKey;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -70,10 +71,10 @@ public class Fastboot {
   static final String[] ARGS_LIST_DEVICES_WITH_PATHS = new String[] {"devices", "-l"};
 
   /** Default max attempt times if requiring retry. */
-  @VisibleForTesting static final int DEFAULT_ATTEMPTS = 2;
+  private static final int DEFAULT_ATTEMPTS = 3;
 
   /** Duration used for short-running commands like 'fastboot devices' */
-  @VisibleForTesting static final Duration SHORT_COMMAND_DURATION = Duration.ofSeconds(30);
+  private static final Duration SHORT_COMMAND_DURATION = Duration.ofSeconds(30);
 
   /** Duration used for flashing. */
   private static final Duration FLASH_COMMAND_DURATION = Duration.ofMinutes(20);
@@ -103,21 +104,40 @@ public class Fastboot {
 
   private final String workDirectory;
 
+  private final int defaultAttempts;
+
+  private final Duration shortCommandDuration;
+
+  private final Duration flashCommandDuration;
+
+  private final Duration updateCommandDuration;
+
+  private final Duration wipeCommandDuration;
+
   /** Command output callback for capturing fastboot command output. */
   private LineCallback outputCallback;
 
   public Fastboot() {
-    this(new CommandExecutor(), "");
+    this(new Builder(new CommandExecutor(), ""));
   }
 
   public Fastboot(CommandExecutor cmdExecutor, String workDirectory) {
+    this(new Builder(cmdExecutor, workDirectory));
+  }
+
+  private Fastboot(Builder builder) {
     this(
         Suppliers.memoize(() -> new FastbootInitializer().initializeFastbootEnvironment()),
         QuotaManager.getInstance(),
-        cmdExecutor,
+        builder.cmdExecutor,
         new SystemUtil(),
         Sleeper.defaultSleeper(),
-        workDirectory);
+        builder.workDirectory,
+        builder.defaultAttempts,
+        builder.shortCommandDuration,
+        builder.flashCommandDuration,
+        builder.updateCommandDuration,
+        builder.wipeCommandDuration);
   }
 
   @VisibleForTesting
@@ -127,13 +147,78 @@ public class Fastboot {
       CommandExecutor cmdExecutor,
       SystemUtil systemUtil,
       Sleeper sleeper,
-      String workDirectory) {
+      String workDirectory,
+      int defaultAttempts,
+      Duration shortCommandDuration,
+      Duration flashCommandDuration,
+      Duration updateCommandDuration,
+      Duration wipeCommandDuration) {
     this.fastbootParamSupplier = fastbootParamSupplier;
     this.quotaManager = quotaManager;
     this.cmdExecutor = cmdExecutor;
     this.systemUtil = systemUtil;
     this.sleeper = sleeper;
     this.workDirectory = workDirectory;
+    this.defaultAttempts = defaultAttempts;
+    this.shortCommandDuration = shortCommandDuration;
+    this.flashCommandDuration = flashCommandDuration;
+    this.updateCommandDuration = updateCommandDuration;
+    this.wipeCommandDuration = wipeCommandDuration;
+  }
+
+  public static Builder builder(CommandExecutor cmdExecutor, String workDirectory) {
+    return new Builder(cmdExecutor, workDirectory);
+  }
+
+  /** Builder for {@link Fastboot}. */
+  public static class Builder {
+    private final CommandExecutor cmdExecutor;
+    private final String workDirectory;
+
+    private int defaultAttempts = DEFAULT_ATTEMPTS;
+    private Duration shortCommandDuration = SHORT_COMMAND_DURATION;
+    private Duration flashCommandDuration = FLASH_COMMAND_DURATION;
+    private Duration updateCommandDuration = UPDATE_COMMAND_DURATION;
+    private Duration wipeCommandDuration = WIPE_COMMAND_DURATION;
+
+    private Builder(CommandExecutor cmdExecutor, String workDirectory) {
+      this.cmdExecutor = cmdExecutor;
+      this.workDirectory = workDirectory;
+    }
+
+    @CanIgnoreReturnValue
+    public Builder setDefaultAttempts(int defaultAttempts) {
+      this.defaultAttempts = defaultAttempts;
+      return this;
+    }
+
+    @CanIgnoreReturnValue
+    public Builder setShortCommandDuration(Duration shortCommandDuration) {
+      this.shortCommandDuration = shortCommandDuration;
+      return this;
+    }
+
+    @CanIgnoreReturnValue
+    public Builder setFlashCommandDuration(Duration flashCommandDuration) {
+      this.flashCommandDuration = flashCommandDuration;
+      return this;
+    }
+
+    @CanIgnoreReturnValue
+    public Builder setUpdateCommandDuration(Duration updateCommandDuration) {
+      this.updateCommandDuration = updateCommandDuration;
+      return this;
+    }
+
+    @CanIgnoreReturnValue
+    public Builder setWipeCommandDuration(Duration wipeCommandDuration) {
+      this.wipeCommandDuration = wipeCommandDuration;
+      return this;
+    }
+
+    public Fastboot build() {
+      return new Fastboot(this);
+    }
   }
 
   /** Interface for specifying logic to run on retry. */
@@ -173,7 +258,7 @@ public class Fastboot {
     runWithRetry(
         serial,
         new String[] {"boot", imagePath},
-        SHORT_COMMAND_DURATION,
+        shortCommandDuration,
         /* flashSemaphore= */ false);
   }
 
@@ -220,7 +305,7 @@ public class Fastboot {
           runWithRetry(
               serial,
               fullCommand.toArray(new String[0]),
-              FLASH_COMMAND_DURATION,
+              flashCommandDuration,
               /* flashSemaphore= */ true,
               retryTask);
     } catch (MobileHarnessException e) {
@@ -276,7 +361,7 @@ public class Fastboot {
         runWithRetry(
             serial,
             fullCommandBuilder.build().toArray(new String[0]),
-            UPDATE_COMMAND_DURATION,
+            updateCommandDuration,
             /* flashSemaphore= */ true,
             retryTask);
     if (!FASTBOOT_SUCCESS_PATTERN.matcher(output).find()) {
@@ -300,7 +385,7 @@ public class Fastboot {
     checkFastboot();
     Map<String, FastbootDeviceState> serials = new HashMap<>();
     String output =
-        runWithRetry(ARGS_LIST_DEVICES, SHORT_COMMAND_DURATION, /* flashSemaphore= */ false);
+        runWithRetry(ARGS_LIST_DEVICES, shortCommandDuration, /* flashSemaphore= */ false);
     // It is known issue of fastboot on macOS >= 10.13.4 (latest tested 10.14.4). b/64292422
     if (systemUtil.isOnMac() && output.contains(FASTBOOT_DEVICE_INTERFACE_ITERATOR_ERROR_ON_MAC)) {
       return serials;
@@ -354,7 +439,7 @@ public class Fastboot {
     try {
       String output =
           runWithRetry(
-              ARGS_LIST_DEVICES_WITH_PATHS, SHORT_COMMAND_DURATION, /* flashSemaphore= */ false);
+              ARGS_LIST_DEVICES_WITH_PATHS, shortCommandDuration, /* flashSemaphore= */ false);
       // Example output:
       // 0256eeebde9d4e25       fastboot
       //  usb:1-9
@@ -409,7 +494,7 @@ public class Fastboot {
     keyName = keyName.replace('_', '-');
     String[] command = new String[] {"getvar", keyName};
     String output =
-        runWithRetry(serial, command, Duration.ofSeconds(10L), /* flashSemaphore= */ false);
+        runWithRetry(serial, command, shortCommandDuration, /* flashSemaphore= */ false);
     Matcher matcher = Pattern.compile(keyName + ": (.+)").matcher(output);
     if (matcher.find()) {
       return matcher.group(1);
@@ -442,7 +527,7 @@ public class Fastboot {
     return runWithRetry(
         serial,
         new String[] {"erase", partitionName},
-        WIPE_COMMAND_DURATION,
+        wipeCommandDuration,
         /* flashSemaphore= */ false,
         retryTask);
   }
@@ -461,11 +546,7 @@ public class Fastboot {
     checkFastboot();
     try {
       return runWithRetry(
-          serial,
-          new String[] {"-w"},
-          WIPE_COMMAND_DURATION,
-          /* flashSemaphore= */ false,
-          retryTask);
+          serial, new String[] {"-w"}, wipeCommandDuration, /* flashSemaphore= */ false, retryTask);
     } catch (MobileHarnessException e) {
       // When device is using f2fs for userdata just like volantis, fasboot -w will be failed.
       // This isn't a new failure, just not silently as before in the newest fastboot tool.
@@ -477,13 +558,13 @@ public class Fastboot {
           runWithRetry(
               serial,
               new String[] {"erase", "userdata"},
-              WIPE_COMMAND_DURATION,
+              wipeCommandDuration,
               /* flashSemaphore= */ false,
               retryTask),
           runWithRetry(
               serial,
               new String[] {"format", "cache"},
-              WIPE_COMMAND_DURATION,
+              wipeCommandDuration,
               /* flashSemaphore= */ false,
               retryTask));
     }
@@ -504,7 +585,7 @@ public class Fastboot {
       throws MobileHarnessException, InterruptedException {
     checkFastboot();
     runWithRetry(
-        serial, new String[] {"reboot"}, SHORT_COMMAND_DURATION, /* flashSemaphore= */ false);
+        serial, new String[] {"reboot"}, shortCommandDuration, /* flashSemaphore= */ false);
     if (TimeUtils.isDurationPositive(waitTime)) {
       sleeper.sleep(waitTime);
     }
@@ -540,7 +621,7 @@ public class Fastboot {
         runWithRetry(
             serial,
             new String[] {"reboot-bootloader"},
-            SHORT_COMMAND_DURATION,
+            shortCommandDuration,
             /* flashSemaphore= */ false);
 
     // 'fastboot reboot-bootloader' can return immediately, before the device has rebooted.
@@ -564,7 +645,7 @@ public class Fastboot {
       return runWithRetry(
           serial,
           new String[] {"oem", "unlock"},
-          SHORT_COMMAND_DURATION,
+          shortCommandDuration,
           /* flashSemaphore= */ false);
     } catch (MobileHarnessException e) {
       if (!Ascii.toLowerCase(e.getMessage()).contains("already unlocked")) {
@@ -663,7 +744,7 @@ public class Fastboot {
     }
     try {
       CommandException error = null;
-      for (int i = 0; i < DEFAULT_ATTEMPTS; i++) {
+      for (int i = 0; i < defaultAttempts; i++) {
         try {
           Command cmd =
               Command.of(
@@ -704,7 +785,7 @@ public class Fastboot {
           AndroidErrorId.ANDROID_FASTBOOT_COMMAND_EXEC_ERROR,
           String.format(
               "Abort fastboot command after attempting %d times:%n%s",
-              DEFAULT_ATTEMPTS, error.getMessage()),
+              defaultAttempts, error.getMessage()),
           error);
     } finally {
       if (flashSemaphore) {
