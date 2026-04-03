@@ -216,14 +216,7 @@ func TestAcceptStream_MultipleStreams(t *testing.T) {
 			go func(c net.Conn) {
 				defer backendConnections.Done()
 				defer c.Close()
-				buf := make([]byte, 1024)
-				for {
-					n, err := c.Read(buf)
-					if err != nil {
-						return
-					}
-					c.Write(buf[:n]) // Echo back
-				}
+				io.Copy(c, c)
 			}(conn)
 		}
 	}()
@@ -260,11 +253,13 @@ func TestAcceptStream_MultipleStreams(t *testing.T) {
 			incoming[id] <- payload.New([]byte(msg), nil)
 
 			// Extract echoed data
-			res, err := outgoing[id].BlockFirst(t.Context())
+			res, err := outgoing[id].Take(1).BlockLast(t.Context())
 			if err != nil {
 				t.Errorf("Error reading from flux %d: %v", id, err)
+			} else if res == nil {
+				t.Errorf("Flux %d got nil, want %q", id, msg)
 			} else if string(res.Data()) != msg {
-				t.Errorf("Flux %d got %v, want %v", id, string(res.Data()), msg)
+				t.Errorf("Flux %d got %q, want %q", id, string(res.Data()), msg)
 			}
 		}(i)
 	}
