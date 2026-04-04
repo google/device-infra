@@ -45,4 +45,6 @@ message TenantDeviceConfig {
   // the device config. When there are conflicts, the value(s) from this config
   // take precedence.
   DeviceConfig device_config = 2;
+  // The path to the GCL source file that generated this config.
+  string gcl_path = 4;
 }
