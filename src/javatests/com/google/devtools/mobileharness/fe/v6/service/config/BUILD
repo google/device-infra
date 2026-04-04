@@ -21,15 +21,22 @@ package(
 )
 
 java_library(
-    name = "util",
+    name = "config",
     testonly = 1,
     srcs = glob(["*.java"]),
     deps = [
         "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config:config_service_logic_impl",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_service_capability",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/auth",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:set_flags_oss",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_extensions_guice_testlib",
+        "@maven//:com_google_inject_guice",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
     ],
@@ -40,5 +47,5 @@ junit_test_suites(
     sizes = [
         "small",
     ],
-    deps = [":util"],
+    deps = [":config"],
 )

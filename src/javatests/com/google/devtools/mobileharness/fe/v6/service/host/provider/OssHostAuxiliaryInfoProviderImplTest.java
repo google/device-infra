@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.fe.v6.service.host.provider;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,17 +37,28 @@ public final class OssHostAuxiliaryInfoProviderImplTest {
 
   @Test
   public void getHostReleaseInfo_returnsEmpty() throws Exception {
-    assertThat(ossHostAuxiliaryInfoProviderImpl.getHostReleaseInfo("host").get()).isEmpty();
+    assertThat(
+            ossHostAuxiliaryInfoProviderImpl
+                .getHostReleaseInfo("host", Universe.getDefaultInstance())
+                .get())
+        .isEmpty();
   }
 
   @Test
   public void getPassThroughFlags_returnsEmpty() throws Exception {
-    assertThat(ossHostAuxiliaryInfoProviderImpl.getPassThroughFlags("host").get()).isEmpty();
+    assertThat(
+            ossHostAuxiliaryInfoProviderImpl
+                .getPassThroughFlags("host", Universe.getDefaultInstance())
+                .get())
+        .isEmpty();
   }
 
   @Test
   public void getDiagnosticLinks_returnsEmpty() throws Exception {
-    assertThat(ossHostAuxiliaryInfoProviderImpl.getDiagnosticLinks("host", Optional.empty()).get())
+    assertThat(
+            ossHostAuxiliaryInfoProviderImpl
+                .getDiagnosticLinks("host", Optional.empty(), Universe.getDefaultInstance())
+                .get())
         .isEmpty();
   }
 }

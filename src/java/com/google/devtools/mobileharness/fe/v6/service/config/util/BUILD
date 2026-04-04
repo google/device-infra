@@ -41,6 +41,7 @@ java_library(
         "ConfigServiceCapabilityFactory.java",
     ],
     deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_resources_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",

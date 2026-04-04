@@ -33,6 +33,8 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.GroupedDevices;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.DeviceView;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.SelfUniverse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
@@ -51,7 +53,8 @@ import org.mockito.junit.MockitoRule;
 public final class DeviceInfoLookupHelperTest {
 
   private static final String DEVICE_ID = "test_device_id";
-  private static final String UNIVERSE = "test_universe";
+  private static final Universe SELF_UNIVERSE =
+      Universe.newBuilder().setSelfUniverse(SelfUniverse.getDefaultInstance()).build();
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
@@ -76,15 +79,15 @@ public final class DeviceInfoLookupHelperTest {
                                         DeviceList.newBuilder()
                                             .addDeviceInfo(expectedDeviceInfo)))))
             .build();
-    when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), eq(UNIVERSE)))
+    when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), eq(SELF_UNIVERSE)))
         .thenReturn(immediateFuture(labInfoResponse));
 
     ListenableFuture<DeviceInfo> deviceInfoFuture =
         DeviceInfoLookupHelper.lookUpDeviceInfoAsync(
-            labInfoProvider, DEVICE_ID, UNIVERSE, directExecutor());
+            labInfoProvider, DEVICE_ID, SELF_UNIVERSE, directExecutor());
 
     assertThat(deviceInfoFuture.get()).isEqualTo(expectedDeviceInfo);
-    verify(labInfoProvider).getLabInfoAsync(labInfoRequestCaptor.capture(), eq(UNIVERSE));
+    verify(labInfoProvider).getLabInfoAsync(labInfoRequestCaptor.capture(), eq(SELF_UNIVERSE));
     GetLabInfoRequest capturedRequest = labInfoRequestCaptor.getValue();
 
     assertThat(capturedRequest.getLabQuery().hasDeviceViewRequest()).isTrue();
@@ -98,12 +101,12 @@ public final class DeviceInfoLookupHelperTest {
             .setLabQueryResult(
                 LabQueryResult.newBuilder().setDeviceView(DeviceView.getDefaultInstance()))
             .build();
-    when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), eq(UNIVERSE)))
+    when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), eq(SELF_UNIVERSE)))
         .thenReturn(immediateFuture(labInfoResponse));
 
     ListenableFuture<DeviceInfo> deviceInfoFuture =
         DeviceInfoLookupHelper.lookUpDeviceInfoAsync(
-            labInfoProvider, DEVICE_ID, UNIVERSE, directExecutor());
+            labInfoProvider, DEVICE_ID, SELF_UNIVERSE, directExecutor());
 
     ExecutionException exception = assertThrows(ExecutionException.class, deviceInfoFuture::get);
     assertThat(exception).hasCauseThat().isInstanceOf(RuntimeException.class);

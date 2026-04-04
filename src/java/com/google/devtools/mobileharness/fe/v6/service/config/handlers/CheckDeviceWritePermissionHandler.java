@@ -22,6 +22,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
@@ -52,14 +53,13 @@ public final class CheckDeviceWritePermissionHandler {
   }
 
   public ListenableFuture<CheckDeviceWritePermissionResponse> checkDeviceWritePermission(
-      CheckDeviceWritePermissionRequest request, Optional<String> username) {
+      CheckDeviceWritePermissionRequest request, Universe universe, Optional<String> username) {
     if (username.isEmpty()) {
       return immediateFuture(
           CheckDeviceWritePermissionResponse.newBuilder().setHasPermission(false).build());
     }
     String user = username.get();
     String deviceId = request.getId();
-    String universe = request.getUniverse();
 
     return Futures.transformAsync(
         deviceDataLoader.loadDeviceData(deviceId, universe),

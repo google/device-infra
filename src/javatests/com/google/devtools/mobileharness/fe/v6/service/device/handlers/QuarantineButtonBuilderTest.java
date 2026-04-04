@@ -23,6 +23,8 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.TempDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.SelfUniverse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
@@ -38,7 +40,8 @@ import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class QuarantineButtonBuilderTest {
-  private static final String UNIVERSE = "google_1p";
+  private static final Universe UNIVERSE =
+      Universe.newBuilder().setSelfUniverse(SelfUniverse.getDefaultInstance()).build();
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Mock private FeatureManagerFactory featureManagerFactory;

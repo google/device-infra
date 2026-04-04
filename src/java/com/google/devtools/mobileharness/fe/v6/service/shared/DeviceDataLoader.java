@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.api.query.proto.FilterProto;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
@@ -108,7 +109,7 @@ public class DeviceDataLoader {
    * @param deviceId the unique ID of the device
    * @param universe the universe the device belongs to
    */
-  public ListenableFuture<DeviceData> loadDeviceData(String deviceId, String universe) {
+  public ListenableFuture<DeviceData> loadDeviceData(String deviceId, Universe universe) {
     logger.atInfo().log("Loading device data for %s (universe: %s)", deviceId, universe);
 
     // Parallel fetch start: DeviceInfo (Required) and Individual Config (Speculative)
@@ -141,7 +142,7 @@ public class DeviceDataLoader {
 
   private DeviceData resolveDeviceData(
       String deviceId,
-      String universe,
+      Universe universe,
       DeviceInfo deviceInfo,
       Optional<LabConfig> labConfigOpt,
       Optional<DeviceConfig> individualConfigOpt) {
@@ -184,7 +185,7 @@ public class DeviceDataLoader {
   }
 
   private ListenableFuture<Optional<DeviceConfig>> getSafeDeviceConfigAsync(
-      String deviceId, String universe) {
+      String deviceId, Universe universe) {
     return Futures.catching(
         configurationProvider.getDeviceConfig(deviceId, universe),
         Throwable.class,
@@ -196,7 +197,7 @@ public class DeviceDataLoader {
   }
 
   private ListenableFuture<Optional<LabConfig>> getSafeLabConfigAsync(
-      String hostName, String universe) {
+      String hostName, Universe universe) {
     return Futures.catching(
         configurationProvider.getLabConfig(hostName, universe),
         Throwable.class,
@@ -207,7 +208,7 @@ public class DeviceDataLoader {
         executor);
   }
 
-  private ListenableFuture<DeviceInfo> getDeviceInfoAsync(String deviceId, String universe) {
+  private ListenableFuture<DeviceInfo> getDeviceInfoAsync(String deviceId, Universe universe) {
     return Futures.transform(
         labInfoProvider.getLabInfoAsync(createGetLabInfoRequest(deviceId), universe),
         response ->

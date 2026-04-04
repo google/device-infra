@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInf
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.HealthAndActivityBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceType;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.RemoteControlInfo;
@@ -81,13 +82,11 @@ public final class GetHostDeviceSummariesHandler {
 
   /** Gets host device summaries. */
   public ListenableFuture<GetHostDeviceSummariesResponse> getHostDeviceSummaries(
-      GetHostDeviceSummariesRequest request) {
-    // TODO: - dafeng - Use the universe parameter.
-    @SuppressWarnings("unused")
-    String universe = request.getUniverse();
+      GetHostDeviceSummariesRequest request, Universe universe) {
+
     GetLabInfoRequest getLabInfoRequest = createGetLabInfoRequest(request.getHostName());
     return Futures.transform(
-        labInfoProvider.getLabInfoAsync(getLabInfoRequest, ""),
+        labInfoProvider.getLabInfoAsync(getLabInfoRequest, universe),
         this::processLabInfoResponse,
         executor);
   }

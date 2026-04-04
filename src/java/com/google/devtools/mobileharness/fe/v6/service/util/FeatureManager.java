@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.util;
 
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
@@ -39,10 +40,10 @@ import com.google.inject.assistedinject.AssistedInject;
 public class FeatureManager {
 
   private final Environment environment;
-  private final String universe;
+  private final Universe universe;
 
   @AssistedInject
-  FeatureManager(Environment environment, @Assisted String universe) {
+  FeatureManager(Environment environment, @Assisted Universe universe) {
     this.environment = environment;
     this.universe = universe;
   }
@@ -54,7 +55,7 @@ public class FeatureManager {
    * builds.
    */
   public boolean isDeviceFlashingFeatureEnabled() {
-    return environment.isGoogleInternal() && universe.equals("google_1p");
+    return environment.isGoogleInternal() && universe.hasSelfUniverse();
   }
 
   /**
@@ -64,7 +65,7 @@ public class FeatureManager {
    * builds.
    */
   public boolean isDeviceLogcatFeatureEnabled() {
-    return environment.isGoogleInternal() && universe.equals("google_1p");
+    return environment.isGoogleInternal() && universe.hasSelfUniverse();
   }
 
   /**
@@ -74,7 +75,7 @@ public class FeatureManager {
    * builds.
    */
   public boolean isDeviceQuarantineFeatureEnabled() {
-    return environment.isGoogleInternal() && universe.equals("google_1p");
+    return environment.isGoogleInternal() && universe.hasSelfUniverse();
   }
 
   /**
@@ -84,18 +85,19 @@ public class FeatureManager {
    * builds.
    */
   public boolean isDeviceScreenshotFeatureEnabled() {
-    return environment.isGoogleInternal() && universe.equals("google_1p");
+    return environment.isGoogleInternal() && universe.hasSelfUniverse();
   }
 
   /**
-   * Checks if the device configuration feature is enabled.
+   * Checks if the configuration feature is enabled.
    *
    * <p>In Google internal builds, this feature is only available in the {@code google_1p} universe.
-   * In OSS builds, it is always available. In both cases, the {@code fe_enable_configuration} flag
-   * must be set.
+   * In OSS builds, it depends on the {@code fe_enable_configuration} flag.
    */
   public boolean isConfigurationFeatureEnabled() {
-    boolean enabledByUniverse = !environment.isGoogleInternal() || universe.equals("google_1p");
-    return enabledByUniverse && Flags.instance().feEnableConfiguration.getNonNull();
+    if (environment.isGoogleInternal()) {
+      return universe.hasSelfUniverse();
+    }
+    return Flags.instance().feEnableConfiguration.getNonNull();
   }
 }

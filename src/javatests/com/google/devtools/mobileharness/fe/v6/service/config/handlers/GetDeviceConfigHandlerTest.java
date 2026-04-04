@@ -21,7 +21,6 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
@@ -33,6 +32,8 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.DeviceView;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapability;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.SelfUniverse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfigUiStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigResponse;
@@ -56,6 +57,9 @@ import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class GetDeviceConfigHandlerTest {
+  private static final Universe SELF_UNIVERSE =
+      Universe.newBuilder().setSelfUniverse(SelfUniverse.getDefaultInstance()).build();
+
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Bind @Mock private LabInfoProvider labInfoProvider;
   @Bind @Mock private ConfigurationProvider configurationProvider;
@@ -67,7 +71,8 @@ public final class GetDeviceConfigHandlerTest {
   @Before
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
-    when(configServiceCapabilityFactory.create(anyString())).thenReturn(configServiceCapability);
+    when(configServiceCapabilityFactory.create(any(Universe.class)))
+        .thenReturn(configServiceCapability);
     when(configServiceCapability.calculateDeviceUiStatus())
         .thenReturn(DeviceConfigUiStatus.getDefaultInstance());
     when(labInfoProvider.getLabInfoAsync(any(), any()))
@@ -95,7 +100,8 @@ public final class GetDeviceConfigHandlerTest {
   public void getDeviceConfig_success() throws Exception {
     GetDeviceConfigRequest request =
         GetDeviceConfigRequest.newBuilder().setId("test").setUniverse("google_1p").build();
-    GetDeviceConfigResponse response = getDeviceConfigHandler.getDeviceConfig(request).get();
+    GetDeviceConfigResponse response =
+        getDeviceConfigHandler.getDeviceConfig(request, SELF_UNIVERSE).get();
     assertThat(response.getIsHostManaged()).isFalse();
   }
 
@@ -107,6 +113,7 @@ public final class GetDeviceConfigHandlerTest {
     GetDeviceConfigRequest request =
         GetDeviceConfigRequest.newBuilder().setId("test").setUniverse("unsupported").build();
     assertThrows(
-        ExecutionException.class, () -> getDeviceConfigHandler.getDeviceConfig(request).get());
+        ExecutionException.class,
+        () -> getDeviceConfigHandler.getDeviceConfig(request, SELF_UNIVERSE).get());
   }
 }

@@ -19,16 +19,17 @@ package com.google.devtools.mobileharness.fe.v6.service.shared.providers;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import java.util.Optional;
 
 /** Interface for fetching and updating device and lab configurations. */
 public interface ConfigurationProvider {
-  ListenableFuture<Optional<DeviceConfig>> getDeviceConfig(String deviceId, String universe);
+  ListenableFuture<Optional<DeviceConfig>> getDeviceConfig(String deviceId, Universe universe);
 
-  ListenableFuture<Optional<LabConfig>> getLabConfig(String hostName, String universe);
+  ListenableFuture<Optional<LabConfig>> getLabConfig(String hostName, Universe universe);
 
   ListenableFuture<Void> updateDeviceConfig(
-      String deviceId, DeviceConfig deviceConfig, String universe);
+      String deviceId, DeviceConfig deviceConfig, Universe universe);
 
-  ListenableFuture<Void> updateLabConfig(String hostName, LabConfig labConfig, String universe);
+  ListenableFuture<Void> updateLabConfig(String hostName, LabConfig labConfig, Universe universe);
 }

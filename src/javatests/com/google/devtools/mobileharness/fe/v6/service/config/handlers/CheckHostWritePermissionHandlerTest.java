@@ -26,6 +26,8 @@ import static org.mockito.Mockito.when;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.SelfUniverse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
@@ -47,6 +49,9 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public final class CheckHostWritePermissionHandlerTest {
 
+  private static final Universe SELF_UNIVERSE =
+      Universe.newBuilder().setSelfUniverse(SelfUniverse.getDefaultInstance()).build();
+
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
   @Bind @Mock private ConfigurationProvider configurationProvider;
@@ -66,14 +71,14 @@ public final class CheckHostWritePermissionHandlerTest {
         CheckHostWritePermissionRequest.newBuilder().setHostName("host").build();
 
     CheckHostWritePermissionResponse response =
-        handler.checkHostWritePermission(request, Optional.empty()).get();
+        handler.checkHostWritePermission(request, SELF_UNIVERSE, Optional.empty()).get();
 
     assertThat(response.getHasPermission()).isFalse();
   }
 
   @Test
   public void checkHostWritePermission_noLabConfig_returnsFalse() throws Exception {
-    when(configurationProvider.getLabConfig("host", "universe"))
+    when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
         .thenReturn(immediateFuture(Optional.empty()));
 
     CheckHostWritePermissionRequest request =
@@ -83,7 +88,7 @@ public final class CheckHostWritePermissionHandlerTest {
             .build();
 
     CheckHostWritePermissionResponse response =
-        handler.checkHostWritePermission(request, Optional.of("user")).get();
+        handler.checkHostWritePermission(request, SELF_UNIVERSE, Optional.of("user")).get();
 
     assertThat(response.getHasPermission()).isFalse();
   }
@@ -95,7 +100,7 @@ public final class CheckHostWritePermissionHandlerTest {
             .setDefaultDeviceConfig(
                 BasicDeviceConfig.newBuilder().addOwner("admin1").addOwner("admin2").build())
             .build();
-    when(configurationProvider.getLabConfig("host", "universe"))
+    when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
         .thenReturn(immediateFuture(Optional.of(labConfig)));
 
     CheckHostWritePermissionRequest request =
@@ -105,7 +110,7 @@ public final class CheckHostWritePermissionHandlerTest {
             .build();
 
     CheckHostWritePermissionResponse response =
-        handler.checkHostWritePermission(request, Optional.of("admin1")).get();
+        handler.checkHostWritePermission(request, SELF_UNIVERSE, Optional.of("admin1")).get();
 
     assertThat(response.getHasPermission()).isTrue();
   }
@@ -113,7 +118,7 @@ public final class CheckHostWritePermissionHandlerTest {
   @Test
   public void checkHostWritePermission_noAdmins_returnsTrue() throws Exception {
     LabConfig labConfig = LabConfig.getDefaultInstance();
-    when(configurationProvider.getLabConfig("host", "universe"))
+    when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
         .thenReturn(immediateFuture(Optional.of(labConfig)));
 
     CheckHostWritePermissionRequest request =
@@ -123,7 +128,7 @@ public final class CheckHostWritePermissionHandlerTest {
             .build();
 
     CheckHostWritePermissionResponse response =
-        handler.checkHostWritePermission(request, Optional.of("user")).get();
+        handler.checkHostWritePermission(request, SELF_UNIVERSE, Optional.of("user")).get();
 
     assertThat(response.getHasPermission()).isTrue();
   }
@@ -134,7 +139,7 @@ public final class CheckHostWritePermissionHandlerTest {
         LabConfig.newBuilder()
             .setDefaultDeviceConfig(BasicDeviceConfig.newBuilder().addOwner("group1").build())
             .build();
-    when(configurationProvider.getLabConfig("host", "universe"))
+    when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
         .thenReturn(immediateFuture(Optional.of(labConfig)));
     when(groupMembershipProvider.isMemberOfAny(eq("user"), any()))
         .thenReturn(immediateFuture(true));
@@ -146,7 +151,7 @@ public final class CheckHostWritePermissionHandlerTest {
             .build();
 
     CheckHostWritePermissionResponse response =
-        handler.checkHostWritePermission(request, Optional.of("user")).get();
+        handler.checkHostWritePermission(request, SELF_UNIVERSE, Optional.of("user")).get();
 
     assertThat(response.getHasPermission()).isTrue();
   }

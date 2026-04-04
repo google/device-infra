@@ -23,8 +23,8 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.google.auto.value.AutoValue;
 import com.google.common.base.Enums;
-import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceCon
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.PermissionInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.BasicDeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.BasicDeviceInfo.Form;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.CapabilitiesInfo;
@@ -77,7 +78,18 @@ public final class GetDeviceOverviewHandler {
   private final HealthAndActivityBuilder healthAndActivityBuilder;
   private final DeviceHeaderInfoBuilder deviceHeaderInfoBuilder;
   private final SubDeviceInfoListFactory subDeviceInfoListFactory;
-  private final AsyncLoadingCache<String, DeviceOverviewPageData> overviewCache;
+  private final AsyncLoadingCache<DeviceCacheKey, DeviceOverviewPageData> overviewCache;
+
+  @AutoValue
+  abstract static class DeviceCacheKey {
+    abstract Universe universe();
+
+    abstract String deviceId();
+
+    static DeviceCacheKey create(Universe universe, String deviceId) {
+      return new AutoValue_GetDeviceOverviewHandler_DeviceCacheKey(universe, deviceId);
+    }
+  }
 
   @Inject
   GetDeviceOverviewHandler(
@@ -100,9 +112,8 @@ public final class GetDeviceOverviewHandler {
   }
 
   public ListenableFuture<DeviceOverviewPageData> getDeviceOverview(
-      GetDeviceOverviewRequest request) {
-    String universe = request.getUniverse().isEmpty() ? "google_1p" : request.getUniverse();
-    String cacheKey = universe + ":" + request.getId();
+      GetDeviceOverviewRequest request, Universe universe) {
+    DeviceCacheKey cacheKey = DeviceCacheKey.create(universe, request.getId());
     if (request.getForceRefresh()) {
       logger.atInfo().log("Force refreshing cache for %s", cacheKey);
       overviewCache.synchronous().invalidate(cacheKey);
@@ -110,9 +121,11 @@ public final class GetDeviceOverviewHandler {
     return JdkFutureAdapters.listenInPoolThread(overviewCache.get(cacheKey), executor);
   }
 
-  private class DeviceOverviewLoader implements AsyncCacheLoader<String, DeviceOverviewPageData> {
+  private class DeviceOverviewLoader
+      implements AsyncCacheLoader<DeviceCacheKey, DeviceOverviewPageData> {
     @Override
-    public CompletableFuture<DeviceOverviewPageData> asyncLoad(String key, Executor executor) {
+    public CompletableFuture<DeviceOverviewPageData> asyncLoad(
+        DeviceCacheKey key, Executor executor) {
       ListenableFuture<DeviceOverviewPageData> loadFuture = loadDeviceOverviewPageData(key);
       return toCompletableFuture(loadFuture);
     }
@@ -137,10 +150,9 @@ public final class GetDeviceOverviewHandler {
     return completableFuture;
   }
 
-  private ListenableFuture<DeviceOverviewPageData> loadDeviceOverviewPageData(String key) {
-    List<String> parts = Splitter.on(':').limit(2).splitToList(key);
-    String universe = parts.get(0);
-    String deviceId = parts.get(1);
+  private ListenableFuture<DeviceOverviewPageData> loadDeviceOverviewPageData(DeviceCacheKey key) {
+    Universe universe = key.universe();
+    String deviceId = key.deviceId();
     logger.atInfo().log("Loading device overview for %s", key);
 
     return Futures.transform(
@@ -153,7 +165,7 @@ public final class GetDeviceOverviewHandler {
   }
 
   private DeviceOverviewPageData buildDeviceOverviewPageData(
-      String deviceId, DeviceData deviceData, String universe) {
+      String deviceId, DeviceData deviceData, Universe universe) {
     DeviceInfo deviceInfo = deviceData.deviceInfo();
 
     DeviceHeaderInfo headerInfo =

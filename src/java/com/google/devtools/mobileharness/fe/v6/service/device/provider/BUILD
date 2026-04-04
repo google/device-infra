@@ -35,6 +35,7 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/fe/v6/service:__subpackages__",
     ],
     deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:device_ops",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/cloud/rpc/stub:cloud_file_transfer_stub",
     ],

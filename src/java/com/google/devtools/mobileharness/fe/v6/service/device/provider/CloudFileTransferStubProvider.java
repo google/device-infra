@@ -16,10 +16,11 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.device.provider;
 
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.stub.CloudFileTransferStubInterface;
 
 /** Provider for creating {@link CloudFileTransferStubInterface}. */
 public interface CloudFileTransferStubProvider {
 
-  CloudFileTransferStubInterface createStub(String hostName, String universe);
+  CloudFileTransferStubInterface createStub(String hostName, Universe universe);
 }

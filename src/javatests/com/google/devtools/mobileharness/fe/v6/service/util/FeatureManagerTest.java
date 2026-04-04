@@ -20,6 +20,9 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.RoutedUniverse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.SelfUniverse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import org.junit.Rule;
 import org.junit.Test;
@@ -37,12 +40,17 @@ public final class FeatureManagerTest {
 
   @Mock private Environment mockEnvironment;
 
+  private static final Universe SELF_UNIVERSE =
+      Universe.newBuilder().setSelfUniverse(SelfUniverse.getDefaultInstance()).build();
+  private static final Universe ROUTED_UNIVERSE =
+      Universe.newBuilder().setRoutedUniverse(RoutedUniverse.getDefaultInstance()).build();
+
   // --- Scenario 1: Internal (1P), google_1p universe ---
 
   @Test
   public void isDeviceFlashingFeatureEnabled_internal_google1p_returnsTrue() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    FeatureManager featureManager = new FeatureManager(mockEnvironment, "google_1p");
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, SELF_UNIVERSE);
     assertThat(featureManager.isDeviceFlashingFeatureEnabled()).isTrue();
   }
 
@@ -50,16 +58,16 @@ public final class FeatureManagerTest {
   public void isConfigurationFeatureEnabled_scenario1_flagTrue_returnsTrue() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(true);
     flags.setAllFlags(ImmutableMap.of("fe_enable_configuration", "true"));
-    FeatureManager featureManager = new FeatureManager(mockEnvironment, "google_1p");
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, SELF_UNIVERSE);
     assertThat(featureManager.isConfigurationFeatureEnabled()).isTrue();
   }
 
   @Test
-  public void isConfigurationFeatureEnabled_scenario1_flagFalse_returnsFalse() {
+  public void isConfigurationFeatureEnabled_scenario1_flagFalse_returnsTrue() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(true);
     flags.setAllFlags(ImmutableMap.of("fe_enable_configuration", "false"));
-    FeatureManager featureManager = new FeatureManager(mockEnvironment, "google_1p");
-    assertThat(featureManager.isConfigurationFeatureEnabled()).isFalse();
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, SELF_UNIVERSE);
+    assertThat(featureManager.isConfigurationFeatureEnabled()).isTrue();
   }
 
   // --- Scenario 2: Internal (1P), non-google_1p universe ---
@@ -67,7 +75,7 @@ public final class FeatureManagerTest {
   @Test
   public void isDeviceFlashingFeatureEnabled_internal_nonGoogle1p_returnsFalse() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    FeatureManager featureManager = new FeatureManager(mockEnvironment, "xiaomi");
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, ROUTED_UNIVERSE);
     assertThat(featureManager.isDeviceFlashingFeatureEnabled()).isFalse();
   }
 
@@ -75,7 +83,7 @@ public final class FeatureManagerTest {
   public void isConfigurationFeatureEnabled_scenario2_flagTrue_returnsFalse() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(true);
     flags.setAllFlags(ImmutableMap.of("fe_enable_configuration", "true"));
-    FeatureManager featureManager = new FeatureManager(mockEnvironment, "xiaomi");
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, ROUTED_UNIVERSE);
     assertThat(featureManager.isConfigurationFeatureEnabled()).isFalse();
   }
 
@@ -84,7 +92,7 @@ public final class FeatureManagerTest {
   @Test
   public void isDeviceFlashingFeatureEnabled_oss_returnsFalse() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(false);
-    FeatureManager featureManager = new FeatureManager(mockEnvironment, "xiaomi");
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, ROUTED_UNIVERSE);
     assertThat(featureManager.isDeviceFlashingFeatureEnabled()).isFalse();
   }
 
@@ -92,7 +100,7 @@ public final class FeatureManagerTest {
   public void isConfigurationFeatureEnabled_scenario3_flagTrue_returnsTrue() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(false);
     flags.setAllFlags(ImmutableMap.of("fe_enable_configuration", "true"));
-    FeatureManager featureManager = new FeatureManager(mockEnvironment, "xiaomi");
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, ROUTED_UNIVERSE);
     assertThat(featureManager.isConfigurationFeatureEnabled()).isTrue();
   }
 
@@ -100,7 +108,7 @@ public final class FeatureManagerTest {
   public void isConfigurationFeatureEnabled_scenario3_flagFalse_returnsFalse() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(false);
     flags.setAllFlags(ImmutableMap.of("fe_enable_configuration", "false"));
-    FeatureManager featureManager = new FeatureManager(mockEnvironment, "xiaomi");
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, ROUTED_UNIVERSE);
     assertThat(featureManager.isConfigurationFeatureEnabled()).isFalse();
   }
 
@@ -109,7 +117,7 @@ public final class FeatureManagerTest {
   @Test
   public void otherFeatures_internal_google1p_returnsTrue() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    FeatureManager featureManager = new FeatureManager(mockEnvironment, "google_1p");
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, SELF_UNIVERSE);
     assertThat(featureManager.isDeviceLogcatFeatureEnabled()).isTrue();
     assertThat(featureManager.isDeviceQuarantineFeatureEnabled()).isTrue();
     assertThat(featureManager.isDeviceScreenshotFeatureEnabled()).isTrue();
@@ -118,7 +126,7 @@ public final class FeatureManagerTest {
   @Test
   public void otherFeatures_internal_nonGoogle1p_returnsFalse() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    FeatureManager featureManager = new FeatureManager(mockEnvironment, "xiaomi");
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, ROUTED_UNIVERSE);
     assertThat(featureManager.isDeviceLogcatFeatureEnabled()).isFalse();
     assertThat(featureManager.isDeviceQuarantineFeatureEnabled()).isFalse();
     assertThat(featureManager.isDeviceScreenshotFeatureEnabled()).isFalse();
@@ -127,7 +135,7 @@ public final class FeatureManagerTest {
   @Test
   public void otherFeatures_oss_returnsFalse() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(false);
-    FeatureManager featureManager = new FeatureManager(mockEnvironment, "google_1p");
+    FeatureManager featureManager = new FeatureManager(mockEnvironment, SELF_UNIVERSE);
     assertThat(featureManager.isDeviceLogcatFeatureEnabled()).isFalse();
     assertThat(featureManager.isDeviceQuarantineFeatureEnabled()).isFalse();
     assertThat(featureManager.isDeviceScreenshotFeatureEnabled()).isFalse();

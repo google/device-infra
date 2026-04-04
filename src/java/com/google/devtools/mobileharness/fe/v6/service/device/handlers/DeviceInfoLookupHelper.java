@@ -24,6 +24,7 @@ import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilte
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
@@ -41,7 +42,7 @@ public final class DeviceInfoLookupHelper {
    * @throws RuntimeException if the device is not found during future transformation
    */
   public static ListenableFuture<DeviceInfo> lookUpDeviceInfoAsync(
-      LabInfoProvider labInfoProvider, String deviceId, String universe, Executor executor) {
+      LabInfoProvider labInfoProvider, String deviceId, Universe universe, Executor executor) {
     GetLabInfoRequest labInfoRequest = createSingleDeviceLabInfoRequest(deviceId);
     return Futures.transform(
         labInfoProvider.getLabInfoAsync(labInfoRequest, universe),
@@ -72,7 +73,7 @@ public final class DeviceInfoLookupHelper {
   }
 
   private static DeviceInfo getDeviceInfoFromResponse(
-      GetLabInfoResponse response, String deviceId, String universe) {
+      GetLabInfoResponse response, String deviceId, Universe universe) {
     return response
         .getLabQueryResult()
         .getDeviceView()
@@ -84,6 +85,11 @@ public final class DeviceInfoLookupHelper {
         .orElseThrow(
             () ->
                 new RuntimeException(
-                    "Device not found: " + deviceId + " in universe: " + universe));
+                    "Device not found: "
+                        + deviceId
+                        + " in universe: "
+                        + (universe.hasSelfUniverse()
+                            ? "self"
+                            : universe.getRoutedUniverse().getAtsControllerId())));
   }
 }

@@ -21,6 +21,9 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.RoutedUniverse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.SelfUniverse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfigUiStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostConfigUiStatus;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
@@ -42,6 +45,18 @@ public final class ConfigServiceCapabilityTest {
 
   @Mock private Environment environment;
 
+  private static final Universe SELF_UNIVERSE =
+      Universe.newBuilder().setSelfUniverse(SelfUniverse.getDefaultInstance()).build();
+  private static final Universe ROUTED_UNIVERSE =
+      Universe.newBuilder()
+          .setRoutedUniverse(RoutedUniverse.newBuilder().setAtsControllerId("other").build())
+          .build();
+  private static final Universe UNSUPPORTED_UNIVERSE =
+      Universe.newBuilder()
+          .setRoutedUniverse(
+              RoutedUniverse.newBuilder().setAtsControllerId("unsupported_env").build())
+          .build();
+
   @Before
   public void setUp() {
     flags.setAllFlags(ImmutableMap.of("fe_connect_to_config_server", "true"));
@@ -51,9 +66,10 @@ public final class ConfigServiceCapabilityTest {
   public void isConfigServiceAvailable_googleInternal_supported() {
     when(environment.isGoogleInternal()).thenReturn(true);
 
-    assertThat(new ConfigServiceCapability(environment, "google_1p").isConfigServiceAvailable())
+    assertThat(new ConfigServiceCapability(environment, SELF_UNIVERSE).isConfigServiceAvailable())
         .isTrue();
-    assertThat(new ConfigServiceCapability(environment, "").isConfigServiceAvailable()).isTrue();
+    assertThat(new ConfigServiceCapability(environment, SELF_UNIVERSE).isConfigServiceAvailable())
+        .isTrue();
   }
 
   @Test
@@ -61,16 +77,17 @@ public final class ConfigServiceCapabilityTest {
     when(environment.isGoogleInternal()).thenReturn(true);
     flags.setAllFlags(ImmutableMap.of("fe_connect_to_config_server", "false"));
 
-    assertThat(new ConfigServiceCapability(environment, "google_1p").isConfigServiceAvailable())
+    assertThat(new ConfigServiceCapability(environment, SELF_UNIVERSE).isConfigServiceAvailable())
         .isTrue();
-    assertThat(new ConfigServiceCapability(environment, "").isConfigServiceAvailable()).isTrue();
+    assertThat(new ConfigServiceCapability(environment, SELF_UNIVERSE).isConfigServiceAvailable())
+        .isTrue();
   }
 
   @Test
   public void isConfigServiceAvailable_googleInternal_unsupported() {
     when(environment.isGoogleInternal()).thenReturn(true);
 
-    assertThat(new ConfigServiceCapability(environment, "other").isConfigServiceAvailable())
+    assertThat(new ConfigServiceCapability(environment, ROUTED_UNIVERSE).isConfigServiceAvailable())
         .isFalse();
   }
 
@@ -78,14 +95,15 @@ public final class ConfigServiceCapabilityTest {
   public void isConfigServiceAvailable_notGoogleInternal_supported() {
     when(environment.isGoogleInternal()).thenReturn(false);
 
-    assertThat(new ConfigServiceCapability(environment, "").isConfigServiceAvailable()).isTrue();
+    assertThat(new ConfigServiceCapability(environment, SELF_UNIVERSE).isConfigServiceAvailable())
+        .isTrue();
   }
 
   @Test
   public void isConfigServiceAvailable_notGoogleInternal_unsupported() {
     when(environment.isGoogleInternal()).thenReturn(false);
 
-    assertThat(new ConfigServiceCapability(environment, "other").isConfigServiceAvailable())
+    assertThat(new ConfigServiceCapability(environment, ROUTED_UNIVERSE).isConfigServiceAvailable())
         .isFalse();
   }
 
@@ -93,7 +111,7 @@ public final class ConfigServiceCapabilityTest {
   public void checkConfigServiceAvailability_googleInternal_unsupported() {
     when(environment.isGoogleInternal()).thenReturn(true);
     ConfigServiceCapability capability =
-        new ConfigServiceCapability(environment, "unsupported_env");
+        new ConfigServiceCapability(environment, UNSUPPORTED_UNIVERSE);
 
     UnsupportedOperationException exception =
         assertThrows(
@@ -109,7 +127,7 @@ public final class ConfigServiceCapabilityTest {
   public void checkConfigServiceAvailability_notGoogleInternal_unsupported() {
     when(environment.isGoogleInternal()).thenReturn(false);
     ConfigServiceCapability capability =
-        new ConfigServiceCapability(environment, "unsupported_env");
+        new ConfigServiceCapability(environment, UNSUPPORTED_UNIVERSE);
 
     UnsupportedOperationException exception =
         assertThrows(
@@ -123,7 +141,7 @@ public final class ConfigServiceCapabilityTest {
   @Test
   public void checkConfigServiceAvailability_disabledByFlag() {
     flags.setAllFlags(ImmutableMap.of("fe_connect_to_config_server", "false"));
-    ConfigServiceCapability capability = new ConfigServiceCapability(environment, "");
+    ConfigServiceCapability capability = new ConfigServiceCapability(environment, SELF_UNIVERSE);
 
     UnsupportedOperationException exception =
         assertThrows(
@@ -137,7 +155,7 @@ public final class ConfigServiceCapabilityTest {
   @Test
   public void calculateHostUiStatus_ats() {
     when(environment.isAts()).thenReturn(true);
-    ConfigServiceCapability capability = new ConfigServiceCapability(environment, "");
+    ConfigServiceCapability capability = new ConfigServiceCapability(environment, SELF_UNIVERSE);
 
     HostConfigUiStatus status = capability.calculateHostUiStatus();
 
@@ -151,7 +169,7 @@ public final class ConfigServiceCapabilityTest {
   @Test
   public void calculateHostUiStatus_notAts() {
     when(environment.isAts()).thenReturn(false);
-    ConfigServiceCapability capability = new ConfigServiceCapability(environment, "");
+    ConfigServiceCapability capability = new ConfigServiceCapability(environment, SELF_UNIVERSE);
 
     HostConfigUiStatus status = capability.calculateHostUiStatus();
 
@@ -166,7 +184,7 @@ public final class ConfigServiceCapabilityTest {
   @Test
   public void calculateDeviceUiStatus_ats() {
     when(environment.isAts()).thenReturn(true);
-    ConfigServiceCapability capability = new ConfigServiceCapability(environment, "");
+    ConfigServiceCapability capability = new ConfigServiceCapability(environment, SELF_UNIVERSE);
 
     DeviceConfigUiStatus status = capability.calculateDeviceUiStatus();
 
@@ -179,7 +197,7 @@ public final class ConfigServiceCapabilityTest {
   @Test
   public void calculateDeviceUiStatus_notAts() {
     when(environment.isAts()).thenReturn(false);
-    ConfigServiceCapability capability = new ConfigServiceCapability(environment, "");
+    ConfigServiceCapability capability = new ConfigServiceCapability(environment, SELF_UNIVERSE);
 
     DeviceConfigUiStatus status = capability.calculateDeviceUiStatus();
 

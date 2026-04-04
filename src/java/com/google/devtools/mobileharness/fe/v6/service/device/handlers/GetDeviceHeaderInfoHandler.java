@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHeaderInfoRequest;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
@@ -56,10 +57,12 @@ public final class GetDeviceHeaderInfoHandler {
   }
 
   public ListenableFuture<DeviceHeaderInfo> getDeviceHeaderInfo(
-      GetDeviceHeaderInfoRequest request) {
-    String universe = request.getUniverse().isEmpty() ? "google_1p" : request.getUniverse();
+      GetDeviceHeaderInfoRequest request, Universe universe) {
     String deviceId = request.getId();
-    String key = universe + ":" + deviceId;
+    String key =
+        (universe.hasSelfUniverse() ? "self" : universe.getRoutedUniverse().getAtsControllerId())
+            + ":"
+            + deviceId;
     logger.atInfo().log("Loading device header info for %s", key);
 
     // 1. Fetch DeviceInfo

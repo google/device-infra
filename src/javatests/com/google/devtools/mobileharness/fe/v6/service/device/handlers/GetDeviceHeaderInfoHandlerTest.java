@@ -30,6 +30,8 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.GroupedDevices;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.DeviceView;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.SelfUniverse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHeaderInfoRequest;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
@@ -53,6 +55,8 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public final class GetDeviceHeaderInfoHandlerTest {
 
+  private static final Universe SELF_UNIVERSE =
+      Universe.newBuilder().setSelfUniverse(SelfUniverse.getDefaultInstance()).build();
   private static final String DEVICE_ID = "test_device_id";
   private static final String UNIVERSE = "test_universe";
   private static final String HOST_NAME = "test_host.google.com";
@@ -106,7 +110,8 @@ public final class GetDeviceHeaderInfoHandlerTest {
     GetDeviceHeaderInfoRequest request =
         GetDeviceHeaderInfoRequest.newBuilder().setId(DEVICE_ID).setUniverse(UNIVERSE).build();
 
-    DeviceHeaderInfo response = getDeviceHeaderInfoHandler.getDeviceHeaderInfo(request).get();
+    DeviceHeaderInfo response =
+        getDeviceHeaderInfoHandler.getDeviceHeaderInfo(request, SELF_UNIVERSE).get();
 
     assertThat(response).isEqualTo(DeviceHeaderInfo.newBuilder().setId(DEVICE_ID).build());
   }

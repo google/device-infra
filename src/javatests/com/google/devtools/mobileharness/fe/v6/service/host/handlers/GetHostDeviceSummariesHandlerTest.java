@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.Universe;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceType;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthState;
@@ -71,6 +72,7 @@ public final class GetHostDeviceSummariesHandlerTest {
   private static final GetHostDeviceSummariesRequest REQUEST =
       GetHostDeviceSummariesRequest.newBuilder().setHostName(HOST_NAME).build();
   private static final Instant NOW = Instant.parse("2025-11-21T10:00:00Z");
+  private static final Universe UNIVERSE = Universe.getDefaultInstance();
 
   private static final DeviceInfo DEVICE_INFO =
       DeviceInfo.newBuilder()
@@ -123,7 +125,7 @@ public final class GetHostDeviceSummariesHandlerTest {
         .thenReturn(immediateFuture(LAB_INFO_RESPONSE));
 
     GetHostDeviceSummariesResponse response =
-        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST).get();
+        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST, UNIVERSE).get();
 
     assertThat(response.getDeviceSummariesList()).hasSize(1);
     DeviceSummary expectedDeviceSummary =
@@ -151,7 +153,7 @@ public final class GetHostDeviceSummariesHandlerTest {
         .thenReturn(immediateFuture(GetLabInfoResponse.getDefaultInstance()));
 
     GetHostDeviceSummariesResponse response =
-        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST).get();
+        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST, UNIVERSE).get();
 
     assertThat(response.getDeviceSummariesList()).isEmpty();
   }
@@ -191,7 +193,7 @@ public final class GetHostDeviceSummariesHandlerTest {
         .thenReturn(immediateFuture(labInfoResponseMultiple));
 
     GetHostDeviceSummariesResponse response =
-        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST).get();
+        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST, UNIVERSE).get();
 
     assertThat(response.getDeviceSummariesList()).hasSize(2);
     assertThat(response.getDeviceSummaries(0).getId()).isEqualTo(DEVICE_ID);
@@ -250,7 +252,7 @@ public final class GetHostDeviceSummariesHandlerTest {
                     .build()));
 
     GetHostDeviceSummariesResponse response =
-        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST).get();
+        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST, UNIVERSE).get();
 
     assertThat(response.getDeviceSummaries(0).getId()).isEqualTo("testbed_device");
     assertThat(response.getDeviceSummaries(0).getSubDevicesList()).hasSize(1);
@@ -298,7 +300,7 @@ public final class GetHostDeviceSummariesHandlerTest {
                     .build()));
 
     GetHostDeviceSummariesResponse response =
-        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST).get();
+        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST, UNIVERSE).get();
 
     assertThat(response.getDeviceSummariesList()).hasSize(1);
     assertThat(response.getDeviceSummaries(0).getSubDevicesCount()).isEqualTo(1);
