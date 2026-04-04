@@ -1,14 +1,17 @@
 import {Injectable} from '@angular/core';
 import {Observable, of, throwError} from 'rxjs';
+import {delay} from 'rxjs/operators';
 
 import {
+  CanRolloutResult,
   DecommissionHostResponse,
-  ReleaseLabServerRequest,
-  ReleaseLabServerResponse,
   GetHostDebugInfoResponse,
   HostHeaderInfo,
   HostReleaseConfig,
+  HostRolloutAction,
   PopularFlag,
+  ReleaseLabServerRequest,
+  ReleaseLabServerResponse,
   RestartLabServerResponse,
   StartLabServerResponse,
   StopLabServerResponse,
@@ -56,7 +59,7 @@ export class FakeHostService extends HostService {
     return of({
       hostName,
       actions,
-    });
+    }).pipe(delay(1000));
   }
 
   /**
@@ -87,14 +90,14 @@ export class FakeHostService extends HostService {
           actions,
         },
         overviewContent: scenario.overview,
-      });
+      }).pipe(delay(1000));
     } else {
       return throwError(
         () =>
           new Error(
             `Host with '${hostName}' not found or has no overview in mock data.`,
           ),
-      );
+      ).pipe(delay(1000));
     }
   }
 
@@ -103,9 +106,9 @@ export class FakeHostService extends HostService {
   ): Observable<GetHostDeviceSummariesResponse> {
     const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
     if (scenario && scenario.deviceSummaries) {
-      return of({deviceSummaries: scenario.deviceSummaries});
+      return of({deviceSummaries: scenario.deviceSummaries}).pipe(delay(1000));
     }
-    return of({deviceSummaries: []});
+    return of({deviceSummaries: []}).pipe(delay(1000));
   }
 
   override getHostDebugInfo(
@@ -126,7 +129,7 @@ export class FakeHostService extends HostService {
         },
       ],
       timestamp: new Date().toISOString(),
-    });
+    }).pipe(delay(1000));
   }
 
   override getPopularFlags(hostName: string): Observable<PopularFlag[]> {
@@ -146,7 +149,7 @@ export class FakeHostService extends HostService {
         description: 'Enables support for Linux devices',
         cmd: '--enable_linux_device',
       },
-    ]);
+    ]).pipe(delay(1000));
   }
 
   override updatePassThroughFlags(
@@ -156,14 +159,14 @@ export class FakeHostService extends HostService {
     const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
     if (scenario && scenario.overview) {
       scenario.overview.labServer.passThroughFlags = flags;
-      return of(undefined);
+      return of(undefined).pipe(delay(1000));
     } else {
       return throwError(
         () =>
           new Error(
             `Host with '${hostName}' not found or has no overview in mock data.`,
           ),
-      );
+      ).pipe(delay(1000));
     }
   }
 
@@ -191,7 +194,7 @@ export class FakeHostService extends HostService {
         ],
         asyncCMD: ['sudo systemctl start mobileharness-lab'],
       },
-    ]);
+    ]).pipe(delay(1000));
   }
 
   override decommissionMissingDevices(
@@ -203,14 +206,14 @@ export class FakeHostService extends HostService {
       scenario.deviceSummaries = scenario.deviceSummaries.filter(
         (d) => !deviceControlIds.includes(d.id),
       );
-      return of(undefined);
+      return of(undefined).pipe(delay(1000));
     } else {
       return throwError(
         () =>
           new Error(
             `Host with '${hostName}' not found or has no devices in mock data.`,
           ),
-      );
+      ).pipe(delay(1000));
     }
   }
 
@@ -357,7 +360,7 @@ export class FakeHostService extends HostService {
       return of({
         status: EligibilityStatus.BLOCK_ALL_PERMISSION_DENIED,
         results,
-      });
+      }).pipe(delay(1000));
     }
 
     // 2. Check for ineligible devices
@@ -370,7 +373,7 @@ export class FakeHostService extends HostService {
       return of({
         status: EligibilityStatus.BLOCK_DEVICES_INELIGIBLE,
         results,
-      });
+      }).pipe(delay(1000));
     }
 
     // 3. Check for common proxy
@@ -387,7 +390,7 @@ export class FakeHostService extends HostService {
         return of({
           status: EligibilityStatus.BLOCK_NO_COMMON_PROXY,
           results,
-        });
+        }).pipe(delay(1000));
       }
 
       // Calculate common runAs candidates
@@ -412,7 +415,7 @@ export class FakeHostService extends HostService {
           commonRunAsCandidates: commonRunAs,
           maxDurationHours,
         },
-      });
+      }).pipe(delay(1000));
     }
 
     // Default empty case (should not happen if deviceControlIds is not empty)
@@ -424,7 +427,7 @@ export class FakeHostService extends HostService {
         commonRunAsCandidates: [],
         maxDurationHours: 12,
       },
-    });
+    }).pipe(delay(1000));
   }
 
   /**
@@ -443,7 +446,7 @@ export class FakeHostService extends HostService {
         sessionUrl: `https://xcid.google.example.com/provider/mh/create/?device_id=${config.deviceId}`,
       })),
     };
-    return of(response);
+    return of(response).pipe(delay(1000));
   }
 
   override decommissionHost(
@@ -452,11 +455,11 @@ export class FakeHostService extends HostService {
     const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
     if (scenario) {
       // Simulate success if host is found in mock data.
-      return of({});
+      return of({}).pipe(delay(5000));
     } else {
       return throwError(
         () => new Error(`Host with '${hostName}' not found in mock data.`),
-      );
+      ).pipe(delay(1000));
     }
   }
 
@@ -467,7 +470,7 @@ export class FakeHostService extends HostService {
     return of({
       trackingUrl:
         'https://rollouts.corp.example.com/rollouts/prodchange-rollout/abc%2F123%2Frrui',
-    });
+    }).pipe(delay(1000));
   }
 
   override startLabServer(
@@ -476,7 +479,7 @@ export class FakeHostService extends HostService {
     return of({
       trackingUrl:
         'https://rollouts.corp.example.com/rollouts/prodchange-rollout/start%2F123',
-    });
+    }).pipe(delay(1000));
   }
 
   override restartLabServer(
@@ -485,15 +488,28 @@ export class FakeHostService extends HostService {
     return of({
       trackingUrl:
         'https://rollouts.corp.example.com/rollouts/prodchange-rollout/restart%2F123',
-    });
+    }).pipe(delay(1000));
   }
 
-  override stopLabServer(
-    hostName: string,
-  ): Observable<StopLabServerResponse> {
+  override stopLabServer(hostName: string): Observable<StopLabServerResponse> {
     return of({
       trackingUrl:
         'https://rollouts.corp.example.com/rollouts/prodchange-rollout/stop%2F123',
-    });
+    }).pipe(delay(1000));
+  }
+
+  override canRollout(
+    hostName: string,
+    action: HostRolloutAction,
+  ): Observable<CanRolloutResult> {
+    const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    if (scenario && scenario.canRollout) {
+      return of(scenario.canRollout).pipe(delay(1000));
+    }
+    return of({
+      canRollout: true,
+      needUpgrade: false,
+      message: '',
+    }).pipe(delay(1000));
   }
 }

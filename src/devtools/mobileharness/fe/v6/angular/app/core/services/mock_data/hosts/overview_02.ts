@@ -65,4 +65,9 @@ export const OVERVIEW_02: MockHostScenario = {
   },
   defaultDeviceConfig: null,
   actions: createHostActions('RUNNING', false),
+  canRollout: {
+    canRollout: false,
+    needUpgrade: false,
+    message: 'The previous rollout process is in progress, please wait...',
+  },
 };

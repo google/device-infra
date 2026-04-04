@@ -153,11 +153,19 @@ export function createHostActions(
         : '',
     },
     // Not directly on the action bar but included in the model
-    deploy: {enabled: manageHostEnabled, visible: true, tooltip: ''},
-    updatePassThroughFlags: {
+    deploy: {
       enabled: manageHostEnabled,
       visible: true,
-      tooltip: '',
+      tooltip: manageHostEnabled
+        ? 'Deploy a release'
+        : 'Release management is not available for Shared Labs',
+    },
+    updatePassThroughFlags: {
+      enabled: manageHostEnabled,
+      visible: manageHostEnabled,
+      tooltip: manageHostEnabled
+        ? 'Edit Pass Through Flags'
+        : 'Pass Through Flags management is not available for Shared Labs',
     },
   };
 }

@@ -79,9 +79,26 @@ export declare interface ReleasePort {
 }
 
 /**
- * Response for DecommissionHost API.
+ * Response for DecommissionHostResponse API.
  */
 export declare interface DecommissionHostResponse {}
+
+/**
+ * Represents the available rollout actions for a host.
+ */
+export type HostRolloutAction = 'start' | 'stop' | 'restart';
+
+/**
+ * Result of the check for rollout eligibility.
+ */
+export interface CanRolloutResult {
+  /** Whether the rollout action can be performed. Default is false. */
+  canRollout?: boolean;
+  /** Whether a version upgrade is required or recommended. Default is false. */
+  needUpgrade?: boolean;
+  /** Descriptive message explaining the rollout status or reasons for ineligibility. */
+  message?: string;
+}
 
 /**
  * Response for those rollout action

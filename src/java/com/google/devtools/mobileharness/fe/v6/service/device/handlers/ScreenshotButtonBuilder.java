@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 import com.google.common.base.Ascii;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import javax.inject.Inject;

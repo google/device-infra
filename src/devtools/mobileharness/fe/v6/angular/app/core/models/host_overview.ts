@@ -233,7 +233,7 @@ export declare interface HostOverview {
   /** Links to diagnostic tools (logs, statusz, etc.). */
   readonly diagnosticLinks?: DiagnosticLink[];
   /** Whether a newer release version is available for this host. */
-  readonly canUpgrade: boolean;
+  readonly canUpgrade?: boolean;
 }
 
 /**

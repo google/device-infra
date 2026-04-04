@@ -7,13 +7,14 @@ import {TestBed} from '@angular/core/testing';
 
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
+  CanRolloutResult,
   DecommissionHostResponse,
-  ReleaseLabServerRequest,
-  ReleaseLabServerResponse,
   GetHostDebugInfoResponse,
   HostHeaderInfo,
   HostReleaseConfig,
   PopularFlag,
+  ReleaseLabServerRequest,
+  ReleaseLabServerResponse,
   RestartLabServerResponse,
   StartLabServerResponse,
   StopLabServerResponse,
@@ -243,6 +244,22 @@ describe('HttpHostService', () => {
       'http://testdomain.com/v6/hosts/test-host:stop',
     );
     expect(req.request.method).toBe('POST');
+    req.flush(mockResponse);
+  });
+
+  it('should check if host can rollout', () => {
+    const mockResponse: CanRolloutResult = {
+      canRollout: true,
+      needUpgrade: false,
+      message: '',
+    };
+    service.canRollout('test-host', 'restart').subscribe((res) => {
+      expect(res).toEqual(mockResponse);
+    });
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/hosts/test-host:can-rollout?action=restart',
+    );
+    expect(req.request.method).toBe('GET');
     req.flush(mockResponse);
   });
 });
