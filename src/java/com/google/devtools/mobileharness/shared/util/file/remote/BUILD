@@ -58,6 +58,7 @@ java_library(
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_http_client_google_http_client",
+        "@maven//:com_google_http_client_google_http_client_apache_v2",
         "@maven//:com_google_http_client_google_http_client_gson",
         "@protobuf//:protobuf_java",
     ],
