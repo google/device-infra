@@ -115,11 +115,14 @@ public abstract class GcsUtil {
       NONE,
       CREDENTIAL_FILE,
       APP_DEFAULT,
+      ANONYMOUS,
     }
 
     public abstract Type getType();
 
     public abstract void none();
+
+    public abstract void anonymous();
 
     public abstract String credentialFile();
 
@@ -127,6 +130,10 @@ public abstract class GcsUtil {
 
     public static CredentialType ofNone() {
       return AutoOneOf_GcsUtil_CredentialType.none();
+    }
+
+    public static CredentialType ofAnonymous() {
+      return AutoOneOf_GcsUtil_CredentialType.anonymous();
     }
 
     public static CredentialType ofCredentialFile(String credentialFile) {
