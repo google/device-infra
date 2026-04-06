@@ -17,6 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.api.device;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
@@ -28,6 +29,9 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 /** Failed device that needs recovery jobs. */
 @RetainDeviceInfoAnnotation
 public class FailedDevice extends BaseDevice {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
   /** Name of the driver type which takes no action for a test. */
   @VisibleForTesting static final String NO_OP_DRIVER = "NoOpDriver";
 
