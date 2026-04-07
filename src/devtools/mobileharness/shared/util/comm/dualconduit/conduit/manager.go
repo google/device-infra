@@ -36,7 +36,7 @@ func NewManager() *Manager {
 // the conduit will automatically shut down and remove itself from the manager.
 //
 // Returns ErrAlreadyExists if a Conduit with the same ID already exists.
-func (m *Manager) Add(ctx context.Context, id string, meta *dconpb.EstablishConduitRequest, rs rsocket.CloseableRSocket) (*Conduit, error) {
+func (m *Manager) Add(ctx context.Context, id string, meta *dconpb.EstablishConduitRequest, rs rsocket.CloseableRSocket, beforeClose func()) (*Conduit, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -52,7 +52,7 @@ func (m *Manager) Add(ctx context.Context, id string, meta *dconpb.EstablishCond
 		m.mu.Unlock()
 	}
 
-	c := New(ctx, id, meta, rs, onRemove)
+	c := New(ctx, id, meta, rs, onRemove, beforeClose)
 	m.conduits[id] = c
 	return c, nil
 }

@@ -20,7 +20,7 @@ func TestConduitCloseViaPumpCtx(t *testing.T) {
 
 	c := New(ctx, "test-id", nil, mrs, func() {
 		close(removed)
-	})
+	}, nil)
 
 	if c.ID != "test-id" {
 		t.Errorf("New() ID = %v, want %v", c.ID, "test-id")
@@ -61,7 +61,7 @@ func TestConduitCloseViaRSocket(t *testing.T) {
 
 	c := New(ctx, "test-id2", nil, mrs, func() {
 		close(removed)
-	})
+	}, nil)
 
 	// Simulate RSocket connection drop.
 	mrs.Close()
@@ -91,7 +91,7 @@ func TestConduitExplicitClose(t *testing.T) {
 
 	c := New(ctx, "test-id3", nil, mrs, func() {
 		removed = true
-	})
+	}, nil)
 
 	// Explicitly close the Conduit.
 	if err := c.Close(); err != nil {
@@ -129,7 +129,7 @@ func TestConduitCloseIdempotent(t *testing.T) {
 
 	c := New(ctx, "test-id4", nil, mrs, func() {
 		removedCount++
-	})
+	}, nil)
 
 	// Explicitly close the Conduit multiple times.
 	if err := c.Close(); err != nil {
