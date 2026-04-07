@@ -54,7 +54,7 @@ func TestRxConn_ToFlux_EOF(t *testing.T) {
 	select {
 	case p := <-resultChan:
 		if string(p.Data()) != "hello" {
-			t.Errorf("Got payload %q, want %q", string(p.Data()), "hello")
+			t.Errorf("ToFlux() got payload %q, want %q", string(p.Data()), "hello")
 		}
 	case <-time.After(time.Second):
 		t.Fatal("timeout waiting for data")
@@ -64,7 +64,7 @@ func TestRxConn_ToFlux_EOF(t *testing.T) {
 	case <-doneChan:
 		// Success
 	case err := <-errChan:
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("ToFlux() error = %v, want nil", err)
 	case <-time.After(time.Second):
 		t.Fatal("timeout waiting for EOF (OnComplete)")
 	}
@@ -81,9 +81,13 @@ func TestRxConn_ToFlux_ContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 
 	f := conn.ToFlux(ctx)
+	doneChan := make(chan struct{})
 	errChan := make(chan error, 1)
 
 	f.Subscribe(t.Context(),
+		rx.OnComplete(func() {
+			close(doneChan)
+		}),
 		rx.OnError(func(err error) {
 			errChan <- err
 		}),
@@ -92,14 +96,14 @@ func TestRxConn_ToFlux_ContextCancellation(t *testing.T) {
 	// Cancel context immediately
 	cancel()
 
-	// Context cancellation should result in an error propagating
+	// Context cancellation should result in completion
 	select {
+	case <-doneChan:
+		// Success
 	case err := <-errChan:
-		if err != context.Canceled {
-			t.Errorf("Got error %v, want %v", err, context.Canceled)
-		}
+		t.Errorf("ToFlux() error = %v, want nil", err)
 	case <-time.After(time.Second):
-		t.Fatal("timeout waiting for OnError due to context cancellation")
+		t.Fatal("timeout waiting for OnComplete due to context cancellation")
 	}
 }
 
@@ -130,11 +134,11 @@ func TestRxConn_FromFlux_DataAndEOFPropagation(t *testing.T) {
 	n, err := clientSide.Read(buf)
 
 	if err != nil {
-		t.Fatalf("unexpected error reading from pipe: %v", err)
+		t.Fatalf("FromFlux() error reading from pipe = %v, want nil", err)
 	}
 
 	if string(buf[:n]) != "from_flux" {
-		t.Errorf("Got data %q, want %q", string(buf[:n]), "from_flux")
+		t.Errorf("FromFlux() got data %q, want %q", string(buf[:n]), "from_flux")
 	}
 
 	// Now it should return io.ErrClosedPipe because net.Pipe() CloseWrite doesn't exist natively.
@@ -233,7 +237,7 @@ func TestRxConn_Wait_CloseFromFluxFirst(t *testing.T) {
 
 	select {
 	case <-waitDone:
-		t.Fatal("Wait() returned prematurely before pumps were stopped")
+		t.Fatal("Wait() got complete, want blocked")
 	case <-time.After(100 * time.Millisecond):
 		// Expected to block
 	}
@@ -243,7 +247,7 @@ func TestRxConn_Wait_CloseFromFluxFirst(t *testing.T) {
 
 	select {
 	case <-waitDone:
-		t.Fatal("Wait() returned prematurely after only FromFlux stopped")
+		t.Fatal("Wait() got complete, want blocked after only FromFlux stopped")
 	case <-time.After(100 * time.Millisecond):
 		// Expected to STILL block since ToFlux is still running
 	}
@@ -290,7 +294,7 @@ func TestRxConn_Wait_CloseToFluxFirst(t *testing.T) {
 
 	select {
 	case <-waitDone:
-		t.Fatal("Wait() returned prematurely before pumps were stopped")
+		t.Fatal("Wait() got complete, want blocked")
 	case <-time.After(100 * time.Millisecond):
 		// Expected to block
 	}
@@ -300,7 +304,7 @@ func TestRxConn_Wait_CloseToFluxFirst(t *testing.T) {
 
 	select {
 	case <-waitDone:
-		t.Fatal("Wait() returned prematurely after only ToFlux stopped")
+		t.Fatal("Wait() got complete, want blocked after only ToFlux stopped")
 	case <-time.After(100 * time.Millisecond):
 		// Expected to STILL block since FromFlux is still running
 	}

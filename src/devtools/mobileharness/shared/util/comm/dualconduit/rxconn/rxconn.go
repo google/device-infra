@@ -86,21 +86,19 @@ func (c *Conn) ToFlux(ctx context.Context) flux.Flux {
 			for {
 				select {
 				case <-ctx.Done():
-					sink.Error(ctx.Err())
+					sink.Complete()
 					return
 				case <-subscriberCtx.Done():
-					sink.Error(subscriberCtx.Err())
+					sink.Complete()
 					return
 				case data, ok := <-upstreamChan:
 					if !ok {
 						// upstreamChan closed string, check errors
 						select {
-						case err := <-errChan:
-							if err == io.EOF {
-								sink.Complete()
-							} else {
-								sink.Error(err)
-							}
+						case <-errChan:
+							// Treat ALL read errors as clean completion to avoid sending ERROR frames
+							// that cause panics in rsocket-go Responder side.
+							sink.Complete()
 						default:
 							sink.Complete()
 						}
@@ -114,10 +112,9 @@ func (c *Conn) ToFlux(ctx context.Context) flux.Flux {
 }
 
 // FromFlux subscribes to the Flux and writes to the active socket.
-func (c *Conn) FromFlux(ctx context.Context, incomingFlux flux.Flux) {
+func (c *Conn) FromFlux(ctx context.Context, incoming flux.Flux) {
 	c.wg.Add(1)
-	// The incomingFlux is provided by the RSocket RequestChannel handler
-	incomingFlux.Subscribe(ctx,
+	incoming.Subscribe(ctx,
 		rx.OnNext(func(p payload.Payload) error {
 			data := p.Data()
 			// Write in a loop to ensure all bytes are flushed
