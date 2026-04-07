@@ -39,10 +39,10 @@ import com.google.inject.assistedinject.AssistedInject;
 public class FeatureManager {
 
   private final Environment environment;
-  private final String universe;
+  private final UniverseScope universe;
 
   @AssistedInject
-  FeatureManager(Environment environment, @Assisted String universe) {
+  FeatureManager(Environment environment, @Assisted UniverseScope universe) {
     this.environment = environment;
     this.universe = universe;
   }
@@ -54,7 +54,7 @@ public class FeatureManager {
    * builds.
    */
   public boolean isDeviceFlashingFeatureEnabled() {
-    return environment.isGoogleInternal() && universe.equals("google_1p");
+    return environment.isGoogleInternal() && universe instanceof UniverseScope.SelfUniverse;
   }
 
   /**
@@ -64,7 +64,7 @@ public class FeatureManager {
    * builds.
    */
   public boolean isDeviceLogcatFeatureEnabled() {
-    return environment.isGoogleInternal() && universe.equals("google_1p");
+    return environment.isGoogleInternal() && universe instanceof UniverseScope.SelfUniverse;
   }
 
   /**
@@ -74,7 +74,7 @@ public class FeatureManager {
    * builds.
    */
   public boolean isDeviceQuarantineFeatureEnabled() {
-    return environment.isGoogleInternal() && universe.equals("google_1p");
+    return environment.isGoogleInternal() && universe instanceof UniverseScope.SelfUniverse;
   }
 
   /**
@@ -84,18 +84,22 @@ public class FeatureManager {
    * builds.
    */
   public boolean isDeviceScreenshotFeatureEnabled() {
-    return environment.isGoogleInternal() && universe.equals("google_1p");
+    return environment.isGoogleInternal() && universe instanceof UniverseScope.SelfUniverse;
   }
 
   /**
-   * Checks if the device configuration feature is enabled.
+   * Checks if the configuration feature is enabled.
    *
-   * <p>In Google internal builds, this feature is only available in the {@code google_1p} universe.
-   * In OSS builds, it is always available. In both cases, the {@code fe_enable_configuration} flag
-   * must be set.
+   * <p>In Google internal builds, configuration is always enabled for {@link
+   * UniverseScope.SelfUniverse} and disabled for routed universes. In OSS builds, availability is
+   * gated by the {@code fe_enable_configuration} flag regardless of universe.
    */
   public boolean isConfigurationFeatureEnabled() {
-    boolean enabledByUniverse = !environment.isGoogleInternal() || universe.equals("google_1p");
-    return enabledByUniverse && Flags.instance().feEnableConfiguration.getNonNull();
+    if (environment.isGoogleInternal()) {
+      // Internal builds: configuration is always available for the self universe, no flag needed.
+      return universe instanceof UniverseScope.SelfUniverse;
+    }
+    // OSS/ATS: availability depends on the flag.
+    return Flags.instance().feEnableConfiguration.getNonNull();
   }
 }

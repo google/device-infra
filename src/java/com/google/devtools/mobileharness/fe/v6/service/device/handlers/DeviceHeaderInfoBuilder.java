@@ -23,6 +23,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceAction
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HostInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineInfo;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseFactory;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.Locale;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -37,6 +39,7 @@ public class DeviceHeaderInfoBuilder {
   private final QuarantineButtonBuilder quarantineButtonBuilder;
   private final ScreenshotButtonBuilder screenshotButtonBuilder;
   private final ConfigurationButtonBuilder configurationButtonBuilder;
+  private final UniverseFactory universeFactory;
 
   @Inject
   DeviceHeaderInfoBuilder(
@@ -44,12 +47,30 @@ public class DeviceHeaderInfoBuilder {
       LogcatButtonBuilder logcatButtonBuilder,
       QuarantineButtonBuilder quarantineButtonBuilder,
       ScreenshotButtonBuilder screenshotButtonBuilder,
-      ConfigurationButtonBuilder configurationButtonBuilder) {
+      ConfigurationButtonBuilder configurationButtonBuilder,
+      UniverseFactory universeFactory) {
     this.flashButtonBuilder = flashButtonBuilder;
     this.logcatButtonBuilder = logcatButtonBuilder;
     this.quarantineButtonBuilder = quarantineButtonBuilder;
     this.screenshotButtonBuilder = screenshotButtonBuilder;
     this.configurationButtonBuilder = configurationButtonBuilder;
+    this.universeFactory = universeFactory;
+  }
+
+  /**
+   * Builds DeviceHeaderInfo based on device info and configs.
+   *
+   * @deprecated Use {@link #buildDeviceHeaderInfo(DeviceInfo, Optional, Optional, UniverseScope)}
+   *     instead.
+   */
+  @Deprecated
+  public DeviceHeaderInfo buildDeviceHeaderInfo(
+      DeviceInfo deviceInfo,
+      Optional<DeviceConfig> unusedDeviceConfigOpt,
+      Optional<LabConfig> unusedLabConfigOpt,
+      String universe) {
+    return buildDeviceHeaderInfo(
+        deviceInfo, unusedDeviceConfigOpt, unusedLabConfigOpt, universeFactory.create(universe));
   }
 
   /** Builds DeviceHeaderInfo based on device info and configs. */
@@ -57,7 +78,7 @@ public class DeviceHeaderInfoBuilder {
       DeviceInfo deviceInfo,
       Optional<DeviceConfig> unusedDeviceConfigOpt,
       Optional<LabConfig> unusedLabConfigOpt,
-      String universe) {
+      UniverseScope universe) {
     return DeviceHeaderInfo.newBuilder()
         .setId(deviceInfo.getDeviceLocator().getId())
         .setHost(

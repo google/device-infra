@@ -22,5 +22,5 @@ import com.google.inject.assistedinject.Assisted;
 public interface FeatureManagerFactory {
 
   /** Creates a {@link FeatureManager} for the given universe. */
-  FeatureManager create(@Assisted String universe);
+  FeatureManager create(@Assisted UniverseScope universe);
 }

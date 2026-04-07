@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButton
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -38,7 +39,7 @@ import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class QuarantineButtonBuilderTest {
-  private static final String UNIVERSE = "google_1p";
+  private static final UniverseScope UNIVERSE = new UniverseScope.SelfUniverse();
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Mock private FeatureManagerFactory featureManagerFactory;

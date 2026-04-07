@@ -22,6 +22,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInf
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -39,7 +40,7 @@ class ScreenshotButtonBuilder {
     this.featureReadiness = featureReadiness;
   }
 
-  public ActionButtonState build(DeviceInfo deviceInfo, String universe) {
+  public ActionButtonState build(DeviceInfo deviceInfo, UniverseScope universe) {
     if (!featureManagerFactory.create(universe).isDeviceScreenshotFeatureEnabled()) {
       return ActionButtonState.newBuilder().setVisible(false).build();
     }

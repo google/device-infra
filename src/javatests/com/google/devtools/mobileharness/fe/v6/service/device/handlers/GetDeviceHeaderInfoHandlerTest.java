@@ -97,7 +97,7 @@ public final class GetDeviceHeaderInfoHandlerTest {
         .thenReturn(immediateFuture(Optional.empty()));
     when(configurationProvider.getLabConfig(any(), any()))
         .thenReturn(immediateFuture(Optional.empty()));
-    when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(any(), any(), any(), any()))
+    when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(any(), any(), any(), any(String.class)))
         .thenReturn(DeviceHeaderInfo.newBuilder().setId(DEVICE_ID).build());
   }
 

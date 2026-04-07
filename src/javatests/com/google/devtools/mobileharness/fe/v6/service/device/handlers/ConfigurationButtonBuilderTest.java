@@ -23,6 +23,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInf
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -34,7 +35,7 @@ import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class ConfigurationButtonBuilderTest {
-  private static final String UNIVERSE = "google_1p";
+  private static final UniverseScope SELF_UNIVERSE = new UniverseScope.SelfUniverse();
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Mock private FeatureManagerFactory featureManagerFactory;
@@ -45,7 +46,7 @@ public final class ConfigurationButtonBuilderTest {
   @Before
   public void setUp() {
     configurationButtonBuilder = new ConfigurationButtonBuilder(featureManagerFactory);
-    when(featureManagerFactory.create(UNIVERSE)).thenReturn(featureManager);
+    when(featureManagerFactory.create(SELF_UNIVERSE)).thenReturn(featureManager);
   }
 
   @Test
@@ -54,7 +55,7 @@ public final class ConfigurationButtonBuilderTest {
 
     assertThat(
             configurationButtonBuilder
-                .build(DeviceInfo.getDefaultInstance(), UNIVERSE)
+                .build(DeviceInfo.getDefaultInstance(), SELF_UNIVERSE)
                 .getVisible())
         .isFalse();
   }
@@ -64,7 +65,7 @@ public final class ConfigurationButtonBuilderTest {
     when(featureManager.isConfigurationFeatureEnabled()).thenReturn(true);
 
     ActionButtonState state =
-        configurationButtonBuilder.build(DeviceInfo.getDefaultInstance(), UNIVERSE);
+        configurationButtonBuilder.build(DeviceInfo.getDefaultInstance(), SELF_UNIVERSE);
 
     assertThat(state.getVisible()).isTrue();
     assertThat(state.getEnabled()).isTrue();

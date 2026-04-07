@@ -23,6 +23,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButton
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -41,7 +42,7 @@ public class FlashButtonBuilder {
     this.featureReadiness = featureReadiness;
   }
 
-  public FlashActionButtonState build(DeviceInfo deviceInfo, String universe) {
+  public FlashActionButtonState build(DeviceInfo deviceInfo, UniverseScope universe) {
     if (!featureManagerFactory.create(universe).isDeviceFlashingFeatureEnabled()) {
       return FlashActionButtonState.newBuilder()
           .setState(ActionButtonState.newBuilder().setVisible(false))
