@@ -16,8 +16,19 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.config.util;
 
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
+
 /** Factory for creating {@link ConfigServiceCapability} instances. */
 public interface ConfigServiceCapabilityFactory {
 
-  ConfigServiceCapability create(String universe);
+  ConfigServiceCapability create(UniverseScope universe);
+
+  /**
+   * @deprecated Use {@link #create(UniverseScope)} instead. TODO: Remove after all callers are
+   *     migrated to UniverseScope.
+   */
+  @Deprecated
+  default ConfigServiceCapability create(String universe) {
+    return create(UniverseScope.fromString(universe));
+  }
 }

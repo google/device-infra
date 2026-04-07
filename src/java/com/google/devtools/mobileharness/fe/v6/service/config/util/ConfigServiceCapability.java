@@ -23,6 +23,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostDeviceCo
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostPropertiesUiStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.PartStatus;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
@@ -34,18 +35,30 @@ import com.google.inject.assistedinject.AssistedInject;
 public class ConfigServiceCapability {
 
   private final Environment environment;
-  private final String universe;
+  private final UniverseScope universe;
 
   @AssistedInject
-  ConfigServiceCapability(Environment environment, @Assisted String universe) {
+  ConfigServiceCapability(Environment environment, @Assisted UniverseScope universe) {
     this.environment = environment;
     this.universe = universe;
   }
 
+  /**
+   * @deprecated Use {@link #ConfigServiceCapability(Environment, UniverseScope)} instead. TODO:
+   *     Remove after all callers are migrated to UniverseScope.
+   */
+  @Deprecated
+  @AssistedInject
+  ConfigServiceCapability(Environment environment, @Assisted String universe) {
+    this(environment, UniverseScope.fromString(universe));
+  }
+
+  // TODO: Consolidate with FeatureManager.isConfigurationFeatureEnabled() which
+  // contains similar universe-based availability logic.
   /** Returns true if the configuration service is available for the current context. */
   public boolean isConfigServiceAvailable() {
     if (environment.isGoogleInternal()) {
-      return universe.isEmpty() || universe.equals("google_1p");
+      return universe instanceof UniverseScope.SelfUniverse;
     }
 
     if (!Flags.instance().feConnectToConfigServer.get()) {
@@ -53,7 +66,7 @@ public class ConfigServiceCapability {
     }
 
     // OSS/ATS only supports the default context (empty universe).
-    return universe.isEmpty();
+    return universe instanceof UniverseScope.SelfUniverse;
   }
 
   /**
@@ -68,7 +81,10 @@ public class ConfigServiceCapability {
     if (environment.isGoogleInternal()) {
       throw new UnsupportedOperationException(
           String.format(
-              "Configuration operations are not currently supported for universe '%s'.", universe));
+              "Configuration operations are not currently supported for universe '%s'.",
+              universe instanceof UniverseScope.RoutedUniverse routed
+                  ? routed.atsControllerId()
+                  : "self"));
     }
 
     if (!Flags.instance().feConnectToConfigServer.getNonNull()) {
