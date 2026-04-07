@@ -134,13 +134,16 @@ public final class JobInfoCreator {
         jobId, actualUser, jobAccessAccount, null, jobConfig, sessionTmpDir, sessionGenDir);
   }
 
-  /** Creates JobInfo from Gateway JobConfig. */
+  /** Creates JobInfo from Gateway JobConfig, with explicit MH JobConfig and flags. */
   public static JobInfo createJobInfo(
       String jobId,
       String actualUser,
       String jobAccessAccount,
-      Timestamp originalSubmitTimestamp,
+      @Nullable Timestamp originalSubmitTimestamp,
       com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfig jobConfig,
+      @Nullable com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig,
+      List<String> nonstandardFlags,
+      @Nullable String genDirPath,
       String sessionTmpDir,
       String sessionGenDir)
       throws MobileHarnessException, InterruptedException {
@@ -167,11 +170,6 @@ public final class JobInfoCreator {
     if (jobConfig.hasRetry()) {
       jobSettingBuilder.setRetry(jobConfig.getRetry());
     } else {
-      // Set to default value.
-      // When previously use com.google.wireless.qa.mobileharness.shared.proto.Job.Retry, the
-      // test_attempts and retry_level have default value. With new
-      // com.google.devtools.mobileharness.api.model.proto.Job.Retry, the default value doesn't
-      // exist, so we need to manually set it to avoid inconsistency.
       jobSettingBuilder.setRetry(JobSetting.getDefaultRetryInstance());
     }
     logger.atInfo().log(
@@ -186,15 +184,40 @@ public final class JobInfoCreator {
     logger.atInfo().log("Output jobSetting retry=%s", jobSetting.getRetry());
 
     JobInfo jobInfo;
-    if (jobConfig.hasJobConfigFromTarget()) {
-      JobConfigFromTarget jobConfigFromTarget = jobConfig.getJobConfigFromTarget();
-      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig =
-          jobConfigFromTarget.getMhJobConfig();
+    if (mhJobConfig != null) {
       mhJobConfig = mhJobConfig.toBuilder().setName(mhJobConfig.getName()).build();
       jobInfo =
           createJobInfo(
               jobId,
               mhJobConfig,
+              nonstandardFlags,
+              jobSetting,
+              JobUser.newBuilder()
+                  .setRunAs(jobConfig.getUser())
+                  .setActualUser(actualUser)
+                  .setJobAccessAccount(jobAccessAccount)
+                  .build(),
+              sessionTmpDir,
+              genDirPath,
+              false);
+      for (StrPair property : jobConfig.getPropertyList()) {
+        jobInfo.properties().add(property.getName(), property.getValue());
+      }
+      for (StrPair param : jobConfig.getParamList()) {
+        if (!jobInfo.params().has(param.getName())) {
+          jobInfo.params().add(param.getName(), param.getValue());
+        }
+      }
+    } else if (jobConfig.hasJobConfigFromTarget()) {
+      JobConfigFromTarget jobConfigFromTarget = jobConfig.getJobConfigFromTarget();
+      com.google.wireless.qa.mobileharness.shared.proto.JobConfig legacyMhJobConfig =
+          jobConfigFromTarget.getMhJobConfig();
+      legacyMhJobConfig =
+          legacyMhJobConfig.toBuilder().setName(legacyMhJobConfig.getName()).build();
+      jobInfo =
+          createJobInfo(
+              jobId,
+              legacyMhJobConfig,
               jobConfigFromTarget.getNonstandardFlagList(),
               jobSetting,
               JobUser.newBuilder()
@@ -225,6 +248,29 @@ public final class JobInfoCreator {
               sessionTmpDir);
     }
     return jobInfo;
+  }
+
+  /** Creates JobInfo from Gateway JobConfig. */
+  public static JobInfo createJobInfo(
+      String jobId,
+      String actualUser,
+      String jobAccessAccount,
+      Timestamp originalSubmitTimestamp,
+      com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfig jobConfig,
+      String sessionTmpDir,
+      String sessionGenDir)
+      throws MobileHarnessException, InterruptedException {
+    return createJobInfo(
+        jobId,
+        actualUser,
+        jobAccessAccount,
+        originalSubmitTimestamp,
+        jobConfig,
+        null,
+        ImmutableList.of(),
+        null,
+        sessionTmpDir,
+        sessionGenDir);
   }
 
   /** Creates JobInfo from MH JobConfig. */
