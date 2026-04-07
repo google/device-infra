@@ -47,6 +47,7 @@ public abstract class DetectionResult {
     ANDROID_DESKTOP_EXECUTOR,
     AAOS_HYPERVISOR,
     ADB,
+    ANDROID_XR,
     CROS,
     DHCP,
     EMBEDDED_LINUX,
