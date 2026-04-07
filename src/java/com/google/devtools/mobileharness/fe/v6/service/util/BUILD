@@ -19,6 +19,7 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//java/com/google/devtools/mobileharness/fe/v6/service:__subpackages__",
+        "//javatests/com/google/devtools/mobileharness/fe/v6/service:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/fe/v6/service:__subpackages__",
     ],
@@ -29,6 +30,7 @@ java_library(
     srcs = glob(["*.java"]),
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_extensions_guice_assistedinject",
         "@maven//:javax_inject_jsr330_api",
     ],

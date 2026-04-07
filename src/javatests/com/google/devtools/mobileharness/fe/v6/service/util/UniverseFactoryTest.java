@@ -1,0 +1,99 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.devtools.mobileharness.fe.v6.service.util;
+
+import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
+import static org.mockito.Mockito.when;
+
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
+
+@RunWith(JUnit4.class)
+public final class UniverseFactoryTest {
+
+  @Rule public final MockitoRule mocks = MockitoJUnit.rule();
+
+  @Mock private Environment mockEnvironment;
+
+  private UniverseFactory universeFactory;
+
+  @Before
+  public void setUp() {
+    universeFactory = new UniverseFactory(mockEnvironment);
+  }
+
+  @Test
+  public void create_internal_nullUniverse_returnsSelfUniverse() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
+
+    UniverseScope universe = universeFactory.create(null);
+
+    assertThat(universe).isInstanceOf(UniverseScope.SelfUniverse.class);
+  }
+
+  @Test
+  public void create_internal_emptyUniverse_returnsSelfUniverse() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
+
+    UniverseScope universe = universeFactory.create("");
+
+    assertThat(universe).isInstanceOf(UniverseScope.SelfUniverse.class);
+  }
+
+  @Test
+  public void create_internal_google1pUniverse_returnsSelfUniverse() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
+
+    UniverseScope universe = universeFactory.create("google_1p");
+
+    assertThat(universe).isInstanceOf(UniverseScope.SelfUniverse.class);
+  }
+
+  @Test
+  public void create_internal_otherUniverse_returnsRoutedUniverse() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(true);
+
+    UniverseScope universe = universeFactory.create("my_universe");
+
+    assertThat(universe).isInstanceOf(UniverseScope.RoutedUniverse.class);
+    assertThat(((UniverseScope.RoutedUniverse) universe).atsControllerId())
+        .isEqualTo("my_universe");
+  }
+
+  @Test
+  public void create_oss_emptyUniverse_returnsSelfUniverse() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(false);
+
+    UniverseScope universe = universeFactory.create("");
+
+    assertThat(universe).isInstanceOf(UniverseScope.SelfUniverse.class);
+  }
+
+  @Test
+  public void create_oss_nonEmptyUniverse_throwsException() {
+    when(mockEnvironment.isGoogleInternal()).thenReturn(false);
+
+    assertThrows(IllegalArgumentException.class, () -> universeFactory.create("my_universe"));
+  }
+}
