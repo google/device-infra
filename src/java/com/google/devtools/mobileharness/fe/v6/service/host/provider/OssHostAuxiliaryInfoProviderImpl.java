@@ -21,6 +21,7 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DiagnosticLink;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -32,18 +33,20 @@ public class OssHostAuxiliaryInfoProviderImpl implements HostAuxiliaryInfoProvid
   OssHostAuxiliaryInfoProviderImpl() {}
 
   @Override
-  public ListenableFuture<Optional<HostReleaseInfo>> getHostReleaseInfo(String hostName) {
+  public ListenableFuture<Optional<HostReleaseInfo>> getHostReleaseInfo(
+      String hostName, UniverseScope universe) {
     return immediateFuture(Optional.empty());
   }
 
   @Override
-  public ListenableFuture<Optional<String>> getPassThroughFlags(String hostName) {
+  public ListenableFuture<Optional<String>> getPassThroughFlags(
+      String hostName, UniverseScope universe) {
     return immediateFuture(Optional.empty());
   }
 
   @Override
   public ListenableFuture<List<DiagnosticLink>> getDiagnosticLinks(
-      String hostName, Optional<String> labType) {
+      String hostName, Optional<String> labType, UniverseScope universe) {
     return immediateFuture(ImmutableList.of());
   }
 }

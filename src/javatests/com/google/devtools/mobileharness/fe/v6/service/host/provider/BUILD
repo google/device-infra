@@ -26,6 +26,7 @@ java_library(
     srcs = glob(["*.java"]),
     deps = [
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/provider",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:junit_junit",
     ],
