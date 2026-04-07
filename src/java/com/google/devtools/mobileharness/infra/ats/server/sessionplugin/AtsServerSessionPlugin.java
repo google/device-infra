@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Ses
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestModuleResult;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.NewMultiCommandRequestHandler.CreateJobsResult;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.NewMultiCommandRequestHandler.HandleResultProcessingResult;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionNotificationEvent;
@@ -246,8 +247,9 @@ final class AtsServerSessionPlugin {
       try {
         HandleResultProcessingResult handleResultProcessingResult =
             newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
-        // Set final state if not in terminal state.
-        if (handleResultProcessingResult.state().equals(RequestState.RUNNING)
+        if (isAborted()) {
+          requestDetail.setState(RequestState.CANCELED).setCancelReason(CancelReason.REQUEST_API);
+        } else if (handleResultProcessingResult.state().equals(RequestState.RUNNING)
             || handleResultProcessingResult.state().equals(RequestState.UNKNOWN)) {
           requestDetail.setState(
               hasSessionCompleted(handleResultProcessingResult.commandDetails())
@@ -443,6 +445,9 @@ final class AtsServerSessionPlugin {
   @GuardedBy("sessionLock")
   void handleXtsJobEnd(JobInfo jobInfo, RequestDetail.Builder requestDetail)
       throws MobileHarnessException, InterruptedException {
+    if (requestDetail.getState().equals(RequestState.CANCELED) || isAborted()) {
+      return;
+    }
     if (jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)) {
       newMultiCommandRequestHandler.prepareMoblyJobLogDirName(jobInfo, requestDetail);
       for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
@@ -576,6 +581,14 @@ final class AtsServerSessionPlugin {
     }
   }
 
+  @GuardedBy("sessionLock")
+  private boolean isAborted() {
+    return sessionInfo
+        .getSessionProperty(SessionProperties.PROPERTY_KEY_SESSION_ABORTED_WHEN_RUNNING)
+        .map(Boolean::parseBoolean)
+        .orElse(false);
+  }
+
   private void sendCancellationMessageToStartedTest(TestInfo testInfo) {
     try {
       testMessageUtil.sendProtoMessageToTest(testInfo, CANCELLATION_MESSAGE);
@@ -651,7 +664,8 @@ final class AtsServerSessionPlugin {
 
   // TODO: create more concrete retry strategy.
   private static boolean canRetrySession(RequestDetailOrBuilder requestDetail) {
-    return requestDetail.getMaxRetryOnTestFailures() > 0
+    return requestDetail.getState() == RequestState.COMPLETED
+        && requestDetail.getMaxRetryOnTestFailures() > 0
         && hasSessionCompletedWithFailure(requestDetail);
   }
 

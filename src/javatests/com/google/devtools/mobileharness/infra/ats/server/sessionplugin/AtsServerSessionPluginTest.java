@@ -63,6 +63,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Tes
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionNotificationEvent;
@@ -1634,5 +1635,67 @@ public final class AtsServerSessionPluginTest {
     assertThat(requestDetail.getTestModuleResults(1).getPassedTests()).isEqualTo(5);
     assertThat(requestDetail.getTestModuleResults(1).getFailedTests()).isEqualTo(0);
     assertThat(requestDetail.getTestModuleResults(1).getTotalTests()).isEqualTo(5);
+  }
+
+  @Test
+  public void onJobEnded_sessionAborted_skipSequentialJob() throws Exception {
+    request = request.toBuilder().addCommands(commandInfo).build();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo, jobInfo2));
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(jobInfo);
+
+    // Mock session aborted property.
+    when(sessionInfo.getSessionProperty(
+            SessionProperties.PROPERTY_KEY_SESSION_ABORTED_WHEN_RUNNING))
+        .thenReturn(Optional.of("true"));
+
+    Timing timing = new Timing();
+    when(jobInfo.timing()).thenReturn(timing);
+    timing.start();
+    var unused = timing.end();
+    when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    Result result = new Result(timing.toNewTiming(), new Params(timing).toNewParams()).setPass();
+    when(jobInfo.resultWithCause()).thenReturn(result);
+    when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
+
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+
+    // Verify next tradefed job is NOT added.
+    verify(sessionInfo, never()).addJob(jobInfo2);
+  }
+
+  @Test
+  public void onSessionEnded_sessionAborted_noRetry() throws Exception {
+    request = request.toBuilder().setMaxRetryOnTestFailures(1).build();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(jobInfo);
+
+    // Mock session aborted property.
+    when(sessionInfo.getSessionProperty(
+            SessionProperties.PROPERTY_KEY_SESSION_ABORTED_WHEN_RUNNING))
+        .thenReturn(Optional.of("true"));
+
+    plugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null));
+
+    // Verify state is CANCELED and retry is NOT triggered.
+    verify(localSessionStub, never()).createSession(any());
+    verify(sessionInfo, times(3))
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.CANCELED);
   }
 }
