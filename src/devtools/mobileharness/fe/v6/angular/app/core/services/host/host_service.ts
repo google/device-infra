@@ -1,13 +1,15 @@
 import {InjectionToken} from '@angular/core';
 import {Observable} from 'rxjs';
 import {
+  CanRolloutResult,
   DecommissionHostResponse,
-  ReleaseLabServerRequest,
-  ReleaseLabServerResponse,
   GetHostDebugInfoResponse,
   HostHeaderInfo,
   HostReleaseConfig,
+  HostRolloutAction,
   PopularFlag,
+  ReleaseLabServerRequest,
+  ReleaseLabServerResponse,
   RestartLabServerResponse,
   StartLabServerResponse,
   StopLabServerResponse,
@@ -139,4 +141,12 @@ export abstract class HostService {
    * Stops the lab server process on the host.
    */
   abstract stopLabServer(hostName: string): Observable<StopLabServerResponse>;
+
+  /**
+   * Checks if a rollout action (start, stop, or restart) can be performed on the host.
+   */
+  abstract canRollout(
+    hostName: string,
+    action: HostRolloutAction,
+  ): Observable<CanRolloutResult>;
 }

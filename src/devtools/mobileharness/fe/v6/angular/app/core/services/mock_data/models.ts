@@ -9,7 +9,7 @@ import {
   RecoveryTaskStats,
   TestResultStats,
 } from '../../models/device_stats';
-import {HostActions} from '../../models/host_action';
+import {CanRolloutResult, HostActions} from '../../models/host_action';
 import {GetHostConfigResult} from '../../models/host_config_models';
 import {DeviceSummary, HostOverview} from '../../models/host_overview';
 
@@ -51,4 +51,5 @@ export interface MockHostScenario {
   overview?: HostOverview;
   deviceSummaries?: DeviceSummary[];
   actions: HostActions;
+  canRollout?: CanRolloutResult;
 }

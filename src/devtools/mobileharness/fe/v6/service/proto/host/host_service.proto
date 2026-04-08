@@ -154,6 +154,27 @@ service HostService {
       body: "*"
     };
   }
+
+  // Checks if a rollout action (start, stop, or restart) can be performed on
+  // the host.
+  rpc CanRollout(CanRolloutRequest) returns (CanRolloutResponse) {
+    option (google.api.http) = {
+      get: "/v6/hosts/{host_name}:can-rollout"
+    };
+  }
+}
+
+// Request message for CanRollout.
+message CanRolloutRequest {
+  string host_name = 1;
+  string action = 2;
+}
+
+// Response message for CanRollout.
+message CanRolloutResponse {
+  bool can_rollout = 1;
+  bool need_upgrade = 2;
+  string message = 3;
 }
 
 // Request message for GetHostHeaderInfo.

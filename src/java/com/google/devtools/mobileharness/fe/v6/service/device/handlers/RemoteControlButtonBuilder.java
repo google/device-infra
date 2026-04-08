@@ -17,7 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
 
 /** Utility class to build {@link ActionButtonState} for remote control button. */
 final class RemoteControlButtonBuilder {
