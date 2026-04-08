@@ -16,10 +16,11 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.device.provider;
 
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.DeviceOpsStub;
 
 /** Provider for creating {@link DeviceOpsStub}. */
 public interface DeviceOpsStubProvider {
 
-  DeviceOpsStub createStub(String hostName, String universe);
+  DeviceOpsStub createStub(String hostName, UniverseScope universe);
 }

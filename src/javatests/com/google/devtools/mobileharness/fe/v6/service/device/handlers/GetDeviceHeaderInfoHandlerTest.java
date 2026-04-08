@@ -55,6 +55,7 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public final class GetDeviceHeaderInfoHandlerTest {
 
+  private static final UniverseScope SELF_UNIVERSE = new UniverseScope.SelfUniverse();
   private static final String DEVICE_ID = "test_device_id";
   private static final String UNIVERSE = "test_universe";
   private static final String HOST_NAME = "test_host.google.com";
@@ -95,13 +96,12 @@ public final class GetDeviceHeaderInfoHandlerTest {
 
     when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any(UniverseScope.class)))
         .thenReturn(immediateFuture(DEFAULT_LAB_INFO_RESPONSE));
-    when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), anyString()))
-        .thenReturn(immediateFuture(DEFAULT_LAB_INFO_RESPONSE));
-    when(configurationProvider.getDeviceConfig(anyString(), anyString()))
+    when(configurationProvider.getDeviceConfig(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.empty()));
-    when(configurationProvider.getLabConfig(anyString(), anyString()))
+    when(configurationProvider.getLabConfig(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.empty()));
-    when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(any(), any(), any(), any(String.class)))
+    when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(
+            any(), any(), any(), any(UniverseScope.class)))
         .thenReturn(DeviceHeaderInfo.newBuilder().setId(DEVICE_ID).build());
   }
 
@@ -110,7 +110,8 @@ public final class GetDeviceHeaderInfoHandlerTest {
     GetDeviceHeaderInfoRequest request =
         GetDeviceHeaderInfoRequest.newBuilder().setId(DEVICE_ID).setUniverse(UNIVERSE).build();
 
-    DeviceHeaderInfo response = getDeviceHeaderInfoHandler.getDeviceHeaderInfo(request).get();
+    DeviceHeaderInfo response =
+        getDeviceHeaderInfoHandler.getDeviceHeaderInfo(request, SELF_UNIVERSE).get();
 
     assertThat(response).isEqualTo(DeviceHeaderInfo.newBuilder().setId(DEVICE_ID).build());
   }

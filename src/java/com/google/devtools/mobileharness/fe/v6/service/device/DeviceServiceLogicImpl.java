@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.device;
 
+import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.util.concurrent.ListenableFuture;
@@ -43,6 +44,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.TestResultSt
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.TestbedConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.UnquarantineDeviceRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.UnquarantineDeviceResponse;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseFactory;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -54,29 +57,44 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
   private final GetDeviceOverviewHandler getDeviceOverviewHandler;
   private final GetLogcatHandler getLogcatHandler;
   private final GetTestbedConfigHandler getTestbedConfigHandler;
+  private final UniverseFactory universeFactory;
 
   @Inject
   DeviceServiceLogicImpl(
       GetDeviceHeaderInfoHandler getDeviceHeaderInfoHandler,
       GetDeviceOverviewHandler getDeviceOverviewHandler,
       GetTestbedConfigHandler getTestbedConfigHandler,
-      GetLogcatHandler getLogcatHandler) {
+      GetLogcatHandler getLogcatHandler,
+      UniverseFactory universeFactory) {
     this.getDeviceHeaderInfoHandler = getDeviceHeaderInfoHandler;
     this.getDeviceOverviewHandler = getDeviceOverviewHandler;
     this.getTestbedConfigHandler = getTestbedConfigHandler;
     this.getLogcatHandler = getLogcatHandler;
+    this.universeFactory = universeFactory;
   }
 
   @Override
   public ListenableFuture<DeviceOverviewPageData> getDeviceOverview(
       GetDeviceOverviewRequest request) {
-    return getDeviceOverviewHandler.getDeviceOverview(request);
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return getDeviceOverviewHandler.getDeviceOverview(request, universe);
   }
 
   @Override
   public ListenableFuture<DeviceHeaderInfo> getDeviceHeaderInfo(
       GetDeviceHeaderInfoRequest request) {
-    return getDeviceHeaderInfoHandler.getDeviceHeaderInfo(request);
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return getDeviceHeaderInfoHandler.getDeviceHeaderInfo(request, universe);
   }
 
   // Methods for other RPCs (GetDeviceHealthinessStats, etc.)
@@ -121,7 +139,13 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
 
   @Override
   public ListenableFuture<GetLogcatResponse> getLogcat(GetLogcatRequest request) {
-    return getLogcatHandler.getLogcat(request);
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return getLogcatHandler.getLogcat(request, universe);
   }
 
   @Override
@@ -146,6 +170,12 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
 
   @Override
   public ListenableFuture<TestbedConfig> getTestbedConfig(GetTestbedConfigRequest request) {
-    return getTestbedConfigHandler.getTestbedConfig(request);
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return getTestbedConfigHandler.getTestbedConfig(request, universe);
   }
 }

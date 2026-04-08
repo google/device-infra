@@ -96,6 +96,7 @@ import org.mockito.junit.MockitoRule;
 public final class GetDeviceOverviewHandlerTest {
 
   private static final String DEVICE_ID = "test_device_id";
+  private static final UniverseScope SELF_UNIVERSE = new UniverseScope.SelfUniverse();
   private static final String UNIVERSE = "test_universe";
   private static final String HOST_NAME = "test_host.google.com";
   private static final Instant NOW = Instant.parse("2025-11-21T10:00:00Z");
@@ -174,14 +175,14 @@ public final class GetDeviceOverviewHandlerTest {
     // By default, assume Config Service is available but returns nothing
     when(configurationProvider.getLabConfig(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.of(LabConfig.getDefaultInstance())));
-    when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(any(), any(), any(), anyString()))
+    when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(
+            any(), any(), any(), any(UniverseScope.class)))
         .thenReturn(
             DeviceHeaderInfo.newBuilder()
                 .setId(DEVICE_ID)
                 .setHost(HostInfo.newBuilder().setName(HOST_NAME))
                 .build());
     when(environment.isGoogleInternal()).thenReturn(true);
-    when(configServiceCapabilityFactory.create(anyString())).thenReturn(configServiceCapability);
     when(configServiceCapabilityFactory.create(any(UniverseScope.class)))
         .thenReturn(configServiceCapability);
     when(configServiceCapability.isConfigServiceAvailable()).thenReturn(true);
@@ -207,7 +208,7 @@ public final class GetDeviceOverviewHandlerTest {
   @Test
   public void getDeviceOverview_success() throws Exception {
     ListenableFuture<DeviceOverviewPageData> responseFuture =
-        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST);
+        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE);
 
     DeviceOverviewPageData response = responseFuture.get();
     assertThat(response.getOverview().getId()).isEqualTo(DEVICE_ID);
@@ -220,33 +221,32 @@ public final class GetDeviceOverviewHandlerTest {
                 .setHost(HostInfo.newBuilder().setName(HOST_NAME))
                 .build());
 
-    verify(labInfoProvider).getLabInfoAsync(any(GetLabInfoRequest.class), any(UniverseScope.class));
-    verify(configurationProvider).getDeviceConfig(eq(DEVICE_ID), any(UniverseScope.class));
-    verify(configurationProvider).getLabConfig(eq(HOST_NAME), any(UniverseScope.class));
+    verify(labInfoProvider).getLabInfoAsync(any(GetLabInfoRequest.class), eq(SELF_UNIVERSE));
+    verify(configurationProvider).getDeviceConfig(eq(DEVICE_ID), eq(SELF_UNIVERSE));
+    verify(configurationProvider).getLabConfig(eq(HOST_NAME), eq(SELF_UNIVERSE));
   }
 
   @Test
   public void getDeviceOverview_cacheHit() throws Exception {
-    getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get(); // First call
-    getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get(); // Second call
+    getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE).get(); // First call
+    getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE).get(); // Second call
 
-    verify(labInfoProvider).getLabInfoAsync(any(GetLabInfoRequest.class), any(UniverseScope.class));
-    verify(configurationProvider).getDeviceConfig(eq(DEVICE_ID), any(UniverseScope.class));
-    verify(configurationProvider).getLabConfig(eq(HOST_NAME), any(UniverseScope.class));
+    verify(labInfoProvider).getLabInfoAsync(any(GetLabInfoRequest.class), eq(SELF_UNIVERSE));
+    verify(configurationProvider).getDeviceConfig(eq(DEVICE_ID), eq(SELF_UNIVERSE));
+    verify(configurationProvider).getLabConfig(eq(HOST_NAME), eq(SELF_UNIVERSE));
   }
 
   @Test
   public void getDeviceOverview_forceRefresh() throws Exception {
-    getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get(); // First call
+    getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE).get(); // First call
     getDeviceOverviewHandler
-        .getDeviceOverview(DEFAULT_REQUEST.toBuilder().setForceRefresh(true).build())
+        .getDeviceOverview(DEFAULT_REQUEST.toBuilder().setForceRefresh(true).build(), SELF_UNIVERSE)
         .get(); // Second call with force refresh
 
     verify(labInfoProvider, times(2))
-        .getLabInfoAsync(any(GetLabInfoRequest.class), any(UniverseScope.class));
-    verify(configurationProvider, times(2))
-        .getDeviceConfig(eq(DEVICE_ID), any(UniverseScope.class));
-    verify(configurationProvider, times(2)).getLabConfig(eq(HOST_NAME), any(UniverseScope.class));
+        .getLabInfoAsync(any(GetLabInfoRequest.class), eq(SELF_UNIVERSE));
+    verify(configurationProvider, times(2)).getDeviceConfig(eq(DEVICE_ID), eq(SELF_UNIVERSE));
+    verify(configurationProvider, times(2)).getLabConfig(eq(HOST_NAME), eq(SELF_UNIVERSE));
   }
 
   @Test
@@ -255,7 +255,7 @@ public final class GetDeviceOverviewHandlerTest {
         .thenReturn(immediateFailedFuture(new StatusRuntimeException(Status.DEADLINE_EXCEEDED)));
 
     ListenableFuture<DeviceOverviewPageData> responseFuture =
-        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST);
+        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE);
 
     ExecutionException e = assertThrows(ExecutionException.class, responseFuture::get);
     assertThat(e).hasCauseThat().isInstanceOf(StatusRuntimeException.class);
@@ -267,7 +267,7 @@ public final class GetDeviceOverviewHandlerTest {
         .thenReturn(immediateFailedFuture(new RuntimeException("Config error")));
 
     ListenableFuture<DeviceOverviewPageData> responseFuture =
-        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST);
+        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE);
 
     // Should NOT throw exception, but return metadata with no config dimensions
     DeviceOverviewPageData response = responseFuture.get();
@@ -279,7 +279,7 @@ public final class GetDeviceOverviewHandlerTest {
   @Test
   public void getDeviceOverview_dimensions_onlyDetected() throws Exception {
     ListenableFuture<DeviceOverviewPageData> responseFuture =
-        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST);
+        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE);
     DeviceOverview response = responseFuture.get().getOverview();
 
     ImmutableMap<String, DimensionSourceGroup> expectedSupported =
@@ -334,7 +334,7 @@ public final class GetDeviceOverviewHandlerTest {
         .thenReturn(immediateFuture(Optional.of(deviceConfig)));
 
     ListenableFuture<DeviceOverviewPageData> responseFuture =
-        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST);
+        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE);
     DeviceOverview response = responseFuture.get().getOverview();
 
     ImmutableMap<String, DimensionSourceGroup> expectedSupported =
@@ -402,7 +402,7 @@ public final class GetDeviceOverviewHandlerTest {
         .thenReturn(immediateFuture(Optional.of(DeviceConfig.getDefaultInstance())));
 
     ListenableFuture<DeviceOverviewPageData> responseFuture =
-        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST);
+        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE);
     DeviceOverview response = responseFuture.get().getOverview();
 
     ImmutableMap<String, DimensionSourceGroup> expectedSupported =
@@ -453,7 +453,7 @@ public final class GetDeviceOverviewHandlerTest {
     when(configServiceCapability.isConfigServiceAvailable()).thenReturn(false);
 
     DeviceOverviewPageData response =
-        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get();
+        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE).get();
 
     assertThat(response.getOverview().getId()).isEqualTo(DEVICE_ID);
     // When universe is not supported, it should behave like situation 2 (no config dimensions,
@@ -482,7 +482,7 @@ public final class GetDeviceOverviewHandlerTest {
     mockDeviceInfo(DEFAULT_DEVICE_INFO.toBuilder().setDeviceStatus(DeviceStatus.IDLE).build());
     HealthAndActivityInfo info =
         getDeviceOverviewHandler
-            .getDeviceOverview(DEFAULT_REQUEST)
+            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
             .get()
             .getOverview()
             .getHealthAndActivity();
@@ -503,7 +503,7 @@ public final class GetDeviceOverviewHandlerTest {
     mockDeviceInfo(DEFAULT_DEVICE_INFO.toBuilder().setDeviceStatus(DeviceStatus.BUSY).build());
     HealthAndActivityInfo info =
         getDeviceOverviewHandler
-            .getDeviceOverview(DEFAULT_REQUEST)
+            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
             .get()
             .getOverview()
             .getHealthAndActivity();
@@ -531,7 +531,7 @@ public final class GetDeviceOverviewHandlerTest {
     mockDeviceInfo(quarantinedDevice);
     HealthAndActivityInfo info =
         getDeviceOverviewHandler
-            .getDeviceOverview(DEFAULT_REQUEST)
+            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
             .get()
             .getOverview()
             .getHealthAndActivity();
@@ -560,7 +560,7 @@ public final class GetDeviceOverviewHandlerTest {
     mockDeviceInfo(recoveringDevice);
     HealthAndActivityInfo info =
         getDeviceOverviewHandler
-            .getDeviceOverview(DEFAULT_REQUEST)
+            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
             .get()
             .getOverview()
             .getHealthAndActivity();
@@ -587,7 +587,7 @@ public final class GetDeviceOverviewHandlerTest {
     mockDeviceInfo(initDevice);
     HealthAndActivityInfo info =
         getDeviceOverviewHandler
-            .getDeviceOverview(DEFAULT_REQUEST)
+            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
             .get()
             .getOverview()
             .getHealthAndActivity();
@@ -615,7 +615,7 @@ public final class GetDeviceOverviewHandlerTest {
     mockDeviceInfo(missingDevice);
     HealthAndActivityInfo info =
         getDeviceOverviewHandler
-            .getDeviceOverview(DEFAULT_REQUEST)
+            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
             .get()
             .getOverview()
             .getHealthAndActivity();
@@ -642,7 +642,7 @@ public final class GetDeviceOverviewHandlerTest {
     mockDeviceInfo(noTypeDevice);
     HealthAndActivityInfo info =
         getDeviceOverviewHandler
-            .getDeviceOverview(DEFAULT_REQUEST)
+            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
             .get()
             .getOverview()
             .getHealthAndActivity();
@@ -678,7 +678,10 @@ public final class GetDeviceOverviewHandlerTest {
     mockDeviceInfo(androidDevice);
 
     DeviceOverview response =
-        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get().getOverview();
+        getDeviceOverviewHandler
+            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
+            .get()
+            .getOverview();
 
     assertThat(response.getBasicInfo().getVersion()).isEqualTo("31");
 
@@ -705,7 +708,11 @@ public final class GetDeviceOverviewHandlerTest {
     GetDeviceOverviewRequest forceRefreshRequest =
         DEFAULT_REQUEST.toBuilder().setForceRefresh(true).build();
 
-    response = getDeviceOverviewHandler.getDeviceOverview(forceRefreshRequest).get().getOverview();
+    response =
+        getDeviceOverviewHandler
+            .getDeviceOverview(forceRefreshRequest, SELF_UNIVERSE)
+            .get()
+            .getOverview();
     assertThat(response.getBasicInfo().getVersion()).isEqualTo("ubuntu_20.04");
   }
 
@@ -731,7 +738,10 @@ public final class GetDeviceOverviewHandlerTest {
     mockDeviceInfo(malformedDevice);
 
     DeviceOverview response =
-        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get().getOverview();
+        getDeviceOverviewHandler
+            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
+            .get()
+            .getOverview();
 
     assertThat(response.getBasicInfo().getBatteryLevel()).isEqualTo(-1);
     assertThat(response.getBasicInfo().getNetwork().getWifiRssi()).isEqualTo(0);
@@ -750,7 +760,10 @@ public final class GetDeviceOverviewHandlerTest {
     when(subDeviceInfoListFactory.create(any())).thenReturn(ImmutableList.of(subDevice));
 
     DeviceOverview response =
-        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get().getOverview();
+        getDeviceOverviewHandler
+            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
+            .get()
+            .getOverview();
 
     assertThat(response.getSubDevicesList()).containsExactly(subDevice);
     verify(subDeviceInfoListFactory).create(any());

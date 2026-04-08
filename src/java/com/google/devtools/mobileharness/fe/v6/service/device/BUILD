@@ -66,6 +66,7 @@ java_library(
         "//src/devtools/mobileharness/fe/v6/service/proto/device:device_service_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/device:device_stats_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/handlers",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],

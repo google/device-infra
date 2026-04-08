@@ -18,12 +18,13 @@ package com.google.devtools.mobileharness.fe.v6.service.device;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
+import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
@@ -45,6 +46,8 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.M
 import com.google.devtools.mobileharness.fe.v6.service.shared.SubDeviceInfoListFactory;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseFactory;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -52,6 +55,7 @@ import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import java.time.Instant;
 import java.time.InstantSource;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -74,12 +78,14 @@ public final class DeviceServiceLogicImplTest {
   @Bind @Mock private LogcatActionHelper logcatActionHelper;
   @Bind @Mock private SubDeviceInfoListFactory subDeviceInfoListFactory;
   @Bind @Mock private InstantSource instantSource;
-  @Bind private final ListeningExecutorService executor = MoreExecutors.newDirectExecutorService();
+  @Bind @Mock private UniverseFactory universeFactory;
+  @Bind private final ListeningExecutorService executor = newDirectExecutorService();
 
   private DeviceServiceLogicImpl deviceServiceLogicImpl;
 
   @Before
   public void setUp() {
+    when(universeFactory.create(anyString())).thenReturn(new UniverseScope.SelfUniverse());
     deviceServiceLogicImpl =
         Guice.createInjector(BoundFieldModule.of(this)).getInstance(DeviceServiceLogicImpl.class);
   }
@@ -96,9 +102,10 @@ public final class DeviceServiceLogicImplTest {
             Optional.empty(),
             Optional.empty());
 
-    when(deviceDataLoader.loadDeviceData(anyString(), anyString()))
+    when(deviceDataLoader.loadDeviceData(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(deviceData));
-    when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(any(), any(), any(), anyString()))
+    when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(
+            any(), any(), any(), any(UniverseScope.class)))
         .thenReturn(DeviceHeaderInfo.getDefaultInstance());
     when(instantSource.instant()).thenReturn(Instant.now());
 
@@ -125,12 +132,13 @@ public final class DeviceServiceLogicImplTest {
                                             .build()))))
             .build();
 
-    when(labInfoProvider.getLabInfoAsync(any(), anyString()))
+    when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(labInfoResponse));
 
-    when(configurationProvider.getDeviceConfig(anyString(), anyString()))
+    when(configurationProvider.getDeviceConfig(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.empty()));
-    when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(any(), any(), any(), anyString()))
+    when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(
+            any(), any(), any(), any(UniverseScope.class)))
         .thenReturn(DeviceHeaderInfo.getDefaultInstance());
 
     DeviceHeaderInfo response = deviceServiceLogicImpl.getDeviceHeaderInfo(request).get();
@@ -148,12 +156,26 @@ public final class DeviceServiceLogicImplTest {
             Optional.empty(),
             Optional.empty());
 
-    when(deviceDataLoader.loadDeviceData(anyString(), anyString()))
+    when(deviceDataLoader.loadDeviceData(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(deviceData));
     when(testbedConfigBuilder.buildTestbedConfig(anyString(), any()))
         .thenReturn(TestbedConfig.getDefaultInstance());
 
     assertThat(deviceServiceLogicImpl.getTestbedConfig(request).get())
         .isEqualTo(TestbedConfig.getDefaultInstance());
+  }
+
+  @Test
+  public void getDeviceOverview_invalidUniverse_fails() throws Exception {
+    GetDeviceOverviewRequest request =
+        GetDeviceOverviewRequest.newBuilder().setId("device").setUniverse("invalid").build();
+
+    when(universeFactory.create("invalid")).thenThrow(new IllegalArgumentException("invalid"));
+
+    ExecutionException e =
+        assertThrows(
+            ExecutionException.class,
+            () -> deviceServiceLogicImpl.getDeviceOverview(request).get());
+    assertThat(e).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
   }
 }

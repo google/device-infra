@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetTestbedConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.TestbedConfig;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -43,10 +44,10 @@ public final class GetTestbedConfigHandler {
     this.testbedConfigBuilder = testbedConfigBuilder;
   }
 
-  public ListenableFuture<TestbedConfig> getTestbedConfig(GetTestbedConfigRequest request) {
+  public ListenableFuture<TestbedConfig> getTestbedConfig(
+      GetTestbedConfigRequest request, UniverseScope universe) {
     String deviceId = request.getId();
     Preconditions.checkArgument(!deviceId.isEmpty(), "Device ID cannot be empty");
-    String universe = request.getUniverse().isEmpty() ? "google_1p" : request.getUniverse();
 
     return Futures.transform(
         deviceDataLoader.loadDeviceData(deviceId, universe),

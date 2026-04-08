@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.TestbedConfi
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.DeviceData;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.ManagementMode;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -45,6 +46,8 @@ import org.mockito.junit.MockitoRule;
 public final class GetTestbedConfigHandlerTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
+
+  private static final UniverseScope SELF_UNIVERSE = new UniverseScope.SelfUniverse();
 
   @Bind @Mock private DeviceDataLoader deviceDataLoader;
   @Bind @Mock private TestbedConfigBuilder testbedConfigBuilder;
@@ -68,15 +71,14 @@ public final class GetTestbedConfigHandlerTest {
   @Test
   public void getTestbedConfig_success() throws Exception {
     String deviceId = "test_id";
-    String universe = "google_1p";
     GetTestbedConfigRequest request = GetTestbedConfigRequest.newBuilder().setId(deviceId).build();
     TestbedConfig response = TestbedConfig.newBuilder().setYamlContent("test_yaml").build();
 
-    when(deviceDataLoader.loadDeviceData(deviceId, universe))
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
         .thenReturn(immediateFuture(deviceData));
     when(testbedConfigBuilder.buildTestbedConfig(deviceId, deviceData)).thenReturn(response);
 
-    TestbedConfig result = getTestbedConfigHandler.getTestbedConfig(request).get();
+    TestbedConfig result = getTestbedConfigHandler.getTestbedConfig(request, SELF_UNIVERSE).get();
 
     assertThat(result).isEqualTo(response);
   }
