@@ -25,6 +25,8 @@ java_library(
     visibility = [
         "//:deviceinfra_all_pkg",
         "//:omnilab_fusion",
+        "//java/com/google/home/enterprise/tools/partneronboarding/ghpsubscriptionspartneragent/catalog:__pkg__",
+        "//java/com/google/home/enterprise/tools/partneronboarding/ghpsubscriptionspartneragent/signup:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
