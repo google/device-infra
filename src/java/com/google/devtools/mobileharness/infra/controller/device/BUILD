@@ -148,7 +148,10 @@ java_library(
     name = "device_info_manager_shim",
     srcs = ["DeviceInfoManagerShim.java"],
     # DO NOT change this. This is a hack to allow code in an allowlist to access the DeviceInfoManager's package private methods.
-    visibility = ["//src/java/com/google/devtools/omnilab/device/lab/server/framework/internal/device:__pkg__"],
+    visibility = [
+        "//java/com/google/devtools/omnilab/device/lifecycle/android:__pkg__",
+        "//src/java/com/google/devtools/omnilab/device/lab/server/framework/internal/device:__pkg__",
+    ],
     deps = [
         ":device_info_manager",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:device_id_descriptor",
