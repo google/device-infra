@@ -1,0 +1,7 @@
+--- a/bzlmod_extensions/com_android_dex.bzl
++++ b/bzlmod_extensions/com_android_dex.bzl
+@@ -28,3 +28,3 @@
+         name = "com_android_dex",
+-        url = "https://android.googlesource.com/platform/dalvik/+archive/5a81c499a569731e2395f7c8d13c0e0d4e17a2b6.tar.gz",
++        url = "https://mirror.bazel.build/android.googlesource.com/platform/dalvik/+archive/5a81c499a569731e2395f7c8d13c0e0d4e17a2b6.tar.gz",
+         build_file = Label("//bzlmod_extensions:com_android_dex.BUILD"),
