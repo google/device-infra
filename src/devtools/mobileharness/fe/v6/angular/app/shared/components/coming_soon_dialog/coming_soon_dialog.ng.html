@@ -1,0 +1,35 @@
+<div class="coming-soon-dialog-container">
+  <div class="coming-soon-dialog-wrapper">
+    <div class="coming-soon-dialog-header">
+      <div class="coming-soon-icon-container">
+        <mat-icon class="coming-soon-icon">{{ icon }}</mat-icon>
+      </div>
+      <h3 class="text-gray-800">{{ title }}</h3>
+    </div>
+    <mat-dialog-content class="coming-soon-dialog-content">
+      <p [innerHTML]="message"></p>
+      @if (data?.legacyScreenshotLink) {
+      <p>See <a [href]="data!.legacyScreenshotLink" target="_blank">screenshot</a> for details.</p>
+      }
+    </mat-dialog-content>
+  </div>
+</div>
+
+<!-- Actions -->
+<div class="coming-soon-dialog-actions-container">
+  <mat-dialog-actions align="center" class="coming-soon-dialog-actions">
+    @if(data?.legacyPageUrl) {
+    <button class="secondary-button" (click)="onCancel()" mat-dialog-close>
+      Cancel
+    </button>
+    <button class="primary-button" (click)="onConfirm()">
+      <mat-icon class="primary-button-icon">{{ confirmIcon }}</mat-icon>
+      {{ confirmLabel }}
+    </button>
+    } @else {
+    <button class="secondary-button" (click)="onCancel()" mat-dialog-close>
+      Close
+    </button>
+    }
+  </mat-dialog-actions>
+</div>

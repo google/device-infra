@@ -1,0 +1,85 @@
+/**
+ * Enum representing all unimplemented features that will show a "Coming Soon" dialog.
+ */
+export enum ActionBarAction {
+  // Host Actions
+  HOST_CONFIGURATION = 'HOST_CONFIGURATION',
+  HOST_DEBUG = 'HOST_DEBUG',
+  HOST_DEPLOY = 'HOST_DEPLOY',
+  HOST_START = 'HOST_START',
+  HOST_RESTART = 'HOST_RESTART',
+  HOST_STOP = 'HOST_STOP',
+  HOST_DECOMMISSION = 'HOST_DECOMMISSION',
+  HOST_UPDATE_PASS_THROUGH_FLAGS = 'HOST_UPDATE_PASS_THROUGH_FLAGS',
+  HOST_RELEASE = 'HOST_RELEASE',
+
+  // Device Actions
+  DEVICE_CONFIGURATION = 'DEVICE_CONFIGURATION',
+  DEVICE_SCREENSHOT = 'DEVICE_SCREENSHOT',
+  DEVICE_REMOTE_CONTROL = 'DEVICE_REMOTE_CONTROL',
+  DEVICE_FLASH = 'DEVICE_FLASH',
+  DEVICE_LOGCAT = 'DEVICE_LOGCAT',
+  DEVICE_QUARANTINE = 'DEVICE_QUARANTINE',
+}
+
+/**
+ * Metadata for each Action Bar action.
+ */
+export interface ActionMetadata {
+  readonly displayName: string;
+  readonly legacyScreenshotLink?: string;
+}
+
+/**
+ * Centralized configuration for Action Bar items, including "Coming Soon" details.
+ */
+export const ACTION_BAR_CONFIG: Record<ActionBarAction, ActionMetadata> = {
+  // Host Features
+  [ActionBarAction.HOST_CONFIGURATION]: {
+    displayName: 'Host Configuration',
+  },
+  [ActionBarAction.HOST_DEBUG]: {
+    displayName: 'Debug',
+  },
+  [ActionBarAction.HOST_DEPLOY]: {
+    displayName: 'Deploy',
+  },
+  [ActionBarAction.HOST_START]: {
+    displayName: 'Start Server',
+  },
+  [ActionBarAction.HOST_RESTART]: {
+    displayName: 'Restart Server',
+  },
+  [ActionBarAction.HOST_STOP]: {
+    displayName: 'Stop Server',
+  },
+  [ActionBarAction.HOST_DECOMMISSION]: {
+    displayName: 'Decommission',
+  },
+  [ActionBarAction.HOST_UPDATE_PASS_THROUGH_FLAGS]: {
+    displayName: 'Update Pass Through Flags',
+  },
+  [ActionBarAction.HOST_RELEASE]: {
+    displayName: 'Release',
+  },
+
+  // Device Features
+  [ActionBarAction.DEVICE_CONFIGURATION]: {
+    displayName: 'Device Configuration',
+  },
+  [ActionBarAction.DEVICE_SCREENSHOT]: {
+    displayName: 'Screenshot',
+  },
+  [ActionBarAction.DEVICE_LOGCAT]: {
+    displayName: 'Get Logcat',
+  },
+  [ActionBarAction.DEVICE_FLASH]: {
+    displayName: 'Flash',
+  },
+  [ActionBarAction.DEVICE_REMOTE_CONTROL]: {
+    displayName: 'Remote Control',
+  },
+  [ActionBarAction.DEVICE_QUARANTINE]: {
+    displayName: 'Quarantine',
+  },
+};

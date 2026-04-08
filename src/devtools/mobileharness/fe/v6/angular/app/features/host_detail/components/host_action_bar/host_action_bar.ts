@@ -10,10 +10,17 @@ import {MatDialog} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
 import {MatTooltipModule} from '@angular/material/tooltip';
+
+import {ActionBarAction} from 'app/core/constants/action_bar_config';
+import {
+  APP_DATA,
+  getLegacyFeUrl,
+} from 'app/core/models/app_data';
 import {ActionButtonState} from '../../../../core/models/action_common';
 import {HostActions} from '../../../../core/models/host_action';
 import type {HostOverviewPageData} from '../../../../core/models/host_overview';
 import {Environment} from '../../../../core/services/environment';
+import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {HostConfig} from '../host_config/host_config';
 import {HostEmpty} from '../host_config/host_empty/host_empty';
@@ -35,6 +42,10 @@ export class HostActionBar {
   private readonly snackBar = inject(SnackBarService);
   private readonly dialog = inject(MatDialog);
   private readonly environment = inject(Environment);
+  private readonly comingSoonService = inject(ComingSoonService);
+  private readonly appData = inject(APP_DATA);
+
+  readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
 
   @Input({required: true}) pageData!: HostOverviewPageData;
 
@@ -158,6 +169,27 @@ export class HostActionBar {
   readonly onRelease = () => {
     this.snackBar.showInfo(`Release action triggered for ${this.hostName}`);
   };
+
+  showComingSoonPopup(key: string) {
+    const featureMap: Record<string, ActionBarAction> = {
+      'configuration': ActionBarAction.HOST_CONFIGURATION,
+      'debug': ActionBarAction.HOST_DEBUG,
+      'deploy': ActionBarAction.HOST_DEPLOY,
+      'start': ActionBarAction.HOST_START,
+      'restart': ActionBarAction.HOST_RESTART,
+      'stop': ActionBarAction.HOST_STOP,
+      'decommission': ActionBarAction.HOST_DECOMMISSION,
+      'updatePassThroughFlags': ActionBarAction.HOST_UPDATE_PASS_THROUGH_FLAGS,
+      'release': ActionBarAction.HOST_RELEASE,
+    };
+    const feature = featureMap[key];
+    if (feature) {
+      const hostLegacyUrl = this.legacyFeUrl
+        ? `${this.legacyFeUrl}/labdetailview/${this.hostName}/${this.pageData.overviewContent.ip}`
+        : undefined;
+      this.comingSoonService.show(feature, hostLegacyUrl);
+    }
+  }
 
   getAction(key: keyof HostActions): ActionButtonState | undefined {
     return (this.actions as unknown as Record<string, ActionButtonState>)?.[

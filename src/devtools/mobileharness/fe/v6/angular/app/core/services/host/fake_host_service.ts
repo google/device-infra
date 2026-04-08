@@ -3,12 +3,12 @@ import {Observable, of, throwError} from 'rxjs';
 
 import {
   DecommissionHostResponse,
-  ReleaseLabServerRequest,
-  ReleaseLabServerResponse,
   GetHostDebugInfoResponse,
   HostHeaderInfo,
   HostReleaseConfig,
   PopularFlag,
+  ReleaseLabServerRequest,
+  ReleaseLabServerResponse,
   RestartLabServerResponse,
   StartLabServerResponse,
   StopLabServerResponse,
@@ -42,15 +42,30 @@ export class FakeHostService extends HostService {
   override getHostHeaderInfo(hostName: string): Observable<HostHeaderInfo> {
     const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
     const actions = scenario?.actions || {
-      configuration: {enabled: true, visible: true, tooltip: ''},
-      debug: {enabled: true, visible: true, tooltip: ''},
-      deploy: {enabled: true, visible: true, tooltip: ''},
-      start: {enabled: true, visible: true, tooltip: ''},
-      restart: {enabled: true, visible: true, tooltip: ''},
-      stop: {enabled: true, visible: true, tooltip: ''},
-      decommission: {enabled: false, visible: true, tooltip: ''},
-      updatePassThroughFlags: {enabled: true, visible: true, tooltip: ''},
-      release: {enabled: true, visible: true, tooltip: ''},
+      configuration: {
+        enabled: true,
+        visible: true,
+        tooltip: '',
+        isReady: true,
+      },
+      debug: {enabled: true, visible: true, tooltip: '', isReady: true},
+      deploy: {enabled: true, visible: true, tooltip: '', isReady: true},
+      start: {enabled: true, visible: true, tooltip: '', isReady: true},
+      restart: {enabled: true, visible: true, tooltip: '', isReady: true},
+      stop: {enabled: true, visible: true, tooltip: '', isReady: true},
+      decommission: {
+        enabled: false,
+        visible: true,
+        tooltip: '',
+        isReady: true,
+      },
+      updatePassThroughFlags: {
+        enabled: true,
+        visible: true,
+        tooltip: '',
+        isReady: true,
+      },
+      release: {enabled: true, visible: true, tooltip: '', isReady: true},
     };
 
     return of({
@@ -70,15 +85,30 @@ export class FakeHostService extends HostService {
     const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
     if (scenario && scenario.overview) {
       const actions = scenario.actions || {
-        configuration: {enabled: true, visible: true, tooltip: ''},
-        debug: {enabled: true, visible: true, tooltip: ''},
-        deploy: {enabled: true, visible: true, tooltip: ''},
-        start: {enabled: true, visible: true, tooltip: ''},
-        restart: {enabled: true, visible: true, tooltip: ''},
-        stop: {enabled: true, visible: true, tooltip: ''},
-        decommission: {enabled: false, visible: true, tooltip: ''},
-        updatePassThroughFlags: {enabled: true, visible: true, tooltip: ''},
-        release: {enabled: true, visible: true, tooltip: ''},
+        configuration: {
+          enabled: true,
+          visible: true,
+          tooltip: '',
+          isReady: true,
+        },
+        debug: {enabled: true, visible: true, tooltip: '', isReady: true},
+        deploy: {enabled: true, visible: true, tooltip: '', isReady: true},
+        start: {enabled: true, visible: true, tooltip: '', isReady: true},
+        restart: {enabled: true, visible: true, tooltip: '', isReady: true},
+        stop: {enabled: true, visible: true, tooltip: '', isReady: true},
+        decommission: {
+          enabled: false,
+          visible: true,
+          tooltip: '',
+          isReady: true,
+        },
+        updatePassThroughFlags: {
+          enabled: true,
+          visible: true,
+          tooltip: '',
+          isReady: true,
+        },
+        release: {enabled: true, visible: true, tooltip: '', isReady: true},
       };
 
       return of({
@@ -488,9 +518,7 @@ export class FakeHostService extends HostService {
     });
   }
 
-  override stopLabServer(
-    hostName: string,
-  ): Observable<StopLabServerResponse> {
+  override stopLabServer(hostName: string): Observable<StopLabServerResponse> {
     return of({
       trackingUrl:
         'https://rollouts.corp.example.com/rollouts/prodchange-rollout/stop%2F123',

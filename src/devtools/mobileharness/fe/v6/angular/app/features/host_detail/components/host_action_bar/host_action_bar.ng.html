@@ -241,7 +241,7 @@
       <button
         class="m3-action-button filled"
         [class]="customClass"
-        (click)="handler()"
+        (click)="action?.isReady ? handler() : showComingSoonPopup(key)"
         [disabled]="!action?.enabled"
         [matTooltip]="action?.tooltip || ''"
         [attr.data-testid]="key + '-button-' + suffix"
@@ -251,7 +251,7 @@
     } @else {
       <button
         mat-menu-item
-        (click)="handler()"
+        (click)="action?.isReady ? handler() : showComingSoonPopup(key)"
         [disabled]="!action?.enabled"
         [matTooltip]="action?.tooltip || ''"
         [attr.data-testid]="key + '-menu-item-' + suffix"

@@ -4,7 +4,7 @@ import {
   Component,
   computed,
   inject,
-  Input,
+  input,
   signal,
   WritableSignal,
 } from '@angular/core';
@@ -15,6 +15,12 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 import {ActivatedRoute} from '@angular/router';
 import {Observable} from 'rxjs';
 import {finalize} from 'rxjs/operators';
+
+import {ActionBarAction} from 'app/core/constants/action_bar_config';
+import {
+  APP_DATA,
+  getLegacyFeUrl,
+} from 'app/core/models/app_data';
 import {ActionButtonState} from '../../../../core/models/action_common';
 import {
   DeviceActions,
@@ -27,6 +33,7 @@ import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
 import {Environment} from '../../../../core/services/environment';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
 import {RemoteControlDeviceInfo} from '../../../../shared/components/remote_control/remote_control.types';
+import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
 import {RemoteControlService} from '../../../../shared/services/remote_control_service';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {DeviceConfig} from '../device_config/device_config';
@@ -56,29 +63,31 @@ export class DeviceActionBar {
   private readonly snackBar = inject(SnackBarService);
   private readonly environment = inject(Environment);
   private readonly route = inject(ActivatedRoute);
+  private readonly comingSoonService = inject(ComingSoonService);
+  private readonly appData = inject(APP_DATA);
 
-  @Input({required: true}) pageData!: DeviceOverviewPageData;
+  readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
+
+  readonly pageData = input.required<DeviceOverviewPageData>();
 
   takingScreenshot = signal(false);
   gettingLogcat = signal(false);
   unquarantining = signal(false);
   checkingRemoteControl = signal(false);
 
-  get actions() {
-    return this.pageData.headerInfo.actions;
-  }
+  protected readonly actions = computed(
+    () => this.pageData().headerInfo.actions,
+  );
 
-  get quarantineInfo() {
-    return this.pageData.headerInfo.quarantine;
-  }
+  protected readonly quarantineInfo = computed(
+    () => this.pageData().headerInfo.quarantine,
+  );
 
-  get deviceId() {
-    return this.pageData.overview.id;
-  }
+  protected readonly deviceId = computed(() => this.pageData().overview.id);
 
-  get hostName() {
-    return this.pageData.overview.host.name;
-  }
+  protected readonly hostName = computed(
+    () => this.pageData().overview.host.name,
+  );
 
   get universe() {
     return this.route.snapshot.queryParamMap.get('universe') || '';
@@ -99,7 +108,7 @@ export class DeviceActionBar {
   readonly onChangeQuarantine = this.changeQuarantine.bind(this);
 
   getAction(key: keyof DeviceActions): ActionButtonState | undefined {
-    return (this.actions as unknown as Record<string, ActionButtonState>)?.[
+    return (this.actions() as unknown as Record<string, ActionButtonState>)?.[
       key
     ];
   }
@@ -129,8 +138,8 @@ export class DeviceActionBar {
   });
 
   openConfiguration(): void {
-    const deviceId = this.deviceId;
-    const hostName = this.hostName;
+    const deviceId = this.deviceId();
+    const hostName = this.hostName();
     const universe = this.universe;
     const dialogRef = this.dialog.open(DeviceConfig, {
       data: {deviceId, hostName, universe},
@@ -208,7 +217,7 @@ export class DeviceActionBar {
         if (result.action === 'reset') {
           this.resetConfiguration(
             result.deviceId,
-            this.hostName,
+            this.hostName(),
             result.universe,
           );
         }
@@ -217,7 +226,7 @@ export class DeviceActionBar {
   }
 
   takeScreenshot(): void {
-    const deviceId = this.deviceId;
+    const deviceId = this.deviceId();
     this.handleAsyncAction(
       this.takingScreenshot,
       'Taking screenshot...',
@@ -237,7 +246,7 @@ export class DeviceActionBar {
   }
 
   remoteControl(): void {
-    const overview = this.pageData.overview;
+    const overview = this.pageData().overview;
     const device: RemoteControlDeviceInfo[] = [
       {
         id: overview.id,
@@ -248,15 +257,15 @@ export class DeviceActionBar {
         subDevices: overview.subDevices,
       },
     ];
-    this.remoteControlService.startRemoteControl(this.hostName, device);
+    this.remoteControlService.startRemoteControl(this.hostName(), device);
   }
 
   flashDevice(): void {
-    const params = this.actions?.flash?.params;
+    const params = this.actions()?.flash?.params;
     this.dialog.open(FlashDialog, {
       data: {
-        deviceId: this.deviceId,
-        hostName: this.hostName,
+        deviceId: this.deviceId(),
+        hostName: this.hostName(),
         deviceType: params?.deviceType || '',
         requiredDimensions: params?.requiredDimensions || '',
       },
@@ -264,7 +273,7 @@ export class DeviceActionBar {
   }
 
   getLogcat(): void {
-    const deviceId = this.deviceId;
+    const deviceId = this.deviceId();
     this.handleAsyncAction(
       this.gettingLogcat,
       'Getting logcat...',
@@ -293,8 +302,8 @@ export class DeviceActionBar {
   }
 
   quarantineDevice(): void {
-    const deviceId = this.deviceId;
-    const {isQuarantined} = this.quarantineInfo ?? {
+    const deviceId = this.deviceId();
+    const {isQuarantined} = this.quarantineInfo() ?? {
       isQuarantined: false,
       expiry: '',
     };
@@ -342,8 +351,8 @@ export class DeviceActionBar {
   }
 
   changeQuarantine(): void {
-    const deviceId = this.deviceId;
-    const {expiry} = this.quarantineInfo ?? {
+    const deviceId = this.deviceId();
+    const {expiry} = this.quarantineInfo() ?? {
       isQuarantined: false,
       expiry: '',
     };
@@ -357,6 +366,24 @@ export class DeviceActionBar {
         confirmText: 'Update',
       } as QuarantineDialogData,
     });
+  }
+
+  showComingSoonPopup(key: string) {
+    const featureMap: Record<string, ActionBarAction> = {
+      'configuration': ActionBarAction.DEVICE_CONFIGURATION,
+      'screenshot': ActionBarAction.DEVICE_SCREENSHOT,
+      'remoteControl': ActionBarAction.DEVICE_REMOTE_CONTROL,
+      'flash': ActionBarAction.DEVICE_FLASH,
+      'logcat': ActionBarAction.DEVICE_LOGCAT,
+      'quarantine': ActionBarAction.DEVICE_QUARANTINE,
+    };
+    const feature = featureMap[key];
+    if (feature) {
+      const deviceLegacyUrl = this.legacyFeUrl
+        ? `${this.legacyFeUrl}/devicedetailview/${this.hostName()}/${this.pageData().overview.host.ip}/${this.deviceId()}`
+        : undefined;
+      this.comingSoonService.show(feature, deviceLegacyUrl);
+    }
   }
 
   private handleAsyncAction<T>(

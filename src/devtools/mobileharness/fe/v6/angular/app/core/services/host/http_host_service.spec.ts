@@ -8,12 +8,12 @@ import {TestBed} from '@angular/core/testing';
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
   DecommissionHostResponse,
-  ReleaseLabServerRequest,
-  ReleaseLabServerResponse,
   GetHostDebugInfoResponse,
   HostHeaderInfo,
   HostReleaseConfig,
   PopularFlag,
+  ReleaseLabServerRequest,
+  ReleaseLabServerResponse,
   RestartLabServerResponse,
   StartLabServerResponse,
   StopLabServerResponse,
@@ -62,15 +62,30 @@ describe('HttpHostService', () => {
     const mockHeaderInfo: HostHeaderInfo = {
       hostName: 'test-host',
       actions: {
-        configuration: {enabled: true, visible: true, tooltip: ''},
-        debug: {enabled: true, visible: true, tooltip: ''},
-        deploy: {enabled: true, visible: true, tooltip: ''},
-        start: {enabled: true, visible: true, tooltip: ''},
-        restart: {enabled: true, visible: true, tooltip: ''},
-        stop: {enabled: true, visible: true, tooltip: ''},
-        decommission: {enabled: false, visible: true, tooltip: ''},
-        updatePassThroughFlags: {enabled: true, visible: true, tooltip: ''},
-        release: {enabled: true, visible: true, tooltip: ''},
+        configuration: {
+          enabled: true,
+          visible: true,
+          tooltip: '',
+          isReady: true,
+        },
+        debug: {enabled: true, visible: true, tooltip: '', isReady: true},
+        deploy: {enabled: true, visible: true, tooltip: '', isReady: true},
+        start: {enabled: true, visible: true, tooltip: '', isReady: true},
+        restart: {enabled: true, visible: true, tooltip: '', isReady: true},
+        stop: {enabled: true, visible: true, tooltip: '', isReady: true},
+        decommission: {
+          enabled: false,
+          visible: true,
+          tooltip: '',
+          isReady: true,
+        },
+        updatePassThroughFlags: {
+          enabled: true,
+          visible: true,
+          tooltip: '',
+          isReady: true,
+        },
+        release: {enabled: true, visible: true, tooltip: '', isReady: true},
       },
     };
     service.getHostHeaderInfo('test-host').subscribe((info) => {

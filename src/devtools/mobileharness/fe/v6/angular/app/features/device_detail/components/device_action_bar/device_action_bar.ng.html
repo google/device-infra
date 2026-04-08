@@ -50,17 +50,17 @@
       suffix: '2xl'
     }"></ng-container>
 
-    @if (actions?.quarantine?.visible) {
-      @if (quarantineInfo?.isQuarantined) {
+    @if (actions()?.quarantine?.visible) {
+      @if (quarantineInfo()?.isQuarantined) {
         <div class="m3-split-button-group" data-testid="quarantine-group-2xl">
-          <button class="m3-split-button main-action" (click)="onQuarantine()" [disabled]="!actions?.quarantine?.enabled || unquarantining()" [matTooltip]="actions?.quarantine?.tooltip || ''">
+          <button class="m3-split-button main-action" (click)="actions()?.quarantine?.isReady ? onQuarantine() : showComingSoonPopup('quarantine')" [disabled]="!actions()?.quarantine?.enabled || unquarantining()" [matTooltip]="actions()?.quarantine?.tooltip || ''">
             @if (unquarantining()) {
               <mat-icon class="spin-animation">sync</mat-icon>Working...
             } @else {
               <mat-icon>play_circle_outline</mat-icon>Unquarantine
             }
           </button>
-          <button class="m3-split-button dropdown-action" [matMenuTriggerFor]="quarantineMenu2xl" matTooltip="Quarantine options" [disabled]="!actions?.quarantine?.enabled || unquarantining()">
+          <button class="m3-split-button dropdown-action" [matMenuTriggerFor]="quarantineMenu2xl" matTooltip="Quarantine options" [disabled]="!actions()?.quarantine?.enabled || unquarantining()">
             <mat-icon>arrow_drop_down</mat-icon>
           </button>
           <mat-menu #quarantineMenu2xl="matMenu">
@@ -148,8 +148,8 @@
           suffix: 'xl'
         }"></ng-container>
 
-        @if (actions?.quarantine?.visible) {
-          @if (quarantineInfo?.isQuarantined) {
+        @if (actions()?.quarantine?.visible) {
+          @if (quarantineInfo()?.isQuarantined) {
             <ng-container *ngTemplateOutlet="actionItem; context: {
               key: 'quarantine',
               icon: 'play_circle_outline',
@@ -245,8 +245,8 @@
           suffix: 'sm'
         }"></ng-container>
 
-        @if (actions?.quarantine?.visible) {
-          @if (quarantineInfo?.isQuarantined) {
+        @if (actions()?.quarantine?.visible) {
+          @if (quarantineInfo()?.isQuarantined) {
             <ng-container *ngTemplateOutlet="actionItem; context: {
               key: 'quarantine',
               icon: 'play_circle_outline',
@@ -297,7 +297,7 @@
     @if (mode === 'button') {
       <button
         class="m3-action-button filled"
-        (click)="handler()"
+        (click)="action?.isReady ? handler() : showComingSoonPopup(key)"
         [disabled]="!action?.enabled || (loading ?? false)"
         [matTooltip]="action?.tooltip || ''"
         [attr.data-testid]="key + '-button-' + suffix"
@@ -311,7 +311,7 @@
     } @else {
       <button
         mat-menu-item
-        (click)="handler()"
+        (click)="action?.isReady ? handler() : showComingSoonPopup(key)"
         [disabled]="!action?.enabled || (loading ?? false)"
         [matTooltip]="action?.tooltip || ''"
         [attr.data-testid]="key + '-menu-item-' + suffix"

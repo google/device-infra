@@ -3,6 +3,7 @@ import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {MatDialog} from '@angular/material/dialog';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
+import {APP_DATA} from 'app/core/models/app_data';
 import {of} from 'rxjs';
 import {DeviceOverviewPageData} from '../../../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
@@ -10,6 +11,7 @@ import {FakeDeviceService} from '../../../../core/services/device/fake_device_se
 import {FakeHostService} from '../../../../core/services/host/fake_host_service';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
+import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
 import {RemoteControlService} from '../../../../shared/services/remote_control_service';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {FlashDialog} from '../flash_dialog/flash_dialog';
@@ -26,6 +28,7 @@ describe('DeviceActionBar', () => {
   let deviceService: FakeDeviceService;
   let hostService: FakeHostService;
   let remoteControlService: jasmine.SpyObj<RemoteControlService>;
+  let comingSoonService: jasmine.SpyObj<ComingSoonService>;
 
   const mockPageData: DeviceOverviewPageData = {
     overview: {
@@ -58,24 +61,27 @@ describe('DeviceActionBar', () => {
       id: 'test-device',
       quarantine: {isQuarantined: false, expiry: ''},
       actions: {
-        screenshot: {enabled: true, visible: true, tooltip: ''},
-        logcat: {enabled: true, visible: true, tooltip: ''},
+        screenshot: {enabled: true, visible: true, tooltip: '', isReady: true},
+        logcat: {enabled: true, visible: true, tooltip: '', isReady: true},
         flash: {
           enabled: true,
           visible: true,
           tooltip: '',
+          isReady: true,
           params: {deviceType: 'AndroidRealDevice', requiredDimensions: ''},
         },
         remoteControl: {
           enabled: true,
           visible: true,
           tooltip: '',
+          isReady: true,
         },
-        quarantine: {enabled: true, visible: true, tooltip: ''},
+        quarantine: {enabled: true, visible: true, tooltip: '', isReady: true},
         configuration: {
           enabled: true,
           visible: true,
           tooltip: 'Configure device',
+          isReady: true,
         },
       },
     },
@@ -90,6 +96,7 @@ describe('DeviceActionBar', () => {
     dialog = jasmine.createSpyObj('MatDialog', ['open']);
     deviceService = new FakeDeviceService();
     hostService = new FakeHostService();
+    comingSoonService = jasmine.createSpyObj('ComingSoonService', ['show']);
 
     remoteControlService = jasmine.createSpyObj('RemoteControlService', [
       'startRemoteControl',
@@ -104,12 +111,14 @@ describe('DeviceActionBar', () => {
         {provide: SnackBarService, useValue: snackBarService},
         {provide: MatDialog, useValue: dialog},
         {provide: RemoteControlService, useValue: remoteControlService},
+        {provide: ComingSoonService, useValue: comingSoonService},
+        {provide: APP_DATA, useValue: {applicationId: 'test-app'}},
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(DeviceActionBar);
     component = fixture.componentInstance;
-    component.pageData = mockPageData;
+    fixture.componentRef.setInput('pageData', mockPageData);
     fixture.detectChanges();
   });
 
@@ -126,16 +135,21 @@ describe('DeviceActionBar', () => {
   });
 
   it('should disable configuration button if enabled is false', () => {
-    component.pageData = {
+    fixture.componentRef.setInput('pageData', {
       ...mockPageData,
       headerInfo: {
         ...mockPageData.headerInfo,
         actions: {
           ...mockPageData.headerInfo.actions!,
-          configuration: {enabled: false, visible: true, tooltip: 'Disabled'},
+          configuration: {
+            enabled: false,
+            visible: true,
+            tooltip: 'Disabled',
+            isReady: true,
+          },
         },
       },
-    };
+    });
     const cdr = fixture.debugElement.injector.get(ChangeDetectorRef);
     cdr.markForCheck();
     fixture.detectChanges();
@@ -147,7 +161,7 @@ describe('DeviceActionBar', () => {
   });
 
   it('should disable flash button if enabled is false', () => {
-    component.pageData = {
+    fixture.componentRef.setInput('pageData', {
       ...mockPageData,
       headerInfo: {
         ...mockPageData.headerInfo,
@@ -157,11 +171,12 @@ describe('DeviceActionBar', () => {
             enabled: false,
             visible: true,
             tooltip: 'Disabled',
+            isReady: true,
             params: {deviceType: 'AndroidRealDevice', requiredDimensions: ''},
           },
         },
       },
-    };
+    });
     const cdr = fixture.debugElement.injector.get(ChangeDetectorRef);
     cdr.markForCheck();
     fixture.detectChanges();
@@ -170,6 +185,36 @@ describe('DeviceActionBar', () => {
     ) as HTMLButtonElement;
     expect(flashButton).toBeTruthy();
     expect(flashButton.disabled).toBeTrue();
+  });
+
+  it('should show coming soon popup if an action is not ready', () => {
+    spyOn(deviceService, 'takeScreenshot');
+    fixture.componentRef.setInput('pageData', {
+      ...mockPageData,
+      headerInfo: {
+        ...mockPageData.headerInfo,
+        actions: {
+          ...mockPageData.headerInfo.actions!,
+          screenshot: {
+            enabled: true,
+            visible: true,
+            tooltip: 'Coming Soon',
+            isReady: false,
+          },
+        },
+      },
+    });
+    const cdr = fixture.debugElement.injector.get(ChangeDetectorRef);
+    cdr.markForCheck();
+    fixture.detectChanges();
+
+    const screenshotButton = fixture.nativeElement.querySelector(
+      '[data-testid="screenshot-button-2xl"]',
+    );
+    screenshotButton.click();
+
+    expect(comingSoonService.show).toHaveBeenCalled();
+    expect(deviceService.takeScreenshot).not.toHaveBeenCalled();
   });
 
   it('should call takeScreenshot and open dialog on success', () => {
@@ -293,13 +338,13 @@ describe('DeviceActionBar', () => {
   });
 
   it('should open ConfirmDialog when unquarantine button is clicked', () => {
-    component.pageData = {
+    fixture.componentRef.setInput('pageData', {
       ...mockPageData,
       headerInfo: {
         ...mockPageData.headerInfo,
         quarantine: {isQuarantined: true, expiry: '2025-12-31T23:59:59Z'},
       },
-    };
+    });
     const cdr = fixture.debugElement.injector.get(ChangeDetectorRef);
     cdr.markForCheck();
     fixture.detectChanges();

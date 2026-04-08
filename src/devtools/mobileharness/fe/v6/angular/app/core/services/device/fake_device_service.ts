@@ -256,6 +256,7 @@ export class FakeDeviceService extends DeviceService {
               : isMissing
                 ? 'Device is missing'
                 : 'Screenshot not supported',
+          isReady: !scenario.allActionsNotReady,
         },
         logcat: {
           enabled: logcatEnabled,
@@ -265,6 +266,7 @@ export class FakeDeviceService extends DeviceService {
             : !isAndroid
               ? 'Only for Android devices'
               : 'Device is missing',
+          isReady: !scenario.allActionsNotReady,
         },
         flash: {
           enabled: flashEnabled,
@@ -278,6 +280,7 @@ export class FakeDeviceService extends DeviceService {
             deviceType: 'AndroidRealDevice',
             requiredDimensions: '',
           },
+          isReady: !scenario.allActionsNotReady,
         },
         remoteControl: {
           enabled: remoteControlEnabled,
@@ -287,16 +290,19 @@ export class FakeDeviceService extends DeviceService {
             : !isAndroid
               ? 'Only for Android devices'
               : 'Device must be IDLE for remote control',
+          isReady: !scenario.allActionsNotReady,
         },
         quarantine: {
           enabled: true,
           visible: quarantineVisible,
           tooltip: isQuarantined ? 'Unquarantine device' : 'Quarantine device',
+          isReady: !scenario.allActionsNotReady,
         },
         configuration: {
           enabled: true,
           visible: true,
           tooltip: 'Configure device',
+          isReady: !scenario.allActionsNotReady,
         },
       },
     };

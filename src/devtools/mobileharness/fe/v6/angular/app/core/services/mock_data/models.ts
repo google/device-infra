@@ -35,6 +35,7 @@ export interface MockDeviceScenario {
     remoteControl?: boolean;
     quarantine?: boolean;
   };
+  allActionsNotReady?: boolean;
   testbedConfig?: TestbedConfig;
 }
 

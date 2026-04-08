@@ -111,11 +111,13 @@ export function createHostActions(
       tooltip: manageHostEnabled
         ? 'Configure host properties'
         : 'Configuration is not available for Shared Labs',
+      isReady: true,
     },
     debug: {
       enabled: true,
       visible: true,
       tooltip: 'Run and view live diagnostic commands on the host',
+      isReady: true,
     },
     release: {
       enabled: manageHostEnabled,
@@ -123,6 +125,7 @@ export function createHostActions(
       tooltip: manageHostEnabled
         ? 'Deploy a release or edit Pass Through Flags'
         : 'Release management is not available for Shared Labs',
+      isReady: true,
     },
     restart: {
       enabled: restartEnabled,
@@ -130,6 +133,7 @@ export function createHostActions(
       tooltip: restartEnabled
         ? 'Restart the lab server by redeploying its current software version and Pass Through Flags.'
         : '',
+      isReady: true,
     },
     stop: {
       enabled: stopEnabled,
@@ -137,6 +141,7 @@ export function createHostActions(
       tooltip: stopEnabled
         ? 'Drains running tests, then stops the lab server via Legislator rollout.'
         : '',
+      isReady: true,
     },
     start: {
       enabled: startEnabled,
@@ -144,6 +149,7 @@ export function createHostActions(
       tooltip: startEnabled
         ? 'Start the lab server by deploying its configured software version and Pass Through Flags.'
         : '',
+      isReady: true,
     },
     decommission: {
       enabled: removeEnabled,
@@ -151,13 +157,20 @@ export function createHostActions(
       tooltip: removeEnabled
         ? 'Decommission this missing host record from OmniLab'
         : '',
+      isReady: true,
     },
     // Not directly on the action bar but included in the model
-    deploy: {enabled: manageHostEnabled, visible: true, tooltip: ''},
+    deploy: {
+      enabled: manageHostEnabled,
+      visible: true,
+      tooltip: '',
+      isReady: true,
+    },
     updatePassThroughFlags: {
       enabled: manageHostEnabled,
       visible: true,
       tooltip: '',
+      isReady: true,
     },
   };
 }
