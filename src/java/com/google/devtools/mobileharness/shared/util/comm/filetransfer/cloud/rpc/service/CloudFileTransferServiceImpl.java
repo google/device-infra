@@ -23,8 +23,10 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalListener;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
@@ -95,11 +97,17 @@ public class CloudFileTransferServiceImpl {
   private static final Duration DEFAULT_PROCESS_STATUS_CACHE_TTL = Duration.ofHours(12);
 
   /** For generating process Id. */
+  private static final Duration DEFAULT_BACKGROUND_HARD_TIMEOUT = Duration.ofMinutes(30);
+
   private static final AtomicLong nextProcessId = new AtomicLong(1000L);
 
   /** Thread pool to run all processes. */
   private static final ListeningExecutorService threadPool =
       ThreadPools.createStandardThreadPool("cloud-file-transfer");
+
+  /** Thread pool to run timeouts. */
+  private static final ListeningScheduledExecutorService scheduledThreadPool =
+      ThreadPools.createStandardScheduledThreadPool("cloud-file-transfer-scheduled", 5);
 
   private final FileHandlers handlers = new FileHandlers();
 
@@ -398,6 +406,12 @@ public class CloudFileTransferServiceImpl {
             GetProcessStatusResponse.newBuilder().setStatus(ProcessStatus.RUNNING).build()));
     ListenableFuture<ProcessResponseOrException> future =
         threadPool.submit(new CloudProcess<>(processId, this::uploadFile, request.getRequest()));
+    long hardTimeoutMs = DEFAULT_BACKGROUND_HARD_TIMEOUT.toMillis();
+    if (request.getRequest().hasCompressOptions()
+        && request.getRequest().getCompressOptions().getTimeoutMs() > 0) {
+      hardTimeoutMs = request.getRequest().getCompressOptions().getTimeoutMs();
+    }
+    future = Futures.withTimeout(future, hardTimeoutMs, TimeUnit.MILLISECONDS, scheduledThreadPool);
     future.addListener(() -> logger.atInfo().log("[%s] finished", processId), threadPool);
     logger.atInfo().log("[%s] Started %s", processId, actionInfo);
 
@@ -454,6 +468,12 @@ public class CloudFileTransferServiceImpl {
     ListenableFuture<ProcessResponseOrException> future =
         threadPool.submit(
             new CloudProcess<>(processId, this::downloadGcsFile, request.getRequest()));
+    long hardTimeoutMs = DEFAULT_BACKGROUND_HARD_TIMEOUT.toMillis();
+    if (request.getRequest().hasCompressOptions()
+        && request.getRequest().getCompressOptions().getTimeoutMs() > 0) {
+      hardTimeoutMs = request.getRequest().getCompressOptions().getTimeoutMs();
+    }
+    future = Futures.withTimeout(future, hardTimeoutMs, TimeUnit.MILLISECONDS, scheduledThreadPool);
     future.addListener(() -> logger.atInfo().log("[%s] finished", processId), threadPool);
     logger.atInfo().log("[%s] Started %s", processId, actionInfo);
 
