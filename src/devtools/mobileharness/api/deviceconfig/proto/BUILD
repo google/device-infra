@@ -51,6 +51,11 @@ proto_library(
     ],
 )
 
+kt_jvm_proto_library(
+    name = "device_kt_proto",
+    deps = [":device_proto"],
+)
+
 java_proto_library(
     name = "device_java_proto",
     deps = [":device_proto"],
@@ -99,10 +104,15 @@ proto_library(
     name = "device_config_service_proto",
     srcs = ["device_config_service.proto"],
     deps = [
-        "//src/devtools/mobileharness/api/deviceconfig/proto:device_proto",
-        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_proto",
+        ":device_proto",
+        ":lab_proto",
         "@protobuf//:field_mask_proto",
     ],
+)
+
+kt_jvm_proto_library(
+    name = "device_config_service_kt_proto",
+    deps = [":device_config_service_proto"],
 )
 
 java_proto_library(
