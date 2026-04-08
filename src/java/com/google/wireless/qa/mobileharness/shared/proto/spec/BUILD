@@ -407,6 +407,11 @@ proto_library(
     deps = [":base_spec_proto"],
 )
 
+py_proto_library(
+    name = "tradefed_test_spec_py_pb2",
+    deps = [":tradefed_test_spec_proto"],
+)
+
 java_proto_library(
     name = "tradefed_test_spec_java_proto",
     deps = [":tradefed_test_spec_proto"],
