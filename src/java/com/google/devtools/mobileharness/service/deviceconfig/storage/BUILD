@@ -22,6 +22,17 @@ package(
     ],
 )
 
+filegroup(
+    name = "device_config_sql",
+    srcs = [
+        "device_config_table.sdl",
+        "lab_config_table.sdl",
+    ],
+    visibility = [
+        "//third_party/py/multitest_transport:__pkg__",
+    ],
+)
+
 java_library(
     name = "storage_client",
     srcs = ["StorageClient.java"],
