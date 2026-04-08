@@ -43,16 +43,6 @@ public class ConfigServiceCapability {
     this.universe = universe;
   }
 
-  /**
-   * @deprecated Use {@link #ConfigServiceCapability(Environment, UniverseScope)} instead. TODO:
-   *     Remove after all callers are migrated to UniverseScope.
-   */
-  @Deprecated
-  @AssistedInject
-  ConfigServiceCapability(Environment environment, @Assisted String universe) {
-    this(environment, UniverseScope.fromString(universe));
-  }
-
   // TODO: Consolidate with FeatureManager.isConfigurationFeatureEnabled() which
   // contains similar universe-based availability logic.
   /** Returns true if the configuration service is available for the current context. */

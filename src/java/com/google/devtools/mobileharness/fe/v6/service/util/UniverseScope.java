@@ -37,20 +37,4 @@ public sealed interface UniverseScope {
 
   /** Represents a remote ATS controller universe, identified by its controller ID. */
   record RoutedUniverse(String atsControllerId) implements UniverseScope {}
-
-  /**
-   * Creates a {@link UniverseScope} from a legacy universe string.
-   *
-   * <p>This is intended for use in {@code @Deprecated} bridge methods to convert legacy
-   * String-based callers to the new type-safe API during the migration period.
-   *
-   * @deprecated Use {@link UniverseFactory#create(String)} instead, which includes environment
-   *     validation. TODO: Remove after all callers are migrated to UniverseScope.
-   */
-  @Deprecated
-  static UniverseScope fromString(String universe) {
-    return (universe.isEmpty() || universe.equals("google_1p"))
-        ? SELF
-        : new RoutedUniverse(universe);
-  }
 }

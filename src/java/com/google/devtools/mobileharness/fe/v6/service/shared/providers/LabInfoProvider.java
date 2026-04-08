@@ -25,14 +25,4 @@ import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProt
 public interface LabInfoProvider {
   ListenableFuture<GetLabInfoResponse> getLabInfoAsync(
       GetLabInfoRequest request, UniverseScope universe);
-
-  /**
-   * @deprecated Use {@link #getLabInfoAsync(GetLabInfoRequest, UniverseScope)} instead. TODO:
-   *     Remove after all callers are migrated to UniverseScope.
-   */
-  @Deprecated
-  default ListenableFuture<GetLabInfoResponse> getLabInfoAsync(
-      GetLabInfoRequest request, String universe) {
-    return getLabInfoAsync(request, UniverseScope.fromString(universe));
-  }
 }

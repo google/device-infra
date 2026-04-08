@@ -29,67 +29,10 @@ public interface HostAuxiliaryInfoProvider {
   ListenableFuture<Optional<HostReleaseInfo>> getHostReleaseInfo(
       String hostName, UniverseScope universe);
 
-  /**
-   * @deprecated Use {@link #getHostReleaseInfo(String, UniverseScope)} instead. TODO: Remove after
-   *     all callers are migrated to UniverseScope.
-   */
-  @Deprecated
-  default ListenableFuture<Optional<HostReleaseInfo>> getHostReleaseInfo(
-      String hostName, String universe) {
-    return getHostReleaseInfo(hostName, UniverseScope.fromString(universe));
-  }
-
-  /**
-   * @deprecated Use {@link #getHostReleaseInfo(String, UniverseScope)} instead. TODO: Remove after
-   *     all callers are migrated to UniverseScope.
-   */
-  @Deprecated
-  default ListenableFuture<Optional<HostReleaseInfo>> getHostReleaseInfo(String hostName) {
-    return getHostReleaseInfo(hostName, new UniverseScope.SelfUniverse());
-  }
-
   /** Fetches the legacy pass-through flags for the lab server. */
   ListenableFuture<Optional<String>> getPassThroughFlags(String hostName, UniverseScope universe);
-
-  /**
-   * @deprecated Use {@link #getPassThroughFlags(String, UniverseScope)} instead. TODO: Remove after
-   *     all callers are migrated to UniverseScope.
-   */
-  @Deprecated
-  default ListenableFuture<Optional<String>> getPassThroughFlags(String hostName, String universe) {
-    return getPassThroughFlags(hostName, UniverseScope.fromString(universe));
-  }
-
-  /**
-   * @deprecated Use {@link #getPassThroughFlags(String, UniverseScope)} instead. TODO: Remove after
-   *     all callers are migrated to UniverseScope.
-   */
-  @Deprecated
-  default ListenableFuture<Optional<String>> getPassThroughFlags(String hostName) {
-    return getPassThroughFlags(hostName, new UniverseScope.SelfUniverse());
-  }
 
   /** Fetches the diagnostic links for the host. */
   ListenableFuture<List<DiagnosticLink>> getDiagnosticLinks(
       String hostName, Optional<String> labType, UniverseScope universe);
-
-  /**
-   * @deprecated Use {@link #getDiagnosticLinks(String, Optional, UniverseScope)} instead. TODO:
-   *     Remove after all callers are migrated to UniverseScope.
-   */
-  @Deprecated
-  default ListenableFuture<List<DiagnosticLink>> getDiagnosticLinks(
-      String hostName, Optional<String> labType, String universe) {
-    return getDiagnosticLinks(hostName, labType, UniverseScope.fromString(universe));
-  }
-
-  /**
-   * @deprecated Use {@link #getDiagnosticLinks(String, Optional, UniverseScope)} instead. TODO:
-   *     Remove after all callers are migrated to UniverseScope.
-   */
-  @Deprecated
-  default ListenableFuture<List<DiagnosticLink>> getDiagnosticLinks(
-      String hostName, Optional<String> labType) {
-    return getDiagnosticLinks(hostName, labType, new UniverseScope.SelfUniverse());
-  }
 }

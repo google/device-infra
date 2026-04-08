@@ -22,13 +22,4 @@ import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 public interface ConfigServiceCapabilityFactory {
 
   ConfigServiceCapability create(UniverseScope universe);
-
-  /**
-   * @deprecated Use {@link #create(UniverseScope)} instead. TODO: Remove after all callers are
-   *     migrated to UniverseScope.
-   */
-  @Deprecated
-  default ConfigServiceCapability create(String universe) {
-    return create(UniverseScope.fromString(universe));
-  }
 }

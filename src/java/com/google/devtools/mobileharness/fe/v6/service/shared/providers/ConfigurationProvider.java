@@ -26,50 +26,11 @@ import java.util.Optional;
 public interface ConfigurationProvider {
   ListenableFuture<Optional<DeviceConfig>> getDeviceConfig(String deviceId, UniverseScope universe);
 
-  /**
-   * @deprecated Use {@link #getDeviceConfig(String, UniverseScope)} instead. TODO: Remove after all
-   *     callers are migrated to UniverseScope.
-   */
-  @Deprecated
-  default ListenableFuture<Optional<DeviceConfig>> getDeviceConfig(
-      String deviceId, String universe) {
-    return getDeviceConfig(deviceId, UniverseScope.fromString(universe));
-  }
-
   ListenableFuture<Optional<LabConfig>> getLabConfig(String hostName, UniverseScope universe);
-
-  /**
-   * @deprecated Use {@link #getLabConfig(String, UniverseScope)} instead. TODO: Remove after all
-   *     callers are migrated to UniverseScope.
-   */
-  @Deprecated
-  default ListenableFuture<Optional<LabConfig>> getLabConfig(String hostName, String universe) {
-    return getLabConfig(hostName, UniverseScope.fromString(universe));
-  }
 
   ListenableFuture<Void> updateDeviceConfig(
       String deviceId, DeviceConfig deviceConfig, UniverseScope universe);
 
-  /**
-   * @deprecated Use {@link #updateDeviceConfig(String, DeviceConfig, UniverseScope)} instead. TODO:
-   *     Remove after all callers are migrated to UniverseScope.
-   */
-  @Deprecated
-  default ListenableFuture<Void> updateDeviceConfig(
-      String deviceId, DeviceConfig deviceConfig, String universe) {
-    return updateDeviceConfig(deviceId, deviceConfig, UniverseScope.fromString(universe));
-  }
-
   ListenableFuture<Void> updateLabConfig(
       String hostName, LabConfig labConfig, UniverseScope universe);
-
-  /**
-   * @deprecated Use {@link #updateLabConfig(String, LabConfig, UniverseScope)} instead. TODO:
-   *     Remove after all callers are migrated to UniverseScope.
-   */
-  @Deprecated
-  default ListenableFuture<Void> updateLabConfig(
-      String hostName, LabConfig labConfig, String universe) {
-    return updateLabConfig(hostName, labConfig, UniverseScope.fromString(universe));
-  }
 }
