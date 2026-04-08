@@ -82,7 +82,7 @@ public final class GetHostOverviewHandlerTest {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
 
     // Default empty responses
-    when(labInfoProvider.getLabInfoAsync(any(), any()))
+    when(labInfoProvider.getLabInfoAsync(any(), anyString()))
         .thenReturn(immediateFuture(GetLabInfoResponse.getDefaultInstance()));
     when(hostAuxiliaryInfoProvider.getHostReleaseInfo(any()))
         .thenReturn(immediateFuture(Optional.empty()));
@@ -213,7 +213,7 @@ public final class GetHostOverviewHandlerTest {
                                                                     .setKey("other_prop")
                                                                     .setValue("other_val"))))))))
             .build();
-    when(labInfoProvider.getLabInfoAsync(any(), any())).thenReturn(immediateFuture(response));
+    when(labInfoProvider.getLabInfoAsync(any(), anyString())).thenReturn(immediateFuture(response));
 
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST)).getOverviewContent();
@@ -376,7 +376,7 @@ public final class GetHostOverviewHandlerTest {
                                                                     .setKey(key)
                                                                     .setValue(value))))))))
             .build();
-    when(labInfoProvider.getLabInfoAsync(any(), any())).thenReturn(immediateFuture(response));
+    when(labInfoProvider.getLabInfoAsync(any(), anyString())).thenReturn(immediateFuture(response));
   }
 
   private void mockLabInfoWithIp(String ip) {
@@ -392,6 +392,6 @@ public final class GetHostOverviewHandlerTest {
                                         LabInfo.newBuilder()
                                             .setLabLocator(LabLocator.newBuilder().setIp(ip))))))
             .build();
-    when(labInfoProvider.getLabInfoAsync(any(), any())).thenReturn(immediateFuture(response));
+    when(labInfoProvider.getLabInfoAsync(any(), anyString())).thenReturn(immediateFuture(response));
   }
 }

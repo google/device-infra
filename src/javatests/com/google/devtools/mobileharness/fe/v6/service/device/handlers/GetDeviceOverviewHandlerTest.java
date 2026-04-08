@@ -68,6 +68,7 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.SubDeviceInfoListF
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
@@ -166,12 +167,12 @@ public final class GetDeviceOverviewHandlerTest {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
 
     // Default mock behaviors
-    when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any()))
+    when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any(UniverseScope.class)))
         .thenReturn(immediateFuture(DEFAULT_LAB_INFO_RESPONSE));
-    when(configurationProvider.getDeviceConfig(anyString(), anyString()))
+    when(configurationProvider.getDeviceConfig(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.empty()));
     // By default, assume Config Service is available but returns nothing
-    when(configurationProvider.getLabConfig(anyString(), anyString()))
+    when(configurationProvider.getLabConfig(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.of(LabConfig.getDefaultInstance())));
     when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(any(), any(), any(), anyString()))
         .thenReturn(
@@ -181,11 +182,13 @@ public final class GetDeviceOverviewHandlerTest {
                 .build());
     when(environment.isGoogleInternal()).thenReturn(true);
     when(configServiceCapabilityFactory.create(anyString())).thenReturn(configServiceCapability);
+    when(configServiceCapabilityFactory.create(any(UniverseScope.class)))
+        .thenReturn(configServiceCapability);
     when(configServiceCapability.isConfigServiceAvailable()).thenReturn(true);
   }
 
   private void mockDeviceInfo(DeviceInfo deviceInfo) {
-    when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any()))
+    when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any(UniverseScope.class)))
         .thenReturn(
             immediateFuture(
                 GetLabInfoResponse.newBuilder()
@@ -217,9 +220,9 @@ public final class GetDeviceOverviewHandlerTest {
                 .setHost(HostInfo.newBuilder().setName(HOST_NAME))
                 .build());
 
-    verify(labInfoProvider).getLabInfoAsync(any(GetLabInfoRequest.class), eq(UNIVERSE));
-    verify(configurationProvider).getDeviceConfig(eq(DEVICE_ID), eq(UNIVERSE));
-    verify(configurationProvider).getLabConfig(eq(HOST_NAME), eq(UNIVERSE));
+    verify(labInfoProvider).getLabInfoAsync(any(GetLabInfoRequest.class), any(UniverseScope.class));
+    verify(configurationProvider).getDeviceConfig(eq(DEVICE_ID), any(UniverseScope.class));
+    verify(configurationProvider).getLabConfig(eq(HOST_NAME), any(UniverseScope.class));
   }
 
   @Test
@@ -227,9 +230,9 @@ public final class GetDeviceOverviewHandlerTest {
     getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get(); // First call
     getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST).get(); // Second call
 
-    verify(labInfoProvider).getLabInfoAsync(any(GetLabInfoRequest.class), eq(UNIVERSE));
-    verify(configurationProvider).getDeviceConfig(eq(DEVICE_ID), eq(UNIVERSE));
-    verify(configurationProvider).getLabConfig(eq(HOST_NAME), eq(UNIVERSE));
+    verify(labInfoProvider).getLabInfoAsync(any(GetLabInfoRequest.class), any(UniverseScope.class));
+    verify(configurationProvider).getDeviceConfig(eq(DEVICE_ID), any(UniverseScope.class));
+    verify(configurationProvider).getLabConfig(eq(HOST_NAME), any(UniverseScope.class));
   }
 
   @Test
@@ -239,14 +242,16 @@ public final class GetDeviceOverviewHandlerTest {
         .getDeviceOverview(DEFAULT_REQUEST.toBuilder().setForceRefresh(true).build())
         .get(); // Second call with force refresh
 
-    verify(labInfoProvider, times(2)).getLabInfoAsync(any(GetLabInfoRequest.class), eq(UNIVERSE));
-    verify(configurationProvider, times(2)).getDeviceConfig(eq(DEVICE_ID), eq(UNIVERSE));
-    verify(configurationProvider, times(2)).getLabConfig(eq(HOST_NAME), eq(UNIVERSE));
+    verify(labInfoProvider, times(2))
+        .getLabInfoAsync(any(GetLabInfoRequest.class), any(UniverseScope.class));
+    verify(configurationProvider, times(2))
+        .getDeviceConfig(eq(DEVICE_ID), any(UniverseScope.class));
+    verify(configurationProvider, times(2)).getLabConfig(eq(HOST_NAME), any(UniverseScope.class));
   }
 
   @Test
   public void getDeviceOverview_labInfoProviderFails() throws Exception {
-    when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any()))
+    when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any(UniverseScope.class)))
         .thenReturn(immediateFailedFuture(new StatusRuntimeException(Status.DEADLINE_EXCEEDED)));
 
     ListenableFuture<DeviceOverviewPageData> responseFuture =
@@ -258,7 +263,7 @@ public final class GetDeviceOverviewHandlerTest {
 
   @Test
   public void getDeviceOverview_deviceConfigFails_gracefulFallback() throws Exception {
-    when(configurationProvider.getDeviceConfig(anyString(), anyString()))
+    when(configurationProvider.getDeviceConfig(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFailedFuture(new RuntimeException("Config error")));
 
     ListenableFuture<DeviceOverviewPageData> responseFuture =
@@ -325,7 +330,7 @@ public final class GetDeviceOverviewHandlerTest {
                             .addSupportedDimension(DIMENSION_CONFIG_SUPPORTED)
                             .addRequiredDimension(DIMENSION_CONFIG_REQUIRED)))
             .build();
-    when(configurationProvider.getDeviceConfig(anyString(), anyString()))
+    when(configurationProvider.getDeviceConfig(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.of(deviceConfig)));
 
     ListenableFuture<DeviceOverviewPageData> responseFuture =
@@ -390,10 +395,10 @@ public final class GetDeviceOverviewHandlerTest {
                             .addSupportedDimension(DIMENSION_CONFIG_SUPPORTED)
                             .addRequiredDimension(DIMENSION_CONFIG_REQUIRED)))
             .build();
-    when(configurationProvider.getLabConfig(anyString(), anyString()))
+    when(configurationProvider.getLabConfig(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.of(labConfig)));
     // DeviceConfig should be ignored even if present
-    when(configurationProvider.getDeviceConfig(anyString(), anyString()))
+    when(configurationProvider.getDeviceConfig(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.of(DeviceConfig.getDefaultInstance())));
 
     ListenableFuture<DeviceOverviewPageData> responseFuture =

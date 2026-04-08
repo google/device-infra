@@ -29,8 +29,10 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembersh
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProviderImpl;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProviderImpl;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.NoOpConfigurationProvider;
-import com.google.devtools.mobileharness.fe.v6.service.shared.providers.oss.OssLabInfoProviderImpl;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.NoOpRoutedUniverseLabInfoStubFactory;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.RoutedUniverseLabInfoStubFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.MasterStubAnnotation.GrpcStub;
@@ -56,6 +58,7 @@ public final class OssStubsModule extends AbstractModule {
         ChannelFactory.createLocalChannel(
             Flags.instance().olcServerPort.getNonNull(), directExecutor());
     install(new LabInfoGrpcStubModule(olcServerChannel));
+
     if (Flags.instance().feConnectToConfigServer.getNonNull()) {
 
       install(new DeviceConfigGrpcStubModule());
@@ -71,7 +74,11 @@ public final class OssStubsModule extends AbstractModule {
     install(new FactoryModuleBuilder().build(ConfigServiceCapabilityFactory.class));
     install(new FactoryModuleBuilder().build(FeatureManagerFactory.class));
 
-    bind(LabInfoProvider.class).to(OssLabInfoProviderImpl.class).in(Singleton.class);
+    bind(LabInfoProvider.class).to(LabInfoProviderImpl.class).in(Singleton.class);
+    bind(RoutedUniverseLabInfoStubFactory.class)
+        .to(NoOpRoutedUniverseLabInfoStubFactory.class)
+        .in(Singleton.class);
+
     bind(HostAuxiliaryInfoProvider.class).to(OssHostAuxiliaryInfoProviderImpl.class);
     bind(LogcatActionHelper.class).to(NoOpLogcatActionHelper.class).in(Singleton.class);
     bind(GroupMembershipProvider.class).to(NoOpGroupMembershipProvider.class).in(Singleton.class);

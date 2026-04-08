@@ -29,6 +29,8 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseFactory;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -43,17 +45,20 @@ public class DeviceDataLoader {
   private final ConfigurationProvider configurationProvider;
   private final ListeningExecutorService executor;
   private final ConfigServiceCapabilityFactory configServiceCapabilityFactory;
+  private final UniverseFactory universeFactory;
 
   @Inject
   DeviceDataLoader(
       LabInfoProvider labInfoProvider,
       ConfigurationProvider configurationProvider,
       ListeningExecutorService executor,
-      ConfigServiceCapabilityFactory configServiceCapabilityFactory) {
+      ConfigServiceCapabilityFactory configServiceCapabilityFactory,
+      UniverseFactory universeFactory) {
     this.labInfoProvider = labInfoProvider;
     this.configurationProvider = configurationProvider;
     this.executor = executor;
     this.configServiceCapabilityFactory = configServiceCapabilityFactory;
+    this.universeFactory = universeFactory;
   }
 
   /** Represents how the device's configuration is managed and where it originates. */
@@ -106,9 +111,21 @@ public class DeviceDataLoader {
    * Loads device data asynchronously.
    *
    * @param deviceId the unique ID of the device
+   * @param universe the universe string
+   * @deprecated Use {@link #loadDeviceData(String, UniverseScope)} instead.
+   */
+  @Deprecated
+  public ListenableFuture<DeviceData> loadDeviceData(String deviceId, String universe) {
+    return loadDeviceData(deviceId, universeFactory.create(universe));
+  }
+
+  /**
+   * Loads device data asynchronously.
+   *
+   * @param deviceId the unique ID of the device
    * @param universe the universe the device belongs to
    */
-  public ListenableFuture<DeviceData> loadDeviceData(String deviceId, String universe) {
+  public ListenableFuture<DeviceData> loadDeviceData(String deviceId, UniverseScope universe) {
     logger.atInfo().log("Loading device data for %s (universe: %s)", deviceId, universe);
 
     // Parallel fetch start: DeviceInfo (Required) and Individual Config (Speculative)
@@ -141,7 +158,7 @@ public class DeviceDataLoader {
 
   private DeviceData resolveDeviceData(
       String deviceId,
-      String universe,
+      UniverseScope universe,
       DeviceInfo deviceInfo,
       Optional<LabConfig> labConfigOpt,
       Optional<DeviceConfig> individualConfigOpt) {
@@ -184,7 +201,7 @@ public class DeviceDataLoader {
   }
 
   private ListenableFuture<Optional<DeviceConfig>> getSafeDeviceConfigAsync(
-      String deviceId, String universe) {
+      String deviceId, UniverseScope universe) {
     return Futures.catching(
         configurationProvider.getDeviceConfig(deviceId, universe),
         Throwable.class,
@@ -196,7 +213,7 @@ public class DeviceDataLoader {
   }
 
   private ListenableFuture<Optional<LabConfig>> getSafeLabConfigAsync(
-      String hostName, String universe) {
+      String hostName, UniverseScope universe) {
     return Futures.catching(
         configurationProvider.getLabConfig(hostName, universe),
         Throwable.class,
@@ -207,7 +224,7 @@ public class DeviceDataLoader {
         executor);
   }
 
-  private ListenableFuture<DeviceInfo> getDeviceInfoAsync(String deviceId, String universe) {
+  private ListenableFuture<DeviceInfo> getDeviceInfoAsync(String deviceId, UniverseScope universe) {
     return Futures.transform(
         labInfoProvider.getLabInfoAsync(createGetLabInfoRequest(deviceId), universe),
         response ->

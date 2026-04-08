@@ -52,7 +52,22 @@ java_library(
     srcs = ["LabInfoProvider.java"],
     deps = [
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "lab_info_provider_impl",
+    srcs = ["LabInfoProviderImpl.java"],
+    deps = [
+        ":lab_info_provider",
+        ":routed_universe_lab_info_stub_factory",
+        "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
+        "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:lab_info",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 
@@ -65,5 +80,20 @@ java_library(
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "routed_universe_lab_info_stub_factory",
+    srcs = ["RoutedUniverseLabInfoStubFactory.java"],
+    deps = ["//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:lab_info"],
+)
+
+java_library(
+    name = "no_op_routed_universe_lab_info_stub_factory",
+    srcs = ["NoOpRoutedUniverseLabInfoStubFactory.java"],
+    deps = [
+        ":routed_universe_lab_info_stub_factory",
+        "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:lab_info",
     ],
 )

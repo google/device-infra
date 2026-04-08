@@ -21,6 +21,7 @@ import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -119,7 +120,7 @@ public final class GetHostDeviceSummariesHandlerTest {
 
   @Test
   public void getHostDeviceSummaries_success() throws Exception {
-    when(labInfoProvider.getLabInfoAsync(any(), any()))
+    when(labInfoProvider.getLabInfoAsync(any(), anyString()))
         .thenReturn(immediateFuture(LAB_INFO_RESPONSE));
 
     GetHostDeviceSummariesResponse response =
@@ -147,7 +148,7 @@ public final class GetHostDeviceSummariesHandlerTest {
 
   @Test
   public void getHostDeviceSummaries_noDevices_returnsEmpty() throws Exception {
-    when(labInfoProvider.getLabInfoAsync(any(), any()))
+    when(labInfoProvider.getLabInfoAsync(any(), anyString()))
         .thenReturn(immediateFuture(GetLabInfoResponse.getDefaultInstance()));
 
     GetHostDeviceSummariesResponse response =
@@ -187,7 +188,7 @@ public final class GetHostDeviceSummariesHandlerTest {
                                             .addDeviceInfo(DEVICE_INFO)
                                             .addDeviceInfo(deviceInfoBusy)))))
             .build();
-    when(labInfoProvider.getLabInfoAsync(any(), any()))
+    when(labInfoProvider.getLabInfoAsync(any(), anyString()))
         .thenReturn(immediateFuture(labInfoResponseMultiple));
 
     GetHostDeviceSummariesResponse response =
@@ -234,7 +235,7 @@ public final class GetHostDeviceSummariesHandlerTest {
                                     .setName(TestbedDeviceSpec.SUBDEVICE_DIMENSIONS_KEY)
                                     .setValue(encodedSubDeviceDimensions))))
             .build();
-    when(labInfoProvider.getLabInfoAsync(any(), any()))
+    when(labInfoProvider.getLabInfoAsync(any(), anyString()))
         .thenReturn(
             immediateFuture(
                 GetLabInfoResponse.newBuilder()
@@ -282,7 +283,7 @@ public final class GetHostDeviceSummariesHandlerTest {
                                     .setName(TestbedDeviceSpec.SUBDEVICE_DIMENSIONS_KEY)
                                     .setValue(encodedSubDeviceDimensions))))
             .build();
-    when(labInfoProvider.getLabInfoAsync(any(), any()))
+    when(labInfoProvider.getLabInfoAsync(any(), anyString()))
         .thenReturn(
             immediateFuture(
                 GetLabInfoResponse.newBuilder()

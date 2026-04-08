@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeader
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHeaderInfoRequest;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
@@ -92,7 +93,9 @@ public final class GetDeviceHeaderInfoHandlerTest {
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
 
-    when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any()))
+    when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any(UniverseScope.class)))
+        .thenReturn(immediateFuture(DEFAULT_LAB_INFO_RESPONSE));
+    when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), anyString()))
         .thenReturn(immediateFuture(DEFAULT_LAB_INFO_RESPONSE));
     when(configurationProvider.getDeviceConfig(anyString(), anyString()))
         .thenReturn(immediateFuture(Optional.empty()));

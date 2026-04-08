@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceCon
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -68,9 +69,11 @@ public final class GetDeviceConfigHandlerTest {
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     when(configServiceCapabilityFactory.create(anyString())).thenReturn(configServiceCapability);
+    when(configServiceCapabilityFactory.create(any(UniverseScope.class)))
+        .thenReturn(configServiceCapability);
     when(configServiceCapability.calculateDeviceUiStatus())
         .thenReturn(DeviceConfigUiStatus.getDefaultInstance());
-    when(labInfoProvider.getLabInfoAsync(any(), anyString()))
+    when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
         .thenReturn(
             immediateFuture(
                 GetLabInfoResponse.newBuilder()
@@ -85,16 +88,15 @@ public final class GetDeviceConfigHandlerTest {
                                                     .addDeviceInfo(
                                                         DeviceInfo.getDefaultInstance())))))
                     .build()));
-    when(configurationProvider.getLabConfig(anyString(), anyString()))
+    when(configurationProvider.getLabConfig(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.empty()));
-    when(configurationProvider.getDeviceConfig(anyString(), anyString()))
+    when(configurationProvider.getDeviceConfig(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.empty()));
   }
 
   @Test
   public void getDeviceConfig_success() throws Exception {
-    GetDeviceConfigRequest request =
-        GetDeviceConfigRequest.newBuilder().setId("test").setUniverse("google_1p").build();
+    GetDeviceConfigRequest request = GetDeviceConfigRequest.newBuilder().setId("test").build();
     GetDeviceConfigResponse response = getDeviceConfigHandler.getDeviceConfig(request).get();
     assertThat(response.getIsHostManaged()).isFalse();
   }

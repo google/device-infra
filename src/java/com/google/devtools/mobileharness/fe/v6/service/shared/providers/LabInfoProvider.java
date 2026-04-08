@@ -17,10 +17,22 @@
 package com.google.devtools.mobileharness.fe.v6.service.shared.providers;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 
 /** Provider for fetching LabInfo, with universe awareness. */
 public interface LabInfoProvider {
-  ListenableFuture<GetLabInfoResponse> getLabInfoAsync(GetLabInfoRequest request, String universe);
+  ListenableFuture<GetLabInfoResponse> getLabInfoAsync(
+      GetLabInfoRequest request, UniverseScope universe);
+
+  /**
+   * @deprecated Use {@link #getLabInfoAsync(GetLabInfoRequest, UniverseScope)} instead. TODO:
+   *     Remove after all callers are migrated to UniverseScope.
+   */
+  @Deprecated
+  default ListenableFuture<GetLabInfoResponse> getLabInfoAsync(
+      GetLabInfoRequest request, String universe) {
+    return getLabInfoAsync(request, UniverseScope.fromString(universe));
+  }
 }

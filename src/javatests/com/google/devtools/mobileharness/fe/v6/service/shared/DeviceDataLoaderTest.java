@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.M
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
@@ -67,7 +68,9 @@ import org.mockito.junit.MockitoRule;
 public final class DeviceDataLoaderTest {
 
   private static final String DEVICE_ID = "test_device_id";
-  private static final String UNIVERSE = "test_universe";
+  private static final UniverseScope UNIVERSE = new UniverseScope.SelfUniverse();
+  private static final UniverseScope UNSUPPORTED_UNIVERSE =
+      new UniverseScope.RoutedUniverse("not_supported");
   private static final String HOST_NAME = "test_host";
 
   private static final DeviceInfo DEFAULT_DEVICE_INFO =
@@ -105,12 +108,13 @@ public final class DeviceDataLoaderTest {
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
 
-    when(configServiceCapabilityFactory.create(anyString())).thenReturn(configServiceCapability);
-    when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any()))
+    when(configServiceCapabilityFactory.create(any(UniverseScope.class)))
+        .thenReturn(configServiceCapability);
+    when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any(UniverseScope.class)))
         .thenReturn(immediateFuture(DEFAULT_LAB_INFO_RESPONSE));
-    when(configurationProvider.getDeviceConfig(anyString(), anyString()))
+    when(configurationProvider.getDeviceConfig(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.empty()));
-    when(configurationProvider.getLabConfig(anyString(), anyString()))
+    when(configurationProvider.getLabConfig(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.of(LabConfig.getDefaultInstance())));
     when(environment.isGoogleInternal()).thenReturn(true);
     when(configServiceCapability.isConfigServiceAvailable()).thenReturn(true);
@@ -163,7 +167,7 @@ public final class DeviceDataLoaderTest {
 
   @Test
   public void loadDeviceData_deviceConfigFetchFailure_returnsDefault() throws Exception {
-    when(configurationProvider.getDeviceConfig(anyString(), anyString()))
+    when(configurationProvider.getDeviceConfig(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFailedFuture(new RuntimeException("Config service error")));
 
     DeviceData deviceData = deviceDataLoader.loadDeviceData(DEVICE_ID, UNIVERSE).get();
@@ -174,7 +178,7 @@ public final class DeviceDataLoaderTest {
 
   @Test
   public void loadDeviceData_labConfigFetchFailure_returnsNotSupported() throws Exception {
-    when(configurationProvider.getLabConfig(anyString(), anyString()))
+    when(configurationProvider.getLabConfig(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFailedFuture(new RuntimeException("Config service error")));
 
     DeviceData deviceData = deviceDataLoader.loadDeviceData(DEVICE_ID, UNIVERSE).get();
@@ -185,7 +189,7 @@ public final class DeviceDataLoaderTest {
 
   @Test
   public void loadDeviceData_deviceInfoNotFound_throwsException() throws Exception {
-    when(labInfoProvider.getLabInfoAsync(any(), any()))
+    when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any(UniverseScope.class)))
         .thenReturn(
             immediateFuture(
                 GetLabInfoResponse.newBuilder()
