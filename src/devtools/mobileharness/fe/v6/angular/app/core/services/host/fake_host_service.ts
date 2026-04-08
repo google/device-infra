@@ -1,14 +1,17 @@
 import {Injectable} from '@angular/core';
 import {Observable, of, throwError} from 'rxjs';
+import {delay} from 'rxjs/operators';
 
 import {
+  CanRolloutResult,
   DecommissionHostResponse,
-  ReleaseLabServerRequest,
-  ReleaseLabServerResponse,
   GetHostDebugInfoResponse,
   HostHeaderInfo,
   HostReleaseConfig,
+  HostRolloutAction,
   PopularFlag,
+  ReleaseLabServerRequest,
+  ReleaseLabServerResponse,
   RestartLabServerResponse,
   StartLabServerResponse,
   StopLabServerResponse,
@@ -488,12 +491,25 @@ export class FakeHostService extends HostService {
     });
   }
 
-  override stopLabServer(
-    hostName: string,
-  ): Observable<StopLabServerResponse> {
+  override stopLabServer(hostName: string): Observable<StopLabServerResponse> {
     return of({
       trackingUrl:
         'https://rollouts.corp.example.com/rollouts/prodchange-rollout/stop%2F123',
     });
+  }
+
+  override canRollout(
+    hostName: string,
+    action: HostRolloutAction,
+  ): Observable<CanRolloutResult> {
+    const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    if (scenario && scenario.canRollout) {
+      return of(scenario.canRollout).pipe(delay(1000));
+    }
+    return of({
+      canRollout: true,
+      needUpgrade: false,
+      message: '',
+    }).pipe(delay(1000));
   }
 }
