@@ -23,6 +23,7 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:deviceinfra_all_pkg",
+        "//wireless/android/pixel/testing/labs/tools/device_recovery:__subpackages__",
         "//wireless/android/pixel/testtools/djar:__subpackages__",
     ],
 )
