@@ -21,7 +21,6 @@ import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -44,6 +43,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceS
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.remotecontrol.RemoteControlEligibilityChecker;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -72,6 +72,7 @@ public final class GetHostDeviceSummariesHandlerTest {
   private static final GetHostDeviceSummariesRequest REQUEST =
       GetHostDeviceSummariesRequest.newBuilder().setHostName(HOST_NAME).build();
   private static final Instant NOW = Instant.parse("2025-11-21T10:00:00Z");
+  private static final UniverseScope UNIVERSE = new UniverseScope.SelfUniverse();
 
   private static final DeviceInfo DEVICE_INFO =
       DeviceInfo.newBuilder()
@@ -120,11 +121,11 @@ public final class GetHostDeviceSummariesHandlerTest {
 
   @Test
   public void getHostDeviceSummaries_success() throws Exception {
-    when(labInfoProvider.getLabInfoAsync(any(), anyString()))
+    when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(LAB_INFO_RESPONSE));
 
     GetHostDeviceSummariesResponse response =
-        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST).get();
+        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST, UNIVERSE).get();
 
     assertThat(response.getDeviceSummariesList()).hasSize(1);
     DeviceSummary expectedDeviceSummary =
@@ -148,11 +149,11 @@ public final class GetHostDeviceSummariesHandlerTest {
 
   @Test
   public void getHostDeviceSummaries_noDevices_returnsEmpty() throws Exception {
-    when(labInfoProvider.getLabInfoAsync(any(), anyString()))
+    when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(GetLabInfoResponse.getDefaultInstance()));
 
     GetHostDeviceSummariesResponse response =
-        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST).get();
+        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST, UNIVERSE).get();
 
     assertThat(response.getDeviceSummariesList()).isEmpty();
   }
@@ -188,11 +189,11 @@ public final class GetHostDeviceSummariesHandlerTest {
                                             .addDeviceInfo(DEVICE_INFO)
                                             .addDeviceInfo(deviceInfoBusy)))))
             .build();
-    when(labInfoProvider.getLabInfoAsync(any(), anyString()))
+    when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(labInfoResponseMultiple));
 
     GetHostDeviceSummariesResponse response =
-        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST).get();
+        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST, UNIVERSE).get();
 
     assertThat(response.getDeviceSummariesList()).hasSize(2);
     assertThat(response.getDeviceSummaries(0).getId()).isEqualTo(DEVICE_ID);
@@ -235,7 +236,7 @@ public final class GetHostDeviceSummariesHandlerTest {
                                     .setName(TestbedDeviceSpec.SUBDEVICE_DIMENSIONS_KEY)
                                     .setValue(encodedSubDeviceDimensions))))
             .build();
-    when(labInfoProvider.getLabInfoAsync(any(), anyString()))
+    when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
         .thenReturn(
             immediateFuture(
                 GetLabInfoResponse.newBuilder()
@@ -251,7 +252,7 @@ public final class GetHostDeviceSummariesHandlerTest {
                     .build()));
 
     GetHostDeviceSummariesResponse response =
-        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST).get();
+        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST, UNIVERSE).get();
 
     assertThat(response.getDeviceSummaries(0).getId()).isEqualTo("testbed_device");
     assertThat(response.getDeviceSummaries(0).getSubDevicesList()).hasSize(1);
@@ -283,7 +284,7 @@ public final class GetHostDeviceSummariesHandlerTest {
                                     .setName(TestbedDeviceSpec.SUBDEVICE_DIMENSIONS_KEY)
                                     .setValue(encodedSubDeviceDimensions))))
             .build();
-    when(labInfoProvider.getLabInfoAsync(any(), anyString()))
+    when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
         .thenReturn(
             immediateFuture(
                 GetLabInfoResponse.newBuilder()
@@ -299,7 +300,7 @@ public final class GetHostDeviceSummariesHandlerTest {
                     .build()));
 
     GetHostDeviceSummariesResponse response =
-        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST).get();
+        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST, UNIVERSE).get();
 
     assertThat(response.getDeviceSummariesList()).hasSize(1);
     assertThat(response.getDeviceSummaries(0).getSubDevicesCount()).isEqualTo(1);

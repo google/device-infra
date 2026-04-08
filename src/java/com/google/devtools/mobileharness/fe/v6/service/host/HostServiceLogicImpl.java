@@ -16,10 +16,12 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.host;
 
+import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostDeviceSummariesHandler;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostHeaderInfoHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostOverviewHandler;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityResponse;
@@ -37,7 +39,6 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetPopularFlag
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetPopularFlagsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetReleaseConfigsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetReleaseConfigsResponse;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostActions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ReleaseLabServerRequest;
@@ -52,6 +53,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.StopLabServerR
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.StopLabServerResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsResponse;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseFactory;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -61,38 +64,53 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
 
   private final GetHostOverviewHandler getHostOverviewHandler;
   private final GetHostDeviceSummariesHandler getHostDeviceSummariesHandler;
+  private final GetHostHeaderInfoHandler getHostHeaderInfoHandler;
+  private final UniverseFactory universeFactory;
 
   @Inject
   HostServiceLogicImpl(
       GetHostOverviewHandler getHostOverviewHandler,
-      GetHostDeviceSummariesHandler getHostDeviceSummariesHandler) {
+      GetHostDeviceSummariesHandler getHostDeviceSummariesHandler,
+      GetHostHeaderInfoHandler getHostHeaderInfoHandler,
+      UniverseFactory universeFactory) {
     this.getHostOverviewHandler = getHostOverviewHandler;
     this.getHostDeviceSummariesHandler = getHostDeviceSummariesHandler;
+    this.getHostHeaderInfoHandler = getHostHeaderInfoHandler;
+    this.universeFactory = universeFactory;
   }
 
   @Override
   public ListenableFuture<HostHeaderInfo> getHostHeaderInfo(GetHostHeaderInfoRequest request) {
-    // TODO: - dafeng - Use the universe parameter.
-    @SuppressWarnings("unused")
-    String universe = request.getUniverse();
-
-    // TODO: Implement this method.
-    return immediateFuture(
-        HostHeaderInfo.newBuilder()
-            .setHostName(request.getHostName())
-            .setActions(HostActions.getDefaultInstance())
-            .build());
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return getHostHeaderInfoHandler.getHostHeaderInfo(request, universe);
   }
 
   @Override
   public ListenableFuture<HostOverviewPageData> getHostOverview(GetHostOverviewRequest request) {
-    return getHostOverviewHandler.getHostOverview(request);
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return getHostOverviewHandler.getHostOverview(request, universe);
   }
 
   @Override
   public ListenableFuture<GetHostDeviceSummariesResponse> getHostDeviceSummaries(
       GetHostDeviceSummariesRequest request) {
-    return getHostDeviceSummariesHandler.getHostDeviceSummaries(request);
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return getHostDeviceSummariesHandler.getHostDeviceSummaries(request, universe);
   }
 
   @Override

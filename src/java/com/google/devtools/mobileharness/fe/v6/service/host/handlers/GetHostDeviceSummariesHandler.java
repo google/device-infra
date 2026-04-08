@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoP
 import com.google.devtools.mobileharness.fe.v6.service.shared.remotecontrol.RemoteControlEligibilityChecker;
 import com.google.devtools.mobileharness.fe.v6.service.shared.remotecontrol.RemoteControlEligibilityContext;
 import com.google.devtools.mobileharness.fe.v6.service.shared.remotecontrol.RemoteControlEligibilityResult;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import javax.inject.Inject;
@@ -81,13 +82,11 @@ public final class GetHostDeviceSummariesHandler {
 
   /** Gets host device summaries. */
   public ListenableFuture<GetHostDeviceSummariesResponse> getHostDeviceSummaries(
-      GetHostDeviceSummariesRequest request) {
-    // TODO: - dafeng - Use the universe parameter.
-    @SuppressWarnings("unused")
-    String universe = request.getUniverse();
+      GetHostDeviceSummariesRequest request, UniverseScope universe) {
+
     GetLabInfoRequest getLabInfoRequest = createGetLabInfoRequest(request.getHostName());
     return Futures.transform(
-        labInfoProvider.getLabInfoAsync(getLabInfoRequest, ""),
+        labInfoProvider.getLabInfoAsync(getLabInfoRequest, universe),
         this::processLabInfoResponse,
         executor);
   }

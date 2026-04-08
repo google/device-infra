@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverview;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -66,6 +67,7 @@ public final class GetHostOverviewHandlerTest {
   private static final String HOST_NAME = "test.host";
   private static final GetHostOverviewRequest REQUEST =
       GetHostOverviewRequest.newBuilder().setHostName(HOST_NAME).build();
+  private static final UniverseScope UNIVERSE = new UniverseScope.SelfUniverse();
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
@@ -82,20 +84,21 @@ public final class GetHostOverviewHandlerTest {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
 
     // Default empty responses
-    when(labInfoProvider.getLabInfoAsync(any(), anyString()))
+    when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(GetLabInfoResponse.getDefaultInstance()));
-    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(any()))
+    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.empty()));
-    when(hostAuxiliaryInfoProvider.getPassThroughFlags(any()))
+    when(hostAuxiliaryInfoProvider.getPassThroughFlags(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.empty()));
-    when(hostAuxiliaryInfoProvider.getDiagnosticLinks(anyString(), any()))
+    when(hostAuxiliaryInfoProvider.getDiagnosticLinks(anyString(), any(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(ImmutableList.of()));
     when(environment.isGoogleInternal()).thenReturn(true);
   }
 
   @Test
   public void getHostOverview_noData_returnsUnknown() throws Exception {
-    ListenableFuture<HostOverviewPageData> result = getHostOverviewHandler.getHostOverview(REQUEST);
+    ListenableFuture<HostOverviewPageData> result =
+        getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE);
 
     HostOverview overview = Futures.getDone(result).getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Unknown");
@@ -104,27 +107,29 @@ public final class GetHostOverviewHandlerTest {
 
   @Test
   public void getHostOverview_labType_fusion() throws Exception {
-    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(HOST_NAME)))
+    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(HOST_NAME), any(UniverseScope.class)))
         .thenReturn(
             immediateFuture(
                 Optional.of(
                     HostReleaseInfo.builder().setLabType(Optional.of("FUSION_LAB")).build())));
 
     HostOverview overview =
-        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST)).getOverviewContent();
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
+            .getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Fusion Lab");
   }
 
   @Test
   public void getHostOverview_labType_core_fromEnum() throws Exception {
-    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(HOST_NAME)))
+    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(HOST_NAME), any(UniverseScope.class)))
         .thenReturn(
             immediateFuture(
                 Optional.of(
                     HostReleaseInfo.builder().setLabType(Optional.of("SHARED_LAB")).build())));
 
     HostOverview overview =
-        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST)).getOverviewContent();
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
+            .getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Core Lab");
   }
 
@@ -133,7 +138,8 @@ public final class GetHostOverviewHandlerTest {
     mockLabInfoWithProperty("lab_type", "core");
 
     HostOverview overview =
-        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST)).getOverviewContent();
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
+            .getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Core Lab");
   }
 
@@ -142,7 +148,8 @@ public final class GetHostOverviewHandlerTest {
     mockLabInfoWithProperty("lab_type", "slaas");
 
     HostOverview overview =
-        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST)).getOverviewContent();
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
+            .getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Satellite Lab (SLaaS)");
   }
 
@@ -151,20 +158,22 @@ public final class GetHostOverviewHandlerTest {
     mockLabInfoWithProperty("lab_type", "satellite");
 
     HostOverview overview =
-        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST)).getOverviewContent();
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
+            .getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Satellite Lab");
   }
 
   @Test
   public void getHostOverview_labType_ate() throws Exception {
-    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(HOST_NAME)))
+    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(HOST_NAME), any(UniverseScope.class)))
         .thenReturn(
             immediateFuture(
                 Optional.of(
                     HostReleaseInfo.builder().setLabType(Optional.of("MH_ATE_LAB")).build())));
 
     HostOverview overview =
-        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST)).getOverviewContent();
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
+            .getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList())
         .containsExactly("Satellite Lab", "ATE Lab")
         .inOrder();
@@ -172,7 +181,7 @@ public final class GetHostOverviewHandlerTest {
 
   @Test
   public void getHostOverview_labType_field() throws Exception {
-    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(HOST_NAME)))
+    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(HOST_NAME), any(UniverseScope.class)))
         .thenReturn(
             immediateFuture(
                 Optional.of(
@@ -181,7 +190,8 @@ public final class GetHostOverviewHandlerTest {
                         .build())));
 
     HostOverview overview =
-        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST)).getOverviewContent();
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
+            .getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList())
         .containsExactly("Satellite Lab", "Riemann Field Lab")
         .inOrder();
@@ -213,10 +223,12 @@ public final class GetHostOverviewHandlerTest {
                                                                     .setKey("other_prop")
                                                                     .setValue("other_val"))))))))
             .build();
-    when(labInfoProvider.getLabInfoAsync(any(), anyString())).thenReturn(immediateFuture(response));
+    when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
+        .thenReturn(immediateFuture(response));
 
     HostOverview overview =
-        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST)).getOverviewContent();
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
+            .getOverviewContent();
 
     assertThat(overview.getIp()).isEqualTo("1.2.3.4");
     assertThat(overview.getOs()).isEqualTo("Linux");
@@ -227,11 +239,12 @@ public final class GetHostOverviewHandlerTest {
   @Test
   public void getHostOverview_withPassThroughFlags() throws Exception {
     String passThroughFlags = "--some_flags";
-    when(hostAuxiliaryInfoProvider.getPassThroughFlags(eq(HOST_NAME)))
+    when(hostAuxiliaryInfoProvider.getPassThroughFlags(eq(HOST_NAME), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.of(passThroughFlags)));
 
     HostOverview overview =
-        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST)).getOverviewContent();
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
+            .getOverviewContent();
 
     assertThat(overview.getLabServer().getPassThroughFlags()).isEqualTo(passThroughFlags);
   }
@@ -242,13 +255,14 @@ public final class GetHostOverviewHandlerTest {
     GetHostOverviewRequest mtaasRequest =
         GetHostOverviewRequest.newBuilder().setHostName(mtaasHost).build();
     mockLabInfoWithIp("1.2.3.4");
-    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(mtaasHost)))
+    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(mtaasHost), any(UniverseScope.class)))
         .thenReturn(
             immediateFuture(
                 Optional.of(
                     HostReleaseInfo.builder().setLabType(Optional.of("FUSION_LAB")).build())));
 
-    when(hostAuxiliaryInfoProvider.getDiagnosticLinks(eq(mtaasHost), any()))
+    when(hostAuxiliaryInfoProvider.getDiagnosticLinks(
+            eq(mtaasHost), any(), any(UniverseScope.class)))
         .thenReturn(
             immediateFuture(
                 ImmutableList.of(
@@ -268,7 +282,8 @@ public final class GetHostOverviewHandlerTest {
                         .build())));
 
     HostOverview overview =
-        Futures.getDone(getHostOverviewHandler.getHostOverview(mtaasRequest)).getOverviewContent();
+        Futures.getDone(getHostOverviewHandler.getHostOverview(mtaasRequest, UNIVERSE))
+            .getOverviewContent();
 
     assertThat(overview.getDiagnosticLinksList()).hasSize(3);
 
@@ -293,14 +308,15 @@ public final class GetHostOverviewHandlerTest {
 
     // Case 1: mtaas.google.com + FUSION_LAB -> Included
     String mtaasHost = "host.mtaas.google.com";
-    when(hostAuxiliaryInfoProvider.getDiagnosticLinks(eq(mtaasHost), any()))
+    when(hostAuxiliaryInfoProvider.getDiagnosticLinks(
+            eq(mtaasHost), any(), any(UniverseScope.class)))
         .thenReturn(
             immediateFuture(
                 ImmutableList.of(DiagnosticLink.newBuilder().setLabel("View STATUSZ").build())));
     HostOverview overview1 =
         Futures.getDone(
                 getHostOverviewHandler.getHostOverview(
-                    GetHostOverviewRequest.newBuilder().setHostName(mtaasHost).build()))
+                    GetHostOverviewRequest.newBuilder().setHostName(mtaasHost).build(), UNIVERSE))
             .getOverviewContent();
     assertThat(
             overview1.getDiagnosticLinksList().stream()
@@ -309,17 +325,18 @@ public final class GetHostOverviewHandlerTest {
 
     // Case 2: NOT mtaas.google.com + FUSION_LAB -> Excluded (Mock Provider to return empty)
     String otherHost = "host.other.google.com";
-    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(otherHost)))
+    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(otherHost), any(UniverseScope.class)))
         .thenReturn(
             immediateFuture(
                 Optional.of(
                     HostReleaseInfo.builder().setLabType(Optional.of("FUSION_LAB")).build())));
-    when(hostAuxiliaryInfoProvider.getDiagnosticLinks(eq(otherHost), any()))
+    when(hostAuxiliaryInfoProvider.getDiagnosticLinks(
+            eq(otherHost), any(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(ImmutableList.of()));
     HostOverview overview2 =
         Futures.getDone(
                 getHostOverviewHandler.getHostOverview(
-                    GetHostOverviewRequest.newBuilder().setHostName(otherHost).build()))
+                    GetHostOverviewRequest.newBuilder().setHostName(otherHost).build(), UNIVERSE))
             .getOverviewContent();
     assertThat(
             overview2.getDiagnosticLinksList().stream()
@@ -327,17 +344,18 @@ public final class GetHostOverviewHandlerTest {
         .isFalse();
 
     // Case 3: mtaas.google.com + NOT FUSION_LAB -> Excluded (Mock Provider to return empty)
-    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(mtaasHost)))
+    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(mtaasHost), any(UniverseScope.class)))
         .thenReturn(
             immediateFuture(
                 Optional.of(
                     HostReleaseInfo.builder().setLabType(Optional.of("MH_ATE_LAB")).build())));
-    when(hostAuxiliaryInfoProvider.getDiagnosticLinks(eq(mtaasHost), any()))
+    when(hostAuxiliaryInfoProvider.getDiagnosticLinks(
+            eq(mtaasHost), any(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(ImmutableList.of()));
     HostOverview overview3 =
         Futures.getDone(
                 getHostOverviewHandler.getHostOverview(
-                    GetHostOverviewRequest.newBuilder().setHostName(mtaasHost).build()))
+                    GetHostOverviewRequest.newBuilder().setHostName(mtaasHost).build(), UNIVERSE))
             .getOverviewContent();
     assertThat(
             overview3.getDiagnosticLinksList().stream()
@@ -351,7 +369,8 @@ public final class GetHostOverviewHandlerTest {
     mockLabInfoWithIp("1.2.3.4");
 
     HostOverview overview =
-        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST)).getOverviewContent();
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
+            .getOverviewContent();
 
     assertThat(overview.getDiagnosticLinksList()).isEmpty();
   }
@@ -376,7 +395,8 @@ public final class GetHostOverviewHandlerTest {
                                                                     .setKey(key)
                                                                     .setValue(value))))))))
             .build();
-    when(labInfoProvider.getLabInfoAsync(any(), anyString())).thenReturn(immediateFuture(response));
+    when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
+        .thenReturn(immediateFuture(response));
   }
 
   private void mockLabInfoWithIp(String ip) {
@@ -392,6 +412,7 @@ public final class GetHostOverviewHandlerTest {
                                         LabInfo.newBuilder()
                                             .setLabLocator(LabLocator.newBuilder().setIp(ip))))))
             .build();
-    when(labInfoProvider.getLabInfoAsync(any(), anyString())).thenReturn(immediateFuture(response));
+    when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
+        .thenReturn(immediateFuture(response));
   }
 }
