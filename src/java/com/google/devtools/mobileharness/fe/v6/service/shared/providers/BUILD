@@ -26,6 +26,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -62,6 +63,7 @@ java_library(
         ":configuration_provider",
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "@maven//:com_google_guava_guava",
     ],
 )

@@ -20,7 +20,6 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static org.junit.Assert.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
@@ -72,7 +71,7 @@ public final class GetHostConfigHandlerTest {
 
   @Test
   public void getHostConfig_empty() throws Exception {
-    when(configurationProvider.getLabConfig(any(), any()))
+    when(configurationProvider.getLabConfig(anyString(), anyString()))
         .thenReturn(immediateFuture(Optional.empty()));
 
     GetHostConfigRequest request = GetHostConfigRequest.newBuilder().setHostName("host").build();

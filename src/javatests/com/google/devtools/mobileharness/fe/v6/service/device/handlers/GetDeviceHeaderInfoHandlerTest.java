@@ -20,6 +20,7 @@ import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -93,9 +94,9 @@ public final class GetDeviceHeaderInfoHandlerTest {
 
     when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any()))
         .thenReturn(immediateFuture(DEFAULT_LAB_INFO_RESPONSE));
-    when(configurationProvider.getDeviceConfig(any(), any()))
+    when(configurationProvider.getDeviceConfig(anyString(), anyString()))
         .thenReturn(immediateFuture(Optional.empty()));
-    when(configurationProvider.getLabConfig(any(), any()))
+    when(configurationProvider.getLabConfig(anyString(), anyString()))
         .thenReturn(immediateFuture(Optional.empty()));
     when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(any(), any(), any(), any(String.class)))
         .thenReturn(DeviceHeaderInfo.newBuilder().setId(DEVICE_ID).build());

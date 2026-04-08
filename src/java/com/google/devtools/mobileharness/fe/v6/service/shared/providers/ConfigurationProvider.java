@@ -19,16 +19,57 @@ package com.google.devtools.mobileharness.fe.v6.service.shared.providers;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.Optional;
 
 /** Interface for fetching and updating device and lab configurations. */
 public interface ConfigurationProvider {
-  ListenableFuture<Optional<DeviceConfig>> getDeviceConfig(String deviceId, String universe);
+  ListenableFuture<Optional<DeviceConfig>> getDeviceConfig(String deviceId, UniverseScope universe);
 
-  ListenableFuture<Optional<LabConfig>> getLabConfig(String hostName, String universe);
+  /**
+   * @deprecated Use {@link #getDeviceConfig(String, UniverseScope)} instead. TODO: Remove after all
+   *     callers are migrated to UniverseScope.
+   */
+  @Deprecated
+  default ListenableFuture<Optional<DeviceConfig>> getDeviceConfig(
+      String deviceId, String universe) {
+    return getDeviceConfig(deviceId, UniverseScope.fromString(universe));
+  }
+
+  ListenableFuture<Optional<LabConfig>> getLabConfig(String hostName, UniverseScope universe);
+
+  /**
+   * @deprecated Use {@link #getLabConfig(String, UniverseScope)} instead. TODO: Remove after all
+   *     callers are migrated to UniverseScope.
+   */
+  @Deprecated
+  default ListenableFuture<Optional<LabConfig>> getLabConfig(String hostName, String universe) {
+    return getLabConfig(hostName, UniverseScope.fromString(universe));
+  }
 
   ListenableFuture<Void> updateDeviceConfig(
-      String deviceId, DeviceConfig deviceConfig, String universe);
+      String deviceId, DeviceConfig deviceConfig, UniverseScope universe);
 
-  ListenableFuture<Void> updateLabConfig(String hostName, LabConfig labConfig, String universe);
+  /**
+   * @deprecated Use {@link #updateDeviceConfig(String, DeviceConfig, UniverseScope)} instead. TODO:
+   *     Remove after all callers are migrated to UniverseScope.
+   */
+  @Deprecated
+  default ListenableFuture<Void> updateDeviceConfig(
+      String deviceId, DeviceConfig deviceConfig, String universe) {
+    return updateDeviceConfig(deviceId, deviceConfig, UniverseScope.fromString(universe));
+  }
+
+  ListenableFuture<Void> updateLabConfig(
+      String hostName, LabConfig labConfig, UniverseScope universe);
+
+  /**
+   * @deprecated Use {@link #updateLabConfig(String, LabConfig, UniverseScope)} instead. TODO:
+   *     Remove after all callers are migrated to UniverseScope.
+   */
+  @Deprecated
+  default ListenableFuture<Void> updateLabConfig(
+      String hostName, LabConfig labConfig, String universe) {
+    return updateLabConfig(hostName, labConfig, UniverseScope.fromString(universe));
+  }
 }

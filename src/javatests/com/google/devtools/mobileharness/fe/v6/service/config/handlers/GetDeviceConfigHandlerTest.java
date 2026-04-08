@@ -70,7 +70,7 @@ public final class GetDeviceConfigHandlerTest {
     when(configServiceCapabilityFactory.create(anyString())).thenReturn(configServiceCapability);
     when(configServiceCapability.calculateDeviceUiStatus())
         .thenReturn(DeviceConfigUiStatus.getDefaultInstance());
-    when(labInfoProvider.getLabInfoAsync(any(), any()))
+    when(labInfoProvider.getLabInfoAsync(any(), anyString()))
         .thenReturn(
             immediateFuture(
                 GetLabInfoResponse.newBuilder()
@@ -85,9 +85,9 @@ public final class GetDeviceConfigHandlerTest {
                                                     .addDeviceInfo(
                                                         DeviceInfo.getDefaultInstance())))))
                     .build()));
-    when(configurationProvider.getLabConfig(any(), any()))
+    when(configurationProvider.getLabConfig(anyString(), anyString()))
         .thenReturn(immediateFuture(Optional.empty()));
-    when(configurationProvider.getDeviceConfig(any(), any()))
+    when(configurationProvider.getDeviceConfig(anyString(), anyString()))
         .thenReturn(immediateFuture(Optional.empty()));
   }
 

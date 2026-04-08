@@ -22,6 +22,7 @@ import static org.junit.Assert.assertThrows;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.concurrent.ExecutionException;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,18 +41,21 @@ public class NoOpConfigurationProviderTest {
 
   @Test
   public void getDeviceConfig_returnEmpty() throws Exception {
-    assertThat(provider.getDeviceConfig("device_id", "universe").get()).isEmpty();
+    assertThat(provider.getDeviceConfig("device_id", new UniverseScope.SelfUniverse()).get())
+        .isEmpty();
   }
 
   @Test
   public void getLabConfig_returnEmpty() throws Exception {
-    assertThat(provider.getLabConfig("host_name", "universe").get()).isEmpty();
+    assertThat(provider.getLabConfig("host_name", new UniverseScope.SelfUniverse()).get())
+        .isEmpty();
   }
 
   @Test
   public void updateDeviceConfig_throwUnsupported() {
     ListenableFuture<Void> future =
-        provider.updateDeviceConfig("device_id", DeviceConfig.getDefaultInstance(), "universe");
+        provider.updateDeviceConfig(
+            "device_id", DeviceConfig.getDefaultInstance(), new UniverseScope.SelfUniverse());
     ExecutionException thrown = assertThrows(ExecutionException.class, future::get);
     assertThat(thrown).hasCauseThat().isInstanceOf(UnsupportedOperationException.class);
   }
@@ -59,7 +63,8 @@ public class NoOpConfigurationProviderTest {
   @Test
   public void updateLabConfig_throwUnsupported() {
     ListenableFuture<Void> future =
-        provider.updateLabConfig("host_name", LabConfig.getDefaultInstance(), "universe");
+        provider.updateLabConfig(
+            "host_name", LabConfig.getDefaultInstance(), new UniverseScope.SelfUniverse());
     ExecutionException thrown = assertThrows(ExecutionException.class, future::get);
     assertThat(thrown).hasCauseThat().isInstanceOf(UnsupportedOperationException.class);
   }

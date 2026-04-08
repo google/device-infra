@@ -168,10 +168,10 @@ public final class GetDeviceOverviewHandlerTest {
     // Default mock behaviors
     when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any()))
         .thenReturn(immediateFuture(DEFAULT_LAB_INFO_RESPONSE));
-    when(configurationProvider.getDeviceConfig(any(), any()))
+    when(configurationProvider.getDeviceConfig(anyString(), anyString()))
         .thenReturn(immediateFuture(Optional.empty()));
     // By default, assume Config Service is available but returns nothing
-    when(configurationProvider.getLabConfig(any(), any()))
+    when(configurationProvider.getLabConfig(anyString(), anyString()))
         .thenReturn(immediateFuture(Optional.of(LabConfig.getDefaultInstance())));
     when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(any(), any(), any(), anyString()))
         .thenReturn(
@@ -258,7 +258,7 @@ public final class GetDeviceOverviewHandlerTest {
 
   @Test
   public void getDeviceOverview_deviceConfigFails_gracefulFallback() throws Exception {
-    when(configurationProvider.getDeviceConfig(any(), any()))
+    when(configurationProvider.getDeviceConfig(anyString(), anyString()))
         .thenReturn(immediateFailedFuture(new RuntimeException("Config error")));
 
     ListenableFuture<DeviceOverviewPageData> responseFuture =
@@ -325,7 +325,7 @@ public final class GetDeviceOverviewHandlerTest {
                             .addSupportedDimension(DIMENSION_CONFIG_SUPPORTED)
                             .addRequiredDimension(DIMENSION_CONFIG_REQUIRED)))
             .build();
-    when(configurationProvider.getDeviceConfig(any(), any()))
+    when(configurationProvider.getDeviceConfig(anyString(), anyString()))
         .thenReturn(immediateFuture(Optional.of(deviceConfig)));
 
     ListenableFuture<DeviceOverviewPageData> responseFuture =
@@ -390,10 +390,10 @@ public final class GetDeviceOverviewHandlerTest {
                             .addSupportedDimension(DIMENSION_CONFIG_SUPPORTED)
                             .addRequiredDimension(DIMENSION_CONFIG_REQUIRED)))
             .build();
-    when(configurationProvider.getLabConfig(any(), any()))
+    when(configurationProvider.getLabConfig(anyString(), anyString()))
         .thenReturn(immediateFuture(Optional.of(labConfig)));
     // DeviceConfig should be ignored even if present
-    when(configurationProvider.getDeviceConfig(any(), any()))
+    when(configurationProvider.getDeviceConfig(anyString(), anyString()))
         .thenReturn(immediateFuture(Optional.of(DeviceConfig.getDefaultInstance())));
 
     ListenableFuture<DeviceOverviewPageData> responseFuture =

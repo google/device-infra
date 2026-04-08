@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServ
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.DeviceConfigStub;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -60,7 +61,7 @@ public class ConfigurationProviderImpl implements ConfigurationProvider {
 
   @Override
   public ListenableFuture<Optional<DeviceConfig>> getDeviceConfig(
-      String deviceId, String universe) {
+      String deviceId, UniverseScope universe) {
     if (!configServiceCapabilityFactory.create(universe).isConfigServiceAvailable()) {
       return immediateFuture(Optional.empty());
     }
@@ -76,7 +77,8 @@ public class ConfigurationProviderImpl implements ConfigurationProvider {
   }
 
   @Override
-  public ListenableFuture<Optional<LabConfig>> getLabConfig(String hostName, String universe) {
+  public ListenableFuture<Optional<LabConfig>> getLabConfig(
+      String hostName, UniverseScope universe) {
     if (!configServiceCapabilityFactory.create(universe).isConfigServiceAvailable()) {
       return immediateFuture(Optional.empty());
     }
@@ -90,7 +92,7 @@ public class ConfigurationProviderImpl implements ConfigurationProvider {
 
   @Override
   public ListenableFuture<Void> updateDeviceConfig(
-      String deviceId, DeviceConfig deviceConfig, String universe) {
+      String deviceId, DeviceConfig deviceConfig, UniverseScope universe) {
     if (!configServiceCapabilityFactory.create(universe).isConfigServiceAvailable()) {
       return immediateVoidFuture();
     }
@@ -109,7 +111,7 @@ public class ConfigurationProviderImpl implements ConfigurationProvider {
 
   @Override
   public ListenableFuture<Void> updateLabConfig(
-      String hostName, LabConfig labConfig, String universe) {
+      String hostName, LabConfig labConfig, UniverseScope universe) {
     if (!configServiceCapabilityFactory.create(universe).isConfigServiceAvailable()) {
       return immediateVoidFuture();
     }

@@ -108,9 +108,9 @@ public final class DeviceDataLoaderTest {
     when(configServiceCapabilityFactory.create(anyString())).thenReturn(configServiceCapability);
     when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any()))
         .thenReturn(immediateFuture(DEFAULT_LAB_INFO_RESPONSE));
-    when(configurationProvider.getDeviceConfig(any(), any()))
+    when(configurationProvider.getDeviceConfig(anyString(), anyString()))
         .thenReturn(immediateFuture(Optional.empty()));
-    when(configurationProvider.getLabConfig(any(), any()))
+    when(configurationProvider.getLabConfig(anyString(), anyString()))
         .thenReturn(immediateFuture(Optional.of(LabConfig.getDefaultInstance())));
     when(environment.isGoogleInternal()).thenReturn(true);
     when(configServiceCapability.isConfigServiceAvailable()).thenReturn(true);
@@ -163,7 +163,7 @@ public final class DeviceDataLoaderTest {
 
   @Test
   public void loadDeviceData_deviceConfigFetchFailure_returnsDefault() throws Exception {
-    when(configurationProvider.getDeviceConfig(any(), any()))
+    when(configurationProvider.getDeviceConfig(anyString(), anyString()))
         .thenReturn(immediateFailedFuture(new RuntimeException("Config service error")));
 
     DeviceData deviceData = deviceDataLoader.loadDeviceData(DEVICE_ID, UNIVERSE).get();
@@ -174,7 +174,7 @@ public final class DeviceDataLoaderTest {
 
   @Test
   public void loadDeviceData_labConfigFetchFailure_returnsNotSupported() throws Exception {
-    when(configurationProvider.getLabConfig(any(), any()))
+    when(configurationProvider.getLabConfig(anyString(), anyString()))
         .thenReturn(immediateFailedFuture(new RuntimeException("Config service error")));
 
     DeviceData deviceData = deviceDataLoader.loadDeviceData(DEVICE_ID, UNIVERSE).get();
