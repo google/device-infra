@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfi
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostConfigUiStatus;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -53,10 +54,11 @@ public final class GetHostConfigHandler {
     this.executor = executor;
   }
 
-  public ListenableFuture<GetHostConfigResponse> getHostConfig(GetHostConfigRequest request) {
+  public ListenableFuture<GetHostConfigResponse> getHostConfig(
+      GetHostConfigRequest request, UniverseScope universe) {
     logger.atInfo().log("Getting host config for %s", request.getHostName());
     ConfigServiceCapability configServiceCapability =
-        configServiceCapabilityFactory.create(request.getUniverse());
+        configServiceCapabilityFactory.create(universe);
     try {
       configServiceCapability.checkConfigServiceAvailability();
     } catch (UnsupportedOperationException e) {
@@ -64,7 +66,7 @@ public final class GetHostConfigHandler {
     }
 
     return Futures.transform(
-        configurationProvider.getLabConfig(request.getHostName(), request.getUniverse()),
+        configurationProvider.getLabConfig(request.getHostName(), universe),
         labConfigOpt -> {
           if (labConfigOpt.isEmpty()) {
             return GetHostConfigResponse.getDefaultInstance();

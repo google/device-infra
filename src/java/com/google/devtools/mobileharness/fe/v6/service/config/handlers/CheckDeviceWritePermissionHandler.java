@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceW
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.DeviceData;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -52,14 +53,15 @@ public final class CheckDeviceWritePermissionHandler {
   }
 
   public ListenableFuture<CheckDeviceWritePermissionResponse> checkDeviceWritePermission(
-      CheckDeviceWritePermissionRequest request, Optional<String> username) {
+      CheckDeviceWritePermissionRequest request,
+      UniverseScope universe,
+      Optional<String> username) {
     if (username.isEmpty()) {
       return immediateFuture(
           CheckDeviceWritePermissionResponse.newBuilder().setHasPermission(false).build());
     }
     String user = username.get();
     String deviceId = request.getId();
-    String universe = request.getUniverse();
 
     return Futures.transformAsync(
         deviceDataLoader.loadDeviceData(deviceId, universe),

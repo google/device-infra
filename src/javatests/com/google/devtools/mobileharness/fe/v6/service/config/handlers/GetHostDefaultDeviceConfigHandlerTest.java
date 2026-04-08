@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static org.junit.Assert.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
@@ -33,6 +34,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfig
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -51,6 +53,8 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public final class GetHostDefaultDeviceConfigHandlerTest {
 
+  private static final UniverseScope SELF_UNIVERSE = new UniverseScope.SelfUniverse();
+
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
   @Bind @Mock private ConfigurationProvider configurationProvider;
@@ -63,17 +67,21 @@ public final class GetHostDefaultDeviceConfigHandlerTest {
   @Before
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
-    when(configServiceCapabilityFactory.create(anyString())).thenReturn(configServiceCapability);
+    when(configServiceCapabilityFactory.create(any(UniverseScope.class)))
+        .thenReturn(configServiceCapability);
   }
 
   @Test
   public void getHostDefaultDeviceConfig_empty() throws Exception {
-    when(configurationProvider.getLabConfig(anyString(), anyString()))
+    when(configurationProvider.getLabConfig(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.empty()));
 
     GetHostDefaultDeviceConfigRequest request =
         GetHostDefaultDeviceConfigRequest.newBuilder().setHostName("host").build();
-    assertThat(getHostDefaultDeviceConfigHandler.getHostDefaultDeviceConfig(request).get())
+    assertThat(
+            getHostDefaultDeviceConfigHandler
+                .getHostDefaultDeviceConfig(request, SELF_UNIVERSE)
+                .get())
         .isEqualTo(GetHostDefaultDeviceConfigResponse.getDefaultInstance());
   }
 
@@ -91,7 +99,10 @@ public final class GetHostDefaultDeviceConfigHandlerTest {
 
     assertThrows(
         ExecutionException.class,
-        () -> getHostDefaultDeviceConfigHandler.getHostDefaultDeviceConfig(request).get());
+        () ->
+            getHostDefaultDeviceConfigHandler
+                .getHostDefaultDeviceConfig(request, SELF_UNIVERSE)
+                .get());
   }
 
   @Test
@@ -101,7 +112,7 @@ public final class GetHostDefaultDeviceConfigHandlerTest {
             .setHostName("host")
             .setDefaultDeviceConfig(BasicDeviceConfig.newBuilder().addOwner("owner").build())
             .build();
-    when(configurationProvider.getLabConfig("host", "universe"))
+    when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
         .thenReturn(immediateFuture(Optional.of(labConfig)));
 
     GetHostDefaultDeviceConfigRequest request =
@@ -111,7 +122,7 @@ public final class GetHostDefaultDeviceConfigHandlerTest {
             .build();
 
     GetHostDefaultDeviceConfigResponse response =
-        getHostDefaultDeviceConfigHandler.getHostDefaultDeviceConfig(request).get();
+        getHostDefaultDeviceConfigHandler.getHostDefaultDeviceConfig(request, SELF_UNIVERSE).get();
 
     assertThat(response.getDeviceConfig().getPermissions().getOwnersList())
         .containsExactly("owner");
@@ -120,7 +131,7 @@ public final class GetHostDefaultDeviceConfigHandlerTest {
   @Test
   public void getHostDefaultDeviceConfig_success_noDefault() throws Exception {
     LabConfig labConfig = LabConfig.newBuilder().setHostName("host").build();
-    when(configurationProvider.getLabConfig("host", "universe"))
+    when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
         .thenReturn(immediateFuture(Optional.of(labConfig)));
 
     GetHostDefaultDeviceConfigRequest request =
@@ -130,7 +141,7 @@ public final class GetHostDefaultDeviceConfigHandlerTest {
             .build();
 
     GetHostDefaultDeviceConfigResponse response =
-        getHostDefaultDeviceConfigHandler.getHostDefaultDeviceConfig(request).get();
+        getHostDefaultDeviceConfigHandler.getHostDefaultDeviceConfig(request, SELF_UNIVERSE).get();
 
     assertThat(response.getDeviceConfig()).isEqualTo(DeviceConfig.getDefaultInstance());
   }

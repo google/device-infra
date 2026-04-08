@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.D
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -69,11 +70,11 @@ public final class UpdateDeviceConfigHandler {
   }
 
   public ListenableFuture<UpdateDeviceConfigResponse> updateDeviceConfig(
-      UpdateDeviceConfigRequest request, Optional<String> username) {
+      UpdateDeviceConfigRequest request, UniverseScope universe, Optional<String> username) {
     logger.atInfo().log("Updating device config for %s", request.getId());
 
     try {
-      validateRequest(request);
+      validateRequest(request, universe);
     } catch (IllegalArgumentException | UnsupportedOperationException e) {
       return immediateFuture(
           UpdateDeviceConfigResponse.newBuilder()
@@ -87,8 +88,7 @@ public final class UpdateDeviceConfigHandler {
 
     BasicDeviceConfig incoming = ConfigConverter.toBasicDeviceConfig(request.getConfig());
 
-    return FluentFuture.from(
-            deviceDataLoader.loadDeviceData(request.getId(), request.getUniverse()))
+    return FluentFuture.from(deviceDataLoader.loadDeviceData(request.getId(), universe))
         .transformAsync(this::checkHostManaged, executor)
         .transformAsync(
             optResponse ->
@@ -100,12 +100,12 @@ public final class UpdateDeviceConfigHandler {
             optResponse ->
                 optResponse.isPresent()
                     ? immediateFuture(optResponse.get())
-                    : saveUpdatedConfig(request, incoming),
+                    : saveUpdatedConfig(request, universe, incoming),
             executor);
   }
 
-  private void validateRequest(UpdateDeviceConfigRequest request) {
-    configServiceCapabilityFactory.create(request.getUniverse()).checkConfigServiceAvailability();
+  private void validateRequest(UpdateDeviceConfigRequest request, UniverseScope universe) {
+    configServiceCapabilityFactory.create(universe).checkConfigServiceAvailability();
 
     if (environment.isAts()) {
       switch (request.getSection()) {
@@ -161,9 +161,9 @@ public final class UpdateDeviceConfigHandler {
   }
 
   private ListenableFuture<UpdateDeviceConfigResponse> saveUpdatedConfig(
-      UpdateDeviceConfigRequest request, BasicDeviceConfig incoming) {
+      UpdateDeviceConfigRequest request, UniverseScope universe, BasicDeviceConfig incoming) {
     return Futures.transformAsync(
-        configurationProvider.getDeviceConfig(request.getId(), request.getUniverse()),
+        configurationProvider.getDeviceConfig(request.getId(), universe),
         existingConfigOpt -> {
           DeviceConfig.Builder configToUpdate =
               existingConfigOpt.isPresent()
@@ -176,7 +176,7 @@ public final class UpdateDeviceConfigHandler {
 
           return Futures.transform(
               configurationProvider.updateDeviceConfig(
-                  request.getId(), configToUpdate.build(), request.getUniverse()),
+                  request.getId(), configToUpdate.build(), universe),
               unused -> UpdateDeviceConfigResponse.newBuilder().setSuccess(true).build(),
               executor);
         },

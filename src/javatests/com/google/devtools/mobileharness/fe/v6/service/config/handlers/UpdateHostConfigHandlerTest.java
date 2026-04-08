@@ -55,6 +55,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.WifiConfig;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -83,16 +84,22 @@ public final class UpdateHostConfigHandlerTest {
   @Bind @Mock private Environment environment;
   @Bind private ListeningExecutorService executorService = newDirectExecutorService();
 
+  private static final UniverseScope SELF_UNIVERSE = new UniverseScope.SelfUniverse();
+  private static final UniverseScope UNSUPPORTED_UNIVERSE =
+      new UniverseScope.RoutedUniverse("unsupported");
+
   @Inject private UpdateHostConfigHandler updateHostConfigHandler;
 
   @Before
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
-    when(configServiceCapabilityFactory.create(anyString())).thenReturn(configServiceCapability);
+    when(configServiceCapabilityFactory.create(any(UniverseScope.class)))
+        .thenReturn(configServiceCapability);
     when(environment.isAts()).thenReturn(false);
-    when(configurationProvider.getLabConfig(any(), anyString()))
+    when(configurationProvider.getLabConfig(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.empty()));
-    when(configurationProvider.updateLabConfig(any(), any(), anyString()))
+    when(configurationProvider.updateLabConfig(
+            anyString(), any(LabConfig.class), any(UniverseScope.class)))
         .thenReturn(immediateVoidFuture());
   }
 
@@ -106,7 +113,9 @@ public final class UpdateHostConfigHandlerTest {
         UpdateHostConfigRequest.newBuilder().setHostName("host").setUniverse(universe).build();
 
     UpdateHostConfigResponse response =
-        updateHostConfigHandler.updateHostConfig(request, Optional.empty()).get();
+        updateHostConfigHandler
+            .updateHostConfig(request, UNSUPPORTED_UNIVERSE, Optional.empty())
+            .get();
 
     assertThat(response.getSuccess()).isFalse();
     assertThat(response.getError().getCode()).isEqualTo(UpdateError.Code.VALIDATION_ERROR);
@@ -145,17 +154,18 @@ public final class UpdateHostConfigHandlerTest {
                             .build())
                     .build())
             .build();
-    when(configurationProvider.getLabConfig(hostName, universe))
+    when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
         .thenReturn(immediateFuture(Optional.of(existingConfig)));
-    when(configurationProvider.updateLabConfig(eq(hostName), any(), eq(universe)))
+    when(configurationProvider.updateLabConfig(eq(hostName), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
     UpdateHostConfigResponse response =
-        updateHostConfigHandler.updateHostConfig(request, Optional.empty()).get();
+        updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
 
     assertThat(response.getSuccess()).isTrue();
     ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
-    verify(configurationProvider).updateLabConfig(eq(hostName), captor.capture(), eq(universe));
+    verify(configurationProvider)
+        .updateLabConfig(eq(hostName), captor.capture(), eq(SELF_UNIVERSE));
     assertThat(captor.getValue().getHostProperties())
         .isEqualTo(
             HostProperties.newBuilder()
@@ -201,13 +211,14 @@ public final class UpdateHostConfigHandlerTest {
                             .build())
                     .build())
             .build();
-    when(configurationProvider.getLabConfig(hostName, universe))
+    when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
         .thenReturn(immediateFuture(Optional.of(existingConfig)));
 
-    updateHostConfigHandler.updateHostConfig(request, Optional.empty()).get();
+    updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
 
     ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
-    verify(configurationProvider).updateLabConfig(eq(hostName), captor.capture(), eq(universe));
+    verify(configurationProvider)
+        .updateLabConfig(eq(hostName), captor.capture(), eq(SELF_UNIVERSE));
     assertThat(captor.getValue().getHostProperties().getHostPropertyList())
         .containsExactly(
             Lab.HostProperty.newBuilder().setKey("device_config_mode").setValue("host").build(),
@@ -228,7 +239,7 @@ public final class UpdateHostConfigHandlerTest {
             .build();
 
     UpdateHostConfigResponse response =
-        updateHostConfigHandler.updateHostConfig(request, Optional.empty()).get();
+        updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
 
     assertThat(response.getSuccess()).isFalse();
     assertThat(response.getError().getMessage())
@@ -269,18 +280,19 @@ public final class UpdateHostConfigHandlerTest {
                     .build())
             .build();
 
-    when(configurationProvider.getLabConfig(hostName, universe))
+    when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
         .thenReturn(
             immediateFuture(Optional.of(LabConfig.newBuilder().setHostName(hostName).build())));
-    when(configurationProvider.updateLabConfig(eq(hostName), any(), eq(universe)))
+    when(configurationProvider.updateLabConfig(eq(hostName), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
     UpdateHostConfigResponse response =
-        updateHostConfigHandler.updateHostConfig(request, Optional.empty()).get();
+        updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
 
     assertThat(response.getSuccess()).isTrue();
     ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
-    verify(configurationProvider).updateLabConfig(eq(hostName), captor.capture(), eq(universe));
+    verify(configurationProvider)
+        .updateLabConfig(eq(hostName), captor.capture(), eq(SELF_UNIVERSE));
     LabConfig updatedConfig = captor.getValue();
     BasicDeviceConfig deviceConfig = updatedConfig.getDefaultDeviceConfig();
     assertThat(deviceConfig.getDefaultWifi().getSsid()).isEqualTo("new_wifi");
@@ -319,17 +331,18 @@ public final class UpdateHostConfigHandlerTest {
             .setHostName(hostName)
             .setDefaultDeviceConfig(BasicDeviceConfig.newBuilder().addOwner("old_owner").build())
             .build();
-    when(configurationProvider.getLabConfig(hostName, universe))
+    when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
         .thenReturn(immediateFuture(Optional.of(existingConfig)));
-    when(configurationProvider.updateLabConfig(eq(hostName), any(), eq(universe)))
+    when(configurationProvider.updateLabConfig(eq(hostName), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
     UpdateHostConfigResponse response =
-        updateHostConfigHandler.updateHostConfig(request, Optional.empty()).get();
+        updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
 
     assertThat(response.getSuccess()).isTrue();
     ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
-    verify(configurationProvider).updateLabConfig(eq(hostName), captor.capture(), eq(universe));
+    verify(configurationProvider)
+        .updateLabConfig(eq(hostName), captor.capture(), eq(SELF_UNIVERSE));
     LabConfig updatedConfig = captor.getValue();
     // PERMISSIONS is not supported in ATS for DeviceConfig, so it should be ignored (not updated)
     assertThat(updatedConfig.getDefaultDeviceConfig().getOwnerList()).containsExactly("old_owner");
@@ -356,7 +369,7 @@ public final class UpdateHostConfigHandlerTest {
     when(groupMembershipProvider.isMemberOfAny(eq(user), any())).thenReturn(immediateFuture(false));
 
     UpdateHostConfigResponse response =
-        updateHostConfigHandler.updateHostConfig(request, Optional.of(user)).get();
+        updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.of(user)).get();
 
     assertThat(response.getSuccess()).isFalse();
     assertThat(response.getError().getCode()).isEqualTo(UpdateError.Code.SELF_LOCKOUT_DETECTED);
@@ -382,10 +395,11 @@ public final class UpdateHostConfigHandlerTest {
             .build();
 
     UpdateHostConfigResponse response =
-        updateHostConfigHandler.updateHostConfig(request, Optional.of(user)).get();
+        updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.of(user)).get();
 
     assertThat(response.getSuccess()).isTrue();
-    verify(configurationProvider).updateLabConfig(eq(hostName), any(), anyString());
+    verify(configurationProvider)
+        .updateLabConfig(eq(hostName), any(LabConfig.class), any(UniverseScope.class));
   }
 
   @Test
@@ -403,10 +417,11 @@ public final class UpdateHostConfigHandlerTest {
                     .build())
             .build();
 
-    updateHostConfigHandler.updateHostConfig(request, Optional.empty()).get();
+    updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
 
     ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
-    verify(configurationProvider).updateLabConfig(eq(hostName), captor.capture(), anyString());
+    verify(configurationProvider)
+        .updateLabConfig(eq(hostName), captor.capture(), any(UniverseScope.class));
     assertThat(captor.getValue().getHostProperties().getHostPropertyList())
         .contains(
             Lab.HostProperty.newBuilder().setKey("device_config_mode").setValue("host").build());
@@ -428,10 +443,11 @@ public final class UpdateHostConfigHandlerTest {
                     .build())
             .build();
 
-    updateHostConfigHandler.updateHostConfig(request, Optional.empty()).get();
+    updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
 
     ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
-    verify(configurationProvider).updateLabConfig(eq(hostName), captor.capture(), anyString());
+    verify(configurationProvider)
+        .updateLabConfig(eq(hostName), captor.capture(), any(UniverseScope.class));
     assertThat(captor.getValue().getMonitoredDeviceUuidList()).containsExactly("uuid1");
   }
 
@@ -459,10 +475,11 @@ public final class UpdateHostConfigHandlerTest {
                     .build())
             .build();
 
-    updateHostConfigHandler.updateHostConfig(request, Optional.empty()).get();
+    updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
 
     ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
-    verify(configurationProvider).updateLabConfig(eq(hostName), captor.capture(), anyString());
+    verify(configurationProvider)
+        .updateLabConfig(eq(hostName), captor.capture(), any(UniverseScope.class));
     assertThat(captor.getValue().getDefaultDeviceConfig().getMaxConsecutiveFail())
         .isEqualTo(Int32Value.of(5));
     assertThat(captor.getValue().getDefaultDeviceConfig().getMaxConsecutiveTest())
@@ -477,7 +494,7 @@ public final class UpdateHostConfigHandlerTest {
         LabConfig.newBuilder()
             .setDefaultDeviceConfig(BasicDeviceConfig.newBuilder().addOwner("old_owner").build())
             .build();
-    when(configurationProvider.getLabConfig(eq(hostName), anyString()))
+    when(configurationProvider.getLabConfig(eq(hostName), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.of(existingLabConfig)));
 
     DeviceConfig feDeviceConfig =
@@ -498,10 +515,11 @@ public final class UpdateHostConfigHandlerTest {
                     .build())
             .build();
 
-    updateHostConfigHandler.updateHostConfig(request, Optional.empty()).get();
+    updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
 
     ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
-    verify(configurationProvider).updateLabConfig(eq(hostName), captor.capture(), anyString());
+    verify(configurationProvider)
+        .updateLabConfig(eq(hostName), captor.capture(), any(UniverseScope.class));
     BasicDeviceConfig result = captor.getValue().getDefaultDeviceConfig();
     assertThat(result.getOwnerList()).containsExactly("new_owner");
     assertThat(result.getDefaultWifi().getSsid()).isEqualTo("wifi");
@@ -512,7 +530,7 @@ public final class UpdateHostConfigHandlerTest {
   public void updateHostConfig_deviceDiscovery_detailed_success() throws Exception {
     String hostName = "host";
     LabConfig existingLabConfig = LabConfig.getDefaultInstance();
-    when(configurationProvider.getLabConfig(eq(hostName), anyString()))
+    when(configurationProvider.getLabConfig(eq(hostName), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.of(existingLabConfig)));
 
     DeviceDiscoverySettings discovery =
@@ -540,10 +558,11 @@ public final class UpdateHostConfigHandlerTest {
                     .build())
             .build();
 
-    updateHostConfigHandler.updateHostConfig(request, Optional.empty()).get();
+    updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
 
     ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
-    verify(configurationProvider).updateLabConfig(eq(hostName), captor.capture(), anyString());
+    verify(configurationProvider)
+        .updateLabConfig(eq(hostName), captor.capture(), any(UniverseScope.class));
     LabConfig result = captor.getValue();
     assertThat(result.getOverSshCount()).isEqualTo(1);
     assertThat(result.getOverSsh(0).getIpAddress()).isEqualTo("1.2.3.4");
@@ -572,8 +591,9 @@ public final class UpdateHostConfigHandlerTest {
                     .setSection(HostConfigSection.HOST_PROPERTIES)
                     .build())
             .build();
-    updateHostConfigHandler.updateHostConfig(request, Optional.of("user")).get();
-    verify(configurationProvider).updateLabConfig(eq("host"), any(), anyString());
+    updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.of("user")).get();
+    verify(configurationProvider)
+        .updateLabConfig(eq("host"), any(LabConfig.class), any(UniverseScope.class));
   }
 
   @Test
@@ -591,8 +611,9 @@ public final class UpdateHostConfigHandlerTest {
                     .setPermissions(HostPermissions.newBuilder().addHostAdmins(user).build())
                     .build())
             .build();
-    updateHostConfigHandler.updateHostConfig(request, Optional.of(user)).get();
-    verify(configurationProvider).updateLabConfig(eq("host"), any(), anyString());
+    updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.of(user)).get();
+    verify(configurationProvider)
+        .updateLabConfig(eq("host"), any(LabConfig.class), any(UniverseScope.class));
   }
 
   @Test
@@ -611,8 +632,9 @@ public final class UpdateHostConfigHandlerTest {
                     .addHostProperties(HostProperty.newBuilder().setKey("k").setValue("v").build())
                     .build())
             .build();
-    updateHostConfigHandler.updateHostConfig(request, Optional.empty()).get();
-    verify(configurationProvider).updateLabConfig(eq(hostName), any(), anyString());
+    updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
+    verify(configurationProvider)
+        .updateLabConfig(eq(hostName), any(LabConfig.class), any(UniverseScope.class));
   }
 
   @Test
@@ -627,8 +649,9 @@ public final class UpdateHostConfigHandlerTest {
                     .build())
             .setConfig(HostConfig.getDefaultInstance())
             .build();
-    updateHostConfigHandler.updateHostConfig(request, Optional.empty()).get();
-    verify(configurationProvider).updateLabConfig(eq("host"), any(), anyString());
+    updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
+    verify(configurationProvider)
+        .updateLabConfig(eq("host"), any(LabConfig.class), any(UniverseScope.class));
   }
 
   @Test
@@ -650,9 +673,10 @@ public final class UpdateHostConfigHandlerTest {
                             .build())
                     .build())
             .build();
-    updateHostConfigHandler.updateHostConfig(request, Optional.empty()).get();
+    updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
     ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
-    verify(configurationProvider).updateLabConfig(eq("host"), captor.capture(), anyString());
+    verify(configurationProvider)
+        .updateLabConfig(eq("host"), captor.capture(), any(UniverseScope.class));
     assertThat(captor.getValue().getDefaultDeviceConfig().getOwnerList()).containsExactly("owner1");
   }
 
@@ -675,9 +699,10 @@ public final class UpdateHostConfigHandlerTest {
                             .build())
                     .build())
             .build();
-    updateHostConfigHandler.updateHostConfig(request, Optional.empty()).get();
+    updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
     ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
-    verify(configurationProvider).updateLabConfig(eq("host"), captor.capture(), anyString());
+    verify(configurationProvider)
+        .updateLabConfig(eq("host"), captor.capture(), any(UniverseScope.class));
     assertThat(captor.getValue().getDefaultDeviceConfig().getDefaultWifi().getSsid())
         .isEqualTo("ssid");
   }
@@ -708,9 +733,10 @@ public final class UpdateHostConfigHandlerTest {
                             .build())
                     .build())
             .build();
-    updateHostConfigHandler.updateHostConfig(request, Optional.empty()).get();
+    updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
     ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
-    verify(configurationProvider).updateLabConfig(eq("host"), captor.capture(), anyString());
+    verify(configurationProvider)
+        .updateLabConfig(eq("host"), captor.capture(), any(UniverseScope.class));
     assertThat(captor.getValue().getDefaultDeviceConfig().getCompositeDimension().toString())
         .contains("v");
   }
@@ -731,7 +757,7 @@ public final class UpdateHostConfigHandlerTest {
                             .build())
                     .build())
             .build();
-    when(configurationProvider.getLabConfig(eq(hostName), anyString()))
+    when(configurationProvider.getLabConfig(eq(hostName), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.of(existingLabConfig)));
 
     UpdateHostConfigRequest request =
@@ -744,10 +770,11 @@ public final class UpdateHostConfigHandlerTest {
                     .build())
             .build();
 
-    updateHostConfigHandler.updateHostConfig(request, Optional.empty()).get();
+    updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
 
     ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
-    verify(configurationProvider).updateLabConfig(eq(hostName), captor.capture(), anyString());
+    verify(configurationProvider)
+        .updateLabConfig(eq(hostName), captor.capture(), any(UniverseScope.class));
     assertThat(captor.getValue().getHostProperties().getHostPropertyList())
         .containsExactly(
             Lab.HostProperty.newBuilder().setKey("other_key").setValue("val").build(),
@@ -768,7 +795,7 @@ public final class UpdateHostConfigHandlerTest {
                             .build())
                     .build())
             .build();
-    when(configurationProvider.getLabConfig(eq(hostName), anyString()))
+    when(configurationProvider.getLabConfig(eq(hostName), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.of(existingLabConfig)));
 
     UpdateHostConfigRequest request =
@@ -782,10 +809,11 @@ public final class UpdateHostConfigHandlerTest {
                     .build())
             .build();
 
-    updateHostConfigHandler.updateHostConfig(request, Optional.empty()).get();
+    updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
 
     ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
-    verify(configurationProvider).updateLabConfig(eq(hostName), captor.capture(), anyString());
+    verify(configurationProvider)
+        .updateLabConfig(eq(hostName), captor.capture(), any(UniverseScope.class));
     assertThat(captor.getValue().getHostProperties().getHostPropertyList()).isEmpty();
   }
 
@@ -805,10 +833,11 @@ public final class UpdateHostConfigHandlerTest {
                     .build())
             .build();
 
-    updateHostConfigHandler.updateHostConfig(request, Optional.empty()).get();
+    updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
 
     ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
-    verify(configurationProvider).updateLabConfig(eq(hostName), captor.capture(), anyString());
+    verify(configurationProvider)
+        .updateLabConfig(eq(hostName), captor.capture(), any(UniverseScope.class));
     assertThat(captor.getValue().getDefaultDeviceConfig().getOwnerList()).containsExactly("admin1");
   }
 }

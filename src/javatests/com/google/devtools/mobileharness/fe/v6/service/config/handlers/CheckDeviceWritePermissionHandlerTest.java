@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.DeviceData;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.ManagementMode;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -49,6 +50,8 @@ import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class CheckDeviceWritePermissionHandlerTest {
+
+  private static final UniverseScope SELF_UNIVERSE = new UniverseScope.SelfUniverse();
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
@@ -69,7 +72,7 @@ public final class CheckDeviceWritePermissionHandlerTest {
         CheckDeviceWritePermissionRequest.newBuilder().setId("device").build();
 
     CheckDeviceWritePermissionResponse response =
-        handler.checkDeviceWritePermission(request, Optional.empty()).get();
+        handler.checkDeviceWritePermission(request, SELF_UNIVERSE, Optional.empty()).get();
 
     assertThat(response.getHasPermission()).isFalse();
   }
@@ -83,7 +86,7 @@ public final class CheckDeviceWritePermissionHandlerTest {
             ManagementMode.PER_DEVICE,
             Optional.empty(),
             Optional.empty());
-    when(deviceDataLoader.loadDeviceData("device", "universe"))
+    when(deviceDataLoader.loadDeviceData("device", SELF_UNIVERSE))
         .thenReturn(immediateFuture(deviceData));
 
     CheckDeviceWritePermissionRequest request =
@@ -93,7 +96,7 @@ public final class CheckDeviceWritePermissionHandlerTest {
             .build();
 
     CheckDeviceWritePermissionResponse response =
-        handler.checkDeviceWritePermission(request, Optional.of("user")).get();
+        handler.checkDeviceWritePermission(request, SELF_UNIVERSE, Optional.of("user")).get();
 
     assertThat(response.getHasPermission()).isFalse();
   }
@@ -111,7 +114,7 @@ public final class CheckDeviceWritePermissionHandlerTest {
             ManagementMode.PER_DEVICE,
             Optional.empty(),
             Optional.of(config));
-    when(deviceDataLoader.loadDeviceData("device", "universe"))
+    when(deviceDataLoader.loadDeviceData("device", SELF_UNIVERSE))
         .thenReturn(immediateFuture(deviceData));
 
     CheckDeviceWritePermissionRequest request =
@@ -122,7 +125,7 @@ public final class CheckDeviceWritePermissionHandlerTest {
 
     assertThat(
             handler
-                .checkDeviceWritePermission(request, Optional.of("owner1"))
+                .checkDeviceWritePermission(request, SELF_UNIVERSE, Optional.of("owner1"))
                 .get()
                 .getHasPermission())
         .isTrue();
@@ -141,7 +144,7 @@ public final class CheckDeviceWritePermissionHandlerTest {
             ManagementMode.PER_DEVICE,
             Optional.empty(),
             Optional.of(config));
-    when(deviceDataLoader.loadDeviceData("device", "universe"))
+    when(deviceDataLoader.loadDeviceData("device", SELF_UNIVERSE))
         .thenReturn(immediateFuture(deviceData));
 
     CheckDeviceWritePermissionRequest request =
@@ -152,7 +155,7 @@ public final class CheckDeviceWritePermissionHandlerTest {
 
     assertThat(
             handler
-                .checkDeviceWritePermission(request, Optional.of("executor1"))
+                .checkDeviceWritePermission(request, SELF_UNIVERSE, Optional.of("executor1"))
                 .get()
                 .getHasPermission())
         .isTrue();
@@ -172,7 +175,7 @@ public final class CheckDeviceWritePermissionHandlerTest {
             ManagementMode.PER_DEVICE,
             Optional.empty(),
             Optional.of(config));
-    when(deviceDataLoader.loadDeviceData("device", "universe"))
+    when(deviceDataLoader.loadDeviceData("device", SELF_UNIVERSE))
         .thenReturn(immediateFuture(deviceData));
     when(groupMembershipProvider.isMemberOfAny(eq("executor1"), any()))
         .thenReturn(immediateFuture(false));
@@ -185,7 +188,7 @@ public final class CheckDeviceWritePermissionHandlerTest {
 
     assertThat(
             handler
-                .checkDeviceWritePermission(request, Optional.of("executor1"))
+                .checkDeviceWritePermission(request, SELF_UNIVERSE, Optional.of("executor1"))
                 .get()
                 .getHasPermission())
         .isFalse();
@@ -202,7 +205,7 @@ public final class CheckDeviceWritePermissionHandlerTest {
             ManagementMode.PER_DEVICE,
             Optional.empty(),
             Optional.of(config));
-    when(deviceDataLoader.loadDeviceData("device", "universe"))
+    when(deviceDataLoader.loadDeviceData("device", SELF_UNIVERSE))
         .thenReturn(immediateFuture(deviceData));
 
     CheckDeviceWritePermissionRequest request =
@@ -212,7 +215,7 @@ public final class CheckDeviceWritePermissionHandlerTest {
             .build();
 
     CheckDeviceWritePermissionResponse response =
-        handler.checkDeviceWritePermission(request, Optional.of("user")).get();
+        handler.checkDeviceWritePermission(request, SELF_UNIVERSE, Optional.of("user")).get();
 
     assertThat(response.getHasPermission()).isTrue();
   }
@@ -230,7 +233,7 @@ public final class CheckDeviceWritePermissionHandlerTest {
             ManagementMode.PER_DEVICE,
             Optional.empty(),
             Optional.of(config));
-    when(deviceDataLoader.loadDeviceData("device", "universe"))
+    when(deviceDataLoader.loadDeviceData("device", SELF_UNIVERSE))
         .thenReturn(immediateFuture(deviceData));
     when(groupMembershipProvider.isMemberOfAny(eq("user"), any()))
         .thenReturn(immediateFuture(true));
@@ -242,7 +245,7 @@ public final class CheckDeviceWritePermissionHandlerTest {
             .build();
 
     CheckDeviceWritePermissionResponse response =
-        handler.checkDeviceWritePermission(request, Optional.of("user")).get();
+        handler.checkDeviceWritePermission(request, SELF_UNIVERSE, Optional.of("user")).get();
 
     assertThat(response.getHasPermission()).isTrue();
   }

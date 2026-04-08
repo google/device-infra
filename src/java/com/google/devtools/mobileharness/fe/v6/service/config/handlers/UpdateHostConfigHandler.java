@@ -43,6 +43,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostCo
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -74,11 +75,11 @@ public final class UpdateHostConfigHandler {
   }
 
   public ListenableFuture<UpdateHostConfigResponse> updateHostConfig(
-      UpdateHostConfigRequest request, Optional<String> username) {
+      UpdateHostConfigRequest request, UniverseScope universe, Optional<String> username) {
     logger.atInfo().log("Updating host config for %s", request.getHostName());
 
     try {
-      validateRequest(request);
+      validateRequest(request, universe);
     } catch (IllegalArgumentException | UnsupportedOperationException e) {
       return immediateFuture(
           UpdateHostConfigResponse.newBuilder()
@@ -95,12 +96,12 @@ public final class UpdateHostConfigHandler {
             optResponse ->
                 optResponse.isPresent()
                     ? immediateFuture(optResponse.get())
-                    : saveUpdatedConfig(request),
+                    : saveUpdatedConfig(request, universe),
             executor);
   }
 
-  private void validateRequest(UpdateHostConfigRequest request) {
-    configServiceCapabilityFactory.create(request.getUniverse()).checkConfigServiceAvailability();
+  private void validateRequest(UpdateHostConfigRequest request, UniverseScope universe) {
+    configServiceCapabilityFactory.create(universe).checkConfigServiceAvailability();
 
     if (environment.isAts()) {
       switch (request.getScope().getSection()) {
@@ -137,9 +138,9 @@ public final class UpdateHostConfigHandler {
   }
 
   private ListenableFuture<UpdateHostConfigResponse> saveUpdatedConfig(
-      UpdateHostConfigRequest request) {
+      UpdateHostConfigRequest request, UniverseScope universe) {
     return Futures.transformAsync(
-        configurationProvider.getLabConfig(request.getHostName(), request.getUniverse()),
+        configurationProvider.getLabConfig(request.getHostName(), universe),
         existingConfigOpt -> {
           LabConfig.Builder builder =
               existingConfigOpt.isPresent()
@@ -150,7 +151,7 @@ public final class UpdateHostConfigHandler {
 
           return Futures.transform(
               configurationProvider.updateLabConfig(
-                  request.getHostName(), builder.build(), request.getUniverse()),
+                  request.getHostName(), builder.build(), universe),
               unused -> UpdateHostConfigResponse.newBuilder().setSuccess(true).build(),
               executor);
         },

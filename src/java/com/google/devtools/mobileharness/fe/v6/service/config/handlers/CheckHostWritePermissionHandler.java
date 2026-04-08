@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWri
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -51,14 +52,13 @@ public final class CheckHostWritePermissionHandler {
   }
 
   public ListenableFuture<CheckHostWritePermissionResponse> checkHostWritePermission(
-      CheckHostWritePermissionRequest request, Optional<String> username) {
+      CheckHostWritePermissionRequest request, UniverseScope universe, Optional<String> username) {
     if (username.isEmpty()) {
       return immediateFuture(
           CheckHostWritePermissionResponse.newBuilder().setHasPermission(false).build());
     }
     String user = username.get();
     String hostName = request.getHostName();
-    String universe = request.getUniverse();
 
     return Futures.transformAsync(
         configurationProvider.getLabConfig(hostName, universe),

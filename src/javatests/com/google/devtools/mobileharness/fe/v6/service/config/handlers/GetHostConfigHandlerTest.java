@@ -20,7 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static org.junit.Assert.assertThrows;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfi
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostConfigUiStatus;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -52,6 +53,8 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public final class GetHostConfigHandlerTest {
 
+  private static final UniverseScope SELF_UNIVERSE = new UniverseScope.SelfUniverse();
+
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
   @Bind @Mock private ConfigurationProvider configurationProvider;
@@ -64,18 +67,19 @@ public final class GetHostConfigHandlerTest {
   @Before
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
-    when(configServiceCapabilityFactory.create(anyString())).thenReturn(configServiceCapability);
+    when(configServiceCapabilityFactory.create(any(UniverseScope.class)))
+        .thenReturn(configServiceCapability);
     when(configServiceCapability.calculateHostUiStatus())
         .thenReturn(HostConfigUiStatus.getDefaultInstance());
   }
 
   @Test
   public void getHostConfig_empty() throws Exception {
-    when(configurationProvider.getLabConfig(anyString(), anyString()))
+    when(configurationProvider.getLabConfig(any(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.empty()));
 
     GetHostConfigRequest request = GetHostConfigRequest.newBuilder().setHostName("host").build();
-    assertThat(getHostConfigHandler.getHostConfig(request).get())
+    assertThat(getHostConfigHandler.getHostConfig(request, SELF_UNIVERSE).get())
         .isEqualTo(GetHostConfigResponse.getDefaultInstance());
   }
 
@@ -89,20 +93,21 @@ public final class GetHostConfigHandlerTest {
         GetHostConfigRequest.newBuilder().setHostName("host").setUniverse("unsupported").build();
 
     ListenableFuture<GetHostConfigResponse> listenableFuture =
-        getHostConfigHandler.getHostConfig(request);
+        getHostConfigHandler.getHostConfig(request, SELF_UNIVERSE);
     assertThrows(ExecutionException.class, () -> listenableFuture.get());
   }
 
   @Test
   public void getHostConfig_success() throws Exception {
     LabConfig labConfig = LabConfig.newBuilder().setHostName("host").build();
-    when(configurationProvider.getLabConfig("host", "universe"))
+    when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
         .thenReturn(immediateFuture(Optional.of(labConfig)));
 
     GetHostConfigRequest request =
         GetHostConfigRequest.newBuilder().setHostName("host").setUniverse("universe").build();
 
-    GetHostConfigResponse response = getHostConfigHandler.getHostConfig(request).get();
+    GetHostConfigResponse response =
+        getHostConfigHandler.getHostConfig(request, SELF_UNIVERSE).get();
 
     assertThat(response.getHostConfig().getDeviceConfigMode())
         .isEqualTo(DeviceConfigMode.PER_DEVICE);

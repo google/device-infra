@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfig
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -52,16 +53,16 @@ public final class GetHostDefaultDeviceConfigHandler {
   }
 
   public ListenableFuture<GetHostDefaultDeviceConfigResponse> getHostDefaultDeviceConfig(
-      GetHostDefaultDeviceConfigRequest request) {
+      GetHostDefaultDeviceConfigRequest request, UniverseScope universe) {
     logger.atInfo().log("Getting host default device config for %s", request.getHostName());
     try {
-      configServiceCapabilityFactory.create(request.getUniverse()).checkConfigServiceAvailability();
+      configServiceCapabilityFactory.create(universe).checkConfigServiceAvailability();
     } catch (UnsupportedOperationException e) {
       return immediateFailedFuture(e);
     }
 
     return Futures.transform(
-        configurationProvider.getLabConfig(request.getHostName(), request.getUniverse()),
+        configurationProvider.getLabConfig(request.getHostName(), universe),
         labConfigOpt -> {
           if (labConfigOpt.isEmpty()) {
             return GetHostDefaultDeviceConfigResponse.getDefaultInstance();

@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.config;
 
+import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
+
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.CheckDeviceWritePermissionHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.CheckHostWritePermissionHandler;
@@ -41,6 +43,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDevice
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigResponse;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseFactory;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -57,6 +61,7 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
   private final GetHostConfigHandler getHostConfigHandler;
   private final CheckHostWritePermissionHandler checkHostWritePermissionHandler;
   private final UpdateHostConfigHandler updateHostConfigHandler;
+  private final UniverseFactory universeFactory;
 
   @Inject
   ConfigServiceLogicImpl(
@@ -67,7 +72,8 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
       GetHostDefaultDeviceConfigHandler getHostDefaultDeviceConfigHandler,
       GetHostConfigHandler getHostConfigHandler,
       CheckHostWritePermissionHandler checkHostWritePermissionHandler,
-      UpdateHostConfigHandler updateHostConfigHandler) {
+      UpdateHostConfigHandler updateHostConfigHandler,
+      UniverseFactory universeFactory) {
     this.getDeviceConfigHandler = getDeviceConfigHandler;
     this.checkDeviceWritePermissionHandler = checkDeviceWritePermissionHandler;
     this.updateDeviceConfigHandler = updateDeviceConfigHandler;
@@ -76,51 +82,101 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
     this.getHostConfigHandler = getHostConfigHandler;
     this.checkHostWritePermissionHandler = checkHostWritePermissionHandler;
     this.updateHostConfigHandler = updateHostConfigHandler;
+    this.universeFactory = universeFactory;
   }
 
   @Override
   public ListenableFuture<GetDeviceConfigResponse> getDeviceConfig(GetDeviceConfigRequest request) {
-    return getDeviceConfigHandler.getDeviceConfig(request);
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return getDeviceConfigHandler.getDeviceConfig(request, universe);
   }
 
   @Override
   public ListenableFuture<CheckDeviceWritePermissionResponse> checkDeviceWritePermission(
       CheckDeviceWritePermissionRequest request, Optional<String> username) {
-    return checkDeviceWritePermissionHandler.checkDeviceWritePermission(request, username);
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return checkDeviceWritePermissionHandler.checkDeviceWritePermission(
+        request, universe, username);
   }
 
   @Override
   public ListenableFuture<UpdateDeviceConfigResponse> updateDeviceConfig(
       UpdateDeviceConfigRequest request, Optional<String> username) {
-    return updateDeviceConfigHandler.updateDeviceConfig(request, username);
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return updateDeviceConfigHandler.updateDeviceConfig(request, universe, username);
   }
 
   @Override
   public ListenableFuture<GetRecommendedWifiResponse> getRecommendedWifi(
       GetRecommendedWifiRequest request) {
-    return getRecommendedWifiHandler.getRecommendedWifi(request);
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return getRecommendedWifiHandler.getRecommendedWifi(request, universe);
   }
 
   @Override
   public ListenableFuture<GetHostDefaultDeviceConfigResponse> getHostDefaultDeviceConfig(
       GetHostDefaultDeviceConfigRequest request) {
-    return getHostDefaultDeviceConfigHandler.getHostDefaultDeviceConfig(request);
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return getHostDefaultDeviceConfigHandler.getHostDefaultDeviceConfig(request, universe);
   }
 
   @Override
   public ListenableFuture<GetHostConfigResponse> getHostConfig(GetHostConfigRequest request) {
-    return getHostConfigHandler.getHostConfig(request);
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return getHostConfigHandler.getHostConfig(request, universe);
   }
 
   @Override
   public ListenableFuture<CheckHostWritePermissionResponse> checkHostWritePermission(
       CheckHostWritePermissionRequest request, Optional<String> username) {
-    return checkHostWritePermissionHandler.checkHostWritePermission(request, username);
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return checkHostWritePermissionHandler.checkHostWritePermission(request, universe, username);
   }
 
   @Override
   public ListenableFuture<UpdateHostConfigResponse> updateHostConfig(
       UpdateHostConfigRequest request, Optional<String> username) {
-    return updateHostConfigHandler.updateHostConfig(request, username);
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return updateHostConfigHandler.updateHostConfig(request, universe, username);
   }
 }

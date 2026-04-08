@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceCon
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.DeviceData;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -53,10 +54,11 @@ public final class GetDeviceConfigHandler {
     this.executor = executor;
   }
 
-  public ListenableFuture<GetDeviceConfigResponse> getDeviceConfig(GetDeviceConfigRequest request) {
+  public ListenableFuture<GetDeviceConfigResponse> getDeviceConfig(
+      GetDeviceConfigRequest request, UniverseScope universe) {
     logger.atInfo().log("Getting device config for %s", request.getId());
     ConfigServiceCapability configServiceCapability =
-        configServiceCapabilityFactory.create(request.getUniverse());
+        configServiceCapabilityFactory.create(universe);
     try {
       configServiceCapability.checkConfigServiceAvailability();
     } catch (UnsupportedOperationException e) {
@@ -64,7 +66,7 @@ public final class GetDeviceConfigHandler {
     }
 
     ListenableFuture<DeviceData> deviceDataFuture =
-        deviceDataLoader.loadDeviceData(request.getId(), request.getUniverse());
+        deviceDataLoader.loadDeviceData(request.getId(), universe);
 
     return Futures.transform(
         deviceDataFuture,
