@@ -262,6 +262,8 @@ public final class Dimension {
     GSERVICES_ANDROID_ID,
     /** The hardware name of the device. */
     HARDWARE,
+    /** The hardware DDR of the device. */
+    HARDWARE_DDR,
     /** The hardware UFS of the device. */
     HARDWARE_UFS,
     /**

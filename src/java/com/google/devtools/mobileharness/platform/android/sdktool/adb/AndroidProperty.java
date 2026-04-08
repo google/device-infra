@@ -57,6 +57,7 @@ public enum AndroidProperty {
   FLAVOR("ro.build.flavor"),
   GSM_OPERATOR_ALPHA("gsm.operator.alpha"),
   HARDWARE("ro.hardware"),
+  HARDWARE_DDR("ro.boot.hardware.ddr"),
   HARDWARE_TYPE("ro.hardware.type"),
   HARDWARE_UFS("ro.boot.hardware.ufs"),
   INCREMENTAL_BUILD("ro.build.version.incremental"),
