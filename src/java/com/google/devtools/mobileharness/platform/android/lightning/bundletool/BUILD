@@ -24,6 +24,7 @@ java_library(
     ],
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//:deviceinfra_limited_pkg",
         "//:omnilab_fusion",
     ],
     deps = [
