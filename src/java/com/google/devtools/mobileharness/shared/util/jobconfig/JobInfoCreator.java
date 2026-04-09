@@ -62,6 +62,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelp
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecWalker;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.DeviceList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.Driver;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.FileConfigList.FileConfig;
@@ -144,6 +145,33 @@ public final class JobInfoCreator {
       String sessionTmpDir,
       String sessionGenDir)
       throws MobileHarnessException, InterruptedException {
+    JobConfigFromTarget target = jobConfig.getJobConfigFromTarget();
+    return createJobInfo(
+        jobId,
+        actualUser,
+        jobAccessAccount,
+        originalSubmitTimestamp,
+        jobConfig,
+        target.getMhJobConfig(),
+        target.getNonstandardFlagList(),
+        target.getGenDirPath(),
+        sessionTmpDir,
+        sessionGenDir);
+  }
+
+  /** Creates JobInfo from Gateway JobConfig and parsed details. */
+  public static JobInfo createJobInfo(
+      String jobId,
+      String actualUser,
+      String jobAccessAccount,
+      Timestamp originalSubmitTimestamp,
+      com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfig jobConfig,
+      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig,
+      List<String> nonstandardFlags,
+      @Nullable String genDirPath,
+      String sessionTmpDir,
+      String sessionGenDir)
+      throws MobileHarnessException, InterruptedException {
     jobId = jobId == null ? UUID.randomUUID().toString() : jobId;
     String jobDir = PathUtil.join(sessionTmpDir, "j_" + jobId);
     LocalFileUtil localFileUtil = new LocalFileUtil();
@@ -186,16 +214,12 @@ public final class JobInfoCreator {
     logger.atInfo().log("Output jobSetting retry=%s", jobSetting.getRetry());
 
     JobInfo jobInfo;
-    if (jobConfig.hasJobConfigFromTarget()) {
-      JobConfigFromTarget jobConfigFromTarget = jobConfig.getJobConfigFromTarget();
-      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig =
-          jobConfigFromTarget.getMhJobConfig();
-      mhJobConfig = mhJobConfig.toBuilder().setName(mhJobConfig.getName()).build();
+    if (!mhJobConfig.equals(JobConfig.getDefaultInstance())) {
       jobInfo =
           createJobInfo(
               jobId,
               mhJobConfig,
-              jobConfigFromTarget.getNonstandardFlagList(),
+              nonstandardFlags,
               jobSetting,
               JobUser.newBuilder()
                   .setRunAs(jobConfig.getUser())
@@ -203,7 +227,7 @@ public final class JobInfoCreator {
                   .setJobAccessAccount(jobAccessAccount)
                   .build(),
               sessionTmpDir,
-              jobConfigFromTarget.getGenDirPath(),
+              genDirPath,
               false);
       for (StrPair property : jobConfig.getPropertyList()) {
         jobInfo.properties().add(property.getName(), property.getValue());
@@ -229,16 +253,16 @@ public final class JobInfoCreator {
 
   /** Creates JobInfo from MH JobConfig. */
   public static JobInfo createJobInfo(
-      com.google.wireless.qa.mobileharness.shared.proto.JobConfig jobConfig,
+      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig,
       List<String> nonstandardFlags,
       @Nullable String genFileDir)
       throws MobileHarnessException, InterruptedException {
-    return createJobInfo(jobConfig, nonstandardFlags, genFileDir, /* tmpFileDir= */ null);
+    return createJobInfo(mhJobConfig, nonstandardFlags, genFileDir, /* tmpFileDir= */ null);
   }
 
   /** Creates JobInfo from MH JobConfig. */
   public static JobInfo createJobInfo(
-      com.google.wireless.qa.mobileharness.shared.proto.JobConfig jobConfig,
+      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig,
       List<String> nonstandardFlags,
       @Nullable String genFileDir,
       @Nullable String tmpFileDir)
@@ -247,10 +271,10 @@ public final class JobInfoCreator {
     String jobId = UUID.randomUUID().toString();
     return createJobInfo(
         jobId,
-        jobConfig,
+        mhJobConfig,
         nonstandardFlags,
-        JobSettingsCreator.createJobSetting(jobId, jobConfig, tmpFileDir),
-        JobConfigHelper.finalizeUser(jobConfig),
+        JobSettingsCreator.createJobSetting(jobId, mhJobConfig, tmpFileDir),
+        JobConfigHelper.finalizeUser(mhJobConfig),
         tmpFileDir,
         genFileDir,
         true);
@@ -260,7 +284,7 @@ public final class JobInfoCreator {
   @VisibleForTesting
   static JobInfo createJobInfo(
       String jobId,
-      com.google.wireless.qa.mobileharness.shared.proto.JobConfig jobConfig,
+      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig,
       List<String> nonstandardFlags,
       JobSetting setting,
       JobUser jobUser,
@@ -269,17 +293,17 @@ public final class JobInfoCreator {
       boolean removeGenFileDirBeforePrepare)
       throws MobileHarnessException, InterruptedException {
     // Finalizes the job name.
-    String jobName = jobConfig.getName();
+    String jobName = mhJobConfig.getName();
     if (Strings.isNullOrEmpty(jobName)) {
       throw new MobileHarnessException(
           BasicErrorId.JOB_CONFIG_NO_JOB_NAME_ERROR,
           "Can not find the job name from job config file, BUILD target, or flag");
     }
 
-    jobConfig = updateDeviceList(jobConfig, genDirPath);
+    mhJobConfig = updateDeviceList(mhJobConfig, genDirPath);
 
     // Finalizes the job type.
-    JobType type = finalizeJobType(jobConfig);
+    JobType type = finalizeJobType(mhJobConfig);
 
     // Finalizes the GEN_FILE dir.
     LocalFileUtil fileUtil = new LocalFileUtil();
@@ -308,9 +332,10 @@ public final class JobInfoCreator {
     // Finalize job spec.
     JobSpecHelper jobSpecHelper = JobSpecHelper.getDefaultHelper();
     List<JobSpec> jobSpecs = new ArrayList<>();
-    for (String specFile : jobConfig.getSpecFiles().getContentList()) {
+    for (String specFile : mhJobConfig.getSpecFiles().getContentList()) {
       String path =
-          getFileOrDirPath("", specFile, genDirPath, jobConfig.getTargetLocations().getContentMap())
+          getFileOrDirPath(
+                  "", specFile, genDirPath, mhJobConfig.getTargetLocations().getContentMap())
               .get(0);
       String fileName = Path.of(path).getFileName().toString();
       fileUtil.copyFileOrDir(path, PathUtil.join(genFileDir, "specfile_" + fileName));
@@ -340,16 +365,16 @@ public final class JobInfoCreator {
     }
 
     // Finalizes the parameters. This must be done before finalizing subDeviceSpecs or scopedSpecs.
-    jobInfo.params().addAll(jobConfig.getParams().getContentMap());
+    jobInfo.params().addAll(mhJobConfig.getParams().getContentMap());
     jobInfo.params().addAll(overridingParams);
-    jobInfo.params().add("tags", String.join(", ", jobConfig.getTags().getContentList()));
+    jobInfo.params().add("tags", String.join(", ", mhJobConfig.getTags().getContentList()));
 
     // Finalizes sub-devices and their dimensions.
-    if (jobConfig.hasDevice()) {
+    if (mhJobConfig.hasDevice()) {
       finalizeSubDeviceSpecs(
-          jobConfig.getDevice().getSubDeviceSpecList(),
-          jobConfig.hasSharedDimensionNames()
-              ? jobConfig.getSharedDimensionNames().getContentList()
+          mhJobConfig.getDevice().getSubDeviceSpecList(),
+          mhJobConfig.hasSharedDimensionNames()
+              ? mhJobConfig.getSharedDimensionNames().getContentList()
               : ImmutableList.of(),
           jobInfo);
     }
@@ -360,13 +385,13 @@ public final class JobInfoCreator {
         .forEach(dimensions -> dimensions.addAll(overridingDimensions));
 
     // Finalizes the scoped specs.
-    finalizeJobScopedSpecs(jobConfig, jobInfo, genDirPath);
+    finalizeJobScopedSpecs(mhJobConfig, jobInfo, genDirPath);
 
     // Finalizes the files.
-    finalizeFiles(jobConfig, jobInfo, setting, overridingFiles, tmpRunDirPath, genDirPath);
+    finalizeFiles(mhJobConfig, jobInfo, setting, overridingFiles, tmpRunDirPath, genDirPath);
 
     // Finalizes the tests.
-    for (String test : jobConfig.getTests().getContentList()) {
+    for (String test : mhJobConfig.getTests().getContentList()) {
       jobInfo.tests().add(test);
     }
 
@@ -460,7 +485,7 @@ public final class JobInfoCreator {
 
   @VisibleForTesting
   static void finalizeFiles(
-      com.google.wireless.qa.mobileharness.shared.proto.JobConfig jobConfig,
+      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig,
       JobInfo jobInfo,
       @Nullable JobSetting jobSetting,
       Map<String, List<String>> overridingFiles,
@@ -468,7 +493,7 @@ public final class JobInfoCreator {
       String genDirPath)
       throws MobileHarnessException, InterruptedException {
     finalizeFiles(
-        jobConfig,
+        mhJobConfig,
         jobInfo,
         jobSetting,
         overridingFiles,
@@ -480,7 +505,7 @@ public final class JobInfoCreator {
 
   @VisibleForTesting
   static void finalizeFiles(
-      com.google.wireless.qa.mobileharness.shared.proto.JobConfig jobConfig,
+      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig,
       JobInfo jobInfo,
       @Nullable JobSetting jobSetting,
       Map<String, List<String>> overridingFiles,
@@ -491,9 +516,9 @@ public final class JobInfoCreator {
       throws MobileHarnessException, InterruptedException {
     // Implementation of the MapSplitter is backed up by a LinkedMultimap, so the order of
     // file keeps the same as defined.
-    Map<String, String> targetLocations = jobConfig.getTargetLocations().getContentMap();
+    Map<String, String> targetLocations = mhJobConfig.getTargetLocations().getContentMap();
     List<String> apksUnderTest = new ArrayList<>();
-    for (FileConfig fileConfig : jobConfig.getFiles().getContentList()) {
+    for (FileConfig fileConfig : mhJobConfig.getFiles().getContentList()) {
       String tag = fileConfig.getTag();
       if (tag.equals(TAG_DEVICE_SPEC)) {
         continue;
@@ -504,7 +529,7 @@ public final class JobInfoCreator {
           apksUnderTest = putApksUnderTestInFront(files);
         }
         for (String file : files) {
-          if (checkBuiltFiles(jobConfig, jobInfo, tag)) {
+          if (checkBuiltFiles(mhJobConfig, jobInfo, tag)) {
             for (String fileOrDirPath :
                 getFileOrDirPath(tag, file, genDirPath, targetLocations, localFileUtil)) {
               if (tmpRunDirPath != null
@@ -556,10 +581,10 @@ public final class JobInfoCreator {
 
   /** Returns {@code true} if need to check the built files. */
   private static boolean checkBuiltFiles(
-      com.google.wireless.qa.mobileharness.shared.proto.JobConfig jobConfig,
+      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig,
       JobInfo jobInfo,
       @Nullable String fileTag) {
-    return jobConfig.getNeedCheckBuiltFiles();
+    return mhJobConfig.getNeedCheckBuiltFiles();
   }
 
   /**
@@ -604,20 +629,22 @@ public final class JobInfoCreator {
 
   @VisibleForTesting
   static JobType finalizeJobType(
-      com.google.wireless.qa.mobileharness.shared.proto.JobConfig jobConfig)
+      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig)
       throws MobileHarnessException {
     JobType type;
-    // It is possible for jobConfig to have both a non-empty type and device fields. We should check
+    // It is possible for mhJobConfig to have both a non-empty type and device fields. We should
+    // check
     // for the deprecated type field first because device may have been populated while rewriting
     // the job config json to accommodate moving the dimensions proto field into part of
     // SubDeviceSpecs.
-    if (jobConfig.hasDevice() || jobConfig.hasDriver()) {
+    if (mhJobConfig.hasDevice() || mhJobConfig.hasDriver()) {
       logger.atInfo().log("Job type is empty, use the first sub device to set job type");
       JobType.Builder typeBuilder = JobType.newBuilder();
-      typeBuilder.setDevice(JobTypeUtil.getDeviceTypeName(jobConfig.getDevice()));
-      typeBuilder.setDriver(jobConfig.getDriver().getName());
+      typeBuilder.setDevice(JobTypeUtil.getDeviceTypeName(mhJobConfig.getDevice()));
+      typeBuilder.setDriver(mhJobConfig.getDriver().getName());
       typeBuilder.addAllDecorator(
-          Lists.reverse(jobConfig.getDevice().getSubDeviceSpec(0).getDecorators().getContentList())
+          Lists.reverse(
+                  mhJobConfig.getDevice().getSubDeviceSpec(0).getDecorators().getContentList())
               .stream()
               .map(Driver::getName)
               .collect(toImmutableList()));
@@ -633,13 +660,13 @@ public final class JobInfoCreator {
           BasicErrorId.JOB_CONFIG_INVALID_JOB_TYPE_ERROR,
           "Can not find the device from job config file, BUILD target, or flag");
     }
-    return mayAppendDecorator(type, jobConfig);
+    return mayAppendDecorator(type, mhJobConfig);
   }
 
   private static JobType mayAppendDecorator(
-      JobType type, com.google.wireless.qa.mobileharness.shared.proto.JobConfig jobConfig) {
+      JobType type, com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig) {
     JobType newType =
-        SharedPoolJobUtil.isUsingSharedDefaultPerformancePool(jobConfig)
+        SharedPoolJobUtil.isUsingSharedDefaultPerformancePool(mhJobConfig)
             ? mayAppendPerformanceLockDecorator(type)
             : type;
     return mayAddSysLogDecoratorForIosTest(newType);
@@ -714,16 +741,18 @@ public final class JobInfoCreator {
    * the updated JobConfig.
    */
   private static com.google.wireless.qa.mobileharness.shared.proto.JobConfig updateDeviceList(
-      com.google.wireless.qa.mobileharness.shared.proto.JobConfig jobConfig, String genDirPath)
+      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig, String genDirPath)
       throws MobileHarnessException, InterruptedException {
-    for (FileConfig fileConfig : jobConfig.getFiles().getContentList()) {
+    for (FileConfig fileConfig : mhJobConfig.getFiles().getContentList()) {
       if (TAG_DEVICE_SPEC.equals(fileConfig.getTag())) {
         DeviceSpec deviceSpecFromFile =
             loadDeviceSpecFromFile(
-                fileConfig.getPath(0), genDirPath, jobConfig.getTargetLocations().getContentMap());
+                fileConfig.getPath(0),
+                genDirPath,
+                mhJobConfig.getTargetLocations().getContentMap());
         if (!deviceSpecFromFile.equals(DeviceSpec.getDefaultInstance())) {
           DeviceList.Builder deviceListBuilder = DeviceList.newBuilder();
-          for (SubDeviceSpec subDeviceSpec : jobConfig.getDevice().getSubDeviceSpecList()) {
+          for (SubDeviceSpec subDeviceSpec : mhJobConfig.getDevice().getSubDeviceSpecList()) {
             deviceListBuilder.addSubDeviceSpec(
                 subDeviceSpec.toBuilder()
                     .setType(deviceSpecFromFile.getType())
@@ -738,11 +767,11 @@ public final class JobInfoCreator {
           }
           logger.atInfo().log(
               "Device list update from target_device as: %s", deviceListBuilder.build());
-          return jobConfig.toBuilder().setDevice(deviceListBuilder).build();
+          return mhJobConfig.toBuilder().setDevice(deviceListBuilder).build();
         }
       }
     }
-    return jobConfig;
+    return mhJobConfig;
   }
 
   /** Finalizes {@code SubDeviceSpecs} in {@code JobInfo}. */
@@ -843,7 +872,7 @@ public final class JobInfoCreator {
   /** Finalizes scoped specs in {@code jobInfo}. */
   @VisibleForTesting
   static void finalizeJobScopedSpecs(
-      com.google.wireless.qa.mobileharness.shared.proto.JobConfig jobConfig,
+      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig,
       JobInfo jobInfo,
       @Nullable String genDirPath)
       throws MobileHarnessException, InterruptedException {
@@ -856,16 +885,16 @@ public final class JobInfoCreator {
     ScopedSpecs scopedSpecs = jobInfo.scopedSpecs();
 
     // Multiple device jobs should not dupe any decorator related information to the JobInfo.
-    if (jobConfig.getDevice().getSubDeviceSpecCount() == 1) {
+    if (mhJobConfig.getDevice().getSubDeviceSpecCount() == 1) {
       for (Driver decorator :
-          jobConfig.getDevice().getSubDeviceSpec(0).getDecorators().getContentList()) {
+          mhJobConfig.getDevice().getSubDeviceSpec(0).getDecorators().getContentList()) {
         addSpecsOfDriver(scopedSpecs, decorator, true);
       }
     }
-    addSpecsOfDriver(scopedSpecs, jobConfig.getDriver(), false);
+    addSpecsOfDriver(scopedSpecs, mhJobConfig.getDriver(), false);
 
     // Try to resolve the files in the scoped specs of SpecConfigable driver/decorators.
-    Map<String, String> targetLocations = jobConfig.getTargetLocations().getContentMap();
+    Map<String, String> targetLocations = mhJobConfig.getTargetLocations().getContentMap();
     scopedSpecs.addAll(
         JobSpecWalker.resolve(
             scopedSpecs.toJobSpec(JobSpecHelper.getDefaultHelper()),
@@ -893,7 +922,7 @@ public final class JobInfoCreator {
                 List<Object> resolvedPaths = new ArrayList<>();
                 String fieldName = field.getName();
                 for (Object rawPath : originalPaths) {
-                  if (!(rawPath instanceof String)) {
+                  if (!(rawPath instanceof String rawPathString)) {
                     throw new MobileHarnessException(
                         BasicErrorId.JOB_SPEC_INVALID_FILE_PATH_ERROR,
                         String.format(
@@ -902,11 +931,10 @@ public final class JobInfoCreator {
                                 + "String.",
                             field.getFullName()));
                   }
-                  String rawPathString = (String) rawPath;
                   if (rawPathString.startsWith(SCOPED_SPEC_FILE_PREFIX)) {
                     rawPathString = rawPathString.substring(SCOPED_SPEC_FILE_PREFIX.length());
                     if (checkBuiltFiles(
-                        jobConfig,
+                        mhJobConfig,
                         jobInfo,
                         tagField.isEmpty() ? null : (String) builder.getField(tagField.get()))) {
                       resolvedPaths.addAll(
