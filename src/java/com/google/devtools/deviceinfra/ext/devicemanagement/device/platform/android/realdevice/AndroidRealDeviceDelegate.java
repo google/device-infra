@@ -387,7 +387,8 @@ public abstract class AndroidRealDeviceDelegate {
     ImmutableMap.Builder<FastbootProperty, String> fastbootPropertyToValue = ImmutableMap.builder();
     for (FastbootProperty fastbootProperty : fastbootPropertyToDimensionName.keySet()) {
       try {
-        String value = fastboot.getVar(deviceId, fastbootProperty);
+        String value;
+        value = fastboot.getVar(deviceId, fastbootProperty);
         if (!Strings.isNullOrEmpty(value)) {
           device.updateDimension(
               fastbootPropertyToDimensionName.get(fastbootProperty), Ascii.toLowerCase(value));
