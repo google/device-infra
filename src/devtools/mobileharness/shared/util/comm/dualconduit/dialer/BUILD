@@ -13,52 +13,31 @@
 # limitations under the License.
 #
 
-load("@rules_go//go:def.bzl", "go_binary")
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load", "oci_push")
-load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+load("@rules_go//go:def.bzl", "go_library")
 
-package(default_applicable_licenses = ["//:license"])
-
-go_binary(
-    name = "dialer",
-    srcs = ["dialer.go"],
-    goarch = "amd64",
-    goos = "linux",
-    pure = "on",
-    deps = [
-        "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_go_proto",
-        "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_service_go_grpc",
-        "@org_golang_google_grpc//:grpc",
-        "@org_golang_google_grpc//codes",
-        "@org_golang_google_grpc//reflection",
-        "@org_golang_google_grpc//status",
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = [
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/dialer:__pkg__",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/tests:__pkg__",
     ],
 )
 
-# ==========================================
-# Build and push Docker image.
-# ==========================================
-pkg_tar(
-    name = "dialer_tar",
-    srcs = [":dialer"],
-    package_dir = "/dualconduit",
-)
-
-oci_image(
-    name = "dialer_image",
-    base = "@distroless_static",
-    entrypoint = ["/dualconduit/dialer"],
-    tars = [":dialer_tar"],
-)
-
-oci_load(
-    name = "dialer_load",
-    image = ":dialer_image",
-    repo_tags = ["dualconduit/dialer:latest"],
-)
-
-oci_push(
-    name = "dialer_push",
-    image = ":dialer_image",
-    remote_tags = ["latest"],
+go_library(
+    name = "dialer",
+    srcs = ["dialer.go"],
+    importpath = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/dialer",
+    deps = [
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/conduit",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_go_proto",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_service_go_grpc",
+        "@com_github_rsocket_rsocket_go//:rsocket-go",
+        "@com_github_rsocket_rsocket_go//core/transport",
+        "@com_github_rsocket_rsocket_go//payload",
+        "@com_github_rsocket_rsocket_go//rx/flux",
+        "@com_github_google_uuid//:uuid",
+        "@org_golang_google_grpc//codes",
+        "@org_golang_google_grpc//status",
+        "@org_golang_google_protobuf//proto",
+    ],
 )
