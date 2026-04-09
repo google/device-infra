@@ -41,7 +41,6 @@ java_library(
     ],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/master/central/storage:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/shared/storage/transaction:__subpackages__",
     ],
     deps = [
