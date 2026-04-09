@@ -26,6 +26,8 @@ java_library(
     ],
     visibility = [
         "//java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
+        "//java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
+        "//javatests/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
