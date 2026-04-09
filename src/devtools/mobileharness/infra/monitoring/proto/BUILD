@@ -21,6 +21,7 @@ load("@protobuf//bazel:py_proto_library.bzl", "py_proto_library")
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
+        "//chrome/ops/fleet/fleet_data_platform:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/monitoring:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/monitoring:__pkg__",
         "//wireless/android/pixel/testing/labs/metrics:__subpackages__",
