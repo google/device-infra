@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import javax.annotation.Nullable;
@@ -100,6 +101,7 @@ public class CacheFileResolver extends AbstractFileResolver {
     return internalResolve(resolveSource);
   }
 
+  @SuppressWarnings("Interruption")
   private Optional<ResolveResult> internalResolve(ResolveSource resolveSource)
       throws MobileHarnessException, InterruptedException {
     if (persistentResolvedFileCache != null && usePersistentCache(resolveSource)) {
@@ -112,6 +114,19 @@ public class CacheFileResolver extends AbstractFileResolver {
     if (!cachedResult.isCachedData()) {
       try {
         return cachedResult.cachedResult().get();
+      } catch (CancellationException e) {
+        // This thread created the task. If cancelled, we want to cancel the background task to
+        // avoid zombie futures.
+        cachedResult.cachedResult().cancel(/* mayInterruptIfRunning= */ true);
+        throw new MobileHarnessException(
+            BasicErrorId.RESOLVE_FILE_GENERIC_ERROR, "Downloading was cancelled", e);
+      } catch (InterruptedException e) {
+        // This thread created the task. If interrupted, we want to cancel the background task to
+        // avoid zombie futures.
+        cachedResult.cachedResult().cancel(/* mayInterruptIfRunning= */ true);
+        Thread.currentThread().interrupt();
+        throw new MobileHarnessException(
+            BasicErrorId.RESOLVE_FILE_GENERIC_ERROR, "Downloading is interrupted", e);
       } catch (ExecutionException e) {
         if (e.getCause() instanceof MobileHarnessException) {
           throw (MobileHarnessException) e.getCause();
@@ -130,6 +145,11 @@ public class CacheFileResolver extends AbstractFileResolver {
       Optional<ResolveResult> optionalResolveResult;
       try {
         optionalResolveResult = cachedResult.cachedResult().get(RESOLVE_TIMEOUT_IN_HOUR, HOURS);
+      } catch (CancellationException e) {
+        logger.atInfo().log(
+            "Previous resolve process for %s was cancelled. Need to re-resolve.", resolveSource);
+        localCache.removeItemIfValueMatch(resolveSource, cachedResult.cachedResult());
+        return internalResolve(resolveSource);
       } catch (ExecutionException e) {
         if ((e.getCause() instanceof MobileHarnessException
                 && ((MobileHarnessException) e.getCause()).getErrorId()
@@ -160,6 +180,9 @@ public class CacheFileResolver extends AbstractFileResolver {
               e);
         }
       } catch (TimeoutException e) {
+        // Interrupt the long-running resolution task because it is considered as a zombie future.
+        cachedResult.cachedResult().cancel(/* mayInterruptIfRunning= */ true);
+        localCache.removeItemIfValueMatch(resolveSource, cachedResult.cachedResult());
         throw new MobileHarnessException(
             BasicErrorId.RESOLVE_FILE_TIMEOUT,
             String.format("Timeout while resolving file %s", resolveSource),
