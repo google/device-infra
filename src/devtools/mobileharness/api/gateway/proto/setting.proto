@@ -48,7 +48,7 @@ message JobConfig {
   optional mobileharness.shared.spec.JobSpec job_spec = 12;
 
   // Do NOT set this field explicitly. It is the parsing result of BlazeTarget.
-  optional JobConfigFromTarget job_config_from_target = 13 [deprecated = true];
+  optional JobConfigFromTarget job_config_from_target = 13;
   optional string master_spec = 14;
   optional mobileharness.shared.Priority priority = 15 [default = DEFAULT];
 
