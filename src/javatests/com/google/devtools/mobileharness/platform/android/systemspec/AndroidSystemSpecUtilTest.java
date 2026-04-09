@@ -170,6 +170,22 @@ public class AndroidSystemSpecUtilTest {
   }
 
   @Test
+  public void getDeviceSdkVersion_validSdkVersion_shouldReturnDesiredValue() throws Exception {
+    when(adbUtil.getProperty(SERIAL, AndroidProperty.SDK_VERSION)).thenReturn("29");
+    assertThat(systemSpecUtil.getDeviceSdkVersion(SERIAL)).isEqualTo(29);
+  }
+
+  @Test
+  public void getDeviceSdkVersion_invalidSdkVersion_shouldThrowException() throws Exception {
+    when(adbUtil.getProperty(SERIAL, AndroidProperty.SDK_VERSION)).thenReturn("invalid");
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class, () -> systemSpecUtil.getDeviceSdkVersion(SERIAL))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_INVALID_SDK_VERSION);
+  }
+
+  @Test
   public void getDeviceImei() throws Exception {
     when(adb.runShell(
             SERIAL, String.format(AndroidSystemSpecUtil.ADB_SHELL_IPHONE_SUBINFO_TEMPLATE, 4)))
