@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -76,15 +77,26 @@ public abstract class AbstractFileResolver implements FileResolver {
 
   /** Resolve multiple files synchronously. */
   @Override
+  @SuppressWarnings("Interruption")
   public final List<Optional<ResolveResult>> resolve(List<ResolveSource> resolveSources)
       throws MobileHarnessException, InterruptedException {
+    ListenableFuture<List<Optional<ResolveResult>>> future = resolveAsync(resolveSources);
     try {
-      return resolveAsync(resolveSources).get(RESOLVE_TIMEOUT_IN_HOUR, HOURS);
+      return future.get(RESOLVE_TIMEOUT_IN_HOUR, HOURS);
     } catch (TimeoutException e) {
+      // Cancels the background tasks to prevent resource leakage.
+      future.cancel(/* mayInterruptIfRunning= */ true);
       throw new MobileHarnessException(
           BasicErrorId.RESOLVE_FILE_TIMEOUT,
           String.format("Timeout while resolving file %s", resolveSources),
           e);
+    } catch (InterruptedException e) {
+      // Cancels the background tasks to prevent resource leakage.
+      future.cancel(/* mayInterruptIfRunning= */ true);
+      throw e;
+    } catch (CancellationException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.RESOLVE_FILE_GENERIC_ERROR, "Resolution was cancelled", e);
     } catch (ExecutionException e) {
       if (e.getCause() instanceof MobileHarnessException) {
         throw (MobileHarnessException) e.getCause();
