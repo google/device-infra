@@ -304,6 +304,12 @@ export class FakeDeviceService extends DeviceService {
           tooltip: 'Configure device',
           isReady: !scenario.allActionsNotReady,
         },
+        decommission: {
+          enabled: true,
+          visible: true,
+          tooltip: 'Decommission device',
+          isReady: !scenario.allActionsNotReady,
+        },
       },
     };
   }

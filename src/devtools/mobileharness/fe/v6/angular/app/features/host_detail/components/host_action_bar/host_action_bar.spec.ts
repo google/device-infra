@@ -151,6 +151,7 @@ describe('HostActionBar', () => {
     configButton.nativeElement.click();
     expect(comingSoonService.show).toHaveBeenCalledWith(
       ActionBarAction.HOST_CONFIGURATION,
+      'default',
       component.legacyFeUrl ? jasmine.anything() : undefined,
     );
   });

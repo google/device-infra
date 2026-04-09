@@ -34,7 +34,10 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceActions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceType;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DeviceHealthState;
@@ -128,6 +131,17 @@ public final class GetHostDeviceSummariesHandlerTest {
         getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST, UNIVERSE).get();
 
     assertThat(response.getDeviceSummariesList()).hasSize(1);
+    DeviceActions expectedActions =
+        DeviceActions.newBuilder()
+            .setScreenshot(ActionButtonState.newBuilder().setIsReady(false).build())
+            .setRemoteControl(ActionButtonState.newBuilder().setIsReady(false).build())
+            .setFlash(
+                FlashActionButtonState.newBuilder()
+                    .setState(ActionButtonState.newBuilder().setIsReady(false).build())
+                    .build())
+            .setConfiguration(ActionButtonState.newBuilder().setIsReady(false).build())
+            .setDecommission(ActionButtonState.newBuilder().setIsReady(false).build())
+            .build();
     DeviceSummary expectedDeviceSummary =
         DeviceSummary.newBuilder()
             .setId(DEVICE_ID)
@@ -143,6 +157,7 @@ public final class GetHostDeviceSummariesHandlerTest {
                     .setIsCritical(false))
             .setRequiredDims("pool:shared")
             .setModel("pixel 6")
+            .setActions(expectedActions)
             .build();
     assertThat(response.getDeviceSummaries(0)).isEqualTo(expectedDeviceSummary);
   }

@@ -9,7 +9,7 @@
     <mat-dialog-content class="coming-soon-dialog-content">
       <p [innerHTML]="message"></p>
       @if (data?.legacyScreenshotLink) {
-      <p>See <a [href]="data!.legacyScreenshotLink" target="_blank">screenshot</a> for details.</p>
+        <p>See <a [href]="data!.legacyScreenshotLink" target="_blank">screenshot</a> for details.</p>
       }
     </mat-dialog-content>
   </div>
@@ -19,17 +19,17 @@
 <div class="coming-soon-dialog-actions-container">
   <mat-dialog-actions align="center" class="coming-soon-dialog-actions">
     @if(data?.legacyPageUrl) {
-    <button class="secondary-button" (click)="onCancel()" mat-dialog-close>
-      Cancel
-    </button>
-    <button class="primary-button" (click)="onConfirm()">
-      <mat-icon class="primary-button-icon">{{ confirmIcon }}</mat-icon>
-      {{ confirmLabel }}
-    </button>
+      <button class="secondary-button" (click)="onCancel()" mat-dialog-close>
+        Cancel
+      </button>
+      <button class="primary-button" (click)="onConfirm()">
+        <mat-icon class="primary-button-icon">{{ confirmIcon }}</mat-icon>
+        {{ confirmLabel }}
+      </button>
     } @else {
-    <button class="secondary-button" (click)="onCancel()" mat-dialog-close>
-      Close
-    </button>
+      <button class="secondary-button" (click)="onCancel()" mat-dialog-close>
+        Close
+      </button>
     }
   </mat-dialog-actions>
 </div>

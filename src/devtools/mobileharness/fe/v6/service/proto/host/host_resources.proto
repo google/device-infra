@@ -231,8 +231,8 @@ message DeviceSummary {
   string model = 7;
   string version = 8;
   repeated device.SubDeviceInfo sub_devices = 9;
-  // Optional parent device ID (e.g. for sub-devices belonging to a testbed).
-  string parent_device_id = 10;
+  // State of action buttons for this device.
+  device.DeviceActions actions = 10;
 }
 
 // Types of proxy supported by devices.

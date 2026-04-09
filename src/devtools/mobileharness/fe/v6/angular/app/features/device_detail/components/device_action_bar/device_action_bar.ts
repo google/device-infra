@@ -382,7 +382,7 @@ export class DeviceActionBar {
       const deviceLegacyUrl = this.legacyFeUrl
         ? `${this.legacyFeUrl}/devicedetailview/${this.hostName()}/${this.pageData().overview.host.ip}/${this.deviceId()}`
         : undefined;
-      this.comingSoonService.show(feature, deviceLegacyUrl);
+      this.comingSoonService.show(feature, 'default', deviceLegacyUrl);
     }
   }
 

@@ -187,7 +187,7 @@ export class HostActionBar {
       const hostLegacyUrl = this.legacyFeUrl
         ? `${this.legacyFeUrl}/labdetailview/${this.hostName}/${this.pageData.overviewContent.ip}`
         : undefined;
-      this.comingSoonService.show(feature, hostLegacyUrl);
+      this.comingSoonService.show(feature, 'default', hostLegacyUrl);
     }
   }
 

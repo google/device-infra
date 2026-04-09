@@ -7,6 +7,7 @@
  */
 
 import {HealthState, SubDeviceInfo} from './device_overview';
+import {DeviceActions} from './device_action';
 import {HostHeaderInfo} from './host_action';
 
 
@@ -160,6 +161,7 @@ export declare interface DeviceSummary {
     isCritical: boolean;
   };
   readonly label?: string;
+  readonly actions?: DeviceActions;
   // TODO: Consider if we need to display more complex form of required dimensions.
   // The type of `requiredDims` may need to update.
   readonly requiredDims?: string;

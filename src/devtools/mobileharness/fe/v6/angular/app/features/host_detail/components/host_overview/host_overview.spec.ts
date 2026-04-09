@@ -2,6 +2,7 @@ import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
 
+import {APP_DATA} from '../../../../core/models/app_data';
 import {HostOverview} from '../../../../core/models/host_overview';
 import {FakeHostService} from '../../../../core/services/host/fake_host_service';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
@@ -52,6 +53,7 @@ describe('HostOverview Component', () => {
       ],
       providers: [
         provideRouter([]),
+        {provide: APP_DATA, useValue: {applicationId: 'arsenal'}},
         {provide: HOST_SERVICE, useClass: FakeHostService},
         {
           provide: RemoteControlService,

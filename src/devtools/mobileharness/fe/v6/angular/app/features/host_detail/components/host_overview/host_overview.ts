@@ -32,6 +32,9 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 import {RouterLink} from '@angular/router';
 import {map, tap} from 'rxjs/operators';
 
+import {ActionBarAction} from '../../../../core/constants/action_bar_config';
+import {APP_DATA, getLegacyFeUrl} from '../../../../core/models/app_data';
+import {DeviceActions} from '../../../../core/models/device_action';
 import {
   HealthState,
   type DeviceDimension,
@@ -59,6 +62,7 @@ import {
   SearchableListOverlayComponent,
   SearchableListOverlayData,
 } from '../../../../shared/components/searchable_list_overlay/searchable_list_overlay';
+import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
 import {RemoteControlService} from '../../../../shared/services/remote_control_service';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {dateUtils} from '../../../../shared/utils/date_utils';
@@ -162,6 +166,10 @@ export class HostOverviewPage implements OnChanges {
   private readonly destroyRef = inject(DestroyRef);
   private readonly snackBar = inject(SnackBarService);
   private readonly environment = inject(Environment);
+  private readonly comingSoonService = inject(ComingSoonService);
+  private readonly appData = inject(APP_DATA);
+
+  readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
 
   readonly objectUtils = objectUtils;
   readonly dateUtils = dateUtils;
@@ -530,6 +538,41 @@ export class HostOverviewPage implements OnChanges {
           );
         }),
       );
+  }
+
+  showComingSoonPopup(actionName: string, element?: DeviceSummary) {
+    const featureMap: Record<string, ActionBarAction> = {
+      'Configure': ActionBarAction.DEVICE_CONFIGURATION,
+      'Remote Control': ActionBarAction.DEVICE_REMOTE_CONTROL,
+      'Decommission': ActionBarAction.DEVICE_DECOMMISSION,
+      'Screenshot': ActionBarAction.DEVICE_SCREENSHOT,
+      'Flash': ActionBarAction.DEVICE_FLASH,
+    };
+    const feature = featureMap[actionName];
+
+    const hostLegacyUrl = this.legacyFeUrl
+      ? `${this.legacyFeUrl}/labdetailview/${this.host.hostName}/${this.host.ip}`
+      : undefined;
+
+    if (feature) {
+      this.comingSoonService.show(
+        feature,
+        element ? 'hostDevicesItem' : 'hostDevices',
+        hostLegacyUrl,
+      );
+    }
+  }
+
+  isDeviceActionReady(
+    devices: DeviceSummary[],
+    actionKey: keyof DeviceActions,
+  ): boolean {
+    return devices.every((d) => {
+      const actions = d.actions as
+        | Record<string, {isReady?: boolean}>
+        | undefined;
+      return actions?.[actionKey]?.isReady || false;
+    });
   }
 
   // device table actions -  Multi-device remote control

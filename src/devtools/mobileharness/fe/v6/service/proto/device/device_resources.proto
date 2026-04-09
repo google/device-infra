@@ -258,6 +258,8 @@ message DeviceActions {
   ActionButtonState remote_control = 4;
   ActionButtonState quarantine = 5;
   ActionButtonState configuration = 6;
+  // used to decommission device from lab
+  ActionButtonState decommission = 7;
 }
 
 // Information for device header.

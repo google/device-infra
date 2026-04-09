@@ -167,16 +167,16 @@
 
                 <div class="separator"></div>
 
-                <button mat-flat-button class="action-button" matTooltip="Configure">
+                <button mat-flat-button class="action-button" matTooltip="Configure" (click)="isDeviceActionReady(selection.selected, 'configuration') ? null : showComingSoonPopup('Configure')">
                   <mat-icon>settings</mat-icon>
                   <span class="action-button-text">Configure</span>
                 </button>
-                <button mat-flat-button class="action-button" matTooltip="Remote Control" (click)="startRemoteControl(selection.selected)">
+                <button mat-flat-button class="action-button" matTooltip="Remote Control" (click)="isDeviceActionReady(selection.selected, 'remoteControl') ? startRemoteControl(selection.selected) : showComingSoonPopup('Remote Control')">
                   <mat-icon>important_devices</mat-icon>
                   <span class="action-button-text">Remote Control</span>
                 </button>
                 @if(decommissionMissingCount() > 0) {
-                  <button mat-flat-button class="action-button" [matTooltip]="'Decommission Missing (' + decommissionMissingCount() + ')'" (click)="decommissionMissing()">
+                  <button mat-flat-button class="action-button" [matTooltip]="'Decommission Missing (' + decommissionMissingCount() + ')'" (click)="isDeviceActionReady(selection.selected, 'decommission') ? decommissionMissing() : showComingSoonPopup('Decommission')">
                     <mat-icon>delete_sweep</mat-icon>
                     <span class="action-button-text">Decommission Missing ({{decommissionMissingCount()}})</span>
                   </button>
@@ -352,6 +352,7 @@
 
               <!-- Actions Column -->
               <!-- TODO: remove the hide-action-column class when action buttons are implemented. -->
+              <!-- TODO: add real logic for the action buttons. -->
               <ng-container matColumnDef="actions" stickyEnd>
                 <th mat-header-cell *matHeaderCellDef class="sticky-end-header" [class.hide-action-column]="!isGoogleInternal">
                   <button mat-icon-button>
@@ -363,18 +364,24 @@
                     <mat-icon>more_vert</mat-icon>
                   </button>
                   <mat-menu #menu="matMenu">
-                    <button mat-menu-item>
+                    <button mat-menu-item (click)="element.actions?.screenshot?.isReady ? null : showComingSoonPopup('Screenshot', element)">
                       <mat-icon>screenshot</mat-icon>
                       <span>Screenshot</span>
                     </button>
-                    <button mat-menu-item (click)="startRemoteControl([element])">
+                    <button mat-menu-item (click)="element.actions?.remoteControl?.isReady ? startRemoteControl([element]) : showComingSoonPopup('Remote Control', element)">
                       <mat-icon>important_devices</mat-icon>
                       <span>Remote Control</span>
                     </button>
-                      <button mat-menu-item>
+                    <button mat-menu-item (click)="element.actions?.flash?.isReady ? null : showComingSoonPopup('Flash', element)">
                       <mat-icon>flash_on</mat-icon>
                       <span>Flash</span>
                     </button>
+                    @if(element.deviceStatus.status === 'MISSING') {
+                      <button mat-menu-item (click)="element.actions?.decommission?.isReady ? null : showComingSoonPopup('Decommission', element)">
+                        <mat-icon>delete_sweep</mat-icon>
+                        <span>Decommission</span>
+                      </button>
+                    }
                   </mat-menu>
                 </td>
               </ng-container>

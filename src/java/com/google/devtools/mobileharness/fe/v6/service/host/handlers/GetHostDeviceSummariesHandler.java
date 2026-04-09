@@ -32,7 +32,10 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInf
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.HealthAndActivityBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceActions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceType;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.RemoteControlInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DeviceHealthState;
@@ -128,8 +131,8 @@ public final class GetHostDeviceSummariesHandler {
             .setModel(dimensions.getOrDefault(DIMENSION_MODEL, ""))
             .setVersion(
                 dimensions.getOrDefault(
-                    DIMENSION_SOFTWARE_VERSION,
-                    dimensions.getOrDefault(DIMENSION_SDK_VERSION, "")));
+                    DIMENSION_SOFTWARE_VERSION, dimensions.getOrDefault(DIMENSION_SDK_VERSION, "")))
+            .setActions(createDeviceActions());
 
     // If it is a testbed device, decode sub-device information.
     boolean isTestbed = deviceInfo.getDeviceFeature().getTypeList().contains("TestbedDevice");
@@ -173,6 +176,19 @@ public final class GetHostDeviceSummariesHandler {
     }
 
     return deviceSummaryBuilder.build();
+  }
+
+  private DeviceActions createDeviceActions() {
+    return DeviceActions.newBuilder()
+        .setScreenshot(ActionButtonState.newBuilder().setIsReady(false).build())
+        .setRemoteControl(ActionButtonState.newBuilder().setIsReady(false).build())
+        .setFlash(
+            FlashActionButtonState.newBuilder()
+                .setState(ActionButtonState.newBuilder().setIsReady(false).build())
+                .build())
+        .setConfiguration(ActionButtonState.newBuilder().setIsReady(false).build())
+        .setDecommission(ActionButtonState.newBuilder().setIsReady(false).build())
+        .build();
   }
 
   /** Creates a {@link GetLabInfoRequest} to filter labs by host name. */

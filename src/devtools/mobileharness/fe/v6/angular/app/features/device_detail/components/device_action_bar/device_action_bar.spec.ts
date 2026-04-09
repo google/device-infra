@@ -3,6 +3,7 @@ import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {MatDialog} from '@angular/material/dialog';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
+import {ActionBarAction} from 'app/core/constants/action_bar_config';
 import {APP_DATA} from 'app/core/models/app_data';
 import {of} from 'rxjs';
 import {DeviceOverviewPageData} from '../../../../core/models/device_overview';
@@ -81,6 +82,12 @@ describe('DeviceActionBar', () => {
           enabled: true,
           visible: true,
           tooltip: 'Configure device',
+          isReady: true,
+        },
+        decommission: {
+          enabled: true,
+          visible: true,
+          tooltip: '',
           isReady: true,
         },
       },
@@ -213,7 +220,11 @@ describe('DeviceActionBar', () => {
     );
     screenshotButton.click();
 
-    expect(comingSoonService.show).toHaveBeenCalled();
+    expect(comingSoonService.show).toHaveBeenCalledWith(
+      ActionBarAction.DEVICE_SCREENSHOT,
+      'default',
+      component.legacyFeUrl ? jasmine.anything() : undefined,
+    );
     expect(deviceService.takeScreenshot).not.toHaveBeenCalled();
   });
 

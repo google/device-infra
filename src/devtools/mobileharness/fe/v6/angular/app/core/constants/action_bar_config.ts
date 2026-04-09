@@ -1,3 +1,5 @@
+import {InjectionToken} from '@angular/core';
+
 /**
  * Enum representing all unimplemented features that will show a "Coming Soon" dialog.
  */
@@ -20,14 +22,24 @@ export enum ActionBarAction {
   DEVICE_FLASH = 'DEVICE_FLASH',
   DEVICE_LOGCAT = 'DEVICE_LOGCAT',
   DEVICE_QUARANTINE = 'DEVICE_QUARANTINE',
+  DEVICE_DECOMMISSION = 'DEVICE_DECOMMISSION',
 }
+
+/**
+ * Enum representing the context of the action bar.
+ */
+export type ActionContext = 'default' | 'hostDevices' | 'hostDevicesItem';
 
 /**
  * Metadata for each Action Bar action.
  */
 export interface ActionMetadata {
   readonly displayName: string;
-  readonly legacyScreenshotLink?: string;
+  readonly legacyScreenshotLinks?: {
+    readonly default: string;
+    readonly hostDevices?: string;
+    readonly hostDevicesItem?: string;
+  };
 }
 
 /**
@@ -67,6 +79,12 @@ export const ACTION_BAR_CONFIG: Record<ActionBarAction, ActionMetadata> = {
   [ActionBarAction.DEVICE_CONFIGURATION]: {
     displayName: 'Device Configuration',
   },
+  [ActionBarAction.DEVICE_REMOTE_CONTROL]: {
+    displayName: 'Remote Control',
+  },
+  [ActionBarAction.DEVICE_DECOMMISSION]: {
+    displayName: 'Decommission',
+  },
   [ActionBarAction.DEVICE_SCREENSHOT]: {
     displayName: 'Screenshot',
   },
@@ -76,10 +94,17 @@ export const ACTION_BAR_CONFIG: Record<ActionBarAction, ActionMetadata> = {
   [ActionBarAction.DEVICE_FLASH]: {
     displayName: 'Flash',
   },
-  [ActionBarAction.DEVICE_REMOTE_CONTROL]: {
-    displayName: 'Remote Control',
-  },
   [ActionBarAction.DEVICE_QUARANTINE]: {
     displayName: 'Quarantine',
   },
 };
+
+/**
+ * Injection token for the action bar configuration.
+ */
+export const ACTION_BAR_CONFIG_TOKEN = new InjectionToken<
+  Record<ActionBarAction, ActionMetadata>
+>('ActionBarConfig', {
+  providedIn: 'root',
+  factory: () => ACTION_BAR_CONFIG,
+});
