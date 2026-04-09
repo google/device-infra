@@ -26,9 +26,11 @@
         </header>
 
         <div class="card-body">
+          <!-- TODO: remove it when we don't need this banner anymore -->
           <!-- Legacy Console Banner -->
           @if (legacyFeUrl) {
-            <div class="legacy-page-banner">
+            <!-- always hide the banner as we decided to show it in arsenal instead -->
+            <div class="legacy-page-banner" style="display: none;">
               <mat-icon class="legacy-page-banner-icon">info</mat-icon>
               <span>
                   This is the new OmniLab Console. If needed, you can
