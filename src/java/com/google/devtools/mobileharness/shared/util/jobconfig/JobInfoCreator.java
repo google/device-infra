@@ -35,6 +35,8 @@ import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
+import com.google.devtools.mobileharness.api.model.proto.Job.Repeat;
+import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.api.proto.Device.DeviceSpec;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
@@ -62,6 +64,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelp
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecWalker;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.DeviceList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.Driver;
@@ -175,15 +178,51 @@ public final class JobInfoCreator {
     jobId = jobId == null ? UUID.randomUUID().toString() : jobId;
     String jobDir = PathUtil.join(sessionTmpDir, "j_" + jobId);
     LocalFileUtil localFileUtil = new LocalFileUtil();
+    Timeout timeout;
+    if (mhJobConfig.getJobTimeoutSec() > 0
+        || mhJobConfig.getTestTimeoutSec() > 0
+        || mhJobConfig.getStartTimeoutSec() > 0) {
+      timeout =
+          Timeout.newBuilder()
+              .setJobTimeoutMs(mhJobConfig.getJobTimeoutSec() * 1000L)
+              .setTestTimeoutMs(mhJobConfig.getTestTimeoutSec() * 1000L)
+              .setStartTimeoutMs(mhJobConfig.getStartTimeoutSec() * 1000L)
+              .build();
+      timeout = SharedPoolJobUtil.maybeExtendStartTimeout(timeout, mhJobConfig);
+    } else {
+      timeout = SharedPoolJobUtil.maybeExtendStartTimeout(jobConfig.getTimeout(), jobConfig);
+    }
+
+    Repeat repeat;
+    if (mhJobConfig.getRepeatRuns() > 0) {
+      repeat = Repeat.newBuilder().setRepeatRuns(mhJobConfig.getRepeatRuns()).build();
+    } else {
+      repeat = jobConfig.getRepeat();
+    }
+
+    Retry retry;
+    if (mhJobConfig.getTestAttempts() > 0) {
+      retry =
+          Retry.newBuilder()
+              .setTestAttempts(mhJobConfig.getTestAttempts())
+              .setRetryLevel(mhJobConfig.getRetryLevel())
+              .build();
+    } else if (jobConfig.hasRetry()) {
+      retry = jobConfig.getRetry();
+    } else {
+      retry = JobSetting.getDefaultRetryInstance();
+    }
+
     JobSetting.Builder jobSettingBuilder =
         JobSetting.newBuilder()
             .setRemoteFileDir(sessionGenDir)
             .setTmpFileDir(PathUtil.join(jobDir, "tmp"))
             .setRunFileDir(PathUtil.join(jobDir, "run"))
             .setGenFileDir(PathUtil.join(jobDir, "gen"))
-            .setTimeout(
-                SharedPoolJobUtil.maybeExtendStartTimeout(jobConfig.getTimeout(), jobConfig))
-            .setRepeat(jobConfig.getRepeat());
+            .setTimeout(timeout)
+            .setRepeat(repeat)
+            .setRetry(retry);
+
     if (originalSubmitTimestamp != null) {
       if (ORIGINAL_SUBMIT_TIMESTAMP_ALLOWLIST_USERS.contains(actualUser)) {
         jobSettingBuilder.setOriginalSubmitTime(toJavaInstant(originalSubmitTimestamp));
@@ -192,21 +231,14 @@ public final class JobInfoCreator {
             "Cannot set original submit time for user not in allowlist: %s", actualUser);
       }
     }
-    if (jobConfig.hasRetry()) {
-      jobSettingBuilder.setRetry(jobConfig.getRetry());
-    } else {
-      // Set to default value.
-      // When previously use com.google.wireless.qa.mobileharness.shared.proto.Job.Retry, the
-      // test_attempts and retry_level have default value. With new
-      // com.google.devtools.mobileharness.api.model.proto.Job.Retry, the default value doesn't
-      // exist, so we need to manually set it to avoid inconsistency.
-      jobSettingBuilder.setRetry(JobSetting.getDefaultRetryInstance());
-    }
+
     logger.atInfo().log(
         "Input gateway JobConfig.hasRetry=%b, repeate runs time = %d",
         jobConfig.hasRetry(), jobConfig.getRepeat().getRepeatRuns());
 
-    if (jobConfig.hasPriority()) {
+    if (mhJobConfig.hasPriority()) {
+      jobSettingBuilder.setPriority(mhJobConfig.getPriority());
+    } else if (jobConfig.hasPriority()) {
       jobSettingBuilder.setPriority(jobConfig.getPriority());
     }
 
@@ -222,7 +254,7 @@ public final class JobInfoCreator {
               nonstandardFlags,
               jobSetting,
               JobUser.newBuilder()
-                  .setRunAs(jobConfig.getUser())
+                  .setRunAs(mhJobConfig.hasRunAs() ? mhJobConfig.getRunAs() : jobConfig.getUser())
                   .setActualUser(actualUser)
                   .setJobAccessAccount(jobAccessAccount)
                   .build(),
