@@ -22,6 +22,7 @@ import {APP_DATA, getLegacyFeUrl} from '../../core/models/app_data';
 import {DeviceOverviewPageData} from '../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../core/services/device/device_service';
 import {SnackBarService} from '../../shared/services/snackbar_service';
+import {ClipboardService} from '../../shared/services/clipboard_service';
 import {DeviceActionBar} from './components/device_action_bar/device_action_bar';
 import {DeviceOverviewTab} from './components/device_overview_tab/device_overview_tab';
 import {HealthStatisticTab} from './components/health_statistic_tab/health_statistic_tab';
@@ -67,7 +68,7 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
   private readonly titleService = inject(Title);
   private readonly destroyed = new ReplaySubject<void>(1);
   private readonly appData = inject(APP_DATA);
-
+  private readonly clipboardService = inject(ClipboardService);
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
 
   activeTab = signal<'overview' | 'test-history' | 'health' | 'record'>(
@@ -134,11 +135,19 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
   }
 
   unquarantineDevice() {
-    this.actionBar.quarantineDevice();
+    if (this.actionBar.getAction('quarantine')?.isReady) {
+      this.actionBar.quarantineDevice();
+    } else {
+      this.actionBar.showComingSoonPopup('quarantine');
+    }
   }
 
   changeQuarantine() {
-    this.actionBar.changeQuarantine();
+    if (this.actionBar.getAction('quarantine')?.isReady) {
+      this.actionBar.changeQuarantine();
+    } else {
+      this.actionBar.showComingSoonPopup('quarantine');
+    }
   }
 
   formatRemainingTime(expiry: string | undefined): string {
@@ -163,15 +172,12 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
   }
 
   copyToClipboard(text: string): void {
-    navigator.clipboard
-      .writeText(text)
-      .then(() => {
-        this.snackBar.showSuccess('Copied to clipboard!');
-      })
-      .catch((err) => {
-        this.snackBar.showError('Failed to copy text.');
-        console.error('Failed to copy text: ', err);
-      });
+    const success = this.clipboardService.copyToClipboard(text);
+    if (success) {
+      this.snackBar.showSuccess('Copied to clipboard!');
+    } else {
+      this.snackBar.showError('Failed to copy text.');
+    }
   }
 
   getFormattedQuarantineExpiry(expiry: string): string {

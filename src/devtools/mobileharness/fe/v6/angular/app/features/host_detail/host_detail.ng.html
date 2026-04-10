@@ -27,7 +27,7 @@
               <span class="host-text-bold">Host: </span>
               <span class="host-text">{{ host.hostName }}</span>
             </h1>
-            <button class="copy-button" title="Copy host name to clipboard">
+            <button class="copy-button" title="Copy host name to clipboard" (click)="copyToClipboard(host.hostName)">
               <mat-icon class="copy-icon">content_copy</mat-icon>
             </button>
             <div class="title-actions">

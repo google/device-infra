@@ -102,27 +102,31 @@
               {{ device.healthAndActivity.deviceStatus.status }}
             </div>
           </dd>
-          @if (device.healthAndActivity.currentTask; as task) {
-            <dt class="task-dt">Running</dt>
-            <dd class="task-dd">
-              <mat-icon
-                class="task-icon"
-                [class.spin-animation]="getHealthStateUI(device.healthAndActivity.state).isSpinning"
-                >sync</mat-icon
-              >
-              <div class="task-info">
-                <div class="task-title">
-                  {{ task.type }}:
-                  <a href="#" class="task-link" [title]="task.taskId">{{ task.taskId }}</a>
-                </div>
-                @if (task.jobId) {
-                  <div class="task-jobid">
-                    Part of job:
-                    <a href="#" class="task-link" [title]="task.jobId">{{ task.jobId }}</a>
+
+          <!-- TODO: remove the link once the taskId and jobId are available and clickable. -->
+          @if (device.healthAndActivity.deviceStatus.status !== 'BUSY') {
+            @if (device.healthAndActivity.currentTask; as task) {
+              <dt class="task-dt">Running</dt>
+              <dd class="task-dd">
+                <mat-icon
+                  class="task-icon"
+                  [class]="'task-icon ' + healthUI.iconColorClass + (healthUI.isSpinning ? ' spin-animation' : '')"
+                  >sync</mat-icon
+                >
+                <div class="task-info">
+                  <div class="task-title">
+                    {{ task.type }}:
+                    <a href="#" class="task-link" [title]="task.taskId">{{ task.taskId }}</a>
                   </div>
-                }
-              </div>
-            </dd>
+                  @if (task.jobId) {
+                    <div class="task-jobid">
+                      Part of job:
+                      <a href="#" class="task-link" [title]="task.jobId">{{ task.jobId }}</a>
+                    </div>
+                  }
+                </div>
+              </dd>
+            }
           }
         </dl>
       </div>
@@ -139,7 +143,7 @@
         <div class="basic-info-grid-wrapper">
           <dl class="info-grid-tight">
             <dt title="Model">Model</dt>
-            <dd [title]="device.basicInfo.model">{{ device.basicInfo.model || 'N/A' }}</dd>
+            <dd [title]="device.basicInfo.model" [matTooltip]="device.basicInfo.model">{{ device.basicInfo.model || 'N/A' }}</dd>
 
             <dt title="Version">Version</dt>
             <dd [title]="device.basicInfo.version">
@@ -201,7 +205,7 @@
               >{{ device.basicInfo.hardware || 'N/A' }}</dd
             >
             <dt title="Build">Build</dt
-            ><dd [title]="device.basicInfo.build">{{ device.basicInfo.build || 'N/A' }}</dd>
+            ><dd [title]="device.basicInfo.build" [matTooltip]="device.basicInfo.build">{{ device.basicInfo.build || 'N/A' }}</dd>
           </dl>
         </div>
       </div>
@@ -311,7 +315,7 @@
                 </button>
               }
             </mat-form-field>
-            <div class="capability-list-container">
+            <div class="capability-list-container scroll-container">
               @if (filteredDrivers().length > 0) {
                 <ul class="capability-list">
                   @for (driver of filteredDrivers(); track driver) {
@@ -348,7 +352,7 @@
                 </button>
               }
             </mat-form-field>
-            <div class="capability-list-container">
+            <div class="capability-list-container scroll-container">
               @if (filteredDecorators().length > 0) {
                 <ul class="capability-list">
                   @for (decorator of filteredDecorators(); track decorator) {

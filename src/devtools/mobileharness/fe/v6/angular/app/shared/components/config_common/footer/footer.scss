@@ -33,7 +33,7 @@
   .permission-status.failure {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: start;
     width: 100%;
     font-style: normal;
   }
@@ -66,7 +66,6 @@
     border-radius: 4px;
     transition: background-color 0.2s;
     white-space: nowrap;
-    flex: 1;
   }
   .request-access-link:hover {
       background-color: rgba(11, 87, 208, 0.08);

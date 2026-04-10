@@ -5,11 +5,12 @@ import {
   TEST_COLORS,
 } from '../../../../core/constants/statistic_constants';
 import {
-  HealthinessStats,
   GoogleTypeDate,
+  HealthinessStats,
   RecoveryOutcomeCategory,
   RecoveryTaskStats,
   TestResultCategory,
+  TestResultGroup,
   TestResultStats,
 } from '../../../../core/models/device_stats';
 import {
@@ -534,17 +535,7 @@ export function transformTestStatsToTable(
   });
 
   // Helper to add groups
-  const addGroup = (
-    group: {
-      displayName: string;
-      totalStats: {count?: number; percent?: number};
-      breakdownItems: Array<{
-        category: TestResultCategory;
-        stats: {count?: number; percent?: number};
-      }>;
-    },
-    color: string,
-  ) => {
+  const addGroup = (group: TestResultGroup, color: string) => {
     if (!group || !group.totalStats.count) return;
 
     items.push({
@@ -555,7 +546,7 @@ export function transformTestStatsToTable(
       type: 'summary' as const,
     });
 
-    group.breakdownItems
+    (group.breakdownItems ?? [])
       .filter((item) => item.stats.count && item.stats.count > 0)
       .forEach((item) => {
         const label = getTestLabel(item.category);
@@ -639,9 +630,9 @@ export function transformTestStatsToCharts(
   const minorColors: string[] = [];
 
   const allBreakdown = [
-    ...stats.completionGroup.breakdownItems,
-    ...stats.nonCompletionGroup.breakdownItems,
-    ...stats.unknownGroup.breakdownItems,
+    ...(stats.completionGroup.breakdownItems ?? []),
+    ...(stats.nonCompletionGroup.breakdownItems ?? []),
+    ...(stats.unknownGroup.breakdownItems ?? []),
   ];
 
   allBreakdown.forEach((item) => {

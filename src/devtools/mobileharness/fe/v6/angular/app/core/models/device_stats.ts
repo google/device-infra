@@ -132,7 +132,7 @@ export declare interface TestResultGroup {
   displayName: string; // e.g., "Completion", "Non-Completion", "Unknown"
   // 'percent' in totalStats is relative to TestResultSummary.totalCount
   totalStats: Stats; // Total count and percent for this group
-  breakdownItems: TestResultBreakdownItem[]; // Breakdown of individual categories within this group
+  breakdownItems?: TestResultBreakdownItem[]; // Breakdown of individual categories within this group
 }
 
 /**

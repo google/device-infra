@@ -17,6 +17,8 @@ import {catchError, map, switchMap, takeUntil} from 'rxjs/operators';
 
 import {HostOverviewPageData} from '../../core/models/host_overview';
 import {HOST_SERVICE} from '../../core/services/host/host_service';
+import {SnackBarService} from '../../shared/services/snackbar_service';
+import {ClipboardService} from '../../shared/services/clipboard_service';
 import {HostActionBar} from './components/host_action_bar/host_action_bar';
 import {HostOverviewPage} from './components/host_overview/host_overview';
 
@@ -55,6 +57,17 @@ export class HostDetail implements OnInit, OnDestroy {
   private readonly hostService = inject(HOST_SERVICE);
   private readonly titleService = inject(Title);
   private readonly destroyed = new ReplaySubject<void>(1);
+  private readonly clipboardService = inject(ClipboardService);
+  private readonly snackBar = inject(SnackBarService);
+
+  copyToClipboard(text: string): void {
+    const success = this.clipboardService.copyToClipboard(text);
+    if (success) {
+      this.snackBar.showSuccess('Copied to clipboard!');
+    } else {
+      this.snackBar.showError('Failed to copy text.');
+    }
+  }
 
   readonly hostPageData$: Observable<HostPageData> = this.route.paramMap.pipe(
     map((params) => params.get('hostName')),

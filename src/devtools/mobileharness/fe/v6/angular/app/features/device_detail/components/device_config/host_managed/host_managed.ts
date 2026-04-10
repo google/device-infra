@@ -7,9 +7,10 @@ import {
   OnInit,
 } from '@angular/core';
 import {MatDialogModule} from '@angular/material/dialog';
+import {RouterModule} from '@angular/router';
 
 import {DEFAULT_DEVICE_CONFIG} from '../../../../../core/constants/device_config_constants';
-import type {DeviceConfig} from '../../../../../core/models/device_config_models';
+import {DeviceConfig} from '../../../../../core/models/device_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
 
@@ -26,7 +27,7 @@ import {Dialog} from '../../../../../shared/components/config_common/dialog/dial
   templateUrl: './host_managed.ng.html',
   styleUrl: './host_managed.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, MatDialogModule, Dialog],
+  imports: [CommonModule, MatDialogModule, RouterModule, Dialog],
 })
 export class HostManaged implements OnInit {
   private readonly configService = inject(CONFIG_SERVICE);
