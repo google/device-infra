@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.infra.lab.proto.File.JobOrTestFileUnit;
 import com.google.devtools.mobileharness.infra.lab.proto.File.JobOrTestFileUnit.JobOrTestCase;
 import com.google.devtools.mobileharness.infra.lab.proto.File.TestFileUnit;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.protobuf.TextFormat;
 import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
@@ -203,6 +204,10 @@ public class LabFileNotifier {
 
   @GuardedBy("fileCache")
   protected void handleTestFile(TestFileUnit testFileUnit) {}
+
+  private boolean isOnMacAndIosTest(TestInfo testInfo) {
+    return new SystemUtil().isOnMac() && testInfo.jobInfo().type().getDevice().startsWith("Ios");
+  }
 
   @GuardedBy("fileCache")
   private void handleJobFile(JobFileUnit jobFileUnit)
