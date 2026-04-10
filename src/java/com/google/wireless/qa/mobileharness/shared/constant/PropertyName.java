@@ -60,6 +60,9 @@ public interface PropertyName {
     /** True to indicate that the job contains plugins not from verifiable sources. */
     HAS_INSECURE_PLUGIN,
 
+    /** True to indicate that the job contains insecure MPM plugins. */
+    HAS_INSECURE_MPM_PLUGIN,
+
     /** Whether the job is resumable. */
     IS_RESUMABLE,
 
