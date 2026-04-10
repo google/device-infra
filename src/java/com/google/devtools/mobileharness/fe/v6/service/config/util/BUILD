@@ -35,6 +35,14 @@ java_library(
 )
 
 java_library(
+    name = "config_util",
+    srcs = ["ConfigUtil.java"],
+    deps = [
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "config_service_capability",
     srcs = [
         "ConfigServiceCapability.java",

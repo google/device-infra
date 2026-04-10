@@ -42,6 +42,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_util",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/auth",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
@@ -122,6 +123,7 @@ java_library(
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_converter",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_util",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/auth",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",

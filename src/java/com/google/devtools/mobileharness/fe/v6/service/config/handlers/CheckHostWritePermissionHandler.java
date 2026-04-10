@@ -23,7 +23,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigConverter;
-import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionRequest;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigUtil;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
@@ -52,13 +52,12 @@ public final class CheckHostWritePermissionHandler {
   }
 
   public ListenableFuture<CheckHostWritePermissionResponse> checkHostWritePermission(
-      CheckHostWritePermissionRequest request, UniverseScope universe, Optional<String> username) {
+      String hostName, UniverseScope universe, Optional<String> username) {
     if (username.isEmpty()) {
       return immediateFuture(
           CheckHostWritePermissionResponse.newBuilder().setHasPermission(false).build());
     }
     String user = username.get();
-    String hostName = request.getHostName();
 
     return Futures.transformAsync(
         configurationProvider.getLabConfig(hostName, universe),
@@ -75,7 +74,9 @@ public final class CheckHostWritePermissionHandler {
                 CheckHostWritePermissionResponse.newBuilder().setHasPermission(true).build());
           }
 
-          if (hostAdmins.isEmpty()) {
+          // hostAdmins is stored as the owner in the default device config in labConfig, so we can
+          // use the owner check.
+          if (ConfigUtil.isOwnerEmptyOrDefault(hostAdmins)) {
             return immediateFuture(
                 CheckHostWritePermissionResponse.newBuilder().setHasPermission(true).build());
           }

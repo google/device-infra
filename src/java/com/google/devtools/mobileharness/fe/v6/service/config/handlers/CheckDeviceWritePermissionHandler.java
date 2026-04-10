@@ -22,7 +22,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
-import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionRequest;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigUtil;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.DeviceData;
@@ -53,15 +53,12 @@ public final class CheckDeviceWritePermissionHandler {
   }
 
   public ListenableFuture<CheckDeviceWritePermissionResponse> checkDeviceWritePermission(
-      CheckDeviceWritePermissionRequest request,
-      UniverseScope universe,
-      Optional<String> username) {
+      String deviceId, UniverseScope universe, Optional<String> username) {
     if (username.isEmpty()) {
       return immediateFuture(
           CheckDeviceWritePermissionResponse.newBuilder().setHasPermission(false).build());
     }
     String user = username.get();
-    String deviceId = request.getId();
 
     return Futures.transformAsync(
         deviceDataLoader.loadDeviceData(deviceId, universe),
@@ -73,7 +70,7 @@ public final class CheckDeviceWritePermissionHandler {
           }
 
           List<String> owners = config.getBasicConfig().getOwnerList();
-          if (owners.isEmpty()) {
+          if (ConfigUtil.isOwnerEmptyOrDefault(owners)) {
             return immediateFuture(
                 CheckDeviceWritePermissionResponse.newBuilder().setHasPermission(true).build());
           }

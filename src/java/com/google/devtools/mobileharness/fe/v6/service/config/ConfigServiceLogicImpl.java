@@ -106,7 +106,7 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
       return immediateFailedFuture(e);
     }
     return checkDeviceWritePermissionHandler.checkDeviceWritePermission(
-        request, universe, username);
+        request.getId(), universe, username);
   }
 
   @Override
@@ -165,7 +165,8 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
     } catch (IllegalArgumentException e) {
       return immediateFailedFuture(e);
     }
-    return checkHostWritePermissionHandler.checkHostWritePermission(request, universe, username);
+    return checkHostWritePermissionHandler.checkHostWritePermission(
+        request.getHostName(), universe, username);
   }
 
   @Override
