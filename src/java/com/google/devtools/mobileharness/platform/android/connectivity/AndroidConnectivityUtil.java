@@ -672,7 +672,6 @@ public class AndroidConnectivityUtil {
           "Wifi util functionality is disabled. Skip pinging for device %s.", serial);
       return false;
     }
-    boolean wifiUtilPingFailed = false;
     String targetUrl = HOST_FOR_NOT_IN_CHINA;
     String targetHostForShellPing = HOST_PING_FOR_NOT_IN_CHINA;
     try {
@@ -694,20 +693,15 @@ public class AndroidConnectivityUtil {
       if (!output.contains(PING_SUCCESS)) {
         logger.atWarning().log(
             "Device %s is not able to ping %s, output=[%s] ", serial, targetUrl, output);
-        wifiUtilPingFailed = true;
       } else {
         return true;
       }
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Device %s failed to ping %s: %s", serial, targetUrl, MoreThrowables.shortDebugString(e));
-      wifiUtilPingFailed = true;
     }
-    if (wifiUtilPingFailed) {
-      logger.atInfo().log("Device %s tries to ping (via shell) %s", serial, targetHostForShellPing);
-      return pingSuccessRate(serial, targetHostForShellPing, /* count= */ 5) > 0.5;
-    }
-    return false;
+    logger.atInfo().log("Device %s tries to ping (via shell) %s", serial, targetHostForShellPing);
+    return pingSuccessRate(serial, targetHostForShellPing, /* count= */ 5) > 0.5;
   }
 
   /**
