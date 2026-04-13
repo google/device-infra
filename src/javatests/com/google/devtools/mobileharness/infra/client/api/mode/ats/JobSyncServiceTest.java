@@ -22,9 +22,8 @@ import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static java.util.Objects.requireNonNull;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceAllocationPriority;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirement;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirements;
@@ -43,14 +42,14 @@ import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractSche
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler.JobsAndAllocations;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.OpenJobRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.OpenJobResponse;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
-import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.proto.VersionProto.VersionCheckRequest;
 import com.google.devtools.mobileharness.shared.version.proto.VersionProto.VersionCheckResponse;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.inject.util.Modules;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobScheduleUnit;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
@@ -141,16 +140,6 @@ public class JobSyncServiceTest {
                   .setServiceVersion(Version.MASTER_V5_VERSION.toString()))
           .build();
 
-  @Bind
-  private final ListeningExecutorService threadPool =
-      ThreadPools.createStandardThreadPool("testing-thread-pool");
-
-  @Bind
-  private final ListeningScheduledExecutorService scheduledThreadPool =
-      ThreadPools.createStandardScheduledThreadPool("testing-scheduled-thread-pool", 10);
-
-  @Bind private final Sleeper sleeper = Sleeper.defaultSleeper();
-
   @Bind @Mock private Clock clock;
 
   @Inject private JobSyncService jobSyncService;
@@ -160,7 +149,12 @@ public class JobSyncServiceTest {
   public void setUp() throws Exception {
     when(clock.instant()).thenReturn(Instant.ofEpochMilli(123L));
 
-    Guice.createInjector(BoundFieldModule.of(this), new AtsModeModule()).injectMembers(this);
+    Guice.createInjector(
+            Modules.override(
+                    new CommonModule(ImmutableList.of(), ImmutableMap.of(), ImmutableMap.of()))
+                .with(BoundFieldModule.of(this)),
+            new AtsModeModule())
+        .injectMembers(this);
   }
 
   @Test

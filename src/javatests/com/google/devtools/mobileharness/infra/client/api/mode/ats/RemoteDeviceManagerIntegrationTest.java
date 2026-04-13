@@ -21,6 +21,8 @@ import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
@@ -43,9 +45,8 @@ import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServicePr
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabSyncGrpcStub;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.comm.stub.MasterGrpcStubHelper;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
+import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
-import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.proto.VersionProto.VersionCheckRequest;
 import com.google.inject.Guice;
@@ -118,15 +119,9 @@ public class RemoteDeviceManagerIntegrationTest {
                                           .setValue(DIMENSION_VALUE)))))
           .build();
 
-  @Bind
-  private final ListeningExecutorService threadPool =
-      ThreadPools.createStandardThreadPool("testing-thread-pool");
+  @Inject private ListeningExecutorService threadPool;
+  @Inject private ListeningScheduledExecutorService scheduledThreadPool;
 
-  @Bind
-  private final ListeningScheduledExecutorService scheduledThreadPool =
-      ThreadPools.createStandardScheduledThreadPool("testing-scheduled-thread-pool", 5);
-
-  @Bind private final Sleeper sleeper = Sleeper.defaultSleeper();
   @Bind @Mock private LabRecordManager labRecordManager;
   @Bind @Mock private NetUtil netUtil;
 
@@ -145,7 +140,11 @@ public class RemoteDeviceManagerIntegrationTest {
 
     when(netUtil.getLocalHostName()).thenReturn("fake_olc_host_name");
 
-    Guice.createInjector(BoundFieldModule.of(this), new AtsModeModule()).injectMembers(this);
+    Guice.createInjector(
+            BoundFieldModule.of(this),
+            new CommonModule(ImmutableList.of(), ImmutableMap.of(), ImmutableMap.of()),
+            new AtsModeModule())
+        .injectMembers(this);
 
     grpcServer =
         NettyServerBuilder.forPort(grpcPort)

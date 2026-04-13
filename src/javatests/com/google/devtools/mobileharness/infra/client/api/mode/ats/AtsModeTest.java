@@ -16,15 +16,14 @@
 
 package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 
-import static com.google.common.truth.OptionalSubject.optionals;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.job.TestLocator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
@@ -56,15 +55,13 @@ import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProt
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.comm.stub.MasterGrpcStubHelper;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
+import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.proto.VersionProto.VersionCheckRequest;
 import com.google.devtools.mobileharness.shared.version.proto.VersionProto.VersionCheckResponse;
 import com.google.inject.Guice;
-import com.google.inject.testing.fieldbinder.Bind;
-import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
@@ -74,10 +71,8 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Devic
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
 import io.grpc.BindableService;
 import io.grpc.netty.NettyServerBuilder;
-import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Test;
@@ -125,29 +120,18 @@ public class AtsModeTest {
                   .setServiceVersion(Version.MASTER_V5_VERSION.toString()))
           .build();
 
-  @Bind private Sleeper sleeper;
-  @Bind private ListeningScheduledExecutorService listeningScheduledExecutorService;
-  @Bind private ExecutorService executorService;
-  @Bind private ListeningExecutorService listeningExecutorService;
-  @Bind private Clock clock;
-
+  @Inject private ListeningExecutorService listeningExecutorService;
   @Inject private AtsMode atsMode;
-  private LabSyncGrpcStub labSyncGrpcStub;
   @Inject private LabInfoGrpcStub labInfoGrpcStub;
+
+  private LabSyncGrpcStub labSyncGrpcStub;
 
   @Before
   public void setUp() throws Exception {
     int serverPort = PortProber.pickUnusedPort();
-    sleeper = Sleeper.defaultSleeper();
-    clock = Clock.systemUTC();
-    listeningExecutorService = ThreadPools.createStandardThreadPool("ats-mode-thread-pool");
-    executorService = listeningExecutorService;
-    listeningScheduledExecutorService =
-        ThreadPools.createStandardScheduledThreadPool(
-            "ats-mode-scheduled-thread-pool", /* corePoolSize= */ 5);
 
     Guice.createInjector(
-            BoundFieldModule.of(this),
+            new CommonModule(ImmutableList.of(), ImmutableMap.of(), ImmutableMap.of()),
             new AtsModeModule(),
             new LabInfoGrpcStubModule(
                 ChannelFactory.createLocalChannel(serverPort, directExecutor())))
@@ -191,7 +175,6 @@ public class AtsModeTest {
     DeviceAllocator deviceAllocator =
         atsMode.createDeviceAllocator(jobInfo, /* globalInternalBus= */ null);
     assertWithMessage("Error during device allocator setup")
-        .about(optionals())
         .that(deviceAllocator.setUp())
         .isEmpty();
     assertThat(deviceAllocator.pollAllocations()).isEmpty();

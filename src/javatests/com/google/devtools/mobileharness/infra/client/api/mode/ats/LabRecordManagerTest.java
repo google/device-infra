@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.testing.TestingExecutors;
 import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
@@ -38,10 +40,12 @@ import com.google.devtools.mobileharness.api.query.proto.LabRecordProto.DeviceRe
 import com.google.devtools.mobileharness.api.query.proto.LabRecordProto.LabRecord;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.LabRecordManager.DeviceRecordData;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.LabRecordManager.LabRecordData;
+import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.inject.util.Modules;
 import com.google.protobuf.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
@@ -57,8 +61,11 @@ import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class LabRecordManagerTest {
+
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
+
   @Bind @Mock private Clock clock;
+
   @Bind private ListeningScheduledExecutorService listeningScheduledExecutorService;
 
   @Inject private LabRecordManager labRecordManager;
@@ -66,7 +73,11 @@ public final class LabRecordManagerTest {
   @Before
   public void setUp() {
     listeningScheduledExecutorService = TestingExecutors.sameThreadScheduledExecutor();
-    Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+    Guice.createInjector(
+            Modules.override(
+                    new CommonModule(ImmutableList.of(), ImmutableMap.of(), ImmutableMap.of()))
+                .with(BoundFieldModule.of(this)))
+        .injectMembers(this);
     when(clock.instant()).thenReturn(Instant.EPOCH);
   }
 

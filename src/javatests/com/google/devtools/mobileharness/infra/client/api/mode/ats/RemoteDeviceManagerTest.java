@@ -22,8 +22,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
@@ -78,6 +77,7 @@ import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServicePr
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabSyncGrpcStub;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.comm.stub.MasterGrpcStubHelper;
+import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.proto.VersionProto.VersionCheckRequest;
@@ -88,7 +88,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 import io.grpc.netty.NettyServerBuilder;
-import java.util.concurrent.Executors;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -249,7 +248,6 @@ public class RemoteDeviceManagerTest {
   @Bind @Mock private LabRecordManager labRecordManager;
   @Bind @Mock private NetUtil netUtil;
 
-  @Bind private ListeningScheduledExecutorService scheduledThreadPool;
   @Bind private MasterGrpcStubHelper masterGrpcStubHelper;
 
   @Inject private RemoteDeviceManager remoteDeviceManager;
@@ -260,11 +258,13 @@ public class RemoteDeviceManagerTest {
     when(netUtil.getLocalHostName()).thenReturn("fake_olc_host_name");
 
     int grpcPort = PortProber.pickUnusedPort();
-    scheduledThreadPool = MoreExecutors.listeningDecorator(Executors.newScheduledThreadPool(5));
     masterGrpcStubHelper =
         new MasterGrpcStubHelper(ChannelFactory.createLocalChannel(grpcPort, directExecutor()));
 
-    Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+    Guice.createInjector(
+            new CommonModule(ImmutableList.of(), ImmutableMap.of(), ImmutableMap.of()),
+            BoundFieldModule.of(this))
+        .injectMembers(this);
 
     NettyServerBuilder.forPort(grpcPort)
         .addService(remoteDeviceManager.getLabSyncService())

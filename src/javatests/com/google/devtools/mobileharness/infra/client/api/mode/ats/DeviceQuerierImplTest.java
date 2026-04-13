@@ -22,9 +22,9 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier.LabQueryResult;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
+import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -45,18 +45,22 @@ import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class DeviceQuerierImplTest {
+
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
-  @Mock @Bind private RemoteDeviceManager remoteDeviceManager;
-  @Bind private ListeningExecutorService threadPool;
-  @Inject private DeviceQuerierImpl deviceQuerier;
 
   private static final String HOST_IP_DIMENSION_NAME = Ascii.toLowerCase(Name.HOST_IP.name());
   private static final String HOST_NAME_DIMENSION_NAME = Ascii.toLowerCase(Name.HOST_NAME.name());
 
+  @Mock @Bind private RemoteDeviceManager remoteDeviceManager;
+
+  @Inject private DeviceQuerierImpl deviceQuerier;
+
   @Before
   public void setUp() {
-    threadPool = ThreadPools.createStandardThreadPool("device-querier-test");
-    Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+    Guice.createInjector(
+            new CommonModule(ImmutableList.of(), ImmutableMap.of(), ImmutableMap.of()),
+            BoundFieldModule.of(this))
+        .injectMembers(this);
   }
 
   @Test
