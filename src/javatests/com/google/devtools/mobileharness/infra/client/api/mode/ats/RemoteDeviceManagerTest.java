@@ -842,4 +842,45 @@ public class RemoteDeviceManagerTest {
                 .setValue("temp_val")
                 .build());
   }
+
+  @Test
+  public void upsertDeviceTempRequiredDimensions_duplicateKeys() throws Exception {
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
+
+    UpsertDeviceTempRequiredDimensionsRequest request =
+        UpsertDeviceTempRequiredDimensionsRequest.newBuilder()
+            .setDeviceLocator(
+                DeviceLocator.newBuilder()
+                    .setId("fake_uuid")
+                    .setLabLocator(
+                        LabLocator.newBuilder()
+                            .setIp("fake_lab_ip")
+                            .setHostName("fake_lab_host_name")))
+            .addTempRequiredDimension(
+                DeviceDimension.newBuilder().setName("temp_dim").setValue("temp_val1"))
+            .addTempRequiredDimension(
+                DeviceDimension.newBuilder().setName("temp_dim").setValue("temp_val2"))
+            .setDurationMs(60000L)
+            .build();
+
+    remoteDeviceManager.upsertDeviceTempRequiredDimensions(request);
+
+    ImmutableList<DeviceQuery.DeviceInfo> deviceInfos = remoteDeviceManager.getDeviceInfos();
+    assertThat(deviceInfos).hasSize(1);
+    DeviceQuery.DeviceInfo deviceInfo = deviceInfos.get(0);
+    assertThat(deviceInfo.getDimensionList())
+        .contains(
+            Dimension.newBuilder()
+                .setRequired(true)
+                .setName("temp_dim")
+                .setValue("temp_val1")
+                .build());
+    assertThat(deviceInfo.getDimensionList())
+        .contains(
+            Dimension.newBuilder()
+                .setRequired(true)
+                .setName("temp_dim")
+                .setValue("temp_val2")
+                .build());
+  }
 }

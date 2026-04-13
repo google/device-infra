@@ -262,7 +262,8 @@ class RemoteDeviceManager implements LabInfoProvider {
       DeviceTempRequiredDimensions tempRequiredDimensions =
           new DeviceTempRequiredDimensions(
               request.getTempRequiredDimensionList().stream()
-                  .collect(toImmutableMap(DeviceDimension::getName, DeviceDimension::getValue)),
+                  .collect(
+                      toImmutableListMultimap(DeviceDimension::getName, DeviceDimension::getValue)),
               Instant.now().plus(duration));
       logger.atInfo().log(
           "Added temp required dimensions of device %s: %s", deviceKey, tempRequiredDimensions);
@@ -899,7 +900,7 @@ class RemoteDeviceManager implements LabInfoProvider {
   }
 
   private record DeviceTempRequiredDimensions(
-      ImmutableMap<String, String> dimensions, Instant expireTime) {
+      ImmutableListMultimap<String, String> dimensions, Instant expireTime) {
 
     @Nonnull
     @Override
@@ -1255,19 +1256,19 @@ class RemoteDeviceManager implements LabInfoProvider {
         case DIMENSION_MATCH_CONDITION:
           return createStringMultimapMatcher(
               deviceMatchCondition.getDimensionMatchCondition().getCondition(),
-              deviceData ->
-                  ImmutableListMultimap.<String, String>builder()
-                      .putAll(deviceData.dataFromLab.dimensions().supported().getAll())
-                      .putAll(deviceData.dataFromLab.dimensions().required().getAll())
-                      .putAll(
-                          deviceData.tempRequiredDimensions == null
-                              ? ImmutableMap.<String, String>of().entrySet()
-                              : deviceData.tempRequiredDimensions.dimensions().entrySet())
-                      .build());
-        case CONDITION_NOT_SET:
-          break;
+              deviceData -> {
+                ImmutableListMultimap.Builder<String, String> builder =
+                    ImmutableListMultimap.<String, String>builder()
+                        .putAll(deviceData.dataFromLab.dimensions().supported().getAll())
+                        .putAll(deviceData.dataFromLab.dimensions().required().getAll());
+                if (deviceData.tempRequiredDimensions != null) {
+                  builder.putAll(deviceData.tempRequiredDimensions.dimensions());
+                }
+                return builder.build();
+              });
+        default:
+          return deviceData -> true;
       }
-      return deviceData -> true;
     }
   }
 
