@@ -814,8 +814,7 @@ public abstract class GcsUtil {
               }));
     }
 
-    ListenableFuture<?> future =
-        Futures.whenAllSucceed(results).call(() -> null, Holder.copyFileToCloudThreadpool);
+    ListenableFuture<?> future = Futures.whenAllSucceed(results).call(() -> null, directExecutor());
     try {
       future.get();
 
