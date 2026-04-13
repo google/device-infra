@@ -34,7 +34,6 @@ java_library(
         ":testdata",
     ],
     deps = [
-        ":test_module",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/tradefed/proto:record_java_proto",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
@@ -42,6 +41,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info_factory",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_creator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_merger",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_module",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_parser",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:mobly_report_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:mobly_report_parser",
@@ -49,6 +49,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/tradefed:test_record_writer",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_common",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/inject:common_module",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/util:test_runfiles_util",
@@ -59,18 +60,6 @@ java_library(
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
         "@protobuf//:protobuf_java",
-    ],
-)
-
-java_library(
-    name = "test_module",
-    srcs = ["TestModule.java"],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_module",
-        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
-        "@maven//:com_google_guava_guava",
-        "@maven//:com_google_inject_guice",
-        "@maven//:javax_inject_jsr330_api",
     ],
 )
 

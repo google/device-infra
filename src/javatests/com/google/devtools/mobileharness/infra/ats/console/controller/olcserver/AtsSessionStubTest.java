@@ -25,8 +25,6 @@ import static org.junit.Assert.assertThrows;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
@@ -44,12 +42,11 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
+import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
-import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -71,9 +68,6 @@ public class AtsSessionStubTest {
 
   private final SystemUtil systemUtil = new SystemUtil();
 
-  @Bind private ListeningExecutorService threadPool;
-  @Bind private ListeningScheduledExecutorService scheduledThreadPool;
-  @Bind private Sleeper sleeper;
   @Bind private FlagsString deviceInfraServiceFlags;
   @Bind private ServerEnvironmentPreparer serverEnvironmentPreparer;
 
@@ -116,11 +110,6 @@ public class AtsSessionStubTest {
             .collect(toImmutableList());
     deviceInfraServiceFlags = FlagsString.of(String.join(" ", flagList), flagList);
 
-    sleeper = Sleeper.defaultSleeper();
-    threadPool = ThreadPools.createStandardThreadPool("main-thread");
-    scheduledThreadPool =
-        ThreadPools.createStandardScheduledThreadPool("main-scheduled-thread", 10);
-
     outPrintStream = System.out;
     errPrintStream = System.err;
 
@@ -136,6 +125,7 @@ public class AtsSessionStubTest {
 
     Guice.createInjector(
             new OlcServerConnectorModule(deviceInfraServiceFlags, "ATS console", "fake_client_id"),
+            new CommonModule(ImmutableList.of(), ImmutableMap.of(), ImmutableMap.of()),
             BoundFieldModule.of(this))
         .injectMembers(this);
   }

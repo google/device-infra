@@ -23,6 +23,7 @@ import com.android.tradefed.metrics.proto.MetricMeasurement.Measurements;
 import com.android.tradefed.metrics.proto.MetricMeasurement.Metric;
 import com.android.tradefed.result.proto.TestRecordProto.TestRecord;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
@@ -35,6 +36,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.report.Compati
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger.TradefedResultBundle;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportParser.MoblyReportInfo;
 import com.google.devtools.mobileharness.infra.ats.console.util.TestRunfilesUtil;
+import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.inject.Guice;
 import com.google.protobuf.TextFormat;
 import java.nio.file.Files;
@@ -111,7 +113,10 @@ public final class CompatibilityReportMergerTest {
 
   @Before
   public void setUp() {
-    Guice.createInjector(new TestModule()).injectMembers(this);
+    Guice.createInjector(
+            new CompatibilityReportModule(),
+            new CommonModule(ImmutableList.of(), ImmutableMap.of(), ImmutableMap.of()))
+        .injectMembers(this);
   }
 
   @Test

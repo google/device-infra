@@ -32,9 +32,9 @@ java_library(
     ),
     deps = [
         ":test_data",
-        ":test_module",
         "//src/devtools/mobileharness/infra/ats/console/tradefed/proto:record_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/tradefed:test_record_helper",
+        "//src/java/com/google/devtools/mobileharness/shared/util/inject:common_module",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
@@ -49,17 +49,6 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/tradefed/proto:record_java_proto",
         "@maven//:com_google_protobuf_protobuf_java",
-    ],
-)
-
-java_library(
-    name = "test_module",
-    srcs = ["TestModule.java"],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
-        "@maven//:com_google_guava_guava",
-        "@maven//:com_google_inject_guice",
-        "@maven//:javax_inject_jsr330_api",
     ],
 )
 

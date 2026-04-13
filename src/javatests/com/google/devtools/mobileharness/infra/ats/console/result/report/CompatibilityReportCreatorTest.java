@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.infra.ats.console.util.TestRunfilesUtil
 import com.google.devtools.mobileharness.infra.ats.console.util.tradefed.TestRecordWriter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -75,7 +76,11 @@ public final class CompatibilityReportCreatorTest {
 
   @Before
   public void setUp() {
-    Guice.createInjector(new TestModule(), BoundFieldModule.of(this)).injectMembers(this);
+    Guice.createInjector(
+            new CompatibilityReportModule(),
+            new CommonModule(ImmutableList.of(), ImmutableMap.of(), ImmutableMap.of()),
+            BoundFieldModule.of(this))
+        .injectMembers(this);
     reportCreator =
         new CompatibilityReportCreator(
             realLocalFileUtil, testRecordWriter, new SystemUtil(), Clock.systemUTC());

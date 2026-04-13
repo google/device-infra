@@ -22,6 +22,8 @@ import com.android.tradefed.config.proto.ConfigurationDescription.Metadata;
 import com.android.tradefed.invoker.proto.InvocationContext.Context;
 import com.android.tradefed.result.proto.TestRecordProto.TestRecord;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.inject.Guice;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -37,7 +39,8 @@ public final class TestRecordHelperTest {
 
   @Before
   public void setUp() {
-    Guice.createInjector(new TestModule()).injectMembers(this);
+    Guice.createInjector(new CommonModule(ImmutableList.of(), ImmutableMap.of(), ImmutableMap.of()))
+        .injectMembers(this);
   }
 
   @Test

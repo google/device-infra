@@ -22,8 +22,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.DeviceDescriptorProto.DeviceDescriptor;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
@@ -34,10 +34,11 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdb
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
+import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.inject.util.Modules;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
@@ -63,16 +64,17 @@ public class ListDevicesCommandHandlerTest {
   @Bind @Mock private AndroidAdbUtil androidAdbUtil;
   @Bind @Mock private AndroidAdbInternalUtil androidAdbInternalUtil;
   @Bind @Mock private AndroidSystemSettingUtil androidSystemSettingUtil;
-  @Bind private ListeningExecutorService listeningExecutorService;
   @Bind @Mock Clock clock;
 
   @Inject private ListDevicesCommandHandler listDevicesCommandHandler;
 
   @Before
   public void setUp() {
-    listeningExecutorService =
-        ThreadPools.createStandardThreadPool("list-devices-command-handler-test");
-    Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+    Guice.createInjector(
+            Modules.override(
+                    new CommonModule(ImmutableList.of(), ImmutableMap.of(), ImmutableMap.of()))
+                .with(BoundFieldModule.of(this)))
+        .injectMembers(this);
     listDevicesCommandHandler = spy(listDevicesCommandHandler);
   }
 

@@ -17,20 +17,17 @@
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerConnectorModule;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.NoOpServerEnvironmentPreparer;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.ServerEnvironment;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
-import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import java.time.InstantSource;
 
 /** Console command module for testing. */
 public class ConsoleCommandTestModule extends AbstractModule {
@@ -47,31 +44,12 @@ public class ConsoleCommandTestModule extends AbstractModule {
         new OlcServerConnectorModule(
             FlagsString.of("", ImmutableList.of()), "ATS console", "fake_client_id"));
     install(new CompatibilityReportModule());
+    install(new CommonModule(ImmutableList.of(), ImmutableMap.of(), ImmutableMap.of()));
   }
 
   @Provides
   @Singleton
   ServerEnvironmentPreparer provideServerEnvironmentPreparer() {
     return new NoOpServerEnvironmentPreparer(serverEnvironment);
-  }
-
-  @Provides
-  ListeningExecutorService provideThreadPool() {
-    return ThreadPools.createStandardThreadPool("main-thread");
-  }
-
-  @Provides
-  ListeningScheduledExecutorService provideScheduledThreadPool() {
-    return ThreadPools.createStandardScheduledThreadPool("main-scheduled-thread", 10);
-  }
-
-  @Provides
-  Sleeper provideSleeper() {
-    return Sleeper.defaultSleeper();
-  }
-
-  @Provides
-  InstantSource provideInstantSource() {
-    return InstantSource.system();
   }
 }

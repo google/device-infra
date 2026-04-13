@@ -22,10 +22,12 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
+import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -52,8 +54,7 @@ public class InterruptibleLineReaderTest {
   @Bind @Mock private ConsoleUtil consoleUtil;
   @Bind @Mock private CommandHelper commandHelper;
 
-  private final ListeningScheduledExecutorService scheduledThreadPool =
-      ThreadPools.createStandardScheduledThreadPool("testing-scheduled-thread-pool", 1);
+  @Inject private ListeningScheduledExecutorService scheduledThreadPool;
 
   @Inject private InterruptibleLineReader interruptibleLineReader;
 
@@ -71,7 +72,10 @@ public class InterruptibleLineReaderTest {
               throw new AssertionError("Should not reach here");
             });
 
-    Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+    Guice.createInjector(
+            new CommonModule(ImmutableList.of(), ImmutableMap.of(), ImmutableMap.of()),
+            BoundFieldModule.of(this))
+        .injectMembers(this);
   }
 
   @Test

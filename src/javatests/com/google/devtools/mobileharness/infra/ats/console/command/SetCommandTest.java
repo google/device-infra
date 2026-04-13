@@ -30,6 +30,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.inject.util.Modules;
 import java.nio.file.Path;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -61,12 +62,13 @@ public final class SetCommandTest {
   public void setUp() {
     Injector injector =
         Guice.createInjector(
-            BoundFieldModule.of(this),
-            new ConsoleCommandTestModule(
-                ServerEnvironment.of(
-                    Path.of("/fake_server_binary"),
-                    Path.of("/fake_java_binary"),
-                    Path.of("/fake_working_dir"))));
+            Modules.override(
+                    new ConsoleCommandTestModule(
+                        ServerEnvironment.of(
+                            Path.of("/fake_server_binary"),
+                            Path.of("/fake_java_binary"),
+                            Path.of("/fake_working_dir"))))
+                .with(BoundFieldModule.of(this)));
     injector.injectMembers(this);
     commandLine = new CommandLine(RootCommand.class, new GuiceFactory(injector));
   }
