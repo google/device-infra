@@ -25,8 +25,8 @@ package(
 filegroup(
     name = "device_config_sql",
     srcs = [
-        "device_config_table.sdl",
-        "lab_config_table.sdl",
+        "device_config_table.sql",
+        "lab_config_table.sql",
     ],
     visibility = [
         "//third_party/py/multitest_transport:__pkg__",
