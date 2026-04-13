@@ -13,44 +13,28 @@
 # limitations under the License.
 #
 
-load("@rules_go//go:def.bzl", "go_binary")
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load", "oci_push")
-load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+load("@rules_go//go:def.bzl", "go_library")
 
-package(default_applicable_licenses = ["//:license"])
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = [
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/acceptor:__pkg__",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/tests:__pkg__",
+    ],
+)
 
-go_binary(
+go_library(
     name = "acceptor",
     srcs = ["acceptor.go"],
-    goarch = "amd64",
-    goos = "linux",
-    pure = "on",
-)
-
-# ==========================================
-# Build and push Docker image.
-# ==========================================
-pkg_tar(
-    name = "acceptor_tar",
-    srcs = [":acceptor"],
-    package_dir = "/dualconduit",
-)
-
-oci_image(
-    name = "acceptor_image",
-    base = "@distroless_static",
-    entrypoint = ["/dualconduit/acceptor"],
-    tars = [":acceptor_tar"],
-)
-
-oci_load(
-    name = "acceptor_load",
-    image = ":acceptor_image",
-    repo_tags = ["dualconduit/acceptor:latest"],
-)
-
-oci_push(
-    name = "acceptor_push",
-    image = ":acceptor_image",
-    remote_tags = ["latest"],
+    importpath = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/acceptor",
+    deps = [
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/conduit",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_go_proto",
+        "@com_github_rsocket_rsocket_go//:rsocket-go",
+        "@com_github_rsocket_rsocket_go//core/transport",
+        "@com_github_rsocket_rsocket_go//payload",
+        "@com_github_rsocket_rsocket_go//rx/flux",
+        "@com_github_rsocket_rsocket_go//rx/mono",
+        "@org_golang_google_protobuf//proto",
+    ],
 )

@@ -35,13 +35,15 @@ message EstablishConduitRequest {
   bool auto_reconnect = 2;
   // Service name to identify the service.
   string service_name = 3;
+  // The hostname of the client initiating the conduit.
+  string client_hostname = 4;
   // The protocol of the backend service (e.g., grpc, tcp).
-  Protocol protocol = 4;
+  Protocol protocol = 5;
   // The destination endpoint of the backend service.
-  string destination_endpoint = 5;
+  string destination_endpoint = 6;
   // The local entry port opened on the RQ side. If not set, a random port will
   // be used. You should always specify this field for forward conduits.
-  int32 entry_port = 6;
+  int32 entry_port = 7;
 }
 
 message ServiceLocator {
