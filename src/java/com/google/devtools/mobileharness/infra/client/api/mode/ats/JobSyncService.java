@@ -99,6 +99,7 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
   private static final Duration JOB_CLEANUP_INTERVAL = Duration.ofMinutes(5L);
 
   private final AbstractScheduler scheduler;
+  private final RemoteDeviceManager remoteDeviceManager;
   private final ServiceSideVersionChecker versionChecker;
   private final ListeningScheduledExecutorService scheduledThreadPool;
   private final Clock clock;
@@ -109,10 +110,12 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
   @Inject
   JobSyncService(
       @AtsModeAbstractScheduler AbstractScheduler scheduler,
+      RemoteDeviceManager remoteDeviceManager,
       @JobSyncServiceVersionChecker ServiceSideVersionChecker versionChecker,
       ListeningScheduledExecutorService scheduledThreadPool,
       Clock clock) {
     this.scheduler = scheduler;
+    this.remoteDeviceManager = remoteDeviceManager;
     this.versionChecker = versionChecker;
     this.scheduledThreadPool = scheduledThreadPool;
     this.clock = clock;
@@ -252,14 +255,11 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
 
   private static Priority createPriority(
       Job.Priority jobPriority, DeviceAllocationPriority deviceAllocationPriority) {
-    switch (deviceAllocationPriority) {
-      case DEVICE_ALLOCATION_PRIORITY_INTERACTIVE:
-        return Priority.MAX;
-      case DEVICE_ALLOCATION_PRIORITY_LOW:
-        return Priority.LOW;
-      default:
-        return Priority.forNumber(jobPriority.getNumber());
-    }
+    return switch (deviceAllocationPriority) {
+      case DEVICE_ALLOCATION_PRIORITY_INTERACTIVE -> Priority.MAX;
+      case DEVICE_ALLOCATION_PRIORITY_LOW -> Priority.LOW;
+      default -> Priority.forNumber(jobPriority.getNumber());
+    };
   }
 
   private static Duration createJobExpirationTime(Duration clientJobExpirationTime) {
@@ -430,9 +430,10 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
   }
 
   private UpsertDeviceTempRequiredDimensionsResponse doUpsertDeviceTempRequiredDimensions(
-      UpsertDeviceTempRequiredDimensionsRequest request) {
-    // TODO: Implements it.
-    throw new UnsupportedOperationException();
+      UpsertDeviceTempRequiredDimensionsRequest request) throws MobileHarnessException {
+    logger.atInfo().log("UpsertDeviceTempRequiredDimensionsRequest: %s", shortDebugString(request));
+    remoteDeviceManager.upsertDeviceTempRequiredDimensions(request);
+    return UpsertDeviceTempRequiredDimensionsResponse.getDefaultInstance();
   }
 
   @Override

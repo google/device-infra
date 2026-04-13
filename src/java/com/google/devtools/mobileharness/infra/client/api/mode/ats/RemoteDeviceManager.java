@@ -29,7 +29,6 @@ import static com.google.devtools.mobileharness.shared.util.filter.FilterUtils.c
 
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
@@ -42,11 +41,13 @@ import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabScheduleUnit;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
@@ -64,6 +65,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.UpsertDeviceTempRequiredDimensionsRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceGrpc;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabResponse;
@@ -85,6 +87,7 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.VersionUtil;
 import com.google.devtools.mobileharness.shared.version.checker.ServiceSideVersionChecker;
+import com.google.devtools.mobileharness.shared.version.proto.VersionProto.BuildVersion;
 import com.google.devtools.mobileharness.shared.version.proto.VersionProto.VersionCheckResponse;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
@@ -109,6 +112,7 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.stream.Stream;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
@@ -121,6 +125,8 @@ class RemoteDeviceManager implements LabInfoProvider {
 
   private static final Duration LAB_AND_DEVICE_CLEANUP_INTERVAL = Duration.ofMinutes(2L);
   private static final Duration LAB_AND_DEVICE_CHECK_MISSING_INTERVAL = Duration.ofMinutes(2L);
+  private static final Duration DEVICE_TEMP_REQUIRED_DIMENSIONS_CLEANUP_INTERVAL =
+      Duration.ofMinutes(1L);
   private static final Duration LAB_AND_DEVICE_MISSING_TIME = Duration.ofMinutes(5L);
   private static final Duration LAB_REMOVAL_TIME =
       Flags.instance().atsLabRemovalTime.getNonNull(); // Default is 7 days.
@@ -138,6 +144,7 @@ class RemoteDeviceManager implements LabInfoProvider {
   private final AbstractScheduler scheduler;
   private final ListeningScheduledExecutorService scheduledThreadPool;
   private final LabRecordManager labRecordManager;
+  private final NetUtil netUtil;
 
   private final Object lock = new Object();
 
@@ -154,19 +161,9 @@ class RemoteDeviceManager implements LabInfoProvider {
 
   private final List<HostProperty> additionalHostProperties = new ArrayList<>();
 
-  private final NetUtil netUtil;
-
   @Inject
   RemoteDeviceManager(
       @AtsModeAbstractScheduler AbstractScheduler scheduler,
-      ListeningScheduledExecutorService scheduledThreadPool,
-      LabRecordManager labRecordManager) {
-    this(scheduler, scheduledThreadPool, labRecordManager, new NetUtil());
-  }
-
-  @VisibleForTesting
-  RemoteDeviceManager(
-      AbstractScheduler scheduler,
       ListeningScheduledExecutorService scheduledThreadPool,
       LabRecordManager labRecordManager,
       NetUtil netUtil) {
@@ -176,52 +173,17 @@ class RemoteDeviceManager implements LabInfoProvider {
     this.netUtil = netUtil;
   }
 
-  private void addOlcHostName() {
-    try {
-      String olcHostName = netUtil.getLocalHostName();
-      if (isNullOrEmpty(olcHostName)) {
-        logger.atWarning().log("Got empty OLC host name, skip adding OLC host name property");
-      } else {
-        logger.atInfo().log("Got OLC host name: %s", olcHostName);
-        additionalHostProperties.add(
-            HostProperty.newBuilder()
-                .setKey(OLC_HOST_NAME_PROPERTY_KEY)
-                .setValue(olcHostName)
-                .build());
-      }
-    } catch (MobileHarnessException e) {
-      logger.atWarning().withCause(e).log(
-          "Failed to get OLC host name, skip adding OLC host name property");
-    }
-  }
-
-  private void addOlcGithubVersion() {
-    VersionUtil.getBuildVersion()
-        .filter(version -> version.hasGithubVersion())
-        .map(
-            version ->
-                HostProperty.newBuilder()
-                    .setKey(OLC_GITHUB_VERSION_PROPERTY_KEY)
-                    .setValue(version.getGithubVersion())
-                    .build())
-        .ifPresentOrElse(
-            hostProperty -> {
-              additionalHostProperties.add(hostProperty);
-              logger.atInfo().log("Got OLC github build version: %s", hostProperty.getValue());
-            },
-            () ->
-                logger.atWarning().log(
-                    "Failed to get OLC github version, skip adding OLC github version property"));
-  }
-
   BindableService getLabSyncService() {
     return labSyncService;
   }
 
   void start() {
     logger.atInfo().log("Starting RemoteDeviceManager");
+
+    // Adds OLC host name and GitHub version.
     addOlcHostName();
     addOlcGithubVersion();
+
     // Registers AllocationEventHandler.
     scheduler.registerEventHandler(new AllocationEventHandler());
 
@@ -234,6 +196,17 @@ class RemoteDeviceManager implements LabInfoProvider {
             LAB_AND_DEVICE_CLEANUP_INTERVAL),
         Level.WARNING,
         "Error when cleaning up labs and devices");
+
+    // Starts device temp required dimensions cleaner.
+    logFailure(
+        scheduledThreadPool.scheduleWithFixedDelay(
+            threadRenaming(
+                this::cleanUpDeviceTempRequiredDimensions,
+                () -> "remote-device-manager-device-temp-required-dimensions-cleaner"),
+            DEVICE_TEMP_REQUIRED_DIMENSIONS_CLEANUP_INTERVAL,
+            DEVICE_TEMP_REQUIRED_DIMENSIONS_CLEANUP_INTERVAL),
+        Level.WARNING,
+        "Error when cleaning up device temp required dimensions");
 
     // Starts first device awaiter.
     logFailure(
@@ -265,6 +238,51 @@ class RemoteDeviceManager implements LabInfoProvider {
     }
   }
 
+  void upsertDeviceTempRequiredDimensions(UpsertDeviceTempRequiredDimensionsRequest request)
+      throws MobileHarnessException {
+    DeviceKey deviceKey =
+        DeviceKey.of(
+            request.getDeviceLocator().getLabLocator().getHostName(),
+            request.getDeviceLocator().getId());
+    synchronized (lock) {
+      DeviceData deviceData = devices.get(deviceKey);
+      if (deviceData == null) {
+        throw new MobileHarnessException(
+            InfraErrorId.OLCS_UPSERT_TEMP_REQUIRED_DIMENSIONS_DEVICE_NOT_FOUND,
+            String.format("Device not found: %s", deviceKey));
+      }
+
+      if (request.getDurationMs() <= 0L) {
+        deviceData.removeTempRequiredDimensions();
+        updateScheduler(deviceData);
+        return;
+      }
+
+      Duration duration = Duration.ofMillis(request.getDurationMs());
+      DeviceTempRequiredDimensions tempRequiredDimensions =
+          new DeviceTempRequiredDimensions(
+              request.getTempRequiredDimensionList().stream()
+                  .collect(toImmutableMap(DeviceDimension::getName, DeviceDimension::getValue)),
+              Instant.now().plus(duration));
+      logger.atInfo().log(
+          "Added temp required dimensions of device %s: %s", deviceKey, tempRequiredDimensions);
+      deviceData.tempRequiredDimensions = tempRequiredDimensions;
+      updateScheduler(deviceData);
+
+      // Schedules a task to remove the temp required dimensions.
+      logFailure(
+          scheduledThreadPool.schedule(
+              threadRenaming(
+                  new DeviceTempRequiredDimensionsRemover(deviceKey, tempRequiredDimensions),
+                  () -> "remote-device-manager-device-temp-required-dimensions-remover"),
+              duration),
+          Level.WARNING,
+          "Error when removing temp required dimensions of device %s: %s",
+          deviceKey,
+          tempRequiredDimensions);
+    }
+  }
+
   @Override
   public LabQueryResult.LabView getLabInfos(Filter filter) {
     ImmutableMap<LabKey, LabQueryProto.LabData.Builder> filteredLabs;
@@ -290,7 +308,7 @@ class RemoteDeviceManager implements LabInfoProvider {
         }
       }
     }
-    // Adds olc host name and github version to lab server feature of each lab.
+    // Adds OLC host name and GitHub version to lab server feature of each lab.
     additionalHostProperties.forEach(
         hostProperty ->
             logger.atInfo().log(
@@ -635,7 +653,7 @@ class RemoteDeviceManager implements LabInfoProvider {
       case IDLE:
         // Adds device to scheduler if it is IDLE.
         scheduler.upsertDevice(
-            deviceData.dataFromLab,
+            deviceData.getDataFromLabWithTempRequiredDimensions(),
             new LabScheduleUnit(deviceData.dataFromLab.locator().labLocator()));
         break;
       case BUSY:
@@ -647,6 +665,44 @@ class RemoteDeviceManager implements LabInfoProvider {
             deviceData.dataFromLab.locator(), /* removeDevices= */ true, /* closeTest= */ true);
         break;
     }
+  }
+
+  private void addOlcHostName() {
+    try {
+      String olcHostName = netUtil.getLocalHostName();
+      if (isNullOrEmpty(olcHostName)) {
+        logger.atWarning().log("Got empty OLC host name, skip adding OLC host name property");
+      } else {
+        logger.atInfo().log("Got OLC host name: %s", olcHostName);
+        additionalHostProperties.add(
+            HostProperty.newBuilder()
+                .setKey(OLC_HOST_NAME_PROPERTY_KEY)
+                .setValue(olcHostName)
+                .build());
+      }
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to get OLC host name, skip adding OLC host name property");
+    }
+  }
+
+  private void addOlcGithubVersion() {
+    VersionUtil.getBuildVersion()
+        .filter(BuildVersion::hasGithubVersion)
+        .map(
+            version ->
+                HostProperty.newBuilder()
+                    .setKey(OLC_GITHUB_VERSION_PROPERTY_KEY)
+                    .setValue(version.getGithubVersion())
+                    .build())
+        .ifPresentOrElse(
+            hostProperty -> {
+              additionalHostProperties.add(hostProperty);
+              logger.atInfo().log("Got OLC github build version: %s", hostProperty.getValue());
+            },
+            () ->
+                logger.atWarning().log(
+                    "Failed to get OLC github version, skip adding OLC github version property"));
   }
 
   /**
@@ -696,6 +752,20 @@ class RemoteDeviceManager implements LabInfoProvider {
     }
     Duration cleanupTime = Duration.between(timestamp, Instant.now());
     logger.atInfo().log("Labs/devices cleanup finished, time_used=%s", cleanupTime);
+  }
+
+  private void cleanUpDeviceTempRequiredDimensions() {
+    logger.atInfo().log("Cleaning up device temp required dimensions");
+    Instant timestamp = Instant.now();
+    synchronized (lock) {
+      for (DeviceData deviceData : devices.values()) {
+        if (deviceData.tempRequiredDimensions != null
+            && timestamp.isAfter(deviceData.tempRequiredDimensions.expireTime())) {
+          deviceData.removeTempRequiredDimensions();
+          updateScheduler(deviceData);
+        }
+      }
+    }
   }
 
   /**
@@ -828,12 +898,48 @@ class RemoteDeviceManager implements LabInfoProvider {
     }
   }
 
+  private record DeviceTempRequiredDimensions(
+      ImmutableMap<String, String> dimensions, Instant expireTime) {
+
+    @Nonnull
+    @Override
+    public String toString() {
+      return String.format("dimensions=%s, expire_time=%s", dimensions, expireTime);
+    }
+  }
+
+  private class DeviceTempRequiredDimensionsRemover implements Runnable {
+
+    private final DeviceKey deviceKey;
+    private final DeviceTempRequiredDimensions targetDimensions;
+
+    private DeviceTempRequiredDimensionsRemover(
+        DeviceKey deviceKey, DeviceTempRequiredDimensions targetDimensions) {
+      this.deviceKey = deviceKey;
+      this.targetDimensions = targetDimensions;
+    }
+
+    @Override
+    public void run() {
+      synchronized (lock) {
+        DeviceData deviceData = devices.get(deviceKey);
+        if (deviceData != null && targetDimensions.equals(deviceData.tempRequiredDimensions)) {
+          deviceData.removeTempRequiredDimensions();
+          updateScheduler(deviceData);
+        }
+      }
+    }
+  }
+
   /** All access to this class must be guarded by {@link #lock}. */
   private static class DeviceData {
 
     private final DeviceKey deviceKey;
 
+    /** Use {@link #getDataFromLabWithTempRequiredDimensions()} to get merged data. */
     private DeviceScheduleUnit dataFromLab;
+
+    @Nullable private DeviceTempRequiredDimensions tempRequiredDimensions;
 
     /** Lab-side timestamp that is corresponding to {@link #dataFromLab}. */
     private Instant dataFromLabTimestamp;
@@ -858,12 +964,15 @@ class RemoteDeviceManager implements LabInfoProvider {
     private DeviceData(DeviceKey deviceKey, LabLocator labLocator, SignUpLabRequest.Device device) {
       Instant timestamp = Instant.ofEpochMilli(device.getTimestampMs());
       this.deviceKey = deviceKey;
+
+      // Sets dataFromLab.
       this.dataFromLab = new DeviceScheduleUnit(DeviceLocator.of(device.getUuid(), labLocator));
       dataFromLab.addFeature(device.getFeature());
+      addHostIpAndHostNameDimensionsIfMissing(labLocator);
+
       this.dataFromLabTimestamp = timestamp;
       setStatusFromLab(device.getStatus(), timestamp);
       this.updateFromLabLocalTimestamp = Instant.now();
-      addHostIpAndHostNameDimensionsIfMissing(labLocator);
     }
 
     private void addHostIpAndHostNameDimensionsIfMissing(LabLocator labLocator) {
@@ -908,10 +1017,12 @@ class RemoteDeviceManager implements LabInfoProvider {
       }
 
       if (dataFromLabTimestamp.isBefore(timestamp)) {
+        // Sets dataFromLab.
         dataFromLab = new DeviceScheduleUnit(DeviceLocator.of(device.getUuid(), labLocator));
         dataFromLab.addFeature(device.getFeature());
-        dataFromLabTimestamp = timestamp;
         addHostIpAndHostNameDimensionsIfMissing(labLocator);
+
+        dataFromLabTimestamp = timestamp;
       } else {
         logger.atWarning().log(
             "SignUpLabRequest.Device timestamp is older than current data timestamp [%s], ignore"
@@ -974,12 +1085,32 @@ class RemoteDeviceManager implements LabInfoProvider {
       this.statusFromLab = DeviceStatus.MISSING;
     }
 
+    private void removeTempRequiredDimensions() {
+      if (tempRequiredDimensions == null) {
+        return;
+      }
+      logger.atInfo().log(
+          "Removed temp required dimensions of device %s: %s", deviceKey, tempRequiredDimensions);
+      tempRequiredDimensions = null;
+    }
+
+    private DeviceScheduleUnit getDataFromLabWithTempRequiredDimensions() {
+      if (tempRequiredDimensions == null) {
+        return dataFromLab;
+      }
+      DeviceScheduleUnit result = (DeviceScheduleUnit) dataFromLab.clone();
+      tempRequiredDimensions
+          .dimensions()
+          .forEach((name, value) -> result.dimensions().required().add(name, value));
+      return result;
+    }
+
     private LabRecordManager.DeviceRecordData createDeviceRecordData() {
       return LabRecordManager.DeviceRecordData.create(
           updateFromLabLocalTimestamp,
           dataFromLab.locator(),
           deviceKey.deviceUuid(),
-          dataFromLab,
+          getDataFromLabWithTempRequiredDimensions(),
           statusFromLab);
     }
 
@@ -987,29 +1118,30 @@ class RemoteDeviceManager implements LabInfoProvider {
       return LabQueryProto.DeviceInfo.newBuilder()
           .setDeviceLocator(dataFromLab.locator().toProto())
           .setDeviceStatus(statusFromLab)
-          .setDeviceFeature(dataFromLab.toFeature())
+          .setDeviceFeature(getDataFromLabWithTempRequiredDimensions().toFeature())
           .build();
     }
 
     private DeviceQuery.DeviceInfo toDeviceQueryDeviceInfo() {
+      DeviceScheduleUnit data = getDataFromLabWithTempRequiredDimensions();
       DeviceQuery.DeviceInfo.Builder deviceInfo =
           DeviceQuery.DeviceInfo.newBuilder()
-              .setId(dataFromLab.locator().id())
+              .setId(data.locator().id())
               .setStatus(statusFromLab.name())
-              .addAllOwner(dataFromLab.owners().getAll())
-              .addAllType(dataFromLab.types().getAll())
-              .addAllDriver(dataFromLab.drivers().getAll())
-              .addAllDecorator(dataFromLab.decorators().getAll())
+              .addAllOwner(data.owners().getAll())
+              .addAllType(data.types().getAll())
+              .addAllDriver(data.drivers().getAll())
+              .addAllDecorator(data.decorators().getAll())
               .addAllDimension(
                   Stream.concat(
-                          dataFromLab.dimensions().supported().getAll().entries().stream()
+                          data.dimensions().supported().getAll().entries().stream()
                               .map(
                                   entry ->
                                       Dimension.newBuilder()
                                           .setName(entry.getKey())
                                           .setValue(entry.getValue())
                                           .build()),
-                          dataFromLab.dimensions().required().getAll().entries().stream()
+                          data.dimensions().required().getAll().entries().stream()
                               .map(
                                   entry ->
                                       Dimension.newBuilder()
@@ -1032,7 +1164,8 @@ class RemoteDeviceManager implements LabInfoProvider {
   }
 
   /** All access to this class must be guarded by {@link #lock}. */
-  private static class LabPredicate implements Predicate<Entry<LabKey, LabData>> {
+  private static class LabPredicate
+      implements Predicate<Entry<RemoteDeviceManager.LabKey, LabData>> {
 
     private final ImmutableList<Predicate<LabData>> labMatchers;
 
@@ -1126,6 +1259,10 @@ class RemoteDeviceManager implements LabInfoProvider {
                   ImmutableListMultimap.<String, String>builder()
                       .putAll(deviceData.dataFromLab.dimensions().supported().getAll())
                       .putAll(deviceData.dataFromLab.dimensions().required().getAll())
+                      .putAll(
+                          deviceData.tempRequiredDimensions == null
+                              ? ImmutableMap.<String, String>of().entrySet()
+                              : deviceData.tempRequiredDimensions.dimensions().entrySet())
                       .build());
         case CONDITION_NOT_SET:
           break;
