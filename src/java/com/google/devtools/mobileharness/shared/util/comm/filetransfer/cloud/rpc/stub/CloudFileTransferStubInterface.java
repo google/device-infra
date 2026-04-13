@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rp
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.CancelProcessResponse;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.DownloadGcsFileRequest;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.GetFileRequest;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.GetFileResponse;
@@ -122,6 +123,18 @@ public interface CloudFileTransferStubInterface {
 
   /** Gets status of process {@code processId} from peer side asynchronously. */
   ListenableFuture<GetProcessStatusResponse> getProcessStatusAsync(String processId);
+
+  /** Cancels process {@code processId} from peer side. */
+  CancelProcessResponse cancelProcess(String processId) throws MobileHarnessException;
+
+  /** Cancels process {@code processId} from peer side with impersonation user. */
+  default CancelProcessResponse cancelProcess(String processId, @Nullable String impersonationUser)
+      throws MobileHarnessException {
+    return cancelProcess(processId);
+  }
+
+  /** Cancels process {@code processId} from peer side asynchronously. */
+  ListenableFuture<CancelProcessResponse> cancelProcessAsync(String processId);
 
   /** Saves file content specified in {@code request} to server directly. */
   @CanIgnoreReturnValue

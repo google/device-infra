@@ -29,6 +29,8 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.common.FileTransferConstant;
+import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.CancelProcessRequest;
+import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.CancelProcessResponse;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.CompressOptions;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.DownloadGcsFileRequest;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.DownloadGcsFileResponse;
@@ -74,6 +76,7 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -107,6 +110,9 @@ public class CloudFileTransferServiceImpl {
 
   /** Cache of process result. */
   private final Cache<String, ProcessResponseOrException> processStatusCache;
+
+  private final ConcurrentMap<String, ListenableFuture<ProcessResponseOrException>>
+      runningProcesses;
 
   private final Path publicDir;
 
@@ -155,6 +161,7 @@ public class CloudFileTransferServiceImpl {
                             "Remove cached process status: [Cause: %s] %s",
                             notification.getCause(), notification.getValue()))
             .build();
+    this.runningProcesses = new ConcurrentHashMap<>();
     this.tmpDir = tmpDir;
   }
 
@@ -398,7 +405,13 @@ public class CloudFileTransferServiceImpl {
             GetProcessStatusResponse.newBuilder().setStatus(ProcessStatus.RUNNING).build()));
     ListenableFuture<ProcessResponseOrException> future =
         threadPool.submit(new CloudProcess<>(processId, this::uploadFile, request.getRequest()));
-    future.addListener(() -> logger.atInfo().log("[%s] finished", processId), threadPool);
+    runningProcesses.put(processId, future);
+    future.addListener(
+        () -> {
+          runningProcesses.remove(processId);
+          logger.atInfo().log("[%s] finished", processId);
+        },
+        threadPool);
     logger.atInfo().log("[%s] Started %s", processId, actionInfo);
 
     int initialTimeout = request.getInitialTimeoutSec();
@@ -454,7 +467,13 @@ public class CloudFileTransferServiceImpl {
     ListenableFuture<ProcessResponseOrException> future =
         threadPool.submit(
             new CloudProcess<>(processId, this::downloadGcsFile, request.getRequest()));
-    future.addListener(() -> logger.atInfo().log("[%s] finished", processId), threadPool);
+    runningProcesses.put(processId, future);
+    future.addListener(
+        () -> {
+          runningProcesses.remove(processId);
+          logger.atInfo().log("[%s] finished", processId);
+        },
+        threadPool);
     logger.atInfo().log("[%s] Started %s", processId, actionInfo);
 
     int initialTimeout = request.getInitialTimeoutSec();
@@ -500,6 +519,26 @@ public class CloudFileTransferServiceImpl {
       return GetProcessStatusResponse.newBuilder().setStatus(ProcessStatus.UNKNOWN).build();
     }
     return response.get();
+  }
+
+  public CancelProcessResponse cancelProcess(CancelProcessRequest request) {
+    String processId = request.getProcessId();
+    ListenableFuture<?> future = runningProcesses.remove(processId);
+    if (future != null) {
+      logger.atInfo().log("[%s] Canceling running process", processId);
+      // Interrupt the thread running the task (upload/download) to cancel it on the server.
+      boolean cancelled = future.cancel(true);
+      if (cancelled) {
+        processStatusCache.put(
+            processId,
+            ProcessResponseOrException.of(
+                new MobileHarnessException(
+                    InfraErrorId.FT_CLOUD_PROCESS_INTERRUPTED,
+                    String.format("Process %s is interrupted by cancellation", processId))));
+      }
+      return CancelProcessResponse.newBuilder().setCancelled(cancelled).build();
+    }
+    return CancelProcessResponse.newBuilder().setCancelled(false).build();
   }
 
   /** Saves content specified in {@code request} to a local file directly. */
@@ -663,6 +702,9 @@ public class CloudFileTransferServiceImpl {
       ProcessResponseOrException processResponse;
       try {
         ResponseT response = func.apply(request, String.format("[%s] ", processId));
+        if (Thread.currentThread().isInterrupted()) {
+          throw new InterruptedException();
+        }
         processResponse =
             ProcessResponseOrException.of(
                 GetProcessStatusResponse.newBuilder()

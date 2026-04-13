@@ -147,6 +147,16 @@ message GetProcessStatusResponse {
   google.protobuf.Any response = 2;
 }
 
+// Request to cancel a process.
+message CancelProcessRequest {
+  string process_id = 1;
+}
+
+// Response of canceling a process.
+message CancelProcessResponse {
+  bool cancelled = 1;  // Whether it was found and cancelled.
+}
+
 // Request of Getting file information list.
 message ListFilesRequest {
   // The absolute path of directory where files reside.
@@ -236,6 +246,9 @@ service CloudFileTransferService {
   // Gets status of a process with process_id specified in the request.
   rpc GetProcessStatus(GetProcessStatusRequest)
       returns (GetProcessStatusResponse) {}
+
+  // Cancels a process with process_id specified in the request.
+  rpc CancelProcess(CancelProcessRequest) returns (CancelProcessResponse) {}
 
   // Saves a file directly to service. The file should be small enough to send
   // in one single request (< 3MB).

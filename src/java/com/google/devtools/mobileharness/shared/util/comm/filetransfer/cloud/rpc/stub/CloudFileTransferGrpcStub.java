@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.stub;
 
+import static com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.stub.CloudFileTransferStubUtils.createCancelProcessRequest;
 import static com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.stub.CloudFileTransferStubUtils.createGetProcessStatusRequest;
 import static com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.stub.CloudFileTransferStubUtils.createStartDownloadingGcsFileRequest;
 import static com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.stub.CloudFileTransferStubUtils.createStartUploadingFileRequest;
@@ -25,6 +26,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.CancelProcessRequest;
+import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.CancelProcessResponse;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.DownloadGcsFileRequest;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.DownloadGcsFileResponse;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.GetFileRequest;
@@ -168,6 +171,26 @@ public class CloudFileTransferGrpcStub implements CloudFileTransferStubInterface
   }
 
   @Override
+  public CancelProcessResponse cancelProcess(String processId) throws MobileHarnessException {
+    CancelProcessRequest request = createCancelProcessRequest(processId);
+    RpcExceptionWrapper wrapper = getRpcExceptionWrapper(request);
+    try {
+      return GrpcStubUtil.invoke(
+          stub::cancelProcess, request, wrapper.errorId(), wrapper.message());
+    } catch (GrpcExceptionWithErrorId e) {
+      throw wrapper.mobileHarnessException(e);
+    }
+  }
+
+  @Override
+  public ListenableFuture<CancelProcessResponse> cancelProcessAsync(String processId) {
+    CancelProcessRequest request = createCancelProcessRequest(processId);
+    RpcExceptionWrapper wrapper = getRpcExceptionWrapper(request);
+    return GrpcStubUtil.invokeAsync(
+        futureStub::cancelProcess, request, wrapper.errorId(), wrapper.message());
+  }
+
+  @Override
   public SaveFileResponse saveFile(SaveFileRequest request) throws MobileHarnessException {
     RpcExceptionWrapper wrapper = getRpcExceptionWrapper(request);
     try {
@@ -204,6 +227,8 @@ public class CloudFileTransferGrpcStub implements CloudFileTransferStubInterface
 
     GetProcessStatusResponse getProcessStatus(GetProcessStatusRequest request);
 
+    CancelProcessResponse cancelProcess(CancelProcessRequest request);
+
     SaveFileResponse saveFile(SaveFileRequest request);
 
     GetFileResponse getFile(GetFileRequest request);
@@ -224,6 +249,8 @@ public class CloudFileTransferGrpcStub implements CloudFileTransferStubInterface
         StartDownloadingGcsFileRequest request);
 
     ListenableFuture<GetProcessStatusResponse> getProcessStatus(GetProcessStatusRequest request);
+
+    ListenableFuture<CancelProcessResponse> cancelProcess(CancelProcessRequest request);
 
     ListenableFuture<SaveFileResponse> saveFile(SaveFileRequest request);
 

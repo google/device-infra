@@ -18,6 +18,8 @@ package com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rp
 
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.CancelProcessRequest;
+import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.CancelProcessResponse;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.DownloadGcsFileRequest;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.DownloadGcsFileResponse;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.GetFileRequest;
@@ -154,6 +156,17 @@ public class CloudFileTransferServiceGrpcImpl extends CloudFileTransferServiceIm
         impl::getFile,
         CloudFileTransferServiceGrpc.getServiceDescriptor(),
         CloudFileTransferServiceGrpc.getGetFileMethod());
+  }
+
+  @Override
+  public void cancelProcess(
+      CancelProcessRequest request, StreamObserver<CancelProcessResponse> responseObserver) {
+    GrpcServiceUtil.invoke(
+        request,
+        responseObserver,
+        impl::cancelProcess,
+        CloudFileTransferServiceGrpc.getServiceDescriptor(),
+        CloudFileTransferServiceGrpc.getCancelProcessMethod());
   }
 
   /**

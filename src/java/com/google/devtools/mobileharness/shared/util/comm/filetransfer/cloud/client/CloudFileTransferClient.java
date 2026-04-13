@@ -352,29 +352,44 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
                       "trigger server download gcs file %s; original path: %s",
                       checksum, relativePath));
           String processId = response.getProcessId();
-
-          if (response.hasResponse()) {
-            logger.atInfo().log(
-                "[%s] Finish downloading gcs file %s without waiting.", processId, relativePath);
-            return response.getResponse();
-          }
-
-          while (!Thread.interrupted()) {
-            GetProcessStatusResponse statusResponse =
-                withRetry(
-                    () -> stub.getProcessStatus(processId, impersonationUser),
-                    String.format(
-                        "[%s] get status of downloading gcs file %s; original path: %s",
-                        processId, checksum, relativePath));
-            if (statusResponse.getStatus() == ProcessStatus.FINISHED) {
-              return statusResponse.getResponse();
+          boolean success = false;
+          try {
+            if (response.hasResponse()) {
+              logger.atInfo().log(
+                  "[%s] Finish downloading gcs file %s without waiting.", processId, relativePath);
+              success = true;
+              return response.getResponse();
             }
-            sleeper.sleep(GET_PROCESS_STATUS_INTERVAL);
+
+            while (!Thread.interrupted()) {
+              GetProcessStatusResponse statusResponse =
+                  withRetry(
+                      () -> stub.getProcessStatus(processId, impersonationUser),
+                      String.format(
+                          "[%s] get status of downloading gcs file %s; original path: %s",
+                          processId, checksum, relativePath));
+              if (statusResponse.getStatus() == ProcessStatus.FINISHED) {
+                success = true;
+                return statusResponse.getResponse();
+              }
+              sleeper.sleep(GET_PROCESS_STATUS_INTERVAL);
+            }
+            throw new InterruptedException(
+                String.format(
+                    "[%s] Interrupted while waiting for the finish of sending file %s",
+                    processId, relativePath));
+          } finally {
+            if (!success) {
+              try {
+                logger.atInfo().log("[%s] Canceling downloading process", processId);
+                var unused = stub.cancelProcess(processId);
+              } catch (MobileHarnessException e) {
+                logger.atWarning().withCause(e).log(
+                    "[%s] Failed to abort downloading from peer side! Proceeding as-is.",
+                    processId);
+              }
+            }
           }
-          throw new InterruptedException(
-              String.format(
-                  "[%s] Interrupted while waiting for the finish of sending file %s",
-                  processId, relativePath));
         },
         String.format(
             "let server downloading gcs file %s; original path: %s", checksum, relativePath),
@@ -575,20 +590,35 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
 
           String processId = response.getProcessId();
           Sleeper sleeper = Sleeper.defaultSleeper();
-          while (!Thread.interrupted()) {
-            GetProcessStatusResponse statusResponse =
-                withRetry(
-                    () -> stub.getProcessStatus(processId, impersonationUser),
-                    String.format("get status of uploading file [%s] %s", processId, local));
-            if (statusResponse.getStatus() == ProcessStatus.FINISHED) {
-              return statusResponse.getResponse().unpack(UploadFileResponse.class);
+          boolean success = false;
+          try {
+            while (!Thread.interrupted()) {
+              GetProcessStatusResponse statusResponse =
+                  withRetry(
+                      () -> stub.getProcessStatus(processId, impersonationUser),
+                      String.format("get status of uploading file [%s] %s", processId, local));
+              if (statusResponse.getStatus() == ProcessStatus.FINISHED) {
+                success = true;
+                return statusResponse.getResponse().unpack(UploadFileResponse.class);
+              }
+              sleeper.sleep(GET_PROCESS_STATUS_INTERVAL);
             }
-            sleeper.sleep(GET_PROCESS_STATUS_INTERVAL);
+            throw new InterruptedException(
+                String.format(
+                    "Interrupted while waiting for the finish of getting file [%s] %s",
+                    processId, local));
+          } finally {
+            if (!success) {
+              try {
+                logger.atInfo().log("[%s] Canceling uploading process", processId);
+                var unused = stub.cancelProcess(processId);
+              } catch (MobileHarnessException e) {
+                logger.atWarning().withCause(e).log(
+                    "[%s] Failed to abort uploading process from peer side! Proceeding as-is.",
+                    processId);
+              }
+            }
           }
-          throw new InterruptedException(
-              String.format(
-                  "Interrupted while waiting for the finish of getting file [%s] %s",
-                  processId, local));
         },
         "let server uploading file " + local,
         /* isUploadFile= */ true);
@@ -697,6 +727,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
     } catch (ExecutionException e) {
       throw new MobileHarnessException(InfraErrorId.FT_GENERAL_ERROR, "Failed to " + msg, e);
     } catch (TimeoutException e) {
+      // Cancel the worker future on timeout to prevent the thread from leaking.
       future.cancel(true);
       throw new MobileHarnessException(
           isUploadFile
@@ -704,6 +735,10 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
               : InfraErrorId.LAB_DOWNLOAD_FILE_TIMEOUT,
           String.format("Timeout to %s", msg),
           e);
+    } catch (InterruptedException e) {
+      // Propagate interruption to the worker thread to stop the task immediately.
+      future.cancel(true);
+      throw e;
     }
   }
 

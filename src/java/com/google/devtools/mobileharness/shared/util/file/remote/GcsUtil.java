@@ -451,6 +451,7 @@ public abstract class GcsUtil {
       localFileUtil.moveFileOrDir(shards.get(0), localFile);
       logger.atInfo().log("Moved the merged gcs file %s to %s", gcsFile, localFile);
     } catch (InterruptedException e) {
+      future.cancel(true);
       throw e;
     } catch (Throwable e) {
       tryRemoveFile(localFile);
@@ -828,6 +829,9 @@ public abstract class GcsUtil {
           Duration.between(startTime, currentTime()));
 
     } catch (InterruptedException e) {
+      // Cancelling the aggregate future returned by whenAllSucceed will propagate
+      // cancellation to all component shard upload futures, ensuring no orphaned tasks are left.
+      future.cancel(true);
       throw e;
     } catch (Throwable e) {
       throw new MobileHarnessException(

@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.stub;
 
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.CancelProcessRequest;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.DownloadGcsFileRequest;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.GetFileRequest;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto.CloudFileTransfer.GetProcessStatusRequest;
@@ -34,7 +35,7 @@ public final class CloudFileTransferStubUtils {
       UploadFileRequest request, Duration initialTimeout) {
     return StartUploadingFileRequest.newBuilder()
         .setRequest(request)
-        .setInitialTimeoutSec((int) initialTimeout.getSeconds())
+        .setInitialTimeoutSec((int) initialTimeout.toSeconds())
         .build();
   }
 
@@ -42,12 +43,16 @@ public final class CloudFileTransferStubUtils {
       DownloadGcsFileRequest request, Duration initialTimeout) {
     return StartDownloadingGcsFileRequest.newBuilder()
         .setRequest(request)
-        .setInitialTimeoutSec((int) initialTimeout.getSeconds())
+        .setInitialTimeoutSec((int) initialTimeout.toSeconds())
         .build();
   }
 
   public static GetProcessStatusRequest createGetProcessStatusRequest(String processId) {
     return GetProcessStatusRequest.newBuilder().setProcessId(processId).build();
+  }
+
+  public static CancelProcessRequest createCancelProcessRequest(String processId) {
+    return CancelProcessRequest.newBuilder().setProcessId(processId).build();
   }
 
   public static RpcExceptionWrapper getRpcExceptionWrapper(DownloadGcsFileRequest request) {
@@ -88,6 +93,12 @@ public final class CloudFileTransferStubUtils {
     return RpcExceptionWrapper.create(
         InfraErrorId.FT_RPC_STUB_GET_PROCESS_STATUS_ERROR,
         String.format("Failed to get the status of the process %s", request.getProcessId()));
+  }
+
+  public static RpcExceptionWrapper getRpcExceptionWrapper(CancelProcessRequest request) {
+    return RpcExceptionWrapper.create(
+        InfraErrorId.FT_RPC_STUB_CANCEL_PROCESS_ERROR,
+        String.format("Failed to cancel process %s via RPC", request.getProcessId()));
   }
 
   public static RpcExceptionWrapper getRpcExceptionWrapper(SaveFileRequest request) {
