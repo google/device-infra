@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilA
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import org.junit.Before;
 import org.junit.Rule;
@@ -55,6 +56,7 @@ public final class AndroidProcessUtilTest {
   @Mock private AndroidSystemSpecUtil systemSpecUtil;
 
   private static final String SERIAL = "363005dc750400ec";
+  private static final Duration STOP_APPLICATION_ATTEMPT_TIMEOUT = Duration.ofSeconds(10);
   private AndroidProcessUtil androidProcessUtil;
 
   @Before
@@ -529,7 +531,9 @@ public final class AndroidProcessUtilTest {
     adbOrder
         .verify(adb, times(1))
         .runShellWithRetry(
-            SERIAL, AndroidProcessUtil.ADB_SHELL_AM_FORCE_STOP + "com.android.email");
+            SERIAL,
+            AndroidProcessUtil.ADB_SHELL_AM_FORCE_STOP + "com.android.email",
+            STOP_APPLICATION_ATTEMPT_TIMEOUT);
     adbOrder
         .verify(adb, times(1))
         .runShellWithRetry(SERIAL, AndroidProcessUtil.ADB_SHELL_GET_PROCESS_STATUS);
@@ -554,7 +558,9 @@ public final class AndroidProcessUtilTest {
     adbOrder
         .verify(adb, times(1))
         .runShellWithRetry(
-            SERIAL, AndroidProcessUtil.ADB_SHELL_AM_FORCE_STOP + "com.android.email");
+            SERIAL,
+            AndroidProcessUtil.ADB_SHELL_AM_FORCE_STOP + "com.android.email",
+            STOP_APPLICATION_ATTEMPT_TIMEOUT);
     adbOrder
         .verify(adb, times(1))
         .runShellWithRetry(SERIAL, AndroidProcessUtil.ADB_SHELL_GET_PROCESS_STATUS);
@@ -565,7 +571,9 @@ public final class AndroidProcessUtilTest {
     UtilArgs utilArgs = UtilArgs.builder().setSerial(SERIAL).build();
     when(clock.instant()).thenReturn(Instant.ofEpochMilli(1));
     when(adb.runShellWithRetry(
-            SERIAL, AndroidProcessUtil.ADB_SHELL_AM_FORCE_STOP + "android.process.acore"))
+            SERIAL,
+            AndroidProcessUtil.ADB_SHELL_AM_FORCE_STOP + "android.process.acore",
+            STOP_APPLICATION_ATTEMPT_TIMEOUT))
         .thenThrow(
             new MobileHarnessException(
                 AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_ERROR, "Mocked adb shell exception"));
@@ -597,7 +605,9 @@ public final class AndroidProcessUtilTest {
     UtilArgs utilArgs = UtilArgs.builder().setSerial(SERIAL).build();
     when(clock.instant()).thenReturn(Instant.ofEpochMilli(1));
     when(adb.runShellWithRetry(
-            SERIAL, AndroidProcessUtil.ADB_SHELL_AM_FORCE_STOP + "android.process.acore"))
+            SERIAL,
+            AndroidProcessUtil.ADB_SHELL_AM_FORCE_STOP + "android.process.acore",
+            STOP_APPLICATION_ATTEMPT_TIMEOUT))
         .thenThrow(
             new MobileHarnessException(
                 AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_ERROR, "Mocked adb shell exception"));
@@ -618,6 +628,12 @@ public final class AndroidProcessUtilTest {
         .runShellWithRetry(SERIAL, AndroidProcessUtil.ADB_SHELL_GET_PROCESS_STATUS);
     adbOrder
         .verify(adb, times(1))
+        .runShellWithRetry(
+            SERIAL,
+            AndroidProcessUtil.ADB_SHELL_AM_FORCE_STOP + "android.process.acore",
+            STOP_APPLICATION_ATTEMPT_TIMEOUT);
+    adbOrder
+        .verify(adb, times(1))
         .runShellWithRetry(SERIAL, AndroidProcessUtil.ADB_SHELL_KILL_PROCESS + " -9 104");
     adbOrder
         .verify(adb, times(1))
@@ -633,7 +649,9 @@ public final class AndroidProcessUtilTest {
         .thenReturn(Instant.ofEpochSecond(3))
         .thenReturn(Instant.ofEpochSecond(4));
     when(adb.runShellWithRetry(
-            SERIAL, AndroidProcessUtil.ADB_SHELL_AM_FORCE_STOP + "android.process.acore"))
+            SERIAL,
+            AndroidProcessUtil.ADB_SHELL_AM_FORCE_STOP + "android.process.acore",
+            STOP_APPLICATION_ATTEMPT_TIMEOUT))
         .thenThrow(
             new MobileHarnessException(
                 AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_ERROR, "Mocked adb shell exception"));
@@ -658,6 +676,12 @@ public final class AndroidProcessUtilTest {
     adbOrder
         .verify(adb, times(1))
         .runShellWithRetry(SERIAL, AndroidProcessUtil.ADB_SHELL_GET_PROCESS_STATUS);
+    adbOrder
+        .verify(adb, times(1))
+        .runShellWithRetry(
+            SERIAL,
+            AndroidProcessUtil.ADB_SHELL_AM_FORCE_STOP + "android.process.acore",
+            STOP_APPLICATION_ATTEMPT_TIMEOUT);
     adbOrder
         .verify(adb, times(1))
         .runShellWithRetry(SERIAL, AndroidProcessUtil.ADB_SHELL_KILL_PROCESS + " -9 104");

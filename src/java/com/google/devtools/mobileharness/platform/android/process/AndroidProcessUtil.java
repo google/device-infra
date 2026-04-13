@@ -103,6 +103,9 @@ public class AndroidProcessUtil {
   /** Timeout for stopping application on a device. */
   private static final Duration DEFAULT_STOP_APPLICATION_TIMEOUT = Duration.ofMinutes(1);
 
+  /** Timeout for one attempt of stopping application on a device. */
+  private static final Duration DEFAULT_STOP_APPLICATION_ATTEMPT_TIMEOUT = Duration.ofSeconds(10);
+
   private final Adb adb;
 
   private final AndroidSystemSpecUtil systemSpecUtil;
@@ -513,7 +516,11 @@ public class AndroidProcessUtil {
        force-stop" to kill the process before hand
       */
       try {
-        String unused = adb.runShellWithRetry(args.serial(), ADB_SHELL_AM_FORCE_STOP + packageName);
+        String unused =
+            adb.runShellWithRetry(
+                args.serial(),
+                ADB_SHELL_AM_FORCE_STOP + packageName,
+                DEFAULT_STOP_APPLICATION_ATTEMPT_TIMEOUT);
       } catch (MobileHarnessException e) {
         /*
          For API < 15, am force-stop has not been introduced. Ignore the exception and fall back to
@@ -533,7 +540,7 @@ public class AndroidProcessUtil {
 
       processIdsBeenKilled.addAll(processIdsRemaining);
       processIdsRemaining = getAllProcessId(args, packageName);
-      if (clock.instant().isAfter(timeOut)) {
+      if (clock.instant().isAfter(timeOut) && !processIdsRemaining.isEmpty()) {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_PROCESS_STOP_PROCESS_TIMEOUT,
             String.format(
