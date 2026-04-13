@@ -34,8 +34,7 @@ message HealthinessStats {
 
 // Healthiness breakdown for a single day.
 message DailyHealthiness {
-  // The date in YYYY-MM-DD format.
-  string date = 1;
+  google.type.Date date = 1;
   HealthinessSummary healthiness_summary = 2;
 }
 

@@ -129,11 +129,6 @@
                 <p class="placeholder-text">The test history tab is still under development.</p>
               </div>
             }
-            @if (activeTab() === 'health') {
-              <div class="tab-content">
-                <app-health-statistic-tab [deviceId]="device.id"></app-health-statistic-tab>
-              </div>
-            }
             @if (activeTab() === 'record') {
               <div class="tab-content">
                 <p class="placeholder-text">Device Record Content Here.</p>

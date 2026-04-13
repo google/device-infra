@@ -117,7 +117,7 @@ export class DeviceEmpty implements OnInit {
         this.openWizard('copy', config.deviceConfig);
       },
       error: (error) => {
-        this.copyFromAnotherErrorMessage.set(error.message);
+        this.copyFromAnotherErrorMessage.set(`Failed to find configuration`);
       },
     });
   }

@@ -3,11 +3,11 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
-  Input,
   OnDestroy,
   OnInit,
   ViewChild,
   effect,
+  input,
   signal,
 } from '@angular/core';
 import {load} from '@google-web-components/google-chart/loader';
@@ -26,13 +26,14 @@ type ChartRowValue = string | number | boolean | Date | {v: number; f: string};
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GoogleChartComponent implements OnInit, OnDestroy {
-  @Input({required: true}) type!: 'ColumnChart' | 'PieChart';
-  @Input() dataTable: google.visualization.DataTable | undefined;
-  @Input() columns: Array<{type: string; label: string}> | undefined;
-  @Input() rows: Array<Array<ChartRowValue | null | undefined>> | undefined;
-  @Input() options:
+  readonly type = input.required<'ColumnChart' | 'PieChart'>();
+  readonly dataTable = input<google.visualization.DataTable | undefined>();
+  readonly columns = input<Array<{type: string; label: string}> | undefined>();
+  readonly rows = input<Array<Array<ChartRowValue | null | undefined>> | undefined>();
+  readonly options = input<
     | google.visualization.ColumnChartOptions
-    | google.visualization.PieChartOptions = {};
+    | google.visualization.PieChartOptions
+  >({});
 
   @ViewChild('chartContainer', {static: true}) chartContainer!: ElementRef;
 
@@ -52,11 +53,11 @@ export class GoogleChartComponent implements OnInit, OnDestroy {
 
     effect(() => {
       const loaded = this.libLoaded();
-      const type = this.type;
-      const dt = this.dataTable;
-      const cols = this.columns;
-      const rows = this.rows;
-      const opts = this.options;
+      const type = this.type();
+      const dt = this.dataTable();
+      const cols = this.columns();
+      const rows = this.rows();
+      const opts = this.options();
 
       if (loaded && (dt || (cols && rows))) {
         this.drawChart(type, dt, cols, rows, opts);
@@ -68,12 +69,12 @@ export class GoogleChartComponent implements OnInit, OnDestroy {
     this.resizeObserver = new ResizeObserver(() => {
       if (this.libLoaded() && this.chart) {
         // Re-draw with current state
-        const dt = this.dataTable;
-        const cols = this.columns;
-        const rows = this.rows;
-        const opts = this.options;
+        const dt = this.dataTable();
+        const cols = this.columns();
+        const rows = this.rows();
+        const opts = this.options();
         if (dt || (cols && rows)) {
-          this.drawChart(this.type, dt, cols, rows, opts);
+          this.drawChart(this.type(), dt, cols, rows, opts);
         }
       }
     });
