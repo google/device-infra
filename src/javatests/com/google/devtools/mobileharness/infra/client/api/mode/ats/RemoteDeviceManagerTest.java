@@ -247,24 +247,18 @@ public class RemoteDeviceManagerTest {
 
   @Bind @Mock @AtsModeAbstractScheduler private AbstractScheduler scheduler;
   @Bind @Mock private LabRecordManager labRecordManager;
+  @Bind @Mock private NetUtil netUtil;
 
   @Bind private ListeningScheduledExecutorService scheduledThreadPool;
-
   @Bind private MasterGrpcStubHelper masterGrpcStubHelper;
 
   @Inject private RemoteDeviceManager remoteDeviceManager;
   @Inject private LabSyncGrpcStub labSyncGrpcStub;
 
-  @Mock private AbstractScheduler scheduler2;
-  @Mock private LabRecordManager labRecordManager2;
-  @Bind @Mock private NetUtil netUtil;
-  private ListeningScheduledExecutorService scheduledThreadPool2;
-  private MasterGrpcStubHelper masterGrpcStubHelper2;
-  private RemoteDeviceManager remoteDeviceManagerWithMockNetUtil;
-  private LabSyncGrpcStub labSyncGrpcStub2;
-
   @Before
   public void setUp() throws Exception {
+    when(netUtil.getLocalHostName()).thenReturn("fake_olc_host_name");
+
     int grpcPort = PortProber.pickUnusedPort();
     scheduledThreadPool = MoreExecutors.listeningDecorator(Executors.newScheduledThreadPool(5));
     masterGrpcStubHelper =
@@ -277,38 +271,23 @@ public class RemoteDeviceManagerTest {
         .build()
         .start();
     remoteDeviceManager.start();
-
-    int grpcPort2 = PortProber.pickUnusedPort();
-    scheduledThreadPool2 = MoreExecutors.listeningDecorator(Executors.newScheduledThreadPool(5));
-    masterGrpcStubHelper2 =
-        new MasterGrpcStubHelper(ChannelFactory.createLocalChannel(grpcPort2, directExecutor()));
-    labSyncGrpcStub2 = new LabSyncGrpcStub(masterGrpcStubHelper2);
-    when(netUtil.getLocalHostName()).thenReturn("fake_olc_host_name");
-
-    remoteDeviceManagerWithMockNetUtil =
-        new RemoteDeviceManager(scheduler2, scheduledThreadPool2, labRecordManager2, netUtil);
-    NettyServerBuilder.forPort(grpcPort2)
-        .addService(remoteDeviceManagerWithMockNetUtil.getLabSyncService())
-        .build()
-        .start();
-    remoteDeviceManagerWithMockNetUtil.start();
   }
 
   @Test
   public void getLabInfo() throws Exception {
-    labSyncGrpcStub2.signUpLab(SIGN_UP_LAB_REQUEST);
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
 
-    LabView labInfo = remoteDeviceManagerWithMockNetUtil.getLabInfos(Filter.getDefaultInstance());
+    LabView labInfo = remoteDeviceManager.getLabInfos(Filter.getDefaultInstance());
 
     assertThat(labInfo).isEqualTo(LAB_VIEW_WITH_OLC);
   }
 
   @Test
   public void getLabInfo_withLabFilter_withLabHostNameMatchCondition() throws Exception {
-    labSyncGrpcStub2.signUpLab(SIGN_UP_LAB_REQUEST);
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
 
     LabView labInfo =
-        remoteDeviceManagerWithMockNetUtil.getLabInfos(
+        remoteDeviceManager.getLabInfos(
             Filter.newBuilder()
                 .setLabFilter(
                     LabFilter.newBuilder()
@@ -327,7 +306,7 @@ public class RemoteDeviceManagerTest {
     assertThat(labInfo).isEqualTo(LAB_VIEW_WITH_OLC);
 
     labInfo =
-        remoteDeviceManagerWithMockNetUtil.getLabInfos(
+        remoteDeviceManager.getLabInfos(
             Filter.newBuilder()
                 .setLabFilter(
                     LabFilter.newBuilder()
@@ -348,10 +327,10 @@ public class RemoteDeviceManagerTest {
 
   @Test
   public void getLabInfo_withLabFilter_withPropertyMatchCondition() throws Exception {
-    labSyncGrpcStub2.signUpLab(SIGN_UP_LAB_REQUEST);
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
 
     LabView labInfo =
-        remoteDeviceManagerWithMockNetUtil.getLabInfos(
+        remoteDeviceManager.getLabInfos(
             Filter.newBuilder()
                 .setLabFilter(
                     LabFilter.newBuilder()
@@ -379,7 +358,7 @@ public class RemoteDeviceManagerTest {
 
     // Test StringMultimapMatchCondition with key only.
     labInfo =
-        remoteDeviceManagerWithMockNetUtil.getLabInfos(
+        remoteDeviceManager.getLabInfos(
             Filter.newBuilder()
                 .setLabFilter(
                     LabFilter.newBuilder()
@@ -397,7 +376,7 @@ public class RemoteDeviceManagerTest {
 
     // Test StringMultimapMatchCondition with key and value condition with IntegerMatch.
     labInfo =
-        remoteDeviceManagerWithMockNetUtil.getLabInfos(
+        remoteDeviceManager.getLabInfos(
             Filter.newBuilder()
                 .setLabFilter(
                     LabFilter.newBuilder()
@@ -421,11 +400,11 @@ public class RemoteDeviceManagerTest {
 
   @Test
   public void getLabInfo_withDeviceFilter_withDeviceUuidMatchCondition() throws Exception {
-    labSyncGrpcStub2.signUpLab(SIGN_UP_LAB_REQUEST);
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
 
     // Test StringMatchCondition with MatchesRegex.
     LabView labInfo =
-        remoteDeviceManagerWithMockNetUtil.getLabInfos(
+        remoteDeviceManager.getLabInfos(
             Filter.newBuilder()
                 .setDeviceFilter(
                     DeviceFilter.newBuilder()
@@ -443,7 +422,7 @@ public class RemoteDeviceManagerTest {
     assertThat(labInfo).isEqualTo(LAB_VIEW_WITH_OLC);
 
     labInfo =
-        remoteDeviceManagerWithMockNetUtil.getLabInfos(
+        remoteDeviceManager.getLabInfos(
             Filter.newBuilder()
                 .setDeviceFilter(
                     DeviceFilter.newBuilder()
@@ -469,11 +448,11 @@ public class RemoteDeviceManagerTest {
 
   @Test
   public void getLabInfo_withDeviceFilter_withStatusMatchCondition() throws Exception {
-    labSyncGrpcStub2.signUpLab(SIGN_UP_LAB_REQUEST);
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
 
     // Test StringMatchCondition with Include.
     LabView labInfo =
-        remoteDeviceManagerWithMockNetUtil.getLabInfos(
+        remoteDeviceManager.getLabInfos(
             Filter.newBuilder()
                 .setDeviceFilter(
                     DeviceFilter.newBuilder()
@@ -491,11 +470,11 @@ public class RemoteDeviceManagerTest {
 
   @Test
   public void getLabInfo_withDeviceFilter_withTypeMatchCondition() throws Exception {
-    labSyncGrpcStub2.signUpLab(SIGN_UP_LAB_REQUEST);
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
 
     // Test AnyMatch with Include.
     LabView labInfo =
-        remoteDeviceManagerWithMockNetUtil.getLabInfos(
+        remoteDeviceManager.getLabInfos(
             Filter.newBuilder()
                 .setDeviceFilter(
                     DeviceFilter.newBuilder()
@@ -518,7 +497,7 @@ public class RemoteDeviceManagerTest {
 
     // Test SubsetMatch.
     labInfo =
-        remoteDeviceManagerWithMockNetUtil.getLabInfos(
+        remoteDeviceManager.getLabInfos(
             Filter.newBuilder()
                 .setDeviceFilter(
                     DeviceFilter.newBuilder()
@@ -537,7 +516,7 @@ public class RemoteDeviceManagerTest {
 
     // Test SubsetMatch.
     labInfo =
-        remoteDeviceManagerWithMockNetUtil.getLabInfos(
+        remoteDeviceManager.getLabInfos(
             Filter.newBuilder()
                 .setDeviceFilter(
                     DeviceFilter.newBuilder()
@@ -556,11 +535,11 @@ public class RemoteDeviceManagerTest {
 
   @Test
   public void getLabInfo_withDeviceFilter_withOwnerMatchCondition() throws Exception {
-    labSyncGrpcStub2.signUpLab(SIGN_UP_LAB_REQUEST);
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
 
     // Test AnyMatch with MatchesRegex.
     LabView labInfo =
-        remoteDeviceManagerWithMockNetUtil.getLabInfos(
+        remoteDeviceManager.getLabInfos(
             Filter.newBuilder()
                 .setDeviceFilter(
                     DeviceFilter.newBuilder()
@@ -584,11 +563,11 @@ public class RemoteDeviceManagerTest {
 
   @Test
   public void getLabInfo_withDeviceFilter_withDriverMatchCondition() throws Exception {
-    labSyncGrpcStub2.signUpLab(SIGN_UP_LAB_REQUEST);
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
 
     // Test NoneMatch with Include.
     LabView labInfo =
-        remoteDeviceManagerWithMockNetUtil.getLabInfos(
+        remoteDeviceManager.getLabInfos(
             Filter.newBuilder()
                 .setDeviceFilter(
                     DeviceFilter.newBuilder()
@@ -612,11 +591,11 @@ public class RemoteDeviceManagerTest {
 
   @Test
   public void getLabInfo_withDeviceFilter_withDecoratorMatchCondition() throws Exception {
-    labSyncGrpcStub2.signUpLab(SIGN_UP_LAB_REQUEST);
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
 
     // Test NoneMatch with MatchesRegex.
     LabView labInfo =
-        remoteDeviceManagerWithMockNetUtil.getLabInfos(
+        remoteDeviceManager.getLabInfos(
             Filter.newBuilder()
                 .setDeviceFilter(
                     DeviceFilter.newBuilder()
@@ -639,7 +618,7 @@ public class RemoteDeviceManagerTest {
 
     // Test IntegerMatch with MatchesRegex.
     labInfo =
-        remoteDeviceManagerWithMockNetUtil.getLabInfos(
+        remoteDeviceManager.getLabInfos(
             Filter.newBuilder()
                 .setDeviceFilter(
                     DeviceFilter.newBuilder()
@@ -659,10 +638,10 @@ public class RemoteDeviceManagerTest {
 
   @Test
   public void getLabInfo_withDeviceFilter_withDimensionMatchCondition() throws Exception {
-    labSyncGrpcStub2.signUpLab(SIGN_UP_LAB_REQUEST);
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
 
     LabView labInfo =
-        remoteDeviceManagerWithMockNetUtil.getLabInfos(
+        remoteDeviceManager.getLabInfos(
             Filter.newBuilder()
                 .setDeviceFilter(
                     DeviceFilter.newBuilder()
@@ -695,24 +674,24 @@ public class RemoteDeviceManagerTest {
         ArgumentCaptor.forClass(DeviceRecordData.class);
     ArgumentCaptor<LabRecordData> labRecordData1 = ArgumentCaptor.forClass(LabRecordData.class);
 
-    labSyncGrpcStub2.signUpLab(SIGN_UP_LAB_REQUEST);
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
 
-    verify(labRecordManager2).addLabRecordIfLabInfoChanged(labRecordData1.capture());
+    verify(labRecordManager).addLabRecordIfLabInfoChanged(labRecordData1.capture());
     assertThat(labRecordData1.getValue().toRecordProto().getLabInfo()).isEqualTo(LAB_INFO);
 
-    verify(labRecordManager2).addDeviceRecordIfDeviceInfoChanged(deviceRecordData1.capture());
+    verify(labRecordManager).addDeviceRecordIfDeviceInfoChanged(deviceRecordData1.capture());
     assertThat(deviceRecordData1.getValue().toRecordProto().getDeviceInfo()).isEqualTo(DEVICE_INFO);
 
     ArgumentCaptor<DeviceRecordData> deviceRecordData2 =
         ArgumentCaptor.forClass(DeviceRecordData.class);
     ArgumentCaptor<LabRecordData> labRecordData2 = ArgumentCaptor.forClass(LabRecordData.class);
 
-    labSyncGrpcStub2.heartbeatLab(HEARTBEAT_LAB_REQUEST);
+    labSyncGrpcStub.heartbeatLab(HEARTBEAT_LAB_REQUEST);
 
-    verify(labRecordManager2).addLabRecordIfLabInfoChanged(labRecordData2.capture());
+    verify(labRecordManager).addLabRecordIfLabInfoChanged(labRecordData2.capture());
     assertThat(labRecordData2.getValue().toRecordProto().getLabInfo()).isEqualTo(LAB_INFO);
 
-    verify(labRecordManager2).addDeviceRecordIfDeviceInfoChanged(deviceRecordData2.capture());
+    verify(labRecordManager).addDeviceRecordIfDeviceInfoChanged(deviceRecordData2.capture());
     assertThat(deviceRecordData2.getValue().toRecordProto().getDeviceInfo()).isEqualTo(DEVICE_INFO);
   }
 
