@@ -26,10 +26,10 @@ import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.truth.Correspondence;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
@@ -45,7 +45,7 @@ import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
-import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.junit.rule.MonitoredStringBuilders;
 import com.google.devtools.mobileharness.shared.util.junit.rule.PrintTestName;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
@@ -57,6 +57,7 @@ import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProt
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionResponse;
 import com.google.devtools.mobileharness.shared.version.rpc.stub.grpc.VersionGrpcStub;
 import com.google.inject.Guice;
+import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
@@ -65,11 +66,13 @@ import io.grpc.BindableService;
 import io.grpc.ManagedChannel;
 import io.grpc.netty.NettyServerBuilder;
 import java.io.IOException;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeoutException;
 import javax.inject.Inject;
 import org.junit.After;
@@ -106,17 +109,25 @@ public class LabServerIntegrationTest {
 
   private CommandProcess labServerProcess;
   private ManagedChannel labServerChannel;
+  @Bind private Sleeper sleeper;
+  @Bind private ListeningScheduledExecutorService listeningScheduledExecutorService;
+  @Bind private ExecutorService executorService;
+  @Bind private ListeningExecutorService listeningExecutorService;
 
-  @Inject private ListeningExecutorService threadPool;
+  @Bind private Clock clock;
+
   @Inject private AtsMode atsMode;
 
   @Before
   public void setUp() throws Exception {
-    Guice.createInjector(
-            BoundFieldModule.of(this),
-            new AtsModeModule(),
-            new CommonModule(ImmutableList.of(), ImmutableMap.of(), ImmutableMap.of()))
-        .injectMembers(this);
+    sleeper = Sleeper.defaultSleeper();
+    clock = Clock.systemUTC();
+    listeningExecutorService = ThreadPools.createStandardThreadPool("ats-mode-thread-pool");
+    executorService = listeningExecutorService;
+    listeningScheduledExecutorService =
+        ThreadPools.createStandardScheduledThreadPool(
+            "ats-mode-scheduled-thread-pool", /* corePoolSize= */ 5);
+    Guice.createInjector(BoundFieldModule.of(this), new AtsModeModule()).injectMembers(this);
 
     masterPort = PortProber.pickUnusedPort();
     labServerGrpcPort = PortProber.pickUnusedPort();
@@ -283,7 +294,7 @@ public class LabServerIntegrationTest {
     atsMode.initialize(null);
     ImmutableList<BindableService> bindableServices = atsMode.provideServicesForWorkers();
     NettyServerBuilder nettyServerBuilder =
-        NettyServerBuilder.forPort(masterPort).executor(threadPool);
+        NettyServerBuilder.forPort(masterPort).executor(listeningExecutorService);
     bindableServices.forEach(nettyServerBuilder::addService);
     nettyServerBuilder.build().start();
 
