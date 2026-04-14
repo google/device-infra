@@ -84,50 +84,55 @@
         <dt>Version</dt>
         <dd>{{ host.labServer.version }}</dd>
 
-        <dt>Pass Through Flags
-          <mat-icon
-            class="cursor-help"
-            matTooltip="Flags passed directly to the lab server instance on startup for custom configuration."
-            >help_outline</mat-icon
-          >
-        </dt>
-        <dd [class.grid-tight-dd]="!isEditingFlags()">
-          @if(isEditingFlags()) {
-            <div class="flags-edit-container">
-              <textarea
-                [(ngModel)]="editedFlags"
-                class="flags-textarea"
-                rows="5"
-                placeholder="Enter flags..."
-              ></textarea>
-              <div class="flags-edit-actions">
-                <button (click)="cancelEditFlags()" class="flags-edit-button cancel" [disabled]="isSavingFlags()">Cancel</button>
-                <button (click)="saveFlags()" class="flags-edit-button save" [disabled]="isSavingFlags()">
-                  @if (isSavingFlags()) {
-                    <mat-progress-spinner mode="indeterminate" diameter="16" class="button-spinner"></mat-progress-spinner>
-                    Saving...
-                  } @else {
-                    Save
-                  }
+        @if (actions?.updatePassThroughFlags; as updateFlags) {
+          @if (updateFlags.visible) {
+            <dt>Pass Through Flags
+              <mat-icon
+                class="cursor-help"
+                matTooltip="Flags passed directly to the lab server instance on startup for custom configuration."
+                >help_outline</mat-icon
+              >
+            </dt>
+            <dd [class.grid-tight-dd]="!isEditingFlags()">
+              @if(isEditingFlags()) {
+                <div class="flags-edit-container">
+                  <textarea
+                    [(ngModel)]="editedFlags"
+                    class="flags-textarea"
+                    rows="5"
+                    placeholder="Enter flags..."
+                  ></textarea>
+                  <div class="flags-edit-actions">
+                    <button (click)="cancelEditFlags()" class="flags-edit-button cancel" [disabled]="isSavingFlags()">Cancel</button>
+                    <button (click)="saveFlags()" class="flags-edit-button save" [disabled]="isSavingFlags()">
+                      @if (isSavingFlags()) {
+                        <mat-progress-spinner mode="indeterminate" diameter="16" class="button-spinner"></mat-progress-spinner>
+                        Saving...
+                      } @else {
+                        Save
+                      }
+                    </button>
+                  </div>
+                </div>
+              } @else {
+                @if (host.labServer.passThroughFlags) {
+                  <div class="monospace-block">{{ host.labServer.passThroughFlags }}</div>
+                } @else {
+                  <span class="text-gray-500">None</span>
+                }
+
+                <button
+                  mat-icon-button
+                  (click)="updateFlags.isReady ? startEditFlags() : showComingSoonPopup('Pass Through Flags')"
+                  [disabled]="!updateFlags.enabled"
+                  [matTooltip]="updateFlags.tooltip || 'Edit Pass Through Flags'"
+                  class="edit-flags-button">
+                  <mat-icon>edit</mat-icon>
                 </button>
-              </div>
-            </div>
-          } @else {
-            @if (host.labServer.passThroughFlags) {
-              <div class="monospace-block">{{ host.labServer.passThroughFlags }}</div>
-            } @else {
-              <span class="text-gray-500">None</span>
-            }
-            <!-- <button
-              mat-icon-button
-              (click)="startEditFlags()"
-              title="Edit Pass Through Flags"
-              class="edit-flags-button"
-            >
-              <mat-icon>edit</mat-icon>
-            </button> -->
+              }
+            </dd>
           }
-        </dd>
+        }
       </dl>
     </div>
   </app-info-card>
@@ -364,23 +369,25 @@
                     <mat-icon>more_vert</mat-icon>
                   </button>
                   <mat-menu #menu="matMenu">
-                    <button mat-menu-item (click)="element.actions?.screenshot?.isReady ? null : showComingSoonPopup('Screenshot', element)">
-                      <mat-icon>screenshot</mat-icon>
-                      <span>Screenshot</span>
-                    </button>
-                    <button mat-menu-item (click)="element.actions?.remoteControl?.isReady ? startRemoteControl([element]) : showComingSoonPopup('Remote Control', element)">
-                      <mat-icon>important_devices</mat-icon>
-                      <span>Remote Control</span>
-                    </button>
-                    <button mat-menu-item (click)="element.actions?.flash?.isReady ? null : showComingSoonPopup('Flash', element)">
-                      <mat-icon>flash_on</mat-icon>
-                      <span>Flash</span>
-                    </button>
-                    @if(element.deviceStatus.status === 'MISSING') {
-                      <button mat-menu-item (click)="element.actions?.decommission?.isReady ? null : showComingSoonPopup('Decommission', element)">
-                        <mat-icon>delete_sweep</mat-icon>
-                        <span>Decommission</span>
+                    @if (element.actions; as elementActions) {
+                      <button mat-menu-item (click)="elementActions.screenshot.isReady ? null : showComingSoonPopup('Screenshot', element)">
+                        <mat-icon>screenshot</mat-icon>
+                        <span>Screenshot</span>
                       </button>
+                      <button mat-menu-item (click)="elementActions.remoteControl.isReady ? startRemoteControl([element]) : showComingSoonPopup('Remote Control', element)">
+                        <mat-icon>important_devices</mat-icon>
+                        <span>Remote Control</span>
+                      </button>
+                      <button mat-menu-item (click)="elementActions.flash.isReady ? null : showComingSoonPopup('Flash', element)">
+                        <mat-icon>flash_on</mat-icon>
+                        <span>Flash</span>
+                      </button>
+                      @if(element.deviceStatus.status === 'MISSING') {
+                        <button mat-menu-item (click)="elementActions.decommission.isReady ? null : showComingSoonPopup('Decommission', element)">
+                          <mat-icon>delete_sweep</mat-icon>
+                          <span>Decommission</span>
+                        </button>
+                      }
                     }
                   </mat-menu>
                 </td>

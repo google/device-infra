@@ -40,6 +40,7 @@ import {
   type DeviceDimension,
   type SubDeviceInfo,
 } from '../../../../core/models/device_overview';
+import type {HostActions} from '../../../../core/models/host_action';
 import {
   DaemonServerStatus,
   DeviceSummary,
@@ -174,8 +175,10 @@ export class HostOverviewPage implements OnChanges {
   readonly objectUtils = objectUtils;
   readonly dateUtils = dateUtils;
   readonly isGoogleInternal = this.environment.isGoogleInternal();
+  readonly ActionBarAction = ActionBarAction;
 
   @Input({required: true}) host!: HostOverview;
+  @Input() actions?: HostActions;
 
   readonly isAteHost = computed(() => {
     return this.host.labTypeDisplayNames.some((name) =>
@@ -547,6 +550,7 @@ export class HostOverviewPage implements OnChanges {
       'Decommission': ActionBarAction.DEVICE_DECOMMISSION,
       'Screenshot': ActionBarAction.DEVICE_SCREENSHOT,
       'Flash': ActionBarAction.DEVICE_FLASH,
+      'Pass Through Flags': ActionBarAction.HOST_UPDATE_PASS_THROUGH_FLAGS,
     };
     const feature = featureMap[actionName];
 
