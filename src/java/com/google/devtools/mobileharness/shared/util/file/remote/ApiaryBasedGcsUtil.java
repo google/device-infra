@@ -27,7 +27,7 @@ import com.google.api.client.http.HttpRequestInitializer;
 import com.google.api.client.http.HttpResponseException;
 import com.google.api.client.http.HttpStatusCodes;
 import com.google.api.client.http.InputStreamContent;
-import com.google.api.client.http.apache.v2.ApacheHttpTransport;
+import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.storage.Storage;
 import com.google.api.services.storage.model.ComposeRequest;
@@ -53,7 +53,6 @@ import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -109,14 +108,7 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
   private static Storage getClient(GcsParams storageParams) throws MobileHarnessException {
     // Get credential
     HttpRequestInitializer credential = getCredential(storageParams);
-    return new Storage.Builder(
-            new ApacheHttpTransport(
-                ApacheHttpTransport.newDefaultHttpClientBuilder()
-                    // Set to 100 to support up to 50 upload and 50 download threads.
-                    .setMaxConnPerRoute(100)
-                    .build()),
-            GsonFactory.getDefaultInstance(),
-            credential)
+    return new Storage.Builder(new NetHttpTransport(), GsonFactory.getDefaultInstance(), credential)
         .setHttpRequestInitializer(
             request -> {
               // Timeout should be large enough to fit bad network conditions. b/79751793,
@@ -189,8 +181,6 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
             "file gs://%s/%s [%s, %s) to %s",
             storageParams.bucketName, gcsFile, from, from + size, localFile);
 
-    Instant startTime = currentTime();
-
     retryIfMeetQuotaOrNetworkIssue(
         () -> {
           try (BufferedOutputStream bufferedOutputStream = getOutputStream(localFile)) {
@@ -234,13 +224,8 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
         "copy " + fileInfo);
 
     logger.atInfo().log(
-        "Copied file gs://%s/%s [%s, %s) to %s, took %d ms",
-        storageParams.bucketName,
-        gcsFile,
-        from,
-        from + size,
-        localFile,
-        Duration.between(startTime, currentTime()).toMillis());
+        "Copied file gs://%s/%s [%s, %s) to %s",
+        storageParams.bucketName, gcsFile, from, from + size, localFile);
   }
 
   @Override
