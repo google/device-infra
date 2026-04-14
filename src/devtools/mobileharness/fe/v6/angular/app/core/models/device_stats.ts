@@ -181,22 +181,22 @@ export declare interface DailyRecoveryTasks {
  * Statistics for a specific recovery outcome category on a specific day.
  */
 export declare interface DailyOutcomeStats {
-  category: RecoveryOutcomeCategory;
-  stats: Stats;
+  category?: RecoveryOutcomeCategory;
+  stats?: Stats;
 }
 
 /**
  * Breakdown of recovery tasks by outcome category.
  */
 export declare interface RecoveryTaskBreakdownItem {
-  category: RecoveryOutcomeCategory;
-  stats: Stats;
+  category?: RecoveryOutcomeCategory;
+  stats?: Stats;
 }
 
 /**
  * Summary of recovery task statistics over a period.
  */
 export declare interface RecoveryTaskSummary {
-  totalCount: number;
-  outcomeBreakdown: RecoveryTaskBreakdownItem[];
+  totalCount?: number;
+  outcomeBreakdown?: RecoveryTaskBreakdownItem[];
 }

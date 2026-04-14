@@ -354,8 +354,10 @@ export function getRecoveryTaskChartData(
   const existingCategories = new Set(
     dailyStats
       .flatMap((day) => day.categoryStats)
-      .filter((stat) => stat.stats.count && stat.stats.count > 0)
-      .map((stat) => stat.category),
+      .filter((stat) => stat.stats?.count && stat.stats.count > 0)
+      .map(
+        (stat) => stat.category ?? 'RECOVERY_OUTCOME_CATEGORY_UNSPECIFIED',
+      ),
   );
 
   const sortedCategories = (
@@ -668,17 +670,21 @@ export function transformRecoveryStatsToTable(
   return [
     {
       label: 'Total',
-      count: stats.totalCount,
+      count: stats.totalCount ?? 0,
       percent: 100,
       type: 'total' as const,
     },
-    ...stats.outcomeBreakdown
-      .filter((item) => item.stats.count && item.stats.count > 0)
+    ...(stats.outcomeBreakdown ?? [])
+      .filter((item) => item.stats?.count && item.stats.count > 0)
       .map((item) => ({
-        label: getRecoveryLabel(item.category),
-        count: item.stats.count,
-        percent: item.stats.percent,
-        color: getRecoveryColor(item.category),
+        label: getRecoveryLabel(
+          item.category ?? 'RECOVERY_OUTCOME_CATEGORY_UNSPECIFIED',
+        ),
+        count: item.stats?.count ?? 0,
+        percent: item.stats?.percent ?? 0,
+        color: getRecoveryColor(
+          item.category ?? 'RECOVERY_OUTCOME_CATEGORY_UNSPECIFIED',
+        ),
         type: 'detail' as const,
       })),
   ];
@@ -700,10 +706,19 @@ export function transformRecoveryStatsToCharts(
   chartData.addColumn('number', 'Count');
 
   const colors: string[] = [];
-  stats.outcomeBreakdown.forEach((item) => {
-    if (item.stats.count && item.stats.count > 0) {
-      chartData.addRow([getRecoveryLabel(item.category), item.stats.count]);
-      colors.push(getRecoveryColor(item.category));
+  (stats.outcomeBreakdown ?? []).forEach((item) => {
+    if (item.stats?.count && item.stats.count > 0) {
+      chartData.addRow([
+        getRecoveryLabel(
+          item.category ?? 'RECOVERY_OUTCOME_CATEGORY_UNSPECIFIED',
+        ),
+        item.stats.count,
+      ]);
+      colors.push(
+        getRecoveryColor(
+          item.category ?? 'RECOVERY_OUTCOME_CATEGORY_UNSPECIFIED',
+        ),
+      );
     }
   });
 
