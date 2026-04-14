@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.shared.util.file.remote;
 
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.api.client.http.InputStreamContent;
 import com.google.api.services.storage.model.StorageObject;
@@ -57,6 +58,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.concurrent.TimeoutException;
 
 /** Utility class for operating with files using Google Cloud Storage. */
 public abstract class GcsUtil {
@@ -71,6 +73,9 @@ public abstract class GcsUtil {
 
   /** Maximum attempts while meet network issue. */
   protected static final int MAX_ATTEMPTS = 5;
+
+  /** Timeout for each shard transfer attempt. */
+  @VisibleForTesting static final Duration SHARD_TRANSFER_TIMEOUT = Duration.ofSeconds(40);
 
   /** Output signal when lab server has no space left. */
   protected static final String OUTPUT_NO_SPACE = "No space left on device";
@@ -417,38 +422,68 @@ public abstract class GcsUtil {
     String shardNamePrefix =
         String.format(".%s.%s", localFile.getFileName(), Integer.toUnsignedLong(random.nextInt()));
     Instant startTime = currentTime();
-    List<ListenableFuture<?>> results = new ArrayList<>();
-    List<Path> shards = new ArrayList<>();
+    List<ShardContext> shardContexts = new ArrayList<>();
     for (int i = 0; i < shardCount; i++) {
       Path localFileShard = localFile.resolveSibling(String.format("%s.%s", shardNamePrefix, i));
       long from = (long) i * shardSize;
       long size = i < shardCount - 1 ? shardSize : -1;
-      shards.add(localFileShard);
 
-      results.add(
+      ListenableFuture<?> futureTask =
           Holder.copyFileToLocalThreadpool.submit(
               () -> {
                 copyFileToLocal(gcsFile, localFileShard, from, size);
                 return null;
-              }));
+              });
+      shardContexts.add(new ShardContext(i, localFileShard, from, size, futureTask));
     }
 
-    ListenableFuture<?> future = Futures.whenAllSucceed(results).call(() -> null, directExecutor());
+    ListenableFuture<?> future = null;
     try {
-      future.get();
+      List<ListenableFuture<?>> initialFutures = new ArrayList<>();
+      for (ShardContext shard : shardContexts) {
+        initialFutures.add(shard.future);
+      }
+      future = Futures.whenAllSucceed(initialFutures).call(() -> null, directExecutor());
+
+      try {
+        future.get(SHARD_TRANSFER_TIMEOUT.toSeconds(), SECONDS);
+      } catch (TimeoutException e) {
+        logger.atInfo().log("Timeout reached, retrying slow shards once.");
+        for (ShardContext shard : shardContexts) {
+          if (!shard.future.isDone()) {
+            logger.atInfo().log("Shard %s is slow, canceling and retrying", shard.index);
+            shard.future.cancel(true);
+
+            shard.future =
+                Holder.copyFileToLocalThreadpool.submit(
+                    () -> {
+                      copyFileToLocal(gcsFile, shard.path, shard.from, shard.size);
+                      return null;
+                    });
+          }
+        }
+
+        // Wait forever for all shards (both completed and retried ones)
+        List<ListenableFuture<?>> allFutures = new ArrayList<>();
+        for (ShardContext shard : shardContexts) {
+          allFutures.add(shard.future);
+        }
+        future = Futures.whenAllSucceed(allFutures).call(() -> null, directExecutor());
+        future.get();
+      }
       logger.atInfo().log(
           "Downloaded the gcs file %s with %s shards to %s in %s",
-          gcsFile, shards.size(), localFile, Duration.between(startTime, currentTime()));
+          gcsFile, shardContexts.size(), localFile, Duration.between(startTime, currentTime()));
 
-      for (int i = 1; i < shards.size(); i++) {
-        localFileUtil.appendToFile(shards.get(i), shards.get(0));
+      for (int i = 1; i < shardContexts.size(); i++) {
+        localFileUtil.appendToFile(shardContexts.get(i).path, shardContexts.get(0).path);
       }
       logger.atInfo().log("Merged the split gcs file %s to one", gcsFile);
 
       if (localFileUtil.isFileOrDirExist(localFile)) {
         localFileUtil.removeFileOrDir(localFile);
       }
-      localFileUtil.moveFileOrDir(shards.get(0), localFile);
+      localFileUtil.moveFileOrDir(shardContexts.get(0).path, localFile);
       logger.atInfo().log("Moved the merged gcs file %s to %s", gcsFile, localFile);
     } catch (InterruptedException e) {
       future.cancel(true);
@@ -463,8 +498,8 @@ public abstract class GcsUtil {
           e);
     } finally {
       // Remove all temporary files at last
-      for (Path shard : shards) {
-        tryRemoveFile(shard);
+      for (ShardContext shard : shardContexts) {
+        tryRemoveFile(shard.path);
       }
     }
   }
@@ -797,27 +832,60 @@ public abstract class GcsUtil {
     String gcsShardNamePrefix =
         String.format(".%s.%s", gcsFile.getFileName(), Long.toUnsignedString(random.nextLong()));
 
-    List<ListenableFuture<?>> results = new ArrayList<>();
-    List<Path> gcsShards = new ArrayList<>();
+    List<ShardContext> shardContexts = new ArrayList<>();
     for (int i = 0; i < shardCount; i++) {
+      Path gcsShard = gcsFile.resolveSibling(String.format("%s.%s", gcsShardNamePrefix, i));
       long from = (long) i * shardSize;
       long size = i < shardCount - 1 ? shardSize : fileSize - from;
-      Path gcsShard = gcsFile.resolveSibling(String.format("%s.%s", gcsShardNamePrefix, i));
 
-      gcsShards.add(gcsShard);
-
-      results.add(
+      ListenableFuture<?> futureTask =
           Holder.copyFileToCloudThreadpool.submit(
               () -> {
                 partialCopyFileToCloud(localFile, from, size, gcsShard);
                 return null;
-              }));
+              });
+      shardContexts.add(new ShardContext(i, gcsShard, from, size, futureTask));
     }
 
-    ListenableFuture<?> future = Futures.whenAllSucceed(results).call(() -> null, directExecutor());
+    ListenableFuture<?> future = null;
     try {
-      future.get();
+      List<ListenableFuture<?>> initialFutures = new ArrayList<>();
+      for (ShardContext shard : shardContexts) {
+        initialFutures.add(shard.future);
+      }
+      future = Futures.whenAllSucceed(initialFutures).call(() -> null, directExecutor());
 
+      try {
+        future.get(SHARD_TRANSFER_TIMEOUT.toSeconds(), SECONDS);
+      } catch (TimeoutException e) {
+        logger.atInfo().log("Timeout reached, retrying slow shards once.");
+        for (ShardContext shard : shardContexts) {
+          if (!shard.future.isDone()) {
+            logger.atInfo().log("Shard %s is slow, canceling and retrying", shard.index);
+            shard.future.cancel(true);
+
+            shard.future =
+                Holder.copyFileToCloudThreadpool.submit(
+                    () -> {
+                      partialCopyFileToCloud(localFile, shard.from, shard.size, shard.path);
+                      return null;
+                    });
+          }
+        }
+
+        // Wait forever for all shards (both completed and retried ones)
+        List<ListenableFuture<?>> allFutures = new ArrayList<>();
+        for (ShardContext shard : shardContexts) {
+          allFutures.add(shard.future);
+        }
+        future = Futures.whenAllSucceed(allFutures).call(() -> null, directExecutor());
+        future.get();
+      }
+
+      List<Path> gcsShards = new ArrayList<>();
+      for (ShardContext shard : shardContexts) {
+        gcsShards.add(shard.path);
+      }
       compose(gcsFile, true, gcsShards, contentType);
       logger.atInfo().log(
           "Uploaded local %s to gs://%s/%s in %s shards in %s",
@@ -965,12 +1033,22 @@ public abstract class GcsUtil {
       sleeper.sleep(Duration.ofMillis(sleepSecond * 1000 + random.nextInt(10)));
       sleepSecond *= 2;
     }
-    if (lastException != null && isQuotaIssue(lastException)) {
-      throw new MobileHarnessException(
-          BasicErrorId.GCS_MEET_QUOTA_ISSUE,
-          String.format(
-              "Failed in %s attempts. Exceptions from all tries:\n%s",
-              MAX_ATTEMPTS, String.join(",", exceptions)));
+    if (lastException != null) {
+      if (isQuotaIssue(lastException)) {
+        throw new MobileHarnessException(
+            BasicErrorId.GCS_MEET_QUOTA_ISSUE,
+            String.format(
+                "Failed in %s attempts. Exceptions from all tries:\n%s",
+                MAX_ATTEMPTS, String.join(",", exceptions)),
+            lastException);
+      } else {
+        throw new MobileHarnessException(
+            BasicErrorId.GCS_MEET_NETWORK_ISSUE,
+            String.format(
+                "Failed in %s attempts. Exceptions from all tries:\n%s",
+                MAX_ATTEMPTS, String.join(",", exceptions)),
+            lastException);
+      }
     } else {
       throw new MobileHarnessException(
           BasicErrorId.GCS_MEET_NETWORK_ISSUE,
@@ -1047,5 +1125,21 @@ public abstract class GcsUtil {
 
   private static Instant currentInstant() {
     return Clock.systemUTC().instant();
+  }
+
+  private static class ShardContext {
+    final int index;
+    final Path path;
+    final long from;
+    final long size;
+    ListenableFuture<?> future;
+
+    ShardContext(int index, Path path, long from, long size, ListenableFuture<?> future) {
+      this.index = index;
+      this.path = path;
+      this.from = from;
+      this.size = size;
+      this.future = future;
+    }
   }
 }
