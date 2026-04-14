@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.shared.util.command;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.util.concurrent.Futures.getUnchecked;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
@@ -349,7 +348,7 @@ public class CommandExecutor {
     // Schedules timeout tasks.
     Runnable timeoutTask = new TestContextRunnable(new TimeoutTask(commandProcess));
     Function<Duration, ListenableFuture<?>> timeoutTaskScheduler =
-        timeout -> timer.schedule(timeoutTask, timeout.toMillis(), MILLISECONDS);
+        timeout -> timer.schedule(timeoutTask, timeout);
     ListenableFuture<?> timeoutTaskFuture = timeoutTaskScheduler.apply(remainingTime);
     @Nullable
     ListenableFuture<?> startTimeoutTaskFuture =
