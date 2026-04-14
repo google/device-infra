@@ -102,6 +102,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -145,6 +146,7 @@ class RemoteDeviceManager implements LabInfoProvider {
   private final ListeningScheduledExecutorService scheduledThreadPool;
   private final LabRecordManager labRecordManager;
   private final NetUtil netUtil;
+  private final InstantSource instantSource;
 
   private final Object lock = new Object();
 
@@ -166,11 +168,13 @@ class RemoteDeviceManager implements LabInfoProvider {
       @AtsModeAbstractScheduler AbstractScheduler scheduler,
       ListeningScheduledExecutorService scheduledThreadPool,
       LabRecordManager labRecordManager,
-      NetUtil netUtil) {
+      NetUtil netUtil,
+      InstantSource instantSource) {
     this.scheduler = scheduler;
     this.scheduledThreadPool = scheduledThreadPool;
     this.labRecordManager = labRecordManager;
     this.netUtil = netUtil;
+    this.instantSource = instantSource;
   }
 
   BindableService getLabSyncService() {
@@ -264,7 +268,7 @@ class RemoteDeviceManager implements LabInfoProvider {
               request.getTempRequiredDimensionList().stream()
                   .collect(
                       toImmutableListMultimap(DeviceDimension::getName, DeviceDimension::getValue)),
-              Instant.now().plus(duration));
+              instantSource.instant().plus(duration));
       logger.atInfo().log(
           "Added temp required dimensions of device %s: %s", deviceKey, tempRequiredDimensions);
       deviceData.tempRequiredDimensions = tempRequiredDimensions;
@@ -287,7 +291,7 @@ class RemoteDeviceManager implements LabInfoProvider {
   @Override
   public LabQueryResult.LabView getLabInfos(Filter filter) {
     ImmutableMap<LabKey, LabQueryProto.LabData.Builder> filteredLabs;
-    Instant timestamp = Instant.now();
+    Instant timestamp = instantSource.instant();
     synchronized (lock) {
       // Filters labs.
       filteredLabs =
@@ -323,7 +327,7 @@ class RemoteDeviceManager implements LabInfoProvider {
                     .getLabServerFeatureBuilder()
                     .getHostPropertiesBuilder()
                     .addAllHostProperty(additionalHostProperties));
-    Duration queryTime = Duration.between(timestamp, Instant.now());
+    Duration queryTime = Duration.between(timestamp, instantSource.instant());
     logger.atInfo().log(
         "Get lab info, filter=[%s], time_used=%s", shortDebugString(filter), queryTime);
 
@@ -406,10 +410,10 @@ class RemoteDeviceManager implements LabInfoProvider {
                     + " new_locator=[%s], old_locator=[%s]",
                 labKey, labLocator.toFullString(), labData.labLocator.toFullString());
           }
-          labData.updateBySignUp(labLocator, request);
+          labData.updateBySignUp(labLocator, request, instantSource.instant());
         } else {
           // Adds lab data.
-          labData = new LabData(labLocator, request);
+          labData = new LabData(labLocator, request, instantSource.instant());
           labs.put(labKey, labData);
         }
 
@@ -452,10 +456,10 @@ class RemoteDeviceManager implements LabInfoProvider {
           if (devices.containsKey(deviceKey)) {
             // Updates device data.
             deviceData = devices.get(deviceKey);
-            deviceData.updateBySignUp(device, labLocator);
+            deviceData.updateBySignUp(device, labLocator, instantSource.instant());
           } else {
             // Adds device data.
-            deviceData = new DeviceData(deviceKey, labLocator, device);
+            deviceData = new DeviceData(deviceKey, labLocator, device, instantSource.instant());
             devices.put(deviceKey, deviceData);
             deviceUuids.put(device.getUuid(), deviceKey);
             firstDeviceOrTimeoutFuture.set(null);
@@ -485,7 +489,7 @@ class RemoteDeviceManager implements LabInfoProvider {
         if (labs.containsKey(labKey)) {
           // Updates lab data.
           LabData labData = labs.get(labKey);
-          labData.updateByHeartbeat();
+          labData.updateByHeartbeat(instantSource.instant());
           labRecordManager.addLabRecordIfLabInfoChanged(labData.createLabRecordData());
 
           // Checks lab IP.
@@ -509,7 +513,7 @@ class RemoteDeviceManager implements LabInfoProvider {
           }
 
           DeviceData deviceData = devices.get(deviceKey);
-          boolean needSignUp = deviceData.updateByHeartbeat(device);
+          boolean needSignUp = deviceData.updateByHeartbeat(device, instantSource.instant());
 
           if (needSignUp) {
             outdatedDeviceIds.add(device.getId());
@@ -713,7 +717,7 @@ class RemoteDeviceManager implements LabInfoProvider {
    */
   private void cleanUpLabsAndDevices() {
     logger.atInfo().log("Cleaning up lab and devices");
-    Instant timestamp = Instant.now();
+    Instant timestamp = instantSource.instant();
     // TODO: Uses fine-grained lock.
     synchronized (lock) {
       // Cleans up devices.
@@ -751,13 +755,13 @@ class RemoteDeviceManager implements LabInfoProvider {
         }
       }
     }
-    Duration cleanupTime = Duration.between(timestamp, Instant.now());
+    Duration cleanupTime = Duration.between(timestamp, instantSource.instant());
     logger.atInfo().log("Labs/devices cleanup finished, time_used=%s", cleanupTime);
   }
 
   private void cleanUpDeviceTempRequiredDimensions() {
     logger.atInfo().log("Cleaning up device temp required dimensions");
-    Instant timestamp = Instant.now();
+    Instant timestamp = instantSource.instant();
     synchronized (lock) {
       for (DeviceData deviceData : devices.values()) {
         if (deviceData.tempRequiredDimensions != null
@@ -776,7 +780,7 @@ class RemoteDeviceManager implements LabInfoProvider {
    */
   private void checkMissingLabsAndDevices() {
     logger.atInfo().log("Checking missing lab and devices");
-    Instant timestamp = Instant.now();
+    Instant timestamp = instantSource.instant();
     // TODO: Uses fine-grained lock.
     synchronized (lock) {
       // Checks missing devices.
@@ -814,7 +818,7 @@ class RemoteDeviceManager implements LabInfoProvider {
         }
       }
     }
-    Duration checkTime = Duration.between(timestamp, Instant.now());
+    Duration checkTime = Duration.between(timestamp, instantSource.instant());
     logger.atInfo().log("Labs/devices missing check finished, time_used=%s", checkTime);
   }
 
@@ -864,20 +868,20 @@ class RemoteDeviceManager implements LabInfoProvider {
      */
     private Instant updateFromLabLocalTimestamp;
 
-    private LabData(LabLocator labLocator, SignUpLabRequest lab) {
-      updateBySignUp(labLocator, lab);
+    private LabData(LabLocator labLocator, SignUpLabRequest lab, Instant now) {
+      updateBySignUp(labLocator, lab, now);
     }
 
-    private void updateBySignUp(LabLocator labLocator, SignUpLabRequest lab) {
+    private void updateBySignUp(LabLocator labLocator, SignUpLabRequest lab, Instant now) {
       this.labLocator = labLocator;
       labServerSetting = lab.getLabServerSetting();
       labServerFeature = lab.getLabServerFeature();
       labStatus = LabStatus.LAB_RUNNING;
-      updateFromLabLocalTimestamp = Instant.now();
+      updateFromLabLocalTimestamp = now;
     }
 
-    private void updateByHeartbeat() {
-      updateFromLabLocalTimestamp = Instant.now();
+    private void updateByHeartbeat(Instant now) {
+      updateFromLabLocalTimestamp = now;
     }
 
     private LabInfo createLabInfo() {
@@ -962,7 +966,8 @@ class RemoteDeviceManager implements LabInfoProvider {
      */
     @Nullable private Allocation latestAllocationFromScheduler;
 
-    private DeviceData(DeviceKey deviceKey, LabLocator labLocator, SignUpLabRequest.Device device) {
+    private DeviceData(
+        DeviceKey deviceKey, LabLocator labLocator, SignUpLabRequest.Device device, Instant now) {
       Instant timestamp = Instant.ofEpochMilli(device.getTimestampMs());
       this.deviceKey = deviceKey;
 
@@ -973,7 +978,7 @@ class RemoteDeviceManager implements LabInfoProvider {
 
       this.dataFromLabTimestamp = timestamp;
       setStatusFromLab(device.getStatus(), timestamp);
-      this.updateFromLabLocalTimestamp = Instant.now();
+      this.updateFromLabLocalTimestamp = now;
     }
 
     private void addHostIpAndHostNameDimensionsIfMissing(LabLocator labLocator) {
@@ -1003,8 +1008,9 @@ class RemoteDeviceManager implements LabInfoProvider {
      *
      * <p>Lab locator port settings will not be changed.
      */
-    private void updateBySignUp(SignUpLabRequest.Device device, LabLocator labLocator) {
-      updateFromLabLocalTimestamp = Instant.now();
+    private void updateBySignUp(
+        SignUpLabRequest.Device device, LabLocator labLocator, Instant now) {
+      updateFromLabLocalTimestamp = now;
 
       Instant timestamp = Instant.ofEpochMilli(device.getTimestampMs());
 
@@ -1039,8 +1045,8 @@ class RemoteDeviceManager implements LabInfoProvider {
      *
      * @return true if lab needs to re-sign-up the device
      */
-    private boolean updateByHeartbeat(HeartbeatLabRequest.Device device) {
-      updateFromLabLocalTimestamp = Instant.now();
+    private boolean updateByHeartbeat(HeartbeatLabRequest.Device device, Instant now) {
+      updateFromLabLocalTimestamp = now;
 
       Instant timestamp = Instant.ofEpochMilli(device.getTimestampMs());
 
@@ -1228,47 +1234,46 @@ class RemoteDeviceManager implements LabInfoProvider {
 
     private static Predicate<DeviceData> createDeviceMatcher(
         DeviceMatchCondition deviceMatchCondition) {
-      switch (deviceMatchCondition.getConditionCase()) {
-        case DEVICE_UUID_MATCH_CONDITION:
-          return createStringMatcher(
-              deviceMatchCondition.getDeviceUuidMatchCondition().getCondition(),
-              deviceData -> deviceData.deviceKey.deviceUuid());
-        case STATUS_MATCH_CONDITION:
-          return createStringMatcher(
-              deviceMatchCondition.getStatusMatchCondition().getCondition(),
-              deviceData -> deviceData.statusFromLab.name());
-        case TYPE_MATCH_CONDITION:
-          return createStringListMatcher(
-              deviceMatchCondition.getTypeMatchCondition().getCondition(),
-              deviceData -> deviceData.dataFromLab.types().getAll());
-        case OWNER_MATCH_CONDITION:
-          return createStringListMatcher(
-              deviceMatchCondition.getOwnerMatchCondition().getCondition(),
-              deviceData -> ImmutableSet.copyOf(deviceData.dataFromLab.owners().getAll()));
-        case DRIVER_MATCH_CONDITION:
-          return createStringListMatcher(
-              deviceMatchCondition.getDriverMatchCondition().getCondition(),
-              deviceData -> deviceData.dataFromLab.drivers().getAll());
-        case DECORATOR_MATCH_CONDITION:
-          return createStringListMatcher(
-              deviceMatchCondition.getDecoratorMatchCondition().getCondition(),
-              deviceData -> deviceData.dataFromLab.decorators().getAll());
-        case DIMENSION_MATCH_CONDITION:
-          return createStringMultimapMatcher(
-              deviceMatchCondition.getDimensionMatchCondition().getCondition(),
-              deviceData -> {
-                ImmutableListMultimap.Builder<String, String> builder =
-                    ImmutableListMultimap.<String, String>builder()
-                        .putAll(deviceData.dataFromLab.dimensions().supported().getAll())
-                        .putAll(deviceData.dataFromLab.dimensions().required().getAll());
-                if (deviceData.tempRequiredDimensions != null) {
-                  builder.putAll(deviceData.tempRequiredDimensions.dimensions());
-                }
-                return builder.build();
-              });
-        default:
-          return deviceData -> true;
-      }
+      return switch (deviceMatchCondition.getConditionCase()) {
+        case DEVICE_UUID_MATCH_CONDITION ->
+            createStringMatcher(
+                deviceMatchCondition.getDeviceUuidMatchCondition().getCondition(),
+                deviceData -> deviceData.deviceKey.deviceUuid());
+        case STATUS_MATCH_CONDITION ->
+            createStringMatcher(
+                deviceMatchCondition.getStatusMatchCondition().getCondition(),
+                deviceData -> deviceData.statusFromLab.name());
+        case TYPE_MATCH_CONDITION ->
+            createStringListMatcher(
+                deviceMatchCondition.getTypeMatchCondition().getCondition(),
+                deviceData -> deviceData.dataFromLab.types().getAll());
+        case OWNER_MATCH_CONDITION ->
+            createStringListMatcher(
+                deviceMatchCondition.getOwnerMatchCondition().getCondition(),
+                deviceData -> ImmutableSet.copyOf(deviceData.dataFromLab.owners().getAll()));
+        case DRIVER_MATCH_CONDITION ->
+            createStringListMatcher(
+                deviceMatchCondition.getDriverMatchCondition().getCondition(),
+                deviceData -> deviceData.dataFromLab.drivers().getAll());
+        case DECORATOR_MATCH_CONDITION ->
+            createStringListMatcher(
+                deviceMatchCondition.getDecoratorMatchCondition().getCondition(),
+                deviceData -> deviceData.dataFromLab.decorators().getAll());
+        case DIMENSION_MATCH_CONDITION ->
+            createStringMultimapMatcher(
+                deviceMatchCondition.getDimensionMatchCondition().getCondition(),
+                deviceData -> {
+                  ImmutableListMultimap.Builder<String, String> builder =
+                      ImmutableListMultimap.<String, String>builder()
+                          .putAll(deviceData.dataFromLab.dimensions().supported().getAll())
+                          .putAll(deviceData.dataFromLab.dimensions().required().getAll());
+                  if (deviceData.tempRequiredDimensions != null) {
+                    builder.putAll(deviceData.tempRequiredDimensions.dimensions());
+                  }
+                  return builder.build();
+                });
+        default -> deviceData -> true;
+      };
     }
   }
 
