@@ -102,4 +102,14 @@ public class FeatureManager {
     // OSS/ATS: availability depends on the flag.
     return Flags.instance().feEnableConfiguration.getNonNull();
   }
+
+  /**
+   * Checks if the remote control feature is enabled.
+   *
+   * <p>This feature is only available in the {@code google_1p} universe within Google internal
+   * builds.
+   */
+  public boolean isRemoteControlFeatureEnabled() {
+    return environment.isGoogleInternal() && universe instanceof UniverseScope.SelfUniverse;
+  }
 }

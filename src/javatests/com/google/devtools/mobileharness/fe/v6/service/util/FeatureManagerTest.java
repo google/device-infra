@@ -116,6 +116,7 @@ public final class FeatureManagerTest {
     assertThat(featureManager.isDeviceLogcatFeatureEnabled()).isTrue();
     assertThat(featureManager.isDeviceQuarantineFeatureEnabled()).isTrue();
     assertThat(featureManager.isDeviceScreenshotFeatureEnabled()).isTrue();
+    assertThat(featureManager.isRemoteControlFeatureEnabled()).isTrue();
   }
 
   @Test
@@ -125,6 +126,7 @@ public final class FeatureManagerTest {
     assertThat(featureManager.isDeviceLogcatFeatureEnabled()).isFalse();
     assertThat(featureManager.isDeviceQuarantineFeatureEnabled()).isFalse();
     assertThat(featureManager.isDeviceScreenshotFeatureEnabled()).isFalse();
+    assertThat(featureManager.isRemoteControlFeatureEnabled()).isFalse();
   }
 
   @Test
@@ -134,5 +136,6 @@ public final class FeatureManagerTest {
     assertThat(featureManager.isDeviceLogcatFeatureEnabled()).isFalse();
     assertThat(featureManager.isDeviceQuarantineFeatureEnabled()).isFalse();
     assertThat(featureManager.isDeviceScreenshotFeatureEnabled()).isFalse();
+    assertThat(featureManager.isRemoteControlFeatureEnabled()).isFalse();
   }
 }

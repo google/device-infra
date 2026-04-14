@@ -37,4 +37,8 @@ public class FeatureReadiness {
   public boolean isDeviceScreenshotReady() {
     return false;
   }
+
+  public boolean isRemoteControlReady() {
+    return false;
+  }
 }

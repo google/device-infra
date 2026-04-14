@@ -38,6 +38,7 @@ public class DeviceHeaderInfoBuilder {
   private final QuarantineButtonBuilder quarantineButtonBuilder;
   private final ScreenshotButtonBuilder screenshotButtonBuilder;
   private final ConfigurationButtonBuilder configurationButtonBuilder;
+  private final RemoteControlButtonBuilder remoteControlButtonBuilder;
 
   @Inject
   DeviceHeaderInfoBuilder(
@@ -45,12 +46,14 @@ public class DeviceHeaderInfoBuilder {
       LogcatButtonBuilder logcatButtonBuilder,
       QuarantineButtonBuilder quarantineButtonBuilder,
       ScreenshotButtonBuilder screenshotButtonBuilder,
-      ConfigurationButtonBuilder configurationButtonBuilder) {
+      ConfigurationButtonBuilder configurationButtonBuilder,
+      RemoteControlButtonBuilder remoteControlButtonBuilder) {
     this.flashButtonBuilder = flashButtonBuilder;
     this.logcatButtonBuilder = logcatButtonBuilder;
     this.quarantineButtonBuilder = quarantineButtonBuilder;
     this.screenshotButtonBuilder = screenshotButtonBuilder;
     this.configurationButtonBuilder = configurationButtonBuilder;
+    this.remoteControlButtonBuilder = remoteControlButtonBuilder;
   }
 
   /** Builds DeviceHeaderInfo based on device info and configs. */
@@ -82,7 +85,7 @@ public class DeviceHeaderInfoBuilder {
                 .setScreenshot(screenshotButtonBuilder.build(deviceInfo, universe))
                 .setLogcat(logcatButtonBuilder.build(deviceInfo, universe))
                 .setFlash(flashButtonBuilder.build(deviceInfo, universe))
-                .setRemoteControl(RemoteControlButtonBuilder.build(deviceInfo))
+                .setRemoteControl(remoteControlButtonBuilder.build(deviceInfo, universe))
                 .setQuarantine(quarantineButtonBuilder.build(deviceInfo, universe))
                 .setConfiguration(configurationButtonBuilder.build(deviceInfo, universe)))
         .build();

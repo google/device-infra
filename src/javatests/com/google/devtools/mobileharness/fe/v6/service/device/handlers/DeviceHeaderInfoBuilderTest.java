@@ -62,6 +62,7 @@ public final class DeviceHeaderInfoBuilderTest {
   @Bind @Mock private QuarantineButtonBuilder quarantineButtonBuilder;
   @Bind @Mock private ScreenshotButtonBuilder screenshotButtonBuilder;
   @Bind @Mock private ConfigurationButtonBuilder configurationButtonBuilder;
+  @Bind @Mock private RemoteControlButtonBuilder remoteControlButtonBuilder;
   @Bind @Mock private UniverseFactory universeFactory;
   @Inject private DeviceHeaderInfoBuilder deviceHeaderInfoBuilder;
 
@@ -77,6 +78,8 @@ public final class DeviceHeaderInfoBuilderTest {
     when(screenshotButtonBuilder.build(any(DeviceInfo.class), any(UniverseScope.class)))
         .thenReturn(ActionButtonState.getDefaultInstance());
     when(configurationButtonBuilder.build(any(DeviceInfo.class), any(UniverseScope.class)))
+        .thenReturn(ActionButtonState.getDefaultInstance());
+    when(remoteControlButtonBuilder.build(any(DeviceInfo.class), any(UniverseScope.class)))
         .thenReturn(ActionButtonState.getDefaultInstance());
   }
 
