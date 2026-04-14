@@ -20,6 +20,7 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/service/deviceconfig:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/shared/size:__subpackages__",
         "//third_party/py/multitest_transport:__pkg__",
     ],
 )

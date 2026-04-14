@@ -33,6 +33,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/persistentcache:cache_manager_server_deploy.jar",
         "//src/java/com/google/devtools/mobileharness/infra/lab:lab_server_oss_deploy.jar",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/agent:tradefed_invocation_agent_deploy.jar",
+        "//src/java/com/google/devtools/mobileharness/service/deviceconfig:device_config_server_deploy.jar",
     ],
     deps = [
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",

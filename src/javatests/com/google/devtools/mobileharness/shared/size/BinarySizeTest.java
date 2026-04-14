@@ -46,6 +46,8 @@ public class BinarySizeTest {
           "com/google/wireless/qa/mobileharness/tool/android/language/switchlanguage.apk");
   private static final ImmutableSet<String> ATS_CONSOLE_LARGE_RESOURCE_PATH_ALLOWLIST =
       ImmutableSet.of();
+  private static final ImmutableSet<String> DEVICE_CONFIG_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST =
+      ImmutableSet.of();
 
   // ================================================================================
   // Please keep all binary sizes below in the precision "xxx_x50_000L" bytes.
@@ -65,7 +67,9 @@ public class BinarySizeTest {
           "persistent_cache_manager",
           9_150_000L,
           "xts_tradefed_agent",
-          4_950_000L);
+          4_950_000L,
+          "device_config_server",
+          22_150_000L);
 
   private static final long MAX_RESOURCE_FILE_SIZE_BYTE = 800_000L;
 
@@ -124,6 +128,13 @@ public class BinarySizeTest {
   private static final String XTS_TRADEFED_AGENT_SOURCE_PATH =
       "google3/third_party/deviceinfra/src/java/com/google/devtools/mobileharness/platform/"
           + "android/xts/agent:tradefed_invocation_agent_deploy.jar";
+
+  private static final String DEVICE_CONFIG_SERVER_BINARY_FILE_PATH =
+      RunfilesUtil.getRunfilesLocation(
+          "java/com/google/devtools/mobileharness/service/deviceconfig/device_config_server_deploy.jar");
+  private static final String DEVICE_CONFIG_SERVER_BINARY_SOURCE_PATH =
+      "google3/third_party/deviceinfra/src/java/com/google/devtools/mobileharness"
+          + "/service/deviceconfig:device_config_server_deploy.jar";
 
   @Test
   public void checkBaseOlcServerBinarySize() throws Exception {
@@ -241,6 +252,26 @@ public class BinarySizeTest {
         BINARIES_MAX_SIZE_BYTE.get("xts_tradefed_agent"),
         XTS_TRADEFED_AGENT_PATH,
         XTS_TRADEFED_AGENT_SOURCE_PATH);
+  }
+
+  @Test
+  public void checkDeviceConfigServerBinarySize() throws Exception {
+    BinarySizeChecker.checkBinarySize(
+        "device_config_server_deploy.jar",
+        BINARIES_MAX_SIZE_BYTE.get("device_config_server"),
+        DEVICE_CONFIG_SERVER_BINARY_FILE_PATH,
+        DEVICE_CONFIG_SERVER_BINARY_SOURCE_PATH);
+  }
+
+  @Test
+  public void checkDeviceConfigServerBinaryLargeResources() throws Exception {
+    BinarySizeChecker.checkBinaryLargeResourceFiles(
+        "device_config_server_deploy.jar",
+        DEVICE_CONFIG_SERVER_BINARY_FILE_PATH,
+        MAX_RESOURCE_FILE_SIZE_BYTE,
+        DEVICE_CONFIG_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST,
+        DEVICE_CONFIG_SERVER_BINARY_SOURCE_PATH,
+        BINARY_SIZE_TEST_SOURCE_PATH + "#DEVICE_CONFIG_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST");
   }
 
   @Test
