@@ -102,4 +102,7 @@ message TradefedTestDriverSpec {
   optional bool disable_tf_result_log = 17 [
     (field_detail) = { help: "Whether to disable TF result logs in terminal." }
   ];
+
+  optional bool module_sharding_enabled = 18
+      [(field_detail) = { help: "Whether module sharding is enabled." }];
 }

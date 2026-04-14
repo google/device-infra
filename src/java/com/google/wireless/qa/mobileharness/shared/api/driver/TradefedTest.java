@@ -854,6 +854,36 @@ public class TradefedTest extends BaseDriver
         tradefedCommandBuilder.add("--retry-type", spec.getRetryType());
       }
     }
+
+    // If module sharding is enabled, skip tradefed preconditions (suite-level target preparers) if
+    // they have already been executed on the device for the same session.
+    if (spec.getModuleShardingEnabled()) {
+      String sessionId = testInfo.jobInfo().params().get("olc_session_client_id");
+      if (sessionId != null) {
+        String preconditionsAlreadyRunPropKey = "preconditions_run_" + sessionId;
+
+        if (getDevice().getBooleanProperty(preconditionsAlreadyRunPropKey)) {
+          testInfo
+              .log()
+              .atInfo()
+              .alsoTo(logger)
+              .log(
+                  "Skipping preconditions for session %s on device %s",
+                  sessionId, getDevice().getDeviceId());
+          tradefedCommandBuilder.add("--skip-preconditions");
+        } else {
+          // This is the first job of a new session on this device.
+          // Clear properties from old sessions to avoid property bloat.
+          getDevice().getProperties().keySet().stream()
+              .filter(key -> key.startsWith("preconditions_run_"))
+              .forEach(key -> getDevice().info().properties().remove(key));
+
+          // Mark it as preconditions already run so subsequent jobs in this session skip it
+          getDevice().setProperty(preconditionsAlreadyRunPropKey, "true");
+        }
+      }
+    }
+
     ImmutableList<String> tradefedCommand =
         tradefedCommandBuilder.addAll(getExtraRunCommandArgs(spec)).build();
 

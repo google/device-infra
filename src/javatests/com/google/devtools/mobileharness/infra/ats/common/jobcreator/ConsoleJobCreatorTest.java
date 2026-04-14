@@ -22,6 +22,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -53,6 +54,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -220,11 +222,23 @@ public final class ConsoleJobCreatorTest {
     when(moduleShardingArgsGenerator.generateShardingArgs(eq(sessionRequestInfo), any()))
         .thenReturn(ImmutableSet.of("arg1", "arg2"));
 
+    @SuppressWarnings("unchecked") // safe by specification
+    ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
+
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
         jobCreator.createXtsTradefedTestJobInfo(
             sessionRequestInfo, ImmutableList.of("mock_module"));
 
     assertThat(tradefedJobInfoList).hasSize(2);
+
+    verify(sessionRequestHandlerUtil, times(2))
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
+
+    List<Map<String, String>> capturedDriverParams = driverParamsCaptor.getAllValues();
+    assertThat(capturedDriverParams).isNotEmpty();
+    for (Map<String, String> params : capturedDriverParams) {
+      assertThat(params).containsEntry("module_sharding_enabled", "true");
+    }
   }
 
   @Test

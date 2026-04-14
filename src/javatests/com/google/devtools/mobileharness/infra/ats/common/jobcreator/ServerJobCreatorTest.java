@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -171,12 +172,19 @@ public final class ServerJobCreatorTest {
         .thenReturn(JobConfig.getDefaultInstance());
     when(moduleShardingArgsGenerator.generateShardingArgs(eq(sessionRequestInfo), any()))
         .thenReturn(ImmutableSet.of("arg1", "arg2", "arg3"));
+    @SuppressWarnings("unchecked") // safe by specification
+    ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
         jobCreator.createXtsTradefedTestJobInfo(
             sessionRequestInfo, ImmutableList.of("mock_module"));
 
     assertThat(tradefedJobInfoList).hasSize(3);
+    verify(sessionRequestHandlerUtil, times(3))
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
+    for (Map<String, String> params : driverParamsCaptor.getAllValues()) {
+      assertThat(params).containsEntry("module_sharding_enabled", "true");
+    }
   }
 
   @SuppressWarnings("unchecked")

@@ -280,6 +280,7 @@ public abstract class XtsJobCreator {
     if (SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)) {
       runCommandArgsSet =
           moduleShardingArgsGenerator.generateShardingArgs(sessionRequestInfo, tfModules);
+      driverParams.put("module_sharding_enabled", "true");
     } else {
       ImmutableList<String> moduleFilters;
       if (SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan())) {
