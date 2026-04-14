@@ -21,7 +21,10 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "common_module",
     srcs = ["CommonModule.java"],
-    visibility = ["//:deviceinfra_all_pkg"],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
+    ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/constant/inject:annotations",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
