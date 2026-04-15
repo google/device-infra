@@ -201,6 +201,9 @@ public class RemoteDeviceManagerIntegrationTest {
             .setDurationMs(10000L)
             .build());
 
+    // Waits for the listener to be notified and the scheduler to be updated.
+    Thread.sleep(500L);
+
     // 4. Submit next job WITHOUT the temp dimension.
     JobScheduleUnit job2 = createJobScheduleUnit("job2", DIMENSION_NAME, DIMENSION_VALUE);
     TestScheduleUnit test2 = createTestScheduleUnit(job2, "test2");

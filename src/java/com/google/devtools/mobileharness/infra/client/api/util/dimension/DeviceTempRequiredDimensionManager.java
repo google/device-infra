@@ -44,7 +44,7 @@ public class DeviceTempRequiredDimensionManager {
 
   private static final Duration PERIODIC_CLEANUP_INTERVAL = Duration.ofHours(1L);
 
-  /** Listener for state changes. */
+  /** Listener for state changes. Note that the listener is called asynchronously. */
   public interface Listener {
     void onDeviceTempRequiredDimensionChanged(DeviceKey deviceKey);
   }

@@ -86,6 +86,7 @@ junit_test_suites(
     name = "gen_tests",
     sizes = [
         "small",
+        "medium",
     ],
     deps = [":ats"],
 )

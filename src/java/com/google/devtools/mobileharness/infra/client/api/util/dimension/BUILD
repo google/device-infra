@@ -20,7 +20,10 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "device_temp_required_dimension_manager",
     srcs = ["DeviceTempRequiredDimensionManager.java"],
-    visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/client/api/util/dimension:__subpackages__"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api/util/dimension:__subpackages__",
+    ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
