@@ -213,35 +213,36 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
   }
 
   /** Checks whether the device is alive. Will double-check with a real-time detection. */
-  public boolean isDeviceAlive(String deviceId) throws InterruptedException {
-    return localDeviceDispatch.isDeviceAlive(deviceId, getRealtimeDetectionResult());
+  public boolean isDeviceAlive(String deviceUuid) throws InterruptedException {
+    return localDeviceDispatch.isDeviceAlive(deviceUuid, getRealtimeDetectionResult());
   }
 
   /**
-   * Gets the device runner according to its device ID.
+   * Gets the device runner according to its device control ID or UUID.
    *
    * <p>Note looking up the device runner without the device type is not safe inside the lab when
    * the device monitor is enabled. See b/23560412. So always try to use {@link
    * #getLocalDeviceRunner(String, String)} instead if possible.
    *
-   * @param deviceId ID of the device
+   * @param deviceControlIdOrUuid control ID or UUID of the device
    * @return the runner, or null if not found
    */
   @Nullable
-  public LocalDeviceRunner getLocalDeviceRunner(String deviceId) {
-    return getLocalDeviceRunner(deviceId, /* deviceType= */ null);
+  public LocalDeviceRunner getLocalDeviceRunner(String deviceControlIdOrUuid) {
+    return getLocalDeviceRunner(deviceControlIdOrUuid, /* deviceType= */ null);
   }
 
   /**
-   * Gets the device runner according to its device ID and device type.
+   * Gets the device runner according to its device control ID/UUID and device type.
    *
-   * @param deviceId ID of the device
+   * @param deviceControlIdOrUuid control ID or UUID of the device
    * @param deviceType simple class name of the device
    * @return the runner, or null if not found
    */
   @Nullable
-  public LocalDeviceRunner getLocalDeviceRunner(String deviceId, @Nullable String deviceType) {
-    LocalDeviceRunner runner = localDeviceDispatch.getDeviceRunner(deviceId);
+  public LocalDeviceRunner getLocalDeviceRunner(
+      String deviceControlIdOrUuid, @Nullable String deviceType) {
+    LocalDeviceRunner runner = localDeviceDispatch.getDeviceRunner(deviceControlIdOrUuid);
     if (runner != null) {
       if (deviceType == null || runner.getDevice().getClass().getSimpleName().equals(deviceType)) {
         return runner;
@@ -252,39 +253,41 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
 
   @Override
   @Nullable
-  public TestExecutor getTestExecutorForDeviceId(String deviceId) {
-    return getLocalDeviceRunner(deviceId);
+  public TestExecutor getTestExecutorForDeviceId(String deviceControlIdOrUuid) {
+    return getLocalDeviceRunner(deviceControlIdOrUuid);
   }
 
   @Override
-  public boolean isDirty(String deviceId) throws InterruptedException {
+  public boolean isDirty(String deviceUuid) throws InterruptedException {
     // If in lameduck mode, the device would be viewed as DIRTY instead of IDLE, which will be used
     // by master.
-    return !isDeviceAlive(deviceId);
+    return !isDeviceAlive(deviceUuid);
   }
 
   @Override
-  public Device getDeviceHelper(String deviceId) throws MobileHarnessException {
-    LocalDeviceRunner deviceRunner = getLocalDeviceRunner(deviceId);
+  public Device getDeviceHelper(String deviceControlIdOrUuid) throws MobileHarnessException {
+    LocalDeviceRunner deviceRunner = getLocalDeviceRunner(deviceControlIdOrUuid);
     if (deviceRunner == null) {
       throw new MobileHarnessException(
           InfraErrorId.LAB_RPC_EXEC_TEST_KICK_OFF_TEST_DEVICE_NOT_FOUND,
           String.format(
-              "Device runner [%s] is not found. Maybe the device is disconnected", deviceId));
+              "Device runner [%s] is not found. Maybe the device is disconnected",
+              deviceControlIdOrUuid));
     }
     return deviceRunner.getDevice();
   }
 
   @Override
   @Nullable
-  public DeviceWithStatusInfo getDeviceAndStatusInfo(String deviceId) {
-    return getDeviceAndStatusInfo(deviceId, /* deviceType= */ null);
+  public DeviceWithStatusInfo getDeviceAndStatusInfo(String deviceControlIdOrUuid) {
+    return getDeviceAndStatusInfo(deviceControlIdOrUuid, /* deviceType= */ null);
   }
 
   @Override
   @Nullable
-  public DeviceWithStatusInfo getDeviceAndStatusInfo(String deviceId, @Nullable String deviceType) {
-    LocalDeviceRunner deviceRunner = getLocalDeviceRunner(deviceId, deviceType);
+  public DeviceWithStatusInfo getDeviceAndStatusInfo(
+      String deviceControlIdOrUuid, @Nullable String deviceType) {
+    LocalDeviceRunner deviceRunner = getLocalDeviceRunner(deviceControlIdOrUuid, deviceType);
     if (deviceRunner == null) {
       return null;
     }

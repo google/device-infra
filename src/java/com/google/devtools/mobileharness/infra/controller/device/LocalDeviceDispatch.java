@@ -364,9 +364,9 @@ public class LocalDeviceDispatch {
   }
 
   /**
-   * Gets the device runner according to its device control id or uuid.
+   * Gets the device runner according to its device control ID or UUID.
    *
-   * @param deviceControlIdOrUuid ID of the device
+   * @param deviceControlIdOrUuid control ID or UUID of the device
    * @return the runner, or null if not found
    */
   @Nullable
