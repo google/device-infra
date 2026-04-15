@@ -15,6 +15,7 @@ describe('NavLink', () => {
     mockUrlService = jasmine.createSpyObj('UrlService', [
       'getExternalUrl',
       'isInEmbeddedMode',
+      'notifyNavigated',
     ]);
 
     await TestBed.configureTestingModule({
@@ -28,7 +29,7 @@ describe('NavLink', () => {
     fixture = TestBed.createComponent(NavLink);
     component = fixture.componentInstance;
     router = TestBed.inject(Router);
-    spyOn(router, 'navigate');
+    spyOn(router, 'navigate').and.returnValue(Promise.resolve(true));
   });
 
   it('should create', () => {
@@ -165,5 +166,26 @@ describe('NavLink', () => {
     fixture.detectChanges();
 
     expect(component.fullPageLink).toContain('/hosts/host1');
+  });
+
+  it('should notify parent window immediately on client-side navigation', async () => {
+    component.config = {type: 'host', hostName: 'host1', hostIp: '1.1.1.1'};
+    mockUrlService.getExternalUrl.and.returnValue(of('http://parent/host1'));
+    mockUrlService.isInEmbeddedMode.and.returnValue(true);
+    (router.navigate as jasmine.Spy).and.returnValue(Promise.resolve(true));
+    fixture.detectChanges();
+
+    const event = new MouseEvent('click');
+    component.handleClick(event);
+
+    await fixture.whenStable();
+
+    expect(mockUrlService.notifyNavigated).toHaveBeenCalledWith(
+      'host_details',
+      {
+        'host_name': 'host1',
+        'host_ip': '1.1.1.1',
+      },
+    );
   });
 });

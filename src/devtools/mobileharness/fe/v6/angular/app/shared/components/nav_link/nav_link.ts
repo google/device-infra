@@ -1,11 +1,5 @@
 import {DOCUMENT} from '@angular/common';
-import {
-  Component,
-  inject,
-  Input,
-  OnDestroy,
-  OnInit,
-} from '@angular/core';
+import {Component, inject, Input, OnDestroy, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
@@ -88,12 +82,8 @@ export class NavLink implements OnInit, OnDestroy {
       return;
     }
 
-    const page =
-      this.config.type === 'host' ? 'host_details' : 'device_details';
-    const params: Record<string, string> = {
-      'host_name': this.config.hostName,
-      'host_ip': this.config.hostIp,
-    };
+    const {page, params} = this.getNavParams();
+    // Use device_uuid for external URL calculation to maintain compatibility.
     if (this.config.type === 'device') {
       params['device_uuid'] = this.config.deviceId;
     }
@@ -149,8 +139,29 @@ export class NavLink implements OnInit, OnDestroy {
       this.routerLink,
     );
 
+    const {page, params} = this.getNavParams();
+    // Use uuid for navigation notification to match Arsenal's expectation.
+    if (this.config.type === 'device') {
+      params['uuid'] = this.config.deviceId;
+    }
+    // We notify immediately to speed up the synchronization with parent window.
+    this.urlService.notifyNavigated(page, params);
+
     this.router.navigate([this.routerLink], {
       queryParamsHandling: this.queryParamsHandling,
     });
+  }
+
+  private getNavParams(): {
+    page: 'host_details' | 'device_details';
+    params: Record<string, string>;
+  } {
+    const page =
+      this.config.type === 'host' ? 'host_details' : 'device_details';
+    const params: Record<string, string> = {
+      'host_name': this.config.hostName,
+      'host_ip': this.config.hostIp,
+    };
+    return {page, params};
   }
 }

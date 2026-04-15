@@ -23,6 +23,16 @@ export interface ExternalUrlResponse {
 }
 
 /**
+ * Interface for the message sent to the parent window when a navigation
+ * occurs in the iframe.
+ */
+export interface NavigatedMessage {
+  type: 'NAVIGATED';
+  page: 'host_details' | 'device_details';
+  params: Record<string, string>;
+}
+
+/**
  * Service to handle URL generation and cross-window communication for navigation.
  */
 @Injectable({providedIn: 'root'})
@@ -124,5 +134,30 @@ export class UrlService implements OnDestroy {
   /** Returns whether the application is running in embedded mode. */
   isInEmbeddedMode(): boolean {
     return this.isEmbeddedMode;
+  }
+
+  /**
+   * Notifies the parent window that a navigation has occurred in the iframe.
+   *
+   * @param page The identifier of the page (e.g., 'host_details', 'device_details').
+   * @param params Parameters for the current page.
+   */
+  notifyNavigated(
+    page: 'host_details' | 'device_details',
+    params: Record<string, string>,
+  ) {
+    if (!this.isEmbeddedMode || !this.win) {
+      return;
+    }
+
+    const message: NavigatedMessage = {
+      type: 'NAVIGATED',
+      page,
+      params,
+    };
+
+    const urlParams = new URLSearchParams(this.win.location.search);
+    const origin = urlParams.get('origin') || '*';
+    this.win.parent.postMessage(message, origin);
   }
 }

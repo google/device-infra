@@ -141,4 +141,39 @@ describe('UrlService', () => {
       jasmine.clock().tick(5001); // Exceed 5s timeout
     });
   });
+
+  describe('notifyNavigated', () => {
+    it('should send postMessage to parent window if in embedded mode', () => {
+      mockWin.location.search = '?is_embedded_mode=true&origin=test-origin';
+      mockWin.self = {id: 'iframe'};
+      mockWin.top = {id: 'parent'};
+      TestBed.configureTestingModule({
+        providers: [UrlService, {provide: DOCUMENT, useValue: mockDocument}],
+      });
+      service = TestBed.inject(UrlService);
+
+      service.notifyNavigated('host_details', {'host_name': 'test-host'});
+
+      expect(mockWin.parent.postMessage).toHaveBeenCalledWith(
+        {
+          type: 'NAVIGATED',
+          page: 'host_details',
+          params: {'host_name': 'test-host'},
+        },
+        'test-origin',
+      );
+    });
+
+    it('should not send postMessage to parent window if not in embedded mode', () => {
+      mockWin.location.search = '';
+      TestBed.configureTestingModule({
+        providers: [UrlService, {provide: DOCUMENT, useValue: mockDocument}],
+      });
+      service = TestBed.inject(UrlService);
+
+      service.notifyNavigated('host_details', {'host_name': 'test-host'});
+
+      expect(mockWin.parent.postMessage).not.toHaveBeenCalled();
+    });
+  });
 });
