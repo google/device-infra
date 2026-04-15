@@ -38,11 +38,13 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostReleaseInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DiagnosticLink;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DiagnosticLink.Category;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverview;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
@@ -103,6 +105,34 @@ public final class GetHostOverviewHandlerTest {
     HostOverview overview = Futures.getDone(result).getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Unknown");
     assertThat(overview.getHostName()).isEqualTo(HOST_NAME);
+
+    // Verify default states when release info is missing
+    assertThat(overview.getLabServer().getActivity().getState())
+        .isEqualTo(LabServerInfo.ActivityState.UNKNOWN);
+    assertThat(overview.getLabServer().getActivity().getTitle()).isEqualTo("Unknown");
+
+    assertThat(overview.getDaemonServer().getStatus().getState())
+        .isEqualTo(DaemonServerInfo.State.MISSING);
+    assertThat(overview.getDaemonServer().getStatus().getTitle()).isEqualTo("Missing");
+  }
+
+  @Test
+  public void getHostOverview_coreLab_returnsNotApplicable() throws Exception {
+    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(HOST_NAME), any(UniverseScope.class)))
+        .thenReturn(
+            immediateFuture(
+                Optional.of(
+                    HostReleaseInfo.builder().setLabType(Optional.of("SHARED_LAB")).build())));
+
+    HostOverview overview =
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
+            .getOverviewContent();
+
+    assertThat(overview.getLabServer().getActivity().getState())
+        .isEqualTo(LabServerInfo.ActivityState.ACTIVITY_STATE_UNSPECIFIED);
+    assertThat(overview.getLabServer().getActivity().getTitle()).isEqualTo("N/A");
+    assertThat(overview.getLabServer().getActivity().getTooltip())
+        .isEqualTo("Lab Server activity is not applicable for Core Labs.");
   }
 
   @Test

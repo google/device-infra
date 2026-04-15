@@ -28,7 +28,7 @@ import java.util.stream.Stream;
 /** Utility class for Host types. */
 public final class HostTypes {
 
-  private static final String LAB_TYPE_CORE = "Core Lab";
+  public static final String LAB_TYPE_CORE = "Core Lab";
   private static final String LAB_TYPE_FUSION = "Fusion Lab";
   private static final String LAB_TYPE_SATELLITE = "Satellite Lab";
   private static final String LAB_TYPE_SLAAS = "Satellite Lab (SLaaS)";

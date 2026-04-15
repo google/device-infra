@@ -33,13 +33,22 @@ public final class LabActivities {
    */
   public static Activity create(
       Optional<HostReleaseInfo.ComponentInfo> labReleaseOpt,
-      HostConnectivityStatus connectivityStatus) {
+      HostConnectivityStatus connectivityStatus,
+      boolean isCoreLab) {
     if (labReleaseOpt.isEmpty()) {
-      return Activity.newBuilder()
-          .setState(ActivityState.ACTIVITY_STATE_UNSPECIFIED)
-          .setTitle("N/A")
-          .setTooltip("Lab Server activity is not applicable for this host type (e.g., Core Labs).")
-          .build();
+      if (isCoreLab) {
+        return Activity.newBuilder()
+            .setState(ActivityState.ACTIVITY_STATE_UNSPECIFIED)
+            .setTitle("N/A")
+            .setTooltip("Lab Server activity is not applicable for Core Labs.")
+            .build();
+      } else {
+        return Activity.newBuilder()
+            .setState(ActivityState.UNKNOWN)
+            .setTitle("Unknown")
+            .setTooltip("Lab Server activity is unknown.")
+            .build();
+      }
     }
     String rawStatus = labReleaseOpt.get().status().orElse("UNKNOWN");
     Activity.Builder builder = Activity.newBuilder();

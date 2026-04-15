@@ -31,11 +31,19 @@ import org.junit.runners.JUnit4;
 public final class LabActivitiesTest {
 
   @Test
-  public void create_emptyReleaseInfo_returnsNotApplicable() {
+  public void create_emptyReleaseInfo_coreLab_returnsNotApplicable() {
     Activity activity =
-        LabActivities.create(Optional.empty(), HostConnectivityStatus.getDefaultInstance());
+        LabActivities.create(Optional.empty(), HostConnectivityStatus.getDefaultInstance(), true);
     assertThat(activity.getState()).isEqualTo(ActivityState.ACTIVITY_STATE_UNSPECIFIED);
     assertThat(activity.getTitle()).isEqualTo("N/A");
+  }
+
+  @Test
+  public void create_emptyReleaseInfo_nonCoreLab_returnsUnknown() {
+    Activity activity =
+        LabActivities.create(Optional.empty(), HostConnectivityStatus.getDefaultInstance(), false);
+    assertThat(activity.getState()).isEqualTo(ActivityState.UNKNOWN);
+    assertThat(activity.getTitle()).isEqualTo("Unknown");
   }
 
   @Test
@@ -44,7 +52,7 @@ public final class LabActivitiesTest {
         HostReleaseInfo.ComponentInfo.builder().setStatus("STARTING").build();
     Activity activity =
         LabActivities.create(
-            Optional.of(componentInfo), HostConnectivityStatus.getDefaultInstance());
+            Optional.of(componentInfo), HostConnectivityStatus.getDefaultInstance(), false);
     assertThat(activity.getState()).isEqualTo(ActivityState.STARTING);
     assertThat(activity.getTitle()).isEqualTo("Starting");
   }
@@ -55,7 +63,7 @@ public final class LabActivitiesTest {
         HostReleaseInfo.ComponentInfo.builder().setStatus("RUNNING").build();
     HostConnectivityStatus connectivityStatus =
         HostConnectivityStatus.newBuilder().setState(HostConnectivityStatus.State.RUNNING).build();
-    Activity activity = LabActivities.create(Optional.of(componentInfo), connectivityStatus);
+    Activity activity = LabActivities.create(Optional.of(componentInfo), connectivityStatus, false);
     assertThat(activity.getState()).isEqualTo(ActivityState.STARTED);
     assertThat(activity.getTitle()).isEqualTo("Started");
   }
@@ -66,7 +74,7 @@ public final class LabActivitiesTest {
         HostReleaseInfo.ComponentInfo.builder().setStatus("RUNNING").build();
     HostConnectivityStatus connectivityStatus =
         HostConnectivityStatus.newBuilder().setState(HostConnectivityStatus.State.MISSING).build();
-    Activity activity = LabActivities.create(Optional.of(componentInfo), connectivityStatus);
+    Activity activity = LabActivities.create(Optional.of(componentInfo), connectivityStatus, false);
     assertThat(activity.getState()).isEqualTo(ActivityState.STARTED_BUT_DISCONNECTED);
     assertThat(activity.getTitle()).isEqualTo("Started (but disconnected)");
   }
@@ -77,7 +85,7 @@ public final class LabActivitiesTest {
         HostReleaseInfo.ComponentInfo.builder().setStatus("ERROR").build();
     Activity activity =
         LabActivities.create(
-            Optional.of(componentInfo), HostConnectivityStatus.getDefaultInstance());
+            Optional.of(componentInfo), HostConnectivityStatus.getDefaultInstance(), false);
     assertThat(activity.getState()).isEqualTo(ActivityState.ERROR);
     assertThat(activity.getTitle()).isEqualTo("Error");
   }
@@ -88,7 +96,7 @@ public final class LabActivitiesTest {
         HostReleaseInfo.ComponentInfo.builder().setStatus("DRAINING").build();
     Activity activity =
         LabActivities.create(
-            Optional.of(componentInfo), HostConnectivityStatus.getDefaultInstance());
+            Optional.of(componentInfo), HostConnectivityStatus.getDefaultInstance(), false);
     assertThat(activity.getState()).isEqualTo(ActivityState.DRAINING);
     assertThat(activity.getTitle()).isEqualTo("Draining");
   }
@@ -99,7 +107,7 @@ public final class LabActivitiesTest {
         HostReleaseInfo.ComponentInfo.builder().setStatus("DRAINED").build();
     Activity activity =
         LabActivities.create(
-            Optional.of(componentInfo), HostConnectivityStatus.getDefaultInstance());
+            Optional.of(componentInfo), HostConnectivityStatus.getDefaultInstance(), false);
     assertThat(activity.getState()).isEqualTo(ActivityState.DRAINED);
     assertThat(activity.getTitle()).isEqualTo("Drained");
   }
@@ -110,7 +118,7 @@ public final class LabActivitiesTest {
         HostReleaseInfo.ComponentInfo.builder().setStatus("STOPPING").build();
     Activity activity =
         LabActivities.create(
-            Optional.of(componentInfo), HostConnectivityStatus.getDefaultInstance());
+            Optional.of(componentInfo), HostConnectivityStatus.getDefaultInstance(), false);
     assertThat(activity.getState()).isEqualTo(ActivityState.STOPPING);
     assertThat(activity.getTitle()).isEqualTo("Stopping");
   }
@@ -121,7 +129,7 @@ public final class LabActivitiesTest {
         HostReleaseInfo.ComponentInfo.builder().setStatus("STOPPED").build();
     Activity activity =
         LabActivities.create(
-            Optional.of(componentInfo), HostConnectivityStatus.getDefaultInstance());
+            Optional.of(componentInfo), HostConnectivityStatus.getDefaultInstance(), false);
     assertThat(activity.getState()).isEqualTo(ActivityState.STOPPED);
     assertThat(activity.getTitle()).isEqualTo("Stopped");
   }
@@ -132,7 +140,7 @@ public final class LabActivitiesTest {
         HostReleaseInfo.ComponentInfo.builder().setStatus("OTHER").build();
     Activity activity =
         LabActivities.create(
-            Optional.of(componentInfo), HostConnectivityStatus.getDefaultInstance());
+            Optional.of(componentInfo), HostConnectivityStatus.getDefaultInstance(), false);
     assertThat(activity.getState()).isEqualTo(ActivityState.UNKNOWN);
     assertThat(activity.getTitle()).isEqualTo("Unknown");
   }

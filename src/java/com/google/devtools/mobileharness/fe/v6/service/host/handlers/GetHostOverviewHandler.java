@@ -206,7 +206,13 @@ public final class GetHostOverviewHandler {
     if (labReleaseOpt.isPresent()) {
       labReleaseOpt.get().version().ifPresent(builder::setVersion);
     }
-    builder.setActivity(LabActivities.create(labReleaseOpt, connectivityStatus));
+
+    boolean isCoreLab =
+        HostTypes.determineLabTypeDisplayNames(
+                labInfoOpt, hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType))
+            .contains(HostTypes.LAB_TYPE_CORE);
+
+    builder.setActivity(LabActivities.create(labReleaseOpt, connectivityStatus, isCoreLab));
 
     passThroughFlagsOpt.ifPresent(builder::setPassThroughFlags);
 
@@ -222,6 +228,7 @@ public final class GetHostOverviewHandler {
     if (daemonReleaseOpt.isPresent()) {
       daemonReleaseOpt.get().version().ifPresent(builder::setVersion);
     }
+
     return builder.setStatus(DaemonStatuses.create(daemonReleaseOpt)).build();
   }
 }
