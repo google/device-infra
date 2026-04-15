@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
+import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceIdManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.TestExecutor;
@@ -77,6 +78,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.time.Duration;
+import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -192,8 +194,25 @@ public class LocalMode implements ExecMode {
           // Initializes local scheduler.
           localScheduler = new SimpleScheduler(localEnvThreadPool);
           localSchedulerFuture.set(localScheduler);
+          DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager =
+              Guice.createInjector(
+                      new AbstractModule() {
+                        @Override
+                        protected void configure() {
+                          bind(ListeningExecutorService.class).toInstance(localEnvThreadPool);
+                          bind(ListeningScheduledExecutorService.class)
+                              .toInstance(scheduledThreadPool);
+                          bind(InstantSource.class).toInstance(InstantSource.system());
+                        }
+                      })
+                  .getInstance(DeviceTempRequiredDimensionManager.class);
+          deviceTempRequiredDimensionManager.start();
           LocalDeviceManagerSchedulerSyncer localDeviceManagerSchedulerSyncer =
-              new LocalDeviceManagerSchedulerSyncer(localDeviceManager, localScheduler);
+              new LocalDeviceManagerSchedulerSyncer(
+                  localDeviceManager,
+                  localScheduler,
+                  deviceTempRequiredDimensionManager,
+                  ApiConfig.getInstance());
           ApiConfig.getInstance().addListener(localDeviceManagerSchedulerSyncer);
           // Notifies scheduler about device/test change.
           globalInternalBus.register(localDeviceManagerSchedulerSyncer);
