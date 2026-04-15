@@ -181,6 +181,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:schedule_unit",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/util/dimension:device_temp_required_dimension_manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:abstract_scheduler",
         "//src/java/com/google/devtools/mobileharness/shared/labinfo:lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",

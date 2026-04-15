@@ -64,6 +64,8 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
+import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager;
+import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager.DeviceTempRequiredDimensions;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.UpsertDeviceTempRequiredDimensionsRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceGrpc;
@@ -113,7 +115,6 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.stream.Stream;
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
@@ -126,8 +127,6 @@ class RemoteDeviceManager implements LabInfoProvider {
 
   private static final Duration LAB_AND_DEVICE_CLEANUP_INTERVAL = Duration.ofMinutes(2L);
   private static final Duration LAB_AND_DEVICE_CHECK_MISSING_INTERVAL = Duration.ofMinutes(2L);
-  private static final Duration DEVICE_TEMP_REQUIRED_DIMENSIONS_CLEANUP_INTERVAL =
-      Duration.ofMinutes(1L);
   private static final Duration LAB_AND_DEVICE_MISSING_TIME = Duration.ofMinutes(5L);
   private static final Duration LAB_REMOVAL_TIME =
       Flags.instance().atsLabRemovalTime.getNonNull(); // Default is 7 days.
@@ -147,6 +146,9 @@ class RemoteDeviceManager implements LabInfoProvider {
   private final LabRecordManager labRecordManager;
   private final NetUtil netUtil;
   private final InstantSource instantSource;
+  private final DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager;
+
+  private final SettableFuture<Void> firstDeviceOrTimeoutFuture = SettableFuture.create();
 
   private final Object lock = new Object();
 
@@ -159,8 +161,6 @@ class RemoteDeviceManager implements LabInfoProvider {
   @GuardedBy("lock")
   private final Map<String, DeviceKey> deviceUuids = new HashMap<>();
 
-  private final SettableFuture<Void> firstDeviceOrTimeoutFuture = SettableFuture.create();
-
   private final List<HostProperty> additionalHostProperties = new ArrayList<>();
 
   @Inject
@@ -168,13 +168,17 @@ class RemoteDeviceManager implements LabInfoProvider {
       @AtsModeAbstractScheduler AbstractScheduler scheduler,
       ListeningScheduledExecutorService scheduledThreadPool,
       LabRecordManager labRecordManager,
+      DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager,
       NetUtil netUtil,
       InstantSource instantSource) {
     this.scheduler = scheduler;
     this.scheduledThreadPool = scheduledThreadPool;
     this.labRecordManager = labRecordManager;
+    this.deviceTempRequiredDimensionManager = deviceTempRequiredDimensionManager;
     this.netUtil = netUtil;
     this.instantSource = instantSource;
+
+    this.deviceTempRequiredDimensionManager.setListener(this::onDeviceTempRequiredDimensionChanged);
   }
 
   BindableService getLabSyncService() {
@@ -201,17 +205,6 @@ class RemoteDeviceManager implements LabInfoProvider {
         Level.WARNING,
         "Error when cleaning up labs and devices");
 
-    // Starts device temp required dimensions cleaner.
-    logFailure(
-        scheduledThreadPool.scheduleWithFixedDelay(
-            threadRenaming(
-                this::cleanUpDeviceTempRequiredDimensions,
-                () -> "remote-device-manager-device-temp-required-dimensions-cleaner"),
-            DEVICE_TEMP_REQUIRED_DIMENSIONS_CLEANUP_INTERVAL,
-            DEVICE_TEMP_REQUIRED_DIMENSIONS_CLEANUP_INTERVAL),
-        Level.WARNING,
-        "Error when cleaning up device temp required dimensions");
-
     // Starts first device awaiter.
     logFailure(
         scheduledThreadPool.schedule(
@@ -237,7 +230,7 @@ class RemoteDeviceManager implements LabInfoProvider {
   ImmutableList<DeviceQuery.DeviceInfo> getDeviceInfos() {
     synchronized (lock) {
       return devices.values().stream()
-          .map(DeviceData::toDeviceQueryDeviceInfo)
+          .map(deviceData -> deviceData.toDeviceQueryDeviceInfo(deviceTempRequiredDimensionManager))
           .collect(toImmutableList());
     }
   }
@@ -256,35 +249,22 @@ class RemoteDeviceManager implements LabInfoProvider {
             String.format("Device not found: %s", deviceKey));
       }
 
+      DeviceTempRequiredDimensionManager.DeviceKey dtrdmDeviceKey =
+          new DeviceTempRequiredDimensionManager.DeviceKey(
+              deviceKey.labKey().labHostName(), deviceKey.deviceUuid());
+
       if (request.getDurationMs() <= 0L) {
-        deviceData.removeTempRequiredDimensions();
-        updateScheduler(deviceData);
+        deviceTempRequiredDimensionManager.removeDimensions(dtrdmDeviceKey);
         return;
       }
 
       Duration duration = Duration.ofMillis(request.getDurationMs());
-      DeviceTempRequiredDimensions tempRequiredDimensions =
-          new DeviceTempRequiredDimensions(
-              request.getTempRequiredDimensionList().stream()
-                  .collect(
-                      toImmutableListMultimap(DeviceDimension::getName, DeviceDimension::getValue)),
-              instantSource.instant().plus(duration));
-      logger.atInfo().log(
-          "Added temp required dimensions of device %s: %s", deviceKey, tempRequiredDimensions);
-      deviceData.tempRequiredDimensions = tempRequiredDimensions;
-      updateScheduler(deviceData);
+      ImmutableListMultimap<String, String> dimensions =
+          request.getTempRequiredDimensionList().stream()
+              .collect(
+                  toImmutableListMultimap(DeviceDimension::getName, DeviceDimension::getValue));
 
-      // Schedules a task to remove the temp required dimensions.
-      logFailure(
-          scheduledThreadPool.schedule(
-              threadRenaming(
-                  new DeviceTempRequiredDimensionsRemover(deviceKey, tempRequiredDimensions),
-                  () -> "remote-device-manager-device-temp-required-dimensions-remover"),
-              duration),
-          Level.WARNING,
-          "Error when removing temp required dimensions of device %s: %s",
-          deviceKey,
-          tempRequiredDimensions);
+      deviceTempRequiredDimensionManager.addDimensions(dtrdmDeviceKey, dimensions, duration);
     }
   }
 
@@ -305,11 +285,14 @@ class RemoteDeviceManager implements LabInfoProvider {
                               .setLabInfo(entry.getValue().createLabInfo())));
 
       // Filters devices.
-      DevicePredicate devicePredicate = new DevicePredicate(filter.getDeviceFilter());
+      DevicePredicate devicePredicate =
+          new DevicePredicate(filter.getDeviceFilter(), deviceTempRequiredDimensionManager);
       for (DeviceData deviceData : devices.values()) {
         LabQueryProto.LabData.Builder labBuilder = filteredLabs.get(deviceData.deviceKey.labKey());
         if (labBuilder != null && devicePredicate.test(deviceData)) {
-          labBuilder.getDeviceListBuilder().addDeviceInfo(deviceData.toLabQueryDeviceInfo());
+          labBuilder
+              .getDeviceListBuilder()
+              .addDeviceInfo(deviceData.toLabQueryDeviceInfo(deviceTempRequiredDimensionManager));
         }
       }
     }
@@ -466,7 +449,8 @@ class RemoteDeviceManager implements LabInfoProvider {
           }
 
           updateScheduler(deviceData);
-          labRecordManager.addDeviceRecordIfDeviceInfoChanged(deviceData.createDeviceRecordData());
+          labRecordManager.addDeviceRecordIfDeviceInfoChanged(
+              deviceData.createDeviceRecordData(deviceTempRequiredDimensionManager));
         }
         labRecordManager.addLabRecordIfLabInfoChanged(labData.createLabRecordData());
       }
@@ -520,7 +504,8 @@ class RemoteDeviceManager implements LabInfoProvider {
           }
 
           updateScheduler(deviceData);
-          labRecordManager.addDeviceRecordIfDeviceInfoChanged(deviceData.createDeviceRecordData());
+          labRecordManager.addDeviceRecordIfDeviceInfoChanged(
+              deviceData.createDeviceRecordData(deviceTempRequiredDimensionManager));
         }
       }
 
@@ -658,7 +643,7 @@ class RemoteDeviceManager implements LabInfoProvider {
       case IDLE:
         // Adds device to scheduler if it is IDLE.
         scheduler.upsertDevice(
-            deviceData.getDataFromLabWithTempRequiredDimensions(),
+            deviceData.getDataFromLabWithTempRequiredDimensions(deviceTempRequiredDimensionManager),
             new LabScheduleUnit(deviceData.dataFromLab.locator().labLocator()));
         break;
       case BUSY:
@@ -669,6 +654,17 @@ class RemoteDeviceManager implements LabInfoProvider {
         scheduler.unallocate(
             deviceData.dataFromLab.locator(), /* removeDevices= */ true, /* closeTest= */ true);
         break;
+    }
+  }
+
+  private void onDeviceTempRequiredDimensionChanged(
+      DeviceTempRequiredDimensionManager.DeviceKey dtrdmDeviceKey) {
+    synchronized (lock) {
+      DeviceKey deviceKey = DeviceKey.of(dtrdmDeviceKey.labHostName(), dtrdmDeviceKey.deviceUuid());
+      DeviceData deviceData = devices.get(deviceKey);
+      if (deviceData != null) {
+        updateScheduler(deviceData);
+      }
     }
   }
 
@@ -757,20 +753,6 @@ class RemoteDeviceManager implements LabInfoProvider {
     }
     Duration cleanupTime = Duration.between(timestamp, instantSource.instant());
     logger.atInfo().log("Labs/devices cleanup finished, time_used=%s", cleanupTime);
-  }
-
-  private void cleanUpDeviceTempRequiredDimensions() {
-    logger.atInfo().log("Cleaning up device temp required dimensions");
-    Instant timestamp = instantSource.instant();
-    synchronized (lock) {
-      for (DeviceData deviceData : devices.values()) {
-        if (deviceData.tempRequiredDimensions != null
-            && timestamp.isAfter(deviceData.tempRequiredDimensions.expireTime())) {
-          deviceData.removeTempRequiredDimensions();
-          updateScheduler(deviceData);
-        }
-      }
-    }
   }
 
   /**
@@ -903,48 +885,17 @@ class RemoteDeviceManager implements LabInfoProvider {
     }
   }
 
-  private record DeviceTempRequiredDimensions(
-      ImmutableListMultimap<String, String> dimensions, Instant expireTime) {
-
-    @Nonnull
-    @Override
-    public String toString() {
-      return String.format("dimensions=%s, expire_time=%s", dimensions, expireTime);
-    }
-  }
-
-  private class DeviceTempRequiredDimensionsRemover implements Runnable {
-
-    private final DeviceKey deviceKey;
-    private final DeviceTempRequiredDimensions targetDimensions;
-
-    private DeviceTempRequiredDimensionsRemover(
-        DeviceKey deviceKey, DeviceTempRequiredDimensions targetDimensions) {
-      this.deviceKey = deviceKey;
-      this.targetDimensions = targetDimensions;
-    }
-
-    @Override
-    public void run() {
-      synchronized (lock) {
-        DeviceData deviceData = devices.get(deviceKey);
-        if (deviceData != null && targetDimensions.equals(deviceData.tempRequiredDimensions)) {
-          deviceData.removeTempRequiredDimensions();
-          updateScheduler(deviceData);
-        }
-      }
-    }
-  }
-
   /** All access to this class must be guarded by {@link #lock}. */
   private static class DeviceData {
 
     private final DeviceKey deviceKey;
+    private final DeviceTempRequiredDimensionManager.DeviceKey dtrdmDeviceKey;
 
-    /** Use {@link #getDataFromLabWithTempRequiredDimensions()} to get merged data. */
+    /**
+     * Use {@link #getDataFromLabWithTempRequiredDimensions(DeviceTempRequiredDimensionManager)} to
+     * get merged data.
+     */
     private DeviceScheduleUnit dataFromLab;
-
-    @Nullable private DeviceTempRequiredDimensions tempRequiredDimensions;
 
     /** Lab-side timestamp that is corresponding to {@link #dataFromLab}. */
     private Instant dataFromLabTimestamp;
@@ -970,6 +921,9 @@ class RemoteDeviceManager implements LabInfoProvider {
         DeviceKey deviceKey, LabLocator labLocator, SignUpLabRequest.Device device, Instant now) {
       Instant timestamp = Instant.ofEpochMilli(device.getTimestampMs());
       this.deviceKey = deviceKey;
+      this.dtrdmDeviceKey =
+          new DeviceTempRequiredDimensionManager.DeviceKey(
+              deviceKey.labKey().labHostName(), deviceKey.deviceUuid());
 
       // Sets dataFromLab.
       this.dataFromLab = new DeviceScheduleUnit(DeviceLocator.of(device.getUuid(), labLocator));
@@ -1092,45 +1046,42 @@ class RemoteDeviceManager implements LabInfoProvider {
       this.statusFromLab = DeviceStatus.MISSING;
     }
 
-    private void removeTempRequiredDimensions() {
-      if (tempRequiredDimensions == null) {
-        return;
-      }
-      logger.atInfo().log(
-          "Removed temp required dimensions of device %s: %s", deviceKey, tempRequiredDimensions);
-      tempRequiredDimensions = null;
-    }
-
-    private DeviceScheduleUnit getDataFromLabWithTempRequiredDimensions() {
-      if (tempRequiredDimensions == null) {
+    private DeviceScheduleUnit getDataFromLabWithTempRequiredDimensions(
+        DeviceTempRequiredDimensionManager manager) {
+      Optional<DeviceTempRequiredDimensions> dimensions = manager.getDimensions(dtrdmDeviceKey);
+      if (dimensions.isEmpty()) {
         return dataFromLab;
       }
       DeviceScheduleUnit result = (DeviceScheduleUnit) dataFromLab.clone();
-      tempRequiredDimensions
+      dimensions
+          .get()
           .dimensions()
           .forEach((name, value) -> result.dimensions().required().add(name, value));
       return result;
     }
 
-    private LabRecordManager.DeviceRecordData createDeviceRecordData() {
+    private LabRecordManager.DeviceRecordData createDeviceRecordData(
+        DeviceTempRequiredDimensionManager manager) {
       return LabRecordManager.DeviceRecordData.create(
           updateFromLabLocalTimestamp,
           dataFromLab.locator(),
           deviceKey.deviceUuid(),
-          getDataFromLabWithTempRequiredDimensions(),
+          getDataFromLabWithTempRequiredDimensions(manager),
           statusFromLab);
     }
 
-    private LabQueryProto.DeviceInfo toLabQueryDeviceInfo() {
+    private LabQueryProto.DeviceInfo toLabQueryDeviceInfo(
+        DeviceTempRequiredDimensionManager manager) {
       return LabQueryProto.DeviceInfo.newBuilder()
           .setDeviceLocator(dataFromLab.locator().toProto())
           .setDeviceStatus(statusFromLab)
-          .setDeviceFeature(getDataFromLabWithTempRequiredDimensions().toFeature())
+          .setDeviceFeature(getDataFromLabWithTempRequiredDimensions(manager).toFeature())
           .build();
     }
 
-    private DeviceQuery.DeviceInfo toDeviceQueryDeviceInfo() {
-      DeviceScheduleUnit data = getDataFromLabWithTempRequiredDimensions();
+    private DeviceQuery.DeviceInfo toDeviceQueryDeviceInfo(
+        DeviceTempRequiredDimensionManager manager) {
+      DeviceScheduleUnit data = getDataFromLabWithTempRequiredDimensions(manager);
       DeviceQuery.DeviceInfo.Builder deviceInfo =
           DeviceQuery.DeviceInfo.newBuilder()
               .setId(data.locator().id())
@@ -1215,8 +1166,12 @@ class RemoteDeviceManager implements LabInfoProvider {
   private static class DevicePredicate implements Predicate<DeviceData> {
 
     private final ImmutableList<Predicate<DeviceData>> deviceMatchers;
+    private final DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager;
 
-    private DevicePredicate(DeviceFilter deviceFilter) {
+    private DevicePredicate(
+        DeviceFilter deviceFilter,
+        DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager) {
+      this.deviceTempRequiredDimensionManager = deviceTempRequiredDimensionManager;
       this.deviceMatchers = createDeviceMatchers(deviceFilter);
     }
 
@@ -1225,15 +1180,13 @@ class RemoteDeviceManager implements LabInfoProvider {
       return deviceMatchers.stream().allMatch(deviceMatcher -> deviceMatcher.test(deviceData));
     }
 
-    private static ImmutableList<Predicate<DeviceData>> createDeviceMatchers(
-        DeviceFilter deviceFilter) {
+    private ImmutableList<Predicate<DeviceData>> createDeviceMatchers(DeviceFilter deviceFilter) {
       return deviceFilter.getDeviceMatchConditionList().stream()
-          .map(DevicePredicate::createDeviceMatcher)
+          .map(this::createDeviceMatcher)
           .collect(toImmutableList());
     }
 
-    private static Predicate<DeviceData> createDeviceMatcher(
-        DeviceMatchCondition deviceMatchCondition) {
+    private Predicate<DeviceData> createDeviceMatcher(DeviceMatchCondition deviceMatchCondition) {
       return switch (deviceMatchCondition.getConditionCase()) {
         case DEVICE_UUID_MATCH_CONDITION ->
             createStringMatcher(
@@ -1267,9 +1220,9 @@ class RemoteDeviceManager implements LabInfoProvider {
                       ImmutableListMultimap.<String, String>builder()
                           .putAll(deviceData.dataFromLab.dimensions().supported().getAll())
                           .putAll(deviceData.dataFromLab.dimensions().required().getAll());
-                  if (deviceData.tempRequiredDimensions != null) {
-                    builder.putAll(deviceData.tempRequiredDimensions.dimensions());
-                  }
+                  deviceTempRequiredDimensionManager
+                      .getDimensions(deviceData.dtrdmDeviceKey)
+                      .ifPresent(dimensions -> builder.putAll(dimensions.dimensions()));
                   return builder.build();
                 });
         default -> deviceData -> true;
