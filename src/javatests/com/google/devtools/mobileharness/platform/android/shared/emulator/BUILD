@@ -15,6 +15,22 @@
 
 load("@rules_java//java:java_test.bzl", "java_test")
 
+package(default_applicable_licenses = ["//:license"])
+
+java_test(
+    name = "CloudOrchestratorClientTest",
+    size = "small",
+    srcs = ["CloudOrchestratorClientTest.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/shared/emulator:cloud_orchestrator_client",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:com_google_http_client_google_http_client",
+        "@maven//:com_squareup_okhttp3_mockwebserver",
+        "@maven//:junit_junit",
+    ],
+)
+
 java_test(
     name = "AndroidJitEmulatorUtilTest",
     size = "small",

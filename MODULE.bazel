@@ -144,6 +144,7 @@ maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
         "com.google.truth.extensions:truth-java8-extension:1.4.5",
         "com.google.truth.extensions:truth-liteproto-extension:1.4.5",
         "com.google.truth.extensions:truth-proto-extension:1.4.5",
+        "com.squareup.okhttp3:mockwebserver:4.12.0",
         "junit:junit:4.13.2",
         "org.mockito:mockito-core:4.11.0",
     ]]

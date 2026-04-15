@@ -43,3 +43,25 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "cloud_orchestrator_client",
+    srcs = [
+        "CloudOrchestratorClient.java",
+        "CloudOrchestratorMessages.java",
+    ],
+    visibility = [
+        "//javatests/com/google/wireless/qa/mobileharness/shared/api/device:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/shared/emulator:__subpackages__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent/retry",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_http_client_google_http_client",
+        "@maven//:com_google_http_client_google_http_client_gson",
+    ],
+)
