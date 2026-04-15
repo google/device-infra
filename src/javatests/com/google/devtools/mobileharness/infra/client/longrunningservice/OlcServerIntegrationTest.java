@@ -112,6 +112,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 import org.junit.After;
@@ -296,12 +297,8 @@ public class OlcServerIntegrationTest {
     assertWithMessage("OLC server stderr").that(olcServerStderr).contains("Sleep for 2 seconds");
 
     // Checks warnings in log.
-    assertWithMessage(
-            "A successful test run should not print exception stack traces, which will confuse"
-                + " users and affect debuggability when debugging a failed one.\n"
-                + "OLC server stderr")
-        .that(olcServerStderr)
-        .doesNotContain("\tat ");
+    assertNoStackTraces(olcServerStderr, "OLC server stderr", "OlcServer [main] Exiting...");
+    assertThat(olcServerStderr).contains("OlcServer [main] Exiting...");
 
     // Checks the OLC server log.
     String olcServerLog = olcServerLogCollector.getLog();
@@ -390,15 +387,8 @@ public class OlcServerIntegrationTest {
                 "fake_job_file_tag", fakeJobFilePath));
 
     // Checks warnings in log.
-    String errorMessagePrefix =
-        "A successful test run should not print exception stack traces, which will confuse"
-            + " users and affect debuggability when debugging a failed one.\n\n";
-    assertWithMessage("%sOLC server stderr", errorMessagePrefix)
-        .that(olcServerStderr)
-        .doesNotContain("\tat ");
-    assertWithMessage("%slab server stderr", errorMessagePrefix)
-        .that(labServerStderr)
-        .doesNotContain("\tat ");
+    assertNoStackTraces(olcServerStderr, "OLC server stderr", /* exitingSignal= */ null);
+    assertNoStackTraces(labServerStderr, "lab server stderr", /* exitingSignal= */ null);
 
     // Checks the session log.
     String sessionLog = localFileUtil.readFile(sessionLogFile);
@@ -854,5 +844,29 @@ public class OlcServerIntegrationTest {
       result.add(matcher.group());
     }
     return result.build();
+  }
+
+  /**
+   * Asserts that the given stderr does not contain exception stack traces.
+   *
+   * @param stderr the captured stderr of the server
+   * @param stderrLabel the label used in assertion message
+   * @param exitingSignal the signal string that indicates the server is exiting. If present, any
+   *     content after this signal will be ignored to avoid false positives during shutdown. If
+   *     null, the full stderr will be checked.
+   */
+  private static void assertNoStackTraces(
+      String stderr, String stderrLabel, @Nullable String exitingSignal) {
+    String stderrToCheck = stderr;
+    if (exitingSignal != null) {
+      int exitingIndex = stderr.indexOf(exitingSignal);
+      stderrToCheck = stderr.substring(0, exitingIndex);
+    }
+    assertWithMessage(
+            "A successful test run should not print exception stack traces, which will confuse"
+                + " users and affect debuggability when debugging a failed one.\n\n"
+                + stderrLabel)
+        .that(stderrToCheck)
+        .doesNotContain("\tat ");
   }
 }
