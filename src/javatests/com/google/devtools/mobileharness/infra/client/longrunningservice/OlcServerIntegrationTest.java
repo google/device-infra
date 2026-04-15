@@ -239,6 +239,8 @@ public class OlcServerIntegrationTest {
                 .setNoOpDriverSleepTimeSec(2)
                 .putJobDeviceDimensions("control_id", deviceControlId)
                 .putJobDeviceDimensions("fake_dimension_name", "fake_dimension_value")
+                .putJobDeviceDimensions(
+                    "fake_required_dimension_name", "fake_required_dimension_value")
                 .build());
     CreateSessionResponse createSessionResponse = sessionStub.createSession(createSessionRequest);
     SessionId sessionId = createSessionResponse.getSessionId();

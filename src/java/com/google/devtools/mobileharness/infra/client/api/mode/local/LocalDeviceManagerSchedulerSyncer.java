@@ -152,6 +152,7 @@ class LocalDeviceManagerSchedulerSyncer implements ApiConfigListener {
     deviceUnit.drivers().addAll(device.getDriverTypes());
     deviceUnit.decorators().addAll(device.getDecoratorTypes());
     deviceUnit.dimensions().supported().addAll(device.getDimensions());
+    deviceUnit.dimensions().required().addAll(device.getRequiredDimensions());
     deviceUnit.owners().addAll(apiConfig.getOwners(deviceId));
 
     DeviceTempRequiredDimensionManager.DeviceKey deviceKey =
