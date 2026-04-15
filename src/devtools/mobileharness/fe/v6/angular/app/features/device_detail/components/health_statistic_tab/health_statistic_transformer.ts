@@ -211,10 +211,13 @@ export function getHealthDetailChartData(
   if (!stats) return createEmptyChartData();
 
   const allCategories = new Set<string>();
-  for (const day of stats.dailyStats) {
-    collectCategories(day.healthinessSummary.inServiceBreakdown, allCategories);
+  for (const day of stats.dailyStats || []) {
     collectCategories(
-      day.healthinessSummary.outOfServiceBreakdown,
+      day.healthinessSummary?.inServiceBreakdown || [],
+      allCategories,
+    );
+    collectCategories(
+      day.healthinessSummary?.outOfServiceBreakdown || [],
       allCategories,
     );
   }
@@ -263,8 +266,8 @@ export function getHealthDetailChartData(
           breakdownMap[item.category.toUpperCase()] = item.percent ?? 0;
         }
       };
-      addToMap(d.healthinessSummary.inServiceBreakdown);
-      addToMap(d.healthinessSummary.outOfServiceBreakdown);
+      addToMap(d.healthinessSummary?.inServiceBreakdown || []);
+      addToMap(d.healthinessSummary?.outOfServiceBreakdown || []);
 
       states.forEach((state) => {
         row.push(breakdownMap[state.toUpperCase()] || 0);
@@ -286,8 +289,8 @@ export function getTestResultChartData(
   const dailyStats = stats.dailyStats || [];
   const existingCategories = new Set(
     dailyStats
-      .flatMap((day) => day.categoryStats)
-      .filter((stat) => stat.stats.count && stat.stats.count > 0)
+      .flatMap((day) => day.categoryStats || [])
+      .filter((stat) => stat.stats?.count && stat.stats.count > 0)
       .map((stat) => stat.category),
   );
 
@@ -322,7 +325,7 @@ export function getTestResultChartData(
     (d, date) => {
       const row: Array<Date | number | null | {v: number; f: string}> = [date];
       const statsMap = new Map(
-        d.categoryStats.map((s) => [s.category, s.stats]),
+        (d.categoryStats || []).map((s) => [s.category, s.stats]),
       );
 
       sortedCategories.forEach((cat) => {
@@ -353,11 +356,9 @@ export function getRecoveryTaskChartData(
   const dailyStats = stats.dailyStats || [];
   const existingCategories = new Set(
     dailyStats
-      .flatMap((day) => day.categoryStats)
+      .flatMap((day) => day.categoryStats || [])
       .filter((stat) => stat.stats?.count && stat.stats.count > 0)
-      .map(
-        (stat) => stat.category ?? 'RECOVERY_OUTCOME_CATEGORY_UNSPECIFIED',
-      ),
+      .map((stat) => stat.category ?? 'RECOVERY_OUTCOME_CATEGORY_UNSPECIFIED'),
   );
 
   const sortedCategories = (
@@ -391,7 +392,7 @@ export function getRecoveryTaskChartData(
     (d, date) => {
       const row: Array<Date | number | null | {v: number; f: string}> = [date];
       const statsMap = new Map(
-        d.categoryStats.map((s) => [s.category, s.stats]),
+        (d.categoryStats || []).map((s) => [s.category, s.stats]),
       );
 
       sortedCategories.forEach((cat) => {
@@ -428,7 +429,7 @@ export function transformHealthStatsToTable(
       color: '#1e8e3e',
       type: 'summary' as const,
     },
-    ...stats.inServiceBreakdown
+    ...(stats.inServiceBreakdown || [])
       .filter((item) => item.percent && item.percent > 0)
       .map((item) => ({
         label: item.category.toUpperCase(),
@@ -442,7 +443,7 @@ export function transformHealthStatsToTable(
       color: '#d93025',
       type: 'summary' as const,
     },
-    ...stats.outOfServiceBreakdown
+    ...(stats.outOfServiceBreakdown || [])
       .filter((item) => item.percent && item.percent > 0)
       .map((item) => ({
         label:
@@ -496,8 +497,8 @@ export function transformHealthStatsToCharts(
   const minorColors: string[] = [];
 
   const allBreakdown = [
-    ...stats.inServiceBreakdown,
-    ...stats.outOfServiceBreakdown,
+    ...(stats.inServiceBreakdown || []),
+    ...(stats.outOfServiceBreakdown || []),
   ];
 
   allBreakdown.forEach((item) => {
@@ -538,7 +539,7 @@ export function transformTestStatsToTable(
 
   // Helper to add groups
   const addGroup = (group: TestResultGroup, color: string) => {
-    if (!group || !group.totalStats.count) return;
+    if (!group || !group.totalStats?.count) return;
 
     items.push({
       label: group.displayName,
@@ -588,7 +589,7 @@ export function transformTestStatsToCharts(
 
   const majorColors: string[] = [];
   if (
-    stats.completionGroup.totalStats.count &&
+    stats.completionGroup?.totalStats?.count &&
     stats.completionGroup.totalStats.count > 0
   ) {
     majorData.addRow([
@@ -598,7 +599,7 @@ export function transformTestStatsToCharts(
     majorColors.push('#2E7D32');
   }
   if (
-    stats.nonCompletionGroup.totalStats.count &&
+    stats.nonCompletionGroup?.totalStats?.count &&
     stats.nonCompletionGroup.totalStats.count > 0
   ) {
     majorData.addRow([
@@ -608,7 +609,7 @@ export function transformTestStatsToCharts(
     majorColors.push('#C62828');
   }
   if (
-    stats.unknownGroup.totalStats.count &&
+    stats.unknownGroup?.totalStats?.count &&
     stats.unknownGroup.totalStats.count > 0
   ) {
     majorData.addRow([
@@ -632,9 +633,9 @@ export function transformTestStatsToCharts(
   const minorColors: string[] = [];
 
   const allBreakdown = [
-    ...(stats.completionGroup.breakdownItems ?? []),
-    ...(stats.nonCompletionGroup.breakdownItems ?? []),
-    ...(stats.unknownGroup.breakdownItems ?? []),
+    ...(stats.completionGroup?.breakdownItems ?? []),
+    ...(stats.nonCompletionGroup?.breakdownItems ?? []),
+    ...(stats.unknownGroup?.breakdownItems ?? []),
   ];
 
   allBreakdown.forEach((item) => {

@@ -127,18 +127,28 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
   );
 
   healthDataSource = computed(() => {
-    return transformHealthStatsToTable(
-      this.healthinessStats()?.aggregatedStats,
-    );
+    try {
+      return transformHealthStatsToTable(
+        this.healthinessStats()?.aggregatedStats,
+      );
+    } catch (e) {
+      console.error('Error transforming health stats to table:', e);
+      return [];
+    }
   });
 
   private readonly healthBreakdownChartsData = computed(() => {
     if (!this.chartsLibraryLoaded()) {
       return [];
     }
-    return transformHealthStatsToCharts(
-      this.healthinessStats()?.aggregatedStats,
-    );
+    try {
+      return transformHealthStatsToCharts(
+        this.healthinessStats()?.aggregatedStats,
+      );
+    } catch (e) {
+      console.error('Error transforming health stats to charts:', e);
+      return [];
+    }
   });
 
   healthBreakdownCharts = computed(() => {
@@ -147,7 +157,12 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
 
   // New Computed Signals for Health Charts
   readonly healthSummaryChartData = computed(() => {
-    return getHealthSummaryChartData(this.healthinessStats());
+    try {
+      return getHealthSummaryChartData(this.healthinessStats());
+    } catch (e) {
+      console.error('Error getting health summary chart data:', e);
+      return {columns: [], rows: [], options: {}, hasData: false};
+    }
   });
 
   readonly healthSummaryHasData = computed(
@@ -155,7 +170,12 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
   );
 
   readonly healthDetailChartData = computed(() => {
-    return getHealthDetailChartData(this.healthinessStats());
+    try {
+      return getHealthDetailChartData(this.healthinessStats());
+    } catch (e) {
+      console.error('Error getting health detail chart data:', e);
+      return {columns: [], rows: [], options: {}, hasData: false};
+    }
   });
 
   readonly healthDetailHasData = computed(
@@ -190,14 +210,24 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
   );
 
   testDataSource = computed(() => {
-    return transformTestStatsToTable(this.testResultStats()?.summary);
+    try {
+      return transformTestStatsToTable(this.testResultStats()?.summary);
+    } catch (e) {
+      console.error('Error transforming test stats to table:', e);
+      return [];
+    }
   });
 
   private readonly testBreakdownChartsData = computed(() => {
     if (!this.chartsLibraryLoaded()) {
       return [];
     }
-    return transformTestStatsToCharts(this.testResultStats()?.summary);
+    try {
+      return transformTestStatsToCharts(this.testResultStats()?.summary);
+    } catch (e) {
+      console.error('Error transforming test stats to charts:', e);
+      return [];
+    }
   });
 
   testBreakdownCharts = computed(() => {
@@ -205,7 +235,12 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
   });
 
   readonly testChartData = computed(() => {
-    return getTestResultChartData(this.testResultStats());
+    try {
+      return getTestResultChartData(this.testResultStats());
+    } catch (e) {
+      console.error('Error getting test result chart data:', e);
+      return {columns: [], rows: [], options: {}, hasData: false};
+    }
   });
 
   readonly testHasData = computed(() => this.testChartData().hasData);
@@ -238,14 +273,24 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
   );
 
   recoveryDataSource = computed(() => {
-    return transformRecoveryStatsToTable(this.recoveryTaskStats()?.summary);
+    try {
+      return transformRecoveryStatsToTable(this.recoveryTaskStats()?.summary);
+    } catch (e) {
+      console.error('Error transforming recovery stats to table:', e);
+      return [];
+    }
   });
 
   private readonly recoveryBreakdownChartsData = computed(() => {
     if (!this.chartsLibraryLoaded()) {
       return [];
     }
-    return transformRecoveryStatsToCharts(this.recoveryTaskStats()?.summary);
+    try {
+      return transformRecoveryStatsToCharts(this.recoveryTaskStats()?.summary);
+    } catch (e) {
+      console.error('Error transforming recovery stats to charts:', e);
+      return [];
+    }
   });
 
   recoveryBreakdownCharts = computed(() => {
@@ -253,7 +298,12 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
   });
 
   readonly recoveryChartData = computed(() => {
-    return getRecoveryTaskChartData(this.recoveryTaskStats());
+    try {
+      return getRecoveryTaskChartData(this.recoveryTaskStats());
+    } catch (e) {
+      console.error('Error getting recovery task chart data:', e);
+      return {columns: [], rows: [], options: {}, hasData: false};
+    }
   });
 
   readonly recoveryHasData = computed(() => this.recoveryChartData().hasData);
