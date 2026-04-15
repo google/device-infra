@@ -16,8 +16,40 @@
 
     <!-- Global styles -->
     <link rel="stylesheet" href="styles.css" />
+    <style>
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      .initial-loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        font-family: Roboto, "Helvetica Neue", sans-serif;
+      }
+      .initial-loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      .initial-loading-text {
+        margin-top: 20px;
+        font-size: 18px;
+        color: #555;
+      }
+    </style>
   </head>
   <body>
-    <app-root></app-root>
+    <app-root>
+      <div class="initial-loading-container">
+        <div class="initial-loading-spinner"></div>
+        <div class="initial-loading-text">Loading OmniLab Console...</div>
+      </div>
+    </app-root>
   </body>
 </html>

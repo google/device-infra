@@ -13,7 +13,8 @@ import {MatMenuModule} from '@angular/material/menu';
 import {Title} from '@angular/platform-browser';
 import {ActivatedRoute, RouterModule} from '@angular/router';
 import {combineLatest, Observable, of, ReplaySubject} from 'rxjs';
-import {catchError, map, switchMap, takeUntil} from 'rxjs/operators';
+import {catchError, map, switchMap, takeUntil, tap} from 'rxjs/operators';
+import {LoadingService} from 'app/shared/services/loading_service';
 
 import {HostOverviewPageData} from '../../core/models/host_overview';
 import {HOST_SERVICE} from '../../core/services/host/host_service';
@@ -56,6 +57,7 @@ export class HostDetail implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly hostService = inject(HOST_SERVICE);
   private readonly titleService = inject(Title);
+  private readonly loadingService = inject(LoadingService);
   private readonly destroyed = new ReplaySubject<void>(1);
   private readonly clipboardService = inject(ClipboardService);
   private readonly snackBar = inject(SnackBarService);
@@ -71,8 +73,10 @@ export class HostDetail implements OnInit, OnDestroy {
 
   readonly hostPageData$: Observable<HostPageData> = this.route.paramMap.pipe(
     map((params) => params.get('hostName')),
+    tap(() => { this.loadingService.show(); }),
     switchMap((hostName: string | null) => {
       if (!hostName) {
+        this.loadingService.hide();
         return of<HostPageData>({
           hostOverviewPageData: null,
           error: 'No host name provided in the route.',
@@ -90,6 +94,7 @@ export class HostDetail implements OnInit, OnDestroy {
             error: `Failed to load host data for host: ${hostName}. ${err.message || ''}`,
           });
         }),
+        tap(() => { this.loadingService.hide(); }),
       );
     }),
   );

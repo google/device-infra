@@ -11,8 +11,8 @@
       <div class="main-card">
         <header class="card-header">
           <div class="header-device-id">
-            <a
-              [routerLink]="['/hosts', device.host.name]"
+            <a app-nav-link
+              [config]="{type: 'host', hostName: device.host.name, hostIp: device.host.ip}"
               queryParamsHandling="merge"
               class="host-link"
               title="Navigate to host: {{ device.host.name }}"
@@ -65,8 +65,8 @@
                 </div>
                 <div class="title-subtitle">
                   <span>Connected to Host:</span>
-                  <a
-                    [routerLink]="['/hosts', device.host.name]"
+                  <a app-nav-link
+                    [config]="{type: 'host', hostName: device.host.name, hostIp: device.host.ip}"
                     queryParamsHandling="merge"
                     class="host-link-inline"
                     title="{{ device.host.name }}"

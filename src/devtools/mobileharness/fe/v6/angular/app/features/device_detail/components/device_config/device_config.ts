@@ -30,6 +30,7 @@ export class DeviceConfig implements OnInit {
   readonly data = inject<{
     deviceId: string;
     hostName: string;
+    hostIp: string;
     universe?: string;
   }>(MAT_DIALOG_DATA);
   private readonly configService = inject(CONFIG_SERVICE);

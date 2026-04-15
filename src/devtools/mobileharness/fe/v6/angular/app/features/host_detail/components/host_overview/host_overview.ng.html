@@ -230,15 +230,15 @@
               <ng-container matColumnDef="id">
                 <th mat-header-cell *matHeaderCellDef>ID</th>
                 <td mat-cell *matCellDef="let element" class="limit-width">
-                  <a
-                    [routerLink]="['/devices', element.id]"
+                  <a app-nav-link
+                    [config]="{type: 'device', hostName: host.hostName, hostIp: host.ip, deviceId: element.id}"
                     queryParamsHandling="merge"
                     class="id-link truncate-text"
                     title="{{element.id}}"
                     matTooltip="{{element.id}}"
                     matTooltipPositionAtOrigin="true">
                     {{element.id}}
-                    </a>
+                  </a>
                 </td>
               </ng-container>
 

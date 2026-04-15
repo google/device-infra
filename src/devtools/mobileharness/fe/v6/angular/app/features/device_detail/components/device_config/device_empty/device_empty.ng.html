@@ -12,8 +12,8 @@
           The host for this device (<strong class="font-medium">{{ hostName }}</strong>)
           does not have a default configuration set up yet.
         </p>
-        <a
-          href="/hosts/{{ hostName }}"
+        <a app-nav-link
+          [config]="{type: 'host', hostName: hostName, hostIp: hostIp}"
           class="primary-button"
           target="_blank"
           rel="noopener noreferrer"

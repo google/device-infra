@@ -29,8 +29,8 @@ import {MatProgressBarModule} from '@angular/material/progress-bar';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatTableDataSource, MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
-import {RouterLink} from '@angular/router';
 import {map, tap} from 'rxjs/operators';
+import {NavLink} from '../../../../shared/components/nav_link/nav_link';
 
 import {ActionBarAction} from '../../../../core/constants/action_bar_config';
 import {APP_DATA, getLegacyFeUrl} from '../../../../core/models/app_data';
@@ -153,9 +153,9 @@ const STATUS_SEMANTIC_MAP: Record<string, {icon: string; colorClass: string}> =
     MatTableModule,
     MatTooltipModule,
     OverlayModule,
-    RouterLink,
     MasterDetailLayout,
     InfoCard,
+    NavLink,
     SearchableListOverlayComponent,
     OverflowList,
   ],

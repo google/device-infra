@@ -136,3 +136,9 @@
     <router-outlet></router-outlet>
   }
 }
+
+@if (loadingService.isLoading()) {
+  <div class="loading-spinner-overlay">
+    <div class="initial-loading-spinner"></div>
+  </div>
+}

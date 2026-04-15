@@ -48,10 +48,14 @@
       <button mat-button mat-dialog-close class="close-button"
         >Close</button
       >
-      <a [routerLink]="['/hosts', hostName]"
+      <!-- Link for configuring host, uses app-nav-link component -->
+      <a app-nav-link
+        [config]="{type: 'host', hostName: hostName, hostIp: hostIp}"
         queryParamsHandling="merge"
         mat-dialog-close
-        class="go-to-host-button">Go to Host Configuration</a>
+        class="go-to-host-button"
+        >Go to Host Configuration</a
+      >
     </mat-dialog-actions>
   </ng-template>
 </app-dialog>

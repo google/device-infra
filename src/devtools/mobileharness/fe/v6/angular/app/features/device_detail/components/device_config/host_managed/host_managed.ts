@@ -8,11 +8,11 @@ import {
 } from '@angular/core';
 import {MatDialogModule} from '@angular/material/dialog';
 import {RouterModule} from '@angular/router';
-
 import {DEFAULT_DEVICE_CONFIG} from '../../../../../core/constants/device_config_constants';
 import {DeviceConfig} from '../../../../../core/models/device_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
+import {NavLink} from '../../../../../shared/components/nav_link/nav_link';
 
 /**
  * Component for displaying the host-managed configuration of a device.
@@ -27,16 +27,16 @@ import {Dialog} from '../../../../../shared/components/config_common/dialog/dial
   templateUrl: './host_managed.ng.html',
   styleUrl: './host_managed.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, MatDialogModule, RouterModule, Dialog],
+  imports: [CommonModule, MatDialogModule, RouterModule, NavLink, Dialog],
 })
 export class HostManaged implements OnInit {
   private readonly configService = inject(CONFIG_SERVICE);
 
   @Input() deviceId = '';
   @Input() hostName = '';
+  @Input() hostIp = '';
 
   hostDefaultConfig: DeviceConfig = DEFAULT_DEVICE_CONFIG;
-
   ngOnInit() {
     this.configService
       .getHostDefaultDeviceConfig(this.hostName)

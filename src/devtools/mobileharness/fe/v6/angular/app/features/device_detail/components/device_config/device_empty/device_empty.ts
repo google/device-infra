@@ -20,6 +20,7 @@ import {MatInputModule} from '@angular/material/input';
 import type {DeviceConfig} from '../../../../../core/models/device_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
+import {NavLink} from '../../../../../shared/components/nav_link/nav_link';
 
 /**
  * Component for displaying the empty configuration of a device.
@@ -42,6 +43,7 @@ import {Dialog} from '../../../../../shared/components/config_common/dialog/dial
     MatInputModule,
     MatDialogModule,
     MatFormFieldModule,
+    NavLink,
     Dialog,
   ],
 })
@@ -49,6 +51,7 @@ export class DeviceEmpty implements OnInit {
   readonly data = inject<{
     deviceId: string;
     hostName: string;
+    hostIp: string;
     universe?: string;
     title: string;
   }>(MAT_DIALOG_DATA);
@@ -56,8 +59,11 @@ export class DeviceEmpty implements OnInit {
 
   private readonly configService = inject(CONFIG_SERVICE);
 
+  // Define properties for various device and host information.
+
   @Input() deviceId = this.data.deviceId;
   @Input() hostName = this.data.hostName;
+  @Input() hostIp = this.data.hostIp;
   @Input() universe = this.data.universe;
   @Input() title = this.data.title;
 

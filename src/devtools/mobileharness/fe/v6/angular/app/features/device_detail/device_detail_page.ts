@@ -14,13 +14,15 @@ import {MatMenuModule} from '@angular/material/menu';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {Title} from '@angular/platform-browser';
 import {ActivatedRoute, RouterModule} from '@angular/router';
+import {LoadingService} from 'app/shared/services/loading_service';
 import {combineLatest, Observable, of, ReplaySubject} from 'rxjs';
-import {catchError, map, switchMap, takeUntil} from 'rxjs/operators';
+import {catchError, map, switchMap, takeUntil, tap} from 'rxjs/operators';
 
 import {dateUtils} from 'app/shared/utils/date_utils';
 import {APP_DATA, getLegacyFeUrl} from '../../core/models/app_data';
 import {DeviceOverviewPageData} from '../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../core/services/device/device_service';
+import {NavLink} from '../../shared/components/nav_link/nav_link';
 import {ClipboardService} from '../../shared/services/clipboard_service';
 import {SnackBarService} from '../../shared/services/snackbar_service';
 import {DeviceActionBar} from './components/device_action_bar/device_action_bar';
@@ -49,6 +51,7 @@ declare interface DevicePageData {
     DeviceActionBar,
     HealthStatisticTab,
     MatTooltipModule,
+    NavLink,
   ],
   templateUrl: './device_detail_page.ng.html',
   styleUrl: './device_detail_page.scss',
@@ -69,6 +72,8 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
   private readonly destroyed = new ReplaySubject<void>(1);
   private readonly appData = inject(APP_DATA);
   private readonly clipboardService = inject(ClipboardService);
+  private readonly loadingService = inject(LoadingService);
+
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
 
   activeTab = signal<'overview' | 'test-history' | 'health' | 'record'>(
@@ -110,8 +115,12 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
   readonly devicePageData$: Observable<DevicePageData> =
     this.route.paramMap.pipe(
       map((params) => params.get('id')),
+      tap(() => {
+        this.loadingService.show();
+      }),
       switchMap((id) => {
         if (!id) {
+          this.loadingService.hide();
           return of<DevicePageData>({
             pageData: null,
             error: 'No device ID provided in the route.',
@@ -130,6 +139,9 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
                 err.message || ''
               }`,
             });
+          }),
+          tap(() => {
+            this.loadingService.hide();
           }),
         );
       }),

@@ -38,10 +38,12 @@ import {
   RouterModule,
 } from '@angular/router';
 // an example of using absolute path for source code import.
+import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {
   APP_DATA,
   type AppData,
 } from 'app/core/models/app_data';
+import {LoadingService} from 'app/shared/services/loading_service';
 import {ReplaySubject} from 'rxjs';
 import {filter, takeUntil} from 'rxjs/operators';
 
@@ -65,16 +67,17 @@ import {filter, takeUntil} from 'rxjs/operators';
     MatToolbarModule,
     MatTooltipModule,
     RouterModule,
+    MatProgressSpinnerModule,
   ],
 })
 export class App implements OnDestroy {
   sideNavExpanded = false;
-  atsMajorVersionStr = '';
   private readonly destroy = new ReplaySubject<void>();
   private readonly route: ActivatedRoute = inject(ActivatedRoute);
   private readonly cdr: ChangeDetectorRef = inject(ChangeDetectorRef);
   private readonly router: Router = inject(Router);
   readonly appData: AppData = inject(APP_DATA);
+  readonly loadingService = inject(LoadingService);
   showVersionInfo = true;
   isEmbeddedMode = true;
   isFakeData = false;

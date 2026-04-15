@@ -140,9 +140,10 @@ export class DeviceActionBar {
   openConfiguration(): void {
     const deviceId = this.deviceId();
     const hostName = this.hostName();
+    const hostIp = this.pageData().overview.host.ip;
     const universe = this.universe;
     const dialogRef = this.dialog.open(DeviceConfig, {
-      data: {deviceId, hostName, universe},
+      data: {deviceId, hostName, hostIp, universe},
       autoFocus: false,
     });
 
@@ -152,7 +153,12 @@ export class DeviceActionBar {
       }
 
       if (result.action === 'reset') {
-        this.resetConfiguration(result.deviceId, hostName, result.universe);
+        this.resetConfiguration(
+          result.deviceId,
+          hostName,
+          hostIp,
+          result.universe,
+        );
         return;
       }
 
@@ -162,12 +168,18 @@ export class DeviceActionBar {
     });
   }
 
-  resetConfiguration(deviceId: string, hostName: string, universe?: string) {
+  resetConfiguration(
+    deviceId: string,
+    hostName: string,
+    hostIp: string,
+    universe?: string,
+  ) {
     this.dialog
       .open(DeviceEmpty, {
         data: {
           deviceId,
           hostName,
+          hostIp,
           universe,
           title:
             'You are about to clear the existing configuration for this device. Your current settings will be discarded. Please choose how you want to proceed.',
@@ -218,6 +230,7 @@ export class DeviceActionBar {
           this.resetConfiguration(
             result.deviceId,
             this.hostName(),
+            this.pageData().overview.host.ip,
             result.universe,
           );
         }
