@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.master.rpc.stub;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.AddExtraTestsRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.AddExtraTestsResponse;
@@ -109,6 +110,11 @@ public interface JobSyncStub extends AutoCloseable {
       throws RpcExceptionWithErrorId {
     return upsertDeviceTempRequiredDimensions(request);
   }
+
+  /** Upserts temp required dimensions into a device asynchronously. */
+  ListenableFuture<UpsertDeviceTempRequiredDimensionsResponse>
+      upsertDeviceTempRequiredDimensionsAsync(
+          UpsertDeviceTempRequiredDimensionsRequest request, boolean useClientRpcAuthority);
 
   /** Kill a job if it exists and is running. */
   KillJobResponse killJob(KillJobRequest request) throws RpcExceptionWithErrorId;

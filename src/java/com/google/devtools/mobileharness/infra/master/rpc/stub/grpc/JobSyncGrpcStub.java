@@ -16,10 +16,13 @@
 
 package com.google.devtools.mobileharness.infra.master.rpc.stub.grpc;
 
+import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
+
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceGrpc;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.AddExtraTestsRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.AddExtraTestsResponse;
@@ -49,8 +52,10 @@ public class JobSyncGrpcStub implements JobSyncStub {
 
   private final NonThrowingAutoCloseable closeable;
   private final BlockingInterface jobSyncGrpcBlockingStub;
+  private final FutureInterface jobSyncGrpcFutureStub;
 
   @Inject
+  @SuppressWarnings("UnnecessarilyVisible")
   public JobSyncGrpcStub(MasterGrpcStubHelper helper) {
     this(
         helper,
@@ -64,6 +69,7 @@ public class JobSyncGrpcStub implements JobSyncStub {
       FutureInterface futureStub) {
     this.closeable = closeable;
     this.jobSyncGrpcBlockingStub = blockingStub;
+    this.jobSyncGrpcFutureStub = futureStub;
   }
 
   @Override
@@ -127,6 +133,26 @@ public class JobSyncGrpcStub implements JobSyncStub {
       UpsertDeviceTempRequiredDimensionsRequest request) throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
         jobSyncGrpcBlockingStub::upsertDeviceTempRequiredDimensions,
+        request,
+        InfraErrorId.MASTER_RPC_STUB_JOB_SYNC_UPSERT_TEMP_REQUIRED_DIMENSIONS_ERROR,
+        String.format(
+            "Failed upsert temp required dimensions of device %s in lab %s",
+            request.getDeviceLocator().getId(),
+            request.getDeviceLocator().getLabLocator().getHostName()));
+  }
+
+  @Override
+  public ListenableFuture<UpsertDeviceTempRequiredDimensionsResponse>
+      upsertDeviceTempRequiredDimensionsAsync(
+          UpsertDeviceTempRequiredDimensionsRequest request, boolean useClientRpcAuthority) {
+    if (useClientRpcAuthority) {
+      return immediateFailedFuture(
+          new MobileHarnessException(
+              InfraErrorId.MASTER_RPC_STUB_JOB_SYNC_UPSERT_TEMP_REQUIRED_DIMENSIONS_ERROR,
+              "useClientRpcAuthority is not supported in gRPC stub"));
+    }
+    return GrpcStubUtil.invokeAsync(
+        jobSyncGrpcFutureStub::upsertDeviceTempRequiredDimensions,
         request,
         InfraErrorId.MASTER_RPC_STUB_JOB_SYNC_UPSERT_TEMP_REQUIRED_DIMENSIONS_ERROR,
         String.format(
