@@ -227,10 +227,7 @@ java_library(
 java_library(
     name = "compatibility_report_format",
     srcs = ["CompatibilityReportFormat.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
-    ],
+    visibility = ["//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__"],
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
