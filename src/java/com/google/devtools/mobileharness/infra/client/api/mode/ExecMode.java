@@ -21,6 +21,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver.DeviceReserver;
+import com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver.EmptyDeviceReserver;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
@@ -42,7 +43,7 @@ public interface ExecMode {
 
   /** Creates reserver for reserve devices. */
   default DeviceReserver createDeviceReserver() {
-    return new DeviceReserver() {};
+    return new EmptyDeviceReserver();
   }
 
   /** Creates a querier to query the information of the available devices/labs. */

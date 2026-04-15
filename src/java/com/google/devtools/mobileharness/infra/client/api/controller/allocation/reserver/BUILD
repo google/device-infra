@@ -19,32 +19,36 @@
 
 load("@rules_java//java:defs.bzl", "java_library")
 
-DEFAULT_VISIBILITY = [
-    "//java/com/google/devtools/mobileharness/infra/client:__subpackages__",
-    "//java/com/google/wireless/qa/mobileharness/client/api:__subpackages__",
-    "//src/java/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
-    "//javatests/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
-    "//javatests/com/google/devtools/mobileharness/platform/fitbit:__subpackages__",
-    "//javatests/com/google/wireless/qa/mobileharness/client/api:__subpackages__",
-    "//java/com/google/devtools/mobileharness/platform/fitbit/plugins:__subpackages__",
-]
-
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = DEFAULT_VISIBILITY,
+    default_visibility = [
+        "//java/com/google/devtools/mobileharness/infra/client:__subpackages__",
+        "//java/com/google/devtools/mobileharness/platform/fitbit/plugins:__subpackages__",
+        "//java/com/google/devtools/mobileharness/service/moscar:__subpackages__",
+        "//java/com/google/wireless/qa/mobileharness/client/api:__subpackages__",
+        "//javatests/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
+        "//javatests/com/google/devtools/mobileharness/platform/fitbit:__subpackages__",
+        "//javatests/com/google/devtools/mobileharness/service/moscar:__subpackages__",
+        "//javatests/com/google/wireless/qa/mobileharness/client/api:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
+    ],
 )
 
 java_library(
     name = "reserver",
-    srcs = [
-        "DeviceReserver.java",
-    ],
-    visibility = DEFAULT_VISIBILITY + [
-        "//java/com/google/devtools/mobileharness/service/moscar:__subpackages__",
-        "//javatests/com/google/devtools/mobileharness/service/moscar:__subpackages__",
-    ],
+    srcs = ["DeviceReserver.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab:locator",
+    ],
+)
+
+java_library(
+    name = "empty_reserver",
+    srcs = ["EmptyDeviceReserver.java"],
+    deps = [
+        ":reserver",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab:locator",
     ],

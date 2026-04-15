@@ -16,15 +16,15 @@
 
 package com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver;
 
-import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.time.Duration;
 
 /** For reserving devices for tests. */
-public abstract class DeviceReserver {
-  protected static final FluentLogger logger = FluentLogger.forEnclosingClass();
-  private static final Duration TEMP_ALLOCATION_KEY_TTL = Duration.ofMinutes(20);
+public interface DeviceReserver {
+
+  Duration TEMP_ALLOCATION_KEY_TTL = Duration.ofMinutes(20);
 
   /**
    * Temporarily adds allocation key to a given device.
@@ -43,12 +43,9 @@ public abstract class DeviceReserver {
    * @param allocationKey the allocation key that need to be specified by tests that attempt to
    *     allocate the device
    */
-  public void addTempAllocationKeyToDevice(DeviceLocator deviceLocator, String allocationKey)
+  default void addTempAllocationKeyToDevice(DeviceLocator deviceLocator, String allocationKey)
       throws MobileHarnessException, InterruptedException {
     addTempAllocationKeyToDevice(deviceLocator, allocationKey, TEMP_ALLOCATION_KEY_TTL);
-    logger.atInfo().log(
-        "Set temp allocation key %s to device %s with ttl %s",
-        allocationKey, deviceLocator, TEMP_ALLOCATION_KEY_TTL);
   }
 
   /**
@@ -63,10 +60,11 @@ public abstract class DeviceReserver {
    *     allocate the device
    * @param ttl the duration for the reservation
    */
-  public void addTempAllocationKeyToDevice(
+  default void addTempAllocationKeyToDevice(
       DeviceLocator deviceLocator, String allocationKey, Duration ttl)
       throws MobileHarnessException, InterruptedException {
-    logger.atWarning().log("Method [tempReserveAllocation] has no real implementation.");
+    addTempAllocationKeyToDevice(
+        deviceLocator, Dimension.Name.ALLOCATION_KEY.name(), allocationKey, ttl);
   }
 
   /**
@@ -82,12 +80,10 @@ public abstract class DeviceReserver {
    *     allocate the device
    * @param ttl the duration for the reservation
    */
-  public void addTempAllocationKeyToDevice(
+  void addTempAllocationKeyToDevice(
       DeviceLocator deviceLocator,
       String allocationDimensionName,
       String allocationKey,
       Duration ttl)
-      throws MobileHarnessException, InterruptedException {
-    logger.atWarning().log("Method [tempReserveAllocation] has no real implementation.");
-  }
+      throws MobileHarnessException, InterruptedException;
 }
