@@ -25,7 +25,7 @@ option java_multiple_files = true;
 option java_outer_classname = "AndroidGeoHttpProxyDecoratorSpecProto";
 
 // Specs for {@link AndroidGeoHttpProxyDecorator}.
-// Next tag: 2
+// Next tag: 3
 message AndroidGeoHttpProxyDecoratorSpec {
   extend DecoratorSpec {
     optional AndroidGeoHttpProxyDecoratorSpec ext = 1019;
@@ -34,5 +34,10 @@ message AndroidGeoHttpProxyDecoratorSpec {
   optional string country_code = 1 [(field_detail) = {
     is_required: true,
     help: "CLDR region code for the country to route traffic through (e.g. JP)."
+  }];
+
+  optional string credentials_file = 2 [(field_detail) = {
+    is_required: false,
+    help: "Optional path to the credentials file for the proxy."
   }];
 }
