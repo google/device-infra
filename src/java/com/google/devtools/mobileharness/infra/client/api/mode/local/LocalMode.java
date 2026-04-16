@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
+import com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver.DeviceReserver;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager;
@@ -115,6 +116,8 @@ public class LocalMode implements ExecMode {
 
   private static volatile ProxyDeviceManager proxyDeviceManager;
 
+  private static volatile DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager;
+
   /** Synchronization lock for {@link #localDeviceManager} and {@link #localScheduler}. */
   private static final Object LOCAL_ENV_LOCK = new Object();
 
@@ -194,7 +197,7 @@ public class LocalMode implements ExecMode {
           // Initializes local scheduler.
           localScheduler = new SimpleScheduler(localEnvThreadPool);
           localSchedulerFuture.set(localScheduler);
-          DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager =
+          deviceTempRequiredDimensionManager =
               Guice.createInjector(
                       new AbstractModule() {
                         @Override
@@ -278,6 +281,11 @@ public class LocalMode implements ExecMode {
   @Override
   public DeviceQuerier createDeviceQuerier() {
     return new LocalDeviceQuerier(localDeviceManagerFuture, firstDeviceLatch);
+  }
+
+  @Override
+  public DeviceReserver createDeviceReserver() {
+    return new LocalDeviceReserver(deviceTempRequiredDimensionManager);
   }
 
   @Override

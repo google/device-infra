@@ -36,6 +36,7 @@ java_library(
     deps = [
         ":device_info_filter",
         ":local_device_allocator",
+        ":local_device_reserver",
         ":local_device_verifier",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
@@ -44,6 +45,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:schedule_unit",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/allocator",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/reserver",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/dimension:device_temp_required_dimension_manager",
@@ -130,6 +132,19 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "local_device_reserver",
+    srcs = ["LocalDeviceReserver.java"],
+    visibility = ["//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/reserver",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/util/dimension:device_temp_required_dimension_manager",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab",
         "@maven//:com_google_guava_guava",
     ],
 )
