@@ -138,49 +138,17 @@ export class HostActionBar {
     this.snackBar.showInfo(`Debug action triggered for ${this.hostName}`);
   };
 
-  readonly onDeploy = () => {
-    this.snackBar.showInfo(`Deploy action triggered for ${this.hostName}`);
-  };
-
-  readonly onStart = () => {
-    this.snackBar.showInfo(`Start action triggered for ${this.hostName}`);
-  };
-
-  readonly onRestart = () => {
-    this.snackBar.showInfo(`Restart action triggered for ${this.hostName}`);
-  };
-
-  readonly onStop = () => {
-    this.snackBar.showInfo(`Stop action triggered for ${this.hostName}`);
-  };
-
   readonly onDecommission = () => {
     this.snackBar.showInfo(
       `Decommission action triggered for ${this.hostName}`,
     );
   };
 
-  readonly onUpdatePassThroughFlags = () => {
-    this.snackBar.showInfo(
-      `Update Flags action triggered for ${this.hostName}`,
-    );
-  };
-
-  readonly onRelease = () => {
-    this.snackBar.showInfo(`Release action triggered for ${this.hostName}`);
-  };
-
   showComingSoonPopup(key: string) {
     const featureMap: Record<string, ActionBarAction> = {
       'configuration': ActionBarAction.HOST_CONFIGURATION,
       'debug': ActionBarAction.HOST_DEBUG,
-      'deploy': ActionBarAction.HOST_DEPLOY,
-      'start': ActionBarAction.HOST_START,
-      'restart': ActionBarAction.HOST_RESTART,
-      'stop': ActionBarAction.HOST_STOP,
       'decommission': ActionBarAction.HOST_DECOMMISSION,
-      'updatePassThroughFlags': ActionBarAction.HOST_UPDATE_PASS_THROUGH_FLAGS,
-      'release': ActionBarAction.HOST_RELEASE,
     };
     const feature = featureMap[key];
     if (feature) {
@@ -203,21 +171,13 @@ export class HostActionBar {
 
   readonly hasXlMoreMenuItems = computed(() => {
     return (
-      this.isActionVisible('start') ||
-      this.isActionVisible('stop') ||
-      this.isActionVisible('debug') ||
-      this.isActionVisible('decommission')
+      this.isActionVisible('debug') || this.isActionVisible('decommission')
     );
   });
 
   readonly hasSmActionMenuItems = computed(() => {
     return (
-      this.isActionVisible('release') ||
-      this.isActionVisible('start') ||
-      this.isActionVisible('restart') ||
-      this.isActionVisible('stop') ||
-      this.isActionVisible('debug') ||
-      this.isActionVisible('decommission')
+      this.isActionVisible('debug') || this.isActionVisible('decommission')
     );
   });
 }

@@ -59,17 +59,6 @@ export const SCENARIO_HOST_COMING_SOON: MockHostScenario = {
   actions: {
     configuration: {enabled: true, visible: true, tooltip: '', isReady: false},
     debug: {enabled: true, visible: true, tooltip: '', isReady: false},
-    deploy: {enabled: true, visible: true, tooltip: '', isReady: false},
-    start: {enabled: true, visible: true, tooltip: '', isReady: false},
-    restart: {enabled: true, visible: true, tooltip: '', isReady: false},
-    stop: {enabled: true, visible: true, tooltip: '', isReady: false},
     decommission: {enabled: true, visible: true, tooltip: '', isReady: false},
-    updatePassThroughFlags: {
-      enabled: true,
-      visible: true,
-      tooltip: '',
-      isReady: false,
-    },
-    release: {enabled: true, visible: true, tooltip: '', isReady: false},
   },
 };

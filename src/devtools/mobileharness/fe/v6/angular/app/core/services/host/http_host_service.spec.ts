@@ -69,23 +69,12 @@ describe('HttpHostService', () => {
           isReady: true,
         },
         debug: {enabled: true, visible: true, tooltip: '', isReady: true},
-        deploy: {enabled: true, visible: true, tooltip: '', isReady: true},
-        start: {enabled: true, visible: true, tooltip: '', isReady: true},
-        restart: {enabled: true, visible: true, tooltip: '', isReady: true},
-        stop: {enabled: true, visible: true, tooltip: '', isReady: true},
         decommission: {
           enabled: false,
           visible: true,
           tooltip: '',
           isReady: true,
         },
-        updatePassThroughFlags: {
-          enabled: true,
-          visible: true,
-          tooltip: '',
-          isReady: true,
-        },
-        release: {enabled: true, visible: true, tooltip: '', isReady: true},
       },
     };
     service.getHostHeaderInfo('test-host').subscribe((info) => {

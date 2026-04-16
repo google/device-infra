@@ -23,6 +23,24 @@ describe('HostOverview Component', () => {
       },
       version: '4.175.0',
       passThroughFlags: '--pass_through_flag_1=value_1',
+      actions: {
+        release: {visible: true, enabled: true, isReady: true, tooltip: ''},
+        restart: {visible: true, enabled: true, isReady: true, tooltip: ''},
+        start: {visible: false, enabled: false, isReady: false, tooltip: ''},
+        stop: {
+          visible: true,
+          enabled: false,
+          isReady: true,
+          tooltip: 'Already stopped',
+        },
+        deploy: {visible: true, enabled: true, isReady: true, tooltip: ''},
+        updatePassThroughFlags: {
+          visible: true,
+          enabled: true,
+          isReady: true,
+          tooltip: '',
+        },
+      },
     },
     daemonServer: {
       status: {
@@ -87,12 +105,35 @@ describe('HostOverview Component', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     const chips = compiled.querySelectorAll('.lab-type-wrapper .lab-type-chip');
-
     expect(chips.length).toBe(5);
     expect(chips[0].textContent?.trim()).toBe('Lab1');
     expect(chips[1].textContent?.trim()).toBe('Lab2');
     expect(chips[2].textContent?.trim()).toBe('Lab3');
     expect(chips[3].textContent?.trim()).toBe('Lab4');
     expect(chips[4].textContent?.trim()).toBe('Lab5');
+  });
+
+  it('should display visible lab server actions', () => {
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const actionTexts = Array.from(
+      compiled.querySelectorAll(
+        '#lab-server .operation-button .operation-text',
+      ),
+      (el) => el.textContent?.trim().toLowerCase() ?? '',
+    );
+
+    expect(actionTexts).toContain('release');
+    expect(actionTexts).toContain('restart');
+    expect(actionTexts).toContain('stop');
+    expect(actionTexts).not.toContain('start');
+
+    const buttons = compiled.querySelectorAll(
+      '#lab-server .operation-button button',
+    );
+    const stopButton = Array.from(buttons).find((b) =>
+      b.textContent?.trim().toLowerCase().includes('stop'),
+    ) as HTMLButtonElement;
+    expect(stopButton.disabled).toBeTrue();
   });
 });

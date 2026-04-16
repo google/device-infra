@@ -6,9 +6,9 @@
  * uses this data to render the UI, including icons, colors, and layouts.
  */
 
-import {HealthState, SubDeviceInfo} from './device_overview';
 import {DeviceActions} from './device_action';
-import {HostHeaderInfo} from './host_action';
+import {HealthState, SubDeviceInfo} from './device_overview';
+import {HostHeaderInfo, LabServerActions} from './host_action';
 
 
 /**
@@ -82,6 +82,9 @@ export declare interface LabServerInfo {
   readonly version: string;
   /** Pass-through flags configured for the lab server. */
   passThroughFlags: string;
+
+  /** Actions available for the lab server. */
+  readonly actions?: LabServerActions;
 }
 
 /**

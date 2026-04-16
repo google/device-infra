@@ -40,15 +40,58 @@
     </div>
   </app-info-card>
   <app-info-card #overviewSection id="lab-server" title="Lab Server" [collapsible]="false">
-    @for (link of getDiagnosticLinks('LAB_SERVER'); track link.label) {
-      <div operations class="operation-button">
+    <div operations class="operation-button">
+      @if (host.labServer.actions; as actions) {
+        @if (actions.release.visible) {
+          <button
+            (click)="actions.release.isReady ? onRelease() : showComingSoonPopup('Release')"
+            [disabled]="!actions.release.enabled"
+            [matTooltip]="actions.release.tooltip"
+          >
+            <mat-icon>upgrade</mat-icon>
+            <span class="operation-text">Release</span>
+          </button>
+        }
+        @if (actions.restart.visible) {
+          <button
+            (click)="actions.restart.isReady ? onRestart() : showComingSoonPopup('Restart')"
+            [disabled]="!actions.restart.enabled"
+            [matTooltip]="actions.restart.tooltip"
+          >
+            <mat-icon>restart_alt</mat-icon>
+            <span class="operation-text">Restart</span>
+          </button>
+        }
+        @if (actions.start.visible) {
+          <button
+            (click)="actions.start.isReady ? onStart() : showComingSoonPopup('Start')"
+            [disabled]="!actions.start.enabled"
+            [matTooltip]="actions.start.tooltip"
+          >
+            <mat-icon>play_arrow</mat-icon>
+            <span class="operation-text">Start</span>
+          </button>
+        }
+        @if (actions.stop.visible) {
+          <button
+            (click)="actions.stop.isReady ? onStop() : showComingSoonPopup('Stop')"
+            [disabled]="!actions.stop.enabled"
+            [matTooltip]="actions.stop.tooltip"
+          >
+            <mat-icon>stop_circle</mat-icon>
+            <span class="operation-text">Stop</span>
+          </button>
+        }
+      }
+
+      @for (link of getDiagnosticLinks('LAB_SERVER'); track link.label) {
         <a href="{{ link.url }}" target="_blank">
           <mat-icon>article</mat-icon>
           <span class="operation-text">{{ link.label }}</span>
           <mat-icon>open_in_new</mat-icon>
         </a>
-      </div>
-    }
+      }
+    </div>
     <div class="info-card-content">
       <dl class="grid-tight">
         <dt>State</dt>
@@ -84,7 +127,7 @@
         <dt>Version</dt>
         <dd>{{ host.labServer.version }}</dd>
 
-        @if (actions?.updatePassThroughFlags; as updateFlags) {
+        @if (host.labServer.actions?.updatePassThroughFlags; as updateFlags) {
           @if (updateFlags.visible) {
             <dt>Pass Through Flags
               <mat-icon

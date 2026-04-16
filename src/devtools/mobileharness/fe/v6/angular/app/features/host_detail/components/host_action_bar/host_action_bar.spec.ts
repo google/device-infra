@@ -34,46 +34,10 @@ describe('HostActionBar', () => {
           tooltip: 'Debug tooltip',
           isReady: true,
         },
-        deploy: {
-          enabled: false,
-          visible: true,
-          tooltip: 'Deploy tooltip',
-          isReady: true,
-        },
-        start: {
-          enabled: true,
-          visible: false,
-          tooltip: 'Start tooltip',
-          isReady: true,
-        },
-        restart: {
-          enabled: true,
-          visible: true,
-          tooltip: 'Restart tooltip',
-          isReady: true,
-        },
-        stop: {
-          enabled: true,
-          visible: true,
-          tooltip: 'Stop tooltip',
-          isReady: true,
-        },
         decommission: {
           enabled: true,
           visible: true,
           tooltip: 'Decommission tooltip',
-          isReady: true,
-        },
-        updatePassThroughFlags: {
-          enabled: true,
-          visible: true,
-          tooltip: 'Flags tooltip',
-          isReady: true,
-        },
-        release: {
-          enabled: true,
-          visible: true,
-          tooltip: 'Release tooltip',
           isReady: true,
         },
       },
@@ -107,31 +71,20 @@ describe('HostActionBar', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should show visible actions and hide invisible ones', () => {
+  it('should show visible actions', () => {
     const configButton = fixture.debugElement.query(
       By.css('[data-testid="configuration-button-2xl"]'),
     );
     const debugButton = fixture.debugElement.query(
       By.css('[data-testid="debug-button-2xl"]'),
     );
-    const startButton = fixture.debugElement.query(
-      By.css('[data-testid="start-button-2xl"]'),
-    );
-    const deployButton = fixture.debugElement.query(
-      By.css('[data-testid="deploy-button-2xl"]'),
+    const decommissionButton = fixture.debugElement.query(
+      By.css('[data-testid="decommission-button-2xl"]'),
     );
 
     expect(configButton).toBeTruthy();
     expect(debugButton).toBeTruthy();
-    expect(startButton).toBeFalsy();
-    expect(deployButton).toBeFalsy();
-  });
-
-  it('should disable buttons based on enabled state', () => {
-    const restartButton = fixture.debugElement.query(
-      By.css('[data-testid="restart-button-2xl"]'),
-    );
-    expect(restartButton.nativeElement.disabled).toBeFalse();
+    expect(decommissionButton).toBeTruthy();
   });
 
   it('should trigger snackbar on action click', () => {

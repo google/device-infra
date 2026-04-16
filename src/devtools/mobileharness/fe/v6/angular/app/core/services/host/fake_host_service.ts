@@ -25,6 +25,7 @@ import {
   RemoteControlDevicesResponse,
 } from '../../models/host_overview';
 import {MOCK_HOST_SCENARIOS} from '../mock_data';
+import {createHostActions} from '../mock_data/hosts/ui_status_utils';
 import {HostService} from './host_service';
 
 /**
@@ -41,32 +42,7 @@ export class FakeHostService extends HostService {
 
   override getHostHeaderInfo(hostName: string): Observable<HostHeaderInfo> {
     const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
-    const actions = scenario?.actions || {
-      configuration: {
-        enabled: true,
-        visible: true,
-        tooltip: '',
-        isReady: true,
-      },
-      debug: {enabled: true, visible: true, tooltip: '', isReady: true},
-      deploy: {enabled: true, visible: true, tooltip: '', isReady: true},
-      start: {enabled: true, visible: true, tooltip: '', isReady: true},
-      restart: {enabled: true, visible: true, tooltip: '', isReady: true},
-      stop: {enabled: true, visible: true, tooltip: '', isReady: true},
-      decommission: {
-        enabled: false,
-        visible: true,
-        tooltip: '',
-        isReady: true,
-      },
-      updatePassThroughFlags: {
-        enabled: true,
-        visible: true,
-        tooltip: '',
-        isReady: true,
-      },
-      release: {enabled: true, visible: true, tooltip: '', isReady: true},
-    };
+    const actions = scenario?.actions || createHostActions('RUNNING', false);
 
     return of({
       hostName,
@@ -84,32 +60,7 @@ export class FakeHostService extends HostService {
   override getHostOverview(hostName: string): Observable<HostOverviewPageData> {
     const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
     if (scenario && scenario.overview) {
-      const actions = scenario.actions || {
-        configuration: {
-          enabled: true,
-          visible: true,
-          tooltip: '',
-          isReady: true,
-        },
-        debug: {enabled: true, visible: true, tooltip: '', isReady: true},
-        deploy: {enabled: true, visible: true, tooltip: '', isReady: true},
-        start: {enabled: true, visible: true, tooltip: '', isReady: true},
-        restart: {enabled: true, visible: true, tooltip: '', isReady: true},
-        stop: {enabled: true, visible: true, tooltip: '', isReady: true},
-        decommission: {
-          enabled: false,
-          visible: true,
-          tooltip: '',
-          isReady: true,
-        },
-        updatePassThroughFlags: {
-          enabled: true,
-          visible: true,
-          tooltip: '',
-          isReady: true,
-        },
-        release: {enabled: true, visible: true, tooltip: '', isReady: true},
-      };
+      const actions = scenario.actions || createHostActions('RUNNING', false);
 
       return of({
         headerInfo: {

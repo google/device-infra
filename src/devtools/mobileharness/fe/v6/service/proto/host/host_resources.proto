@@ -82,13 +82,17 @@ message HostActions {
   // TODO: Use a common type for action button state.
   device.ActionButtonState configuration = 1;
   device.ActionButtonState debug = 2;
-  device.ActionButtonState deploy = 3;
-  device.ActionButtonState start = 4;
-  device.ActionButtonState restart = 5;
-  device.ActionButtonState stop = 6;
-  device.ActionButtonState decommission = 7;
-  device.ActionButtonState update_pass_through_flags = 8;
-  device.ActionButtonState release = 9;
+  device.ActionButtonState decommission = 3;
+}
+
+// Represents the state of action buttons for a lab server.
+message LabServerActions {
+  device.ActionButtonState release = 1;
+  device.ActionButtonState deploy = 2;
+  device.ActionButtonState start = 3;
+  device.ActionButtonState restart = 4;
+  device.ActionButtonState stop = 5;
+  device.ActionButtonState update_pass_through_flags = 6;
 }
 
 // Result of a single diagnostic command.
@@ -180,6 +184,8 @@ message LabServerInfo {
   Activity activity = 2;
   string version = 3;
   string pass_through_flags = 4;
+  // State of action buttons for this lab server.
+  LabServerActions actions = 5;
 }
 
 // Daemon server process information.

@@ -11,24 +11,6 @@
     }"></ng-container>
 
     <ng-container *ngTemplateOutlet="actionItem; context: {
-      key: 'release',
-      icon: 'upgrade',
-      label: 'Release Lab Server',
-      handler: onRelease,
-      mode: 'button',
-      suffix: '2xl'
-    }"></ng-container>
-
-    <ng-container *ngTemplateOutlet="actionItem; context: {
-      key: 'restart',
-      icon: 'restart_alt',
-      label: 'Restart Server',
-      handler: onRestart,
-      mode: 'button',
-      suffix: '2xl'
-    }"></ng-container>
-
-    <ng-container *ngTemplateOutlet="actionItem; context: {
       key: 'decommission',
       icon: 'delete_sweep',
       label: 'Decommission',
@@ -36,27 +18,6 @@
       mode: 'button',
       suffix: '2xl',
       customClass: 'decommission-btn'
-    }"></ng-container>
-
-    <!-- Divider -->
-    <div class="border-l border-gray-300 h-6 mx-2 self-center"></div>
-
-    <ng-container *ngTemplateOutlet="actionItem; context: {
-      key: 'start',
-      icon: 'play_arrow',
-      label: 'Start Server',
-      handler: onStart,
-      mode: 'button',
-      suffix: '2xl'
-    }"></ng-container>
-
-    <ng-container *ngTemplateOutlet="actionItem; context: {
-      key: 'stop',
-      icon: 'stop_circle',
-      label: 'Stop Server',
-      handler: onStop,
-      mode: 'button',
-      suffix: '2xl'
     }"></ng-container>
 
     <ng-container *ngTemplateOutlet="actionItem; context: {
@@ -80,23 +41,6 @@
       suffix: 'xl'
     }"></ng-container>
 
-    <ng-container *ngTemplateOutlet="actionItem; context: {
-      key: 'release',
-      icon: 'upgrade',
-      label: 'Release',
-      handler: onRelease,
-      mode: 'button',
-      suffix: 'xl'
-    }"></ng-container>
-
-    <ng-container *ngTemplateOutlet="actionItem; context: {
-      key: 'restart',
-      icon: 'restart_alt',
-      label: 'Restart',
-      handler: onRestart,
-      mode: 'button',
-      suffix: 'xl'
-    }"></ng-container>
 
     @if (hasXlMoreMenuItems()) {
       <button
@@ -108,23 +52,6 @@
         <mat-icon>expand_more</mat-icon>
       </button>
       <mat-menu #moreMenu="matMenu">
-        <ng-container *ngTemplateOutlet="actionItem; context: {
-          key: 'start',
-          icon: 'play_arrow',
-          label: 'Start Server',
-          handler: onStart,
-          mode: 'menu',
-          suffix: 'xl'
-        }"></ng-container>
-
-        <ng-container *ngTemplateOutlet="actionItem; context: {
-          key: 'stop',
-          icon: 'stop_circle',
-          label: 'Stop Server',
-          handler: onStop,
-          mode: 'menu',
-          suffix: 'xl'
-        }"></ng-container>
 
         <ng-container *ngTemplateOutlet="actionItem; context: {
           key: 'debug',
@@ -168,41 +95,6 @@
         <mat-icon>expand_more</mat-icon>
       </button>
       <mat-menu #actionsMenu="matMenu">
-        <ng-container *ngTemplateOutlet="actionItem; context: {
-          key: 'release',
-          icon: 'upgrade',
-          label: 'Release Lab Server',
-          handler: onRelease,
-          mode: 'menu',
-          suffix: 'sm'
-        }"></ng-container>
-
-        <ng-container *ngTemplateOutlet="actionItem; context: {
-          key: 'start',
-          icon: 'play_arrow',
-          label: 'Start Server',
-          handler: onStart,
-          mode: 'menu',
-          suffix: 'sm'
-        }"></ng-container>
-
-        <ng-container *ngTemplateOutlet="actionItem; context: {
-          key: 'restart',
-          icon: 'restart_alt',
-          label: 'Restart Server',
-          handler: onRestart,
-          mode: 'menu',
-          suffix: 'sm'
-        }"></ng-container>
-
-        <ng-container *ngTemplateOutlet="actionItem; context: {
-          key: 'stop',
-          icon: 'stop_circle',
-          label: 'Stop Server',
-          handler: onStop,
-          mode: 'menu',
-          suffix: 'sm'
-        }"></ng-container>
 
         <ng-container *ngTemplateOutlet="actionItem; context: {
           key: 'debug',

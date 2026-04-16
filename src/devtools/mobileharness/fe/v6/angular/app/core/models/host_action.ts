@@ -7,13 +7,19 @@ import {ActionButtonState} from './action_common';
 export declare interface HostActions {
   readonly configuration: ActionButtonState;
   readonly debug: ActionButtonState;
+  readonly decommission: ActionButtonState;
+}
+
+/**
+ * Represents the state of action buttons for a device.
+ */
+export declare interface LabServerActions {
+  readonly release: ActionButtonState;
   readonly deploy: ActionButtonState;
   readonly start: ActionButtonState;
   readonly restart: ActionButtonState;
   readonly stop: ActionButtonState;
-  readonly decommission: ActionButtonState;
   readonly updatePassThroughFlags: ActionButtonState;
-  readonly release: ActionButtonState;
 }
 
 /**

@@ -427,9 +427,58 @@ export class HostOverviewPage implements OnChanges {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((result) => {
         if (result === 'primary') {
-          // TODO: Implement restart lab server logic.
-          alert('Restarting lab server');
+          this.onRestart();
         }
+      });
+  }
+
+  onRelease() {
+    this.showComingSoonPopup('Release');
+  }
+
+  onDeploy() {
+    this.showComingSoonPopup('Deploy');
+  }
+
+  onStart() {
+    this.hostService
+      .startLabServer(this.host.hostName)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.snackBar.showSuccess('Lab Server starting...');
+        },
+        error: (err) => {
+          this.snackBar.showError(`Failed to start: ${err.message}`);
+        },
+      });
+  }
+
+  onRestart() {
+    this.hostService
+      .restartLabServer(this.host.hostName)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.snackBar.showSuccess('Lab Server restarting...');
+        },
+        error: (err) => {
+          this.snackBar.showError(`Failed to restart: ${err.message}`);
+        },
+      });
+  }
+
+  onStop() {
+    this.hostService
+      .stopLabServer(this.host.hostName)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.snackBar.showSuccess('Lab Server stopping...');
+        },
+        error: (err) => {
+          this.snackBar.showError(`Failed to stop: ${err.message}`);
+        },
       });
   }
 
@@ -551,6 +600,11 @@ export class HostOverviewPage implements OnChanges {
       'Screenshot': ActionBarAction.DEVICE_SCREENSHOT,
       'Flash': ActionBarAction.DEVICE_FLASH,
       'Pass Through Flags': ActionBarAction.HOST_UPDATE_PASS_THROUGH_FLAGS,
+      'Release': ActionBarAction.HOST_RELEASE,
+      'Deploy': ActionBarAction.HOST_DEPLOY,
+      'Start': ActionBarAction.HOST_START,
+      'Restart': ActionBarAction.HOST_RESTART,
+      'Stop': ActionBarAction.HOST_STOP,
     };
     const feature = featureMap[actionName];
 

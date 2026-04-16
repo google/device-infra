@@ -2,7 +2,7 @@
  * @fileoverview Utility functions for creating UI status objects for mock data.
  */
 
-import {HostActions} from '../../../models/host_action';
+import {HostActions, LabServerActions} from '../../../models/host_action';
 import {
   Editability,
   HostConfigUiStatus,
@@ -71,6 +71,7 @@ export function createDefaultHostOverview(hostName: string): HostOverview {
       },
       version: 'R123.45.6',
       passThroughFlags: '',
+      actions: createLabServerActions('RUNNING'),
     },
     daemonServer: {
       status: {
@@ -81,6 +82,23 @@ export function createDefaultHostOverview(hostName: string): HostOverview {
       version: '24.08.01',
     },
     properties: {},
+    diagnosticLinks: [
+      {
+        label: 'Tradefed Log',
+        url: 'http://example.com/tradefed_log',
+        category: 'LAB_SERVER',
+      },
+      {
+        label: 'Test Log',
+        url: 'http://example.com/test_log',
+        category: 'DAEMON_SERVER',
+      },
+      {
+        label: 'Host Statusz',
+        url: 'http://example.com/host_statusz',
+        category: 'OVERVIEW',
+      },
+    ],
   };
 }
 
@@ -93,15 +111,8 @@ export function createHostActions(
   status = 'RUNNING',
   isCoreLab = false,
 ): HostActions {
-  const isRunning = status === 'RUNNING';
-  const isStopped = status === 'STOPPED';
   const isMissing = status === 'MISSING';
-  const isError = status === 'ERROR';
-
   const manageHostEnabled = !isCoreLab;
-  const startEnabled = !isCoreLab && (isStopped || isMissing);
-  const restartEnabled = !isCoreLab && (isRunning || isError);
-  const stopEnabled = !isCoreLab && (isRunning || isError);
   const removeEnabled = isMissing;
 
   return {
@@ -119,38 +130,6 @@ export function createHostActions(
       tooltip: 'Run and view live diagnostic commands on the host',
       isReady: true,
     },
-    release: {
-      enabled: manageHostEnabled,
-      visible: true,
-      tooltip: manageHostEnabled
-        ? 'Deploy a release or edit Pass Through Flags'
-        : 'Release management is not available for Shared Labs',
-      isReady: true,
-    },
-    restart: {
-      enabled: restartEnabled,
-      visible: restartEnabled,
-      tooltip: restartEnabled
-        ? 'Restart the lab server by redeploying its current software version and Pass Through Flags.'
-        : '',
-      isReady: true,
-    },
-    stop: {
-      enabled: stopEnabled,
-      visible: stopEnabled,
-      tooltip: stopEnabled
-        ? 'Drains running tests, then stops the lab server via Legislator rollout.'
-        : '',
-      isReady: true,
-    },
-    start: {
-      enabled: startEnabled,
-      visible: startEnabled,
-      tooltip: startEnabled
-        ? 'Start the lab server by deploying its configured software version and Pass Through Flags.'
-        : '',
-      isReady: true,
-    },
     decommission: {
       enabled: removeEnabled,
       visible: removeEnabled,
@@ -159,17 +138,81 @@ export function createHostActions(
         : '',
       isReady: true,
     },
-    // Not directly on the action bar but included in the model
-    deploy: {
-      enabled: manageHostEnabled,
+  };
+}
+
+/**
+ * Creates LabServerActions based on the host state.
+ * @param status The status of the lab server (RUNNING, STOPPED, MISSING, ERROR, etc.)
+ * @param isCoreLab Whether the host belongs to a Shared/Core Lab.
+ */
+export function createLabServerActions(
+  status = 'RUNNING',
+  isCoreLab = false,
+): LabServerActions {
+  const isMissing = status === 'MISSING';
+  const isRunning = status === 'RUNNING';
+  const actionEnabled = !isCoreLab;
+
+  return {
+    release: {
+      enabled: !isMissing && actionEnabled,
       visible: true,
-      tooltip: '',
+      tooltip: isMissing
+        ? 'Cannot release a missing host'
+        : isCoreLab
+          ? 'Cannot release in a Shared Lab'
+          : '',
+      isReady: false,
+    },
+    deploy: {
+      enabled: !isMissing && actionEnabled,
+      visible: true,
+      tooltip: isMissing
+        ? 'Cannot deploy to a missing host'
+        : isCoreLab
+          ? 'Cannot deploy in a Shared Lab'
+          : '',
+      isReady: false,
+    },
+    start: {
+      enabled: !isRunning && !isMissing && actionEnabled,
+      visible: !isRunning && !isMissing,
+      tooltip: isRunning
+        ? 'Lab server is already running'
+        : isCoreLab
+          ? 'Cannot start in a Shared Lab'
+          : '',
+      isReady: true,
+    },
+    restart: {
+      enabled: isRunning && actionEnabled,
+      visible: true,
+      tooltip: !isRunning
+        ? 'Lab server must be running to restart'
+        : isCoreLab
+          ? 'Cannot restart in a Shared Lab'
+          : '',
+      isReady: true,
+    },
+    stop: {
+      enabled: isRunning && actionEnabled,
+      visible: true,
+      tooltip: !isRunning
+        ? 'Lab server is not running'
+        : isCoreLab
+          ? 'Cannot stop in a Shared Lab'
+          : '',
       isReady: true,
     },
     updatePassThroughFlags: {
-      enabled: manageHostEnabled,
+      enabled: !isMissing && actionEnabled,
       visible: true,
-      tooltip: '',
+      tooltip: isMissing
+        ? 'Cannot update flags for a missing host'
+        : isCoreLab
+          ? 'Cannot update flags in a Shared Lab'
+          : '',
       isReady: true,
     },
   };
