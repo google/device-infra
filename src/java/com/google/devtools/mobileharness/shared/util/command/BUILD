@@ -32,6 +32,16 @@ java_library(
             "CommandResults.java",
         ],
     ),
+    visibility = [
+        "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
+        "//java/com/google/android/apps/testing/abvt/mobileharness/plugin:__pkg__",
+        "//java/com/google/android/gmscore/integ/test_common/auth/src/com/google/android/gms/testcommon/auth/plugins:__pkg__",
+        "//java/com/google/cloud/test/device/remote/service/shell/client:__subpackages__",
+        "//java/com/google/devtools/mobileharness/shared/util/command:command_users",
+        "//javatests/com/google/access/jetstream/mobile/mobileharness/plugins:__pkg__",
+        "//wireless/android/wear/bisto/testing/java/mobileharness/plugin:__pkg__",
+    ],
     exports = [
         ":command_result",
     ],
