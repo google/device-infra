@@ -24,6 +24,8 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceAllocationPriority;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirement;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirements;
@@ -35,13 +37,19 @@ import com.google.devtools.mobileharness.api.model.proto.Job.Priority;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry.Level;
 import com.google.devtools.mobileharness.api.model.proto.Job.Timeout;
+import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestIdName;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
+import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager;
+import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager.DeviceKey;
+import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager.DeviceTempRequiredDimensions;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler.JobWithTests;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler.JobsAndAllocations;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.OpenJobRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.OpenJobResponse;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.UpsertDeviceTempRequiredDimensionsRequest;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.UpsertDeviceTempRequiredDimensionsResponse;
 import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.proto.VersionProto.VersionCheckRequest;
@@ -60,6 +68,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -144,6 +153,7 @@ public class JobSyncServiceTest {
 
   @Inject private JobSyncService jobSyncService;
   @Inject @AtsModeAbstractScheduler private AbstractScheduler scheduler;
+  @Inject private DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager;
 
   @Before
   public void setUp() throws Exception {
@@ -232,5 +242,102 @@ public class JobSyncServiceTest {
                 "fake_test_id", "fake_test_name", new JobLocator("fake_job_id", "fake_job_name")));
 
     assertThat(jobsAndAllocations.testAllocations()).isEmpty();
+  }
+
+  @Test
+  public void doUpsertDeviceTempRequiredDimensions() {
+    UpsertDeviceTempRequiredDimensionsRequest request =
+        UpsertDeviceTempRequiredDimensionsRequest.newBuilder()
+            .setDeviceLocator(
+                DeviceLocator.newBuilder()
+                    .setId("fake_uuid")
+                    .setLabLocator(
+                        LabLocator.newBuilder()
+                            .setIp("fake_lab_ip")
+                            .setHostName("fake_lab_host_name")))
+            .addTempRequiredDimension(
+                DeviceDimension.newBuilder().setName("temp_dim").setValue("temp_val"))
+            .setDurationMs(60000L)
+            .build();
+
+    assertThat(jobSyncService.doUpsertDeviceTempRequiredDimensions(request))
+        .isEqualToDefaultInstance();
+
+    DeviceKey deviceKey = new DeviceKey("fake_lab_host_name", "fake_uuid");
+    Optional<DeviceTempRequiredDimensions> dimensions =
+        deviceTempRequiredDimensionManager.getDimensions(deviceKey);
+
+    assertThat(dimensions).isPresent();
+    assertThat(dimensions.get().dimensions()).containsEntry("temp_dim", "temp_val");
+  }
+
+  @Test
+  public void doUpsertDeviceTempRequiredDimensions_duplicateKeys() {
+    UpsertDeviceTempRequiredDimensionsRequest request =
+        UpsertDeviceTempRequiredDimensionsRequest.newBuilder()
+            .setDeviceLocator(
+                DeviceLocator.newBuilder()
+                    .setId("fake_uuid")
+                    .setLabLocator(
+                        LabLocator.newBuilder()
+                            .setIp("fake_lab_ip")
+                            .setHostName("fake_lab_host_name")))
+            .addTempRequiredDimension(
+                DeviceDimension.newBuilder().setName("temp_dim").setValue("temp_val1"))
+            .addTempRequiredDimension(
+                DeviceDimension.newBuilder().setName("temp_dim").setValue("temp_val2"))
+            .setDurationMs(60000L)
+            .build();
+
+    assertThat(jobSyncService.doUpsertDeviceTempRequiredDimensions(request))
+        .isEqualToDefaultInstance();
+
+    DeviceKey deviceKey = new DeviceKey("fake_lab_host_name", "fake_uuid");
+    Optional<DeviceTempRequiredDimensions> dimensions =
+        deviceTempRequiredDimensionManager.getDimensions(deviceKey);
+
+    assertThat(dimensions).isPresent();
+    assertThat(dimensions.get().dimensions()).containsEntry("temp_dim", "temp_val1");
+    assertThat(dimensions.get().dimensions()).containsEntry("temp_dim", "temp_val2");
+  }
+
+  @Test
+  public void doUpsertDeviceTempRequiredDimensions_durationNonPositive_removeDimensions() {
+    UpsertDeviceTempRequiredDimensionsRequest addRequest =
+        UpsertDeviceTempRequiredDimensionsRequest.newBuilder()
+            .setDeviceLocator(
+                DeviceLocator.newBuilder()
+                    .setId("fake_uuid")
+                    .setLabLocator(
+                        LabLocator.newBuilder()
+                            .setIp("fake_lab_ip")
+                            .setHostName("fake_lab_host_name")))
+            .addTempRequiredDimension(
+                DeviceDimension.newBuilder().setName("temp_dim").setValue("temp_val"))
+            .setDurationMs(60000L)
+            .build();
+
+    assertThat(jobSyncService.doUpsertDeviceTempRequiredDimensions(addRequest))
+        .isEqualTo(UpsertDeviceTempRequiredDimensionsResponse.getDefaultInstance());
+
+    DeviceKey deviceKey = new DeviceKey("fake_lab_host_name", "fake_uuid");
+    assertThat(deviceTempRequiredDimensionManager.getDimensions(deviceKey)).isPresent();
+
+    UpsertDeviceTempRequiredDimensionsRequest removeRequest =
+        UpsertDeviceTempRequiredDimensionsRequest.newBuilder()
+            .setDeviceLocator(
+                DeviceLocator.newBuilder()
+                    .setId("fake_uuid")
+                    .setLabLocator(
+                        LabLocator.newBuilder()
+                            .setIp("fake_lab_ip")
+                            .setHostName("fake_lab_host_name")))
+            .setDurationMs(0L)
+            .build();
+
+    assertThat(jobSyncService.doUpsertDeviceTempRequiredDimensions(removeRequest))
+        .isEqualToDefaultInstance();
+
+    assertThat(deviceTempRequiredDimensionManager.getDimensions(deviceKey)).isEmpty();
   }
 }

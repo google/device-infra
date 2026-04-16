@@ -41,13 +41,11 @@ import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
-import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabScheduleUnit;
-import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
@@ -67,7 +65,6 @@ import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.A
 import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager;
 import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager.DeviceTempRequiredDimensions;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
-import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.UpsertDeviceTempRequiredDimensionsRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceGrpc;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabResponse;
@@ -232,39 +229,6 @@ class RemoteDeviceManager implements LabInfoProvider {
       return devices.values().stream()
           .map(deviceData -> deviceData.toDeviceQueryDeviceInfo(deviceTempRequiredDimensionManager))
           .collect(toImmutableList());
-    }
-  }
-
-  void upsertDeviceTempRequiredDimensions(UpsertDeviceTempRequiredDimensionsRequest request)
-      throws MobileHarnessException {
-    DeviceKey deviceKey =
-        DeviceKey.of(
-            request.getDeviceLocator().getLabLocator().getHostName(),
-            request.getDeviceLocator().getId());
-    synchronized (lock) {
-      DeviceData deviceData = devices.get(deviceKey);
-      if (deviceData == null) {
-        throw new MobileHarnessException(
-            InfraErrorId.OLCS_UPSERT_TEMP_REQUIRED_DIMENSIONS_DEVICE_NOT_FOUND,
-            String.format("Device not found: %s", deviceKey));
-      }
-
-      DeviceTempRequiredDimensionManager.DeviceKey dtrdmDeviceKey =
-          new DeviceTempRequiredDimensionManager.DeviceKey(
-              deviceKey.labKey().labHostName(), deviceKey.deviceUuid());
-
-      if (request.getDurationMs() <= 0L) {
-        deviceTempRequiredDimensionManager.removeDimensions(dtrdmDeviceKey);
-        return;
-      }
-
-      Duration duration = Duration.ofMillis(request.getDurationMs());
-      ImmutableListMultimap<String, String> dimensions =
-          request.getTempRequiredDimensionList().stream()
-              .collect(
-                  toImmutableListMultimap(DeviceDimension::getName, DeviceDimension::getValue));
-
-      deviceTempRequiredDimensionManager.addDimensions(dtrdmDeviceKey, dimensions, duration);
     }
   }
 

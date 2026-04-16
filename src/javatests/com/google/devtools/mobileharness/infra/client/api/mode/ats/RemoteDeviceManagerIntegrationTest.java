@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.mockito.Mockito.when;
@@ -126,6 +127,7 @@ public class RemoteDeviceManagerIntegrationTest {
   @Bind @Mock private NetUtil netUtil;
 
   @Inject private RemoteDeviceManager remoteDeviceManager;
+  @Inject private JobSyncService jobSyncService;
   @Inject @AtsModeAbstractScheduler private AbstractScheduler scheduler;
 
   private LabSyncGrpcStub labSyncGrpcStub;
@@ -171,7 +173,7 @@ public class RemoteDeviceManagerIntegrationTest {
     labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
 
     // 2. Add a job with proper dimensions, verify allocation.
-    JobScheduleUnit job1 = createJobScheduleUnit("job1", DIMENSION_NAME, DIMENSION_VALUE);
+    JobScheduleUnit job1 = createJobScheduleUnit("job1");
     TestScheduleUnit test1 = createTestScheduleUnit(job1, "test1");
 
     AllocationEventListener allocationListener = new AllocationEventListener();
@@ -187,25 +189,29 @@ public class RemoteDeviceManagerIntegrationTest {
     scheduler.unallocate(test1.locator(), /* removeDevices= */ false, /* closeTest= */ true);
 
     // 3. Add temp required dimensions (duration 10 seconds).
-    remoteDeviceManager.upsertDeviceTempRequiredDimensions(
-        UpsertDeviceTempRequiredDimensionsRequest.newBuilder()
-            .setDeviceLocator(
-                DeviceLocator.newBuilder()
-                    .setId(DEVICE_UUID)
-                    .setLabLocator(
-                        LabLocator.newBuilder().setHostName(LAB_HOST_NAME).setIp("fake_lab_ip")))
-            .addTempRequiredDimension(
-                DeviceDimension.newBuilder()
-                    .setName(TEMP_DIMENSION_NAME)
-                    .setValue(TEMP_DIMENSION_VALUE))
-            .setDurationMs(10000L)
-            .build());
+    assertThat(
+            jobSyncService.doUpsertDeviceTempRequiredDimensions(
+                UpsertDeviceTempRequiredDimensionsRequest.newBuilder()
+                    .setDeviceLocator(
+                        DeviceLocator.newBuilder()
+                            .setId(DEVICE_UUID)
+                            .setLabLocator(
+                                LabLocator.newBuilder()
+                                    .setHostName(LAB_HOST_NAME)
+                                    .setIp("fake_lab_ip")))
+                    .addTempRequiredDimension(
+                        DeviceDimension.newBuilder()
+                            .setName(TEMP_DIMENSION_NAME)
+                            .setValue(TEMP_DIMENSION_VALUE))
+                    .setDurationMs(10000L)
+                    .build()))
+        .isEqualToDefaultInstance();
 
     // Waits for the listener to be notified and the scheduler to be updated.
     Thread.sleep(500L);
 
     // 4. Submit next job WITHOUT the temp dimension.
-    JobScheduleUnit job2 = createJobScheduleUnit("job2", DIMENSION_NAME, DIMENSION_VALUE);
+    JobScheduleUnit job2 = createJobScheduleUnit("job2");
     TestScheduleUnit test2 = createTestScheduleUnit(job2, "test2");
 
     AllocationEventListener allocationListener2 = new AllocationEventListener();
@@ -228,22 +234,26 @@ public class RemoteDeviceManagerIntegrationTest {
     labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
 
     // 2. Add temp required dimensions (duration 10 seconds).
-    remoteDeviceManager.upsertDeviceTempRequiredDimensions(
-        UpsertDeviceTempRequiredDimensionsRequest.newBuilder()
-            .setDeviceLocator(
-                DeviceLocator.newBuilder()
-                    .setId(DEVICE_UUID)
-                    .setLabLocator(
-                        LabLocator.newBuilder().setHostName(LAB_HOST_NAME).setIp("fake_lab_ip")))
-            .addTempRequiredDimension(
-                DeviceDimension.newBuilder()
-                    .setName(TEMP_DIMENSION_NAME)
-                    .setValue(TEMP_DIMENSION_VALUE))
-            .setDurationMs(10000L)
-            .build());
+    assertThat(
+            jobSyncService.doUpsertDeviceTempRequiredDimensions(
+                UpsertDeviceTempRequiredDimensionsRequest.newBuilder()
+                    .setDeviceLocator(
+                        DeviceLocator.newBuilder()
+                            .setId(DEVICE_UUID)
+                            .setLabLocator(
+                                LabLocator.newBuilder()
+                                    .setHostName(LAB_HOST_NAME)
+                                    .setIp("fake_lab_ip")))
+                    .addTempRequiredDimension(
+                        DeviceDimension.newBuilder()
+                            .setName(TEMP_DIMENSION_NAME)
+                            .setValue(TEMP_DIMENSION_VALUE))
+                    .setDurationMs(10000L)
+                    .build()))
+        .isEqualToDefaultInstance();
 
     // 3. Submit job WITH the temp dimension.
-    JobScheduleUnit job = createJobScheduleUnit("job3", DIMENSION_NAME, DIMENSION_VALUE);
+    JobScheduleUnit job = createJobScheduleUnit("job3");
     job.dimensions().add(TEMP_DIMENSION_NAME, TEMP_DIMENSION_VALUE);
     TestScheduleUnit test = createTestScheduleUnit(job, "test3");
 
@@ -257,16 +267,15 @@ public class RemoteDeviceManagerIntegrationTest {
     assertThat(allocationListener.awaitAllocation(Duration.ofSeconds(10L))).isTrue();
   }
 
-  private JobScheduleUnit createJobScheduleUnit(
-      String id, String dimensionName, String dimensionValue) {
+  private JobScheduleUnit createJobScheduleUnit(String jobId) {
     JobScheduleUnit job =
         new JobScheduleUnit(
-            new JobLocator(id, id),
+            new JobLocator(jobId, jobId),
             JobUser.newBuilder().setRunAs("fake_user").setActualUser("fake_user").build(),
             JobType.newBuilder().setDevice("NoOpDevice").setDriver("NoOpDriver").build(),
             JobSetting.newBuilder().setPriority(Priority.HIGH).build(),
             new Timing(Clock.systemUTC()));
-    job.dimensions().add(dimensionName, dimensionValue);
+    job.dimensions().add(DIMENSION_NAME, DIMENSION_VALUE);
     return job;
   }
 

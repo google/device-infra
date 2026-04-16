@@ -22,8 +22,7 @@ java_library(
     srcs = ["DeviceTempRequiredDimensionManager.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client/api/mode/local:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client/api/util/dimension:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",

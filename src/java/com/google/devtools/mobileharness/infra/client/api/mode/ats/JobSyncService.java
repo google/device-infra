@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
@@ -36,6 +37,7 @@ import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Job;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceAllocationPriority;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirement;
@@ -44,6 +46,8 @@ import com.google.devtools.mobileharness.api.model.proto.Job.JobFeature;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestIdName;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.JobSyncServiceVersionChecker;
+import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager;
+import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager.DeviceKey;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler.JobWithTests;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler.JobsAndAllocations;
@@ -99,7 +103,7 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
   private static final Duration JOB_CLEANUP_INTERVAL = Duration.ofMinutes(5L);
 
   private final AbstractScheduler scheduler;
-  private final RemoteDeviceManager remoteDeviceManager;
+  private final DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager;
   private final ServiceSideVersionChecker versionChecker;
   private final ListeningScheduledExecutorService scheduledThreadPool;
   private final Clock clock;
@@ -110,12 +114,12 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
   @Inject
   JobSyncService(
       @AtsModeAbstractScheduler AbstractScheduler scheduler,
-      RemoteDeviceManager remoteDeviceManager,
+      DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager,
       @JobSyncServiceVersionChecker ServiceSideVersionChecker versionChecker,
       ListeningScheduledExecutorService scheduledThreadPool,
       Clock clock) {
     this.scheduler = scheduler;
-    this.remoteDeviceManager = remoteDeviceManager;
+    this.deviceTempRequiredDimensionManager = deviceTempRequiredDimensionManager;
     this.versionChecker = versionChecker;
     this.scheduledThreadPool = scheduledThreadPool;
     this.clock = clock;
@@ -429,10 +433,27 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
         JobSyncServiceGrpc.getUpsertDeviceTempRequiredDimensionsMethod());
   }
 
-  private UpsertDeviceTempRequiredDimensionsResponse doUpsertDeviceTempRequiredDimensions(
-      UpsertDeviceTempRequiredDimensionsRequest request) throws MobileHarnessException {
+  @VisibleForTesting
+  UpsertDeviceTempRequiredDimensionsResponse doUpsertDeviceTempRequiredDimensions(
+      UpsertDeviceTempRequiredDimensionsRequest request) {
     logger.atInfo().log("UpsertDeviceTempRequiredDimensionsRequest: %s", shortDebugString(request));
-    remoteDeviceManager.upsertDeviceTempRequiredDimensions(request);
+
+    DeviceKey deviceKey =
+        new DeviceKey(
+            request.getDeviceLocator().getLabLocator().getHostName(),
+            request.getDeviceLocator().getId());
+
+    if (request.getDurationMs() <= 0L) {
+      deviceTempRequiredDimensionManager.removeDimensions(deviceKey);
+    } else {
+      deviceTempRequiredDimensionManager.addDimensions(
+          deviceKey,
+          request.getTempRequiredDimensionList().stream()
+              .collect(
+                  toImmutableListMultimap(DeviceDimension::getName, DeviceDimension::getValue)),
+          Duration.ofMillis(request.getDurationMs()));
+    }
+
     return UpsertDeviceTempRequiredDimensionsResponse.getDefaultInstance();
   }
 
