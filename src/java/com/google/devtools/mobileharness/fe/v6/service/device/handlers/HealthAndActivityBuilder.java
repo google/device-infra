@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndAct
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo.Diagnostics;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthState;
 import com.google.protobuf.Timestamp;
+import com.google.protobuf.util.Timestamps;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
@@ -232,12 +233,14 @@ public final class HealthAndActivityBuilder {
       }
     }
 
-    builder
-        .setDeviceStatus(
-            HealthAndActivityInfo.DeviceStatus.newBuilder()
-                .setStatus(status)
-                .setIsCritical(builder.getState() == HealthState.OUT_OF_SERVICE_NEEDS_FIXING))
-        .setLastInServiceTime(lastInServiceTime);
+    builder.setDeviceStatus(
+        HealthAndActivityInfo.DeviceStatus.newBuilder()
+            .setStatus(status)
+            .setIsCritical(builder.getState() == HealthState.OUT_OF_SERVICE_NEEDS_FIXING));
+
+    if (Timestamps.isValid(lastInServiceTime) && lastInServiceTime.getSeconds() > 0) {
+      builder.setLastInServiceTime(lastInServiceTime);
+    }
 
     if (status.equals(DeviceStatus.BUSY.name())) {
       CurrentTask.Builder currentTask = CurrentTask.newBuilder();

@@ -499,6 +499,23 @@ public final class GetDeviceOverviewHandlerTest {
   }
 
   @Test
+  public void healthAndActivity_missingLastInServiceTime() throws Exception {
+    mockDeviceInfo(
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceCondition(
+                DEFAULT_DEVICE_INFO.getDeviceCondition().toBuilder().clearLastHealthyTime())
+            .build());
+    HealthAndActivityInfo info =
+        getDeviceOverviewHandler
+            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
+            .get()
+            .getOverview()
+            .getHealthAndActivity();
+
+    assertThat(info.hasLastInServiceTime()).isFalse();
+  }
+
+  @Test
   public void healthAndActivity_inService_busy() throws Exception {
     mockDeviceInfo(DEFAULT_DEVICE_INFO.toBuilder().setDeviceStatus(DeviceStatus.BUSY).build());
     HealthAndActivityInfo info =

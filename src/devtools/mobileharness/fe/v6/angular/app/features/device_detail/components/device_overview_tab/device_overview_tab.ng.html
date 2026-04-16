@@ -36,8 +36,8 @@
             !== 'IN_SERVICE_BUSY' ) {
               <div class="last-in-service">
                 <span class="font-medium">Last in service:</span>
-                {{ dateUtils.format(device.healthAndActivity.lastInServiceTime) }} @if
-                (device.healthAndActivity.lastInServiceTime !== null) {
+                {{ dateUtils.format(device.healthAndActivity.lastInServiceTime) }}
+                @if (!!device.healthAndActivity.lastInServiceTime) {
                   <span class="time-ago-chip">
                     {{ dateUtils.formatTimeAgo(device.healthAndActivity.lastInServiceTime) }}
                   </span>
