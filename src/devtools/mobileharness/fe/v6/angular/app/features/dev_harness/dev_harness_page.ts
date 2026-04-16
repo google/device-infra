@@ -1,6 +1,7 @@
 import {CommonModule} from '@angular/common';
-import {ChangeDetectionStrategy, Component} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {RouterLink} from '@angular/router';
+import {LoadingService} from 'app/shared/services/loading_service';
 import {
   MOCK_DEVICE_SCENARIOS,
   MOCK_HOST_SCENARIOS,
@@ -25,6 +26,7 @@ import {
 export class DevHarnessPage {
   readonly deviceScenarios: MockDeviceScenario[];
   readonly hostScenarios: MockHostScenario[];
+  private readonly loadingService = inject(LoadingService);
 
   constructor() {
     this.deviceScenarios = [...MOCK_DEVICE_SCENARIOS].sort((a, b) => {
@@ -40,5 +42,6 @@ export class DevHarnessPage {
       if (aName > bName) return 1;
       return 0;
     });
+    this.loadingService.hide();
   }
 }

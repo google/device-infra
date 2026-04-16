@@ -94,7 +94,9 @@ export class HostDetail implements OnInit, OnDestroy {
             error: `Failed to load host data for host: ${hostName}. ${err.message || ''}`,
           });
         }),
-        tap(() => { this.loadingService.hide(); }),
+        tap(() => {
+          this.loadingService.hide();
+        }),
       );
     }),
   );

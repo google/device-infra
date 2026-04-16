@@ -8,25 +8,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
 
-    <!-- Needed for Material icons -->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-    <!-- Material Theme CSS -->
-    <link rel="stylesheet" href="material-theme.css" />
-
-    <!-- Global styles -->
-    <link rel="stylesheet" href="styles.css" />
     <style>
       @keyframes spin {
         from { transform: rotate(0deg); }
         to { transform: rotate(360deg); }
       }
       .initial-loading-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: white;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        height: 100vh;
+        z-index: 9999;
         font-family: Roboto, "Helvetica Neue", sans-serif;
       }
       .initial-loading-spinner {
@@ -43,13 +44,21 @@
         color: #555;
       }
     </style>
+
+    <!-- Needed for Material icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" media="print" onload="this.media='all'" />
+
+    <!-- Material Theme CSS -->
+    <link rel="stylesheet" href="material-theme.css" media="print" onload="this.media='all'" />
+
+    <!-- Global styles -->
+    <link rel="stylesheet" href="styles.css" media="print" onload="this.media='all'" />
   </head>
   <body>
-    <app-root>
-      <div class="initial-loading-container">
-        <div class="initial-loading-spinner"></div>
-        <div class="initial-loading-text">Loading OmniLab Console...</div>
-      </div>
-    </app-root>
+    <div id="initial-loading-overlay" class="initial-loading-container">
+      <div class="initial-loading-spinner"></div>
+      <div class="initial-loading-text">Loading OmniLab Console...</div>
+    </div>
+    <app-root></app-root>
   </body>
 </html>
