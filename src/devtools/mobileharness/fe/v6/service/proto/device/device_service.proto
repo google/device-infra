@@ -235,8 +235,8 @@ message GetLogcatResponse {
 message QuarantineDeviceRequest {
   // The device ID.
   string id = 1;
-  // The duration to quarantine the device in hours.
-  int32 duration_hours = 2;
+  // The timestamp when the quarantine should expire.
+  google.protobuf.Timestamp end_time = 2;
   // The universe the device belongs to.
   string universe = 3;
 }

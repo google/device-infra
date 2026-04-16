@@ -37,6 +37,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
+        "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:annotation",
+        "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:job_sync",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_extensions_guice_testlib",

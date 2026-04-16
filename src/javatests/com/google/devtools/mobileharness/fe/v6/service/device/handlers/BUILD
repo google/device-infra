@@ -35,6 +35,7 @@ java_library(
         "//src/devtools/mobileharness/fe/v6/service/proto/device:device_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/device:device_service_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_java_proto",
+        "//src/devtools/mobileharness/infra/master/rpc/proto:job_sync_service_java_proto",
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_service_capability",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/handlers",
@@ -44,6 +45,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/remotecontrol",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
+        "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:annotation",
+        "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:job_sync",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@grpc-java//core",
@@ -55,6 +58,7 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
+        "@protobuf//:protobuf_java_util",
     ],
 )
 

@@ -24,6 +24,7 @@ import com.google.devtools.mobileharness.fe.v6.service.device.handlers.GetDevice
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.GetDeviceOverviewHandler;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.GetLogcatHandler;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.GetTestbedConfigHandler;
+import com.google.devtools.mobileharness.fe.v6.service.device.handlers.QuarantineDeviceHandler;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHeaderInfoRequest;
@@ -58,6 +59,7 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
   private final GetLogcatHandler getLogcatHandler;
   private final GetTestbedConfigHandler getTestbedConfigHandler;
   private final UniverseFactory universeFactory;
+  private final QuarantineDeviceHandler quarantineDeviceHandler;
 
   @Inject
   DeviceServiceLogicImpl(
@@ -65,12 +67,14 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
       GetDeviceOverviewHandler getDeviceOverviewHandler,
       GetTestbedConfigHandler getTestbedConfigHandler,
       GetLogcatHandler getLogcatHandler,
-      UniverseFactory universeFactory) {
+      UniverseFactory universeFactory,
+      QuarantineDeviceHandler quarantineDeviceHandler) {
     this.getDeviceHeaderInfoHandler = getDeviceHeaderInfoHandler;
     this.getDeviceOverviewHandler = getDeviceOverviewHandler;
     this.getTestbedConfigHandler = getTestbedConfigHandler;
     this.getLogcatHandler = getLogcatHandler;
     this.universeFactory = universeFactory;
+    this.quarantineDeviceHandler = quarantineDeviceHandler;
   }
 
   @Override
@@ -151,11 +155,13 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
   @Override
   public ListenableFuture<QuarantineDeviceResponse> quarantineDevice(
       QuarantineDeviceRequest request) {
-    // TODO: Use the universe parameter.
-    @SuppressWarnings("unused")
-    String universe = request.getUniverse();
-    // TODO: Implement this method.
-    return immediateFuture(QuarantineDeviceResponse.getDefaultInstance());
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return quarantineDeviceHandler.quarantineDevice(request, universe);
   }
 
   @Override
