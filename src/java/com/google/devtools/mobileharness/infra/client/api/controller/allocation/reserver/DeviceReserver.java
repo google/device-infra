@@ -55,6 +55,8 @@ public interface DeviceReserver {
    * <p>After this method is called, the device can only be allocated by the test that specified
    * {"allocation_key", <allocationKey>} in its dimensions.
    *
+   * <p>If the duration is non-positive, the reservation will be removed instead of added.
+   *
    * @param deviceLocator the device to add temp allocation key to
    * @param allocationKey the allocation key that need to be specified by tests that attempt to
    *     allocate the device
@@ -73,6 +75,8 @@ public interface DeviceReserver {
    *
    * <p>After this method is called, the device can only be allocated by the test that specified
    * {<allocationDimensionName>, <allocationKey>} in its dimensions.
+   *
+   * <p>If the duration is non-positive, the reservation will be removed instead of added.
    *
    * @param deviceLocator the device to add temp allocation key to
    * @param allocationDimensionName the name of the dimension to use as allocation key
