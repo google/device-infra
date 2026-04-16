@@ -23,14 +23,15 @@ import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceT
 import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager.DeviceKey;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.time.Duration;
+import javax.inject.Inject;
 
 /** Local mode implementation of {@link DeviceReserver}. */
 public class LocalDeviceReserver implements DeviceReserver {
 
   private final DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager;
 
-  public LocalDeviceReserver(
-      DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager) {
+  @Inject
+  LocalDeviceReserver(DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager) {
     this.deviceTempRequiredDimensionManager = deviceTempRequiredDimensionManager;
   }
 

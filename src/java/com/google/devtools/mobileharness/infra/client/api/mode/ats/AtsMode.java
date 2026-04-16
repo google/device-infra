@@ -23,6 +23,7 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
+import com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver.DeviceReserver;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
@@ -30,6 +31,7 @@ import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.A
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator.DeviceVerifier;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator.EmptyDeviceVerifier;
+import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceReserver;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.RemoteTestRunner;
 import com.google.devtools.mobileharness.infra.client.api.proto.ResourceFederationProto.ResourceFederation;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ServiceProvider;
@@ -59,6 +61,7 @@ public class AtsMode implements ExecMode, ServiceProvider {
   private final LabRecordManager labRecordManager;
   private final LabRecordService labRecordService;
   private final JobSyncService jobSyncService;
+  private final LocalDeviceReserver localDeviceReserver;
   private final DeviceVerifier deviceVerifier = new EmptyDeviceVerifier();
 
   @Inject
@@ -70,7 +73,8 @@ public class AtsMode implements ExecMode, ServiceProvider {
       LabInfoService labInfoService,
       LabRecordManager labRecordManager,
       LabRecordService labRecordService,
-      JobSyncService jobSyncService) {
+      JobSyncService jobSyncService,
+      LocalDeviceReserver localDeviceReserver) {
     this.remoteDeviceManager = remoteDeviceManager;
     this.deviceQuerier = deviceQuerier;
     this.scheduler = scheduler;
@@ -79,6 +83,7 @@ public class AtsMode implements ExecMode, ServiceProvider {
     this.labRecordManager = labRecordManager;
     this.labRecordService = labRecordService;
     this.jobSyncService = jobSyncService;
+    this.localDeviceReserver = localDeviceReserver;
   }
 
   @Override
@@ -102,6 +107,11 @@ public class AtsMode implements ExecMode, ServiceProvider {
   @Override
   public DeviceQuerier createDeviceQuerier() {
     return deviceQuerier;
+  }
+
+  @Override
+  public DeviceReserver createDeviceReserver() {
+    return localDeviceReserver;
   }
 
   @Override
