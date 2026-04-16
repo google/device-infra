@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.client.api.util.dimension;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 
@@ -106,14 +105,28 @@ public class DeviceTempRequiredDimensionManager {
   }
 
   /**
-   * Adds temp required dimensions for a device.
+   * Adds or removes temp required dimensions for a device.
    *
-   * @param duration must be positive
+   * @param duration if <= 0, removes dimensions; otherwise, adds dimensions.
    */
-  public void addDimensions(
+  public void addOrRemoveDimensions(
       DeviceKey deviceKey, ImmutableListMultimap<String, String> dimensions, Duration duration) {
-    checkArgument(!duration.isZero() && !duration.isNegative(), "Duration must be positive");
+    if (duration.isZero() || duration.isNegative()) {
+      removeDimensions(deviceKey);
+    } else {
+      addDimensions(deviceKey, dimensions, duration);
+    }
+  }
 
+  /** Gets temp required dimensions for a device. */
+  public Optional<DeviceTempRequiredDimensions> getDimensions(DeviceKey deviceKey) {
+    return Optional.ofNullable(allDimensions.get(deviceKey))
+        .filter(dimensions -> !instantSource.instant().isAfter(dimensions.expireTime()));
+  }
+
+  /** Adds temp required dimensions for a device. */
+  private void addDimensions(
+      DeviceKey deviceKey, ImmutableListMultimap<String, String> dimensions, Duration duration) {
     DeviceTempRequiredDimensions newDimensions =
         new DeviceTempRequiredDimensions(dimensions, instantSource.instant().plus(duration));
 
@@ -143,14 +156,8 @@ public class DeviceTempRequiredDimensionManager {
         newDimensions);
   }
 
-  /** Gets temp required dimensions for a device. */
-  public Optional<DeviceTempRequiredDimensions> getDimensions(DeviceKey deviceKey) {
-    return Optional.ofNullable(allDimensions.get(deviceKey))
-        .filter(dimensions -> !instantSource.instant().isAfter(dimensions.expireTime()));
-  }
-
   /** Removes temp required dimensions for a device. */
-  public void removeDimensions(DeviceKey deviceKey) {
+  private void removeDimensions(DeviceKey deviceKey) {
     DeviceTempRequiredDimensions removedDimensions = allDimensions.remove(deviceKey);
     if (removedDimensions != null) {
       logger.atInfo().log(

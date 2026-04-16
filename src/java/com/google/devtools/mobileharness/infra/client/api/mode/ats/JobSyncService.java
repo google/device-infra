@@ -438,21 +438,13 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
       UpsertDeviceTempRequiredDimensionsRequest request) {
     logger.atInfo().log("UpsertDeviceTempRequiredDimensionsRequest: %s", shortDebugString(request));
 
-    DeviceKey deviceKey =
+    deviceTempRequiredDimensionManager.addOrRemoveDimensions(
         new DeviceKey(
             request.getDeviceLocator().getLabLocator().getHostName(),
-            request.getDeviceLocator().getId());
-
-    if (request.getDurationMs() <= 0L) {
-      deviceTempRequiredDimensionManager.removeDimensions(deviceKey);
-    } else {
-      deviceTempRequiredDimensionManager.addDimensions(
-          deviceKey,
-          request.getTempRequiredDimensionList().stream()
-              .collect(
-                  toImmutableListMultimap(DeviceDimension::getName, DeviceDimension::getValue)),
-          Duration.ofMillis(request.getDurationMs()));
-    }
+            request.getDeviceLocator().getId()),
+        request.getTempRequiredDimensionList().stream()
+            .collect(toImmutableListMultimap(DeviceDimension::getName, DeviceDimension::getValue)),
+        Duration.ofMillis(request.getDurationMs()));
 
     return UpsertDeviceTempRequiredDimensionsResponse.getDefaultInstance();
   }

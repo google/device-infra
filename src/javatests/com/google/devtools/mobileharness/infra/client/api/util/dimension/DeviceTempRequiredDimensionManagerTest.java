@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.infra.client.api.util.dimension;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
-import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -86,22 +85,22 @@ public class DeviceTempRequiredDimensionManagerTest {
   }
 
   @Test
-  public void addDimensions_invalidDuration_throws() {
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> manager.addDimensions(DEVICE_KEY, DIMENSIONS, Duration.ZERO));
-    assertThrows(
-        IllegalArgumentException.class,
-        () -> manager.addDimensions(DEVICE_KEY, DIMENSIONS, Duration.ofMinutes(-1)));
+  public void addOrRemoveDimensions_negativeDuration_removesDimensions() {
+    manager.addOrRemoveDimensions(DEVICE_KEY, DIMENSIONS, Duration.ofMinutes(10));
+    assertThat(manager.getDimensions(DEVICE_KEY)).isPresent();
+
+    manager.addOrRemoveDimensions(DEVICE_KEY, DIMENSIONS, Duration.ofMinutes(-1));
+
+    assertThat(manager.getDimensions(DEVICE_KEY)).isEmpty();
   }
 
   @Test
-  public void addDimensions_overwrite() {
-    manager.addDimensions(DEVICE_KEY, DIMENSIONS, Duration.ofMinutes(10));
+  public void addOrRemoveDimensions_overwrite() {
+    manager.addOrRemoveDimensions(DEVICE_KEY, DIMENSIONS, Duration.ofMinutes(10));
 
     ImmutableListMultimap<String, String> newDimensions =
         ImmutableListMultimap.of("key2", "value2");
-    manager.addDimensions(DEVICE_KEY, newDimensions, Duration.ofMinutes(20));
+    manager.addOrRemoveDimensions(DEVICE_KEY, newDimensions, Duration.ofMinutes(20));
 
     Optional<DeviceTempRequiredDimensions> dimensions = manager.getDimensions(DEVICE_KEY);
     assertThat(dimensions).isPresent();
@@ -109,12 +108,13 @@ public class DeviceTempRequiredDimensionManagerTest {
   }
 
   @Test
-  public void addDimensions_overwriteWithLongerExpiry_doesNotRemovePrematurely() throws Exception {
-    manager.addDimensions(DEVICE_KEY, DIMENSIONS, Duration.ofMillis(100));
+  public void addOrRemoveDimensions_overwriteWithLongerExpiry_doesNotRemovePrematurely()
+      throws Exception {
+    manager.addOrRemoveDimensions(DEVICE_KEY, DIMENSIONS, Duration.ofMillis(100));
 
     ImmutableListMultimap<String, String> newDimensions =
         ImmutableListMultimap.of("key2", "value2");
-    manager.addDimensions(DEVICE_KEY, newDimensions, Duration.ofSeconds(10));
+    manager.addOrRemoveDimensions(DEVICE_KEY, newDimensions, Duration.ofSeconds(10));
 
     Thread.sleep(300); // Wait for the first task to run (100ms)
 
@@ -124,20 +124,20 @@ public class DeviceTempRequiredDimensionManagerTest {
   }
 
   @Test
-  public void addDimensions_overwrite_notifiesListener() {
-    manager.addDimensions(DEVICE_KEY, DIMENSIONS, Duration.ofMinutes(10));
+  public void addOrRemoveDimensions_overwrite_notifiesListener() {
+    manager.addOrRemoveDimensions(DEVICE_KEY, DIMENSIONS, Duration.ofMinutes(10));
     verify(listener).onDeviceTempRequiredDimensionChanged(DEVICE_KEY);
 
     ImmutableListMultimap<String, String> newDimensions =
         ImmutableListMultimap.of("key2", "value2");
-    manager.addDimensions(DEVICE_KEY, newDimensions, Duration.ofMinutes(20));
+    manager.addOrRemoveDimensions(DEVICE_KEY, newDimensions, Duration.ofMinutes(20));
 
     verify(listener, times(2)).onDeviceTempRequiredDimensionChanged(DEVICE_KEY);
   }
 
   @Test
-  public void addDimensions_success() {
-    manager.addDimensions(DEVICE_KEY, DIMENSIONS, Duration.ofMinutes(10));
+  public void addOrRemoveDimensions_success() {
+    manager.addOrRemoveDimensions(DEVICE_KEY, DIMENSIONS, Duration.ofMinutes(10));
 
     Optional<DeviceTempRequiredDimensions> dimensions = manager.getDimensions(DEVICE_KEY);
     assertThat(dimensions).isPresent();
@@ -147,8 +147,37 @@ public class DeviceTempRequiredDimensionManagerTest {
   }
 
   @Test
+  public void addOrRemoveDimensions_zeroDuration_notifiesListener() {
+    manager.addOrRemoveDimensions(DEVICE_KEY, DIMENSIONS, Duration.ofMinutes(10));
+    verify(listener).onDeviceTempRequiredDimensionChanged(DEVICE_KEY);
+
+    manager.addOrRemoveDimensions(DEVICE_KEY, DIMENSIONS, Duration.ZERO);
+
+    verify(listener, times(2)).onDeviceTempRequiredDimensionChanged(DEVICE_KEY);
+  }
+
+  @Test
+  public void addOrRemoveDimensions_zeroDuration_removesDimensions() {
+    manager.addOrRemoveDimensions(DEVICE_KEY, DIMENSIONS, Duration.ofMinutes(10));
+    assertThat(manager.getDimensions(DEVICE_KEY)).isPresent();
+
+    manager.addOrRemoveDimensions(DEVICE_KEY, DIMENSIONS, Duration.ZERO);
+
+    assertThat(manager.getDimensions(DEVICE_KEY)).isEmpty();
+  }
+
+  @Test
+  public void addOrRemoveDimensions_zeroDuration_success() {
+    manager.addOrRemoveDimensions(DEVICE_KEY, DIMENSIONS, Duration.ofMinutes(10));
+    manager.addOrRemoveDimensions(DEVICE_KEY, DIMENSIONS, Duration.ZERO);
+
+    Optional<DeviceTempRequiredDimensions> dimensions = manager.getDimensions(DEVICE_KEY);
+    assertThat(dimensions).isEmpty();
+  }
+
+  @Test
   public void automaticExpiry_notifiesListener() throws Exception {
-    manager.addDimensions(DEVICE_KEY, DIMENSIONS, Duration.ofMillis(100));
+    manager.addOrRemoveDimensions(DEVICE_KEY, DIMENSIONS, Duration.ofMillis(100));
     verify(listener).onDeviceTempRequiredDimensionChanged(DEVICE_KEY);
 
     currentInstant = currentInstant.plusMillis(200L);
@@ -159,28 +188,9 @@ public class DeviceTempRequiredDimensionManagerTest {
 
   @Test
   public void getDimensions_expired_returnsEmpty() {
-    manager.addDimensions(DEVICE_KEY, DIMENSIONS, Duration.ofMinutes(10));
+    manager.addOrRemoveDimensions(DEVICE_KEY, DIMENSIONS, Duration.ofMinutes(10));
 
     currentInstant = currentInstant.plus(Duration.ofMinutes(11));
-
-    Optional<DeviceTempRequiredDimensions> dimensions = manager.getDimensions(DEVICE_KEY);
-    assertThat(dimensions).isEmpty();
-  }
-
-  @Test
-  public void removeDimensions_notifiesListener() {
-    manager.addDimensions(DEVICE_KEY, DIMENSIONS, Duration.ofMinutes(10));
-    verify(listener).onDeviceTempRequiredDimensionChanged(DEVICE_KEY);
-
-    manager.removeDimensions(DEVICE_KEY);
-
-    verify(listener, times(2)).onDeviceTempRequiredDimensionChanged(DEVICE_KEY);
-  }
-
-  @Test
-  public void removeDimensions_success() {
-    manager.addDimensions(DEVICE_KEY, DIMENSIONS, Duration.ofMinutes(10));
-    manager.removeDimensions(DEVICE_KEY);
 
     Optional<DeviceTempRequiredDimensions> dimensions = manager.getDimensions(DEVICE_KEY);
     assertThat(dimensions).isEmpty();
