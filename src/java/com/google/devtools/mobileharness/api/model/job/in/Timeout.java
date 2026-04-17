@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.api.model.job.in;
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfig;
 import com.google.devtools.mobileharness.api.model.proto.Job;
 import java.time.Duration;
 
@@ -107,6 +108,30 @@ public abstract class Timeout {
     return builder.build();
   }
 
+  /**
+   * Builds a {@link Timeout} from a {@link JobConfig}.
+   *
+   * <p>Extracts job, test, and start timeout values from the JobConfig proto and constructs a
+   * {@link Timeout} model. When no explicit timeout is set, the {@link Timeout} defaults are used
+   * (e.g., {@link #DEFAULT_TEST_TIMEOUT}).
+   */
+  public static Timeout fromJobConfig(JobConfig jobConfig) {
+    Timeout.Builder timeoutBuilder = newBuilder();
+    if (jobConfig.hasTimeout()) {
+      var timeoutProto = jobConfig.getTimeout();
+      if (timeoutProto.getJobTimeoutMs() > 0) {
+        timeoutBuilder.setJobTimeout(Duration.ofMillis(timeoutProto.getJobTimeoutMs()));
+      }
+      if (timeoutProto.getTestTimeoutMs() > 0) {
+        timeoutBuilder.setTestTimeout(Duration.ofMillis(timeoutProto.getTestTimeoutMs()));
+      }
+      if (timeoutProto.getStartTimeoutMs() > 0) {
+        timeoutBuilder.setStartTimeout(Duration.ofMillis(timeoutProto.getStartTimeoutMs()));
+      }
+    }
+    return timeoutBuilder.build();
+  }
+
   public Job.Timeout toProto() {
     return Job.Timeout.newBuilder()
         .setJobTimeoutMs(jobTimeout().toMillis())
@@ -160,11 +185,10 @@ public abstract class Timeout {
         }
         if (testTimeout().compareTo(upperBound) > 0) {
           logger.atWarning().log(
-              "Test timeout %s is "
-                  + (upperBound.equals(MAX_TEST_TIMEOUT)
-                      ? "greater than upper bound"
-                      : "greater than or too close to job timeout")
-                  + ". Reduce it to %s.",
+              "Test timeout %s is %s. Reduce it to %s.",
+              upperBound.equals(MAX_TEST_TIMEOUT)
+                  ? "greater than upper bound"
+                  : "greater than or too close to job timeout",
               testTimeout(),
               upperBound);
           setTestTimeout(upperBound);
@@ -180,11 +204,10 @@ public abstract class Timeout {
         Duration upperBound = jobTimeout().minus(MIN_JOB_TEST_TIMEOUT_DIFF);
         if (startTimeout().compareTo(upperBound) > 0) {
           logger.atWarning().log(
-              "Start timeout %s is "
-                  + (upperBound.equals(MAX_TEST_TIMEOUT)
-                      ? "greater than upper bound"
-                      : "greater than or too close to job timeout")
-                  + ". Reduce it to %s.",
+              "Start timeout %s is %s. Reduce it to %s.",
+              upperBound.equals(MAX_TEST_TIMEOUT)
+                  ? "greater than upper bound"
+                  : "greater than or too close to job timeout",
               startTimeout(),
               upperBound);
           setStartTimeout(upperBound);

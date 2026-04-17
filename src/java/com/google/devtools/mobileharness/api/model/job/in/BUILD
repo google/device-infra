@@ -138,6 +138,7 @@ java_library(
         "//java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
     ],
     deps = [
+        "//src/devtools/mobileharness/api/gateway/proto:setting_java_proto",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

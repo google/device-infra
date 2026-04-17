@@ -60,9 +60,9 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpecs;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.DriverDecoratorSpecMapper;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecWalker;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
-import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.DeviceList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.Driver;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.FileConfigList.FileConfig;
@@ -131,8 +131,49 @@ public final class JobInfoCreator {
       String sessionTmpDir,
       String sessionGenDir)
       throws MobileHarnessException, InterruptedException {
+    JobConfigFromTarget target = jobConfig.getJobConfigFromTarget();
     return createJobInfo(
-        jobId, actualUser, jobAccessAccount, null, jobConfig, sessionTmpDir, sessionGenDir);
+        jobId,
+        actualUser,
+        jobAccessAccount,
+        null,
+        jobConfig,
+        target.getMhJobConfig(),
+        target.getNonstandardFlagList(),
+        target.getGenDirPath(),
+        sessionTmpDir,
+        sessionGenDir,
+        null);
+  }
+
+  /**
+   * Creates JobInfo from Gateway JobConfig with an explicit creation time.
+   *
+   * <p>This overload allows callers to inject an accurate creation time (e.g., from Spanner's
+   * JobTable.CreateTime) instead of defaulting to {@code Instant.now()}.
+   */
+  public static JobInfo createJobInfo(
+      String jobId,
+      String actualUser,
+      String jobAccessAccount,
+      com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfig jobConfig,
+      String sessionTmpDir,
+      String sessionGenDir,
+      @Nullable Timing timing)
+      throws MobileHarnessException, InterruptedException {
+    JobConfigFromTarget target = jobConfig.getJobConfigFromTarget();
+    return createJobInfo(
+        jobId,
+        actualUser,
+        jobAccessAccount,
+        null,
+        jobConfig,
+        target.getMhJobConfig(),
+        target.getNonstandardFlagList(),
+        target.getGenDirPath(),
+        sessionTmpDir,
+        sessionGenDir,
+        timing);
   }
 
   /** Creates JobInfo from Gateway JobConfig. */
@@ -140,10 +181,11 @@ public final class JobInfoCreator {
       String jobId,
       String actualUser,
       String jobAccessAccount,
-      Timestamp originalSubmitTimestamp,
+      @Nullable Timestamp originalSubmitTimestamp,
       com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfig jobConfig,
       String sessionTmpDir,
-      String sessionGenDir)
+      String sessionGenDir,
+      @Nullable Timing timing)
       throws MobileHarnessException, InterruptedException {
     JobConfigFromTarget target = jobConfig.getJobConfigFromTarget();
     return createJobInfo(
@@ -156,7 +198,8 @@ public final class JobInfoCreator {
         target.getNonstandardFlagList(),
         target.getGenDirPath(),
         sessionTmpDir,
-        sessionGenDir);
+        sessionGenDir,
+        timing);
   }
 
   /** Creates JobInfo from Gateway JobConfig and parsed details. */
@@ -164,13 +207,14 @@ public final class JobInfoCreator {
       String jobId,
       String actualUser,
       String jobAccessAccount,
-      Timestamp originalSubmitTimestamp,
+      @Nullable Timestamp originalSubmitTimestamp,
       com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfig jobConfig,
       com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig,
       List<String> nonstandardFlags,
       @Nullable String genDirPath,
       String sessionTmpDir,
-      String sessionGenDir)
+      String sessionGenDir,
+      @Nullable Timing timing)
       throws MobileHarnessException, InterruptedException {
     jobId = jobId == null ? UUID.randomUUID().toString() : jobId;
     String jobDir = PathUtil.join(sessionTmpDir, "j_" + jobId);
@@ -195,11 +239,6 @@ public final class JobInfoCreator {
     if (jobConfig.hasRetry()) {
       jobSettingBuilder.setRetry(jobConfig.getRetry());
     } else {
-      // Set to default value.
-      // When previously use com.google.wireless.qa.mobileharness.shared.proto.Job.Retry, the
-      // test_attempts and retry_level have default value. With new
-      // com.google.devtools.mobileharness.api.model.proto.Job.Retry, the default value doesn't
-      // exist, so we need to manually set it to avoid inconsistency.
       jobSettingBuilder.setRetry(JobSetting.getDefaultRetryInstance());
     }
     logger.atInfo().log(
@@ -214,7 +253,8 @@ public final class JobInfoCreator {
     logger.atInfo().log("Output jobSetting retry=%s", jobSetting.getRetry());
 
     JobInfo jobInfo;
-    if (!mhJobConfig.equals(JobConfig.getDefaultInstance())) {
+    if (!mhJobConfig.equals(
+        com.google.wireless.qa.mobileharness.shared.proto.JobConfig.getDefaultInstance())) {
       jobInfo =
           createJobInfo(
               jobId,
@@ -228,7 +268,8 @@ public final class JobInfoCreator {
                   .build(),
               sessionTmpDir,
               genDirPath,
-              false);
+              false,
+              timing);
       for (StrPair property : jobConfig.getPropertyList()) {
         jobInfo.properties().add(property.getName(), property.getValue());
       }
@@ -246,7 +287,8 @@ public final class JobInfoCreator {
               jobConfig,
               jobSetting,
               localFileUtil,
-              sessionTmpDir);
+              sessionTmpDir,
+              timing);
     }
     return jobInfo;
   }
@@ -291,6 +333,30 @@ public final class JobInfoCreator {
       @Nullable String tmpRunDirPath,
       @Nullable String genDirPath,
       boolean removeGenFileDirBeforePrepare)
+      throws MobileHarnessException, InterruptedException {
+    return createJobInfo(
+        jobId,
+        mhJobConfig,
+        nonstandardFlags,
+        setting,
+        jobUser,
+        tmpRunDirPath,
+        genDirPath,
+        removeGenFileDirBeforePrepare,
+        /* timing= */ null);
+  }
+
+  @VisibleForTesting
+  static JobInfo createJobInfo(
+      String jobId,
+      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig,
+      List<String> nonstandardFlags,
+      JobSetting setting,
+      JobUser jobUser,
+      @Nullable String tmpRunDirPath,
+      @Nullable String genDirPath,
+      boolean removeGenFileDirBeforePrepare,
+      @Nullable Timing timing)
       throws MobileHarnessException, InterruptedException {
     // Finalizes the job name.
     String jobName = mhJobConfig.getName();
@@ -343,13 +409,16 @@ public final class JobInfoCreator {
     }
     JobSpec jobSpec = jobSpecHelper.mergeSpec(jobSpecs);
 
-    JobInfo jobInfo =
+    JobInfo.Builder jobInfoBuilder =
         JobInfo.newBuilder()
             .setLocator(new JobLocator(jobId, jobName))
             .setJobUser(jobUser)
             .setType(type)
-            .setSetting(setting)
-            .build();
+            .setSetting(setting);
+    if (timing != null) {
+      jobInfoBuilder.setTiming(timing);
+    }
+    JobInfo jobInfo = jobInfoBuilder.build();
     jobInfo.protoSpec().setProto(jobSpec);
 
     // Loads the overriding info.
@@ -411,9 +480,10 @@ public final class JobInfoCreator {
       com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfig jobConfig,
       JobSetting jobSetting,
       LocalFileUtil localFileUtil,
-      String sessionTmpDir)
+      String sessionTmpDir,
+      @Nullable Timing timing)
       throws MobileHarnessException, InterruptedException {
-    JobInfo jobInfo =
+    JobInfo.Builder jobInfoBuilder =
         JobInfo.newBuilder()
             .setLocator(new JobLocator(jobId, jobConfig.getName()))
             .setJobUser(
@@ -423,8 +493,11 @@ public final class JobInfoCreator {
                     .setJobAccessAccount(jobAccessAccount)
                     .build())
             .setType(mayAppendDecorator(jobConfig.getType(), jobConfig))
-            .setSetting(jobSetting)
-            .build();
+            .setSetting(jobSetting);
+    if (timing != null) {
+      jobInfoBuilder.setTiming(timing);
+    }
+    JobInfo jobInfo = jobInfoBuilder.build();
 
     for (StrPair param : jobConfig.getParamList()) {
       jobInfo.params().add(param.getName(), param.getValue());
