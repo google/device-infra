@@ -44,6 +44,18 @@ java_library(
 )
 
 java_library(
+    name = "ats_device_reserver",
+    srcs = ["AtsDeviceReserver.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/reserver",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/util/dimension:device_temp_required_dimension_manager",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab:locator",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "ats_mode",
     srcs = ["AtsMode.java"],
     deps = [
@@ -150,11 +162,11 @@ java_library(
     srcs = ["AtsModeModule.java"],
     deps = [
         ":annotations",
+        ":ats_device_reserver",
         ":device_querier",
         ":remote_device_manager",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/reserver",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:local_device_reserver",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:abstract_scheduler",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/simple",
         "//src/java/com/google/devtools/mobileharness/shared/labinfo:lab_info_provider",

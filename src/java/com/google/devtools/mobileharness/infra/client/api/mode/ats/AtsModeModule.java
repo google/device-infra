@@ -21,7 +21,6 @@ import com.google.devtools.mobileharness.infra.client.api.controller.device.Devi
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeDeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.JobSyncServiceVersionChecker;
-import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceReserver;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.simple.SimpleScheduler;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
@@ -37,7 +36,7 @@ public class AtsModeModule extends AbstractModule {
   protected void configure() {
     bind(LabInfoProvider.class).to(RemoteDeviceManager.class);
     bind(DeviceQuerier.class).annotatedWith(AtsModeDeviceQuerier.class).to(DeviceQuerierImpl.class);
-    bind(DeviceReserver.class).to(LocalDeviceReserver.class);
+    bind(DeviceReserver.class).to(AtsDeviceReserver.class);
     bind(AbstractScheduler.class)
         .annotatedWith(AtsModeAbstractScheduler.class)
         .to(SimpleScheduler.class)
