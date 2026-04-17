@@ -77,6 +77,29 @@ public final class AndroidFileUtilTest {
   }
 
   @Test
+  public void catFile() throws Exception {
+    when(adb.runShell(SERIAL, "cat /data/local/tmp/test.txt")).thenReturn("file content");
+
+    assertThat(androidFileUtil.catFile(SERIAL, "/data/local/tmp/test.txt"))
+        .isEqualTo("file content");
+  }
+
+  @Test
+  public void catFile_throwsException() throws Exception {
+    when(adb.runShell(SERIAL, "cat /data/local/tmp/test.txt"))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
+
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class,
+                    () -> androidFileUtil.catFile(SERIAL, "/data/local/tmp/test.txt"))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_FILE_UTIL_CAT_FILE_EXE_ERROR);
+  }
+
+  @Test
   public void getSharedPrefs() throws Exception {
     when(adb.runShell(
             SERIAL,
