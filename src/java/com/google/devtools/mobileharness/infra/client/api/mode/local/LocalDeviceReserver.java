@@ -17,24 +17,26 @@
 package com.google.devtools.mobileharness.infra.client.api.mode.local;
 
 import com.google.common.collect.ImmutableListMultimap;
+import com.google.devtools.mobileharness.api.model.lab.DeviceId;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver.DeviceReserver;
 import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager;
 import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager.DeviceKey;
+import com.google.devtools.mobileharness.infra.controller.device.DeviceIdManager;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.time.Duration;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 
 /** Local mode implementation of {@link DeviceReserver}. */
-@Singleton
-public class LocalDeviceReserver extends DeviceReserver {
+class LocalDeviceReserver extends DeviceReserver {
 
   private final DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager;
+  private final DeviceIdManager idManager;
 
-  @Inject
-  LocalDeviceReserver(DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager) {
+  LocalDeviceReserver(
+      DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager,
+      DeviceIdManager idManager) {
     this.deviceTempRequiredDimensionManager = deviceTempRequiredDimensionManager;
+    this.idManager = idManager;
   }
 
   @Override
@@ -43,8 +45,17 @@ public class LocalDeviceReserver extends DeviceReserver {
       String allocationDimensionName,
       String allocationKey,
       Duration ttl) {
+    String controlIdOrUuid = deviceLocator.getSerial();
+    String deviceUuid =
+        idManager.containsUuid(controlIdOrUuid)
+            ? controlIdOrUuid
+            : idManager
+                .getDeviceIdFromControlId(controlIdOrUuid)
+                .map(DeviceId::uuid)
+                .orElse(controlIdOrUuid);
+
     deviceTempRequiredDimensionManager.addOrRemoveDimensions(
-        new DeviceKey(LabLocator.LOCALHOST.hostName(), deviceLocator.getSerial()),
+        new DeviceKey(LabLocator.LOCALHOST.hostName(), deviceUuid),
         ImmutableListMultimap.of(allocationDimensionName, allocationKey),
         ttl);
   }

@@ -280,7 +280,8 @@ public class LocalMode implements ExecMode {
 
   @Override
   public DeviceReserver createDeviceReserver() {
-    return new LocalDeviceReserver(deviceTempRequiredDimensionManager);
+    return new LocalDeviceReserver(
+        deviceTempRequiredDimensionManager, DeviceIdManager.getInstance());
   }
 
   @Override
