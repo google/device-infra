@@ -28,7 +28,6 @@ import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -64,9 +63,7 @@ import com.google.devtools.mobileharness.infra.controller.test.local.utp.control
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.TestFlowConverter;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.IncompatibleReasonProto;
 import com.google.devtools.mobileharness.infra.lab.controller.LocalFileBasedDeviceConfigManager;
-import com.google.devtools.mobileharness.shared.context.InvocationContextExecutors;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;
@@ -84,7 +81,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.stream.IntStream;
 
@@ -129,15 +125,10 @@ public class LocalMode implements ExecMode {
         if (localDeviceManager == null && proxyDeviceManager == null) {
           logger.atInfo().log("Starting local device manager");
 
-          localEnvThreadPool =
-              InvocationContextExecutors.propagatingContext(
-                  MoreExecutors.listeningDecorator(
-                      Executors.newCachedThreadPool(
-                          ThreadFactoryUtil.createThreadFactory("local-mode-thread-pool"))),
-                  ListeningExecutorService.class);
+          localEnvThreadPool = ThreadPools.createStandardThreadPool("local-mode-thread-pool");
           final ListeningScheduledExecutorService scheduledThreadPool =
               ThreadPools.createStandardScheduledThreadPool(
-                  "local-mode-scheduled-thread-pool", /* corePoolSize= */ 1);
+                  "local-mode-scheduled-thread-pool", /* corePoolSize= */ 5);
           ShutdownHookManager.getInstance()
               .addShutdownHook(localEnvThreadPool::shutdownNow, "local-mode-shutdown");
 
