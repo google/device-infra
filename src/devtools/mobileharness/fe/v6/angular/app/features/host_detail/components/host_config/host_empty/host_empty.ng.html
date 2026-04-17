@@ -3,16 +3,17 @@
   subtitle="Host Name: {{ hostName }}"
   type="host"
   [param]="{deviceId: '', hostName: hostName}"
+  (onPermissionChange)="handlePermissionChange($event)"
 >
   <mat-dialog-content class="config-content">
     <div class="config-empty-container">
       <h3 class="empty-config-title">{{ title }}</h3>
       <div class="empty-config-grid">
-        <button class="choice-card" (click)="startNewConfig()">
+        <button class="choice-card" (click)="startNewConfig()" [disabled]="!hasPermission()" [class.disabled]="!hasPermission()">
           <span mat-icon class="material-icons">add</span>
           <p class="choice-card-title">Create New Configuration</p>
         </button>
-        <button class="choice-card" (click)="copyFromAnotherHost()">
+        <button class="choice-card" (click)="copyFromAnotherHost()" [disabled]="!hasPermission()" [class.disabled]="!hasPermission()">
           <span mat-icon class="material-icons">content_copy</span>
           <p class="choice-card-title">Copy from Another Host</p>
         </button>
@@ -35,6 +36,7 @@
         <button
           class="load-button"
           (click)="loadAndReviewConfig()"
+          [disabled]="!hasPermission()"
         >
           Load & Review Configuration
         </button>

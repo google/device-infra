@@ -1,8 +1,19 @@
 import {CommonModule} from '@angular/common';
-import {ChangeDetectionStrategy, Component, inject, Input, OnInit, signal} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  Input,
+  OnInit,
+  signal,
+} from '@angular/core';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
 import {MatButtonModule} from '@angular/material/button';
-import {MAT_DIALOG_DATA, MatDialogModule, MatDialogRef} from '@angular/material/dialog';
+import {
+  MAT_DIALOG_DATA,
+  MatDialogModule,
+  MatDialogRef,
+} from '@angular/material/dialog';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatIconModule} from '@angular/material/icon';
 import {MatInputModule} from '@angular/material/input';
@@ -44,8 +55,13 @@ export class HostEmpty implements OnInit {
   copyFromAnother = signal(false);
   anotherHostName = signal('');
   copyFromAnotherErrorMessage = signal('');
+  hasPermission = signal(false);
 
   ngOnInit() {}
+
+  handlePermissionChange(result: {hasPermission: boolean}) {
+    this.hasPermission.set(result.hasPermission);
+  }
 
   startNewConfig() {
     this.dialogRef.close({action: 'new', hostName: this.data.hostName});
@@ -65,7 +81,7 @@ export class HostEmpty implements OnInit {
       next: (config) => {
         if (!config) {
           this.copyFromAnotherErrorMessage.set(
-              `Host not found or has no configuration.`,
+            `Host not found or has no configuration.`,
           );
           return;
         }
@@ -78,7 +94,7 @@ export class HostEmpty implements OnInit {
       },
       error: (error) => {
         this.copyFromAnotherErrorMessage.set(
-            error.message || 'Failed to load host configuration.',
+          error.message || 'Failed to load host configuration.',
         );
       },
     });

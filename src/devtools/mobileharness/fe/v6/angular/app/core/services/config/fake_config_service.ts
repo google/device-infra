@@ -86,6 +86,7 @@ export class FakeConfigService extends ConfigService {
     universe?: string,
   ): Observable<CheckDeviceWritePermissionResult> {
     const scenario = this.mockDeviceScenarios.find((s) => s.id === deviceId);
+
     if (!scenario || !scenario.config) {
       // If no config exists, permission is granted to create one.
       return of({hasPermission: true, userName: CURRENT_USER});
@@ -202,6 +203,13 @@ export class FakeConfigService extends ConfigService {
     hostName: string,
     universe?: string,
   ): Observable<CheckHostWritePermissionResult> {
+    const scenario = this.mockHostScenarios.find(
+      (s) => s.hostName === hostName,
+    );
+
+    if (scenario && hostName.includes('host-basic-editable')) {
+      return of({hasPermission: false});
+    }
     // For fake service, always grant permission to the current user.
     return of({hasPermission: true, userName: CURRENT_USER});
   }

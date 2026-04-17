@@ -10,7 +10,7 @@
       <mat-icon>more_vert</mat-icon>
     </button>
     <mat-menu #menu="matMenu">
-      <button mat-menu-item (click)="reset()">
+      <button mat-menu-item (click)="reset()" [disabled]="!hasPermission()">
         <mat-icon>delete_sweep</mat-icon>
         <span class="config-menu-text">Clear All & Start Over</span>
       </button>
@@ -76,7 +76,7 @@
             <app-config-mode
               workflow="settings"
               [(mode)]="hostConfig.deviceConfigMode"
-              [uiStatus]="config.uiStatus.deviceConfigMode"
+              [uiStatus]="configModeUiStatus"
             ></app-config-mode>
           }
           @case ('permissions') {
@@ -154,7 +154,7 @@
             <app-host-properties
               workflow="settings"
               [(properties)]="hostConfig.hostProperties!"
-              [uiStatus]="config.uiStatus.hostProperties"
+              [uiStatus]="hostPropertiesUiStatus"
             ></app-host-properties>
           }
           @default {
@@ -162,18 +162,23 @@
           }
         }
       </div>
-      <app-footer type="host" [param]="{deviceId: '', hostName: hostName}" class="main-footer">
+      <app-footer
+        type="host"
+        [param]="{deviceId: '', hostName: hostName}"
+        class="main-footer"
+        (onPermissionChange)="handlePermissionChange($event)"
+      >
         <ng-container footer-buttons>
           <button
             class="wizard-button wizard-button-secondary"
-            [disabled]="!isCategoryDirty(activeSection())"
+            [disabled]="!isCategoryDirty(activeSection()) || !hasPermission()"
             (click)="discard()"
           >
             Discard Changes
           </button>
           <button
             class="wizard-button wizard-button-primary"
-            [disabled]="!isCategoryDirty(activeSection()) || hasError || saving()"
+            [disabled]="!isCategoryDirty(activeSection()) || hasError || saving() || !hasPermission()"
             (click)="save()"
           >
             @if (saving()) {

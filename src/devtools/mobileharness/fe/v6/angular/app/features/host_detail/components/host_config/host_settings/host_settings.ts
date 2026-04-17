@@ -183,52 +183,153 @@ export class HostSettings implements OnInit {
     this.config.uiStatus.hostAdmins.editability || {editable: true},
   );
 
-  // Host permissions UI status.
-  // This is used to determine the visibility and editability of the host
-  // permissions in the UI.
-  hostPermissionsUiStatus = {
-    hostAdmins: this.config.uiStatus.hostAdmins,
-  };
+  get hostPermissionsUiStatus() {
+    const status = {
+      hostAdmins: this.config.uiStatus.hostAdmins,
+    };
+    if (!this.hasPermission()) {
+      return {
+        hostAdmins: {
+          ...status.hostAdmins,
+          editability: {
+            editable: false,
+            reason:
+              'You do not have permission to edit this host configuration.',
+          },
+        },
+      };
+    }
+    return status;
+  }
 
-  // Dimensions UI status.
-  // This is used to determine the visibility and editability of the dimensions
-  // in the UI.
-  dimensionsUiStatus = {
-    sectionStatus: this.config.uiStatus.deviceConfig.sectionStatus,
-  };
+  get configModeUiStatus() {
+    const status = this.config.uiStatus.deviceConfigMode;
+    if (!this.hasPermission()) {
+      return {
+        ...status,
+        editability: {
+          editable: false,
+          reason: 'You do not have permission to edit this host configuration.',
+        },
+      };
+    }
+    return status;
+  }
 
-  // Device discovery UI status.
-  // This is used to determine the visibility and editability of the device
-  // discovery in the UI.
-  deviceDiscoveryUiStatus = {
-    sectionStatus: this.config.uiStatus.deviceDiscovery,
-  };
+  get dimensionsUiStatus() {
+    const status = {
+      sectionStatus: this.config.uiStatus.deviceConfig.sectionStatus,
+    };
+    if (!this.hasPermission()) {
+      return {
+        sectionStatus: {
+          ...status.sectionStatus,
+          editability: {
+            editable: false,
+            reason:
+              'You do not have permission to edit this host configuration.',
+          },
+        },
+      };
+    }
+    return status;
+  }
+
+  get deviceDiscoveryUiStatus() {
+    const status = {
+      sectionStatus: this.config.uiStatus.deviceDiscovery,
+    };
+    if (!this.hasPermission()) {
+      return {
+        sectionStatus: {
+          ...status.sectionStatus,
+          editability: {
+            editable: false,
+            reason:
+              'You do not have permission to edit this host configuration.',
+          },
+        },
+      };
+    }
+    return status;
+  }
 
   get permissionsUiStatus() {
-    return (
-      this.config.uiStatus.deviceConfig.subSections.permissions || {
-        visible: true,
-        editability: {editable: true},
-      }
-    );
+    const status =
+      this.config.uiStatus.deviceConfig.subSections?.permissions || {
+      visible: true,
+      editability: {editable: true},
+    };
+    if (!this.hasPermission()) {
+      return {
+        ...status,
+        editability: {
+          editable: false,
+          reason: 'You do not have permission to edit this host configuration.',
+        },
+      };
+    }
+    return status;
   }
 
   get wifiUiStatus() {
-    return (
-      this.config.uiStatus.deviceConfig.subSections.wifi || {
-        visible: true,
-        editability: {editable: true},
-      }
-    );
+    const status =
+      this.config.uiStatus.deviceConfig.subSections?.wifi || {
+      visible: true,
+      editability: {editable: true},
+    };
+    if (!this.hasPermission()) {
+      return {
+        ...status,
+        editability: {
+          editable: false,
+          reason: 'You do not have permission to edit this host configuration.',
+        },
+      };
+    }
+    return status;
   }
 
   get settingsUiStatus() {
-    return (
-      this.config.uiStatus.deviceConfig.subSections.settings || {
-        visible: true,
-        editability: {editable: true},
-      }
-    );
+    const status =
+      this.config.uiStatus.deviceConfig.subSections?.settings || {
+      visible: true,
+      editability: {editable: true},
+    };
+    if (!this.hasPermission()) {
+      return {
+        ...status,
+        editability: {
+          editable: false,
+          reason: 'You do not have permission to edit this host configuration.',
+        },
+      };
+    }
+    return status;
+  }
+
+  get hostPropertiesUiStatus() {
+    const defaultSectionStatus = {
+      visible: true,
+      editability: {editable: true},
+    };
+    const noPermissionEditability = {
+      editable: false,
+      reason: 'You do not have permission to edit this host configuration.',
+    };
+
+    const currentStatus = this.config.uiStatus.hostProperties;
+
+    if (!this.hasPermission()) {
+      const sectionStatus = currentStatus?.sectionStatus
+        ? {...currentStatus.sectionStatus, editability: noPermissionEditability}
+        : {visible: true, editability: noPermissionEditability};
+      return {sectionStatus};
+    }
+
+    // If hasPermission is true, return the existing status or a default if undefined.
+    const sectionStatus = currentStatus?.sectionStatus || defaultSectionStatus;
+    return {sectionStatus};
   }
 
   // Default device config for the host.
@@ -282,6 +383,7 @@ export class HostSettings implements OnInit {
   hasError = false;
 
   saving = signal<boolean>(false);
+  hasPermission = signal<boolean>(false);
 
   ngOnInit() {
     if (this.dialogData) {
@@ -302,7 +404,6 @@ export class HostSettings implements OnInit {
 
     this.initializeVisibleSections();
     this.initializeData();
-    this.initializeUIStatus();
 
     // Set the tooltip text of device config based on the device config mode.
     const tooltip =
@@ -348,42 +449,51 @@ export class HostSettings implements OnInit {
   }
 
   setActiveSectionEditibility(section: string) {
+    let editability: Editability = {editable: true};
+
     switch (section) {
       case 'host-permissions':
-        this.activeSectionEditibility.set(
-          this.config.uiStatus.hostAdmins.editability || {editable: true},
-        );
+        editability = this.config.uiStatus.hostAdmins.editability || {
+          editable: true,
+        };
         break;
       case 'config-mode':
-        this.activeSectionEditibility.set(
-          this.config.uiStatus.deviceConfigMode.editability || {editable: true},
-        );
+        editability = this.config.uiStatus.deviceConfigMode.editability || {
+          editable: true,
+        };
         break;
       case 'permissions':
       case 'wifi':
       case 'dimensions':
       case 'stability':
-        this.activeSectionEditibility.set(
-          this.config.uiStatus.deviceConfig.sectionStatus.editability || {
-            editable: true,
-          },
-        );
+        editability = this.config.uiStatus.deviceConfig.sectionStatus
+          .editability || {
+          editable: true,
+        };
         break;
       case 'device-discovery':
-        this.activeSectionEditibility.set(
-          this.config.uiStatus.deviceDiscovery.editability || {editable: true},
-        );
+        editability = this.config.uiStatus.deviceDiscovery.editability || {
+          editable: true,
+        };
         break;
       case 'host-properties':
-        this.activeSectionEditibility.set(
-          this.config.uiStatus.hostProperties.sectionStatus.editability || {
-            editable: true,
-          },
-        );
+        editability = this.config.uiStatus.hostProperties.sectionStatus
+          .editability || {
+          editable: true,
+        };
         break;
       default:
-        this.activeSectionEditibility.set({editable: true, reason: ''});
+        editability = {editable: true, reason: ''};
     }
+
+    if (!this.hasPermission()) {
+      editability = {
+        editable: false,
+        reason: 'You do not have permission to edit this host configuration.',
+      };
+    }
+
+    this.activeSectionEditibility.set(editability);
   }
 
   visibleSections() {
@@ -429,20 +539,6 @@ export class HostSettings implements OnInit {
     this.originalHostConfig = objectUtils.deepCopy(
       this.hostConfig,
     ) as HostConfig;
-  }
-
-  initializeUIStatus() {
-    this.hostPermissionsUiStatus = {
-      hostAdmins: this.config.uiStatus.hostAdmins,
-    };
-
-    this.dimensionsUiStatus = {
-      sectionStatus: this.config.uiStatus.deviceConfig.sectionStatus,
-    };
-
-    this.deviceDiscoveryUiStatus = {
-      sectionStatus: this.config.uiStatus.deviceDiscovery,
-    };
   }
 
   isCategoryDirty(category: string) {
@@ -501,6 +597,11 @@ export class HostSettings implements OnInit {
     }
 
     return false;
+  }
+
+  handlePermissionChange(result: {hasPermission: boolean}) {
+    this.hasPermission.set(result.hasPermission);
+    this.setActiveSectionEditibility(this.activeSection());
   }
 
   resetConfig() {
