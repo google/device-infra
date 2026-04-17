@@ -30,7 +30,8 @@ package(
         "//javatests/com/google/devtools/mobileharness/platform/fitbit:__subpackages__",
         "//javatests/com/google/devtools/mobileharness/service/moscar:__subpackages__",
         "//javatests/com/google/wireless/qa/mobileharness/client/api:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client:__subpackages__",
     ],
 )
 

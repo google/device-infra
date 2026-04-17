@@ -79,6 +79,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api",
         "//src/java/com/google/devtools/mobileharness/infra/client/api:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/client/api:module",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/reserver",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:controller_module",

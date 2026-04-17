@@ -22,6 +22,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.ClientApiModule;
+import com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver.DeviceReserver;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.EnableDatabase;
@@ -58,6 +59,8 @@ import com.google.inject.Scopes;
 import com.google.inject.util.Providers;
 import io.grpc.BindableService;
 import java.time.Instant;
+import javax.inject.Inject;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 
 /** Module for OLC server. */
@@ -98,9 +101,7 @@ class OlcServerModule extends AbstractModule {
     install(new ControllerModule());
     install(new ClientApiModule());
 
-    if (isAtsMode) {
-      installByClassName(ATS_MODE_MODULE_CLASS_NAME);
-    }
+    configureExecMode();
 
     if (enableCloudPubsubMonitoring) {
       install(new CloudPubsubMonitorModule());
@@ -110,9 +111,6 @@ class OlcServerModule extends AbstractModule {
 
     bind(OlcServerRunner.class).to(OlcServerRunnerImpl.class);
     bind(ClientApi.class).in(Scopes.SINGLETON);
-    bind(ExecMode.class)
-        .to(isAtsMode ? loadExecMode(ATS_MODE_CLASS_NAME) : loadExecMode(LOCAL_MODE_CLASS_NAME))
-        .in(Scopes.SINGLETON);
     bind(LocalSessionStub.class).to(LocalSessionStubImpl.class);
 
     // Binds database connections and persistence utils.
@@ -178,6 +176,16 @@ class OlcServerModule extends AbstractModule {
     }
   }
 
+  private void configureExecMode() {
+    if (isAtsMode) {
+      installByClassName(ATS_MODE_MODULE_CLASS_NAME);
+      bind(ExecMode.class).to(loadExecMode(ATS_MODE_CLASS_NAME)).in(Scopes.SINGLETON);
+    } else {
+      bind(ExecMode.class).to(loadExecMode(LOCAL_MODE_CLASS_NAME)).in(Scopes.SINGLETON);
+      bind(DeviceReserver.class).toProvider(ExecModeDeviceReserverProvider.class);
+    }
+  }
+
   private void installByClassName(@SuppressWarnings("SameParameterValue") String className) {
     try {
       install(
@@ -214,6 +222,21 @@ class OlcServerModule extends AbstractModule {
       }
     } else {
       return NoOpServerUtils.class;
+    }
+  }
+
+  private static class ExecModeDeviceReserverProvider implements Provider<DeviceReserver> {
+
+    private final ExecMode execMode;
+
+    @Inject
+    ExecModeDeviceReserverProvider(ExecMode execMode) {
+      this.execMode = execMode;
+    }
+
+    @Override
+    public DeviceReserver get() {
+      return execMode.createDeviceReserver();
     }
   }
 }
