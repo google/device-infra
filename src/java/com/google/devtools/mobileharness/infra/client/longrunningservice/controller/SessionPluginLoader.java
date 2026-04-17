@@ -26,6 +26,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver.DeviceReserver;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.ServerStartTime;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
@@ -73,6 +74,7 @@ public class SessionPluginLoader {
   private final DeviceQuerier deviceQuerier;
   private final Instant serverStartTime;
   private final LocalSessionStub localSessionStub;
+  private final DeviceReserver deviceReserver;
 
   @Inject
   SessionPluginLoader(
@@ -80,12 +82,14 @@ public class SessionPluginLoader {
       EventBusBackend eventBusBackend,
       DeviceQuerier deviceQuerier,
       @ServerStartTime Instant serverStartTime,
-      LocalSessionStub localSessionStub) {
+      LocalSessionStub localSessionStub,
+      DeviceReserver deviceReserver) {
     this.reflectionUtil = reflectionUtil;
     this.eventBusBackend = eventBusBackend;
     this.deviceQuerier = deviceQuerier;
     this.serverStartTime = serverStartTime;
     this.localSessionStub = localSessionStub;
+    this.deviceReserver = deviceReserver;
   }
 
   ImmutableList<SessionPlugin> loadSessionPlugins(
@@ -135,6 +139,7 @@ public class SessionPluginLoader {
               deviceQuerier,
               serverStartTime,
               localSessionStub,
+              deviceReserver,
               sessionEnvironment,
               closeableResources);
 
@@ -223,6 +228,7 @@ public class SessionPluginLoader {
     private final DeviceQuerier deviceQuerier;
     private final Instant serverStartTime;
     private final LocalSessionStub localSessionStub;
+    private final DeviceReserver deviceReserver;
     private final SessionEnvironment sessionEnvironment;
     private final CloseableResources closeableResources;
 
@@ -231,12 +237,14 @@ public class SessionPluginLoader {
         DeviceQuerier deviceQuerier,
         Instant serverStartTime,
         LocalSessionStub localSessionStub,
+        DeviceReserver deviceReserver,
         SessionEnvironment sessionEnvironment,
         CloseableResources closeableResources) {
       this.sessionInfo = sessionInfo;
       this.deviceQuerier = deviceQuerier;
       this.serverStartTime = serverStartTime;
       this.localSessionStub = localSessionStub;
+      this.deviceReserver = deviceReserver;
       this.sessionEnvironment = sessionEnvironment;
       this.closeableResources = closeableResources;
     }
@@ -269,6 +277,12 @@ public class SessionPluginLoader {
     @Singleton
     LocalSessionStub provideLocalSessionStub() {
       return localSessionStub;
+    }
+
+    @Provides
+    @Singleton
+    DeviceReserver provideDeviceReserver() {
+      return deviceReserver;
     }
   }
 

@@ -96,6 +96,7 @@ message SessionPluginConfigs {
 // 6. @SessionTempDir Path.
 // 7. @SessionGenDir Path.
 // 8. LocalSessionStub.
+// 9. DeviceReserver.
 message SessionPluginConfig {
   // Required.
   SessionPluginLoadingConfig loading_config = 1;
