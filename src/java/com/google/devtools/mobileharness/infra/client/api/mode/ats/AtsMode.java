@@ -31,7 +31,6 @@ import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.A
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator.DeviceVerifier;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator.EmptyDeviceVerifier;
-import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceReserver;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.RemoteTestRunner;
 import com.google.devtools.mobileharness.infra.client.api.proto.ResourceFederationProto.ResourceFederation;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ServiceProvider;
@@ -61,7 +60,7 @@ public class AtsMode implements ExecMode, ServiceProvider {
   private final LabRecordManager labRecordManager;
   private final LabRecordService labRecordService;
   private final JobSyncService jobSyncService;
-  private final LocalDeviceReserver localDeviceReserver;
+  private final DeviceReserver deviceReserver;
   private final DeviceVerifier deviceVerifier = new EmptyDeviceVerifier();
 
   @Inject
@@ -74,7 +73,7 @@ public class AtsMode implements ExecMode, ServiceProvider {
       LabRecordManager labRecordManager,
       LabRecordService labRecordService,
       JobSyncService jobSyncService,
-      LocalDeviceReserver localDeviceReserver) {
+      DeviceReserver deviceReserver) {
     this.remoteDeviceManager = remoteDeviceManager;
     this.deviceQuerier = deviceQuerier;
     this.scheduler = scheduler;
@@ -83,7 +82,7 @@ public class AtsMode implements ExecMode, ServiceProvider {
     this.labRecordManager = labRecordManager;
     this.labRecordService = labRecordService;
     this.jobSyncService = jobSyncService;
-    this.localDeviceReserver = localDeviceReserver;
+    this.deviceReserver = deviceReserver;
   }
 
   @Override
@@ -111,7 +110,7 @@ public class AtsMode implements ExecMode, ServiceProvider {
 
   @Override
   public DeviceReserver createDeviceReserver() {
-    return localDeviceReserver;
+    return deviceReserver;
   }
 
   @Override

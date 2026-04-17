@@ -24,8 +24,10 @@ import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceT
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.time.Duration;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
 /** Local mode implementation of {@link DeviceReserver}. */
+@Singleton
 public class LocalDeviceReserver extends DeviceReserver {
 
   private final DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager;
