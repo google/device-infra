@@ -156,6 +156,21 @@ public class LocalMode implements ExecMode {
             return;
           }
 
+          // Initializes temp required dimension manager.
+          // It should be before device manager initialization.
+          deviceTempRequiredDimensionManager =
+              Guice.createInjector(
+                      new AbstractModule() {
+                        @Override
+                        protected void configure() {
+                          bind(ListeningExecutorService.class).toInstance(localEnvThreadPool);
+                          bind(ListeningScheduledExecutorService.class)
+                              .toInstance(scheduledThreadPool);
+                          bind(InstantSource.class).toInstance(InstantSource.system());
+                        }
+                      })
+                  .getInstance(DeviceTempRequiredDimensionManager.class);
+
           // Initializes local device manager.
           DetectorsAndDispatchers detectorsAndDispatchers =
               new DetectorDispatcherSelector(Component.LOCAL_MODE).selectDetectorsAndDispatchers();
@@ -188,18 +203,6 @@ public class LocalMode implements ExecMode {
           // Initializes local scheduler.
           localScheduler = new SimpleScheduler(localEnvThreadPool);
           localSchedulerFuture.set(localScheduler);
-          deviceTempRequiredDimensionManager =
-              Guice.createInjector(
-                      new AbstractModule() {
-                        @Override
-                        protected void configure() {
-                          bind(ListeningExecutorService.class).toInstance(localEnvThreadPool);
-                          bind(ListeningScheduledExecutorService.class)
-                              .toInstance(scheduledThreadPool);
-                          bind(InstantSource.class).toInstance(InstantSource.system());
-                        }
-                      })
-                  .getInstance(DeviceTempRequiredDimensionManager.class);
           deviceTempRequiredDimensionManager.start();
           LocalDeviceManagerSchedulerSyncer localDeviceManagerSchedulerSyncer =
               new LocalDeviceManagerSchedulerSyncer(
@@ -271,7 +274,8 @@ public class LocalMode implements ExecMode {
 
   @Override
   public DeviceQuerier createDeviceQuerier() {
-    return new LocalDeviceQuerier(localDeviceManagerFuture, firstDeviceLatch);
+    return new LocalDeviceQuerier(
+        localDeviceManagerFuture, firstDeviceLatch, deviceTempRequiredDimensionManager);
   }
 
   @Override

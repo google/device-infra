@@ -25,7 +25,10 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
+import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager;
+import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager.DeviceKey;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
@@ -48,12 +51,16 @@ class LocalDeviceQuerier implements DeviceQuerier {
 
   private final ListenableFuture<LocalDeviceManager> deviceManagerFuture;
   private final CountDownLatch firstDeviceLatch;
+  private final DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager;
 
   /** Creates a device querier to retrieve the local device information. */
   public LocalDeviceQuerier(
-      ListenableFuture<LocalDeviceManager> deviceManagerFuture, CountDownLatch firstDeviceLatch) {
+      ListenableFuture<LocalDeviceManager> deviceManagerFuture,
+      CountDownLatch firstDeviceLatch,
+      DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager) {
     this.deviceManagerFuture = deviceManagerFuture;
     this.firstDeviceLatch = firstDeviceLatch;
+    this.deviceTempRequiredDimensionManager = deviceTempRequiredDimensionManager;
   }
 
   @Override
@@ -119,6 +126,24 @@ class LocalDeviceQuerier implements DeviceQuerier {
                                                   .setRequired(true)
                                                   .build())
                                       .collect(toImmutableList()))
+                              .addAllDimension(
+                                  deviceTempRequiredDimensionManager
+                                      .getDimensions(
+                                          new DeviceKey(
+                                              LabLocator.LOCALHOST.hostName(),
+                                              deviceEntry.getKey().getDeviceUuid()))
+                                      .map(
+                                          tempRequiredDimensions ->
+                                              tempRequiredDimensions.dimensions().entries().stream()
+                                                  .map(
+                                                      dimension ->
+                                                          Dimension.newBuilder()
+                                                              .setName(dimension.getKey())
+                                                              .setValue(dimension.getValue())
+                                                              .setRequired(true)
+                                                              .build())
+                                                  .collect(toImmutableList()))
+                                      .orElse(ImmutableList.of()))
                               .addDimension(
                                   Dimension.newBuilder()
                                       .setName(Ascii.toLowerCase(Name.HOST_NAME.name()))

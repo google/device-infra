@@ -44,7 +44,6 @@ public class LocalDeviceReserver extends DeviceReserver {
       String allocationKey,
       Duration ttl) {
     deviceTempRequiredDimensionManager.addOrRemoveDimensions(
-        // Uses the same host name in LocalDeviceManagerSchedulerSyncer.
         new DeviceKey(LabLocator.LOCALHOST.hostName(), deviceLocator.getSerial()),
         ImmutableListMultimap.of(allocationDimensionName, allocationKey),
         ttl);

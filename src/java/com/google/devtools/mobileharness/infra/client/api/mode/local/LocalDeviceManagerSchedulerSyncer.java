@@ -157,7 +157,7 @@ class LocalDeviceManagerSchedulerSyncer implements ApiConfigListener {
 
     DeviceTempRequiredDimensionManager.DeviceKey deviceKey =
         new DeviceTempRequiredDimensionManager.DeviceKey(
-            LOCAL_LAB_UNIT.locator().hostName(), device.getDeviceUuid());
+            LabLocator.LOCALHOST.hostName(), device.getDeviceUuid());
     deviceTempRequiredDimensionManager
         .getDimensions(deviceKey)
         .ifPresent(
