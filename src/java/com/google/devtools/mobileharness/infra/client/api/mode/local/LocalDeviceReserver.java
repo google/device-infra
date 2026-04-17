@@ -26,7 +26,7 @@ import java.time.Duration;
 import javax.inject.Inject;
 
 /** Local mode implementation of {@link DeviceReserver}. */
-public class LocalDeviceReserver implements DeviceReserver {
+public class LocalDeviceReserver extends DeviceReserver {
 
   private final DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager;
 

@@ -22,9 +22,9 @@ import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.time.Duration;
 
 /** For reserving devices for tests. */
-public interface DeviceReserver {
+public abstract class DeviceReserver {
 
-  Duration TEMP_ALLOCATION_KEY_TTL = Duration.ofMinutes(20);
+  public static final Duration TEMP_ALLOCATION_KEY_TTL = Duration.ofMinutes(20);
 
   /**
    * Temporarily adds allocation key to a given device.
@@ -43,7 +43,7 @@ public interface DeviceReserver {
    * @param allocationKey the allocation key that need to be specified by tests that attempt to
    *     allocate the device
    */
-  default void addTempAllocationKeyToDevice(DeviceLocator deviceLocator, String allocationKey)
+  public void addTempAllocationKeyToDevice(DeviceLocator deviceLocator, String allocationKey)
       throws MobileHarnessException, InterruptedException {
     addTempAllocationKeyToDevice(deviceLocator, allocationKey, TEMP_ALLOCATION_KEY_TTL);
   }
@@ -62,7 +62,7 @@ public interface DeviceReserver {
    *     allocate the device
    * @param ttl the duration for the reservation
    */
-  default void addTempAllocationKeyToDevice(
+  public void addTempAllocationKeyToDevice(
       DeviceLocator deviceLocator, String allocationKey, Duration ttl)
       throws MobileHarnessException, InterruptedException {
     addTempAllocationKeyToDevice(
@@ -84,7 +84,7 @@ public interface DeviceReserver {
    *     allocate the device
    * @param ttl the duration for the reservation
    */
-  void addTempAllocationKeyToDevice(
+  public abstract void addTempAllocationKeyToDevice(
       DeviceLocator deviceLocator,
       String allocationDimensionName,
       String allocationKey,

@@ -21,7 +21,7 @@ import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.time.Duration;
 
 /** Empty implementation of {@link DeviceReserver}. */
-public class EmptyDeviceReserver implements DeviceReserver {
+public class EmptyDeviceReserver extends DeviceReserver {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
