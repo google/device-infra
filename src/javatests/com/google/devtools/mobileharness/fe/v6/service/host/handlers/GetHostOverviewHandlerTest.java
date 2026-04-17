@@ -47,6 +47,9 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPa
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
@@ -76,6 +79,9 @@ public final class GetHostOverviewHandlerTest {
   @Bind @Mock private LabInfoProvider labInfoProvider;
   @Bind @Mock private HostAuxiliaryInfoProvider hostAuxiliaryInfoProvider;
   @Bind @Mock private Environment environment;
+  @Bind @Mock private FeatureManagerFactory featureManagerFactory;
+  @Bind @Mock private FeatureReadiness featureReadiness;
+  @Mock private FeatureManager mockFeatureManager;
 
   @Bind private ListeningExecutorService executorService = newDirectExecutorService();
 
@@ -84,6 +90,9 @@ public final class GetHostOverviewHandlerTest {
   @Before
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+
+    when(featureManagerFactory.create(any())).thenReturn(mockFeatureManager);
+    when(mockFeatureManager.isLabServerReleaseFeatureEnabled()).thenReturn(true);
 
     // Default empty responses
     when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
@@ -147,6 +156,7 @@ public final class GetHostOverviewHandlerTest {
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Fusion Lab");
+    assertThat(overview.getLabServer().getActions().getRelease().getEnabled()).isFalse();
   }
 
   @Test
@@ -191,6 +201,18 @@ public final class GetHostOverviewHandlerTest {
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Satellite Lab");
+  }
+
+  @Test
+  public void getHostOverview_labType_satellite_releaseButtonVisible() throws Exception {
+    mockLabInfoWithProperty("lab_type", "satellite");
+    when(mockFeatureManager.isLabServerDeployFeatureEnabled()).thenReturn(true);
+    when(featureReadiness.isLabServerDeployReady()).thenReturn(true);
+
+    HostOverview overview =
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
+            .getOverviewContent();
+    assertThat(overview.getLabServer().getActions().getRelease().getVisible()).isTrue();
   }
 
   @Test

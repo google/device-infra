@@ -116,7 +116,10 @@ public final class FeatureManagerTest {
     assertThat(featureManager.isDeviceLogcatFeatureEnabled()).isTrue();
     assertThat(featureManager.isDeviceQuarantineFeatureEnabled()).isTrue();
     assertThat(featureManager.isDeviceScreenshotFeatureEnabled()).isTrue();
-    assertThat(featureManager.isRemoteControlFeatureEnabled()).isTrue();
+    assertThat(featureManager.isDeviceRemoteControlFeatureEnabled()).isTrue();
+    assertThat(featureManager.isHostDebugFeatureEnabled()).isTrue();
+    assertThat(featureManager.isHostDecommissionFeatureEnabled()).isTrue();
+    assertThat(featureManager.isLabServerReleaseFeatureEnabled()).isTrue();
   }
 
   @Test
@@ -126,7 +129,10 @@ public final class FeatureManagerTest {
     assertThat(featureManager.isDeviceLogcatFeatureEnabled()).isFalse();
     assertThat(featureManager.isDeviceQuarantineFeatureEnabled()).isFalse();
     assertThat(featureManager.isDeviceScreenshotFeatureEnabled()).isFalse();
-    assertThat(featureManager.isRemoteControlFeatureEnabled()).isFalse();
+    assertThat(featureManager.isDeviceRemoteControlFeatureEnabled()).isFalse();
+    assertThat(featureManager.isHostDebugFeatureEnabled()).isFalse();
+    assertThat(featureManager.isHostDecommissionFeatureEnabled()).isFalse();
+    assertThat(featureManager.isLabServerReleaseFeatureEnabled()).isFalse();
   }
 
   @Test
@@ -136,6 +142,9 @@ public final class FeatureManagerTest {
     assertThat(featureManager.isDeviceLogcatFeatureEnabled()).isFalse();
     assertThat(featureManager.isDeviceQuarantineFeatureEnabled()).isFalse();
     assertThat(featureManager.isDeviceScreenshotFeatureEnabled()).isFalse();
-    assertThat(featureManager.isRemoteControlFeatureEnabled()).isFalse();
+    assertThat(featureManager.isDeviceRemoteControlFeatureEnabled()).isFalse();
+    assertThat(featureManager.isHostDebugFeatureEnabled()).isFalse();
+    assertThat(featureManager.isHostDecommissionFeatureEnabled()).isFalse();
+    assertThat(featureManager.isLabServerReleaseFeatureEnabled()).isFalse();
   }
 }

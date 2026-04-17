@@ -38,6 +38,7 @@ java_library(
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/handlers",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/provider",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:host_action_button_creator",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/remotecontrol",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",

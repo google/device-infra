@@ -54,7 +54,22 @@ public final class FeatureReadinessTest {
   }
 
   @Test
-  public void isRemoteControlReady_returnsFalse() {
-    assertThat(featureReadiness.isRemoteControlReady()).isFalse();
+  public void isDeviceRemoteControlReady_returnsFalse() {
+    assertThat(featureReadiness.isDeviceRemoteControlReady()).isFalse();
+  }
+
+  @Test
+  public void isHostDebugReady_returnsFalse() {
+    assertThat(featureReadiness.isHostDebugReady()).isFalse();
+  }
+
+  @Test
+  public void isHostDecommissionReady_returnsFalse() {
+    assertThat(featureReadiness.isHostDecommissionReady()).isFalse();
+  }
+
+  @Test
+  public void isLabServerStartReady_returnsTrue() {
+    assertThat(featureReadiness.isLabServerStartReady()).isTrue();
   }
 }

@@ -54,7 +54,7 @@ class RemoteControlButtonBuilder {
   }
 
   public ActionButtonState build(DeviceInfo deviceInfo, UniverseScope universe) {
-    if (!featureManagerFactory.create(universe).isRemoteControlFeatureEnabled()) {
+    if (!featureManagerFactory.create(universe).isDeviceRemoteControlFeatureEnabled()) {
       return ActionButtonState.newBuilder().setVisible(false).build();
     }
 
@@ -92,7 +92,7 @@ class RemoteControlButtonBuilder {
                     .reasonCode()
                     .filter(IneligibilityReasonCode.DEVICE_NOT_IDLE::equals)
                     .isPresent())
-        .setIsReady(featureReadiness.isRemoteControlReady())
+        .setIsReady(featureReadiness.isDeviceRemoteControlReady())
         .setEnabled(result.isEligible())
         .setTooltip(result.reasonMessage().orElse(""))
         .build();

@@ -16,13 +16,26 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 
-import static com.google.common.util.concurrent.Futures.immediateFuture;
-
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.LabFilter;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition.Include;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.LabViewRequest;
+import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
+import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostReleaseInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostHeaderInfoRequest;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostActions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
+import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -30,26 +43,69 @@ import javax.inject.Singleton;
 @Singleton
 public class GetHostHeaderInfoHandler {
 
+  private final LabInfoProvider labInfoProvider;
+  private final HostAuxiliaryInfoProvider hostAuxiliaryInfoProvider;
+  private final ListeningExecutorService executor;
+  private final HostHeaderInfoBuilder hostHeaderInfoBuilder;
+
   @Inject
-  GetHostHeaderInfoHandler() {}
+  GetHostHeaderInfoHandler(
+      LabInfoProvider labInfoProvider,
+      HostAuxiliaryInfoProvider hostAuxiliaryInfoProvider,
+      ListeningExecutorService executor,
+      HostHeaderInfoBuilder hostHeaderInfoBuilder) {
+    this.labInfoProvider = labInfoProvider;
+    this.hostAuxiliaryInfoProvider = hostAuxiliaryInfoProvider;
+    this.executor = executor;
+    this.hostHeaderInfoBuilder = hostHeaderInfoBuilder;
+  }
 
   public ListenableFuture<HostHeaderInfo> getHostHeaderInfo(
       GetHostHeaderInfoRequest request, UniverseScope universe) {
-    if (universe instanceof UniverseScope.RoutedUniverse) {
-      // Scenario 2: routed universe. Configuration is disabled.
-      return immediateFuture(
-          HostHeaderInfo.newBuilder()
-              .setHostName(request.getHostName())
-              .setActions(HostActions.getDefaultInstance()) // Empty actions
-              .build());
-    }
+    String hostName = request.getHostName();
+    ListenableFuture<GetLabInfoResponse> labInfoFuture =
+        labInfoProvider.getLabInfoAsync(createGetLabInfoRequest(hostName), universe);
 
-    // Scenario 1 & 3: self universe.
-    // TODO: Implement this method fully.
-    return immediateFuture(
-        HostHeaderInfo.newBuilder()
-            .setHostName(request.getHostName())
-            .setActions(HostActions.getDefaultInstance())
-            .build());
+    ListenableFuture<Optional<HostReleaseInfo>> hostReleaseInfoFuture =
+        hostAuxiliaryInfoProvider.getHostReleaseInfo(hostName, universe);
+
+    return Futures.whenAllSucceed(labInfoFuture, hostReleaseInfoFuture)
+        .call(
+            () -> {
+              GetLabInfoResponse labInfoResponse = Futures.getDone(labInfoFuture);
+              Optional<HostReleaseInfo> hostReleaseInfoOpt = Futures.getDone(hostReleaseInfoFuture);
+
+              Optional<LabInfo> labInfoOpt =
+                  labInfoResponse.getLabQueryResult().getLabView().getLabDataList().stream()
+                      .map(LabData::getLabInfo)
+                      .findFirst();
+
+              Optional<String> labTypeOpt = hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType);
+
+              return hostHeaderInfoBuilder.build(hostName, universe, labInfoOpt, labTypeOpt);
+            },
+            executor);
+  }
+
+  private GetLabInfoRequest createGetLabInfoRequest(String hostName) {
+    return GetLabInfoRequest.newBuilder()
+        .setLabQuery(
+            LabQuery.newBuilder()
+                .setFilter(
+                    Filter.newBuilder()
+                        .setLabFilter(
+                            LabFilter.newBuilder()
+                                .addLabMatchCondition(
+                                    LabFilter.LabMatchCondition.newBuilder()
+                                        .setLabHostNameMatchCondition(
+                                            LabFilter.LabMatchCondition.LabHostNameMatchCondition
+                                                .newBuilder()
+                                                .setCondition(
+                                                    StringMatchCondition.newBuilder()
+                                                        .setInclude(
+                                                            Include.newBuilder()
+                                                                .addExpected(hostName)))))))
+                .setLabViewRequest(LabViewRequest.getDefaultInstance()))
+        .build();
   }
 }

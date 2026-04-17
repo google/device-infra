@@ -41,7 +41,6 @@ import com.google.devtools.mobileharness.fe.v6.service.host.util.LabActivities;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DiagnosticLink;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostActions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostConnectivityStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverview;
@@ -64,15 +63,21 @@ public final class GetHostOverviewHandler {
   private final LabInfoProvider labInfoProvider;
   private final HostAuxiliaryInfoProvider hostAuxiliaryInfoProvider;
   private final ListeningExecutorService executor;
+  private final HostHeaderInfoBuilder hostHeaderInfoBuilder;
+  private final LabServerActionsBuilder labServerActionsBuilder;
 
   @Inject
   GetHostOverviewHandler(
       LabInfoProvider labInfoProvider,
       HostAuxiliaryInfoProvider hostAuxiliaryInfoProvider,
-      ListeningExecutorService executor) {
+      ListeningExecutorService executor,
+      HostHeaderInfoBuilder hostHeaderInfoBuilder,
+      LabServerActionsBuilder labServerActionsBuilder) {
     this.labInfoProvider = labInfoProvider;
     this.hostAuxiliaryInfoProvider = hostAuxiliaryInfoProvider;
     this.executor = executor;
+    this.hostHeaderInfoBuilder = hostHeaderInfoBuilder;
+    this.labServerActionsBuilder = labServerActionsBuilder;
   }
 
   public ListenableFuture<HostOverviewPageData> getHostOverview(
@@ -117,14 +122,13 @@ public final class GetHostOverviewHandler {
                       labInfoOpt,
                       hostReleaseInfoOpt,
                       passThroughFlagsOpt,
-                      diagnosticLinks);
+                      diagnosticLinks,
+                      universe);
 
-              // TODO: Implement actual logic for can_upgrade.
+              Optional<String> labTypeOpt = hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType);
+
               HostHeaderInfo headerInfo =
-                  HostHeaderInfo.newBuilder()
-                      .setHostName(hostName)
-                      .setActions(HostActions.getDefaultInstance())
-                      .build();
+                  hostHeaderInfoBuilder.build(hostName, universe, labInfoOpt, labTypeOpt);
 
               return HostOverviewPageData.newBuilder()
                   .setHeaderInfo(headerInfo)
@@ -161,7 +165,8 @@ public final class GetHostOverviewHandler {
       Optional<LabInfo> labInfoOpt,
       Optional<HostReleaseInfo> hostReleaseInfoOpt,
       Optional<String> passThroughFlagsOpt,
-      List<DiagnosticLink> diagnosticLinks) {
+      List<DiagnosticLink> diagnosticLinks,
+      UniverseScope universe) {
     HostOverview.Builder builder = HostOverview.newBuilder().setHostName(hostName);
 
     ImmutableMap<String, String> properties =
@@ -185,7 +190,8 @@ public final class GetHostOverviewHandler {
     Optional<String> labTypeOpt = hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType);
     return builder
         .addAllLabTypeDisplayNames(HostTypes.determineLabTypeDisplayNames(labInfoOpt, labTypeOpt))
-        .setLabServer(buildLabServerInfo(labInfoOpt, hostReleaseInfoOpt, passThroughFlagsOpt))
+        .setLabServer(
+            buildLabServerInfo(labInfoOpt, hostReleaseInfoOpt, passThroughFlagsOpt, universe))
         .setDaemonServer(buildDaemonServerInfo(hostReleaseInfoOpt))
         .addAllDiagnosticLinks(diagnosticLinks)
         .build();
@@ -194,7 +200,8 @@ public final class GetHostOverviewHandler {
   private LabServerInfo buildLabServerInfo(
       Optional<LabInfo> labInfoOpt,
       Optional<HostReleaseInfo> hostReleaseInfoOpt,
-      Optional<String> passThroughFlagsOpt) {
+      Optional<String> passThroughFlagsOpt,
+      UniverseScope universe) {
     LabServerInfo.Builder builder = LabServerInfo.newBuilder();
 
     HostConnectivityStatus connectivityStatus = HostConnectivityStatuses.create(labInfoOpt);
@@ -215,6 +222,9 @@ public final class GetHostOverviewHandler {
     builder.setActivity(LabActivities.create(labReleaseOpt, connectivityStatus, isCoreLab));
 
     passThroughFlagsOpt.ifPresent(builder::setPassThroughFlags);
+
+    Optional<String> labTypeOpt = hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType);
+    builder.setActions(labServerActionsBuilder.build(universe, labInfoOpt, labTypeOpt));
 
     return builder.build();
   }

@@ -38,7 +38,39 @@ public class FeatureReadiness {
     return false;
   }
 
-  public boolean isRemoteControlReady() {
+  public boolean isDeviceRemoteControlReady() {
     return false;
+  }
+
+  public boolean isHostDebugReady() {
+    return false;
+  }
+
+  public boolean isHostDecommissionReady() {
+    return false;
+  }
+
+  public boolean isLabServerStartReady() {
+    return true;
+  }
+
+  public boolean isLabServerRestartReady() {
+    return true;
+  }
+
+  public boolean isLabServerStopReady() {
+    return true;
+  }
+
+  public boolean isLabServerReleaseReady() {
+    return false;
+  }
+
+  public boolean isLabServerDeployReady() {
+    return false;
+  }
+
+  public boolean isLabServerUpdatePassThroughFlagsReady() {
+    return true;
   }
 }

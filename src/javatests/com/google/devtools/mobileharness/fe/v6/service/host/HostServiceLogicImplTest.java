@@ -19,23 +19,28 @@ package com.google.devtools.mobileharness.fe.v6.service.host;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static org.junit.Assert.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostHeaderInfoRequest;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostActions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.shared.SubDeviceInfoListFactory;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.remotecontrol.RemoteControlEligibilityChecker;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import java.time.InstantSource;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import org.junit.Before;
 import org.junit.Rule;
@@ -58,12 +63,19 @@ public final class HostServiceLogicImplTest {
   @Bind private final ListeningExecutorService executor = newDirectExecutorService();
   @Bind @Mock private UniverseFactory universeFactory;
   @Bind @Mock private InstantSource instantSource;
+  @Bind @Mock private FeatureManagerFactory featureManagerFactory;
+  @Mock private FeatureManager featureManager;
 
   private HostServiceLogicImpl hostServiceLogicImpl;
 
   @Before
   public void setUp() {
     when(universeFactory.create(anyString())).thenReturn(new UniverseScope.SelfUniverse());
+    when(featureManagerFactory.create(any())).thenReturn(featureManager);
+    when(labInfoProvider.getLabInfoAsync(any(), any()))
+        .thenReturn(Futures.immediateFuture(GetLabInfoResponse.getDefaultInstance()));
+    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(anyString(), any()))
+        .thenReturn(Futures.immediateFuture(Optional.empty()));
     hostServiceLogicImpl =
         Guice.createInjector(BoundFieldModule.of(this)).getInstance(HostServiceLogicImpl.class);
   }
@@ -76,7 +88,9 @@ public final class HostServiceLogicImplTest {
     HostHeaderInfo response = hostServiceLogicImpl.getHostHeaderInfo(request).get();
 
     assertThat(response.getHostName()).isEqualTo("host");
-    assertThat(response.getActions()).isEqualTo(HostActions.getDefaultInstance());
+    assertThat(response.getActions().hasConfiguration()).isTrue();
+    assertThat(response.getActions().hasDebug()).isTrue();
+    assertThat(response.getActions().hasDecommission()).isTrue();
   }
 
   @Test

@@ -27,6 +27,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/host:host_service_java_proto",
+        "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host:host_service_logic_impl",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared",

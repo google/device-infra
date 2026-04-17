@@ -88,6 +88,56 @@ public class FeatureManager {
   }
 
   /**
+   * Checks if the remote control feature is enabled.
+   *
+   * <p>This feature is only available in the {@code google_1p} universe within Google internal
+   * builds.
+   */
+  public boolean isDeviceRemoteControlFeatureEnabled() {
+    return environment.isGoogleInternal() && universe instanceof UniverseScope.SelfUniverse;
+  }
+
+  /** Checks if the host debug feature is enabled. */
+  public boolean isHostDebugFeatureEnabled() {
+    return environment.isGoogleInternal() && universe instanceof UniverseScope.SelfUniverse;
+  }
+
+  /** Checks if the host decommission feature is enabled. */
+  public boolean isHostDecommissionFeatureEnabled() {
+    return environment.isGoogleInternal() && universe instanceof UniverseScope.SelfUniverse;
+  }
+
+  /** Checks if the lab server release feature is enabled. */
+  public boolean isLabServerReleaseFeatureEnabled() {
+    return environment.isGoogleInternal() && universe instanceof UniverseScope.SelfUniverse;
+  }
+
+  /** Checks if the lab server deploy feature is enabled. */
+  public boolean isLabServerDeployFeatureEnabled() {
+    return environment.isGoogleInternal() && universe instanceof UniverseScope.SelfUniverse;
+  }
+
+  /** Checks if the lab server start feature is enabled. */
+  public boolean isLabServerStartFeatureEnabled() {
+    return environment.isGoogleInternal() && universe instanceof UniverseScope.SelfUniverse;
+  }
+
+  /** Checks if the lab server restart feature is enabled. */
+  public boolean isLabServerRestartFeatureEnabled() {
+    return environment.isGoogleInternal() && universe instanceof UniverseScope.SelfUniverse;
+  }
+
+  /** Checks if the lab server stop feature is enabled. */
+  public boolean isLabServerStopFeatureEnabled() {
+    return environment.isGoogleInternal() && universe instanceof UniverseScope.SelfUniverse;
+  }
+
+  /** Checks if the lab server update pass through flags feature is enabled. */
+  public boolean isLabServerUpdatePassThroughFlagsFeatureEnabled() {
+    return environment.isGoogleInternal() && universe instanceof UniverseScope.SelfUniverse;
+  }
+
+  /**
    * Checks if the configuration feature is enabled.
    *
    * <p>In Google internal builds, configuration is always enabled for {@link
@@ -101,15 +151,5 @@ public class FeatureManager {
     }
     // OSS/ATS: availability depends on the flag.
     return Flags.instance().feEnableConfiguration.getNonNull();
-  }
-
-  /**
-   * Checks if the remote control feature is enabled.
-   *
-   * <p>This feature is only available in the {@code google_1p} universe within Google internal
-   * builds.
-   */
-  public boolean isRemoteControlFeatureEnabled() {
-    return environment.isGoogleInternal() && universe instanceof UniverseScope.SelfUniverse;
   }
 }

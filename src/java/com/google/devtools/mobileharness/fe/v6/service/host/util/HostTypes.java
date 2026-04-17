@@ -29,8 +29,8 @@ import java.util.stream.Stream;
 public final class HostTypes {
 
   public static final String LAB_TYPE_CORE = "Core Lab";
-  private static final String LAB_TYPE_FUSION = "Fusion Lab";
-  private static final String LAB_TYPE_SATELLITE = "Satellite Lab";
+  public static final String LAB_TYPE_FUSION = "Fusion Lab";
+  public static final String LAB_TYPE_SATELLITE = "Satellite Lab";
   private static final String LAB_TYPE_SLAAS = "Satellite Lab (SLaaS)";
   private static final String LAB_TYPE_ATE = "ATE Lab";
   private static final String LAB_TYPE_FIELD = "Riemann Field Lab";

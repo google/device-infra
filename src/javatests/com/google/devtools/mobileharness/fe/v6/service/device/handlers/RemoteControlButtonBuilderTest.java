@@ -71,8 +71,8 @@ public final class RemoteControlButtonBuilderTest {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
 
     when(featureManagerFactory.create(any())).thenReturn(featureManager);
-    when(featureManager.isRemoteControlFeatureEnabled()).thenReturn(true);
-    when(featureReadiness.isRemoteControlReady()).thenReturn(true);
+    when(featureManager.isDeviceRemoteControlFeatureEnabled()).thenReturn(true);
+    when(featureReadiness.isDeviceRemoteControlReady()).thenReturn(true);
   }
 
   @Test
@@ -209,7 +209,7 @@ public final class RemoteControlButtonBuilderTest {
   @Test
   public void build_remoteControlFeatureDisabled() {
     DeviceInfo deviceInfo = DeviceInfo.getDefaultInstance();
-    when(featureManager.isRemoteControlFeatureEnabled()).thenReturn(false);
+    when(featureManager.isDeviceRemoteControlFeatureEnabled()).thenReturn(false);
 
     ActionButtonState state = remoteControlButtonBuilder.build(deviceInfo, UNIVERSE);
 
@@ -225,7 +225,7 @@ public final class RemoteControlButtonBuilderTest {
             .build();
     when(checker.checkEligibility(any()))
         .thenReturn(RemoteControlEligibilityResult.builder().setIsEligible(true).build());
-    when(featureReadiness.isRemoteControlReady()).thenReturn(false);
+    when(featureReadiness.isDeviceRemoteControlReady()).thenReturn(false);
 
     ActionButtonState state = remoteControlButtonBuilder.build(deviceInfo, UNIVERSE);
 

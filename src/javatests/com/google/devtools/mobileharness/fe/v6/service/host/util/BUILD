@@ -27,9 +27,11 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/device:device_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:daemon_statuses",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:host_action_button_creator",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:host_connectivity_statuses",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:host_types",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:lab_activities",
