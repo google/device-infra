@@ -82,9 +82,6 @@ java_library(
 java_library(
     name = "system_properties_util",
     srcs = ["SystemPropertiesUtil.java"],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-        "//:omnilab_fusion",
-    ],
+    visibility = ["//:deviceinfra_all_pkg"],
     deps = ["@maven//:com_google_guava_guava"],
 )
