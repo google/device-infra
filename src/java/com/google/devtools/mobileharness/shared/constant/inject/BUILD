@@ -22,10 +22,7 @@ package(
 java_library(
     name = "annotations",
     srcs = ["Annotations.java"],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-        "//:omnilab_fusion",
-    ],
+    visibility = ["//:deviceinfra_all_pkg"],
     deps = [
         "@maven//:javax_inject_jsr330_api",
     ],
