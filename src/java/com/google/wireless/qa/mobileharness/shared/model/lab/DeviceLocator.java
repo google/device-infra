@@ -18,7 +18,12 @@ package com.google.wireless.qa.mobileharness.shared.model.lab;
 
 /** For locating a local, or remote device. */
 public class DeviceLocator {
-  /** Device serial number. Unique within a lab, but may not be unique across labs. */
+
+  /**
+   * See {@link #getSerial()} for details.
+   *
+   * <p>Device control ID or device UUID.
+   */
   private final String serial;
 
   /** Belong lab locator, or {@link LabLocator#LOCALHOST} for local device. */
@@ -41,7 +46,13 @@ public class DeviceLocator {
     this(newDeviceLocator.id(), new LabLocator(newDeviceLocator.labLocator().toProto()));
   }
 
-  /** Returns universal unique ID, which is unique across labs. */
+  /**
+   * Returns a universal unique string of the device.
+   *
+   * <p>Note that it is <b>NOT</b> the UUID of the device.
+   *
+   * <p>Returns {@code id} for local devices, or {@code id@ip} for remote devices.
+   */
   public String getUniversalId() {
     if (LabLocator.LOCALHOST.equals(labLocator)) {
       return serial;
@@ -51,7 +62,17 @@ public class DeviceLocator {
   }
 
   /**
-   * Returns the device serial number. It is unique within a lab, but may not be unique across labs.
+   * Device control ID or device UUID.
+   *
+   * <p>Value in test runner:
+   *
+   * <ul>
+   *   <li>Remote mode: Device UUID for both client side and lab side.
+   *   <li>Local mode: Device control ID for local devices, or device UUID for proxy mode devices.
+   * </ul>
+   *
+   * <p>If the value is a device control ID, it is unique within a lab, but may not be unique across
+   * labs.
    */
   public String getSerial() {
     return serial;

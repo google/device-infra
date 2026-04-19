@@ -23,7 +23,20 @@ import com.google.devtools.mobileharness.api.model.proto.Device;
 /** For locating a local, or remote device. */
 @AutoValue
 public abstract class DeviceLocator {
-  /** Device ID (or device UUID). Unique within a lab, but may not be unique across labs. */
+
+  /**
+   * Device control ID or device UUID.
+   *
+   * <p>Value in test runner:
+   *
+   * <ul>
+   *   <li>Remote mode: Device UUID for both client side and lab side.
+   *   <li>Local mode: Device control ID for local devices, or device UUID for proxy mode devices.
+   * </ul>
+   *
+   * <p>If the value is a device control ID, it is unique within a lab, but may not be unique across
+   * labs.
+   */
   public abstract String id();
 
   /** Belong lab locator, or {@link LabLocator#LOCALHOST} for local device. */
@@ -39,7 +52,13 @@ public abstract class DeviceLocator {
     return of(proto.getId(), LabLocator.of(proto.getLabLocator()));
   }
 
-  /** Returns universal unique ID, which is unique across labs. */
+  /**
+   * Returns a universal unique string of the device.
+   *
+   * <p>Note that it is <b>NOT</b> the UUID of the device.
+   *
+   * <p>Returns {@code id} for local devices, or {@code id@ip} for remote devices.
+   */
   public String universalId() {
     if (labLocator().equals(LabLocator.LOCALHOST)) {
       return id();
