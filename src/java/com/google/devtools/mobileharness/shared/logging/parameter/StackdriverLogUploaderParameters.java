@@ -25,23 +25,14 @@ import com.google.inject.Module;
  */
 public class StackdriverLogUploaderParameters implements LogUploaderParameters {
 
-  private final LogProject logProject;
-
-  public static StackdriverLogUploaderParameters of(LogProject logProject) {
-    return new StackdriverLogUploaderParameters(logProject);
+  public static StackdriverLogUploaderParameters create() {
+    return new StackdriverLogUploaderParameters();
   }
 
-  private StackdriverLogUploaderParameters(LogProject logProject) {
-    this.logProject = logProject;
-  }
+  private StackdriverLogUploaderParameters() {}
 
   @Override
   public Module getLogUploaderModule() {
-    return new StackdriverLogUploaderModule(getSecretFileName());
-  }
-
-  /** Gets the client secret file name based on the type name. */
-  private String getSecretFileName() {
-    return String.format("stackdriver_client_secret_for_%s", logProject.getProjectName());
+    return new StackdriverLogUploaderModule();
   }
 }

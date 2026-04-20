@@ -157,8 +157,7 @@ public class LabServerLauncher {
                   new MobileHarnessHostLogManagerModule(
                       LogManagerParameters.newBuilder()
                           .setLogProject(LogProject.LAB_SERVER)
-                          .setLogUploaderParameters(
-                              StackdriverLogUploaderParameters.of(LogProject.LAB_SERVER))
+                          .setLogUploaderParameters(StackdriverLogUploaderParameters.create())
                           .build()))
               .getInstance(MobileHarnessHostLogManager.class);
       try {

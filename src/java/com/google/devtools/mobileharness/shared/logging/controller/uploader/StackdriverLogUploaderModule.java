@@ -16,21 +16,15 @@
 
 package com.google.devtools.mobileharness.shared.logging.controller.uploader;
 
-import com.google.devtools.mobileharness.shared.logging.annotation.Annotations.StackdriverSecretFileName;
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
 
 /** Module for {@link StackdriverLogUploader}. */
 public class StackdriverLogUploaderModule extends AbstractModule {
-  private final String secretFileName;
-
-  public StackdriverLogUploaderModule(String secretFileName) {
-    this.secretFileName = secretFileName;
-  }
+  public StackdriverLogUploaderModule() {}
 
   @Override
   protected void configure() {
-    bind(String.class).annotatedWith(StackdriverSecretFileName.class).toInstance(secretFileName);
     bind(LogUploader.class).to(StackdriverLogUploader.class).in(Singleton.class);
   }
 }
