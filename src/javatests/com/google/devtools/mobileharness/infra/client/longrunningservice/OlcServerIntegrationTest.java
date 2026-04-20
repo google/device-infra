@@ -33,7 +33,10 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.truth.Correspondence;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
+import com.google.devtools.mobileharness.api.model.proto.Device;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.infra.ats.common.constant.BuiltinFlags;
@@ -366,6 +369,8 @@ public class OlcServerIntegrationTest {
         .comparingExpectedFieldsOnly()
         .ignoringExtraRepeatedFieldElements()
         .isEqualTo(createGetSessionResponse(deviceControlId));
+
+    verifyDeviceInfo(deviceControlId);
 
     String olcServerStderr = stringBuilders.getOrCreate("olc_server_stderr").toString();
     String labServerStderr = stringBuilders.getOrCreate("lab_server_stderr").toString();
@@ -846,6 +851,65 @@ public class OlcServerIntegrationTest {
     return result.build();
   }
 
+  private void verifyDeviceInfo(String allocatedDeviceControlId) throws GrpcExceptionWithErrorId {
+    GetLabInfoResponse getLabInfoResponse =
+        labInfoGrpcStub.getLabInfo(GetLabInfoRequest.getDefaultInstance());
+    List<LabQueryProto.LabData> labDataList =
+        getLabInfoResponse.getLabQueryResult().getLabView().getLabDataList();
+
+    assertWithMessage("Expected exactly 1 lab in result. Full response: %s", getLabInfoResponse)
+        .that(labDataList)
+        .hasSize(1);
+    LabQueryProto.LabData labData = labDataList.get(0);
+
+    boolean foundAllocatedDevice = false;
+
+    for (DeviceInfo deviceInfo : labData.getDeviceList().getDeviceInfoList()) {
+      List<Device.DeviceDimension> supportedDimensions =
+          deviceInfo.getDeviceFeature().getCompositeDimension().getSupportedDimensionList();
+      List<Device.DeviceDimension> requiredDimensions =
+          deviceInfo.getDeviceFeature().getCompositeDimension().getRequiredDimensionList();
+
+      boolean isAllocatedDevice =
+          supportedDimensions.stream()
+              .anyMatch(
+                  dimension ->
+                      dimension.getName().equals("id")
+                          && dimension.getValue().equals(allocatedDeviceControlId));
+
+      boolean hasTempRequiredDimension =
+          requiredDimensions.stream()
+              .anyMatch(
+                  dimension ->
+                      dimension.getName().equals("ALLOCATION_KEY")
+                          && dimension.getValue().equals("fake_allocation_key"));
+
+      String deviceUuid = deviceInfo.getDeviceLocator().getId();
+
+      if (isAllocatedDevice) {
+        foundAllocatedDevice = true;
+        assertWithMessage(
+                "Allocated device %s should contain ALLOCATION_KEY=fake_allocation_key in required"
+                    + " dimensions. Full response: %s",
+                deviceUuid, getLabInfoResponse)
+            .that(hasTempRequiredDimension)
+            .isTrue();
+      } else {
+        assertWithMessage(
+                "Non-allocated device %s should NOT contain ALLOCATION_KEY=fake_allocation_key in"
+                    + " required dimensions. Full response: %s",
+                deviceUuid, getLabInfoResponse)
+            .that(hasTempRequiredDimension)
+            .isFalse();
+      }
+    }
+    assertWithMessage(
+            "Allocated device %s not found in lab info. Full response: %s",
+            allocatedDeviceControlId, getLabInfoResponse)
+        .that(foundAllocatedDevice)
+        .isTrue();
+  }
+
   /**
    * Asserts that the given stderr does not contain exception stack traces.
    *
@@ -864,8 +928,8 @@ public class OlcServerIntegrationTest {
     }
     assertWithMessage(
             "A successful test run should not print exception stack traces, which will confuse"
-                + " users and affect debuggability when debugging a failed one.\n\n"
-                + stderrLabel)
+                + " users and affect debuggability when debugging a failed one.\n\n%s",
+            stderrLabel)
         .that(stderrToCheck)
         .doesNotContain("\tat ");
   }

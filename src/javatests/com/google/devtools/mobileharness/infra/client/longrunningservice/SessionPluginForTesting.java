@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent;
+import com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver.DeviceReserver;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
@@ -37,6 +38,7 @@ import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
+import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import java.time.Duration;
@@ -47,10 +49,12 @@ public class SessionPluginForTesting {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final SessionInfo sessionInfo;
+  private final DeviceReserver deviceReserver;
 
   @Inject
-  SessionPluginForTesting(SessionInfo sessionInfo) {
+  SessionPluginForTesting(SessionInfo sessionInfo, DeviceReserver deviceReserver) {
     this.sessionInfo = sessionInfo;
+    this.deviceReserver = deviceReserver;
   }
 
   @Subscribe
@@ -91,7 +95,8 @@ public class SessionPluginForTesting {
   }
 
   @Subscribe
-  public void onTestStarting(TestStartingEvent event) {
+  public void onTestStarting(TestStartingEvent event)
+      throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("Handling TestStartingEvent");
 
     sessionInfo.putSessionProperty(
@@ -101,6 +106,9 @@ public class SessionPluginForTesting {
             .map(DeviceDimension::getValue)
             .findFirst()
             .orElse("n/a"));
+
+    deviceReserver.addTempAllocationKeyToDevice(
+        new DeviceLocator(event.getAllocation().getDevice()), "fake_allocation_key");
 
     logger.atInfo().log("TestStartingEvent handled");
   }
