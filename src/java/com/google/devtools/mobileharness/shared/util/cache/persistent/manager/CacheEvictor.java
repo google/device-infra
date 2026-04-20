@@ -41,9 +41,11 @@ class CacheEvictor {
   private final LocalFileUtil localFileUtil;
 
   @Inject
-  CacheEvictor(@Named("cache_evictor_executor") ListeningExecutorService executorService) {
+  CacheEvictor(
+      @Named("cache_evictor_executor") ListeningExecutorService executorService,
+      LocalFileUtil localFileUtil) {
     this.executorService = executorService;
-    this.localFileUtil = new LocalFileUtil();
+    this.localFileUtil = localFileUtil;
   }
 
   @CanIgnoreReturnValue

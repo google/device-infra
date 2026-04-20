@@ -31,6 +31,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
 import java.util.Optional;
+import javax.inject.Inject;
 
 /** Utility for scanning a persistent cache directory to gather metadata on cache entries. */
 class CacheScanner {
@@ -38,8 +39,9 @@ class CacheScanner {
 
   private final LocalFileUtil localFileUtil;
 
-  public CacheScanner() {
-    this.localFileUtil = new LocalFileUtil();
+  @Inject
+  CacheScanner(LocalFileUtil localFileUtil) {
+    this.localFileUtil = localFileUtil;
   }
 
   /**

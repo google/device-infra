@@ -47,22 +47,6 @@ public final class CacheManager implements Runnable {
       @Named("max_cache_size") DataSize maxCacheSize,
       CacheScanner cacheScanner,
       EvictionPolicy evictionPolicy,
-      CacheEvictor cacheEvictor) {
-    this(
-        rootCacheDir,
-        maxCacheSize,
-        cacheScanner,
-        evictionPolicy,
-        cacheEvictor,
-        new LocalFileUtil());
-  }
-
-  @VisibleForTesting
-  CacheManager(
-      Path rootCacheDir,
-      DataSize maxCacheSize,
-      CacheScanner cacheScanner,
-      EvictionPolicy evictionPolicy,
       CacheEvictor cacheEvictor,
       LocalFileUtil localFileUtil) {
     this.rootCacheDir = rootCacheDir;

@@ -25,7 +25,6 @@ import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.Arrays.stream;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
@@ -91,6 +90,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import java.util.zip.ZipFile;
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 import javax.inject.Singleton;
 
 /**
@@ -154,7 +154,7 @@ public class LocalFileUtil {
     this(new CommandExecutor());
   }
 
-  @VisibleForTesting
+  @Inject
   public LocalFileUtil(CommandExecutor cmdExecutor) {
     this.cmdExecutor = cmdExecutor;
   }
