@@ -171,6 +171,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
 
   private final ExternalDeviceManager externalDeviceManager;
   private final ContainerDeviceCache containerDeviceCache;
+  private final java.util.function.Supplier<Boolean> drainingSupplier;
 
   /**
    * Creates a new device runner.
@@ -187,7 +188,8 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
       Class<? extends Device> type,
       EventBus globalInternalBus,
       DeviceStat stat,
-      ExternalDeviceManager externalDeviceManager)
+      ExternalDeviceManager externalDeviceManager,
+      java.util.function.Supplier<Boolean> drainingSupplier)
       throws MobileHarnessException {
     apiConfig = ApiConfig.getInstance();
 
@@ -205,6 +207,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
     this.deviceRebootUtil = new DeviceRebootUtil();
     this.externalDeviceManager = externalDeviceManager;
     this.containerDeviceCache = ContainerDeviceCache.getInstance();
+    this.drainingSupplier = drainingSupplier;
   }
 
   /** Creates a new device runner. For test only. */
@@ -218,7 +221,8 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
       Sleeper sleeper,
       Thread runningThread,
       ExternalDeviceManager externalDeviceManager,
-      ContainerDeviceCache containerDeviceCache) {
+      ContainerDeviceCache containerDeviceCache,
+      java.util.function.Supplier<Boolean> drainingSupplier) {
     this.device = device;
     DeviceIdUtil.addDeviceIdAndClassNameToDimension(deviceId, this.device);
     this.deviceStat = stat;
@@ -235,6 +239,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
     this.deviceRebootUtil = new DeviceRebootUtil();
     this.externalDeviceManager = externalDeviceManager;
     this.containerDeviceCache = containerDeviceCache;
+    this.drainingSupplier = drainingSupplier;
   }
 
   @Override
@@ -268,7 +273,12 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
               device.getDeviceTypes(),
               Duration.ofDays(1).minusMinutes(1),
               /* allowUnavailableDevice= */ true);
-      prepareDevice();
+      if (drainingSupplier != null && drainingSupplier.get()) {
+        logger.atInfo().log("Draining mode enabled, skipping prepareDevice");
+        initialized = true; // Allow isReady() to be true
+      } else {
+        prepareDevice();
+      }
       // Release the reservation if it can be successfully initialized.
       if (deviceReservation != null) {
         deviceReservation.close();
@@ -295,7 +305,9 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
           }
           // Check if the device is allocated before checking the device state. This will prevent
           // devices allocated for remote use from cleaning up or interfering with the remote usage.
-          if (!isAllocated() && checkDevice()) {
+          if (!isAllocated()
+              && !(drainingSupplier != null && drainingSupplier.get())
+              && checkDevice()) {
             postDeviceChangeEvent("changed detected");
           }
           if (test != null) {

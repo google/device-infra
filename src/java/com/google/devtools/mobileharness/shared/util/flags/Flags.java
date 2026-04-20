@@ -969,6 +969,14 @@ public class Flags {
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> dispatchDeviceInterval = dispatchDeviceIntervalDefault;
 
+  private static final Flag<String> drainFileDefault = Flag.value("/tmp/drain");
+
+  @com.beust.jcommander.Parameter(
+      names = "--drain_file",
+      description = "Drain file path for checking drain status.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> drainFile = drainFileDefault;
+
   private static final Flag<Boolean> enableAndroidDeviceReadyCheckDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
