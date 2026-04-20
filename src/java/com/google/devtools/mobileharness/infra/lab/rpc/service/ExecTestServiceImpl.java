@@ -63,11 +63,13 @@ import com.google.wireless.qa.mobileharness.lab.proto.Stat.Test;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.job.JobTypeUtil;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManager;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
+import com.google.wireless.qa.mobileharness.shared.model.lab.LabLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import java.util.ArrayList;
 import java.util.List;
@@ -195,12 +197,29 @@ public class ExecTestServiceImpl {
     List<String> deviceIds = devices.stream().map(Device::getDeviceId).collect(toImmutableList());
 
     // Creates Allocation.
+    LabLocator labLocator =
+        devices.stream()
+            .findFirst()
+            .map(
+                device ->
+                    new LabLocator(
+                        device
+                            .info()
+                            .dimensions()
+                            .supported()
+                            .getFirst(Name.HOST_IP, LabLocator.LOCALHOST.getIp()),
+                        device
+                            .info()
+                            .dimensions()
+                            .supported()
+                            .getFirst(Name.HOST_NAME, LabLocator.LOCALHOST.getHostName())))
+            .orElse(LabLocator.LOCALHOST);
     Allocation allocation =
         new Allocation(
             testInfo.locator(),
-            // TODO: Use the correct way to create DeviceLocator after b/37969936
-            // fixed.
-            deviceIds.stream().map(DeviceLocator::new).collect(toImmutableList()),
+            deviceIds.stream()
+                .map(deviceId -> new DeviceLocator(deviceId, labLocator))
+                .collect(toImmutableList()),
             devices.stream()
                 .map(Device::getDimensions)
                 .map(StrPairUtil::convertCollectionToMultimap)
@@ -309,7 +328,7 @@ public class ExecTestServiceImpl {
 
   /**
    * Iteratively populate {@link GetTestStatusResponse} with testInfo of root test and all of its
-   * sub-tests.
+   * subtests.
    *
    * @param deviceFeatures is Optional for the main test while it is null for subtests.
    */
