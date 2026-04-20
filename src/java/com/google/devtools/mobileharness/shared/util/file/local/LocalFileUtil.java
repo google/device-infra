@@ -1704,6 +1704,33 @@ public class LocalFileUtil {
   }
 
   /**
+   * Reads file and returns the content in byte array.
+   *
+   * @throws MobileHarnessException if file not exists, or the given path is a directory, or failed
+   *     to read the file
+   */
+  public byte[] readFileBytes(String filePath) throws MobileHarnessException {
+    return readFileBytes(Paths.get(filePath));
+  }
+
+  /**
+   * Reads file and returns the content in byte array.
+   *
+   * @throws MobileHarnessException if file not exists, or the given path is a directory, or failed
+   *     to read the file
+   */
+  public byte[] readFileBytes(Path file) throws MobileHarnessException {
+    try {
+      return Files.readAllBytes(checkFile(file));
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.LOCAL_FILE_READ_BINARY_ERROR,
+          "Failed to read the content of binary file " + file,
+          e);
+    }
+  }
+
+  /**
    * Reads the first ten lines of text file and returns the content.
    *
    * @throws MobileHarnessException if file not exists, or the given path is a directory, or failed
