@@ -1727,6 +1727,16 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> labServerCheckJobsFromMaster = labServerCheckJobsFromMasterDefault;
 
+  private static final Flag<Boolean> lifecycleEventUseUuidDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--lifecycle_event_use_uuid",
+      description =
+          "If true, DeviceLifecycleEventCallbacks will use UUID instead of control ID as deviceId."
+              + " Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> lifecycleEventUseUuid = lifecycleEventUseUuidDefault;
+
   private static final Flag<String> localTenantDeviceConfigPathDefault = Flag.value("");
 
   @com.beust.jcommander.Parameter(
