@@ -46,7 +46,10 @@ import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabScheduleUnit;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCondition;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
+import com.google.devtools.mobileharness.api.model.proto.Device.TempDimension;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerSetting;
@@ -1036,11 +1039,31 @@ class RemoteDeviceManager implements LabInfoProvider {
 
     private LabQueryProto.DeviceInfo toLabQueryDeviceInfo(
         DeviceTempRequiredDimensionManager manager) {
-      return LabQueryProto.DeviceInfo.newBuilder()
-          .setDeviceLocator(dataFromLab.locator().toProto())
-          .setDeviceStatus(statusFromLab)
-          .setDeviceFeature(getDataFromLabWithTempRequiredDimensions(manager).toFeature())
-          .build();
+      LabQueryProto.DeviceInfo.Builder builder =
+          LabQueryProto.DeviceInfo.newBuilder()
+              .setDeviceLocator(dataFromLab.locator().toProto())
+              .setDeviceStatus(statusFromLab)
+              .setDeviceFeature(getDataFromLabWithTempRequiredDimensions(manager).toFeature());
+
+      manager
+          .getDimensions(dtrdmDeviceKey)
+          .ifPresent(
+              dimensions -> {
+                DeviceCondition.Builder conditionBuilder = DeviceCondition.newBuilder();
+                dimensions
+                    .dimensions()
+                    .forEach(
+                        (name, value) ->
+                            conditionBuilder.addTempDimension(
+                                TempDimension.newBuilder()
+                                    .setDimension(
+                                        DeviceDimension.newBuilder().setName(name).setValue(value))
+                                    .setExpireTimestampMs(dimensions.expireTime().toEpochMilli())
+                                    .setRequired(true)));
+                builder.setDeviceCondition(conditionBuilder.build());
+              });
+
+      return builder.build();
     }
 
     private DeviceQuery.DeviceInfo toDeviceQueryDeviceInfo(

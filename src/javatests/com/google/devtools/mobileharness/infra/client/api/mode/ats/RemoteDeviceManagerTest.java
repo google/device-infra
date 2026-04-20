@@ -22,12 +22,15 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
+import com.google.devtools.mobileharness.api.model.proto.Device.TempDimension;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
@@ -68,6 +71,9 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.LabRecordManager.DeviceRecordData;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.LabRecordManager.LabRecordData;
+import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager;
+import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager.DeviceKey;
+import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager.DeviceTempRequiredDimensions;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignOutDeviceRequest;
@@ -87,6 +93,8 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 import io.grpc.netty.NettyServerBuilder;
+import java.time.Instant;
+import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -219,6 +227,11 @@ public class RemoteDeviceManagerTest {
                   .addDecorator("NoOpDecorator")
                   .setCompositeDimension(
                       DeviceCompositeDimension.newBuilder()
+                          .addRequiredDimension(
+                              DeviceDimension.newBuilder()
+                                  .setName("temp_dimension")
+                                  .setValue("temp_value")
+                                  .build())
                           .addSupportedDimension(
                               DeviceDimension.newBuilder()
                                   .setName("fake_dimension_name")
@@ -231,6 +244,16 @@ public class RemoteDeviceManagerTest {
                               DeviceDimension.newBuilder()
                                   .setName("host_name")
                                   .setValue("fake_lab_host_name"))))
+          .setDeviceCondition(
+              DeviceCondition.newBuilder()
+                  .addTempDimension(
+                      TempDimension.newBuilder()
+                          .setDimension(
+                              DeviceDimension.newBuilder()
+                                  .setName("temp_dimension")
+                                  .setValue("temp_value"))
+                          .setExpireTimestampMs(1000L)
+                          .setRequired(true)))
           .build();
 
   private static final LabView LAB_VIEW_WITH_OLC =
@@ -246,7 +269,7 @@ public class RemoteDeviceManagerTest {
   @Bind @Mock @AtsModeAbstractScheduler private AbstractScheduler scheduler;
   @Bind @Mock private LabRecordManager labRecordManager;
   @Bind @Mock private NetUtil netUtil;
-
+  @Bind @Mock private DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager;
   @Bind private MasterGrpcStubHelper masterGrpcStubHelper;
 
   @Inject private RemoteDeviceManager remoteDeviceManager;
@@ -255,6 +278,13 @@ public class RemoteDeviceManagerTest {
   @Before
   public void setUp() throws Exception {
     when(netUtil.getLocalHostName()).thenReturn("fake_olc_host_name");
+    when(deviceTempRequiredDimensionManager.getDimensions(
+            new DeviceKey("fake_lab_host_name", "fake_uuid")))
+        .thenReturn(
+            Optional.of(
+                new DeviceTempRequiredDimensions(
+                    ImmutableListMultimap.of("temp_dimension", "temp_value"),
+                    Instant.ofEpochMilli(1000L))));
 
     int grpcPort = PortProber.pickUnusedPort();
     masterGrpcStubHelper =
@@ -679,7 +709,8 @@ public class RemoteDeviceManagerTest {
     assertThat(labRecordData1.getValue().toRecordProto().getLabInfo()).isEqualTo(LAB_INFO);
 
     verify(labRecordManager).addDeviceRecordIfDeviceInfoChanged(deviceRecordData1.capture());
-    assertThat(deviceRecordData1.getValue().toRecordProto().getDeviceInfo()).isEqualTo(DEVICE_INFO);
+    assertThat(deviceRecordData1.getValue().toRecordProto().getDeviceInfo())
+        .isEqualTo(DEVICE_INFO.toBuilder().clearDeviceCondition().build());
 
     ArgumentCaptor<DeviceRecordData> deviceRecordData2 =
         ArgumentCaptor.forClass(DeviceRecordData.class);
@@ -691,7 +722,8 @@ public class RemoteDeviceManagerTest {
     assertThat(labRecordData2.getValue().toRecordProto().getLabInfo()).isEqualTo(LAB_INFO);
 
     verify(labRecordManager).addDeviceRecordIfDeviceInfoChanged(deviceRecordData2.capture());
-    assertThat(deviceRecordData2.getValue().toRecordProto().getDeviceInfo()).isEqualTo(DEVICE_INFO);
+    assertThat(deviceRecordData2.getValue().toRecordProto().getDeviceInfo())
+        .isEqualTo(DEVICE_INFO.toBuilder().clearDeviceCondition().build());
   }
 
   @Test
