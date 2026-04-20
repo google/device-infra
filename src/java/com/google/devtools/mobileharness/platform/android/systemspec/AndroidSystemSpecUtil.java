@@ -123,9 +123,15 @@ public class AndroidSystemSpecUtil {
   /** The pattern of device's ICCID. */
   private static final Pattern PATTERN_ICCID = Pattern.compile("'([\\d\\. ]+)'");
 
+  /** The pattern of device's MAC address. */
+  private static final Pattern PATTERN_MAC_ADDRESS = Pattern.compile("link/ether\\s+([\\w:]+)");
+
+  /** The pattern of processor model name. */
+  private static final Pattern PATTERN_PROCESSOR_MODEL_NAME =
+      Pattern.compile("model name\\s+:\\s+(.+)");
+
   /** ADB shell command for getting the wifi mac address. */
-  @VisibleForTesting
-  static final String ADB_SHELL_GET_WIFI_MAC_ADDRESS = "cat /sys/class/net/wlan0/address";
+  @VisibleForTesting static final String ADB_SHELL_GET_WIFI_MAC_ADDRESS = "ip addr show wlan0";
 
   /** ADB shell command for getting the bluetooth mac address. */
   @VisibleForTesting
@@ -386,14 +392,43 @@ public class AndroidSystemSpecUtil {
   public String getMacAddress(String serial) throws MobileHarnessException, InterruptedException {
     String output = "";
     try {
-      output = adb.runShellWithRetry(serial, ADB_SHELL_GET_WIFI_MAC_ADDRESS).trim();
+      output = adb.runShellWithRetry(serial, ADB_SHELL_GET_WIFI_MAC_ADDRESS);
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_SYSTEM_SPEC_GET_MAC_ADDRESS_ERROR, e.getMessage(), e);
     }
     // Sample output:
-    // ac:cf:85:2a:3f:8a
-    return output;
+    // 10: wlan0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen
+    // 3000
+    //     link/ether 1c:69:7a:0e:9b:f3 brd ff:ff:ff:ff:ff:ff
+    Matcher matcher = PATTERN_MAC_ADDRESS.matcher(output);
+    if (matcher.find()) {
+      return matcher.group(1);
+    }
+    return "";
+  }
+
+  /**
+   * Gets processor model name of the device.
+   *
+   * @param serial the serial number of the device
+   * @throws MobileHarnessException if some error occurs in executing system commands, or memory
+   *     info not found
+   */
+  public String getProcessorModelName(String serial)
+      throws MobileHarnessException, InterruptedException {
+    String output = "";
+    try {
+      output = adb.runShellWithRetry(serial, ADB_SHELL_GET_CPU_INFO);
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_SYSTEM_SPEC_GET_CPU_INFO_ERROR, e.getMessage(), e);
+    }
+    Matcher matcher = PATTERN_PROCESSOR_MODEL_NAME.matcher(output);
+    if (matcher.find()) {
+      return matcher.group(1);
+    }
+    return "";
   }
 
   /**
