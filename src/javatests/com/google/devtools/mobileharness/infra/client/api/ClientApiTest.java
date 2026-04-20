@@ -22,9 +22,7 @@ import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaInstant;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
-import static com.google.devtools.mobileharness.shared.util.truth.Correspondences.containsAll;
 
-import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.EventBus;
@@ -189,9 +187,8 @@ public class ClientApiTest {
 
       String logs = captureLogs.getLogs();
 
-      assertThat(Splitter.on('\n').splitToList(logs))
-          .comparingElementsUsing(containsAll())
-          .contains(ImmutableList.of("Sleep for 5 seconds", "{olc_client_id=fake_client_id}"));
+      assertThat(logs).contains("Sleep for 5 seconds");
+      assertThat(logs).containsMatch(".*\\{job_id=.*, olc_client_id=fake_client_id\\}.*");
 
       assertWithMessage(
               "Log of a passed MH job should not contain exception stack traces, which will"
