@@ -153,13 +153,16 @@ class OlcServerRunnerImpl implements OlcServerRunner {
     // Starts session manager.
     sessionManager.start();
 
+    // Prints process info.
+    logger.atInfo().log("OLC server process info: pid=%s", ProcessHandle.current().pid());
+
     // Periodically prints memory usage info.
     logFailure(
         scheduledThreadPool.scheduleWithFixedDelay(
             threadRenaming(
                 () -> logger.atInfo().log("OLC server memory info: %s", systemUtil.getMemoryInfo()),
                 () -> "memory-info-dumper"),
-            DUMP_MEMORY_INFO_INTERVAL,
+            Duration.ZERO,
             DUMP_MEMORY_INFO_INTERVAL),
         Level.SEVERE,
         "Fatal error while dumping memory info.");
@@ -203,9 +206,6 @@ class OlcServerRunnerImpl implements OlcServerRunner {
 
     // Prints signal.
     logger.atInfo().log("Servers have started: %s", SERVER_STARTED_SIGNAL);
-    logger.atInfo().log(
-        "Process info: pid=%s, memory_info=[%s]",
-        ProcessHandle.current().pid(), systemUtil.getMemoryInfo());
   }
 
   @Override
