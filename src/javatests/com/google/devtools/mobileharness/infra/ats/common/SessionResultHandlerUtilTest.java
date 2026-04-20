@@ -315,4 +315,111 @@ public final class SessionResultHandlerUtilTest {
 
     assertThat(result).isEqualTo("module_name[param1]");
   }
+
+  @Test
+  public void copyTradefedTestLogFiles_skipsRedundantClusterLogs() throws Exception {
+    Path genFileDir = folder.newFolder("gen_file_dir").toPath();
+    when(testInfo.getGenFileDir()).thenReturn(genFileDir.toString());
+
+    // Create android-<xtsType>-gen-files/logs
+    Path genFilesSubDir = genFileDir.resolve("android-cts-gen-files").resolve("logs");
+    genFilesSubDir.toFile().mkdirs();
+    genFilesSubDir.resolve("latest").toFile().createNewFile();
+
+    // Create a regular timestamped directory under logs
+    Path timestampedDir = genFilesSubDir.resolve("2025.01.01_12.00.00");
+    timestampedDir.toFile().mkdirs();
+    timestampedDir.resolve("inv_1234").toFile().mkdirs();
+    timestampedDir.resolve("tradefed.log").toFile().createNewFile();
+
+    // Create redundant ClusterLogSaver items
+    Path toolLogsDir = genFileDir.resolve("tool-logs");
+    toolLogsDir.toFile().mkdirs();
+    toolLogsDir.resolve("stdout.txt").toFile().createNewFile();
+    toolLogsDir.resolve("module-configuration_123.xml").toFile().createNewFile();
+    toolLogsDir.resolve("subprocess-device_logcat_test_123.txt").toFile().createNewFile();
+    toolLogsDir
+        .resolve("subprocess-PackageDeviceInfo.deviceinfo.json_123.txt")
+        .toFile()
+        .createNewFile();
+
+    // Create some other valid non-gen file
+    genFileDir.resolve("valid_other_file.txt").toFile().createNewFile();
+
+    Path logRootDir = folder.newFolder("log_root_dir").toPath();
+
+    sessionResultHandlerUtil.copyTradefedTestLogFiles(testInfo, logRootDir, true);
+
+    Path invocationDir = logRootDir.resolve("inv_test_id");
+    Path testLogDir = invocationDir.resolve("TradefedTest_test_test_id");
+
+    // Verify tool-logs contents were selectively skipped
+    assertThat(testLogDir.resolve("tool-logs").toFile().exists()).isTrue();
+    assertThat(testLogDir.resolve("tool-logs").resolve("stdout.txt").toFile().exists()).isTrue();
+    assertThat(
+            testLogDir
+                .resolve("tool-logs")
+                .resolve("module-configuration_123.xml")
+                .toFile()
+                .exists())
+        .isFalse();
+    assertThat(
+            testLogDir
+                .resolve("tool-logs")
+                .resolve("subprocess-device_logcat_test_123.txt")
+                .toFile()
+                .exists())
+        .isFalse();
+    assertThat(
+            testLogDir
+                .resolve("tool-logs")
+                .resolve("subprocess-PackageDeviceInfo.deviceinfo.json_123.txt")
+                .toFile()
+                .exists())
+        .isFalse();
+
+    // Verify valid non-gen file was copied to testLogDir
+    assertThat(testLogDir.resolve("valid_other_file.txt").toFile().exists()).isTrue();
+
+    // Verify standard gen-files contents were copied to invocationDir
+    assertThat(invocationDir.resolve("tradefed.log").toFile().exists()).isTrue();
+  }
+
+  @Test
+  public void copyTradefedTestLogFiles_doesNotSkipRedundantClusterLogs() throws Exception {
+    Path genFileDir = folder.newFolder("gen_file_dir_2").toPath();
+    when(testInfo.getGenFileDir()).thenReturn(genFileDir.toString());
+
+    // Create android-<xtsType>-gen-files/logs
+    Path genFilesSubDir = genFileDir.resolve("android-cts-gen-files").resolve("logs");
+    genFilesSubDir.toFile().mkdirs();
+    Path timestampedDir = genFilesSubDir.resolve("2025.01.01_12.00.00");
+    timestampedDir.toFile().mkdirs();
+    timestampedDir.resolve("tradefed.log").toFile().createNewFile();
+
+    // Create redundant ClusterLogSaver items
+    Path toolLogsDir = genFileDir.resolve("tool-logs");
+    toolLogsDir.toFile().mkdirs();
+    toolLogsDir.resolve("stdout.txt").toFile().createNewFile();
+    toolLogsDir.resolve("module-configuration_123.xml").toFile().createNewFile();
+
+    Path logRootDir = folder.newFolder("log_root_dir_2").toPath();
+
+    sessionResultHandlerUtil.copyTradefedTestLogFiles(testInfo, logRootDir, false);
+
+    Path invocationDir = logRootDir.resolve("inv_test_id");
+    Path testLogDir = invocationDir.resolve("TradefedTest_test_test_id");
+
+    // Verify tool-logs contents were NOT skipped
+    assertThat(testLogDir.resolve("tool-logs").toFile().exists()).isTrue();
+    assertThat(testLogDir.resolve("tool-logs").resolve("stdout.txt").toFile().exists()).isTrue();
+    assertThat(
+            testLogDir
+                .resolve("tool-logs")
+                .resolve("module-configuration_123.xml")
+                .toFile()
+                .exists())
+        .isTrue();
+    assertThat(invocationDir.resolve("tradefed.log").toFile().exists()).isTrue();
+  }
 }
