@@ -83,7 +83,7 @@ public final class RemoteControlButtonBuilderTest {
             .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
             .build();
 
-    when(checker.checkEligibility(any()))
+    when(checker.checkTechnicalEligibility(any(RemoteControlEligibilityContext.class)))
         .thenReturn(RemoteControlEligibilityResult.builder().setIsEligible(true).build());
 
     ActionButtonState state = remoteControlButtonBuilder.build(deviceInfo, UNIVERSE);
@@ -93,7 +93,7 @@ public final class RemoteControlButtonBuilderTest {
 
     ArgumentCaptor<RemoteControlEligibilityContext> contextCaptor =
         ArgumentCaptor.forClass(RemoteControlEligibilityContext.class);
-    verify(checker).checkEligibility(contextCaptor.capture());
+    verify(checker).checkTechnicalEligibility(contextCaptor.capture());
     RemoteControlEligibilityContext context = contextCaptor.getValue();
     assertThat(context.isMultipleSelection()).isFalse();
     assertThat(context.isSubDevice()).isFalse();
@@ -118,7 +118,7 @@ public final class RemoteControlButtonBuilderTest {
             .build();
 
     when(subDeviceInfoListFactory.create(any())).thenReturn(ImmutableList.of(subDevice));
-    when(checker.checkEligibility(any()))
+    when(checker.checkTechnicalEligibility(any(RemoteControlEligibilityContext.class)))
         .thenReturn(RemoteControlEligibilityResult.builder().setIsEligible(true).build());
 
     ActionButtonState state = remoteControlButtonBuilder.build(deviceInfo, UNIVERSE);
@@ -128,7 +128,7 @@ public final class RemoteControlButtonBuilderTest {
 
     ArgumentCaptor<RemoteControlEligibilityContext> contextCaptor =
         ArgumentCaptor.forClass(RemoteControlEligibilityContext.class);
-    verify(checker).checkEligibility(contextCaptor.capture());
+    verify(checker).checkTechnicalEligibility(contextCaptor.capture());
     RemoteControlEligibilityContext context = contextCaptor.getValue();
     assertThat(context.hasCommSubDevice()).isTrue();
     assertThat(context.types()).containsExactly("TestbedDevice");
@@ -149,7 +149,7 @@ public final class RemoteControlButtonBuilderTest {
             .build();
 
     when(subDeviceInfoListFactory.create(any())).thenReturn(ImmutableList.of(subDevice));
-    when(checker.checkEligibility(any()))
+    when(checker.checkTechnicalEligibility(any(RemoteControlEligibilityContext.class)))
         .thenReturn(RemoteControlEligibilityResult.builder().setIsEligible(true).build());
 
     ActionButtonState state = remoteControlButtonBuilder.build(deviceInfo, UNIVERSE);
@@ -159,7 +159,7 @@ public final class RemoteControlButtonBuilderTest {
 
     ArgumentCaptor<RemoteControlEligibilityContext> contextCaptor =
         ArgumentCaptor.forClass(RemoteControlEligibilityContext.class);
-    verify(checker).checkEligibility(contextCaptor.capture());
+    verify(checker).checkTechnicalEligibility(contextCaptor.capture());
     RemoteControlEligibilityContext context = contextCaptor.getValue();
     assertThat(context.hasCommSubDevice()).isFalse();
   }
@@ -172,7 +172,7 @@ public final class RemoteControlButtonBuilderTest {
             .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
             .build();
 
-    when(checker.checkEligibility(any()))
+    when(checker.checkTechnicalEligibility(any(RemoteControlEligibilityContext.class)))
         .thenReturn(
             RemoteControlEligibilityResult.builder()
                 .setIsEligible(false)
@@ -193,7 +193,7 @@ public final class RemoteControlButtonBuilderTest {
             .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
             .build();
 
-    when(checker.checkEligibility(any()))
+    when(checker.checkTechnicalEligibility(any(RemoteControlEligibilityContext.class)))
         .thenReturn(
             RemoteControlEligibilityResult.builder()
                 .setIsEligible(false)
@@ -223,7 +223,7 @@ public final class RemoteControlButtonBuilderTest {
             .setDeviceStatus(DeviceStatus.IDLE)
             .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
             .build();
-    when(checker.checkEligibility(any()))
+    when(checker.checkTechnicalEligibility(any(RemoteControlEligibilityContext.class)))
         .thenReturn(RemoteControlEligibilityResult.builder().setIsEligible(true).build());
     when(featureReadiness.isDeviceRemoteControlReady()).thenReturn(false);
 

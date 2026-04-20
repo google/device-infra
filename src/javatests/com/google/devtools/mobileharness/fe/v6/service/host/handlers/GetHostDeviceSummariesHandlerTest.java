@@ -44,8 +44,10 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.DeviceHealthSt
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DeviceSummary;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDeviceSummariesResponse;
+import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.remotecontrol.RemoteControlEligibilityChecker;
+import com.google.devtools.mobileharness.fe.v6.service.shared.remotecontrol.RemoteControlEligibilityResult;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
@@ -108,11 +110,10 @@ public final class GetHostDeviceSummariesHandlerTest {
 
   @Bind @Mock private LabInfoProvider labInfoProvider;
 
-  @Bind
-  private RemoteControlEligibilityChecker remoteControlEligibilityChecker =
-      new RemoteControlEligibilityChecker();
-
+  @Bind @Mock private GroupMembershipProvider groupMembershipProvider;
   @Bind private ListeningExecutorService executorService = newDirectExecutorService();
+
+  @Bind @Mock private RemoteControlEligibilityChecker remoteControlEligibilityChecker;
   @Bind private InstantSource instantSource = InstantSource.fixed(NOW);
 
   @Inject private GetHostDeviceSummariesHandler getHostDeviceSummariesHandler;
@@ -120,6 +121,8 @@ public final class GetHostDeviceSummariesHandlerTest {
   @Before
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+    when(remoteControlEligibilityChecker.checkTechnicalEligibility(any()))
+        .thenReturn(RemoteControlEligibilityResult.builder().setIsEligible(true).build());
   }
 
   @Test

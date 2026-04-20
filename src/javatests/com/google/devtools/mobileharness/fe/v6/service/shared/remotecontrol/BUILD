@@ -27,12 +27,12 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/auth",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/remotecontrol",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
-        "@maven//:com_google_inject_guice",
-        "@maven//:javax_inject_jsr330_api",
         "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
 )
 

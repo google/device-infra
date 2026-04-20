@@ -17,39 +17,56 @@
 package com.google.devtools.mobileharness.fe.v6.service.shared.remotecontrol;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DeviceProxyType;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.IneligibilityReasonCode;
-import com.google.inject.Guice;
-import javax.inject.Inject;
+import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class RemoteControlEligibilityCheckerTest {
+  @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
-  @Inject private RemoteControlEligibilityChecker checker;
+  @Mock private GroupMembershipProvider groupMembershipProvider;
+
+  private final ListeningExecutorService executor = MoreExecutors.newDirectExecutorService();
+  private RemoteControlEligibilityChecker checker;
 
   @Before
   public void setUp() {
-    Guice.createInjector().injectMembers(this);
+    checker = new RemoteControlEligibilityChecker(groupMembershipProvider, executor);
   }
 
   @Test
-  public void checkEligibility_deviceBusy_returnsIneligible() {
+  public void checkEligibility_deviceBusy_returnsIneligible() throws Exception {
     RemoteControlEligibilityContext context =
         RemoteControlEligibilityContext.builder()
             .setDeviceStatus(DeviceStatus.BUSY)
             .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
             .setDimensions(ImmutableMap.of("communication_type", "ADB"))
+            .setUsername("user")
             .build();
 
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
+    RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
 
     assertThat(result.isEligible()).isFalse();
     assertThat(result.reasonCode()).hasValue(IneligibilityReasonCode.DEVICE_NOT_IDLE);
@@ -57,15 +74,16 @@ public final class RemoteControlEligibilityCheckerTest {
   }
 
   @Test
-  public void checkEligibility_noAcidDriver_returnsIneligible() {
+  public void checkEligibility_noAcidDriver_returnsIneligible() throws Exception {
     RemoteControlEligibilityContext context =
         RemoteControlEligibilityContext.builder()
             .setDeviceStatus(DeviceStatus.IDLE)
             .setDrivers(ImmutableSet.of("OtherDriver"))
             .setDimensions(ImmutableMap.of("communication_type", "ADB"))
+            .setUsername("user")
             .build();
 
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
+    RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
 
     assertThat(result.isEligible()).isFalse();
     assertThat(result.reasonCode()).hasValue(IneligibilityReasonCode.ACID_NOT_SUPPORTED);
@@ -73,7 +91,7 @@ public final class RemoteControlEligibilityCheckerTest {
   }
 
   @Test
-  public void checkEligibility_multiSelectNoAndroidReal_returnsIneligible() {
+  public void checkEligibility_multiSelectNoAndroidReal_returnsIneligible() throws Exception {
     RemoteControlEligibilityContext context =
         RemoteControlEligibilityContext.builder()
             .setIsMultipleSelection(true)
@@ -81,130 +99,44 @@ public final class RemoteControlEligibilityCheckerTest {
             .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
             .setTypes(ImmutableSet.of("UsbDevice"))
             .setDimensions(ImmutableMap.of("communication_type", "USB"))
+            .setUsername("user")
             .build();
 
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
+    RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
 
     assertThat(result.isEligible()).isFalse();
     assertThat(result.reasonCode()).hasValue(IneligibilityReasonCode.DEVICE_TYPE_NOT_SUPPORTED);
-    assertThat(result.reasonMessage()).hasValue("Not AndroidRealDevice");
   }
 
   @Test
-  public void checkEligibility_macosHostSingleSelect_returnsIneligible() {
+  public void checkEligibility_macosHostSingleSelect_returnsIneligible() throws Exception {
     RemoteControlEligibilityContext context =
         RemoteControlEligibilityContext.builder()
             .setIsMultipleSelection(false)
             .setDeviceStatus(DeviceStatus.IDLE)
             .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
             .setDimensions(ImmutableMap.of("host_os", "Mac OS X", "communication_type", "ADB"))
+            .setUsername("user")
             .build();
 
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
+    RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
 
     assertThat(result.isEligible()).isFalse();
     assertThat(result.reasonCode()).hasValue(IneligibilityReasonCode.HOST_OS_NOT_SUPPORTED);
-    assertThat(result.reasonMessage()).hasValue("Mac OS not supported");
   }
 
   @Test
-  public void checkEligibility_noAcidDimension_returnsIneligible() {
-    RemoteControlEligibilityContext context =
-        RemoteControlEligibilityContext.builder()
-            .setDeviceStatus(DeviceStatus.IDLE)
-            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
-            .setDimensions(ImmutableMap.of("host_os", "Linux"))
-            .build();
-
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
-
-    assertThat(result.isEligible()).isFalse();
-    assertThat(result.reasonCode()).hasValue(IneligibilityReasonCode.ACID_NOT_SUPPORTED);
-    assertThat(result.reasonMessage()).hasValue("No eligible Acid dimension");
-  }
-
-  @Test
-  public void checkEligibility_abnormalTestbedSingleSelect_returnsIneligible() {
-    RemoteControlEligibilityContext context =
-        RemoteControlEligibilityContext.builder()
-            .setIsMultipleSelection(false)
-            .setDeviceStatus(DeviceStatus.IDLE)
-            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
-            .setTypes(ImmutableSet.of("AbnormalTestbedDevice"))
-            .setDimensions(ImmutableMap.of("communication_type", "ADB"))
-            .build();
-
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
-
-    assertThat(result.isEligible()).isFalse();
-    assertThat(result.reasonCode()).hasValue(IneligibilityReasonCode.DEVICE_TYPE_NOT_SUPPORTED);
-    assertThat(result.reasonMessage()).hasValue("Device type not supported");
-  }
-
-  @Test
-  public void checkEligibility_failedDeviceSingleSelect_returnsIneligible() {
-    RemoteControlEligibilityContext context =
-        RemoteControlEligibilityContext.builder()
-            .setIsMultipleSelection(false)
-            .setDeviceStatus(DeviceStatus.IDLE)
-            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
-            .setTypes(ImmutableSet.of("FailedDevice"))
-            .setDimensions(ImmutableMap.of("communication_type", "ADB"))
-            .build();
-
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
-
-    assertThat(result.isEligible()).isFalse();
-    assertThat(result.reasonCode()).hasValue(IneligibilityReasonCode.DEVICE_TYPE_NOT_SUPPORTED);
-    assertThat(result.reasonMessage()).hasValue("Device type not supported");
-  }
-
-  @Test
-  public void checkEligibility_macosHostMultiSelect_returnsEligible() {
-    // Mac OS check should be skipped in multi-selection mode.
-    RemoteControlEligibilityContext context =
-        RemoteControlEligibilityContext.builder()
-            .setIsMultipleSelection(true)
-            .setDeviceStatus(DeviceStatus.IDLE)
-            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
-            .setTypes(ImmutableSet.of("AndroidRealDevice"))
-            .setDimensions(ImmutableMap.of("host_os", "Mac OS X", "communication_type", "ADB"))
-            .build();
-
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
-
-    assertThat(result.isEligible()).isTrue();
-  }
-
-  @Test
-  public void checkEligibility_failedDeviceMultiSelect_returnsEligible() {
-    // Ineligible types check should be skipped in multi-selection mode if AndroidRealDevice is
-    // present.
-    RemoteControlEligibilityContext context =
-        RemoteControlEligibilityContext.builder()
-            .setIsMultipleSelection(true)
-            .setDeviceStatus(DeviceStatus.IDLE)
-            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
-            .setTypes(ImmutableSet.of("AndroidRealDevice", "FailedDevice"))
-            .setDimensions(ImmutableMap.of("communication_type", "ADB"))
-            .build();
-
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
-
-    assertThat(result.isEligible()).isTrue();
-  }
-
-  @Test
-  public void checkEligibility_validAndroidDevice_returnsEligibleWithProxies() {
+  public void checkEligibility_validAndroidDevice_returnsEligibleWithProxies() throws Exception {
     RemoteControlEligibilityContext context =
         RemoteControlEligibilityContext.builder()
             .setDeviceStatus(DeviceStatus.IDLE)
             .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
             .setTypes(ImmutableSet.of("AndroidRealDevice"))
             .setDimensions(ImmutableMap.of("communication_type", "ADB", "sdk_version", "30"))
+            .setUsername("user")
             .build();
 
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
+    RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
 
     assertThat(result.isEligible()).isTrue();
     assertThat(result.supportedProxyTypes())
@@ -213,84 +145,122 @@ public final class RemoteControlEligibilityCheckerTest {
   }
 
   @Test
-  public void checkEligibility_validAndroidDeviceOldSdk_returnsEligibleWithLimitedProxies() {
+  public void checkEligibility_permissionDenied_returnsIneligible() throws Exception {
     RemoteControlEligibilityContext context =
         RemoteControlEligibilityContext.builder()
+            .setUsername("user")
+            .setOwnersAndExecutors(ImmutableList.of("owner", "executor"))
             .setDeviceStatus(DeviceStatus.IDLE)
             .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
-            .setTypes(ImmutableSet.of("AndroidRealDevice"))
-            .setDimensions(ImmutableMap.of("communication_type", "ADB", "sdk_version", "19"))
-            .build();
-
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
-
-    assertThat(result.isEligible()).isTrue();
-    assertThat(result.supportedProxyTypes())
-        .containsExactly(DeviceProxyType.ADB_ONLY, DeviceProxyType.USB_IP);
-  }
-
-  @Test
-  public void checkEligibility_moretoSupportOnly_returnsEligible() {
-    RemoteControlEligibilityContext context =
-        RemoteControlEligibilityContext.builder()
-            .setIsSubDevice(true)
-            .setDeviceStatus(DeviceStatus.IDLE)
-            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
-            .setTypes(ImmutableSet.of("UsbDevice"))
-            .setDimensions(ImmutableMap.of("device_supports_moreto", "true"))
-            .build();
-
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
-
-    assertThat(result.isEligible()).isTrue();
-    assertThat(result.supportedProxyTypes()).containsExactly(DeviceProxyType.USB_IP);
-  }
-
-  @Test
-  public void checkEligibility_failedDevice_returnsIneligible() {
-    RemoteControlEligibilityContext context =
-        RemoteControlEligibilityContext.builder()
-            .setDeviceStatus(DeviceStatus.IDLE)
-            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
-            .setTypes(ImmutableSet.of("FailedDevice"))
             .setDimensions(ImmutableMap.of("communication_type", "ADB"))
             .build();
 
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
+    when(groupMembershipProvider.isMemberOfAny(anyString(), any()))
+        .thenReturn(Futures.immediateFuture(false));
+
+    RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
 
     assertThat(result.isEligible()).isFalse();
-    assertThat(result.reasonCode()).hasValue(IneligibilityReasonCode.DEVICE_TYPE_NOT_SUPPORTED);
-    assertThat(result.reasonMessage()).hasValue("Device type not supported");
+    assertThat(result.reasonCode()).hasValue(IneligibilityReasonCode.PERMISSION_DENIED);
+    assertThat(result.runAsCandidates()).isEmpty();
   }
 
   @Test
-  public void checkEligibility_testbedWithCommCapableSubDevice_returnsEligible() {
+  public void checkEligibility_authorizedByGroup_returnsEligible() throws Exception {
     RemoteControlEligibilityContext context =
         RemoteControlEligibilityContext.builder()
+            .setUsername("user")
+            .setOwnersAndExecutors(ImmutableList.of("group1"))
             .setDeviceStatus(DeviceStatus.IDLE)
             .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
-            .setTypes(ImmutableSet.of("TestbedDevice"))
-            .setHasCommSubDevice(true)
+            .setDimensions(ImmutableMap.of("communication_type", "ADB"))
             .build();
 
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
+    when(groupMembershipProvider.isMemberOfAny(eq("user"), eq(ImmutableList.of("group1"))))
+        .thenReturn(Futures.immediateFuture(true));
+
+    RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
 
     assertThat(result.isEligible()).isTrue();
-    assertThat(result.supportedProxyTypes())
-        .containsExactly(DeviceProxyType.DEVICE_PROXY_TYPE_UNSPECIFIED);
+    assertThat(result.runAsCandidates()).containsExactly("group1");
   }
 
   @Test
-  public void checkEligibility_testbedNoCommCapableSubDevice_returnsIneligible() {
+  public void checkEligibility_technicalFailureButAuthorized_populatesCandidates()
+      throws Exception {
+    RemoteControlEligibilityContext context =
+        RemoteControlEligibilityContext.builder()
+            .setUsername("user")
+            .setOwnersAndExecutors(ImmutableList.of("user"))
+            .setDeviceStatus(DeviceStatus.BUSY)
+            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
+            .setDimensions(ImmutableMap.of("communication_type", "ADB"))
+            .build();
+
+    RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
+
+    assertThat(result.isEligible()).isFalse();
+    assertThat(result.reasonCode()).hasValue(IneligibilityReasonCode.DEVICE_NOT_IDLE);
+    assertThat(result.runAsCandidates()).isEmpty();
+  }
+
+  @Test
+  public void checkEligibility_noPermissionsDefined_returnsEligibleForUser() throws Exception {
+    RemoteControlEligibilityContext context =
+        RemoteControlEligibilityContext.builder()
+            .setUsername("user")
+            .setOwnersAndExecutors(ImmutableList.of())
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
+            .setDimensions(ImmutableMap.of("communication_type", "ADB"))
+            .build();
+
+    RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
+
+    assertThat(result.isEligible()).isTrue();
+    assertThat(result.runAsCandidates()).containsExactly("user");
+  }
+
+  @Test
+  public void checkEligibility_noUsername_returnsTechnicalEligible() throws Exception {
+    RemoteControlEligibilityContext context =
+        RemoteControlEligibilityContext.builder()
+            .setUsername("")
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
+            .setDimensions(ImmutableMap.of("communication_type", "ADB"))
+            .build();
+
+    RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
+
+    assertThat(result.isEligible()).isTrue();
+    assertThat(result.runAsCandidates()).isEmpty();
+  }
+
+  @Test
+  public void checkTechnicalEligibility_validDevice_returnsEligible() {
     RemoteControlEligibilityContext context =
         RemoteControlEligibilityContext.builder()
             .setDeviceStatus(DeviceStatus.IDLE)
             .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
-            .setTypes(ImmutableSet.of("TestbedDevice"))
-            .setHasCommSubDevice(false)
+            .setDimensions(ImmutableMap.of("communication_type", "ADB"))
             .build();
 
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
+    RemoteControlEligibilityResult result = checker.checkTechnicalEligibility(context);
+
+    assertThat(result.isEligible()).isTrue();
+  }
+
+  @Test
+  public void checkTechnicalEligibility_noEligibleAcidDimension_returnsIneligible() {
+    RemoteControlEligibilityContext context =
+        RemoteControlEligibilityContext.builder()
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
+            .setDimensions(ImmutableMap.of())
+            .build();
+
+    RemoteControlEligibilityResult result = checker.checkTechnicalEligibility(context);
 
     assertThat(result.isEligible()).isFalse();
     assertThat(result.reasonCode()).hasValue(IneligibilityReasonCode.ACID_NOT_SUPPORTED);
@@ -298,184 +268,151 @@ public final class RemoteControlEligibilityCheckerTest {
   }
 
   @Test
-  public void checkEligibility_subDeviceWithMoreto_returnsEligible() {
-    RemoteControlEligibilityContext context =
-        RemoteControlEligibilityContext.builder()
-            .setIsSubDevice(true)
-            .setDeviceStatus(DeviceStatus.IDLE)
-            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
-            .setTypes(ImmutableSet.of("UsbDevice"))
-            .setDimensions(ImmutableMap.of("device_supports_moreto", "true"))
-            .build();
-
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
-
-    assertThat(result.isEligible()).isTrue();
-    assertThat(result.supportedProxyTypes()).containsExactly(DeviceProxyType.USB_IP);
-  }
-
-  @Test
-  public void checkEligibility_commTypeUsb_returnsEligibleWithUsbIp() {
-    RemoteControlEligibilityContext context =
-        RemoteControlEligibilityContext.builder()
-            .setDeviceStatus(DeviceStatus.IDLE)
-            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
-            .setTypes(ImmutableSet.of("UsbDevice"))
-            .setDimensions(ImmutableMap.of("communication_type", "USB"))
-            .build();
-
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
-
-    assertThat(result.isEligible()).isTrue();
-    assertThat(result.supportedProxyTypes()).containsExactly(DeviceProxyType.USB_IP);
-  }
-
-  @Test
-  public void checkEligibility_commTypeSsh_returnsEligibleWithSsh() {
-    RemoteControlEligibilityContext context =
-        RemoteControlEligibilityContext.builder()
-            .setDeviceStatus(DeviceStatus.IDLE)
-            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
-            .setTypes(ImmutableSet.of("EmbeddedLinuxDevice"))
-            .setDimensions(ImmutableMap.of("communication_type", "SSH"))
-            .build();
-
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
-
-    assertThat(result.isEligible()).isTrue();
-    assertThat(result.supportedProxyTypes()).containsExactly(DeviceProxyType.SSH);
-  }
-
-  @Test
-  public void checkEligibility_androidRealDeviceNonAdbCommType_addsAdbAndVideo() {
-    RemoteControlEligibilityContext context =
-        RemoteControlEligibilityContext.builder()
-            .setDeviceStatus(DeviceStatus.IDLE)
-            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
-            .setTypes(ImmutableSet.of("AndroidRealDevice"))
-            .setDimensions(ImmutableMap.of("communication_type", "USB", "sdk_version", "30"))
-            .build();
-
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
-
-    assertThat(result.isEligible()).isTrue();
-    assertThat(result.supportedProxyTypes()).contains(DeviceProxyType.ADB_AND_VIDEO);
-    assertThat(result.supportedProxyTypes()).contains(DeviceProxyType.USB_IP);
-  }
-
-  @Test
-  public void checkEligibility_adbCommTypeOtherDevice_addsAdbProxies() {
-    RemoteControlEligibilityContext context =
-        RemoteControlEligibilityContext.builder()
-            .setDeviceStatus(DeviceStatus.IDLE)
-            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
-            .setTypes(ImmutableSet.of("EmbeddedLinuxDevice"))
-            .setDimensions(ImmutableMap.of("communication_type", "ADB", "sdk_version", "30"))
-            .build();
-
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
-
-    assertThat(result.isEligible()).isTrue();
-    assertThat(result.supportedProxyTypes()).contains(DeviceProxyType.ADB_ONLY);
-    assertThat(result.supportedProxyTypes()).contains(DeviceProxyType.ADB_AND_VIDEO);
-  }
-
-  @Test
-  public void checkEligibility_usbCommTypeOtherDevice_addsUsbProxy() {
-    RemoteControlEligibilityContext context =
-        RemoteControlEligibilityContext.builder()
-            .setDeviceStatus(DeviceStatus.IDLE)
-            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
-            .setTypes(ImmutableSet.of("EmbeddedLinuxDevice"))
-            .setDimensions(ImmutableMap.of("communication_type", "USB"))
-            .build();
-
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
-
-    assertThat(result.isEligible()).isTrue();
-    assertThat(result.supportedProxyTypes()).contains(DeviceProxyType.USB_IP);
-  }
-
-  @Test
-  public void checkEligibility_testbedWithCommType_returnsSpecificProxies() {
+  public void checkTechnicalEligibility_testbedDeviceWithCommSubDevice_returnsEligible() {
     RemoteControlEligibilityContext context =
         RemoteControlEligibilityContext.builder()
             .setDeviceStatus(DeviceStatus.IDLE)
             .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
             .setTypes(ImmutableSet.of("TestbedDevice"))
-            .setDimensions(ImmutableMap.of("communication_type", "ADB"))
+            .setDimensions(ImmutableMap.of())
+            .setHasCommSubDevice(true)
             .build();
 
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
+    RemoteControlEligibilityResult result = checker.checkTechnicalEligibility(context);
 
     assertThat(result.isEligible()).isTrue();
-    assertThat(result.supportedProxyTypes()).contains(DeviceProxyType.ADB_ONLY);
+  }
+
+  @Test
+  public void checkEligibility_emptyOwnersAndExecutors_returnsEligibleWithUser() throws Exception {
+    RemoteControlEligibilityContext context =
+        RemoteControlEligibilityContext.builder()
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
+            .setDimensions(ImmutableMap.of("communication_type", "ADB"))
+            .setUsername("user")
+            .setOwnersAndExecutors(ImmutableList.of())
+            .build();
+
+    RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
+
+    assertThat(result.isEligible()).isTrue();
+    assertThat(result.runAsCandidates()).containsExactly("user");
+  }
+
+  @Test
+  public void calculateSupportedProxies_nonAndroidDeviceWithAdbComm_addsAdbProxies()
+      throws Exception {
+    RemoteControlEligibilityContext context =
+        RemoteControlEligibilityContext.builder()
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
+            .setTypes(ImmutableSet.of("UsbDevice"))
+            .setDimensions(ImmutableMap.of("communication_type", "ADB"))
+            .setUsername("user")
+            .build();
+
+    RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
+
     assertThat(result.supportedProxyTypes())
-        .doesNotContain(DeviceProxyType.DEVICE_PROXY_TYPE_UNSPECIFIED);
+        .containsExactly(
+            DeviceProxyType.USB_IP, DeviceProxyType.ADB_AND_VIDEO, DeviceProxyType.ADB_ONLY);
   }
 
   @Test
-  public void checkEligibility_sshCommTypeNonSshDevice_addsSshProxy() {
+  public void checkEligibility_multiSelectTestbedAndAndroidReal_returnsIneligible()
+      throws Exception {
+    RemoteControlEligibilityContext context =
+        RemoteControlEligibilityContext.builder()
+            .setIsMultipleSelection(true)
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
+            .setTypes(ImmutableSet.of("AndroidRealDevice", "TestbedDevice"))
+            .setDimensions(ImmutableMap.of("communication_type", "ADB"))
+            .setUsername("user")
+            .build();
+
+    RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
+
+    assertThat(result.isEligible()).isFalse();
+    assertThat(result.reasonCode()).hasValue(IneligibilityReasonCode.DEVICE_TYPE_NOT_SUPPORTED);
+  }
+
+  @Test
+  @SuppressWarnings("DoNotMockAutoValue")
+  public void checkEligibility_usernameBecomesEmpty_returnsEmptyCandidates() throws Exception {
+    RemoteControlEligibilityContext mockContext = mock(RemoteControlEligibilityContext.class);
+    when(mockContext.username()).thenReturn("user", "");
+    when(mockContext.deviceStatus()).thenReturn(DeviceStatus.IDLE);
+    when(mockContext.drivers()).thenReturn(ImmutableSet.of("AcidRemoteDriver"));
+    when(mockContext.types()).thenReturn(ImmutableSet.of("AndroidRealDevice"));
+    when(mockContext.dimensions()).thenReturn(ImmutableMap.of("communication_type", "ADB"));
+    when(mockContext.ownersAndExecutors()).thenReturn(ImmutableList.of());
+    when(mockContext.isMultipleSelection()).thenReturn(false);
+    when(mockContext.isSubDevice()).thenReturn(false);
+    when(mockContext.hasCommSubDevice()).thenReturn(false);
+
+    RemoteControlEligibilityResult result = checker.checkEligibility(mockContext).get();
+
+    assertThat(result.isEligible()).isFalse();
+    assertThat(result.reasonCode()).hasValue(IneligibilityReasonCode.PERMISSION_DENIED);
+    assertThat(result.runAsCandidates()).isEmpty();
+  }
+
+  @Test
+  public void calculateSupportedProxies_androidDeviceMissingSdkVersion_doesNotAddAdbAndVideo()
+      throws Exception {
     RemoteControlEligibilityContext context =
         RemoteControlEligibilityContext.builder()
             .setDeviceStatus(DeviceStatus.IDLE)
             .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
             .setTypes(ImmutableSet.of("AndroidRealDevice"))
-            .setDimensions(ImmutableMap.of("communication_type", "SSH"))
+            .setDimensions(ImmutableMap.of("communication_type", "USB"))
+            .setUsername("user")
             .build();
 
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
+    RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
 
-    assertThat(result.isEligible()).isTrue();
-    assertThat(result.supportedProxyTypes()).contains(DeviceProxyType.SSH);
+    assertThat(result.supportedProxyTypes())
+        .containsExactly(DeviceProxyType.ADB_ONLY, DeviceProxyType.USB_IP);
   }
 
   @Test
-  public void checkEligibility_androidDeviceMissingSdkVersion_addsAdbAndVideo() {
+  public void checkEligibility_nonEmptyOwners_userIsMember_addsOwnerAsCandidate() throws Exception {
     RemoteControlEligibilityContext context =
         RemoteControlEligibilityContext.builder()
             .setDeviceStatus(DeviceStatus.IDLE)
             .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
             .setTypes(ImmutableSet.of("AndroidRealDevice"))
             .setDimensions(ImmutableMap.of("communication_type", "ADB"))
+            .setUsername("user")
+            .setOwnersAndExecutors(ImmutableList.of("owner1"))
             .build();
 
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
+    when(groupMembershipProvider.isMemberOfAny("user", ImmutableList.of("owner1")))
+        .thenReturn(Futures.immediateFuture(true));
+
+    RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
 
     assertThat(result.isEligible()).isTrue();
-    assertThat(result.supportedProxyTypes()).contains(DeviceProxyType.ADB_AND_VIDEO);
+    assertThat(result.runAsCandidates()).containsExactly("owner1");
   }
 
   @Test
-  public void checkEligibility_androidDeviceMalformedSdkVersion_returnsEligibleWithoutVideo() {
+  public void checkEligibility_multiSelectAndroidRealOnly_returnsEligible() throws Exception {
     RemoteControlEligibilityContext context =
         RemoteControlEligibilityContext.builder()
+            .setIsMultipleSelection(true)
+            .setUsername("user")
+            .setOwnersAndExecutors(ImmutableList.of())
             .setDeviceStatus(DeviceStatus.IDLE)
             .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
             .setTypes(ImmutableSet.of("AndroidRealDevice"))
-            .setDimensions(ImmutableMap.of("communication_type", "ADB", "sdk_version", "invalid"))
+            .setDimensions(ImmutableMap.of("communication_type", "ADB"))
             .build();
 
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
+    RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
 
     assertThat(result.isEligible()).isTrue();
-    assertThat(result.supportedProxyTypes()).doesNotContain(DeviceProxyType.ADB_AND_VIDEO);
-    assertThat(result.supportedProxyTypes()).contains(DeviceProxyType.ADB_ONLY);
-  }
-
-  @Test
-  public void checkEligibility_androidDeviceMinSdkVersion_addsAdbAndVideo() {
-    RemoteControlEligibilityContext context =
-        RemoteControlEligibilityContext.builder()
-            .setDeviceStatus(DeviceStatus.IDLE)
-            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
-            .setTypes(ImmutableSet.of("AndroidRealDevice"))
-            .setDimensions(ImmutableMap.of("communication_type", "ADB", "sdk_version", "21"))
-            .build();
-
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
-
-    assertThat(result.isEligible()).isTrue();
-    assertThat(result.supportedProxyTypes()).contains(DeviceProxyType.ADB_AND_VIDEO);
   }
 }

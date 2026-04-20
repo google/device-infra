@@ -31,6 +31,7 @@ import com.google.protobuf.ExtensionRegistry;
 import com.google.wireless.qa.mobileharness.shared.api.spec.TestbedDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.proto.Device.SubDeviceDimensions;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -107,14 +108,13 @@ public class SubDeviceInfoListFactory {
                         .build())
             .collect(toImmutableList()));
 
-    // Create a dimension map
     ImmutableMap<String, String> dimensionMap =
         subDevice.getDeviceDimensionList().stream()
             .collect(
                 toImmutableMap(
                     d -> Ascii.toLowerCase(d.getName()),
                     d -> d.getValue(),
-                    (existing, replacement) -> replacement));
+                    (v1, v2) -> Arrays.asList(v1.split(",")).contains(v2) ? v1 : v1 + "," + v2));
 
     // Extract info using direct mapping.
     Optional.ofNullable(dimensionMap.get(Dimension.Name.MODEL.lowerCaseName()))

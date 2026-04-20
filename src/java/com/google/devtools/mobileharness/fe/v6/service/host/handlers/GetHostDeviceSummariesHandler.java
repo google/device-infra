@@ -162,7 +162,7 @@ public final class GetHostDeviceSummariesHandler {
                             .build();
 
                     RemoteControlEligibilityResult result =
-                        remoteControlEligibilityChecker.checkEligibility(context);
+                        remoteControlEligibilityChecker.checkTechnicalEligibility(context);
 
                     RemoteControlInfo remoteControlInfo =
                         RemoteControlInfo.newBuilder()

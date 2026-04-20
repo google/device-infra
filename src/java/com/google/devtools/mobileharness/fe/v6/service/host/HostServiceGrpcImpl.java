@@ -50,6 +50,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.StopLabServerR
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsResponse;
 import io.grpc.stub.StreamObserver;
+import java.util.Optional;
 import javax.inject.Inject;
 
 /** Implementation of the gRPC HostService. */
@@ -171,7 +172,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
     GrpcServiceUtil.invokeAsync(
         request,
         responseObserver,
-        logic::checkRemoteControlEligibility,
+        req -> logic.checkRemoteControlEligibility(req, Optional.empty()),
         executor,
         HostServiceGrpc.getServiceDescriptor(),
         HostServiceGrpc.getCheckRemoteControlEligibilityMethod());

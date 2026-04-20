@@ -26,6 +26,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/auth",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",

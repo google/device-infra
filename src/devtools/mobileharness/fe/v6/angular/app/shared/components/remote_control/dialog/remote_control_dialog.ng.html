@@ -300,7 +300,7 @@
             <mat-form-field appearance="outline" class="proxy-select" subscriptSizing="dynamic">
               <mat-icon matPrefix>settings_ethernet</mat-icon>
               <mat-select formControlName="proxyType">
-                <mat-option [value]="0">Auto (Default)</mat-option>
+                <mat-option [value]="DeviceProxyType.NONE">Auto (Default)</mat-option>
                 @for (mode of commonProxyModes(); track mode) {
                   <mat-option [value]="mode">{{ PROXY_TYPE_LABELS[mode] }}</mat-option>
                 }

@@ -47,6 +47,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.StopLabServerR
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.StopLabServerResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsResponse;
+import java.util.Optional;
 
 /** Interface for the core logic of the Host Service. */
 public interface HostServiceLogic {
@@ -70,7 +71,7 @@ public interface HostServiceLogic {
       DecommissionMissingDevicesRequest request);
 
   ListenableFuture<CheckRemoteControlEligibilityResponse> checkRemoteControlEligibility(
-      CheckRemoteControlEligibilityRequest request);
+      CheckRemoteControlEligibilityRequest request, Optional<String> username);
 
   ListenableFuture<RemoteControlDevicesResponse> remoteControlDevices(
       RemoteControlDevicesRequest request);

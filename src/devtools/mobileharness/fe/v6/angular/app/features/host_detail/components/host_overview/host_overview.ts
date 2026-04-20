@@ -287,7 +287,7 @@ export class HostOverviewPage implements OnChanges {
   ];
 
   displayedColumns: string[] = [
-    'select',
+    ...(this.isGoogleInternal ? ['select'] : []),
     'expand',
     'id',
     'health',

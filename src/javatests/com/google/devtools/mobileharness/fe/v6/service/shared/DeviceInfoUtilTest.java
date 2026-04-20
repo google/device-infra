@@ -59,7 +59,7 @@ public final class DeviceInfoUtilTest {
   }
 
   @Test
-  public void getDimensions_duplicateKeys_usesLast() {
+  public void getDimensions_duplicateKeys_mergesValues() {
     DeviceInfo deviceInfo =
         DeviceInfo.newBuilder()
             .setDeviceFeature(
@@ -69,11 +69,13 @@ public final class DeviceInfoUtilTest {
                             .addSupportedDimension(
                                 DeviceDimension.newBuilder().setName("dim1").setValue("val1"))
                             .addSupportedDimension(
-                                DeviceDimension.newBuilder().setName("dim1").setValue("val2"))))
+                                DeviceDimension.newBuilder().setName("dim1").setValue("val2"))
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder().setName("dim1").setValue("val1"))))
             .build();
 
     ImmutableMap<String, String> dimensions = DeviceInfoUtil.getDimensions(deviceInfo);
 
-    assertThat(dimensions).containsExactly("dim1", "val2");
+    assertThat(dimensions).containsExactly("dim1", "val1,val2");
   }
 }

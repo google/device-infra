@@ -265,6 +265,8 @@ enum IneligibilityReasonCode {
   HOST_OS_NOT_SUPPORTED = 4;
   // Device does not support AcidRemoteDriver.
   ACID_NOT_SUPPORTED = 5;
+  // Device or sub-device not found in lab info.
+  DEVICE_NOT_FOUND = 6;
 }
 
 // Options for creating a remote control session.

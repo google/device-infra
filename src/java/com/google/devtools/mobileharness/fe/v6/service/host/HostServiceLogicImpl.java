@@ -20,6 +20,7 @@ import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.CheckRemoteControlEligibilityHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostDeviceSummariesHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostHeaderInfoHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostOverviewHandler;
@@ -55,6 +56,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThro
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
+import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -64,6 +66,7 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
 
   private final GetHostOverviewHandler getHostOverviewHandler;
   private final GetHostDeviceSummariesHandler getHostDeviceSummariesHandler;
+  private final CheckRemoteControlEligibilityHandler checkRemoteControlEligibilityHandler;
   private final GetHostHeaderInfoHandler getHostHeaderInfoHandler;
   private final UniverseFactory universeFactory;
 
@@ -71,10 +74,12 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   HostServiceLogicImpl(
       GetHostOverviewHandler getHostOverviewHandler,
       GetHostDeviceSummariesHandler getHostDeviceSummariesHandler,
+      CheckRemoteControlEligibilityHandler checkRemoteControlEligibilityHandler,
       GetHostHeaderInfoHandler getHostHeaderInfoHandler,
       UniverseFactory universeFactory) {
     this.getHostOverviewHandler = getHostOverviewHandler;
     this.getHostDeviceSummariesHandler = getHostDeviceSummariesHandler;
+    this.checkRemoteControlEligibilityHandler = checkRemoteControlEligibilityHandler;
     this.getHostHeaderInfoHandler = getHostHeaderInfoHandler;
     this.universeFactory = universeFactory;
   }
@@ -164,12 +169,16 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
 
   @Override
   public ListenableFuture<CheckRemoteControlEligibilityResponse> checkRemoteControlEligibility(
-      CheckRemoteControlEligibilityRequest request) {
-    // TODO: Use the universe parameter.
-    @SuppressWarnings("unused")
-    String universe = request.getUniverse();
-    // TODO: Implement this method.
-    return immediateFuture(CheckRemoteControlEligibilityResponse.getDefaultInstance());
+      CheckRemoteControlEligibilityRequest request, Optional<String> username) {
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+
+    return checkRemoteControlEligibilityHandler.checkRemoteControlEligibility(
+        request, username, universe);
   }
 
   @Override

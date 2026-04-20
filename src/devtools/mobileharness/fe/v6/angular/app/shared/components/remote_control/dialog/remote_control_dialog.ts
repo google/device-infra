@@ -45,6 +45,7 @@ import {
 import {ConfirmDialog} from 'app/shared/components/confirm_dialog/confirm_dialog';
 import {ToggleSwitch} from 'app/shared/components/toggle_switch/toggle_switch';
 import {SnackBarService} from 'app/shared/services/snackbar_service';
+import {toDeviceProxyType} from 'app/shared/utils/enum_utils';
 import {ConfirmConnectionContent} from '../feedback/confirm_connection_content';
 import {
   DeviceListItem,
@@ -106,7 +107,7 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
     flashTarget: ['', this.requiredIfFlashEnabled()],
 
     // Advanced Settings
-    proxyType: [0], // 0 = Auto
+    proxyType: [DeviceProxyType.NONE],
     videoResolution: ['default'],
     limitVideoSize: [false],
   });
@@ -135,6 +136,7 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
 
   startingSession = signal(false);
   readonly PROXY_TYPE_LABELS = PROXY_TYPE_LABELS;
+  readonly DeviceProxyType = DeviceProxyType;
 
   get deviceConfigs(): FormArray {
     return this.form.get('deviceConfigs') as FormArray;
@@ -172,7 +174,7 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
   });
 
   // Proxies common to all selected devices
-  commonProxyModes = signal<DeviceProxyType[]>([]);
+  commonProxyModes = signal<Array<DeviceProxyType | string>>([]);
 
   // Current time signal, updated periodically
   currentTime = signal(Date.now());
@@ -302,9 +304,10 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
     }
 
     // Initialize Common Proxies from Data
-    this.commonProxyModes.set(
-      (this.data.sessionOptions.commonProxyTypes || []).sort((a, b) => a - b),
-    );
+    const mappedProxies = (this.data.sessionOptions.commonProxyTypes || [])
+      .map(toDeviceProxyType)
+      .sort((a, b) => String(a).localeCompare(String(b)));
+    this.commonProxyModes.set(mappedProxies);
   }
 
   // --- Form Helpers ---
@@ -497,14 +500,14 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
   }
 
   getSettingsSummary(): string {
-    const proxy = this.form.get('proxyType')?.value ?? 0;
+    const proxy =
+      (this.form.get('proxyType')?.value as DeviceProxyType) ??
+      DeviceProxyType.NONE;
     const res = this.form.get('videoResolution')?.value ?? 'default';
     const limit = this.form.get('limitVideoSize')?.value;
 
     const parts = [];
-    parts.push(
-      proxy === 0 ? 'Auto Proxy' : PROXY_TYPE_LABELS[proxy] || 'Proxy',
-    );
+    parts.push(PROXY_TYPE_LABELS[proxy] || 'Proxy');
 
     let qual = res.charAt(0).toUpperCase() + res.slice(1) + ' Quality';
     if (limit) qual += ' (1024px)';
@@ -572,7 +575,7 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
     const req: RemoteControlDevicesRequest = {
       deviceConfigs,
       durationSeconds: (val.durationMinutes ?? 180) * 60,
-      proxyType: val.proxyType ?? 0,
+      proxyType: (val.proxyType as DeviceProxyType) ?? DeviceProxyType.NONE,
       videoResolution:
         val.videoResolution === 'default'
           ? undefined
@@ -602,7 +605,8 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
 
   private openConfirmDialog(req: RemoteControlDevicesRequest) {
     const targetDeviceIds = new Set(req.deviceConfigs.map((c) => c.deviceId));
-    const skippedDevices = this.data.devices
+    const skippedDevices = this.deviceList()
+      .map((d) => d.summary)
       .filter((d) => !targetDeviceIds.has(d.id))
       .map((d) => {
         const result = this.data.eligibilityResults.find(

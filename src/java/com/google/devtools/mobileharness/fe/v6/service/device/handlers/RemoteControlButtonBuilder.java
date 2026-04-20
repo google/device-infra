@@ -81,10 +81,10 @@ class RemoteControlButtonBuilder {
             .setDimensions(dimensions)
             .build();
 
-    RemoteControlEligibilityResult result = checker.checkEligibility(context);
-
-    // If the device is not idle, we still want to show the remote control button, but disable it.
-    // Otherwise, the user will not be able to click the button and see the reason code.
+    RemoteControlEligibilityResult result = checker.checkTechnicalEligibility(context);
+    // If the device is not idle, we still want to show the remote control button, but
+    // disable it. Otherwise, the user will not be able to click the button and see the
+    // reason code.
     return ActionButtonState.newBuilder()
         .setVisible(
             result.isEligible()

@@ -104,6 +104,20 @@ const DEVICES_PERMISSIONS_ALL: DeviceSummary[] = [
     model: 'Pixel 6',
     version: '12',
   },
+  {
+    id: 'RC-INVALID-ineligible-busy',
+    healthState: {
+      health: 'IN_SERVICE_BUSY',
+      title: 'In Service (Busy)',
+      tooltip: 'The device is healthy and currently running a task.',
+    },
+    types: [{type: 'AndroidRealDevice', isAbnormal: false}],
+    deviceStatus: {isCritical: true, status: 'BUSY'},
+    label: 'All Permissions 2',
+    requiredDims: '',
+    model: 'Pixel 6 Pro',
+    version: '12',
+  },
 ];
 
 /** Scenario covering various permission states for remote control. */

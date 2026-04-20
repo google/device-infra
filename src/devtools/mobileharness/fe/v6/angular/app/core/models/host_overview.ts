@@ -243,9 +243,10 @@ export declare interface HostOverview {
 
 /**
  * Types of proxy supported by devices for remote control.
+ * Backend uses string-based enums, frontend uses enum values.
  */
 export enum DeviceProxyType {
-  NONE = 0,
+  NONE = 0, // DEVICE_PROXY_TYPE_UNSPECIFIED
   /**
    * Represents ADB + Video streaming capability, typically provided by ACID.
    * This type is available if 'AcidRemoteDriver' is listed in device's supportedDrivers.
@@ -265,7 +266,8 @@ export type IneligibilityReasonCode =
   | 'DEVICE_NOT_IDLE' // Device state is not IDLE (e.g., BUSY, MISSING)
   | 'DEVICE_TYPE_NOT_SUPPORTED' // Device type is not supported (e.g., FailedDevice, AbnormalTestbedDevice, or non-AndroidRealDevice in multi-selection mode)
   | 'HOST_OS_NOT_SUPPORTED' // Host OS is MacOS
-  | 'ACID_NOT_SUPPORTED'; // Device does not support AcidRemoteDriver
+  | 'ACID_NOT_SUPPORTED' // Device does not support AcidRemoteDriver
+  | 'DEVICE_NOT_FOUND'; // Device or sub-device not found in lab info
 
 /**
  * The eligibility result for a sub-device.

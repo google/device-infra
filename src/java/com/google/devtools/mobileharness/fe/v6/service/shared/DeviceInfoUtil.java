@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import java.util.Arrays;
 import java.util.stream.Stream;
 
 /** Utility for extracting information from {@link DeviceInfo}. */
@@ -48,6 +49,9 @@ public final class DeviceInfoUtil {
                 .getRequiredDimensionList()
                 .stream())
         .collect(
-            toImmutableMap(DeviceDimension::getName, DeviceDimension::getValue, (v1, v2) -> v2));
+            toImmutableMap(
+                DeviceDimension::getName,
+                DeviceDimension::getValue,
+                (v1, v2) -> Arrays.asList(v1.split(",")).contains(v2) ? v1 : v1 + "," + v2));
   }
 }

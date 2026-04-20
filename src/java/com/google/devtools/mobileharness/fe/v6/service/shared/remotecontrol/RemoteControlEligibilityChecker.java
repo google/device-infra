@@ -16,17 +16,27 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.shared.remotecontrol;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.util.concurrent.Futures.immediateFuture;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DeviceProxyType;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.IneligibilityReasonCode;
+import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
 import java.util.EnumSet;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import javax.inject.Inject;
 import javax.inject.Singleton;
 
 /**
@@ -37,6 +47,16 @@ import javax.inject.Singleton;
  */
 @Singleton
 public class RemoteControlEligibilityChecker {
+
+  private final GroupMembershipProvider groupMembershipProvider;
+  private final ListeningExecutorService executor;
+
+  @Inject
+  RemoteControlEligibilityChecker(
+      GroupMembershipProvider groupMembershipProvider, ListeningExecutorService executor) {
+    this.groupMembershipProvider = groupMembershipProvider;
+    this.executor = executor;
+  }
 
   private static final int ACID_MIN_SDK_VERSION = 21;
 
@@ -72,15 +92,56 @@ public class RemoteControlEligibilityChecker {
           .put(TYPE_VIDEO_DEVICE, DeviceProxyType.VIDEO)
           .build();
 
-  private static final ImmutableList<DeviceProxyType> ADB_PROXIES =
-      ImmutableList.of(DeviceProxyType.ADB_ONLY);
+  public ListenableFuture<RemoteControlEligibilityResult> checkEligibility(
+      RemoteControlEligibilityContext context) {
+    RemoteControlEligibilityResult technicalResult = checkTechnicalEligibility(context);
 
-  public RemoteControlEligibilityResult checkEligibility(RemoteControlEligibilityContext context) {
-    RemoteControlEligibilityResult.Builder result = RemoteControlEligibilityResult.builder();
+    // 1. If the username is empty, we return the technical result directly. This is used for cases
+    // like GetDeviceHeaderInfo and GetHostDeviceSummaries.
+    // 2. If the technical result is ineligible, return it directly.
+    if (context.username().isEmpty() || !technicalResult.isEligible()) {
+      return immediateFuture(technicalResult);
+    }
+
+    // Calculate supported proxy types.
+    RemoteControlEligibilityResult resultWithProxies =
+        technicalResult.toBuilder()
+            .setSupportedProxyTypes(
+                calculateSupportedProxies(context.types(), context.dimensions()))
+            .build();
+
+    // Permission and Candidate Calculation (Async).
+    // We calculate this even if technical check failed to ensure PERMISSION_DENIED
+    // takes precedence or candidates are populated for debugging.
+    return Futures.transform(
+        calculateRunAsCandidates(context),
+        candidates -> {
+          RemoteControlEligibilityResult.Builder resultBuilder =
+              resultWithProxies.toBuilder().setRunAsCandidates(candidates);
+
+          // If no candidates are found, return ineligible with PERMISSION_DENIED.
+          // This takes precedence over technical ineligibility.
+          if (candidates.isEmpty()) {
+            return resultBuilder
+                .setIsEligible(false)
+                .setReasonCode(IneligibilityReasonCode.PERMISSION_DENIED)
+                .setReasonMessage("Permission denied")
+                .build();
+          }
+
+          return resultBuilder.build();
+        },
+        executor);
+  }
+
+  public RemoteControlEligibilityResult checkTechnicalEligibility(
+      RemoteControlEligibilityContext context) {
+    RemoteControlEligibilityResult.Builder resultBuilder =
+        RemoteControlEligibilityResult.builder().setIsEligible(true);
 
     // 1. Check Device (or Parent) Status.
     if (context.deviceStatus() != DeviceStatus.IDLE) {
-      return result
+      return resultBuilder
           .setIsEligible(false)
           .setReasonCode(IneligibilityReasonCode.DEVICE_NOT_IDLE)
           .setReasonMessage("Not IDLE")
@@ -89,7 +150,7 @@ public class RemoteControlEligibilityChecker {
 
     // 2. Check AcidRemoteDriver.
     if (!context.drivers().contains(DRIVER_ACID_REMOTE_DRIVER)) {
-      return result
+      return resultBuilder
           .setIsEligible(false)
           .setReasonCode(IneligibilityReasonCode.ACID_NOT_SUPPORTED)
           .setReasonMessage("No AcidRemoteDriver")
@@ -100,8 +161,9 @@ public class RemoteControlEligibilityChecker {
     ImmutableMap<String, String> dimensions = context.dimensions();
 
     // 3. Multiple selection constraints.
-    if (context.isMultipleSelection() && !types.contains(TYPE_ANDROID_REAL_DEVICE)) {
-      return result
+    if (context.isMultipleSelection()
+        && (!types.contains(TYPE_ANDROID_REAL_DEVICE) || types.contains(TYPE_TESTBED_DEVICE))) {
+      return resultBuilder
           .setIsEligible(false)
           .setReasonCode(IneligibilityReasonCode.DEVICE_TYPE_NOT_SUPPORTED)
           .setReasonMessage("Not AndroidRealDevice")
@@ -113,7 +175,7 @@ public class RemoteControlEligibilityChecker {
     if (!context.isMultipleSelection()
         && hostOs != null
         && Ascii.toLowerCase(hostOs).contains("mac os")) {
-      return result
+      return resultBuilder
           .setIsEligible(false)
           .setReasonCode(IneligibilityReasonCode.HOST_OS_NOT_SUPPORTED)
           .setReasonMessage("Mac OS not supported")
@@ -123,26 +185,23 @@ public class RemoteControlEligibilityChecker {
     // 5. Ineligible types check.
     if (!context.isMultipleSelection()
         && (types.contains(TYPE_ABNORMAL_TESTBED_DEVICE) || types.contains(TYPE_FAILED_DEVICE))) {
-      return result
+      return resultBuilder
           .setIsEligible(false)
           .setReasonCode(IneligibilityReasonCode.DEVICE_TYPE_NOT_SUPPORTED)
           .setReasonMessage("Device type not supported")
           .build();
     }
+
     // 6. Generic Acid support check.
     if (!hasEligibleAcidDimension(context)) {
-      return result
+      return resultBuilder
           .setIsEligible(false)
           .setReasonCode(IneligibilityReasonCode.ACID_NOT_SUPPORTED)
           .setReasonMessage("No eligible Acid dimension")
           .build();
     }
 
-    // 7. Success - Calculate proxies.
-    return result
-        .setIsEligible(true)
-        .setSupportedProxyTypes(calculateSupportedProxies(types, dimensions))
-        .build();
+    return resultBuilder.build();
   }
 
   private boolean hasEligibleAcidDimension(RemoteControlEligibilityContext context) {
@@ -169,22 +228,24 @@ public class RemoteControlEligibilityChecker {
       ImmutableSet<String> deviceTypes, Map<String, String> dimensions) {
     EnumSet<DeviceProxyType> proxies = EnumSet.noneOf(DeviceProxyType.class);
 
-    for (String type : deviceTypes) {
-      proxies.addAll(TYPE_TO_PROXIES.get(type));
-    }
+    // 1. Process Device Types using the lookup table (Functional style).
+    deviceTypes.stream()
+        .map(TYPE_TO_PROXIES::get)
+        .filter(Objects::nonNull)
+        .forEach(proxies::addAll);
 
+    // 2. sdk_version dimension check.
     boolean sdkSupported = isSdkVersionSupported(dimensions);
-    if (deviceTypes.contains(TYPE_ANDROID_REAL_DEVICE) && sdkSupported) {
+    if (sdkSupported && deviceTypes.contains(TYPE_ANDROID_REAL_DEVICE)) {
       proxies.add(DeviceProxyType.ADB_AND_VIDEO);
     }
 
     String commType =
         dimensions.getOrDefault(DIMENSION_COMMUNICATION_TYPE, "").toUpperCase(Locale.ROOT);
+
+    // 3. Communication type dimension check.
     if (commType.contains("ADB")) {
-      proxies.addAll(ADB_PROXIES);
-      if (sdkSupported) {
-        proxies.add(DeviceProxyType.ADB_AND_VIDEO);
-      }
+      proxies.addAll(ImmutableList.of(DeviceProxyType.ADB_AND_VIDEO, DeviceProxyType.ADB_ONLY));
     }
     if (commType.contains("USB")) {
       proxies.add(DeviceProxyType.USB_IP);
@@ -203,12 +264,45 @@ public class RemoteControlEligibilityChecker {
   private boolean isSdkVersionSupported(Map<String, String> dimensions) {
     String sdkVersionStr = dimensions.get(DIMENSION_SDK_VERSION);
     if (sdkVersionStr == null) {
-      return true;
+      return false;
     }
     try {
       return Integer.parseInt(sdkVersionStr) >= ACID_MIN_SDK_VERSION;
     } catch (NumberFormatException e) {
       return false;
     }
+  }
+
+  private ListenableFuture<ImmutableList<String>> calculateRunAsCandidates(
+      RemoteControlEligibilityContext context) {
+    String username = context.username();
+    ImmutableList<String> ownersAndExecutors = context.ownersAndExecutors();
+
+    if (username.isEmpty()) {
+      return immediateFuture(ImmutableList.of());
+    }
+
+    if (ownersAndExecutors.isEmpty()) {
+      return immediateFuture(ImmutableList.of(username));
+    }
+
+    // Deduplicate candidates to minimize RPC calls.
+    ImmutableSet<String> uniqueCandidates = ImmutableSet.copyOf(ownersAndExecutors);
+
+    return Futures.transform(
+        Futures.allAsList(
+            uniqueCandidates.stream()
+                .map(
+                    candidate ->
+                        candidate.equals(username)
+                            ? immediateFuture(username)
+                            : Futures.transform(
+                                groupMembershipProvider.isMemberOfAny(
+                                    username, ImmutableList.of(candidate)),
+                                isMember -> isMember ? candidate : null,
+                                directExecutor()))
+                .collect(toImmutableList())),
+        results -> results.stream().filter(Objects::nonNull).collect(toImmutableList()),
+        executor);
   }
 }

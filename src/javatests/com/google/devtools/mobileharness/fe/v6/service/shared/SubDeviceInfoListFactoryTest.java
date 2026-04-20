@@ -205,14 +205,15 @@ public final class SubDeviceInfoListFactoryTest {
   }
 
   @Test
-  public void create_withDuplicateDimensionKeys_usesLastValue() {
+  public void create_withDuplicateDimensionKeys_mergesAndDeduplicatesValues() {
     SubDeviceDimensions subDeviceDimensions =
         SubDeviceDimensions.newBuilder()
             .addSubDeviceDimension(
                 SubDeviceDimensions.SubDeviceDimension.newBuilder()
                     .setDeviceId("sub_device_1")
                     .addDeviceDimension(StrPair.newBuilder().setName("model").setValue("pixel 4"))
-                    .addDeviceDimension(StrPair.newBuilder().setName("model").setValue("pixel 5")))
+                    .addDeviceDimension(StrPair.newBuilder().setName("model").setValue("pixel 5"))
+                    .addDeviceDimension(StrPair.newBuilder().setName("model").setValue("pixel 4")))
             .build();
     String encodedSubDeviceDimensions =
         Base64.getEncoder().encodeToString(subDeviceDimensions.toByteArray());
@@ -221,7 +222,7 @@ public final class SubDeviceInfoListFactoryTest {
 
     ImmutableList<SubDeviceInfo> result = subDeviceInfoListFactory.create(dimensions);
 
-    assertThat(result.get(0).getModel()).isEqualTo("pixel 5");
+    assertThat(result.get(0).getModel()).isEqualTo("pixel 4,pixel 5");
   }
 
   @Test

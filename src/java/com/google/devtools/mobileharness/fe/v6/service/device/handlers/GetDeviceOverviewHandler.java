@@ -51,6 +51,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.NetworkInfo;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.DeviceData;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.ManagementMode;
+import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceInfoUtil;
 import com.google.devtools.mobileharness.fe.v6.service.shared.SubDeviceInfoListFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.time.Duration;
@@ -191,22 +192,9 @@ public final class GetDeviceOverviewHandler {
     // HostInfo
     builder.setHost(headerInfo.getHost());
 
-    // BasicDeviceInfo
-    ImmutableList<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension>
-        allDimensions =
-            Stream.concat(
-                    deviceInfo
-                        .getDeviceFeature()
-                        .getCompositeDimension()
-                        .getSupportedDimensionList()
-                        .stream(),
-                    deviceInfo
-                        .getDeviceFeature()
-                        .getCompositeDimension()
-                        .getRequiredDimensionList()
-                        .stream())
-                .collect(toImmutableList());
-    builder.setBasicInfo(buildBasicDeviceInfo(allDimensions));
+    // BasicDeviceInfo and SubDevices
+    ImmutableMap<String, String> dimensions = DeviceInfoUtil.getDimensions(deviceInfo);
+    builder.setBasicInfo(buildBasicDeviceInfo(dimensions));
 
     // Permissions
     builder.setPermissions(
@@ -233,54 +221,49 @@ public final class GetDeviceOverviewHandler {
 
     // subDevices for testbeds
     if (deviceInfo.getDeviceFeature().getTypeList().contains("TestbedDevice")) {
-      builder.addAllSubDevices(
-          subDeviceInfoListFactory.create(
-              allDimensions.stream()
-                  .collect(toImmutableMap(d -> d.getName(), d -> d.getValue(), (v1, v2) -> v1))));
+      builder.addAllSubDevices(subDeviceInfoListFactory.create(dimensions));
     }
 
     return builder.build();
   }
 
-  private BasicDeviceInfo buildBasicDeviceInfo(
-      List<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension> dimensions) {
+  private BasicDeviceInfo buildBasicDeviceInfo(ImmutableMap<String, String> allDimensions) {
     BasicDeviceInfo.Builder basicInfo = BasicDeviceInfo.newBuilder();
-    ImmutableMap<String, String> dimMap =
-        dimensions.stream()
-            .collect(toImmutableMap(d -> d.getName(), d -> d.getValue(), (v1, unused) -> v1));
 
-    basicInfo.setModel(dimMap.getOrDefault("model", ""));
+    basicInfo.setModel(allDimensions.getOrDefault("model", ""));
 
-    String formStr = dimMap.getOrDefault("device_form", "FORM_UNSPECIFIED");
+    String formStr = allDimensions.getOrDefault("device_form", "FORM_UNSPECIFIED");
     Form form =
         Enums.getIfPresent(Form.class, formStr.toUpperCase(Locale.ROOT)).or(Form.FORM_UNSPECIFIED);
     basicInfo
         .setForm(form)
-        .setOs(dimMap.getOrDefault("os", ""))
-        .setHardware(dimMap.getOrDefault("hardware", ""))
-        .setBuild(dimMap.getOrDefault("build", ""));
+        .setOs(allDimensions.getOrDefault("os", ""))
+        .setHardware(allDimensions.getOrDefault("hardware", ""))
+        .setBuild(allDimensions.getOrDefault("build", ""));
 
-    String os = dimMap.getOrDefault("os", "");
+    String os = allDimensions.getOrDefault("os", "");
     if (os.equals("Android")) {
-      basicInfo.setVersion(dimMap.getOrDefault("sdk_version", ""));
+      basicInfo.setVersion(allDimensions.getOrDefault("sdk_version", ""));
     } else {
       basicInfo.setVersion(
-          dimMap.getOrDefault("software_version", dimMap.getOrDefault("sdk_version", "")));
+          allDimensions.getOrDefault(
+              "software_version", allDimensions.getOrDefault("sdk_version", "")));
     }
 
     try {
-      basicInfo.setBatteryLevel(Integer.parseInt(dimMap.getOrDefault("battery_level", "-1")));
+      basicInfo.setBatteryLevel(
+          Integer.parseInt(allDimensions.getOrDefault("battery_level", "-1")));
     } catch (NumberFormatException e) {
       basicInfo.setBatteryLevel(-1); // Default if not a number
     }
 
     NetworkInfo.Builder network = NetworkInfo.newBuilder();
     try {
-      network.setWifiRssi(Integer.parseInt(dimMap.getOrDefault("wifi_rssi", "0")));
+      network.setWifiRssi(Integer.parseInt(allDimensions.getOrDefault("wifi_rssi", "0")));
     } catch (NumberFormatException e) {
       network.setWifiRssi(0);
     }
-    network.setHasInternet(Boolean.parseBoolean(dimMap.getOrDefault("internet", "false")));
+    network.setHasInternet(Boolean.parseBoolean(allDimensions.getOrDefault("internet", "false")));
     return basicInfo.setNetwork(network).build();
   }
 

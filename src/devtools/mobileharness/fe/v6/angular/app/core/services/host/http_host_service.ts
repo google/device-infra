@@ -1,16 +1,18 @@
 import {HttpClient} from '@angular/common/http';
 import {inject, Injectable} from '@angular/core';
 import {Observable} from 'rxjs';
+import {map} from 'rxjs/operators';
 
+import {toDeviceProxyType} from '../../../shared/utils/enum_utils';
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
   DecommissionHostResponse,
-  ReleaseLabServerRequest,
-  ReleaseLabServerResponse,
   GetHostDebugInfoResponse,
   HostHeaderInfo,
   HostReleaseConfig,
   PopularFlag,
+  ReleaseLabServerRequest,
+  ReleaseLabServerResponse,
   RestartLabServerResponse,
   StartLabServerResponse,
   StopLabServerResponse,
@@ -107,12 +109,29 @@ export class HttpHostService extends HostService {
     hostName: string,
     targets: DeviceTarget[],
   ): Observable<CheckRemoteControlEligibilityResponse> {
-    return this.http.post<CheckRemoteControlEligibilityResponse>(
-      `${this.apiUrl}/${hostName}/checkRemoteControlEligibility`,
-      {
-        targets,
-      },
-    );
+    return this.http
+      .post<CheckRemoteControlEligibilityResponse>(
+        `${this.apiUrl}/${hostName}/checkRemoteControlEligibility`,
+        {
+          targets,
+        },
+      )
+      .pipe(
+        map((response) => {
+          for (const res of response.results) {
+            res.supportedProxyTypes =
+              res.supportedProxyTypes?.map(toDeviceProxyType) ?? [];
+          }
+
+          if (response.sessionOptions) {
+            response.sessionOptions.commonProxyTypes =
+              response.sessionOptions.commonProxyTypes?.map(
+                toDeviceProxyType,
+              ) ?? [];
+          }
+          return response;
+        }),
+      );
   }
 
   override remoteControlDevices(
@@ -162,9 +181,7 @@ export class HttpHostService extends HostService {
     );
   }
 
-  override stopLabServer(
-    hostName: string,
-  ): Observable<StopLabServerResponse> {
+  override stopLabServer(hostName: string): Observable<StopLabServerResponse> {
     return this.http.post<StopLabServerResponse>(
       `${this.apiUrl}/${hostName}:stop`,
       {},

@@ -1,18 +1,19 @@
 import {SubDeviceInfo} from '../../../core/models/device_overview';
 import {
   DeviceEligibilityResult,
+  DeviceProxyType,
   SessionOptions,
   SubDeviceEligibilityResult,
 } from '../../../core/models/host_overview';
 
 /** Labels for DeviceProxyType enum values. */
-export const PROXY_TYPE_LABELS: Record<number, string> = {
-  0: 'Auto (Default)',
-  1: 'ADB & Video',
-  2: 'ADB Console',
-  3: 'USB-over-IP',
-  4: 'SSH',
-  5: 'Video Only',
+export const PROXY_TYPE_LABELS: Record<string | number, string> = {
+  [DeviceProxyType.NONE]: 'Auto (Default)',
+  [DeviceProxyType.ADB_AND_VIDEO]: 'ADB & Video',
+  [DeviceProxyType.ADB_ONLY]: 'ADB Console',
+  [DeviceProxyType.USB_IP]: 'USB-over-IP',
+  [DeviceProxyType.SSH]: 'SSH',
+  [DeviceProxyType.VIDEO]: 'Video Only',
 };
 
 /** Duration presets in minutes. */

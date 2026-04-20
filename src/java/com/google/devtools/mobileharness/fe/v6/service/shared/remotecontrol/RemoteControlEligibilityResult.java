@@ -34,10 +34,15 @@ public abstract class RemoteControlEligibilityResult {
 
   public abstract ImmutableList<DeviceProxyType> supportedProxyTypes();
 
+  public abstract ImmutableList<String> runAsCandidates();
+
+  public abstract Builder toBuilder();
+
   public static Builder builder() {
     return new AutoValue_RemoteControlEligibilityResult.Builder()
         .setIsEligible(true)
-        .setSupportedProxyTypes(ImmutableList.of());
+        .setSupportedProxyTypes(ImmutableList.of())
+        .setRunAsCandidates(ImmutableList.of());
   }
 
   /** Builder for {@link RemoteControlEligibilityResult}. */
@@ -51,6 +56,8 @@ public abstract class RemoteControlEligibilityResult {
 
     public abstract Builder setSupportedProxyTypes(
         ImmutableList<DeviceProxyType> supportedProxyTypes);
+
+    public abstract Builder setRunAsCandidates(ImmutableList<String> runAsCandidates);
 
     public abstract RemoteControlEligibilityResult build();
   }

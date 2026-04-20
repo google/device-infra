@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.shared.remotecontrol;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
@@ -39,6 +40,10 @@ public abstract class RemoteControlEligibilityContext {
 
   public abstract ImmutableMap<String, String> dimensions();
 
+  public abstract String username();
+
+  public abstract ImmutableList<String> ownersAndExecutors();
+
   public static Builder builder() {
     return new AutoValue_RemoteControlEligibilityContext.Builder()
         .setIsMultipleSelection(false)
@@ -47,7 +52,9 @@ public abstract class RemoteControlEligibilityContext {
         .setDeviceStatus(DeviceStatus.IDLE)
         .setDrivers(ImmutableSet.of())
         .setTypes(ImmutableSet.of())
-        .setDimensions(ImmutableMap.of());
+        .setDimensions(ImmutableMap.of())
+        .setUsername("")
+        .setOwnersAndExecutors(ImmutableList.of());
   }
 
   /** Builder for {@link RemoteControlEligibilityContext}. */
@@ -66,6 +73,10 @@ public abstract class RemoteControlEligibilityContext {
     public abstract Builder setTypes(ImmutableSet<String> types);
 
     public abstract Builder setDimensions(ImmutableMap<String, String> dimensions);
+
+    public abstract Builder setUsername(String username);
+
+    public abstract Builder setOwnersAndExecutors(ImmutableList<String> ownersAndExecutors);
 
     public abstract RemoteControlEligibilityContext build();
   }

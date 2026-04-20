@@ -381,7 +381,7 @@ export class FakeHostService extends HostService {
 
       // Calculate max duration hours
       let maxDurationHours = 12;
-      if (eligibleResults.some((r) => r.deviceId.includes('RC-VALID-USER-1'))) {
+      if (eligibleResults.some((r) => r.deviceId.includes('pool-shared'))) {
         maxDurationHours = 3;
       }
 
