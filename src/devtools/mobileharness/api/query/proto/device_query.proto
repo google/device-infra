@@ -90,8 +90,14 @@ message DimensionFilter {
 
 // Device info queried from the omni lab.
 message DeviceInfo {
-  // Device uuid. It could be different from the value defined in dimension
-  // whose key is 'id'.
+  // Device UUID in remote mode, or device control ID in local mode for local
+  // devices.
+  //
+  // It could be different from the value defined in dimension whose
+  // key is 'id' or 'uuid'.
+  //
+  // Device UUID / control ID of a device could be different, for example, for
+  // all NoOpDevice.
   string id = 1;
   // Device status.
   // String converted from mobileharness.api.model.DeviceStatus. Note it may be

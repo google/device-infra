@@ -124,6 +124,7 @@ public class LocalModeIntegrationTest {
                 .setRequired(true)
                 .build());
     assertThat(deviceInfo.getStatus()).isEqualTo("idle");
+    assertThat(deviceInfo.getId()).isEqualTo("NoOpDevice-0");
 
     JobInfo jobInfo2 = createJobInfo("fake_job_name_2");
 
