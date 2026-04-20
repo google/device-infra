@@ -115,6 +115,10 @@ public class ClientApiTest {
         ImmutableMap.of(
             "detect_adb_device",
             "false",
+            "enable_emulator_detection",
+            "false",
+            "enable_fastboot_detector",
+            "false",
             "external_adb_initializer_template",
             "true",
             "no_op_device_num",
@@ -196,6 +200,9 @@ public class ClientApiTest {
           .doesNotContain("\tat ");
 
       assertThat(jobStartResults).containsExactly("1", "2", "3").inOrder();
+
+      assertThat(logs).doesNotContain("AdbInitializer");
+      assertThat(logs).doesNotContain("FastbootInitializer");
     }
   }
 
