@@ -1638,6 +1638,97 @@ public final class AtsServerSessionPluginTest {
   }
 
   @Test
+  public void onTestMessage_multipleMessages_combinedResults() throws Exception {
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(jobInfo);
+
+    // Message 1
+    ImmutableMap<String, ModuleInfo> runningModules1 =
+        ImmutableMap.of(
+            "module1",
+            new ModuleInfo("module1", true, 12, 2, 2, 0, 0, Duration.ofSeconds(1)),
+            "module2",
+            new ModuleInfo("module2", false, 5, 5, 0, 5, 0, Duration.ofSeconds(2)));
+    XtsTradefedTestModuleResults results1 = new XtsTradefedTestModuleResults(runningModules1);
+    XtsTradefedTestModuleResultsMessage resultsMessage1 =
+        XtsTradefedTestModuleResultsMessage.newBuilder()
+            .setTestModuleResultsString(results1.encodeToString())
+            .build();
+    ImmutableMap<String, String> message1 =
+        ImmutableMap.of(
+            "namespace",
+            "@protobuf",
+            "message_full_name",
+            XtsTradefedTestModuleResultsMessage.getDescriptor().getFullName(),
+            "textproto",
+            TextFormat.printer().emittingSingleLine(true).printToString(resultsMessage1));
+
+    TestMessageInfo testMessageInfo1 =
+        TestMessageInfo.of("test_id", message1, ImmutableList.of(), /* isRemote= */ false);
+    plugin.onTestMessage(
+        new TestMessageEvent(
+            testMessageInfo1, testInfo, /* allocation= */ null, /* deviceInfo= */ null));
+
+    // Message 2
+    ImmutableMap<String, ModuleInfo> runningModules2 =
+        ImmutableMap.of(
+            "module1",
+            new ModuleInfo("module1", false, 12, 12, 0, 12, 0, Duration.ofMillis(1500)),
+            "module3",
+            new ModuleInfo("module3", false, 8, 8, 0, 8, 0, Duration.ofMillis(3000)));
+    XtsTradefedTestModuleResults results2 = new XtsTradefedTestModuleResults(runningModules2);
+    XtsTradefedTestModuleResultsMessage resultsMessage2 =
+        XtsTradefedTestModuleResultsMessage.newBuilder()
+            .setTestModuleResultsString(results2.encodeToString())
+            .build();
+    ImmutableMap<String, String> message2 =
+        ImmutableMap.of(
+            "namespace",
+            "@protobuf",
+            "message_full_name",
+            XtsTradefedTestModuleResultsMessage.getDescriptor().getFullName(),
+            "textproto",
+            TextFormat.printer().emittingSingleLine(true).printToString(resultsMessage2));
+
+    TestMessageInfo testMessageInfo2 =
+        TestMessageInfo.of("test_id", message2, ImmutableList.of(), /* isRemote= */ false);
+    plugin.onTestMessage(
+        new TestMessageEvent(
+            testMessageInfo2, testInfo, /* allocation= */ null, /* deviceInfo= */ null));
+
+    // sessionInfo.setSessionPluginOutput() will be called twice in onSessionStarting
+    // and once in each onTestMessage.
+    verify(sessionInfo, times(4))
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+
+    RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
+    assertThat(requestDetail.getTestModuleResultsCount()).isEqualTo(3);
+
+    // Results are stored in order of arrival/update if using LinkedHashMap
+    assertThat(requestDetail.getTestModuleResults(0).getName()).isEqualTo("module1");
+    assertThat(requestDetail.getTestModuleResults(0).getComplete()).isTrue(); // Overwritten
+    assertThat(requestDetail.getTestModuleResults(0).getDurationMs()).isEqualTo(1500);
+    assertThat(requestDetail.getTestModuleResults(0).getPassedTests()).isEqualTo(12);
+
+    assertThat(requestDetail.getTestModuleResults(1).getName()).isEqualTo("module2");
+    assertThat(requestDetail.getTestModuleResults(1).getComplete()).isTrue(); // Retained
+    assertThat(requestDetail.getTestModuleResults(1).getDurationMs()).isEqualTo(2000);
+    assertThat(requestDetail.getTestModuleResults(1).getPassedTests()).isEqualTo(5);
+
+    assertThat(requestDetail.getTestModuleResults(2).getName()).isEqualTo("module3");
+    assertThat(requestDetail.getTestModuleResults(2).getComplete()).isTrue(); // Added
+    assertThat(requestDetail.getTestModuleResults(2).getDurationMs()).isEqualTo(3000);
+    assertThat(requestDetail.getTestModuleResults(2).getPassedTests()).isEqualTo(8);
+  }
+
+  @Test
   public void onJobEnded_sessionAborted_skipSequentialJob() throws Exception {
     request = request.toBuilder().addCommands(commandInfo).build();
     when(sessionInfo.getSessionPluginExecutionConfig())

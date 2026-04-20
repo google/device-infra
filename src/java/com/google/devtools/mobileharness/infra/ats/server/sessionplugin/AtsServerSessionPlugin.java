@@ -82,7 +82,9 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import javax.inject.Inject;
 
 /** Session Plugin to serve test requests coming from ATS server. */
@@ -353,7 +355,9 @@ final class AtsServerSessionPlugin {
           logger.atWarning().withCause(e).log("Failed to decode Tradefed test module results");
           return;
         }
-        requestDetail.clearTestModuleResults();
+        Map<String, TestModuleResult> currentResults = new LinkedHashMap<>();
+        requestDetail.getTestModuleResultsList().forEach(r -> currentResults.put(r.getName(), r));
+
         testModuleResults.runningModules().values().stream()
             .map(
                 module ->
@@ -365,7 +369,9 @@ final class AtsServerSessionPlugin {
                         .setFailedTests(module.testsFailed())
                         .setTotalTests(module.testsExpected())
                         .build())
-            .forEach(requestDetail::addTestModuleResults);
+            .forEach(r -> currentResults.put(r.getName(), r));
+
+        requestDetail.clearTestModuleResults().addAllTestModuleResults(currentResults.values());
       } finally {
         updateSessionPluginOutput(requestDetail);
       }
