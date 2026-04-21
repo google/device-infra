@@ -55,8 +55,10 @@ import io.grpc.stub.StreamObserver;
 import java.util.ArrayList;
 import java.util.List;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
 /** Implementation of {@link SessionServiceGrpc}. */
+@Singleton
 public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
 
   private final SessionManager sessionManager;

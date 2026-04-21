@@ -128,17 +128,17 @@ public class AtsMode implements ExecMode, ServiceProvider {
   }
 
   @Override
-  public ImmutableList<BindableService> provideServices() {
+  public ImmutableList<BindableService> provideServicesForNonWorker() {
     return ImmutableList.of(labInfoService, labRecordService, jobSyncService);
   }
 
   @Override
-  public ImmutableList<BindableService> provideServicesForWorkers() {
+  public ImmutableList<BindableService> provideServicesForWorker() {
     return ImmutableList.of(remoteDeviceManager.getLabSyncService(), jobSyncService);
   }
 
   @Override
-  public ImmutableList<BindableService> provideDualModeServices() {
+  public ImmutableList<BindableService> provideServicesDualMode() {
     return ImmutableList.of();
   }
 }

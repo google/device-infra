@@ -32,13 +32,13 @@ import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.EnableDatabase;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcDatabaseConnections;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServicesDualMode;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServicesForNonWorker;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServicesForWorker;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ServiceProvider;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.SessionManager;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.ControlService;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.SessionService;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.VersionService;
 import com.google.devtools.mobileharness.infra.monitoring.MonitorPipelineLauncher;
 import com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat;
 import com.google.devtools.mobileharness.shared.util.comm.relay.service.ServerUtils;
@@ -55,8 +55,6 @@ import com.google.devtools.mobileharness.shared.version.VersionUtil;
 import io.grpc.BindableService;
 import io.grpc.ServerBuilder;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
@@ -72,8 +70,9 @@ class OlcServerRunnerImpl implements OlcServerRunner {
 
   private static final Duration DUMP_MEMORY_INFO_INTERVAL = Duration.ofMinutes(5L);
 
-  private final SessionService sessionService;
-  private final VersionService versionService;
+  private final ImmutableList<BindableService> servicesForNonWorker;
+  private final ImmutableList<BindableService> servicesForWorker;
+  private final ImmutableList<BindableService> servicesDualMode;
   private final ControlService controlService;
   private final SessionManager sessionManager;
   @Nullable private final MonitorPipelineLauncher monitorPipelineLauncher;
@@ -93,8 +92,9 @@ class OlcServerRunnerImpl implements OlcServerRunner {
 
   @Inject
   OlcServerRunnerImpl(
-      SessionService sessionService,
-      VersionService versionService,
+      @OlcServicesForNonWorker ImmutableList<BindableService> servicesForNonWorker,
+      @OlcServicesForWorker ImmutableList<BindableService> servicesForWorker,
+      @OlcServicesDualMode ImmutableList<BindableService> servicesDualMode,
       ControlService controlService,
       SessionManager sessionManager,
       @Nullable MonitorPipelineLauncher monitorPipelineLauncher,
@@ -109,8 +109,9 @@ class OlcServerRunnerImpl implements OlcServerRunner {
       @OlcDatabaseConnections DatabaseConnections olcDatabaseConnections,
       TablesLister tablesLister,
       ServerUtils serverUtils) {
-    this.sessionService = sessionService;
-    this.versionService = versionService;
+    this.servicesForNonWorker = servicesForNonWorker;
+    this.servicesForWorker = servicesForWorker;
+    this.servicesDualMode = servicesDualMode;
     this.controlService = controlService;
     this.sessionManager = sessionManager;
     this.monitorPipelineLauncher = monitorPipelineLauncher;
@@ -225,19 +226,6 @@ class OlcServerRunnerImpl implements OlcServerRunner {
   }
 
   private LifecycleManager startRpcServers() {
-    // Creates extra services.
-    ImmutableList<BindableService> extraServicesForNonWorker;
-    ImmutableList<BindableService> extraServicesForWorker;
-    List<BindableService> dualModeServices = new ArrayList<>();
-    if (execMode instanceof ServiceProvider serviceProvider) {
-      extraServicesForNonWorker = serviceProvider.provideServices();
-      extraServicesForWorker = serviceProvider.provideServicesForWorkers();
-      dualModeServices.addAll(serviceProvider.provideDualModeServices());
-    } else {
-      extraServicesForNonWorker = ImmutableList.of();
-      extraServicesForWorker = ImmutableList.of();
-    }
-
     // Creates RPC server for non-worker.
     ImmutableList.Builder<LabeledServer> servers = ImmutableList.builder();
     ServerBuilder<?> serverBuilderForNonWorker =
@@ -247,29 +235,25 @@ class OlcServerRunnerImpl implements OlcServerRunner {
                 ImmutableSet.copyOf(Flags.instance().restrictOlcServiceToUsers.getNonNull()))
             : ServerBuilderFactory.createNettyServerBuilder(
                 Flags.instance().olcServerPort.getNonNull(), /* localhost= */ false);
-    serverBuilderForNonWorker
-        .executor(threadPool)
-        .intercept(new ClientAddressServerInterceptor())
-        .addService(controlService)
-        .addService(sessionService);
-    dualModeServices.add(versionService);
-    extraServicesForNonWorker.forEach(serverBuilderForNonWorker::addService);
+    serverBuilderForNonWorker.executor(threadPool).intercept(new ClientAddressServerInterceptor());
+    servicesForNonWorker.forEach(serverBuilderForNonWorker::addService);
+
     if (Flags.instance().enableGrpcRelay.getNonNull()) {
       serverBuilderForNonWorker =
-          serverUtils.enableGrpcRelay(serverBuilderForNonWorker, dualModeServices);
+          serverUtils.enableGrpcRelay(serverBuilderForNonWorker, servicesDualMode);
     } else {
-      dualModeServices.forEach(serverBuilderForNonWorker::addService);
+      servicesDualMode.forEach(serverBuilderForNonWorker::addService);
     }
     servers.add(LabeledServer.create(serverBuilderForNonWorker.build(), "for-non-worker"));
 
     // Creates RPC server for worker.
-    if (!extraServicesForWorker.isEmpty()) {
+    if (!servicesForWorker.isEmpty()) {
       ServerBuilder<?> serverBuilderForWorker =
           ServerBuilderFactory.createNettyServerBuilder(
                   Flags.instance().atsWorkerGrpcPort.getNonNull(), /* localhost= */ false)
               .executor(threadPool)
               .intercept(new ClientAddressServerInterceptor());
-      extraServicesForWorker.forEach(serverBuilderForWorker::addService);
+      servicesForWorker.forEach(serverBuilderForWorker::addService);
       servers.add(LabeledServer.create(serverBuilderForWorker.build(), "for-worker"));
     }
 

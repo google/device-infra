@@ -48,10 +48,26 @@ public class Annotations {
   @Retention(RetentionPolicy.RUNTIME)
   public @interface SessionTempDir {}
 
-  /** gRPC service list of an OLC server. */
+  /** gRPC services for non-worker clients of the OLC server. */
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
-  public @interface OlcServices {}
+  public @interface OlcServicesForNonWorker {}
+
+  /** gRPC services for worker clients of the OLC server. */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface OlcServicesForWorker {}
+
+  /**
+   * gRPC services for non-worker clients provided directly by the OLC server and by workers via
+   * gRPC relay.
+   *
+   * <p>According to its definition, services in it will also appear in {@link
+   * OlcServicesForNonWorker}.
+   */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface OlcServicesDualMode {}
 
   private Annotations() {}
 }

@@ -57,8 +57,10 @@ import java.util.Set;
 import java.util.logging.Level;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
 /** Implementation of {@link ControlServiceGrpc}. */
+@Singleton
 public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();

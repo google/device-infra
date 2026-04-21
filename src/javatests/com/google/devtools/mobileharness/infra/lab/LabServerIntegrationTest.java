@@ -57,7 +57,6 @@ import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProt
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionResponse;
 import com.google.devtools.mobileharness.shared.version.rpc.stub.grpc.VersionGrpcStub;
 import com.google.inject.Guice;
-import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
@@ -113,7 +112,6 @@ public class LabServerIntegrationTest {
   @Before
   public void setUp() throws Exception {
     Guice.createInjector(
-            BoundFieldModule.of(this),
             new AtsModeModule(),
             new CommonModule(ImmutableList.of(), ImmutableMap.of(), ImmutableMap.of()))
         .injectMembers(this);
@@ -281,7 +279,7 @@ public class LabServerIntegrationTest {
       throws MobileHarnessException, InterruptedException, IOException, ExecutionException {
     logger.atInfo().log("Starting AtsMode, port=%s", masterPort);
     atsMode.initialize(null);
-    ImmutableList<BindableService> bindableServices = atsMode.provideServicesForWorkers();
+    ImmutableList<BindableService> bindableServices = atsMode.provideServicesForWorker();
     NettyServerBuilder nettyServerBuilder =
         NettyServerBuilder.forPort(masterPort).executor(threadPool);
     bindableServices.forEach(nettyServerBuilder::addService);

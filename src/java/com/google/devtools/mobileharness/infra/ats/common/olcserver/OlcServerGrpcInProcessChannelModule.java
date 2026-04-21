@@ -20,7 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerChannel;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServices;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServicesForNonWorker;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import io.grpc.BindableService;
@@ -39,7 +39,7 @@ public class OlcServerGrpcInProcessChannelModule extends AbstractModule {
   Channel provideInProcessServerChannel(
       ListeningExecutorService threadPool,
       ListeningScheduledExecutorService scheduledThreadPool,
-      @OlcServices ImmutableList<BindableService> services)
+      @OlcServicesForNonWorker ImmutableList<BindableService> services)
       throws IOException {
     String serverName = "in-process-olc-grpc-server";
     InProcessServerBuilder serverBuilder =

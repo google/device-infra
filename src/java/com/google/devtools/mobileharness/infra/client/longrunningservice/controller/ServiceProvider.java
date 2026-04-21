@@ -22,12 +22,18 @@ import io.grpc.BindableService;
 /** Service provider for providing {@link BindableService}s. */
 public interface ServiceProvider {
 
-  /** Provides services for non-worker clients. */
-  ImmutableList<BindableService> provideServices();
+  /** Services for non-worker clients. */
+  ImmutableList<BindableService> provideServicesForNonWorker();
 
-  /** Provides services for worker clients. */
-  ImmutableList<BindableService> provideServicesForWorkers();
+  /** Services for worker clients. */
+  ImmutableList<BindableService> provideServicesForWorker();
 
-  /** Services can be provided directly or by the workers depending on the request metadata. */
-  ImmutableList<BindableService> provideDualModeServices();
+  /**
+   * Services for non-worker clients provided by this service provider locally or by workers via
+   * gRPC relay, depending on request metadata.
+   *
+   * <p>According to its definition, services in it will also appear in {@link
+   * #provideServicesForNonWorker}.
+   */
+  ImmutableList<BindableService> provideServicesDualMode();
 }

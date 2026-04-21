@@ -58,7 +58,6 @@ java_library(
         "@grpc-java//core",
         "@grpc-java//netty",
         "@maven//:com_google_guava_guava",
-        "@maven//:com_google_inject_extensions_guice_testlib",
         "@maven//:com_google_inject_guice",
         "@maven//:com_google_truth_extensions_truth_proto_extension",
         "@maven//:javax_inject_jsr330_api",

@@ -144,14 +144,14 @@ public class AtsModeTest {
     labSyncGrpcStub = new LabSyncGrpcStub(masterGrpcStubHelper);
 
     atsMode.initialize(null);
-    ImmutableList<BindableService> bindableServices = atsMode.provideServices();
+    ImmutableList<BindableService> bindableServices = atsMode.provideServicesForNonWorker();
     NettyServerBuilder nettyServerBuilder =
         NettyServerBuilder.forPort(serverPort).executor(listeningExecutorService);
     bindableServices.forEach(nettyServerBuilder::addService);
     nettyServerBuilder.build().start();
     NettyServerBuilder workerServerBuilder =
         NettyServerBuilder.forPort(workerServerPort).executor(listeningExecutorService);
-    atsMode.provideServicesForWorkers().forEach(workerServerBuilder::addService);
+    atsMode.provideServicesForWorker().forEach(workerServerBuilder::addService);
     workerServerBuilder.build().start();
   }
 

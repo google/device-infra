@@ -27,10 +27,13 @@ import com.google.devtools.mobileharness.infra.client.api.controller.device.Devi
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.EnableDatabase;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcDatabaseConnections;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServices;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServicesDualMode;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServicesForNonWorker;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServicesForWorker;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.ServerStartTime;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ControllerModule;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager.LogRecordsCollector;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ServiceProvider;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.ControlService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
@@ -157,10 +160,42 @@ class OlcServerModule extends AbstractModule {
 
   @Provides
   @Singleton
-  @OlcServices
-  ImmutableList<BindableService> provideOlcServices(
-      SessionService sessionService, VersionService versionService, ControlService controlService) {
-    return ImmutableList.of(sessionService, versionService, controlService);
+  @OlcServicesForNonWorker
+  ImmutableList<BindableService> provideOlcServicesForNonWorker(
+      SessionService sessionService,
+      VersionService versionService,
+      ControlService controlService,
+      ExecMode execMode) {
+    ImmutableList.Builder<BindableService> services = ImmutableList.builder();
+    services.add(sessionService, versionService, controlService);
+    if (execMode instanceof ServiceProvider serviceProvider) {
+      services.addAll(serviceProvider.provideServicesForNonWorker());
+    }
+    return services.build();
+  }
+
+  @Provides
+  @Singleton
+  @OlcServicesForWorker
+  ImmutableList<BindableService> provideOlcServicesForWorker(ExecMode execMode) {
+    ImmutableList.Builder<BindableService> services = ImmutableList.builder();
+    if (execMode instanceof ServiceProvider serviceProvider) {
+      services.addAll(serviceProvider.provideServicesForWorker());
+    }
+    return services.build();
+  }
+
+  @Provides
+  @Singleton
+  @OlcServicesDualMode
+  ImmutableList<BindableService> provideOlcServicesDualMode(
+      VersionService versionService, ExecMode execMode) {
+    ImmutableList.Builder<BindableService> services = ImmutableList.builder();
+    services.add(versionService);
+    if (execMode instanceof ServiceProvider serviceProvider) {
+      services.addAll(serviceProvider.provideServicesDualMode());
+    }
+    return services.build();
   }
 
   @Provides
@@ -216,9 +251,7 @@ class OlcServerModule extends AbstractModule {
             OlcServerModule.class.getClassLoader());
       } catch (MobileHarnessException | ClassNotFoundException e) {
         throw new IllegalStateException(
-            "Please add the runtime dependency for"
-                + " com.google.devtools.mobileharness.shared.util.comm.relay.service.ServerUtilsImpl",
-            e);
+            "Please add the runtime dependency for " + SERVER_UTILS_IMPL_CLASS_NAME, e);
       }
     } else {
       return NoOpServerUtils.class;

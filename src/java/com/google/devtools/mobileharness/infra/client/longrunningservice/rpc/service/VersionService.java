@@ -22,8 +22,10 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.V
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceProto.GetVersionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.VersionProtoUtil;
 import io.grpc.stub.StreamObserver;
+import javax.inject.Singleton;
 
 /** Implementation of {@link VersionServiceGrpc}. */
+@Singleton
 public class VersionService extends VersionServiceGrpc.VersionServiceImplBase {
 
   @Override

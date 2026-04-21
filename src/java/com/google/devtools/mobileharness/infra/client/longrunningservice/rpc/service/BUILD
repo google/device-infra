@@ -102,5 +102,6 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:service_util",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util:version_proto_util",
         "@grpc-java//stub",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
