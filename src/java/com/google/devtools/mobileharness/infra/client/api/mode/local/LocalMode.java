@@ -36,7 +36,6 @@ import com.google.devtools.mobileharness.infra.client.api.controller.allocation.
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver.DeviceReserver;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
-import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceIdManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.TestExecutor;
@@ -64,6 +63,7 @@ import com.google.devtools.mobileharness.infra.controller.test.local.utp.control
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.IncompatibleReasonProto;
 import com.google.devtools.mobileharness.infra.lab.controller.LocalFileBasedDeviceConfigManager;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
+import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;

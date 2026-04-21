@@ -46,8 +46,6 @@ import com.google.devtools.mobileharness.api.model.proto.Job.JobFeature;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestIdName;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.JobSyncServiceVersionChecker;
-import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager;
-import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager.DeviceKey;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler.JobWithTests;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler.JobsAndAllocations;
@@ -69,6 +67,8 @@ import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServicePr
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.OpenJobResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.UpsertDeviceTempRequiredDimensionsRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.UpsertDeviceTempRequiredDimensionsResponse;
+import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager;
+import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager.DeviceKey;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.checker.ServiceSideVersionChecker;
 import com.google.devtools.mobileharness.shared.version.proto.VersionProto.VersionCheckResponse;

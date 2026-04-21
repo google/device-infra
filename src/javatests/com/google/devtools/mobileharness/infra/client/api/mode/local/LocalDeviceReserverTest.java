@@ -23,9 +23,9 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.devtools.mobileharness.api.model.lab.DeviceId;
-import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager;
-import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager.DeviceKey;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceIdManager;
+import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager;
+import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager.DeviceKey;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import com.google.wireless.qa.mobileharness.shared.model.lab.LabLocator;
 import java.time.Duration;

@@ -90,3 +90,21 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "device_temp_required_dimension_manager",
+    srcs = ["DeviceTempRequiredDimensionManager.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/shared/labinfo:__subpackages__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)

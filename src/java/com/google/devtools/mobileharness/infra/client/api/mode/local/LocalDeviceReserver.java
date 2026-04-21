@@ -20,9 +20,9 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.devtools.mobileharness.api.model.lab.DeviceId;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver.DeviceReserver;
-import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager;
-import com.google.devtools.mobileharness.infra.client.api.util.dimension.DeviceTempRequiredDimensionManager.DeviceKey;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceIdManager;
+import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager;
+import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager.DeviceKey;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.time.Duration;
 
