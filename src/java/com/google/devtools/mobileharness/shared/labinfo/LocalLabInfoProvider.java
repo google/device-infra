@@ -20,8 +20,13 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.api.model.lab.LabLocator;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCondition;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
+import com.google.devtools.mobileharness.api.model.proto.Device.TempDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
@@ -29,16 +34,24 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceStatusInfo;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
+import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager.DeviceKey;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import java.util.Map;
+import javax.annotation.Nullable;
+import javax.inject.Inject;
 
 /** {@link LabInfoProvider} which provides {@link LabView} from {@link LocalDeviceManager}. */
 public class LocalLabInfoProvider implements LabInfoProvider {
 
   private final LocalDeviceManager localDeviceManager;
+  @Nullable private final DeviceTempRequiredDimensionManager tempRequiredDimensionManager;
 
-  public LocalLabInfoProvider(LocalDeviceManager localDeviceManager) {
+  @Inject
+  LocalLabInfoProvider(
+      LocalDeviceManager localDeviceManager,
+      @Nullable DeviceTempRequiredDimensionManager tempRequiredDimensionManager) {
     this.localDeviceManager = localDeviceManager;
+    this.tempRequiredDimensionManager = tempRequiredDimensionManager;
   }
 
   @Override
@@ -62,11 +75,48 @@ public class LocalLabInfoProvider implements LabInfoProvider {
                   Device device = entry.getKey();
                   DeviceStatus deviceStatus =
                       entry.getValue().getDeviceStatusWithTimestamp().getStatus();
-                  return DeviceInfo.newBuilder()
-                      .setDeviceLocator(DeviceLocator.newBuilder().setId(device.getDeviceUuid()))
-                      .setDeviceStatus(deviceStatus)
-                      .setDeviceFeature(device.toFeature())
-                      .build();
+                  DeviceInfo.Builder builder =
+                      DeviceInfo.newBuilder()
+                          .setDeviceLocator(
+                              DeviceLocator.newBuilder().setId(device.getDeviceUuid()))
+                          .setDeviceStatus(deviceStatus);
+                  DeviceFeature.Builder featureBuilder = device.toFeature().toBuilder();
+
+                  if (tempRequiredDimensionManager != null) {
+                    DeviceKey deviceKey =
+                        new DeviceKey(LabLocator.LOCALHOST.hostName(), device.getDeviceUuid());
+                    tempRequiredDimensionManager
+                        .getDimensions(deviceKey)
+                        .ifPresent(
+                            dimensions -> {
+                              DeviceCondition.Builder conditionBuilder =
+                                  DeviceCondition.newBuilder();
+                              dimensions
+                                  .dimensions()
+                                  .forEach(
+                                      (name, value) -> {
+                                        conditionBuilder.addTempDimension(
+                                            TempDimension.newBuilder()
+                                                .setDimension(
+                                                    DeviceDimension.newBuilder()
+                                                        .setName(name)
+                                                        .setValue(value))
+                                                .setExpireTimestampMs(
+                                                    dimensions.expireTime().toEpochMilli())
+                                                .setRequired(true));
+
+                                        featureBuilder
+                                            .getCompositeDimensionBuilder()
+                                            .addRequiredDimension(
+                                                DeviceDimension.newBuilder()
+                                                    .setName(name)
+                                                    .setValue(value));
+                                      });
+                              builder.setDeviceCondition(conditionBuilder.build());
+                            });
+                  }
+
+                  return builder.setDeviceFeature(featureBuilder.build()).build();
                 })
             .collect(toImmutableList());
 

@@ -63,15 +63,22 @@ java_library(
 java_library(
     name = "local_lab_info_provider",
     srcs = ["LocalLabInfoProvider.java"],
-    visibility = ["//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/shared/labinfo:__pkg__",
+    ],
     deps = [
+        ":device_temp_required_dimension_manager",
         ":lab_info_provider",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_status_info",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 
@@ -96,6 +103,7 @@ java_library(
     srcs = ["DeviceTempRequiredDimensionManager.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/shared/labinfo:__subpackages__",
     ],

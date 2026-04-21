@@ -78,6 +78,7 @@ import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.Annotatio
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.DeviceConfigStub;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.grpc.DeviceConfigGrpcStubModule;
 import com.google.devtools.mobileharness.shared.constant.hostmanagement.HostPropertyConstants.HostPropertyKey;
+import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.LocalLabInfoProvider;
 import com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat;
@@ -102,6 +103,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import com.google.inject.util.Providers;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
@@ -348,8 +350,9 @@ public class LabServer {
                   new AbstractModule() {
                     @Override
                     protected void configure() {
-                      bind(LabInfoProvider.class)
-                          .toInstance(new LocalLabInfoProvider(deviceManager));
+                      bind(LocalDeviceManager.class).toInstance(deviceManager);
+                      bind(DeviceTempRequiredDimensionManager.class).toProvider(Providers.of(null));
+                      bind(LabInfoProvider.class).to(LocalLabInfoProvider.class);
                     }
                   })
               .getInstance(com.google.devtools.mobileharness.shared.labinfo.LabInfoService.class));

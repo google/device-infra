@@ -116,6 +116,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/file/resolver:file_resolver",
         "//src/java/com/google/devtools/mobileharness/shared/file/resolver:gcs_file_resolver",
         "//src/java/com/google/devtools/mobileharness/shared/file/resolver:local_file_resolver",
+        "//src/java/com/google/devtools/mobileharness/shared/labinfo:device_temp_required_dimension_manager",
         "//src/java/com/google/devtools/mobileharness/shared/labinfo:lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/shared/labinfo:lab_info_service",
         "//src/java/com/google/devtools/mobileharness/shared/labinfo:local_lab_info_provider",

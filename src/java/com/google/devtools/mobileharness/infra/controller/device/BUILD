@@ -31,6 +31,7 @@ package(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/stat:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api/mode/local:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/shared/labinfo:__subpackages__",
     ],
 )
 
