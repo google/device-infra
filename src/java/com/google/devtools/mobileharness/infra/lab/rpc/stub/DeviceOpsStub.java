@@ -42,6 +42,12 @@ public interface DeviceOpsStub extends NonThrowingAutoCloseable {
   /** Takes a screenshot of a device asynchronously. */
   ListenableFuture<TakeScreenshotResponse> takeScreenshotAsync(TakeScreenshotRequest request);
 
+  /** Takes a screenshot of a device asynchronously with optional client RPC authority. */
+  default ListenableFuture<TakeScreenshotResponse> takeScreenshotAsync(
+      TakeScreenshotRequest request, boolean useClientRpcAuthority) {
+    return takeScreenshotAsync(request);
+  }
+
   GetDeviceLogResponse getDeviceLog(GetDeviceLogRequest request) throws RpcExceptionWithErrorId;
 
   default GetDeviceLogResponse getDeviceLog(
@@ -52,6 +58,12 @@ public interface DeviceOpsStub extends NonThrowingAutoCloseable {
 
   /** Gets the device log asynchronously. */
   ListenableFuture<GetDeviceLogResponse> getDeviceLogAsync(GetDeviceLogRequest request);
+
+  /** Gets the device log asynchronously with optional client RPC authority. */
+  default ListenableFuture<GetDeviceLogResponse> getDeviceLogAsync(
+      GetDeviceLogRequest request, boolean useClientRpcAuthority) {
+    return getDeviceLogAsync(request);
+  }
 
   GetDeviceDebugInfoResponse getDeviceDebugInfo(GetDeviceDebugInfoRequest request)
       throws RpcExceptionWithErrorId;

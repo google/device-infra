@@ -63,6 +63,16 @@ public class DeviceOpsGrpcStub implements DeviceOpsStub {
   }
 
   @Override
+  public ListenableFuture<TakeScreenshotResponse> takeScreenshotAsync(
+      TakeScreenshotRequest request, boolean useClientRpcAuthority) {
+    if (useClientRpcAuthority) {
+      throw new UnsupportedOperationException(
+          "useClientRpcAuthority is not supported in gRPC stub");
+    }
+    return takeScreenshotAsync(request);
+  }
+
+  @Override
   public GetDeviceLogResponse getDeviceLog(GetDeviceLogRequest request)
       throws RpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
@@ -75,6 +85,16 @@ public class DeviceOpsGrpcStub implements DeviceOpsStub {
   @Override
   public ListenableFuture<GetDeviceLogResponse> getDeviceLogAsync(GetDeviceLogRequest request) {
     return futureStub.getDeviceLog(request);
+  }
+
+  @Override
+  public ListenableFuture<GetDeviceLogResponse> getDeviceLogAsync(
+      GetDeviceLogRequest request, boolean useClientRpcAuthority) {
+    if (useClientRpcAuthority) {
+      throw new UnsupportedOperationException(
+          "useClientRpcAuthority is not supported in gRPC stub");
+    }
+    return getDeviceLogAsync(request);
   }
 
   @Override
