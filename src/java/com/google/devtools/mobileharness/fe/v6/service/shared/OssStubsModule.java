@@ -36,17 +36,18 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.providers.NoOpConf
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.NoOpRoutedUniverseLabInfoStubFactory;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.RoutedUniverseLabInfoStubFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub;
-import com.google.devtools.mobileharness.infra.master.rpc.stub.MasterStubAnnotation.GrpcStub;
-import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabInfoGrpcStubModule;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.JobSyncGrpcStub;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabInfoGrpcStub;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.Annotation.DeviceConfigGrpcStub;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.DeviceConfigStub;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.grpc.DeviceConfigGrpcStubModule;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
+import com.google.devtools.mobileharness.shared.util.comm.stub.MasterGrpcStubHelper;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.AbstractModule;
 import com.google.inject.Key;
-import com.google.inject.Provides;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import io.grpc.ManagedChannel;
 import java.util.List;
@@ -59,7 +60,9 @@ public final class OssStubsModule extends AbstractModule {
     ManagedChannel olcServerChannel =
         ChannelFactory.createLocalChannel(
             Flags.instance().olcServerPort.getNonNull(), directExecutor());
-    install(new LabInfoGrpcStubModule(olcServerChannel));
+    bind(MasterGrpcStubHelper.class).toInstance(new MasterGrpcStubHelper(olcServerChannel));
+    bind(LabInfoStub.class).to(LabInfoGrpcStub.class).in(Singleton.class);
+    bind(JobSyncStub.class).to(JobSyncGrpcStub.class).in(Singleton.class);
 
     if (Flags.instance().feConnectToConfigServer.getNonNull()) {
 
@@ -85,12 +88,6 @@ public final class OssStubsModule extends AbstractModule {
     bind(LogcatActionHelper.class).to(NoOpLogcatActionHelper.class).in(Singleton.class);
     bind(GroupMembershipProvider.class).to(NoOpGroupMembershipProvider.class).in(Singleton.class);
     bind(TestbedConfigBuilder.class).to(OssTestbedConfigBuilderImpl.class).in(Singleton.class);
-  }
-
-  @Provides
-  @Singleton
-  LabInfoStub provideLabInfoStub(@GrpcStub LabInfoStub grpcStub) {
-    return grpcStub;
   }
 
   private static final class NoOpGroupMembershipProvider implements GroupMembershipProvider {

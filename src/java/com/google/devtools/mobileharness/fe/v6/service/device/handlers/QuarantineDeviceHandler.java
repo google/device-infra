@@ -31,7 +31,6 @@ import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.UpsertDeviceTempRequiredDimensionsRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
-import com.google.devtools.mobileharness.infra.master.rpc.stub.MasterStubAnnotation.StubbyStub;
 import com.google.protobuf.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
@@ -52,7 +51,7 @@ public final class QuarantineDeviceHandler {
   @Inject
   QuarantineDeviceHandler(
       LabInfoProvider labInfoProvider,
-      @StubbyStub JobSyncStub jobSyncStub,
+      JobSyncStub jobSyncStub,
       ListeningExecutorService executor,
       Environment environment,
       InstantSource instantSource) {

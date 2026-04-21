@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.fe.v6.server;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.fe.v6.server.Annotations.ServerPort;
 import com.google.devtools.mobileharness.fe.v6.service.config.ConfigServiceGrpcImpl;
@@ -74,7 +75,8 @@ public final class OssFeServer {
   }
 
   /** Stops the server. */
-  private void stopServer() {
+  @VisibleForTesting
+  void stopServer() {
     if (grpcServer != null) {
       logger.atWarning().log("*** shutting down gRPC server since JVM is shutting down");
       grpcServer.shutdown();

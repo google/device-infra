@@ -13,48 +13,34 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:java_binary.bzl", "java_binary")
 load("@rules_java//java:java_library.bzl", "java_library")
+load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = ["//src/devtools/mobileharness/fe/v6:visibility"],
 )
 
 java_library(
-    name = "annotations",
-    srcs = ["Annotations.java"],
+    name = "tests",
+    testonly = 1,
+    srcs = glob(["*.java"]),
     deps = [
-        "@maven//:javax_inject_jsr330_api",
-    ],
-)
-
-java_library(
-    name = "oss_fe_server_lib",
-    srcs = ["OssFeServer.java"],
-    runtime_deps = ["@grpc-java//netty"],
-    deps = [
-        ":annotations",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config:config_service_grpc_impl",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/server:annotations",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/server:oss_fe_server_lib",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config:config_service_module",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/device:device_service_grpc_impl",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device:device_service_module",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/host:host_service_grpc_impl",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host:host_service_module",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared:oss_stubs",
         "//src/java/com/google/devtools/mobileharness/fe/v6/shared/util/concurrent:oss_executor_module",
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@grpc-java//core",
-        "@grpc-java//services:reflection",
-        "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
-        "@maven//:javax_inject_jsr330_api",
+        "@maven//:junit_junit",
     ],
 )
 
-java_binary(
-    name = "oss_fe_server",
-    main_class = "com.google.devtools.mobileharness.fe.v6.server.OssFeServer",
-    runtime_deps = [":oss_fe_server_lib"],
+junit_test_suites(
+    name = "gen_tests",
+    sizes = [
+        "small",
+    ],
+    deps = [":tests"],
 )

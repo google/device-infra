@@ -49,7 +49,6 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoP
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
-import com.google.devtools.mobileharness.infra.master.rpc.stub.MasterStubAnnotation.StubbyStub;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -81,7 +80,7 @@ public final class DeviceServiceLogicImplTest {
   @Bind @Mock private SubDeviceInfoListFactory subDeviceInfoListFactory;
   @Bind @Mock private InstantSource instantSource;
   @Bind @Mock private UniverseFactory universeFactory;
-  @Bind @Mock @StubbyStub private JobSyncStub jobSyncStub;
+  @Bind @Mock private JobSyncStub jobSyncStub;
   @Bind private final ListeningExecutorService executor = newDirectExecutorService();
 
   private DeviceServiceLogicImpl deviceServiceLogicImpl;

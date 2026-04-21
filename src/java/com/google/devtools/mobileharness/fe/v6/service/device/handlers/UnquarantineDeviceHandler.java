@@ -31,7 +31,6 @@ import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.UpsertDeviceTempRequiredDimensionsRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
-import com.google.devtools.mobileharness.infra.master.rpc.stub.MasterStubAnnotation.StubbyStub;
 import java.time.Duration;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -51,7 +50,7 @@ public final class UnquarantineDeviceHandler {
   @Inject
   UnquarantineDeviceHandler(
       LabInfoProvider labInfoProvider,
-      @StubbyStub JobSyncStub jobSyncStub,
+      JobSyncStub jobSyncStub,
       ListeningExecutorService executor,
       Environment environment) {
     this.labInfoProvider = labInfoProvider;

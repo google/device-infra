@@ -42,7 +42,6 @@ import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.UpsertDeviceTempRequiredDimensionsRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.JobSyncServiceProto.UpsertDeviceTempRequiredDimensionsResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
-import com.google.devtools.mobileharness.infra.master.rpc.stub.MasterStubAnnotation.StubbyStub;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -68,7 +67,7 @@ public final class QuarantineDeviceHandlerTest {
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
   @Bind @Mock private LabInfoProvider labInfoProvider;
-  @Bind @Mock @StubbyStub private JobSyncStub jobSyncStub;
+  @Bind @Mock private JobSyncStub jobSyncStub;
   @Bind private ListeningExecutorService executor = newDirectExecutorService();
   @Bind @Mock private Environment environment;
   @Bind @Mock private InstantSource instantSource;
