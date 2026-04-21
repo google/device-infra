@@ -141,8 +141,29 @@ public class GcsFileManager {
     this.uploadShardSize = uploadShardSize;
     this.downloadShardSize = downloadShardSize;
 
-    removeFileOrDir(homeDir);
+    if (localFileUtil.isDirExist(homeDir)) {
+      Path tmpDirToDelete =
+          homeDir.resolveSibling(
+              homeDir.getFileName().toString()
+                  + "_delete_"
+                  + System.currentTimeMillis()
+                  + "_"
+                  + random.nextLong());
+      localFileUtil.moveFileOrDir(homeDir, tmpDirToDelete);
+      new Thread(
+              () -> {
+                try {
+                  removeFileOrDir(tmpDirToDelete);
+                } catch (MobileHarnessException | InterruptedException e) {
+                  logger.atWarning().withCause(e).log(
+                      "Failed to remove old cache directory: %s", tmpDirToDelete);
+                }
+              },
+              "gcs-file-manager-cleanup")
+          .start();
+    }
     localFileUtil.prepareDir(homeDir);
+
     this.localCache =
         CacheBuilder.newBuilder()
             .expireAfterAccess(localCacheTtl)
