@@ -659,6 +659,7 @@ java_library(
     srcs = ["MoblyDecoratorAdapter.java"],
     deps = [
         ":composite_device_decorator",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/testbed:runner_util",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/config:base",

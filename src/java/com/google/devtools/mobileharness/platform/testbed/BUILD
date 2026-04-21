@@ -48,6 +48,7 @@ java_library(
     ],
     deps = [
         ":subdevice_synchronization_driver",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:test_context",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

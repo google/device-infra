@@ -51,23 +51,13 @@ public class JobReporter {
         // If no running info, it should be a test not assigned.
         notFinishedTests.add(testName);
       } else if (testInfos.size() == 1) {
-        switch (testInfos.get(0).result().get()) {
-          case UNKNOWN:
-            // If only run once and result is UNKNOWN, it should be a test not finished.
-            notFinishedTests.add(testName);
-            break;
-          case PASS:
-            // If only run once and result is PASS, it should be a passed test.
-            passedTests.add(testName);
-            break;
-          case SKIP:
-            // If only run once and result is SKIP, it should be a skipped test.
-            skippedTests.add(testName);
-            break;
-          default:
-            // Otherwise it's a failed test.
-            failedTests.add(testName);
-        }
+        (switch (testInfos.get(0).resultWithCause().get().type()) {
+              case UNKNOWN -> notFinishedTests;
+              case PASS -> passedTests;
+              case SKIP -> skippedTests;
+              default -> failedTests;
+            })
+            .add(testName);
       } else {
         int passedNumber = 0;
         int skippedNumber = 0;
@@ -180,7 +170,9 @@ public class JobReporter {
           result.append(",  NOT_ASSIGNED: ").append(resultNum[5]);
         }
       } else {
-        result.append(" ").append(Iterables.getOnlyElement(testInfos).result().get());
+        result
+            .append(" ")
+            .append(Iterables.getOnlyElement(testInfos).resultWithCause().get().type());
       }
       result.append("\n");
     }

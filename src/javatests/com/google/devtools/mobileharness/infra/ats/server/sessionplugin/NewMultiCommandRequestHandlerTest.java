@@ -88,7 +88,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
@@ -158,8 +157,6 @@ public final class NewMultiCommandRequestHandlerTest {
   @Mock private Files files;
   @Mock private TestInfo testInfo;
   @Mock private TestInfos testInfos;
-  @Mock private com.google.wireless.qa.mobileharness.shared.model.job.out.Result jobResult;
-  @Mock private com.google.wireless.qa.mobileharness.shared.model.job.out.Result testResult;
   @Mock private com.google.devtools.mobileharness.api.model.job.out.Result newJobResult;
   @Mock private com.google.devtools.mobileharness.api.model.job.out.Result newTestResult;
   private final Properties properties = new Properties(new Timing());
@@ -1457,8 +1454,8 @@ public final class NewMultiCommandRequestHandlerTest {
             .setSummary(ReportProto.Summary.newBuilder().setPassed(0).setFailed(0).build())
             .build();
     mockProcessResult(result);
-    when(testResult.get()).thenReturn(TestResult.FAIL);
     when(newTestResult.get()).thenReturn(ERROR_RESULT);
+    when(testInfo.resultWithCause()).thenReturn(newTestResult);
 
     HandleResultProcessingResult handleResultProcessingResult =
         createJobAndHandleResultProcessing(request);
@@ -1479,13 +1476,12 @@ public final class NewMultiCommandRequestHandlerTest {
             .setSummary(ReportProto.Summary.newBuilder().setPassed(0).setFailed(0).build())
             .build();
     mockProcessResult(result);
-    when(testResult.get()).thenReturn(TestResult.PASS);
-    when(jobResult.get()).thenReturn(TestResult.FAIL);
     when(newJobResult.get())
         .thenReturn(
             ResultTypeWithCause.create(
                 com.google.devtools.mobileharness.api.model.proto.Test.TestResult.ERROR,
                 new MobileHarnessException(BasicErrorId.JOB_TIMEOUT, "job failed with exception")));
+    when(jobInfo.resultWithCause()).thenReturn(newJobResult);
 
     HandleResultProcessingResult handleResultProcessingResult =
         createJobAndHandleResultProcessing(request);
@@ -1768,8 +1764,8 @@ public final class NewMultiCommandRequestHandlerTest {
     TestInfos testInfos2 = Mockito.mock(TestInfos.class);
     when(jobInfo2.tests()).thenReturn(testInfos2);
     when(testInfos2.getAll()).thenReturn(ImmutableListMultimap.of("test_id_2", testInfo2));
-    when(jobInfo2.result()).thenReturn(jobResult);
-    when(testInfo2.result()).thenReturn(testResult);
+    when(jobInfo2.resultWithCause()).thenReturn(newJobResult);
+    when(testInfo2.resultWithCause()).thenReturn(newTestResult);
     when(testInfo2.locator())
         .thenReturn(
             new TestLocator("test_id_2", "test_name_2", new JobLocator("job_id_2", "job_name_2")));
@@ -2053,14 +2049,10 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   private void setUpPassingJobAndTestResults() {
-    when(jobInfo.result()).thenReturn(jobResult);
-    when(testInfo.result()).thenReturn(testResult);
-    when(jobResult.get()).thenReturn(TestResult.PASS);
-    when(testResult.get()).thenReturn(TestResult.PASS);
+    when(jobInfo.resultWithCause()).thenReturn(newJobResult);
+    when(testInfo.resultWithCause()).thenReturn(newTestResult);
     when(testInfo.locator())
         .thenReturn(new TestLocator("test_id", "test_name", new JobLocator("job_id", "job_name")));
-    when(jobResult.toNewResult()).thenReturn(newJobResult);
-    when(testResult.toNewResult()).thenReturn(newTestResult);
     when(newJobResult.get()).thenReturn(PASS_RESULT);
     when(newTestResult.get()).thenReturn(PASS_RESULT);
   }

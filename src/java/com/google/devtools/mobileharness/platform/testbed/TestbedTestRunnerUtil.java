@@ -27,11 +27,11 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.controller.test.TestContext.TestContextCallable;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import java.time.Duration;
 import java.util.Collection;
@@ -63,10 +63,9 @@ public final class TestbedTestRunnerUtil {
                 logger.atInfo().log(
                     "Starting decorator stack on device %s", driver.getDevice().getDeviceId());
                 driver.run(testInfo);
-                if (!testInfo.result().get().equals(TestResult.UNKNOWN)
+                if (testInfo.resultWithCause().get().type() != TestResult.UNKNOWN
                     && !stack.syncer().isReadyToSync()) {
-                  throw new com.google.devtools.mobileharness.api.model.error
-                      .MobileHarnessException(
+                  throw new MobileHarnessException(
                       ExtErrorId.TESTBED_DEVICE_DECORATOR_SETUP_ERROR,
                       "Failure occurred in decorator setup on device "
                           + driver.getDevice().getDeviceId());
@@ -77,22 +76,7 @@ public final class TestbedTestRunnerUtil {
                 logger.atSevere().log(
                     "Exception found in setting up device %s; cancelling: %s",
                     driver.getDevice().getDeviceId(), e.getMessage());
-                Exception finalException;
-                // TODO: Can remove when the MH exception from the driver is updated.
-                if (e instanceof MobileHarnessException
-                    && !(e
-                        instanceof
-                        com.google.devtools.mobileharness.api.model.error.MobileHarnessException)) {
-                  // Convert old MobileHarnessException to new one.
-                  MobileHarnessException mhException = (MobileHarnessException) e;
-                  finalException =
-                      new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
-                          ExtErrorId.TESTBED_DEVICE_DECORATOR_SETUP_ERROR,
-                          "<Device " + driver.getDevice().getDeviceId() + "> ",
-                          mhException);
-                } else {
-                  finalException = e;
-                }
+                Exception finalException = e;
                 stack.syncer().preSyncError(finalException);
                 throw finalException;
               }
@@ -135,7 +119,7 @@ public final class TestbedTestRunnerUtil {
   }
 
   public static void checkCompatible(Device subdevice, List<String> decorators)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+      throws MobileHarnessException {
     if (!isCompatible(subdevice, decorators)) {
       Set<String> invalidDecoratorTypes = new HashSet<>(decorators);
       invalidDecoratorTypes.removeAll(subdevice.getDecoratorTypes());
@@ -147,7 +131,7 @@ public final class TestbedTestRunnerUtil {
               subdevice.getDeviceId(),
               invalidDecoratorTypes,
               subdevice.getDeviceTypes());
-      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      throw new MobileHarnessException(
           ExtErrorId.TESTBED_DEVICE_DECORATOR_NOT_COMPATIBLE_ERROR, msg);
     }
   }
@@ -163,8 +147,7 @@ public final class TestbedTestRunnerUtil {
    */
   public static void runParallelSubDeviceStacks(
       TestInfo testInfo, Collection<SubDeviceDecoratorStack> subDeviceStacks, Driver mainDriver)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     ListeningExecutorService executor =
         MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(subDeviceStacks.size()));
     Set<ListenableFuture<Void>> runFutures = new HashSet<>();
@@ -207,7 +190,13 @@ public final class TestbedTestRunnerUtil {
     // propagate test result to subdevice testInfos.
     // Release the threads into teardown.
     for (SubDeviceDecoratorStack stack : subDeviceStacks) {
-      stack.testInfo().result().set(testInfo.result().get());
+      var mainResult = testInfo.resultWithCause().get();
+      var subResult = stack.testInfo().resultWithCause();
+      if (mainResult.type() == TestResult.PASS) {
+        subResult.setPass();
+      } else if (mainResult.type() != TestResult.UNKNOWN) {
+        subResult.setNonPassing(mainResult.type(), mainResult.causeProtoNonEmpty());
+      }
       stack.syncer().releaseSync();
     }
 
@@ -228,7 +217,7 @@ public final class TestbedTestRunnerUtil {
       MobileHarnessExceptions.rethrow(
           e.getCause(), ExtErrorId.TESTBED_RUN_SUB_PARRALLEL_DEVICE_STACK_ERROR);
     } finally {
-      allFuture.cancel(true /* mayInterruptIfRunning */);
+      allFuture.cancel(/* mayInterruptIfRunning= */ false);
       // We still need to wait for the futures to complete after cancelling them.
       remainingTestTime = testInfo.timer().remainingTimeJava();
       executor.awaitTermination(remainingTestTime.toMillis(), MILLISECONDS);

@@ -24,6 +24,7 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.testbed.SubDeviceDecoratorStack;
 import com.google.devtools.mobileharness.platform.testbed.config.SubDeviceInfo;
 import com.google.devtools.mobileharness.platform.testbed.config.SubDeviceKey;
@@ -112,7 +113,14 @@ public class MoblyDecoratorAdapter extends CompositeDeviceAdapterBase
       // Update mhSubTestInfo attributes
       mhSubTestInfo.remoteGenFiles().addAll(moblySubTestInfo.remoteGenFiles().getAll());
       mhSubTestInfo.status().set(moblySubTestInfo.status().get());
-      mhSubTestInfo.result().set(moblySubTestInfo.result().get());
+      var moblyResult = moblySubTestInfo.resultWithCause().get();
+      if (moblyResult.type() == TestResult.PASS) {
+        mhSubTestInfo.resultWithCause().setPass();
+      } else {
+        mhSubTestInfo
+            .resultWithCause()
+            .setNonPassing(moblyResult.type(), moblyResult.causeProtoNonEmpty());
+      }
       mhSubTestInfo.log().append(moblySubTestInfo.log().get(0));
       mhSubTestInfo.properties().addAll(moblySubTestInfo.properties().getAll());
       mhSubTestInfo

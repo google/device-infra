@@ -176,7 +176,6 @@ public final class AtsServerSessionPluginTest {
   @Mock private TestInfos testInfos;
   @Mock private TestLocator testLocator;
   @Mock private SubDeviceSpecs subDeviceSpecs;
-  @Mock private com.google.wireless.qa.mobileharness.shared.model.job.out.Result testResult;
   private Properties testProperties;
 
   @Captor private ArgumentCaptor<UnaryOperator<RequestDetail>> unaryOperatorCaptor;
@@ -276,10 +275,6 @@ public final class AtsServerSessionPluginTest {
     when(testInfo.jobInfo()).thenReturn(jobInfo);
     when(testInfo.locator()).thenReturn(testLocator);
     when(testLocator.getId()).thenReturn("test_id");
-    when(jobInfo.result()).thenReturn(testResult);
-    when(testInfo.result()).thenReturn(testResult);
-    when(testResult.get())
-        .thenReturn(com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult.PASS);
     testProperties = new Properties(timing);
     SubDeviceSpec subDeviceSpec1 =
         SubDeviceSpec.createForTesting(
@@ -928,13 +923,8 @@ public final class AtsServerSessionPluginTest {
     jobProperties.add(Job.IS_XTS_NON_TF_JOB, "true");
     when(jobInfo.properties()).thenReturn(jobProperties);
 
-    com.google.devtools.mobileharness.api.model.job.out.Result result =
-        mock(com.google.devtools.mobileharness.api.model.job.out.Result.class);
-    when(result.get())
-        .thenReturn(
-            ResultTypeWithCause.create(
-                com.google.devtools.mobileharness.api.model.proto.Test.TestResult.PASS,
-                /* cause= */ null));
+    Result result = mock(Result.class);
+    when(result.get()).thenReturn(ResultTypeWithCause.create(TestResult.PASS, /* cause= */ null));
     when(testInfo.resultWithCause()).thenReturn(result);
     when(testInfo.getGenFileDir()).thenReturn("/tmp/test_gen_file_dir");
 
@@ -964,12 +954,11 @@ public final class AtsServerSessionPluginTest {
     jobProperties.add(Job.IS_XTS_NON_TF_JOB, "true");
     when(jobInfo.properties()).thenReturn(jobProperties);
 
-    com.google.devtools.mobileharness.api.model.job.out.Result result =
-        mock(com.google.devtools.mobileharness.api.model.job.out.Result.class);
+    Result result = mock(Result.class);
     when(result.get())
         .thenReturn(
             ResultTypeWithCause.create(
-                com.google.devtools.mobileharness.api.model.proto.Test.TestResult.ERROR,
+                TestResult.ERROR,
                 new MobileHarnessException(
                     InfraErrorId.DM_RESERVE_BUSY_DEVICE, "Device is not available.")));
     when(testInfo.resultWithCause()).thenReturn(result);
@@ -1505,9 +1494,8 @@ public final class AtsServerSessionPluginTest {
     doThrow(exception)
         .when(sessionResultHandlerUtil)
         .processResult(any(), any(), any(), any(), any(), any());
-    assertThrows(
-        IllegalStateException.class,
-        () -> plugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null)));
+    SessionEndedEvent sessionEndedEvent = new SessionEndedEvent(sessionInfo, null);
+    assertThrows(IllegalStateException.class, () -> plugin.onSessionEnded(sessionEndedEvent));
     // sessionInfo.setSessionPluginOutput() is called 4 times: 2 in onSessionStarting, 1 in
     // onJobEnded, 1 in onSessionEnded (finally block).
     // OnSessionStarting() after creating tradefed jobs. Second time in OnJobEnded()

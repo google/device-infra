@@ -44,6 +44,7 @@ import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
@@ -86,7 +87,6 @@ import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.DeviceList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.Driver;
@@ -1071,7 +1071,7 @@ final class NewMultiCommandRequestHandler {
             sessionRequestInfo);
     if (processResult.isPresent() && processResult.get().hasSummary()) {
       long failedModuleCount =
-          processResult.get().getSummary().getModulesTotal()
+          (long) processResult.get().getSummary().getModulesTotal()
               - processResult.get().getSummary().getModulesDone();
       commandDetailBuilder
           .setPassedTestCount(processResult.get().getSummary().getPassed())
@@ -1147,9 +1147,9 @@ final class NewMultiCommandRequestHandler {
               genFile, testLogDir, ImmutableList.of("-rf"));
         }
 
-        if (testInfo.result().get() == TestResult.PASS) {
+        if (testInfo.resultWithCause().get().type() == TestResult.PASS) {
           passedTestCount++;
-        } else if (testInfo.result().get() != TestResult.SKIP) {
+        } else if (testInfo.resultWithCause().get().type() != TestResult.SKIP) {
           failedTestCount++;
         }
       }
@@ -1172,8 +1172,8 @@ final class NewMultiCommandRequestHandler {
             jobs.stream()
                 .filter(
                     jobInfo ->
-                        jobInfo.result().get() != TestResult.PASS
-                            && jobInfo.result().get() != TestResult.SKIP)
+                        jobInfo.resultWithCause().get().type() != TestResult.PASS
+                            && jobInfo.resultWithCause().get().type() != TestResult.SKIP)
                 .count())
         .setTotalTestCount(passedTestCount + failedTestCount);
   }
@@ -1268,22 +1268,21 @@ final class NewMultiCommandRequestHandler {
             .flatMap(jobInfo -> jobInfo.tests().getAll().values().stream())
             .filter(
                 testInfo ->
-                    testInfo.result().get() != TestResult.PASS
-                        && testInfo.result().get() != TestResult.SKIP)
+                    testInfo.resultWithCause().get().type() != TestResult.PASS
+                        && testInfo.resultWithCause().get().type() != TestResult.SKIP)
             .collect(toImmutableList());
     if (!failedTests.isEmpty()) {
       TestInfo failedTest = failedTests.get(0);
       return Optional.of(
           failedTest
-              .result()
-              .toNewResult()
+              .resultWithCause()
               .get()
               .causeException()
               .map(Throwable::getMessage)
               .orElse(
                   String.format(
                       "Test %s failed with result %s.",
-                      failedTest.locator().getId(), failedTest.result().get())));
+                      failedTest.locator().getId(), failedTest.resultWithCause().get().type())));
     }
     return Optional.empty();
   }
@@ -1293,22 +1292,21 @@ final class NewMultiCommandRequestHandler {
         jobs.stream()
             .filter(
                 jobInfo ->
-                    jobInfo.result().get() != TestResult.PASS
-                        && jobInfo.result().get() != TestResult.SKIP)
+                    jobInfo.resultWithCause().get().type() != TestResult.PASS
+                        && jobInfo.resultWithCause().get().type() != TestResult.SKIP)
             .collect(toImmutableList());
     if (!failedJobs.isEmpty()) {
       JobInfo failedJob = failedJobs.get(0);
       return Optional.of(
           failedJob
-              .result()
-              .toNewResult()
+              .resultWithCause()
               .get()
               .causeException()
               .map(Throwable::getMessage)
               .orElse(
                   String.format(
                       "Job %s failed with result %s.",
-                      failedJob.locator().getId(), failedJob.result().get())));
+                      failedJob.locator().getId(), failedJob.resultWithCause().get().type())));
     }
     return Optional.empty();
   }
