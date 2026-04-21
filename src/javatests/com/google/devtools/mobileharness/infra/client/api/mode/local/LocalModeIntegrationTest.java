@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.client.api.mode.local;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
+import static com.google.devtools.mobileharness.shared.util.truth.Correspondences.isInstanceOf;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -43,6 +44,7 @@ import com.google.inject.Inject;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartedEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
@@ -53,6 +55,8 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import org.junit.Before;
 import org.junit.Rule;
@@ -105,7 +109,8 @@ public class LocalModeIntegrationTest {
     JobInfo jobInfo1 = createJobInfo("fake_job_name_1");
 
     String allocationKey = "allocation-key-" + UUID.randomUUID();
-    TestPlugin testPlugin = new TestPlugin(deviceReserver, allocationKey);
+    TestPluginForDeviceReserver testPlugin =
+        new TestPluginForDeviceReserver(deviceReserver, allocationKey);
 
     clientApi.startJob(jobInfo1, localMode, ImmutableList.of(testPlugin));
     clientApi.waitForJob(jobInfo1.locator().getId());
@@ -132,6 +137,44 @@ public class LocalModeIntegrationTest {
     clientApi.waitForJob(jobInfo2.locator().getId());
 
     assertThat(jobInfo2.resultWithCause().get().type()).isEqualTo(TestResult.ERROR);
+
+    deviceReserver.addTempAllocationKeyToDevice(
+        new DeviceLocator("NoOpDevice-0"), allocationKey, Duration.ZERO);
+  }
+
+  @Test
+  public void testTestEvents() throws Exception {
+    JobInfo jobInfo = createJobInfo("fake_job_for_test_events");
+    TestPluginForTestEvent plugin = new TestPluginForTestEvent();
+
+    clientApi.startJob(jobInfo, localMode, ImmutableList.of(plugin));
+    clientApi.waitForJob(jobInfo.locator().getId());
+
+    assertThat(jobInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+    assertThat(plugin.receivedEvents)
+        .comparingElementsUsing(isInstanceOf())
+        .containsExactly(
+            com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent.class,
+            com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent.class,
+            com.google.wireless.qa.mobileharness.shared.controller.event.TestStartedEvent.class,
+            com.google.devtools.mobileharness.api.testrunner.event.test.TestStartedEvent.class,
+            com.google.devtools.mobileharness.api.testrunner.event.test.TestEndingEvent.class,
+            com.google.wireless.qa.mobileharness.shared.controller.event.TestEndingEvent.class,
+            com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent.class,
+            com.google.devtools.mobileharness.api.testrunner.event.test.TestEndedEvent.class)
+        .inOrder();
+    assertThat(plugin.receivedEvents)
+        .comparingElementsUsing(isInstanceOf())
+        .containsExactly(
+            com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent.class,
+            LocalTestStartingEvent.class,
+            LocalTestStartedEvent.class,
+            com.google.devtools.mobileharness.api.testrunner.event.test.TestStartedEvent.class,
+            com.google.devtools.mobileharness.api.testrunner.event.test.LocalTestEndingEvent.class,
+            com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestEndingEvent.class,
+            com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestEndedEvent.class,
+            com.google.devtools.mobileharness.api.testrunner.event.test.LocalTestEndedEvent.class)
+        .inOrder();
   }
 
   private static JobInfo createJobInfo(String jobName) {
@@ -152,7 +195,7 @@ public class LocalModeIntegrationTest {
     return jobInfo;
   }
 
-  private record TestPlugin(DeviceReserver deviceReserver, String allocationKey) {
+  private record TestPluginForDeviceReserver(DeviceReserver deviceReserver, String allocationKey) {
 
     @Subscribe
     public void onTestStarting(LocalTestStartingEvent event) throws SkipTestException {
@@ -171,6 +214,59 @@ public class LocalModeIntegrationTest {
         throw SkipTestException.create(
             "TestPlugin error", DesiredTestResult.FAIL, BasicErrorId.USER_PLUGIN_ERROR, e);
       }
+    }
+  }
+
+  private static class TestPluginForTestEvent {
+
+    private final List<Object> receivedEvents = new ArrayList<>();
+
+    @Subscribe
+    public void onTestStarting(
+        com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent event) {
+      receivedEvents.add(event);
+    }
+
+    @Subscribe
+    public void onTestStartingOld(
+        com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent event) {
+      receivedEvents.add(event);
+    }
+
+    @Subscribe
+    public void onTestStartedOld(
+        com.google.wireless.qa.mobileharness.shared.controller.event.TestStartedEvent event) {
+      receivedEvents.add(event);
+    }
+
+    @Subscribe
+    public void onTestStarted(
+        com.google.devtools.mobileharness.api.testrunner.event.test.TestStartedEvent event) {
+      receivedEvents.add(event);
+    }
+
+    @Subscribe
+    public void onTestEnding(
+        com.google.devtools.mobileharness.api.testrunner.event.test.TestEndingEvent event) {
+      receivedEvents.add(event);
+    }
+
+    @Subscribe
+    public void onTestEndingOld(
+        com.google.wireless.qa.mobileharness.shared.controller.event.TestEndingEvent event) {
+      receivedEvents.add(event);
+    }
+
+    @Subscribe
+    public void onTestEndedOld(
+        com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent event) {
+      receivedEvents.add(event);
+    }
+
+    @Subscribe
+    public void onTestEnded(
+        com.google.devtools.mobileharness.api.testrunner.event.test.TestEndedEvent event) {
+      receivedEvents.add(event);
     }
   }
 }

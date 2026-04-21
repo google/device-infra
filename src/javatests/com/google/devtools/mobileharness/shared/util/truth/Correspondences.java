@@ -38,6 +38,10 @@ public class Correspondences {
           },
           "contains all elements in");
 
+  private static final Correspondence<Object, Class<?>> IS_INSTANCE_OF =
+      Correspondence.from(
+          (actual, expected) -> requireNonNull(expected).isInstance(actual), "is instance of");
+
   private static final Correspondence<String, String> STARTS_WITH =
       Correspondence.from(
           (actual, expected) -> requireNonNull(actual).startsWith(requireNonNull(expected)),
@@ -49,6 +53,10 @@ public class Correspondences {
 
   public static Correspondence<String, List<String>> containsAll() {
     return CONTAINS_ALL;
+  }
+
+  public static Correspondence<Object, Class<?>> isInstanceOf() {
+    return IS_INSTANCE_OF;
   }
 
   public static Correspondence<String, String> startsWith() {
