@@ -18,14 +18,26 @@ package com.google.devtools.mobileharness.shared.util.comm.relay.service;
 
 import static io.grpc.ServerInterceptors.intercept;
 
+import com.google.common.annotations.VisibleForTesting;
 import io.grpc.BindableService;
 import io.grpc.ServerBuilder;
 import java.util.Collection;
+import javax.inject.Inject;
 
 /** Implementation of {@link ServerUtils}. */
 public final class ServerUtilsImpl implements ServerUtils {
 
-  private final ConnectionManager connectionManager = DirectConnectionManager.getInstance();
+  private final ConnectionManager connectionManager;
+
+  @Inject
+  ServerUtilsImpl() {
+    this(DirectConnectionManager.getInstance());
+  }
+
+  @VisibleForTesting
+  ServerUtilsImpl(ConnectionManager connectionManager) {
+    this.connectionManager = connectionManager;
+  }
 
   @Override
   public ServerBuilder<?> enableGrpcRelay(
