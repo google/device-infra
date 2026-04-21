@@ -936,26 +936,28 @@ final class NewMultiCommandRequestHandler {
         resultProcessingException = e; // Store the exception
       }
 
-      // Determine final state.
-      // The error determination logic is as follows:
-      // 1. If command has module count > 0, then the command is considered completed and set state
-      // to COMPLETED, otherwise set state to ERROR.
-      // 2. If command has no modules, check if any tests or jobs failed, which mean the test didn't
-      // trigger successfully. If so, set state to ERROR.
-      // 3. If command has no modules and no test failures, check if there is a Tradefed invocation
-      // error. If so, set state to ERROR.
-      // 4. If command has no modules, no test failures, and no Tradefed invocation error:
-      //    a. If the command line indicates it's a NO-OP command, set state to COMPLETED.
-      //    b. Otherwise, set state to ERROR with RESULT_PROCESSING_ERROR reason.
+      // CommandState Resolution Precedence:
+      // 1. Fatal Infra Error:   Forces ERROR (e.g. TargetSetupError overrides partial module
+      // success)
+      // 2. Modules present:     Forces COMPLETED (Valid results)
+      // 3. Test/Job crashed:    Forces ERROR (Internal driver halt detected)
+      // 4. General TF error:    Forces ERROR (Non-catastrophic crash string)
+      // 5. Default Fallbacks:   NO-OP command -> COMPLETED, else -> ERROR
       if (commandDetailBuilder.getState() == CommandState.UNKNOWN_STATE
           || commandDetailBuilder.getState() == CommandState.RUNNING) {
-        if (commandDetailBuilder.getTotalModuleCount() > 0) {
+        Optional<String> tradefedInvocationErrorMessage =
+            getTradefedInvocationErrorMessage(jobs, logDir);
+        if (tradefedInvocationErrorMessage.isPresent()
+            && isFatalTradefedError(tradefedInvocationErrorMessage.get())) {
+          setCommandError(
+              commandDetailBuilder,
+              ErrorReason.TRADEFED_INVOCATION_ERROR,
+              tradefedInvocationErrorMessage.get());
+        } else if (commandDetailBuilder.getTotalModuleCount() > 0) {
           commandDetailBuilder.setState(CommandState.COMPLETED);
         } else {
           Optional<String> failedTestErrorMessage = getFailedTestErrorMessage(jobs);
           Optional<String> failedJobErrorMessage = getFailedJobErrorMessage(jobs);
-          Optional<String> tradefedInvocationErrorMessage =
-              getTradefedInvocationErrorMessage(jobs, logDir);
           if (failedTestErrorMessage.isPresent()) {
             setCommandError(
                 commandDetailBuilder, ErrorReason.OMNILAB_ERROR, failedTestErrorMessage.get());
@@ -1369,6 +1371,15 @@ final class NewMultiCommandRequestHandler {
       return Optional.of(String.join("\n", errorMessages));
     }
     return Optional.empty();
+  }
+
+  /**
+   * Returns true if the Tradefed error message indicates a fatal infrastructure breakdown (e.g.
+   * TargetSetupError during GSI device Wi-Fi configuration or hardware provisioning) that should
+   * not be ignored and must be surfaced directly to the user. The list of fatal errors will grow.
+   */
+  private static boolean isFatalTradefedError(String errorMessage) {
+    return errorMessage != null && errorMessage.contains("TargetSetupError");
   }
 
   private ErrorReason getErrorReason(MobileHarnessException e) {

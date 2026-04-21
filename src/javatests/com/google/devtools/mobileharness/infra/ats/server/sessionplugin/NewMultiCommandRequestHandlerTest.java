@@ -1935,6 +1935,60 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
+  public void handleResultProcessing_catastrophicError_overrideModuleCount() throws Exception {
+    setUpPassingJobAndTestResults();
+    ReportProto.Result result =
+        ReportProto.Result.newBuilder()
+            .setSummary(
+                ReportProto.Summary.newBuilder()
+                    .setPassed(1)
+                    .setFailed(0)
+                    .setModulesTotal(1)
+                    .setModulesDone(1)
+                    .build())
+            .build();
+    mockProcessResult(result);
+
+    String tradefedInvocationErrorMessage =
+        "com.android.tradefed.targetprep.TargetSetupError: Failed to connect";
+    when(xtsTradefedRuntimeInfoFileUtil.readInfo(any(), any()))
+        .thenReturn(
+            Optional.of(
+                new XtsTradefedRuntimeInfoFileDetail(
+                    new XtsTradefedRuntimeInfo(
+                        ImmutableList.of(
+                            new TradefedInvocation(
+                                /* isRunning= */ false,
+                                ImmutableList.of(DEVICE_ID_1, DEVICE_ID_2),
+                                "failed",
+                                tradefedInvocationErrorMessage)),
+                        /* timestamp= */ Instant.now()),
+                    /* lastModifiedTime= */ Instant.now())));
+
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+
+    RequestDetail.Builder requestDetail =
+        RequestDetail.newBuilder()
+            .setOriginalRequest(request)
+            .putAllCommandDetails(createJobsResult.commandDetails());
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+
+    HandleResultProcessingResult handleResultProcessingResult =
+        newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+
+    assertThat(handleResultProcessingResult.commandDetails()).hasSize(1);
+    CommandDetail commandDetail =
+        handleResultProcessingResult.commandDetails().values().iterator().next();
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
+    assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.TRADEFED_INVOCATION_ERROR);
+    assertThat(commandDetail.getErrorMessage()).contains("TargetSetupError");
+  }
+
+  @Test
   public void handleResultProcessing_generatesManifestFile() throws Exception {
     setUpPassingJobAndTestResults();
     ReportProto.Result result =
