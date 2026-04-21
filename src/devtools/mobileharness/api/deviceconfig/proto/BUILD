@@ -37,6 +37,12 @@ proto_library(
     ],
 )
 
+py_proto_library(
+    name = "basic_py_pb2",
+    api_version = 2,
+    deps = [":basic_proto"],
+)
+
 java_proto_library(
     name = "basic_java_proto",
     deps = [":basic_proto"],
