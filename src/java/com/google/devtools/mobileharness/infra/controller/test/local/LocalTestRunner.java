@@ -329,7 +329,10 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
             }
           };
       return postTestEvent(
-          /* eventType= */ "driver event", /* afterDriverExecution= */ false, event);
+          /* eventType= */ "driver event",
+          /* afterDriverExecution= */ false,
+          /* isTestEnded= */ false,
+          event);
     }
 
     /** Returns whether to skip running the test */
@@ -381,7 +384,11 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
               return allocation;
             }
           };
-      postTestEvent(/* eventType= */ "driver event", /* afterDriverExecution= */ true, event);
+      postTestEvent(
+          /* eventType= */ "driver event",
+          /* afterDriverExecution= */ true,
+          /* isTestEnded= */ false,
+          event);
     }
   }
 
@@ -481,7 +488,10 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
             }
           };
       return postTestEvent(
-          /* eventType= */ "decorator event", /* afterDriverExecution= */ false, event);
+          /* eventType= */ "decorator event",
+          /* afterDriverExecution= */ false,
+          /* isTestEnded= */ false,
+          event);
     }
 
     /** Returns whether to skip running the test */
@@ -534,7 +544,11 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
               return allocation;
             }
           };
-      postTestEvent(/* eventType= */ "decorator event", /* afterDriverExecution= */ true, event);
+      postTestEvent(
+          /* eventType= */ "decorator event",
+          /* afterDriverExecution= */ true,
+          /* isTestEnded= */ false,
+          event);
     }
   }
 }

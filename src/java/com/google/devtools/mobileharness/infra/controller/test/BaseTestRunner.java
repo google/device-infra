@@ -607,6 +607,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
         postTestEvent(
             /* eventType= */ "test starting event",
             /* afterDriverExecution= */ false,
+            /* isTestEnded= */ false,
             createTestEvent(
                 com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent.class,
                 testInfo,
@@ -643,6 +644,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
         postTestEvent(
             /* eventType= */ "test started event",
             /* afterDriverExecution= */ false,
+            /* isTestEnded= */ false,
             createTestEvent(
                 TestStartedEvent.class,
                 testInfo,
@@ -718,6 +720,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
     postTestEvent(
         /* eventType= */ "test ending event",
         /* afterDriverExecution= */ true,
+        /* isTestEnded= */ false,
         createTestEvent(
             com.google.devtools.mobileharness.api.testrunner.event.test.TestEndingEvent.class,
             testInfo,
@@ -794,7 +797,10 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
       //    b. Releasing device will sync to master to update the device as IDLE. And when
       //       lab server MasterSyncerForJob in GLOBAL_INTERNAL bus talks to master to close test,
       //       master will throw out RpcException. See http://b/13087889
-      postTestEndedEvent(
+      postTestEvent(
+          /* eventType= */ "test ended event",
+          /* afterDriverExecution= */ true,
+          /* isTestEnded= */ true,
           createTestEvent(
               TestEndedEvent.class,
               testInfo,
@@ -932,50 +938,27 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
   }
 
   /**
-   * Posts test ended events in CLASS_INTERNAL, GLOBAL_INTERNAL, INTERNAL_PLUGIN, API_PLUGIN and
-   * JAR_PLUGIN event buses in the given order.
-   *
-   * @return whether plugins want to skip running the test
-   */
-  @CanIgnoreReturnValue
-  private boolean postTestEndedEvent(Object testEvents) {
-    ImmutableList<Object> events = ImmutableList.of(testEvents);
-    try {
-      scopedEventBus.post(events, EventScope.JAR_PLUGIN, EventScope.API_PLUGIN);
-      getTestInfo().timing().end();
-      scopedEventBus.post(
-          events,
-          EventScope.INTERNAL_PLUGIN,
-          EventScope.GLOBAL_INTERNAL,
-          EventScope.CLASS_INTERNAL);
-      if (checkPluginExceptions(true)) {
-        return true;
-      }
-    } catch (RuntimeException | Error e) {
-      logTestEventError(e, "test ended event");
-    }
-    return false;
-  }
-
-  /**
    * Posts test events in CLASS_INTERNAL, GLOBAL_INTERNAL, INTERNAL_PLUGIN, API_PLUGIN and
    * JAR_PLUGIN event buses in the given order.
    *
    * @param afterDriverExecution whether the driver has run. If so, it means that the event posting
    *     scope should be reversed.
+   * @param isTestEnded whether is test ended event
    * @return whether plugins want to skip running the test
    */
   @CanIgnoreReturnValue
   protected final boolean postTestEvent(
-      String eventType, boolean afterDriverExecution, Object... testEvents) {
+      String eventType, boolean afterDriverExecution, boolean isTestEnded, Object... testEvents) {
     try (InfoLogImportanceScope ignored = new InfoLogImportanceScope()) {
       try {
         List<Object> events = Arrays.asList(testEvents);
         if (afterDriverExecution) {
+          scopedEventBus.post(events, EventScope.JAR_PLUGIN, EventScope.API_PLUGIN);
+          if (isTestEnded) {
+            getTestInfo().timing().end();
+          }
           scopedEventBus.post(
               events,
-              EventScope.JAR_PLUGIN,
-              EventScope.API_PLUGIN,
               EventScope.INTERNAL_PLUGIN,
               EventScope.GLOBAL_INTERNAL,
               EventScope.CLASS_INTERNAL);
