@@ -46,6 +46,10 @@ import com.google.devtools.mobileharness.infra.controller.plugin.PluginCreator;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner.EventScope;
 import com.google.devtools.mobileharness.infra.controller.test.PluginLoadingResult.PluginItem;
+import com.google.devtools.mobileharness.infra.controller.test.event.LocalTestEndedEventImpl;
+import com.google.devtools.mobileharness.infra.controller.test.event.LocalTestEndingEventImpl;
+import com.google.devtools.mobileharness.infra.controller.test.event.TestStartedEventImpl;
+import com.google.devtools.mobileharness.infra.controller.test.event.TestStartingEventImpl;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.TestFlowConverter;
 import com.google.devtools.mobileharness.platform.testbed.adhoc.controller.AdhocTestbedDriverFactory;
 import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil;
@@ -316,72 +320,46 @@ public class LocalTestFlow {
       @Nullable Throwable testError) {
     ImmutableMap<String, Device> devicesById =
         devices.stream().collect(toImmutableMap(Device::getDeviceId, identity()));
-    if (eventType == TestStartingEvent.class || eventType == LocalTestStartingEvent.class) {
+    if (eventType == TestStartingEvent.class) {
       return new LocalTestStartingEvent(
           testInfo, devicesById, allocation, checkNotNull(deviceInfos).get(0));
     } else if (eventType
         == com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent.class) {
-      DeviceFeature primaryDeviceFeature = checkNotNull(deviceFeatures).get(0);
-      ImmutableList<LabQueryProto.DeviceInfo> finalNewDeviceInfos =
-          ImmutableList.copyOf(checkNotNull(newDeviceInfos));
-      return new com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent() {
-        @Override
-        public DeviceFeature getDeviceFeature() {
-          return primaryDeviceFeature;
-        }
-
-        @Override
-        public ImmutableList<LabQueryProto.DeviceInfo> getAllDeviceInfos() {
-          return finalNewDeviceInfos;
-        }
-
-        @Override
-        public TestInfo getTest() {
-          return testInfo;
-        }
-
-        @Override
-        public com.google.devtools.mobileharness.api.model.allocation.Allocation getAllocation() {
-          return allocation.toNewAllocation();
-        }
-      };
-    } else if (eventType == TestStartedEvent.class || eventType == LocalTestStartedEvent.class) {
+      return new TestStartingEventImpl(
+          checkNotNull(deviceFeatures).get(0),
+          ImmutableList.copyOf(checkNotNull(newDeviceInfos)),
+          testInfo,
+          allocation.toNewAllocation());
+    } else if (eventType == TestStartedEvent.class) {
       return new LocalTestStartedEvent(
           testInfo, devicesById, allocation, checkNotNull(deviceInfos).get(0));
     } else if (eventType
         == com.google.devtools.mobileharness.api.testrunner.event.test.TestStartedEvent.class) {
-      DeviceFeature primaryDeviceFeature = checkNotNull(deviceFeatures).get(0);
-      ImmutableList<LabQueryProto.DeviceInfo> finalNewDeviceInfos =
-          ImmutableList.copyOf(checkNotNull(newDeviceInfos));
-      return new com.google.devtools.mobileharness.api.testrunner.event.test.TestStartedEvent() {
-        @Override
-        public DeviceFeature getDeviceFeature() {
-          return primaryDeviceFeature;
-        }
-
-        @Override
-        public ImmutableList<LabQueryProto.DeviceInfo> getAllDeviceInfos() {
-          return finalNewDeviceInfos;
-        }
-
-        @Override
-        public TestInfo getTest() {
-          return testInfo;
-        }
-
-        @Override
-        public com.google.devtools.mobileharness.api.model.allocation.Allocation getAllocation() {
-          return allocation.toNewAllocation();
-        }
-      };
-    } else if (eventType == TestEndingEvent.class || eventType == LocalTestEndingEvent.class) {
+      return new TestStartedEventImpl(
+          checkNotNull(deviceFeatures).get(0),
+          ImmutableList.copyOf(checkNotNull(newDeviceInfos)),
+          testInfo,
+          allocation.toNewAllocation());
+    } else if (eventType == TestEndingEvent.class) {
       return new LocalTestEndingEvent(
           testInfo,
           devicesById,
           allocation,
           deviceInfos == null ? null : deviceInfos.get(0),
           testError);
-    } else if (eventType == TestEndedEvent.class || eventType == LocalTestEndedEvent.class) {
+    } else if (eventType
+        == com.google.devtools.mobileharness.api.testrunner.event.test.TestEndingEvent.class) {
+      DeviceFeature primaryDeviceFeature =
+          deviceFeatures == null ? devices.get(0).toFeature() : deviceFeatures.get(0);
+      ImmutableList<LabQueryProto.DeviceInfo> finalNewDeviceInfos =
+          getFinalNewDeviceInfos(devices, allocation, newDeviceInfos);
+      return new LocalTestEndingEventImpl(
+          testInfo,
+          allocation.toNewAllocation(),
+          primaryDeviceFeature,
+          finalNewDeviceInfos,
+          Optional.ofNullable(testError));
+    } else if (eventType == TestEndedEvent.class) {
       return new LocalTestEndedEvent(
           testInfo,
           devicesById,
@@ -390,57 +368,39 @@ public class LocalTestFlow {
           /* shouldRebootDevice= */ false,
           testError);
     } else if (eventType
-            == com.google.devtools.mobileharness.api.testrunner.event.test.TestEndingEvent.class
-        || eventType
-            == com.google.devtools.mobileharness.api.testrunner.event.test.LocalTestEndingEvent
-                .class) {
+        == com.google.devtools.mobileharness.api.testrunner.event.test.TestEndedEvent.class) {
       DeviceFeature primaryDeviceFeature =
           deviceFeatures == null ? devices.get(0).toFeature() : deviceFeatures.get(0);
       ImmutableList<LabQueryProto.DeviceInfo> finalNewDeviceInfos =
-          newDeviceInfos == null
-              ? Streams.zip(
-                      devices.stream(),
-                      allocation.getAllDeviceLocators().stream(),
-                      (device, deviceLocator) ->
-                          LabQueryProto.DeviceInfo.newBuilder()
-                              .setDeviceLocator(deviceLocator.toNewDeviceLocator().toProto())
-                              .setDeviceStatus(DeviceStatus.BUSY)
-                              .setDeviceFeature(device.toFeature())
-                              .build())
-                  .collect(toImmutableList())
-              : ImmutableList.copyOf(newDeviceInfos);
-      return new com.google.devtools.mobileharness.api.testrunner.event.test
-          .LocalTestEndingEvent() {
-
-        @Override
-        public TestInfo getTest() {
-          return testInfo;
-        }
-
-        @Override
-        public com.google.devtools.mobileharness.api.model.allocation.Allocation getAllocation() {
-          return allocation.toNewAllocation();
-        }
-
-        @Override
-        public DeviceFeature getDeviceFeature() {
-          return primaryDeviceFeature;
-        }
-
-        @Override
-        public ImmutableList<LabQueryProto.DeviceInfo> getAllDeviceInfos() {
-          return finalNewDeviceInfos;
-        }
-
-        @Override
-        public Optional<Throwable> getExecutionError() {
-          return Optional.ofNullable(testError);
-        }
-      };
+          getFinalNewDeviceInfos(devices, allocation, newDeviceInfos);
+      return new LocalTestEndedEventImpl(
+          testInfo,
+          allocation.toNewAllocation(),
+          primaryDeviceFeature,
+          finalNewDeviceInfos,
+          Optional.ofNullable(testError));
     } else {
       throw new IllegalArgumentException(
           "Failed to create test event. Type not supported: " + eventType.getName());
     }
+  }
+
+  private ImmutableList<LabQueryProto.DeviceInfo> getFinalNewDeviceInfos(
+      List<Device> devices,
+      Allocation allocation,
+      @Nullable List<LabQueryProto.DeviceInfo> newDeviceInfos) {
+    return newDeviceInfos == null
+        ? Streams.zip(
+                devices.stream(),
+                allocation.getAllDeviceLocators().stream(),
+                (device, deviceLocator) ->
+                    LabQueryProto.DeviceInfo.newBuilder()
+                        .setDeviceLocator(deviceLocator.toNewDeviceLocator().toProto())
+                        .setDeviceStatus(DeviceStatus.BUSY)
+                        .setDeviceFeature(device.toFeature())
+                        .build())
+            .collect(toImmutableList())
+        : ImmutableList.copyOf(newDeviceInfos);
   }
 
   private void runDevicePreRunTest(TestInfo testInfo, List<Device> devices)
@@ -565,7 +525,7 @@ public class LocalTestFlow {
       Driver driver =
           testFlow.utpDriver().isPresent()
               // Fixed the name of UtpDriver to avoid the future class name change
-              // (e.g. UtpDriver -> UtpDriverImpl) affecting users who subscribes driver events.
+              // (e.g. UtpDriver -> UtpDriverImpl) affecting users who subscribe driver events.
               ? driverWrapper.apply(testFlow.utpDriver().get(), UTP_DRIVER_NAME)
               : driverFactory.createDriver(
                   devices.get(0),

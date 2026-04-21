@@ -15,6 +15,8 @@
 
 load("@rules_java//java:defs.bzl", "java_library")
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "direct_test_runner",
     srcs = [
@@ -133,11 +135,11 @@ java_library(
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
-        "//src/java/com/google/devtools/mobileharness/api/model/allocation",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test:client_test_events",
         "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:message_sender",
         "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:message_subscriber_backend",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/event:event_impl",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/exception",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_result",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:exception_handler",
@@ -159,7 +161,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/log:info_log_importance_scope",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/allocation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/out",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/util:result_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:device_info",

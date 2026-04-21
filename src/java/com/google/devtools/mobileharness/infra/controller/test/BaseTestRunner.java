@@ -42,6 +42,10 @@ import com.google.devtools.mobileharness.infra.controller.messaging.MessageSubsc
 import com.google.devtools.mobileharness.infra.controller.messaging.MessageSubscriberBackend.MessageSubscribers;
 import com.google.devtools.mobileharness.infra.controller.test.PluginLoadingResult.PluginItem;
 import com.google.devtools.mobileharness.infra.controller.test.TestContext.WithTestContext;
+import com.google.devtools.mobileharness.infra.controller.test.event.TestEndedEventImpl;
+import com.google.devtools.mobileharness.infra.controller.test.event.TestEndingEventImpl;
+import com.google.devtools.mobileharness.infra.controller.test.event.TestStartedEventImpl;
+import com.google.devtools.mobileharness.infra.controller.test.event.TestStartingEventImpl;
 import com.google.devtools.mobileharness.infra.controller.test.exception.TestRunnerLauncherConnectedException;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionResult;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
@@ -808,6 +812,14 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
               deviceInfos,
               newDeviceInfos,
               deviceFeatures,
+              testException),
+          createTestEvent(
+              com.google.devtools.mobileharness.api.testrunner.event.test.TestEndedEvent.class,
+              testInfo,
+              allocation,
+              deviceInfos,
+              newDeviceInfos,
+              deviceFeatures,
               testException));
       logger.atInfo().log("Stopped");
     }
@@ -850,61 +862,27 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
       return new TestStartingEvent(testInfo, allocation, checkNotNull(deviceInfos).get(0));
     } else if (eventType
         == com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent.class) {
-      DeviceFeature primaryDeviceFeature = checkNotNull(deviceFeatures).get(0);
-      ImmutableList<LabQueryProto.DeviceInfo> finalNewDeviceInfos =
-          ImmutableList.copyOf(checkNotNull(newDeviceInfos));
-      return new com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent() {
-        @Override
-        public DeviceFeature getDeviceFeature() {
-          return primaryDeviceFeature;
-        }
-
-        @Override
-        public ImmutableList<LabQueryProto.DeviceInfo> getAllDeviceInfos() {
-          return finalNewDeviceInfos;
-        }
-
-        @Override
-        public TestInfo getTest() {
-          return testInfo;
-        }
-
-        @Override
-        public com.google.devtools.mobileharness.api.model.allocation.Allocation getAllocation() {
-          return allocation.toNewAllocation();
-        }
-      };
+      return new TestStartingEventImpl(
+          checkNotNull(deviceFeatures).get(0),
+          ImmutableList.copyOf(checkNotNull(newDeviceInfos)),
+          testInfo,
+          allocation.toNewAllocation());
     } else if (eventType == TestStartedEvent.class) {
       return new TestStartedEvent(testInfo, allocation, checkNotNull(deviceInfos).get(0));
     } else if (eventType
         == com.google.devtools.mobileharness.api.testrunner.event.test.TestStartedEvent.class) {
-      DeviceFeature primaryDeviceFeature = checkNotNull(deviceFeatures).get(0);
-      ImmutableList<LabQueryProto.DeviceInfo> finalNewDeviceInfos =
-          ImmutableList.copyOf(checkNotNull(newDeviceInfos));
-      return new com.google.devtools.mobileharness.api.testrunner.event.test.TestStartedEvent() {
-        @Override
-        public DeviceFeature getDeviceFeature() {
-          return primaryDeviceFeature;
-        }
-
-        @Override
-        public ImmutableList<LabQueryProto.DeviceInfo> getAllDeviceInfos() {
-          return finalNewDeviceInfos;
-        }
-
-        @Override
-        public TestInfo getTest() {
-          return testInfo;
-        }
-
-        @Override
-        public com.google.devtools.mobileharness.api.model.allocation.Allocation getAllocation() {
-          return allocation.toNewAllocation();
-        }
-      };
+      return new TestStartedEventImpl(
+          checkNotNull(deviceFeatures).get(0),
+          ImmutableList.copyOf(checkNotNull(newDeviceInfos)),
+          testInfo,
+          allocation.toNewAllocation());
     } else if (eventType == TestEndingEvent.class) {
       return new TestEndingEvent(
           testInfo, allocation, deviceInfos == null ? null : deviceInfos.get(0), testError);
+    } else if (eventType
+        == com.google.devtools.mobileharness.api.testrunner.event.test.TestEndingEvent.class) {
+      return new TestEndingEventImpl(
+          testInfo, allocation.toNewAllocation(), Optional.ofNullable(testError));
     } else if (eventType == TestEndedEvent.class) {
       return new TestEndedEvent(
           testInfo,
@@ -913,24 +891,9 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
           /* shouldRebootDevice= */ false,
           testError);
     } else if (eventType
-        == com.google.devtools.mobileharness.api.testrunner.event.test.TestEndingEvent.class) {
-      return new com.google.devtools.mobileharness.api.testrunner.event.test.TestEndingEvent() {
-
-        @Override
-        public TestInfo getTest() {
-          return testInfo;
-        }
-
-        @Override
-        public com.google.devtools.mobileharness.api.model.allocation.Allocation getAllocation() {
-          return allocation.toNewAllocation();
-        }
-
-        @Override
-        public Optional<Throwable> getExecutionError() {
-          return Optional.ofNullable(testError);
-        }
-      };
+        == com.google.devtools.mobileharness.api.testrunner.event.test.TestEndedEvent.class) {
+      return new TestEndedEventImpl(
+          testInfo, allocation.toNewAllocation(), Optional.ofNullable(testError));
     } else {
       throw new IllegalArgumentException(
           "Failed to create test event. Type not supported: " + eventType.getName());
@@ -989,7 +952,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
    *     skipping and give warnings.
    * @return if the test should be skipped
    */
-  private final boolean checkPluginExceptions(boolean afterDriverExecution) {
+  private boolean checkPluginExceptions(boolean afterDriverExecution) {
     List<SubscriberExceptionContext> internalPluginExceptions =
         internalPluginExceptionHandler.pollExceptions();
     List<SubscriberExceptionContext> apiPluginExceptions =

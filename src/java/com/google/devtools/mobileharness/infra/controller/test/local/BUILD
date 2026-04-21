@@ -15,6 +15,8 @@
 
 load("@rules_java//java:defs.bzl", "java_library")
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "local_test_runner",
     srcs = [
@@ -90,6 +92,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/plugin:lab_common_setup_module",
         "//src/java/com/google/devtools/mobileharness/infra/controller/plugin:plugin_creator",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/event:event_impl",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local/utp/controller:test_flow_converter",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/adhoc/controller:adhoc_testbed_driver",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:concurrency_util",

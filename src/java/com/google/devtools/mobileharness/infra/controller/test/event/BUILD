@@ -15,11 +15,11 @@
 
 load("@rules_java//java:defs.bzl", "java_library")
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "event",
-    srcs = [
-        "TestExecutionEndedEvent.java",
-    ],
+    srcs = ["TestExecutionEndedEvent.java"],
     visibility = [
         "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
@@ -30,5 +30,29 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
+    ],
+)
+
+java_library(
+    name = "event_impl",
+    srcs = [
+        "LocalTestEndedEventImpl.java",
+        "LocalTestEndingEventImpl.java",
+        "TestEndedEventImpl.java",
+        "TestEndingEventImpl.java",
+        "TestStartedEventImpl.java",
+        "TestStartingEventImpl.java",
+    ],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/allocation",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
     ],
 )
