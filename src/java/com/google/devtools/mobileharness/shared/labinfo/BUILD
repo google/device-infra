@@ -24,6 +24,7 @@ java_library(
         "//:omnilab_fusion",
         "//java/com/google/devtools/mobileharness/infra/master/central:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/monitoring:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/monitoring:__pkg__",
@@ -40,6 +41,7 @@ java_library(
     srcs = ["LabInfoService.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/shared/labinfo:__pkg__",
     ],
@@ -64,6 +66,7 @@ java_library(
     name = "local_lab_info_provider",
     srcs = ["LocalLabInfoProvider.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/shared/labinfo:__pkg__",
     ],
@@ -75,6 +78,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_status_info",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",

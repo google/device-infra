@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
@@ -35,6 +36,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.infra.controller.device.DeviceStatusInfo;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager.DeviceKey;
+import com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import java.util.Map;
 import javax.annotation.Nullable;
@@ -43,12 +45,12 @@ import javax.inject.Inject;
 /** {@link LabInfoProvider} which provides {@link LabView} from {@link LocalDeviceManager}. */
 public class LocalLabInfoProvider implements LabInfoProvider {
 
-  private final LocalDeviceManager localDeviceManager;
+  private final ListenableFuture<LocalDeviceManager> localDeviceManager;
   @Nullable private final DeviceTempRequiredDimensionManager tempRequiredDimensionManager;
 
   @Inject
   LocalLabInfoProvider(
-      LocalDeviceManager localDeviceManager,
+      ListenableFuture<LocalDeviceManager> localDeviceManager,
       @Nullable DeviceTempRequiredDimensionManager tempRequiredDimensionManager) {
     this.localDeviceManager = localDeviceManager;
     this.tempRequiredDimensionManager = tempRequiredDimensionManager;
@@ -59,7 +61,7 @@ public class LocalLabInfoProvider implements LabInfoProvider {
     // Gets device information from device manager.
     Map<Device, DeviceStatusInfo> devices;
     try {
-      devices = localDeviceManager.getAllDeviceStatus(false);
+      devices = MoreFutures.getUnchecked(localDeviceManager).getAllDeviceStatus(false);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       devices = ImmutableMap.of();

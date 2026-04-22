@@ -21,6 +21,8 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
@@ -53,9 +55,9 @@ public class LocalLabInfoProviderTest {
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
-  @Mock @Bind private LocalDeviceManager localDeviceManager;
+  @Mock private LocalDeviceManager localDeviceManager;
+  @Bind private ListenableFuture<LocalDeviceManager> localDeviceManagerFuture;
   @Mock @Bind private DeviceTempRequiredDimensionManager tempRequiredDimensionManager;
-
   @Mock private Device device;
 
   @SuppressWarnings("DoNotMockAutoValue")
@@ -66,6 +68,7 @@ public class LocalLabInfoProviderTest {
 
   @Before
   public void setUp() throws Exception {
+    localDeviceManagerFuture = Futures.immediateFuture(localDeviceManager);
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
   }
 

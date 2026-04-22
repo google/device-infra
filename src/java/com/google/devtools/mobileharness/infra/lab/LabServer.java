@@ -26,6 +26,7 @@ import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
@@ -103,6 +104,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import com.google.inject.Provides;
 import com.google.inject.util.Providers;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
@@ -348,11 +350,16 @@ public class LabServer {
       localGrpcServices.add(
           Guice.createInjector(
                   new AbstractModule() {
+
                     @Override
                     protected void configure() {
-                      bind(LocalDeviceManager.class).toInstance(deviceManager);
                       bind(DeviceTempRequiredDimensionManager.class).toProvider(Providers.of(null));
                       bind(LabInfoProvider.class).to(LocalLabInfoProvider.class);
+                    }
+
+                    @Provides
+                    ListenableFuture<LocalDeviceManager> provideLocalDeviceManager() {
+                      return Futures.immediateFuture(deviceManager);
                     }
                   })
               .getInstance(com.google.devtools.mobileharness.shared.labinfo.LabInfoService.class));
