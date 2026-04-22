@@ -72,6 +72,7 @@ public abstract class DetectionResult {
     STATIC_TESTBED,
     STARFISH,
     TTB,
+    TVOS,
     VIDEO,
     WINDOWS,
     ZEBU,
