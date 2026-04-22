@@ -42,6 +42,7 @@ import {SCENARIO_HOST_DISCOVERY_HIDDEN} from './hosts/08_device_discovery_hidden
 import {SCENARIO_HOST_DEVICE_CONFIG_HIDDEN} from './hosts/09_device_config_hidden';
 import {SCENARIO_HOST_DEVICE_CONFIG_WIFI_DIMENSIONS_ONLY} from './hosts/10_device_config_wifi_dimensions_only';
 import {SCENARIO_HOST_COMING_SOON} from './hosts/11_coming_soon';
+import {SCENARIO_HOST_NO_VALID_VERSIONS} from './hosts/12_no_valid_versions';
 import {SCENARIO_HOST_X_PROD} from './hosts/host_x_prod';
 import {SCENARIO_HOST_Z_PROD} from './hosts/host_z_prod';
 import {
@@ -117,6 +118,7 @@ export const MOCK_HOST_SCENARIOS: MockHostScenario[] = [
   SCENARIO_HOST_X_PROD,
   SCENARIO_HOST_Z_PROD,
   SCENARIO_HOST_COMING_SOON,
+  SCENARIO_HOST_NO_VALID_VERSIONS,
   SCENARIO_RC_ALL_VALID,
   SCENARIO_RC_MIXED_ALL,
   SCENARIO_RC_PROXY_MISMATCH,

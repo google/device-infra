@@ -1,16 +1,18 @@
 import {InjectionToken} from '@angular/core';
 import {Observable} from 'rxjs';
+
 import {
   DecommissionHostResponse,
+  GetHostDebugInfoResponse,
+  GetPopularFlagsResponse,
+  HostHeaderInfo,
+  PreflightLabServerReleaseResponse,
   ReleaseLabServerRequest,
   ReleaseLabServerResponse,
-  GetHostDebugInfoResponse,
-  HostHeaderInfo,
-  HostReleaseConfig,
-  PopularFlag,
   RestartLabServerResponse,
   StartLabServerResponse,
   StopLabServerResponse,
+  UpdatePassThroughFlagsResponse,
 } from '../../models/host_action';
 import {
   CheckRemoteControlEligibilityResponse,
@@ -57,7 +59,9 @@ export abstract class HostService {
   /**
    * Retrieves popular pass-through flags for a host.
    */
-  abstract getPopularFlags(hostName: string): Observable<PopularFlag[]>;
+  abstract getPopularFlags(
+    hostName: string,
+  ): Observable<GetPopularFlagsResponse>;
 
   /**
    * Updates the pass through flags for a specific host.
@@ -65,12 +69,14 @@ export abstract class HostService {
   abstract updatePassThroughFlags(
     hostName: string,
     flags: string,
-  ): Observable<void>;
+  ): Observable<UpdatePassThroughFlagsResponse>;
 
   /**
    * Retrieves release configurations for a host.
    */
-  abstract getReleaseConfigs(hostName: string): Observable<HostReleaseConfig[]>;
+  abstract preflightLabServerRelease(
+    hostName: string,
+  ): Observable<PreflightLabServerReleaseResponse>;
 
   /**
    * Decommissions missing devices on a specific host.

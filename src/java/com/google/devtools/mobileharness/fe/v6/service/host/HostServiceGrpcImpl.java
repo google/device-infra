@@ -32,11 +32,11 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostHeaderI
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetPopularFlagsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetPopularFlagsResponse;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetReleaseConfigsRequest;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetReleaseConfigsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostServiceGrpc;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ReleaseLabServerRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ReleaseLabServerResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesRequest;
@@ -140,16 +140,16 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
   }
 
   @Override
-  public void getReleaseConfigs(
-      GetReleaseConfigsRequest request,
-      StreamObserver<GetReleaseConfigsResponse> responseObserver) {
+  public void preflightLabServerRelease(
+      PreflightLabServerReleaseRequest request,
+      StreamObserver<PreflightLabServerReleaseResponse> responseObserver) {
     GrpcServiceUtil.invokeAsync(
         request,
         responseObserver,
-        logic::getReleaseConfigs,
+        logic::preflightLabServerRelease,
         executor,
         HostServiceGrpc.getServiceDescriptor(),
-        HostServiceGrpc.getGetReleaseConfigsMethod());
+        HostServiceGrpc.getPreflightLabServerReleaseMethod());
   }
 
   @Override

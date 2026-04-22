@@ -8,14 +8,15 @@ import {APP_DATA, AppData} from '../../models/app_data';
 import {
   DecommissionHostResponse,
   GetHostDebugInfoResponse,
+  GetPopularFlagsResponse,
   HostHeaderInfo,
-  HostReleaseConfig,
-  PopularFlag,
+  PreflightLabServerReleaseResponse,
   ReleaseLabServerRequest,
   ReleaseLabServerResponse,
   RestartLabServerResponse,
   StartLabServerResponse,
   StopLabServerResponse,
+  UpdatePassThroughFlagsResponse,
 } from '../../models/host_action';
 import {
   CheckRemoteControlEligibilityResponse,
@@ -67,8 +68,10 @@ export class HttpHostService extends HostService {
     );
   }
 
-  override getPopularFlags(hostName: string): Observable<PopularFlag[]> {
-    return this.http.get<PopularFlag[]>(
+  override getPopularFlags(
+    hostName: string,
+  ): Observable<GetPopularFlagsResponse> {
+    return this.http.get<GetPopularFlagsResponse>(
       `${this.apiUrl}/${hostName}/popular-flags`,
     );
   }
@@ -76,8 +79,8 @@ export class HttpHostService extends HostService {
   override updatePassThroughFlags(
     hostName: string,
     flags: string,
-  ): Observable<void> {
-    return this.http.post<void>(
+  ): Observable<UpdatePassThroughFlagsResponse> {
+    return this.http.post<UpdatePassThroughFlagsResponse>(
       `${this.apiUrl}/${hostName}/updatePassThroughFlags`,
       {
         flags,
@@ -85,11 +88,11 @@ export class HttpHostService extends HostService {
     );
   }
 
-  override getReleaseConfigs(
+  override preflightLabServerRelease(
     hostName: string,
-  ): Observable<HostReleaseConfig[]> {
-    return this.http.get<HostReleaseConfig[]>(
-      `${this.apiUrl}/${hostName}/release-configs`,
+  ): Observable<PreflightLabServerReleaseResponse> {
+    return this.http.get<PreflightLabServerReleaseResponse>(
+      `${this.apiUrl}/${hostName}/preflightLabServerRelease`,
     );
   }
 
