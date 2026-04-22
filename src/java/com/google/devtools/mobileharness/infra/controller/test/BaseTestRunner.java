@@ -650,7 +650,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
             /* afterDriverExecution= */ false,
             /* isTestEnded= */ false,
             createTestEvent(
-                TestStartedEvent.class,
+                com.google.devtools.mobileharness.api.testrunner.event.test.TestStartedEvent.class,
                 testInfo,
                 allocation,
                 deviceInfos,
@@ -658,7 +658,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
                 deviceFeatures,
                 null),
             createTestEvent(
-                com.google.devtools.mobileharness.api.testrunner.event.test.TestStartedEvent.class,
+                TestStartedEvent.class,
                 testInfo,
                 allocation,
                 deviceInfos,
@@ -726,7 +726,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
         /* afterDriverExecution= */ true,
         /* isTestEnded= */ false,
         createTestEvent(
-            com.google.devtools.mobileharness.api.testrunner.event.test.TestEndingEvent.class,
+            TestEndingEvent.class,
             testInfo,
             allocation,
             deviceInfos,
@@ -734,7 +734,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
             deviceFeatures,
             testException),
         createTestEvent(
-            TestEndingEvent.class,
+            com.google.devtools.mobileharness.api.testrunner.event.test.TestEndingEvent.class,
             testInfo,
             allocation,
             deviceInfos,

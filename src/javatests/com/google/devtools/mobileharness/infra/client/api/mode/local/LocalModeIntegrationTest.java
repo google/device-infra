@@ -156,10 +156,10 @@ public class LocalModeIntegrationTest {
         .containsExactly(
             com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent.class,
             com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent.class,
-            com.google.wireless.qa.mobileharness.shared.controller.event.TestStartedEvent.class,
             com.google.devtools.mobileharness.api.testrunner.event.test.TestStartedEvent.class,
-            com.google.devtools.mobileharness.api.testrunner.event.test.TestEndingEvent.class,
+            com.google.wireless.qa.mobileharness.shared.controller.event.TestStartedEvent.class,
             com.google.wireless.qa.mobileharness.shared.controller.event.TestEndingEvent.class,
+            com.google.devtools.mobileharness.api.testrunner.event.test.TestEndingEvent.class,
             com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent.class,
             com.google.devtools.mobileharness.api.testrunner.event.test.TestEndedEvent.class)
         .inOrder();
@@ -168,10 +168,10 @@ public class LocalModeIntegrationTest {
         .containsExactly(
             com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent.class,
             LocalTestStartingEvent.class,
-            LocalTestStartedEvent.class,
             com.google.devtools.mobileharness.api.testrunner.event.test.TestStartedEvent.class,
-            com.google.devtools.mobileharness.api.testrunner.event.test.LocalTestEndingEvent.class,
+            LocalTestStartedEvent.class,
             com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestEndingEvent.class,
+            com.google.devtools.mobileharness.api.testrunner.event.test.LocalTestEndingEvent.class,
             com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestEndedEvent.class,
             com.google.devtools.mobileharness.api.testrunner.event.test.LocalTestEndedEvent.class)
         .inOrder();
