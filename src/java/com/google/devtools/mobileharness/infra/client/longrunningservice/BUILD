@@ -98,6 +98,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:exception_handler",
         "//src/java/com/google/devtools/mobileharness/infra/monitoring:cloud_pubsub_monitor_module",
         "//src/java/com/google/devtools/mobileharness/infra/monitoring:monitor_pipeline_launcher",
+        "//src/java/com/google/devtools/mobileharness/shared/labinfo:lab_info_service",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/relay/service:server_utils",
         "//src/java/com/google/devtools/mobileharness/shared/util/database:database_connections",
         "//src/java/com/google/devtools/mobileharness/shared/util/reflection:reflection_util",

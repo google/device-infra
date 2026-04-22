@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -50,6 +52,7 @@ import com.google.devtools.mobileharness.infra.controller.scheduler.simple.persi
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.infra.monitoring.CloudPubsubMonitorModule;
 import com.google.devtools.mobileharness.infra.monitoring.MonitorPipelineLauncher;
+import com.google.devtools.mobileharness.shared.labinfo.LabInfoService;
 import com.google.devtools.mobileharness.shared.util.comm.relay.service.NoOpServerUtils;
 import com.google.devtools.mobileharness.shared.util.comm.relay.service.ServerUtils;
 import com.google.devtools.mobileharness.shared.util.database.DatabaseConnections;
@@ -218,6 +221,7 @@ class OlcServerModule extends AbstractModule {
     } else {
       bind(ExecMode.class).to(loadExecMode(LOCAL_MODE_CLASS_NAME)).in(Scopes.SINGLETON);
       bind(DeviceReserver.class).toProvider(ExecModeDeviceReserverProvider.class);
+      bind(LabInfoService.class).toProvider(LocalModeLabInfoServiceProvider.class);
     }
   }
 
@@ -258,18 +262,36 @@ class OlcServerModule extends AbstractModule {
     }
   }
 
-  private static class ExecModeDeviceReserverProvider implements Provider<DeviceReserver> {
-
-    private final ExecMode execMode;
+  private record ExecModeDeviceReserverProvider(ExecMode execMode)
+      implements Provider<DeviceReserver> {
 
     @Inject
-    ExecModeDeviceReserverProvider(ExecMode execMode) {
-      this.execMode = execMode;
-    }
+    ExecModeDeviceReserverProvider {}
 
     @Override
     public DeviceReserver get() {
       return execMode.createDeviceReserver();
+    }
+  }
+
+  private record LocalModeLabInfoServiceProvider(ExecMode execMode)
+      implements Provider<LabInfoService> {
+
+    @Inject
+    LocalModeLabInfoServiceProvider {}
+
+    @Override
+    public LabInfoService get() {
+      checkState(execMode instanceof ServiceProvider);
+      ServiceProvider serviceProvider = (ServiceProvider) execMode;
+      return serviceProvider.provideServicesForNonWorker().stream()
+          .filter(LabInfoService.class::isInstance)
+          .map(LabInfoService.class::cast)
+          .findFirst()
+          .orElseThrow(
+              () ->
+                  new IllegalStateException(
+                      "LabInfoService not found in ExecMode.provideServicesForNonWorker()"));
     }
   }
 }
