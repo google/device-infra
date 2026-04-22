@@ -27,15 +27,15 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
-import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDecoratorPostForwardEvent;
-import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDecoratorPreForwardEvent;
-import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDriverEndedEvent;
-import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDriverStartingEvent;
 import com.google.devtools.mobileharness.infra.controller.test.BaseTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
 import com.google.devtools.mobileharness.infra.controller.test.PluginLoadingResult;
 import com.google.devtools.mobileharness.infra.controller.test.PluginLoadingResult.PluginItem;
 import com.google.devtools.mobileharness.infra.controller.test.TestRunnerLauncher;
+import com.google.devtools.mobileharness.infra.controller.test.event.LocalDecoratorPostForwardEventImpl;
+import com.google.devtools.mobileharness.infra.controller.test.event.LocalDecoratorPreForwardEventImpl;
+import com.google.devtools.mobileharness.infra.controller.test.event.LocalDriverEndedEventImpl;
+import com.google.devtools.mobileharness.infra.controller.test.event.LocalDriverStartingEventImpl;
 import com.google.devtools.mobileharness.infra.controller.test.exception.TestRunnerLauncherConnectedException;
 import com.google.devtools.mobileharness.infra.controller.test.local.annotation.DoNotSubscribeTestEvent;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.TestFlowConverter;
@@ -54,7 +54,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nullable;
 
@@ -227,8 +226,11 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
   }
 
   /**
-   * Driver wrapper for generating and posting {@linkplain LocalDriverStartingEvent driver starting
-   * event}s and {@linkplain LocalDriverEndedEvent driver ended event}s.
+   * Driver wrapper for generating and posting {@linkplain
+   * com.google.devtools.mobileharness.api.testrunner.event.test.LocalDriverStartingEvent driver
+   * starting event}s and {@linkplain
+   * com.google.devtools.mobileharness.api.testrunner.event.test.LocalDriverEndedEvent driver ended
+   * event}s.
    *
    * <p>Note that it should be a decorator so {@link ClassUtil#getAllSubscribersOfDriver(Driver)}
    * can get subscribers correctly. (b/69013386)
@@ -295,39 +297,8 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
     private boolean postLocalDriverStartingEvent() {
       testInfo.log().atInfo().alsoTo(logger).log("%s is starting", decoratedDriverName);
       Object event =
-          new LocalDriverStartingEvent() {
-
-            @Override
-            public String getDriverName() {
-              return decoratedDriverName;
-            }
-
-            @Override
-            public DeviceFeature getDeviceFeature() {
-              return deviceFeature;
-            }
-
-            @Override
-            public ImmutableList<LabQueryProto.DeviceInfo> getAllDeviceInfos() {
-              return newDeviceInfos;
-            }
-
-            @Override
-            public Device getDevice() {
-              return device;
-            }
-
-            @Override
-            public TestInfo getTest() {
-              return testInfo;
-            }
-
-            @Override
-            public com.google.devtools.mobileharness.api.model.allocation.Allocation
-                getAllocation() {
-              return allocation;
-            }
-          };
+          new LocalDriverStartingEventImpl(
+              decoratedDriverName, deviceFeature, newDeviceInfos, device, testInfo, allocation);
       return postTestEvent(
           /* eventType= */ "driver event",
           /* afterDriverExecution= */ false,
@@ -346,44 +317,14 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
               decoratedDriverName,
               (error == null ? "" : " with error: " + error.getClass().getSimpleName()));
       Object event =
-          new LocalDriverEndedEvent() {
-
-            @Override
-            public String getDriverName() {
-              return decoratedDriverName;
-            }
-
-            @Override
-            public DeviceFeature getDeviceFeature() {
-              return deviceFeature;
-            }
-
-            @Override
-            public ImmutableList<LabQueryProto.DeviceInfo> getAllDeviceInfos() {
-              return newDeviceInfos;
-            }
-
-            @Override
-            public Device getDevice() {
-              return device;
-            }
-
-            @Override
-            public Optional<Throwable> getExecutionError() {
-              return Optional.ofNullable(error);
-            }
-
-            @Override
-            public TestInfo getTest() {
-              return testInfo;
-            }
-
-            @Override
-            public com.google.devtools.mobileharness.api.model.allocation.Allocation
-                getAllocation() {
-              return allocation;
-            }
-          };
+          new LocalDriverEndedEventImpl(
+              decoratedDriverName,
+              deviceFeature,
+              newDeviceInfos,
+              device,
+              error,
+              testInfo,
+              allocation);
       postTestEvent(
           /* eventType= */ "driver event",
           /* afterDriverExecution= */ true,
@@ -393,9 +334,11 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
   }
 
   /**
-   * Decorator extender for generating and posting {@linkplain LocalDecoratorPreForwardEvent
-   * decorator pre-forward event}s and {@linkplain LocalDecoratorPostForwardEvent decorator
-   * post-forward event}s.
+   * Decorator extender for generating and posting {@linkplain
+   * com.google.devtools.mobileharness.api.testrunner.event.test.LocalDecoratorPreForwardEvent
+   * decorator pre-forward event}s and {@linkplain
+   * com.google.devtools.mobileharness.api.testrunner.event.test.LocalDecoratorPostForwardEvent
+   * decorator post-forward event}s.
    */
   @DoNotSubscribeTestEvent
   private class DecoratorEventGenerator extends BaseDecorator {
@@ -454,39 +397,8 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
           .alsoTo(logger)
           .log("%s is forwarding a running request", decoratorName);
       Object event =
-          new LocalDecoratorPreForwardEvent() {
-
-            @Override
-            public String getDriverName() {
-              return decoratorName;
-            }
-
-            @Override
-            public DeviceFeature getDeviceFeature() {
-              return deviceFeature;
-            }
-
-            @Override
-            public ImmutableList<LabQueryProto.DeviceInfo> getAllDeviceInfos() {
-              return newDeviceInfos;
-            }
-
-            @Override
-            public Device getDevice() {
-              return device;
-            }
-
-            @Override
-            public TestInfo getTest() {
-              return testInfo;
-            }
-
-            @Override
-            public com.google.devtools.mobileharness.api.model.allocation.Allocation
-                getAllocation() {
-              return allocation;
-            }
-          };
+          new LocalDecoratorPreForwardEventImpl(
+              decoratorName, deviceFeature, newDeviceInfos, device, testInfo, allocation);
       return postTestEvent(
           /* eventType= */ "decorator event",
           /* afterDriverExecution= */ false,
@@ -506,44 +418,8 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
               decoratorName,
               (error == null ? "" : " with error: " + error.getClass().getSimpleName()));
       Object event =
-          new LocalDecoratorPostForwardEvent() {
-
-            @Override
-            public String getDriverName() {
-              return decoratorName;
-            }
-
-            @Override
-            public DeviceFeature getDeviceFeature() {
-              return deviceFeature;
-            }
-
-            @Override
-            public ImmutableList<LabQueryProto.DeviceInfo> getAllDeviceInfos() {
-              return newDeviceInfos;
-            }
-
-            @Override
-            public Device getDevice() {
-              return device;
-            }
-
-            @Override
-            public Optional<Throwable> getExecutionError() {
-              return Optional.ofNullable(error);
-            }
-
-            @Override
-            public TestInfo getTest() {
-              return testInfo;
-            }
-
-            @Override
-            public com.google.devtools.mobileharness.api.model.allocation.Allocation
-                getAllocation() {
-              return allocation;
-            }
-          };
+          new LocalDecoratorPostForwardEventImpl(
+              decoratorName, deviceFeature, newDeviceInfos, device, error, testInfo, allocation);
       postTestEvent(
           /* eventType= */ "decorator event",
           /* afterDriverExecution= */ true,

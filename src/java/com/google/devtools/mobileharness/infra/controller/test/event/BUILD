@@ -36,8 +36,6 @@ java_library(
 java_library(
     name = "event_impl",
     srcs = [
-        "LocalTestEndedEventImpl.java",
-        "LocalTestEndingEventImpl.java",
         "TestEndedEventImpl.java",
         "TestEndingEventImpl.java",
         "TestStartedEventImpl.java",
@@ -51,8 +49,34 @@ java_library(
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
-        "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test:client_test_events",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "local_event_impl",
+    srcs = [
+        "LocalDecoratorPostForwardEventImpl.java",
+        "LocalDecoratorPreForwardEventImpl.java",
+        "LocalDriverEndedEventImpl.java",
+        "LocalDriverStartingEventImpl.java",
+        "LocalTestEndedEventImpl.java",
+        "LocalTestEndingEventImpl.java",
+    ],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/allocation",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
 )
