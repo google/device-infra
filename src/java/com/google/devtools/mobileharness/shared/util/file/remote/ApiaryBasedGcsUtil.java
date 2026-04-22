@@ -35,6 +35,7 @@ import com.google.api.services.storage.model.ComposeRequest.SourceObjects;
 import com.google.api.services.storage.model.Objects;
 import com.google.api.services.storage.model.StorageObject;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
@@ -170,6 +171,7 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
   @Override
   protected void copyFileToLocal(GcsApiObject gcsFile, Path localFile, long from, long size)
       throws MobileHarnessException, InterruptedException {
+    Stopwatch stopwatch = Stopwatch.createStarted();
     MobileHarnessExceptions.check(
         from >= 0,
         BasicErrorId.GCS_ILLEGAL_OFFSET,
@@ -224,8 +226,8 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
         "copy " + fileInfo);
 
     logger.atInfo().log(
-        "Copied file gs://%s/%s [%s, %s) to %s",
-        storageParams.bucketName, gcsFile, from, from + size, localFile);
+        "Copied file gs://%s/%s [%s, %s) to %s in %s",
+        storageParams.bucketName, gcsFile, from, from + size, localFile, stopwatch.stop());
   }
 
   @Override
