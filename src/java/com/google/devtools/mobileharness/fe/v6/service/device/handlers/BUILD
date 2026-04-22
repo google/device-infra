@@ -27,10 +27,13 @@ java_library(
         exclude = [
             "LogcatActionHelper.java",
             "NoOpLogcatActionHelper.java",
+            "NoOpScreenshotActionHelper.java",
+            "ScreenshotActionHelper.java",
         ],
     ),
     deps = [
         ":logcat_action_helper",
+        ":screenshot_action_helper",
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
@@ -47,7 +50,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/remotecontrol",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
-        "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:annotation",
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:job_sync",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
@@ -65,6 +67,19 @@ java_library(
     srcs = [
         "LogcatActionHelper.java",
         "NoOpLogcatActionHelper.java",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/device:device_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "screenshot_action_helper",
+    srcs = [
+        "NoOpScreenshotActionHelper.java",
+        "ScreenshotActionHelper.java",
     ],
     deps = [
         "//src/devtools/mobileharness/fe/v6/service/proto/device:device_service_java_proto",

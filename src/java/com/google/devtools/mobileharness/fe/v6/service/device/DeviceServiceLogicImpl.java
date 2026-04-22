@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.fe.v6.service.device.handlers.GetDevice
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.GetLogcatHandler;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.GetTestbedConfigHandler;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.QuarantineDeviceHandler;
+import com.google.devtools.mobileharness.fe.v6.service.device.handlers.TakeScreenshotHandler;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.UnquarantineDeviceHandler;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
@@ -61,6 +62,7 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
   private final GetTestbedConfigHandler getTestbedConfigHandler;
   private final UniverseFactory universeFactory;
   private final QuarantineDeviceHandler quarantineDeviceHandler;
+  private final TakeScreenshotHandler takeScreenshotHandler;
   private final UnquarantineDeviceHandler unquarantineDeviceHandler;
 
   @Inject
@@ -71,6 +73,7 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
       GetLogcatHandler getLogcatHandler,
       UniverseFactory universeFactory,
       QuarantineDeviceHandler quarantineDeviceHandler,
+      TakeScreenshotHandler takeScreenshotHandler,
       UnquarantineDeviceHandler unquarantineDeviceHandler) {
     this.getDeviceHeaderInfoHandler = getDeviceHeaderInfoHandler;
     this.getDeviceOverviewHandler = getDeviceOverviewHandler;
@@ -78,6 +81,7 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
     this.getLogcatHandler = getLogcatHandler;
     this.universeFactory = universeFactory;
     this.quarantineDeviceHandler = quarantineDeviceHandler;
+    this.takeScreenshotHandler = takeScreenshotHandler;
     this.unquarantineDeviceHandler = unquarantineDeviceHandler;
   }
 
@@ -138,11 +142,13 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
 
   @Override
   public ListenableFuture<TakeScreenshotResponse> takeScreenshot(TakeScreenshotRequest request) {
-    // TODO: Use the universe parameter.
-    @SuppressWarnings("unused")
-    String universe = request.getUniverse();
-    // TODO: Implement this method.
-    return immediateFuture(TakeScreenshotResponse.getDefaultInstance());
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return takeScreenshotHandler.takeScreenshot(request, universe);
   }
 
   @Override
