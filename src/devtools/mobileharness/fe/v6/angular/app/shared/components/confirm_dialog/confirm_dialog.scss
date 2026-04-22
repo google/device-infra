@@ -7,7 +7,7 @@
 
   @include mat.dialog-overrides((
     container-shape: .5rem,
-    container-max-width: 35rem,
+    container-max-width: fit-content,
   ));
 }
 
@@ -431,7 +431,7 @@
 }
 
 .info-icon {
-  color: #1976d2;
+  color: #2563eb;
 }
 
 .warning-icon {

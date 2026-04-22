@@ -6,7 +6,11 @@ import {
   HostOverview,
 } from '../../../models/host_overview';
 import {MockHostScenario} from '../models';
-import {createDefaultUiStatus, createHostActions} from './ui_status_utils';
+import {
+  createDefaultUiStatus,
+  createDeviceActions,
+  createHostActions,
+} from './ui_status_utils';
 
 // Helper to create a basic HostOverview
 function createHostOverview(
@@ -57,6 +61,7 @@ const DEVICES_PERMISSIONS_ALL: DeviceSummary[] = [
     requiredDims: '',
     model: 'Pixel 8',
     version: '14',
+    actions: createDeviceActions('NO_PERMISSION'),
   },
   {
     id: 'RC-NO-PERM-2',
@@ -67,6 +72,7 @@ const DEVICES_PERMISSIONS_ALL: DeviceSummary[] = [
     requiredDims: '',
     model: 'Pixel 8 Pro',
     version: '14',
+    actions: createDeviceActions('NO_PERMISSION'),
   },
 
   // 2. Device with USER permission only
@@ -79,6 +85,7 @@ const DEVICES_PERMISSIONS_ALL: DeviceSummary[] = [
     requiredDims: '',
     model: 'Pixel 7',
     version: '13',
+    actions: createDeviceActions('USER_PERMISSION'),
   },
 
   // 3. Device with GROUP permission only
@@ -91,6 +98,7 @@ const DEVICES_PERMISSIONS_ALL: DeviceSummary[] = [
     requiredDims: '',
     model: 'Pixel 7 Pro',
     version: '13',
+    actions: createDeviceActions('GROUP_PERMISSION'),
   },
 
   // 4. Device with BOTH/ALL permissions
@@ -103,6 +111,7 @@ const DEVICES_PERMISSIONS_ALL: DeviceSummary[] = [
     requiredDims: '',
     model: 'Pixel 6',
     version: '12',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: 'RC-INVALID-ineligible-busy',

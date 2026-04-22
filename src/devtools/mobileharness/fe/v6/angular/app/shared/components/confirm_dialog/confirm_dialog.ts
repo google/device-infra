@@ -2,6 +2,7 @@ import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   OnInit,
   signal,
@@ -46,6 +47,7 @@ export class ConfirmDialog implements OnInit {
     primaryButtonIcon?: string;
     secondaryButtonLabel?: string;
     onConfirm?: () => Observable<void>;
+    customIcon?: string;
   }>(MAT_DIALOG_DATA);
 
   private readonly dialogRef = inject(MatDialogRef<ConfirmDialog>);
@@ -78,8 +80,17 @@ export class ConfirmDialog implements OnInit {
     }
   }
 
-  get iconUI() {
-    switch (this.data.type) {
+  readonly iconUI = computed(() => {
+    const type = this.data.type || 'info';
+    if (this.data.customIcon) {
+      return {
+        icon: this.data.customIcon,
+        iconColorClass: `${type}-icon`,
+        iconBgColorClass: `bg-${type === 'error' ? 'red' : type === 'warning' ? 'yellow' : type === 'success' ? 'green' : 'gray'}-100`,
+      };
+    }
+
+    switch (type) {
       case 'info':
         return {
           icon: 'info',
@@ -106,5 +117,5 @@ export class ConfirmDialog implements OnInit {
           iconBgColorClass: 'bg-red-100',
         };
     }
-  }
+  });
 }

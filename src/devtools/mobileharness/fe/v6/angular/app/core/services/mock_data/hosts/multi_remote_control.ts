@@ -6,7 +6,11 @@ import {
   HostOverview,
 } from '../../../models/host_overview';
 import {MockHostScenario} from '../models';
-import {createDefaultUiStatus, createHostActions} from './ui_status_utils';
+import {
+  createDefaultUiStatus,
+  createDeviceActions,
+  createHostActions,
+} from './ui_status_utils';
 
 // Helper to create a basic HostOverview
 function createHostOverview(
@@ -277,6 +281,7 @@ const DEVICES_PROXY_MISMATCH: DeviceSummary[] = [
     requiredDims: '',
     model: 'Pixel 8',
     version: '14',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: 'RC-PROXY-MISMATCH-2',
@@ -291,6 +296,7 @@ const DEVICES_PROXY_MISMATCH: DeviceSummary[] = [
     requiredDims: '',
     model: 'Pixel 8 Pro',
     version: '21',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: 'RC-NO-PROXY',
@@ -301,6 +307,7 @@ const DEVICES_PROXY_MISMATCH: DeviceSummary[] = [
     requiredDims: '',
     model: 'Pixel 8 Pro',
     version: '21',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: 'RC-TESTBED-NO-PROXY',

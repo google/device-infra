@@ -63,7 +63,12 @@ export class FakeConfigService extends ConfigService {
     const isHostManaged = scenario.overview.host.name === 'host-x.example.com';
     const hostName = scenario.overview.host.name;
 
-    let uiStatus: Partial<DeviceConfigUiStatus> | undefined;
+    let uiStatus: Partial<DeviceConfigUiStatus> | undefined = {
+      permissions: {visible: true, editability: {editable: true}},
+      wifi: {visible: true, editability: {editable: true}},
+      dimensions: {visible: true, editability: {editable: true}},
+      settings: {visible: true, editability: {editable: true}},
+    };
     if (deviceId === 'WIFI_DIMENSIONS_ONLY_DEVICE') {
       uiStatus = {
         permissions: {visible: false},

@@ -57,23 +57,40 @@ export declare interface PopularFlag {
 }
 
 /**
- * A preset configuration for pass-through flags.
+ * Response for PreflightLabServerRelease API.
  */
-export declare interface FlagPreset {
-  readonly label: string;
-  readonly value: string;
-  readonly description: string;
+export declare interface PreflightLabServerReleaseResponse {
+  readonly permissionDenied?: PermissionDenied;
+  readonly ready?: ReleaseReady;
 }
+
+/**
+ * No deploy permission.
+ */
+export declare interface PermissionDenied {}
+
+/**
+ * All checks passed. Here are the available versions to deploy.
+ */
+export declare interface ReleaseReady {
+  readonly versions: DeployableVersion[];
+}
+
+/**
+ * Represents the status of a Lab Server release.
+ */
+export type ReleaseStatus = 'Latest' | 'Current' | 'Deprecated' | '';
 
 /**
  * Configuration for a specific Lab Server release.
  */
-export declare interface HostReleaseConfig {
+export declare interface DeployableVersion {
   readonly name: string;
   readonly version: string;
-  readonly port: ReleasePort;
-  readonly syncCMD: string[];
-  readonly asyncCMD: string[];
+  readonly status: ReleaseStatus;
+  readonly buildTime: string;
+  readonly ports?: ReleasePort[];
+  readonly releaseDetails?: ReleaseDetails;
 }
 
 /**
@@ -82,6 +99,66 @@ export declare interface HostReleaseConfig {
 export declare interface ReleasePort {
   readonly protocol: string;
   readonly portNumber: number;
+}
+
+/**
+ * Details about a specific release.
+ */
+export declare interface ReleaseDetails {
+  readonly changeLogs?: ChangeLogGroup[];
+  readonly files?: FileRecord[];
+  readonly syncCommands?: CommandRecord[];
+  readonly asyncCommands?: CommandRecord[];
+}
+
+/**
+ * Represents a group of changes or bugs related to a release.
+ */
+export declare interface ChangeLogGroup {
+  readonly name: string;
+  readonly items: ChangeLogItem[];
+}
+
+/**
+ * Represents a single change record or bug record for a release.
+ */
+export declare interface ChangeLogItem {
+  readonly change?: ChangeRecord;
+  readonly bug?: BugRecord;
+}
+
+/**
+ * Represents a single change record for a release.
+ */
+export declare interface ChangeRecord {
+  readonly cl: number;
+  readonly author: string;
+  readonly text: string;
+  readonly bugs: number[];
+}
+
+/**
+ * Represents a single bug record for a release.
+ */
+export declare interface BugRecord {
+  readonly bug: number;
+  readonly text: string;
+}
+
+/**
+ * Represents a single file record for a release.
+ */
+export declare interface FileRecord {
+  readonly name: string;
+  readonly path: string;
+}
+
+/**
+ * Represents a single command record for a release.
+ */
+export declare interface CommandRecord {
+  readonly name: string;
+  readonly command: string;
 }
 
 /**
