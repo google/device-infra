@@ -27,8 +27,14 @@ import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException.DesiredTestResult;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
@@ -36,6 +42,10 @@ import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.ClientApiModule;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver.DeviceReserver;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceGrpc;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceGrpc.LabInfoServiceBlockingStub;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.devtools.mobileharness.shared.util.junit.rule.CaptureLogs;
 import com.google.devtools.mobileharness.shared.util.junit.rule.PrintTestName;
 import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
@@ -54,10 +64,17 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
+import io.grpc.BindableService;
+import io.grpc.ManagedChannel;
+import io.grpc.Server;
+import io.grpc.ServerBuilder;
+import io.grpc.inprocess.InProcessChannelBuilder;
+import io.grpc.inprocess.InProcessServerBuilder;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -76,10 +93,11 @@ public class LocalModeIntegrationTest {
   @Bind @GlobalInternalEventBus private final EventBus globalInternalEventBus = new EventBus();
 
   @Inject private ClientApi clientApi;
+  @Inject private LocalMode localMode;
 
-  private LocalMode localMode;
   private DeviceReserver deviceReserver;
   private DeviceQuerier deviceQuerier;
+  private String allocationKey;
 
   @Before
   public void setUp() throws InterruptedException {
@@ -96,19 +114,27 @@ public class LocalModeIntegrationTest {
             "no_op_device_num",
             "1"));
 
-    localMode = new LocalMode();
-    localMode.initialize(globalInternalEventBus);
+    Guice.createInjector(new ClientApiModule(), BoundFieldModule.of(this)).injectMembers(this);
+
     deviceReserver = localMode.createDeviceReserver();
     deviceQuerier = localMode.createDeviceQuerier();
 
-    Guice.createInjector(new ClientApiModule(), BoundFieldModule.of(this)).injectMembers(this);
+    localMode.initialize(globalInternalEventBus);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    if (allocationKey != null) {
+      deviceReserver.addTempAllocationKeyToDevice(
+          new DeviceLocator("NoOpDevice-0"), allocationKey, Duration.ZERO);
+    }
   }
 
   @Test
   public void testDeviceReserver() throws Exception {
     JobInfo jobInfo1 = createJobInfo("fake_job_name_1");
 
-    String allocationKey = "allocation-key-" + UUID.randomUUID();
+    allocationKey = "allocation-key-" + UUID.randomUUID();
     TestPluginForDeviceReserver testPlugin =
         new TestPluginForDeviceReserver(deviceReserver, allocationKey);
 
@@ -137,9 +163,54 @@ public class LocalModeIntegrationTest {
     clientApi.waitForJob(jobInfo2.locator().getId());
 
     assertThat(jobInfo2.resultWithCause().get().type()).isEqualTo(TestResult.ERROR);
+  }
 
-    deviceReserver.addTempAllocationKeyToDevice(
-        new DeviceLocator("NoOpDevice-0"), allocationKey, Duration.ZERO);
+  @Test
+  public void testLabInfoService() throws Exception {
+    String serverName = InProcessServerBuilder.generateName();
+    ServerBuilder<?> serverBuilder = InProcessServerBuilder.forName(serverName);
+    for (BindableService service : localMode.provideServicesForNonWorker()) {
+      serverBuilder.addService(service);
+    }
+    Server server = serverBuilder.build().start();
+    ManagedChannel channel = InProcessChannelBuilder.forName(serverName).directExecutor().build();
+    LabInfoServiceBlockingStub stub = LabInfoServiceGrpc.newBlockingStub(channel);
+
+    try {
+      GetLabInfoResponse response = stub.getLabInfo(GetLabInfoRequest.getDefaultInstance());
+      LabQueryResult result = response.getLabQueryResult();
+
+      GetLabInfoResponse expectedResponse =
+          GetLabInfoResponse.newBuilder()
+              .setLabQueryResult(
+                  LabQueryResult.newBuilder()
+                      .setLabView(
+                          LabView.newBuilder()
+                              .setLabTotalCount(1)
+                              .addLabData(
+                                  LabData.newBuilder()
+                                      .setDeviceList(
+                                          DeviceList.newBuilder()
+                                              .setDeviceTotalCount(1)
+                                              .addDeviceInfo(
+                                                  DeviceInfo.newBuilder()
+                                                      .setDeviceStatus(DeviceStatus.IDLE))))))
+              .build();
+      assertThat(response).comparingExpectedFieldsOnly().isEqualTo(expectedResponse);
+
+      String deviceUuid =
+          result
+              .getLabView()
+              .getLabData(0)
+              .getDeviceList()
+              .getDeviceInfo(0)
+              .getDeviceLocator()
+              .getId();
+      assertThat(deviceUuid).endsWith(":NoOpDevice-0");
+    } finally {
+      channel.shutdownNow();
+      server.shutdownNow();
+    }
   }
 
   @Test
