@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
@@ -36,6 +37,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.allocation.
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver.DeviceReserver;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ServiceProvider;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceIdManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.TestExecutor;
@@ -64,17 +66,23 @@ import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.I
 import com.google.devtools.mobileharness.infra.lab.controller.LocalFileBasedDeviceConfigManager;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
 import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager;
+import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
+import com.google.devtools.mobileharness.shared.labinfo.LabInfoService;
+import com.google.devtools.mobileharness.shared.labinfo.LocalLabInfoProvider;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Provides;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceUpEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
+import io.grpc.BindableService;
 import java.time.Duration;
 import java.time.InstantSource;
 import java.util.ArrayList;
@@ -85,7 +93,8 @@ import java.util.logging.Level;
 import java.util.stream.IntStream;
 
 /** Execution mode which run tests on local devices. */
-public class LocalMode implements ExecMode {
+public class LocalMode implements ExecMode, ServiceProvider {
+
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** LocalDeviceManager is singleton and shared by all LocalMode jobs in the same machine. */
@@ -101,36 +110,58 @@ public class LocalMode implements ExecMode {
    */
   private static final CountDownLatch firstDeviceLatch = new CountDownLatch(1);
 
-  /** Scheduler is singleton and shared by all LocalMode jobs in the same machine. */
-  private static volatile AbstractScheduler localScheduler;
-
-  /** Future which is set when the local scheduler is initialized. */
-  private static final SettableFuture<AbstractScheduler> localSchedulerFuture =
-      SettableFuture.create();
-
-  private static volatile ListeningExecutorService localEnvThreadPool;
-
   private static volatile ProxyDeviceManager proxyDeviceManager;
 
-  private static volatile DeviceTempRequiredDimensionManager deviceTempRequiredDimensionManager;
-
-  /** Synchronization lock for {@link #localDeviceManager} and {@link #localScheduler}. */
+  /** Synchronization lock for {@link #localDeviceManager}. */
   private static final Object LOCAL_ENV_LOCK = new Object();
 
-  /** Starts the singleton local device manager and the local scheduler, if has not. */
+  /** Only do lightweight work here, including assignments and Guice injection. */
+  private static class LazyInitializer {
+
+    private static final ListeningExecutorService threadPool =
+        ThreadPools.createStandardThreadPool("local-mode-thread-pool");
+    private static final ListeningScheduledExecutorService scheduledThreadPool =
+        ThreadPools.createStandardScheduledThreadPool(
+            "local-mode-scheduled-thread-pool", /* corePoolSize= */ 5);
+    private static final LabInfoService labInfoService;
+    private static final DeviceTempRequiredDimensionManager tempRequiredDimensionManager;
+    private static final AbstractScheduler localScheduler = new SimpleScheduler(threadPool);
+
+    static {
+      ShutdownHookManager.getInstance()
+          .addShutdownHook(threadPool::shutdownNow, "local-mode-thread-pool-shutdown");
+      ShutdownHookManager.getInstance()
+          .addShutdownHook(
+              scheduledThreadPool::shutdownNow, "local-mode-scheduled-thread-pool-shutdown");
+
+      Injector injector =
+          Guice.createInjector(
+              new AbstractModule() {
+                @Override
+                protected void configure() {
+                  bind(ListeningExecutorService.class).toInstance(threadPool);
+                  bind(ListeningScheduledExecutorService.class).toInstance(scheduledThreadPool);
+                  bind(InstantSource.class).toInstance(InstantSource.system());
+                  bind(LabInfoProvider.class).to(LocalLabInfoProvider.class);
+                }
+
+                @Provides
+                ListenableFuture<LocalDeviceManager> provideLocalDeviceManager() {
+                  return localDeviceManagerFuture;
+                }
+              });
+      labInfoService = injector.getInstance(LabInfoService.class);
+      tempRequiredDimensionManager = injector.getInstance(DeviceTempRequiredDimensionManager.class);
+    }
+  }
+
+  /** Starts the singleton local device manager and the local scheduler, if they have not been. */
   @Override
   public void initialize(EventBus globalInternalBus) throws InterruptedException {
     if (localDeviceManager == null && proxyDeviceManager == null) {
       synchronized (LOCAL_ENV_LOCK) {
         if (localDeviceManager == null && proxyDeviceManager == null) {
           logger.atInfo().log("Starting local device manager");
-
-          localEnvThreadPool = ThreadPools.createStandardThreadPool("local-mode-thread-pool");
-          final ListeningScheduledExecutorService scheduledThreadPool =
-              ThreadPools.createStandardScheduledThreadPool(
-                  "local-mode-scheduled-thread-pool", /* corePoolSize= */ 5);
-          ShutdownHookManager.getInstance()
-              .addShutdownHook(localEnvThreadPool::shutdownNow, "local-mode-shutdown");
 
           ApiConfig.getInstance()
               .initialize(
@@ -148,28 +179,14 @@ public class LocalMode implements ExecMode {
                         new AbstractModule() {
                           @Override
                           protected void configure() {
-                            bind(ListeningExecutorService.class).toInstance(localEnvThreadPool);
+                            bind(ListeningExecutorService.class)
+                                .toInstance(LazyInitializer.threadPool);
                             install(new ProxyDeviceManagerModule());
                           }
                         })
                     .getInstance(ProxyDeviceManager.class);
             return;
           }
-
-          // Initializes temp required dimension manager.
-          // It should be before device manager initialization.
-          deviceTempRequiredDimensionManager =
-              Guice.createInjector(
-                      new AbstractModule() {
-                        @Override
-                        protected void configure() {
-                          bind(ListeningExecutorService.class).toInstance(localEnvThreadPool);
-                          bind(ListeningScheduledExecutorService.class)
-                              .toInstance(scheduledThreadPool);
-                          bind(InstantSource.class).toInstance(InstantSource.system());
-                        }
-                      })
-                  .getInstance(DeviceTempRequiredDimensionManager.class);
 
           // Initializes local device manager.
           DetectorsAndDispatchers detectorsAndDispatchers =
@@ -179,7 +196,7 @@ public class LocalMode implements ExecMode {
                   detectorsAndDispatchers.supportedDetectors(),
                   detectorsAndDispatchers.supportedDispatchers(),
                   /* keepGoing= */ false,
-                  localEnvThreadPool,
+                  LazyInitializer.threadPool,
                   globalInternalBus,
                   new NoopExternalDeviceManager());
           localDeviceManager.initialize();
@@ -188,7 +205,7 @@ public class LocalMode implements ExecMode {
           // Starts device config manager.
           if (Flags.instance().enableDeviceConfigManager.getNonNull()) {
             logFailure(
-                localEnvThreadPool.submit(
+                LazyInitializer.threadPool.submit(
                     threadRenaming(
                         new LocalFileBasedDeviceConfigManager(
                             localDeviceManager,
@@ -200,32 +217,30 @@ public class LocalMode implements ExecMode {
                 "Fatal error in device config manager");
           }
 
-          // Initializes local scheduler.
-          localScheduler = new SimpleScheduler(localEnvThreadPool);
-          localSchedulerFuture.set(localScheduler);
-          deviceTempRequiredDimensionManager.start();
+          // Initializes scheduler syncer.
           LocalDeviceManagerSchedulerSyncer localDeviceManagerSchedulerSyncer =
               new LocalDeviceManagerSchedulerSyncer(
                   localDeviceManager,
-                  localScheduler,
-                  deviceTempRequiredDimensionManager,
+                  LazyInitializer.localScheduler,
+                  LazyInitializer.tempRequiredDimensionManager,
                   ApiConfig.getInstance());
           ApiConfig.getInstance().addListener(localDeviceManagerSchedulerSyncer);
           // Notifies scheduler about device/test change.
           globalInternalBus.register(localDeviceManagerSchedulerSyncer);
 
-          // Starts local device manager and scheduler.
+          // Starts local device manager, scheduler and temp dimension manager.
           logFailure(
-              localEnvThreadPool.submit(
+              LazyInitializer.threadPool.submit(
                   threadRenaming(localDeviceManager, () -> "local-device-manager")),
               Level.SEVERE,
               "Fatal error in local device manager");
-          localScheduler.start();
+          LazyInitializer.localScheduler.start();
+          LazyInitializer.tempRequiredDimensionManager.start();
 
           // Starts device status info printer.
           Duration printDeviceStatusInfoInterval = Duration.ofMinutes(2L);
           logFailure(
-              scheduledThreadPool.scheduleWithFixedDelay(
+              LazyInitializer.scheduledThreadPool.scheduleWithFixedDelay(
                   threadRenaming(
                       () -> {
                         try {
@@ -246,7 +261,7 @@ public class LocalMode implements ExecMode {
 
           // Starts first device detector.
           logFailure(
-              localEnvThreadPool.submit(
+              LazyInitializer.threadPool.submit(
                   (Callable<Void>)
                       () -> {
                         Sleeper.defaultSleeper().sleep(Duration.ofSeconds(10L));
@@ -267,21 +282,21 @@ public class LocalMode implements ExecMode {
     return new LocalDeviceAllocator(
         jobInfo,
         new LocalDeviceVerifier(localDeviceManager),
-        localEnvThreadPool,
+        LazyInitializer.threadPool,
         proxyDeviceManager,
-        localSchedulerFuture);
+        LazyInitializer.localScheduler);
   }
 
   @Override
   public DeviceQuerier createDeviceQuerier() {
     return new LocalDeviceQuerier(
-        localDeviceManagerFuture, firstDeviceLatch, deviceTempRequiredDimensionManager);
+        localDeviceManagerFuture, firstDeviceLatch, LazyInitializer.tempRequiredDimensionManager);
   }
 
   @Override
   public DeviceReserver createDeviceReserver() {
     return new LocalDeviceReserver(
-        deviceTempRequiredDimensionManager, DeviceIdManager.getInstance());
+        LazyInitializer.tempRequiredDimensionManager, DeviceIdManager.getInstance());
   }
 
   @Override
@@ -326,6 +341,21 @@ public class LocalMode implements ExecMode {
       devices = testExecutors.stream().map(TestExecutor::getDevice).collect(toImmutableList());
     }
     return doCreateTestRunner(launcher, setting, devices, threadPool);
+  }
+
+  @Override
+  public ImmutableList<BindableService> provideServicesForNonWorker() {
+    return ImmutableList.of(LazyInitializer.labInfoService);
+  }
+
+  @Override
+  public ImmutableList<BindableService> provideServicesForWorker() {
+    return ImmutableList.of();
+  }
+
+  @Override
+  public ImmutableList<BindableService> provideServicesDualMode() {
+    return ImmutableList.of();
   }
 
   private DirectTestRunner doCreateTestRunner(

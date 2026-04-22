@@ -16,8 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 
-import static com.google.common.util.concurrent.Futures.immediateFuture;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -100,7 +98,7 @@ public class AtsMode implements ExecMode, ServiceProvider {
         deviceVerifier,
         threadPool,
         /* proxyDeviceManager= */ null, // RemoteTestRunner does not use proxied devices
-        immediateFuture(scheduler));
+        scheduler);
   }
 
   @Override

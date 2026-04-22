@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.infra.client.api.mode.local;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.util.concurrent.Futures.addCallback;
-import static com.google.common.util.concurrent.Futures.getUnchecked;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 
@@ -27,7 +26,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
@@ -44,7 +42,6 @@ import com.google.devtools.mobileharness.infra.controller.device.proxy.ProxyDevi
 import com.google.devtools.mobileharness.infra.controller.device.proxy.ProxyDeviceManager.ProxyDevices;
 import com.google.devtools.mobileharness.infra.controller.device.proxy.ProxyDeviceRequirement;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
-import com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.controller.event.AllocationEvent;
@@ -65,7 +62,7 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
   private final DeviceVerifier deviceVerifier;
 
   /** Universal scheduler for scheduling local devices for local tests. */
-  private final ListenableFuture<AbstractScheduler> schedulerFuture;
+  private final AbstractScheduler scheduler;
 
   /** Allocations returned by scheduler, & haven't been retrieved by {@link #pollAllocations()}. */
   private final ConcurrentLinkedQueue<Allocation> allocations = new ConcurrentLinkedQueue<>();
@@ -84,12 +81,12 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
       DeviceVerifier deviceVerifier,
       ListeningExecutorService threadPool,
       @Nullable ProxyDeviceManager proxyDeviceManager,
-      ListenableFuture<AbstractScheduler> schedulerFuture) {
+      AbstractScheduler scheduler) {
     super(jobInfo);
     this.deviceVerifier = deviceVerifier;
     this.threadPool = threadPool;
     this.proxyDeviceManager = proxyDeviceManager;
-    this.schedulerFuture = schedulerFuture;
+    this.scheduler = scheduler;
     this.enableProxyMode =
         proxyDeviceManager != null && Flags.instance().enableProxyMode.getNonNull();
   }
@@ -140,7 +137,6 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
             e);
       }
     } else {
-      AbstractScheduler scheduler = getScheduler();
       scheduler.registerEventHandler(allocationEventHandler);
       if (!scheduler.addJob(jobInfo)) {
         throw new MobileHarnessException(
@@ -189,7 +185,6 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
           continue;
         }
       } else {
-        AbstractScheduler scheduler = getScheduler();
         if (test == null) {
           jobInfo
               .warnings()
@@ -274,7 +269,6 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
             e);
       }
     } else {
-      AbstractScheduler scheduler = getScheduler();
       if (!scheduler.addTest(testInfo)) {
         throw new MobileHarnessException(
             InfraErrorId.CLIENT_LOCAL_MODE_TEST_ALREADY_EXIST,
@@ -288,14 +282,13 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
 
   @Override
   public void releaseAllocation(Allocation allocation, TestResult testResult, boolean deviceDirty)
-      throws MobileHarnessException, InterruptedException {
+      throws InterruptedException {
     if (enableProxyMode) {
       // Releases the test's devices synchronously.
       proxyDeviceManager.releaseDevicesOfTest(allocation.getTest());
     } else {
       DeviceLocator deviceLocator = allocation.getDevice();
       String deviceSerial = deviceLocator.id();
-      AbstractScheduler scheduler = getScheduler();
       Optional<Boolean> deviceDirtyFromVerifier =
           deviceVerifier.getDeviceDirtyForAllocationRelease(deviceSerial);
       try {
@@ -319,10 +312,6 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
       // Releases the job's devices synchronously.
       proxyDeviceManager.releaseDevicesOfJob(jobInfo.locator().toNewJobLocator());
     } else {
-      if (!schedulerFuture.isDone()) {
-        return;
-      }
-      AbstractScheduler scheduler = requireNonNull(getUnchecked(schedulerFuture));
       // Closes the job and changes the device back to IDLE.
       scheduler.removeJob(jobInfo.locator().getId(), false);
       scheduler.unregisterEventHandler(allocationEventHandler);
@@ -368,11 +357,6 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
     private DeviceLocator createDeviceLocator(Device device) {
       return DeviceLocator.of(device.getDeviceUuid(), LabLocator.LOCALHOST);
     }
-  }
-
-  private AbstractScheduler getScheduler() throws MobileHarnessException, InterruptedException {
-    return MoreFutures.get(
-        schedulerFuture, InfraErrorId.SCHEDULER_LOCAL_DEVICE_ALLOCATOR_SCHEDULER_INIT_ERROR);
   }
 
   private class AllocationEventHandler {
