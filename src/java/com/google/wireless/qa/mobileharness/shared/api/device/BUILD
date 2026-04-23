@@ -72,6 +72,23 @@ java_library(
 java_library(
     name = "device",
     srcs = ["Device.java"],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
+        "//devtools/mobileharness/project:android_tv_team",
+        "//devtools/mobileharness/project:clouddpc",
+        "//devtools/mobileharness/project:daydream_test",
+        "//devtools/mobileharness/project:mobileiq",
+        "//devtools/mobileharness/project:phonesky_test_mainline",
+        "//devtools/mobileharness/project:pixel_preconditioner",
+        "//devtools/mobileharness/project:utf",
+        "//devtools/mobileharness/project:vinson",
+        "//devtools/mobileharness/project:xros_infra",
+        "//devtools/mobileharness/project:youtube_mh_package",
+        "//java/com/google/devtools/omnilab/device/lifecycle/android:__subpackages__",
+        "//javatests/com/google/access/jetstream/mobile/mobileharness/plugins:__pkg__",
+        "//javatests/com/google/devtools/omnilab/device/lifecycle/android:__subpackages__",
+    ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
