@@ -86,6 +86,7 @@ public class AndroidDeviceHelper {
       String value = getPropertyValue(deviceId, key);
       if (!value.isEmpty()) {
         ImmutableSet<String> values = maybeLowerCaseProperty(key, value);
+
         if (!oldValues.equals(values)) {
           logger.atInfo().log(
               "Dimension %s=%s (was: %s), device_id=%s",
@@ -241,5 +242,9 @@ public class AndroidDeviceHelper {
               }
             })
         .collect(toImmutableSet());
+  }
+
+  private static String normalizeSize(String size) {
+    return Ascii.toLowerCase(size.trim()).replace(" ", "").replace("gib", "gb");
   }
 }

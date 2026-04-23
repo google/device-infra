@@ -207,6 +207,7 @@ public final class Dimension {
     POWER_SWITCH_PORT,
 
     // Android
+
     /** Customized dimension: Android Application Binary Interface. */
     ABI,
     /** Customized dimension: Android Google Search App version */
