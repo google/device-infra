@@ -28,6 +28,7 @@ java_library(
     visibility = [
         "//:deviceinfra_api_users",
         "//:omnilab_fusion",
+        "//java/com/google/fitbit/platform/testing/mobileharness/plugins/sherlog:__subpackages__",
     ],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
