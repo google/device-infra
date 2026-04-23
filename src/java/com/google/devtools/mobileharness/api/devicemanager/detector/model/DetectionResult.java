@@ -49,6 +49,7 @@ public abstract class DetectionResult {
     ADB,
     ANDROID_XR,
     CROS,
+    SDV_OSPREY,
     DHCP,
     EMBEDDED_LINUX,
     EMULATOR,
