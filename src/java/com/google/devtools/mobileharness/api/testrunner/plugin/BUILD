@@ -26,6 +26,7 @@ java_library(
     ],
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//devtools/mobileharness/project:gemini_ios_agentic_testing",
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
