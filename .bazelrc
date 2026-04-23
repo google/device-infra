@@ -17,3 +17,7 @@ build --host_cxxopt=-std=c++17
 build --host_conlyopt=-std=c11
 # Define feature test macro for C compilations (host/exec)
 build --host_conlyopt=-D_DEFAULT_SOURCE
+
+# Workaround for GCC 15 linker error (b/505622188)
+common --copt=-Wa,--gsframe=no
+common --host_copt=-Wa,--gsframe=no
