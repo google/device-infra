@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.fe.v6.service.host.builder.RemoteControlUrlBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostHeaderInfoRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
@@ -60,6 +61,7 @@ public final class HostServiceLogicImplTest {
   @Bind @Mock private HostAuxiliaryInfoProvider hostAuxiliaryInfoProvider;
   @Bind @Mock private SubDeviceInfoListFactory subDeviceInfoListFactory;
   @Bind @Mock private RemoteControlEligibilityChecker remoteControlEligibilityChecker;
+  @Bind @Mock private RemoteControlUrlBuilder remoteControlUrlBuilder;
   @Bind private final ListeningExecutorService executor = newDirectExecutorService();
   @Bind @Mock private UniverseFactory universeFactory;
   @Bind @Mock private InstantSource instantSource;

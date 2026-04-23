@@ -50,21 +50,26 @@ export class RemoteControlService {
     }));
 
     // if subDevice is true, pass the sub-device info.
-    if (isSubDevice) {
-      selectedDevices = selectedDevices.map((d) => {
-        d.id = d.subDevices?.[0]?.id || '';
-        d.model = d.subDevices?.[0]?.model || '';
-        d.isTestbed = true;
-        d.subDevices = [];
-        return d;
-      });
-    }
+    // if (isSubDevice) {
+    //   selectedDevices = selectedDevices.map((d) => {
+    //     d.id = d.subDevices?.[0]?.id || '';
+    //     d.model = d.subDevices?.[0]?.model || '';
+    //     d.isTestbed = true;
+    //     d.subDevices = [];
+    //     return d;
+    //   });
+    // }
 
     this.hostService
       .checkRemoteControlEligibility(hostName, targets)
       .subscribe({
         next: (response: CheckRemoteControlEligibilityResponse) => {
-          this.handleEligibilityResponse(response, selectedDevices, hostName);
+          this.handleEligibilityResponse(
+            response,
+            selectedDevices,
+            hostName,
+            isSubDevice,
+          );
         },
         error: (err: unknown) => {
           console.error(err);
@@ -81,6 +86,7 @@ export class RemoteControlService {
     response: CheckRemoteControlEligibilityResponse,
     selectedDevices: RemoteControlDeviceInfo[],
     hostName: string,
+    isSubDevice = false,
   ) {
     switch (response.status) {
       case EligibilityStatus.BLOCK_DEVICES_INELIGIBLE: {
@@ -158,7 +164,12 @@ export class RemoteControlService {
         break;
       }
       case EligibilityStatus.READY: {
-        this.openRemoteControlDialog(selectedDevices, response, hostName);
+        this.openRemoteControlDialog(
+          selectedDevices,
+          response,
+          hostName,
+          isSubDevice,
+        );
         break;
       }
       default:
@@ -170,6 +181,7 @@ export class RemoteControlService {
     selectedDevices: RemoteControlDeviceInfo[],
     eligibilityResponse: CheckRemoteControlEligibilityResponse,
     hostName: string,
+    isSubDevice = false,
   ) {
     const dialogRef = this.dialog.open(RemoteControlDialog, {
       panelClass: 'remote-control-dialog-panel',
@@ -179,6 +191,7 @@ export class RemoteControlService {
         devices: selectedDevices,
         eligibilityResults: eligibilityResponse.results,
         sessionOptions: eligibilityResponse.sessionOptions!,
+        isSubDevice,
       },
       disableClose: true,
     });
@@ -202,6 +215,11 @@ export class RemoteControlService {
 
     this.hostService.remoteControlDevices(hostName, req).subscribe({
       next: (res) => {
+        if (!res?.sessions || res.sessions.length === 0) {
+          this.snackBar.showError('No sessions found in the response.');
+          return;
+        }
+
         res.sessions.forEach((session) => {
           if (session.sessionUrl) {
             openInNewTab(session.sessionUrl);

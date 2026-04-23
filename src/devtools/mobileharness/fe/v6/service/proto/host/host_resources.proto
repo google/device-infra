@@ -334,13 +334,13 @@ message FlashOptions {
   string branch = 1;
   string build_id = 2;
   string target = 3;
-  repeated string sub_device_ids = 4;
+  string sub_device_id = 4;
 }
 
 // Configuration for a single device in a remote control request.
 message RemoteControlDeviceConfig {
   string device_id = 1;
   string run_as = 2;
-  // Optional parent device ID (e.g. for sub-devices belonging to a testbed).
-  string parent_device_id = 3;
+  // Optional sub-device ID (e.g. for sub-devices belonging to a testbed).
+  string sub_device_id = 3;
 }

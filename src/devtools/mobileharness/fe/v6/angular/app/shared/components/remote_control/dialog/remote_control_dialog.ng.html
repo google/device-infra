@@ -208,21 +208,20 @@
         <div class="flash-fields">
           @if (eligibleSubDevices().length > 0) {
             <div class="flash-field-group full-width">
-              <label class="field-label" id="sub-devices-label">
-                Select Devices to Flash <span class="required">*</span>
+              <label class="field-label" id="branch-label">
+                Device to Flash <span class="required">*</span>
+                <mat-icon class="help-icon" matTooltip="Select a sub device to flash.">help_outline</mat-icon>
               </label>
-              <div class="checkbox-grid" [class.single-col]="eligibleSubDevices().length === 1">
-                @for (sub of eligibleSubDevices(); track sub.deviceId) {
-                  <mat-checkbox
-                    [checked]="isSubDeviceSelected(sub.deviceId)"
-                    (change)="toggleSubDeviceSelection(sub.deviceId, $event.checked)"
-                    color="primary">
-                    <span class="checkbox-label" [matTooltip]="sub.deviceId">{{ sub.deviceId }}</span>
-                  </mat-checkbox>
-                }
-              </div>
-              @if (form.get('flashSubDeviceIds')?.invalid && form.get('flashSubDeviceIds')?.touched) {
-                <mat-error style="font-size: 0.75rem; margin-top: -0.25rem;">At least one device must be selected</mat-error>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full-width">
+                <mat-icon matPrefix>smartphone</mat-icon>
+                <mat-select formControlName="flashSubDeviceId" placeholder="Select a device">
+                  @for (sub of eligibleSubDevices(); track sub.deviceId) {
+                    <mat-option [value]="sub.deviceId">{{ sub.deviceId }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+              @if (form.get('flashSubDeviceId')?.invalid && form.get('flashSubDeviceId')?.touched) {
+                <mat-error style="font-size: 0.75rem; margin-top: 0.25rem;">Device selection is required</mat-error>
               }
             </div>
           }

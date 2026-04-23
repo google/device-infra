@@ -42,6 +42,8 @@ export interface RemoteControlDialogData {
   eligibilityResults: DeviceEligibilityResult[];
   /** Session configuration options common to all selected devices. */
   sessionOptions: SessionOptions;
+  /** Whether the selected device is a sub-device. */
+  isSubDevice: boolean;
 }
 
 /** Internal state representation for a device in the dialog's list. */

@@ -116,55 +116,84 @@
       display: flex;
       flex-direction: column;
 
-      .device-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.5rem;
+      .device-group {
         border-bottom: 1px solid #f3f4f6; // gray-100
 
         &:last-child {
           border-bottom: none;
         }
 
-        .check-icon {
-          color: #22c55e; // green-500
-          font-size: 1.25rem;
-          width: 1.25rem;
-          height: 1.25rem;
-          margin-right: 0.75rem;
-        }
-
-        .device-id {
-          flex: 1;
-          font-size: 0.75rem;
-          font-weight: 600;
-          color: #111827; // gray-900
-        }
-
-        .run-as {
+        .device-item {
           display: flex;
+          justify-content: space-between;
           align-items: center;
-          gap: 0.5rem;
+          padding: 0.5rem;
 
-          .label {
-            font-size: 0.625rem;
-            font-weight: 700;
-            color: #9ca3af; // gray-400
-            text-transform: uppercase;
+          .check-icon {
+            color: #22c55e; // green-500
+            font-size: 1.25rem;
+            width: 1.25rem;
+            height: 1.25rem;
+            margin-right: 0.75rem;
           }
 
-          .value {
-            background-color: #f3f4f6; // gray-100
-            color: #1f2937; // gray-800
+          .device-id {
+            flex: 1;
             font-size: 0.75rem;
             font-weight: 600;
-            padding: 0.125rem 0.5rem;
-            border-radius: 0.375rem;
-            max-width: 150px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            color: #111827; // gray-900
+          }
+
+          .run-as {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+
+            .label {
+              font-size: 0.625rem;
+              font-weight: 700;
+              color: #9ca3af; // gray-400
+              text-transform: uppercase;
+            }
+
+            .value {
+              background-color: #f3f4f6; // gray-100
+              color: #1f2937; // gray-800
+              font-size: 0.75rem;
+              font-weight: 600;
+              padding: 0.125rem 0.5rem;
+              border-radius: 0.375rem;
+              max-width: 150px;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+          }
+        }
+
+        .sub-device-list {
+          padding: 0 0.5rem 0.5rem 2.5rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+
+          .sub-device-item {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+
+            .sub-device-icon {
+              font-size: 1rem;
+              width: 1rem;
+              height: 1rem;
+              color: #9ca3af; // gray-400
+            }
+
+            .sub-device-id {
+              font-size: 0.75rem;
+              color: #4b5563; // gray-600
+              font-family: monospace;
+            }
           }
         }
       }

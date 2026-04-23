@@ -24,6 +24,7 @@ import com.google.devtools.mobileharness.fe.v6.service.host.handlers.CheckRemote
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostDeviceSummariesHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostHeaderInfoHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostOverviewHandler;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.RemoteControlDevicesHandler;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionHostRequest;
@@ -67,6 +68,7 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   private final GetHostOverviewHandler getHostOverviewHandler;
   private final GetHostDeviceSummariesHandler getHostDeviceSummariesHandler;
   private final CheckRemoteControlEligibilityHandler checkRemoteControlEligibilityHandler;
+  private final RemoteControlDevicesHandler remoteControlDevicesHandler;
   private final GetHostHeaderInfoHandler getHostHeaderInfoHandler;
   private final UniverseFactory universeFactory;
 
@@ -75,11 +77,13 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
       GetHostOverviewHandler getHostOverviewHandler,
       GetHostDeviceSummariesHandler getHostDeviceSummariesHandler,
       CheckRemoteControlEligibilityHandler checkRemoteControlEligibilityHandler,
+      RemoteControlDevicesHandler remoteControlDevicesHandler,
       GetHostHeaderInfoHandler getHostHeaderInfoHandler,
       UniverseFactory universeFactory) {
     this.getHostOverviewHandler = getHostOverviewHandler;
     this.getHostDeviceSummariesHandler = getHostDeviceSummariesHandler;
     this.checkRemoteControlEligibilityHandler = checkRemoteControlEligibilityHandler;
+    this.remoteControlDevicesHandler = remoteControlDevicesHandler;
     this.getHostHeaderInfoHandler = getHostHeaderInfoHandler;
     this.universeFactory = universeFactory;
   }
@@ -184,11 +188,13 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   @Override
   public ListenableFuture<RemoteControlDevicesResponse> remoteControlDevices(
       RemoteControlDevicesRequest request) {
-    // TODO: Use the universe parameter.
-    @SuppressWarnings("unused")
-    String universe = request.getUniverse();
-    // TODO: Implement this method.
-    return immediateFuture(RemoteControlDevicesResponse.getDefaultInstance());
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return remoteControlDevicesHandler.remoteControlDevices(request, universe);
   }
 
   @Override

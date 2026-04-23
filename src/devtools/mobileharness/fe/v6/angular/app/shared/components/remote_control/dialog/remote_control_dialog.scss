@@ -913,50 +913,7 @@ section {
       }
     }
 
-    .checkbox-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 0.5rem 1rem;
-      margin-top: 0.5rem;
 
-      &.single-col {
-        grid-template-columns: 1fr;
-      }
-
-      mat-checkbox {
-        @include mat.checkbox-overrides((
-          selected-icon-color: $blue-600,
-          selected-checkmark-color: $white,
-          selected-focus-icon-color: $blue-600,
-          selected-hover-icon-color: $blue-600,
-          selected-pressed-icon-color: $blue-600,
-        ));
-
-        width: 100%;
-        overflow: hidden;
-
-        ::ng-deep .mdc-form-field {
-          padding-left: 0; // Remove default padding
-          width: 100%;
-          overflow: hidden;
-        }
-
-        ::ng-deep .mdc-label {
-          flex: 1;
-          overflow: hidden;
-        }
-
-        .checkbox-label {
-          display: block;
-          font-family: monospace;
-          font-size: 0.8125rem;
-          color: $gray-700;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-      }
-    }
   }
 }
 

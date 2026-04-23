@@ -101,7 +101,7 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
 
     // Flash Settings
     enableFlash: [false],
-    flashSubDeviceIds: [[] as string[]],
+    flashSubDeviceId: ['', this.requiredIfFlashEnabled(true)],
     flashBranch: ['', this.requiredIfFlashEnabled()],
     flashBuildId: ['', this.requiredIfFlashEnabled()],
     flashTarget: ['', this.requiredIfFlashEnabled()],
@@ -240,43 +240,63 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
 
     const initialExpanded = new Set<string>();
 
-    const processedList: DeviceListItem[] = devices.map((device) => {
-      const result = results.find((r) => r.deviceId === device.id);
-      const validIdentities: string[] = result?.runAsCandidates || [];
-      // Device has access if it is eligible OR (not eligible AND reason is NOT PERMISSION_DENIED)
-      // i.e. access is denied only if not eligible AND reason IS PERMISSION_DENIED
-      const hasAccess =
-        result?.isEligible ||
-        result?.ineligibilityReason?.code !== 'PERMISSION_DENIED';
+    const processedList: DeviceListItem[] = devices.flatMap(
+      (device): DeviceListItem[] => {
+        let result = results.find((r) => r.deviceId === device.id);
+        let summary = device;
+        if (this.data.isSubDevice) {
+          result = results[0];
+          summary = {
+            id:
+              device.subDevices?.find((sd) => sd.id === result?.deviceId)?.id ||
+              '',
+            model:
+              device.subDevices?.find((sd) => sd.id === result?.deviceId)
+                ?.model || '',
+            isTestbed: true,
+            subDevices: [],
+          };
+        }
 
-      // Add control to form array
-      const deviceGroup = this.fb.group({
-        deviceId: [device.id],
-        runAs: [
-          hasAccess ? validIdentities[0] : '',
-          hasAccess ? Validators.required : null,
-        ],
-      });
-      this.deviceConfigs.push(deviceGroup);
+        const validIdentities: string[] = result?.runAsCandidates || [];
+        // Device has access if it is eligible OR (not eligible AND reason is NOT PERMISSION_DENIED)
+        // i.e. access is denied only if not eligible AND reason IS PERMISSION_DENIED
+        const hasAccess =
+          result?.isEligible ||
+          result?.ineligibilityReason?.code !== 'PERMISSION_DENIED';
 
-      const subDevices: SubDeviceEligibilityResult[] =
-        result?.subDeviceResults || [];
-      const readySubDeviceCount = subDevices.filter((s) => s.isEligible).length;
+        // Add control to form array
+        const deviceGroup = this.fb.group({
+          deviceId: [device.id],
+          runAs: [
+            hasAccess ? validIdentities[0] : '',
+            hasAccess ? Validators.required : null,
+          ],
+        });
+        this.deviceConfigs.push(deviceGroup);
 
-      // Default expanded
-      if (subDevices.length > 0) {
-        initialExpanded.add(device.id);
-      }
+        const subDevices: SubDeviceEligibilityResult[] =
+          result?.subDeviceResults || [];
+        const readySubDeviceCount = subDevices.filter(
+          (s) => s.isEligible,
+        ).length;
 
-      return {
-        summary: device,
-        eligibility: result!,
-        validIdentities,
-        hasAccess,
-        subDevices,
-        readySubDeviceCount,
-      };
-    });
+        if (subDevices.length > 0) {
+          initialExpanded.add(device.id);
+        }
+
+        return [
+          {
+            summary,
+            eligibility: result!,
+            validIdentities,
+            hasAccess,
+            subDevices,
+            readySubDeviceCount,
+          },
+        ];
+      },
+    );
 
     this.deviceList.set(processedList);
     this.expandedDeviceIds.set(initialExpanded);
@@ -318,51 +338,45 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
 
   // --- Logic ---
 
-  requiredIfFlashEnabled(): ValidatorFn {
+  requiredIfFlashEnabled(isSubDeviceField = false): ValidatorFn {
     return (control: AbstractControl): ValidationErrors | null => {
       const form = control.parent;
       if (!form) return null;
       const enableFlash = form.get('enableFlash')?.value;
-      if (enableFlash && !control.value) {
+
+      if (
+        enableFlash &&
+        !control.value &&
+        (!isSubDeviceField || this.eligibleSubDevices().length > 0)
+      ) {
         return {'required': true};
       }
+
       return null;
     };
   }
 
   private setupFlashValidation() {
     this.form.get('enableFlash')?.valueChanges.subscribe((enabled) => {
-      const fields = ['flashBranch', 'flashBuildId', 'flashTarget'];
-      fields.forEach((field) => {
+      const fields = [
+        'flashSubDeviceId',
+        'flashBranch',
+        'flashBuildId',
+        'flashTarget',
+      ];
+      for (const field of fields) {
         const control = this.form.get(field);
-        if (control) {
-          control.updateValueAndValidity();
-          if (enabled) {
-            control.markAsTouched();
-          } else {
-            control.markAsUntouched();
-          }
-        }
-      });
+        if (!control) continue;
 
-      // Default select all eligible sub-devices when flash is enabled
+        control.updateValueAndValidity();
+        enabled ? control.markAsTouched() : control.markAsUntouched();
+      }
+
+      // Default select the first eligible sub-device when flash is enabled
       if (enabled) {
-        const allIds = this.eligibleSubDevices().map((s) => s.deviceId);
-        this.form.get('flashSubDeviceIds')?.setValue(allIds);
+        const firstId = this.eligibleSubDevices()[0]?.deviceId;
+        this.form.get('flashSubDeviceId')?.setValue(firstId || '');
       }
-    });
-
-    // Add validation for sub-device selection
-    this.form.get('flashSubDeviceIds')?.addValidators((control) => {
-      const enabled = this.form.get('enableFlash')?.value;
-      const subDevices = this.eligibleSubDevices();
-      if (enabled && subDevices.length > 0) {
-        const selected = control.value as string[];
-        if (!selected || selected.length === 0) {
-          return {'required': true};
-        }
-      }
-      return null;
     });
   }
 
@@ -414,17 +428,14 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
         const runAsValues = vals.map((v) => v.runAs);
         const unique = new Set(runAsValues);
 
-        // If all devices share the same valid runAs value
-        if (unique.size === 1) {
-          const val = runAsValues[0];
-          // And it is one of the common identities
-          if (val && this.commonIdentities().includes(val)) {
-            // If current global is different, update it
-            if (this.form.get('globalRunAs')?.value !== val) {
-              this.form.get('globalRunAs')?.setValue(val, {emitEvent: false});
-            }
-            return;
+        // If all devices share the same valid runAs value and it is one of the common identities
+        const val = runAsValues[0];
+        if (unique.size === 1 && val && this.commonIdentities().includes(val)) {
+          // If current global is different, update it
+          if (this.form.get('globalRunAs')?.value !== val) {
+            this.form.get('globalRunAs')?.setValue(val, {emitEvent: false});
           }
+          return;
         }
 
         // Otherwise, set to Mixed if not already
@@ -477,26 +488,6 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
     }
     // Otherwise (e.g. click on padding), manually toggle.
     chip.toggleSelected(true);
-  }
-
-  toggleSubDeviceSelection(deviceId: string, checked: boolean) {
-    const control = this.form.controls.flashSubDeviceIds;
-    const currentSet = new Set(control.value || []);
-
-    if (checked) {
-      currentSet.add(deviceId);
-    } else {
-      currentSet.delete(deviceId);
-    }
-
-    control.setValue(Array.from(currentSet));
-    control.markAsTouched();
-  }
-
-  isSubDeviceSelected(deviceId: string): boolean {
-    return (this.form.controls.flashSubDeviceIds.value || []).includes(
-      deviceId,
-    );
   }
 
   getSettingsSummary(): string {
@@ -564,10 +555,15 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
         const deviceSummary = this.data.devices.find(
           (d) => d.id === c.deviceId,
         );
+
+        const subDeviceId = this.data.isSubDevice
+          ? deviceSummary?.subDevices?.[0]?.id
+          : '';
+
         return {
           deviceId: c.deviceId,
           runAs: c.runAs,
-          subDeviceId: deviceSummary?.subDevices?.[0]?.id,
+          subDeviceId,
         };
       })
       .filter((c) => c.runAs);
@@ -588,7 +584,7 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
             branch: val.flashBranch ?? '',
             buildId: val.flashBuildId ?? '',
             target: val.flashTarget ?? '',
-            subDeviceIds: val.flashSubDeviceIds ?? [],
+            subDeviceId: val.flashSubDeviceId ?? '',
           }
         : undefined,
     };
@@ -604,21 +600,23 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
   }
 
   private openConfirmDialog(req: RemoteControlDevicesRequest) {
-    const targetDeviceIds = new Set(req.deviceConfigs.map((c) => c.deviceId));
+    const targetIds = this.data.isSubDevice
+      ? new Set(req.deviceConfigs.map((c) => c.subDeviceId))
+      : new Set(req.deviceConfigs.map((c) => c.deviceId));
+
     const skippedDevices = this.deviceList()
       .map((d) => d.summary)
-      .filter((d) => !targetDeviceIds.has(d.id))
+      .filter((d) => !targetIds.has(d.id))
       .map((d) => {
         const result = this.data.eligibilityResults.find(
           (r) => r.deviceId === d.id,
         );
         let reason = 'Skipped';
         if (result && !result.isEligible) {
-          if (result.ineligibilityReason?.code === 'PERMISSION_DENIED') {
-            reason = 'Denied';
-          } else {
-            reason = 'Ineligible';
-          }
+          reason =
+            result.ineligibilityReason?.code === 'PERMISSION_DENIED'
+              ? 'Denied'
+              : 'Ineligible';
         }
         return {id: d.id, reason};
       });

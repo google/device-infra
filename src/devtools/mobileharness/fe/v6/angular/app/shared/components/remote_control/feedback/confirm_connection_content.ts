@@ -5,6 +5,12 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 import {type RemoteControlDevicesRequest} from 'app/core/models/host_overview';
 import {PROXY_TYPE_LABELS} from '../remote_control.types';
 
+interface GroupedConfig {
+  deviceId: string;
+  runAs: string;
+  subDeviceIds: string[];
+}
+
 /**
  * Component for displaying confirmation content before starting remote control.
  */
@@ -19,6 +25,18 @@ import {PROXY_TYPE_LABELS} from '../remote_control.types';
 export class ConfirmConnectionContent {
   @Input() request: RemoteControlDevicesRequest | null = null;
   @Input() skippedDevices: Array<{id: string; reason: string}> = [];
+
+  /** Groups flat device configs by deviceId for display. */
+  get groupedConfigs(): GroupedConfig[] {
+    const configs = this.request?.deviceConfigs || [];
+    const groupedMap = configs.reduce((map, {deviceId, runAs, subDeviceId}) => {
+      const group = map.get(deviceId) ?? {deviceId, runAs, subDeviceIds: []};
+      subDeviceId && group.subDeviceIds.push(subDeviceId);
+      return map.set(deviceId, group);
+    }, new Map<string, GroupedConfig>());
+
+    return Array.from(groupedMap.values());
+  }
 
   showSkippedInConfirm = signal(true);
 

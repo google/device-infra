@@ -396,7 +396,7 @@ export declare interface FlashOptions {
   branch: string;
   buildId: string;
   target: string;
-  subDeviceIds?: string[];
+  subDeviceId?: string;
 }
 
 /**
