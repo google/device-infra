@@ -17,6 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.constant;
 
 /** Mobile Harness property name constants. */
+@SuppressWarnings("InterfaceWithOnlyStatics")
 public interface PropertyName {
 
   /** Mobile Harness job property name constants. */
@@ -397,8 +398,8 @@ public interface PropertyName {
     UPLOAD_GENFILES_ROOT_PATH,
 
     /**
-     * The current UTP mode. Values are: {@linkplain
-     * java/com/google/devtools/mobileharness/infra/controller/test/local/utp/common/UtpMode.java}.
+     * The current UTP mode. Values are in:
+     * //depot/google3/java/com/google/devtools/mobileharness/infra/controller/test/local/utp/common/UtpMode.java.
      */
     UTP_MODE,
 
@@ -937,5 +938,15 @@ public interface PropertyName {
       /** Whether the GMS APK was downloaded from L-Space. */
       GMS_DOWNLOADED_FROM_LSPACE,
     }
+  }
+
+  /** Tenant device config property name constants. */
+  public enum TenantConfig implements PropertyName {
+    /** The tenant ID associated with the tenant device config. */
+    TENANT_CONFIG_ID,
+    /** The UUID of the tenant device config. */
+    TENANT_CONFIG_UUID,
+    /** The path to the source file that generated the tenant device config. */
+    TENANT_CONFIG_SOURCE_PATH,
   }
 }
