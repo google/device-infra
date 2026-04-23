@@ -97,6 +97,7 @@ message SessionPluginConfigs {
 // 7. @SessionGenDir Path.
 // 8. LocalSessionStub.
 // 9. DeviceReserver.
+// 10. LabInfoService.
 message SessionPluginConfig {
   // Required.
   SessionPluginLoadingConfig loading_config = 1;

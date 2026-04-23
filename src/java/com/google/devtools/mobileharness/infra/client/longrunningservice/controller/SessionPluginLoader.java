@@ -42,6 +42,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
 import com.google.devtools.mobileharness.infra.controller.plugin.loader.PluginInstantiator;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
+import com.google.devtools.mobileharness.shared.labinfo.LabInfoService;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.Subscriber;
@@ -75,6 +76,7 @@ public class SessionPluginLoader {
   private final Instant serverStartTime;
   private final LocalSessionStub localSessionStub;
   private final DeviceReserver deviceReserver;
+  private final LabInfoService labInfoService;
 
   @Inject
   SessionPluginLoader(
@@ -83,13 +85,15 @@ public class SessionPluginLoader {
       DeviceQuerier deviceQuerier,
       @ServerStartTime Instant serverStartTime,
       LocalSessionStub localSessionStub,
-      DeviceReserver deviceReserver) {
+      DeviceReserver deviceReserver,
+      LabInfoService labInfoService) {
     this.reflectionUtil = reflectionUtil;
     this.eventBusBackend = eventBusBackend;
     this.deviceQuerier = deviceQuerier;
     this.serverStartTime = serverStartTime;
     this.localSessionStub = localSessionStub;
     this.deviceReserver = deviceReserver;
+    this.labInfoService = labInfoService;
   }
 
   ImmutableList<SessionPlugin> loadSessionPlugins(
@@ -140,6 +144,7 @@ public class SessionPluginLoader {
               serverStartTime,
               localSessionStub,
               deviceReserver,
+              labInfoService,
               sessionEnvironment,
               closeableResources);
 
@@ -229,6 +234,7 @@ public class SessionPluginLoader {
     private final Instant serverStartTime;
     private final LocalSessionStub localSessionStub;
     private final DeviceReserver deviceReserver;
+    private final LabInfoService labInfoService;
     private final SessionEnvironment sessionEnvironment;
     private final CloseableResources closeableResources;
 
@@ -238,6 +244,7 @@ public class SessionPluginLoader {
         Instant serverStartTime,
         LocalSessionStub localSessionStub,
         DeviceReserver deviceReserver,
+        LabInfoService labInfoService,
         SessionEnvironment sessionEnvironment,
         CloseableResources closeableResources) {
       this.sessionInfo = sessionInfo;
@@ -245,6 +252,7 @@ public class SessionPluginLoader {
       this.serverStartTime = serverStartTime;
       this.localSessionStub = localSessionStub;
       this.deviceReserver = deviceReserver;
+      this.labInfoService = labInfoService;
       this.sessionEnvironment = sessionEnvironment;
       this.closeableResources = closeableResources;
     }
@@ -283,6 +291,12 @@ public class SessionPluginLoader {
     @Singleton
     DeviceReserver provideDeviceReserver() {
       return deviceReserver;
+    }
+
+    @Provides
+    @Singleton
+    LabInfoService provideLabInfoService() {
+      return labInfoService;
     }
   }
 
