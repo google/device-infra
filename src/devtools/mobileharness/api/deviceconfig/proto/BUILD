@@ -53,6 +53,10 @@ proto_library(
 
 java_proto_library(
     name = "device_java_proto",
+    visibility = [
+        "//java/com/google/nest/engprod/gazoo/mobileharness:__subpackages__",
+        "//javatests/com/google/nest/engprod/gazoo/mobileharness:__subpackages__",
+    ],
     deps = [":device_proto"],
 )
 
