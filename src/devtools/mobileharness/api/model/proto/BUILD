@@ -50,11 +50,17 @@ java_proto_library(
 proto_library(
     name = "job_proto",
     srcs = ["job.proto"],
+    visibility = [
+        "//devtools/mobileharness/project:otter_service",
+    ],
     deps = ["@protobuf//:timestamp_proto"],
 )
 
 java_proto_library(
     name = "job_java_proto",
+    visibility = [
+        "//devtools/mobileharness/project:otter_service",
+    ],
     deps = [":job_proto"],
 )
 
