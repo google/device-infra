@@ -356,6 +356,8 @@ public final class Dimension {
     DEVICE_ADMIN_WIFI_RESTRICTED,
 
     // iOS
+    /** A comma-separated string containing all available xcode versions on the host. */
+    AVAILABLE_XCODE_VERSIONS,
     /** Whether the device has blocked the iOS version upgrade successfully. */
     BLOCKED_IOS_VERSION_UPGRADE,
     /** Whether the device model is a China model(b/35742879). */
@@ -366,6 +368,8 @@ public final class Dimension {
     DEVICE_FREE_STORAGE,
     /** The free disk storage percentage of the device. */
     DEVICE_FREE_STORAGE_PERCENTAGE,
+    /** The name of device defined in Settings > General > About. */
+    DEVICE_NAME,
     /** Google dev identity status on the host mac machine. */
     HOST_IDENTITY_STATUS,
     /** The version of xcode on the host. */
