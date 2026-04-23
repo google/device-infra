@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.controller.test.util;
 
+import static com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory.createExceptionWithoutStackTrace;
+
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.SubscriberExceptionContext;
@@ -75,7 +77,7 @@ public class SubscriberExceptionLoggingHandler
     } else {
       // Handles unexpected exception.
       // InterruptedException is treated as unexpected exception here because it is deprecated for
-      // skipping test/job and it may be thrown because of timeout rather than plugin itself.
+      // skipping test/job, and it may be thrown because of timeout rather than plugin itself.
       handleUnexpectedException(context, isUserPlugin);
     }
   }
@@ -107,13 +109,12 @@ public class SubscriberExceptionLoggingHandler
     Object event = context.event();
     if (isTestEvent(event)) {
       TestInfo testInfo = getTestInfoFromTestEvent(event);
-      if (context.exception() instanceof SkipTestException) {
-        SkipTestException skipTestException = (SkipTestException) context.exception();
+      if (context.exception() instanceof SkipTestException skipTestException) {
         if (shouldPrintDetailForSkipException(skipTestException.testResult())) {
           testInfo
               .warnings()
               .addAndLog(
-                  new MobileHarnessException(
+                  createExceptionWithoutStackTrace(
                       InfraErrorId.TR_PLUGIN_USER_SKIP_TEST,
                       String.format(
                           "Plugin [%s] wants to skip test and set test to [%s]. "
@@ -137,7 +138,7 @@ public class SubscriberExceptionLoggingHandler
         testInfo
             .warnings()
             .addAndLog(
-                new MobileHarnessException(
+                createExceptionWithoutStackTrace(
                     InfraErrorId.TR_PLUGIN_USER_SKIP_JOB_IN_TEST_EVENT,
                     String.format(
                         "SkipJobException is thrown in a test event %s and it will NOT work. "
@@ -155,7 +156,7 @@ public class SubscriberExceptionLoggingHandler
           jobInfo
               .warnings()
               .addAndLog(
-                  new MobileHarnessException(
+                  createExceptionWithoutStackTrace(
                       InfraErrorId.TR_PLUGIN_USER_SKIP_JOB,
                       String.format(
                           "Plugin [%s] wants to skip job and set job to [%s]. "
@@ -178,7 +179,7 @@ public class SubscriberExceptionLoggingHandler
         jobInfo
             .warnings()
             .addAndLog(
-                new MobileHarnessException(
+                createExceptionWithoutStackTrace(
                     InfraErrorId.TR_PLUGIN_USER_SKIP_TEST_IN_JOB_EVENT,
                     String.format(
                         "SkipTestException is thrown in a job event %s and it will NOT work. "
@@ -207,14 +208,13 @@ public class SubscriberExceptionLoggingHandler
         testInfo
             .warnings()
             .add(
-                new MobileHarnessException(
+                createExceptionWithoutStackTrace(
                     InfraErrorId.TR_PLUGIN_USER_TEST_ERROR,
                     "User test plugin error",
                     context.exception()));
       } else {
-        if (context.exception() instanceof MobileHarnessException) {
+        if (context.exception() instanceof MobileHarnessException e) {
           // Uses the error code in MobileHarnessException.
-          MobileHarnessException e = (MobileHarnessException) context.exception();
           testInfo.warnings().add(e.getErrorId(), e.getMessage(), e.getCause());
         } else {
           testInfo
@@ -234,14 +234,13 @@ public class SubscriberExceptionLoggingHandler
         jobInfo
             .warnings()
             .add(
-                new MobileHarnessException(
+                createExceptionWithoutStackTrace(
                     InfraErrorId.TR_PLUGIN_USER_JOB_ERROR,
                     "User job plugin error",
                     context.exception()));
       } else {
-        if (context.exception() instanceof MobileHarnessException) {
+        if (context.exception() instanceof MobileHarnessException e) {
           // Uses the error code in MobileHarnessException.
-          MobileHarnessException e = (MobileHarnessException) context.exception();
           jobInfo.warnings().add(e.getErrorId(), e.getMessage(), e.getCause());
         } else {
           jobInfo

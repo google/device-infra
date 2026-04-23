@@ -32,6 +32,31 @@ public class MobileHarnessExceptionFactory {
   }
 
   /**
+   * Creates an exception without stack trace.
+   *
+   * <p>It is for OmniLab test log readability for users. Because the location of an infra exception
+   * can be easily inferred from its error ID and error message, its stack trace can be and should
+   * be discarded, for the cases where an exception is created not for an "error", e.g., skip test.
+   */
+  public static MobileHarnessException createExceptionWithoutStackTrace(
+      ErrorId errorId, String message) {
+    return createExceptionWithoutStackTrace(errorId, message, /* cause= */ null);
+  }
+
+  /**
+   * Creates an exception without stack trace.
+   *
+   * <p>It is for OmniLab test log readability for users. Because the location of an infra exception
+   * can be easily inferred from its error ID and error message, its stack trace can be and should
+   * be discarded, for the cases where an exception is created not for an "error", e.g., skip test.
+   */
+  public static MobileHarnessException createExceptionWithoutStackTrace(
+      ErrorId errorId, String message, @Nullable Throwable cause) {
+    return new MobileHarnessException(
+        errorId, message, cause, /* addErrorIdToMessage= */ true, /* clearStackTrace= */ true);
+  }
+
+  /**
    * Creates a user facing {@link MobileHarnessException} without stack trace and error id in
    * message.
    *

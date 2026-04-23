@@ -16,16 +16,23 @@
 
 package com.google.devtools.mobileharness.infra.client.api.mode.local;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.devtools.mobileharness.shared.util.truth.Correspondences.isInstanceOf;
+import static java.util.Objects.requireNonNull;
 
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.truth.Correspondence;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
@@ -59,6 +66,7 @@ import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestSta
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
@@ -74,6 +82,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -248,6 +257,23 @@ public class LocalModeIntegrationTest {
         .inOrder();
   }
 
+  @Test
+  public void testSkipTest() throws Exception {
+    JobInfo jobInfo = createJobInfo("fake_job_for_skipping_Test");
+    TestPluginForSkippingTest plugin =
+        new TestPluginForSkippingTest(BasicErrorId.USER_PLUGIN_ERROR);
+
+    clientApi.startJob(jobInfo, localMode, ImmutableList.of(plugin));
+    clientApi.waitForJob(jobInfo.locator().getId());
+
+    TestInfo testInfo = jobInfo.tests().getOnly();
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.FAIL);
+    assertThat(testInfo.resultWithCause().get().causeException().orElseThrow().getErrorId())
+        .isEqualTo(BasicErrorId.USER_PLUGIN_ERROR);
+
+    verifyStackTrace();
+  }
+
   private static JobInfo createJobInfo(String jobName) {
     JobInfo jobInfo =
         JobInfo.newBuilder()
@@ -271,7 +297,7 @@ public class LocalModeIntegrationTest {
     @Subscribe
     public void onTestStarting(LocalTestStartingEvent event) throws SkipTestException {
       try {
-        logger.atInfo().log("TestPlugin.onTestStarting");
+        logger.atInfo().log("TestPluginForDeviceReserver.onTestStarting");
 
         Device device = event.getLocalDevice();
         assertThat(device.getDeviceControlId()).isEqualTo("NoOpDevice-0");
@@ -339,5 +365,62 @@ public class LocalModeIntegrationTest {
         com.google.devtools.mobileharness.api.testrunner.event.test.TestEndedEvent event) {
       receivedEvents.add(event);
     }
+  }
+
+  private record TestPluginForSkippingTest(ErrorId errorId) {
+
+    @Subscribe
+    public void onTestStarting(LocalTestStartingEvent event) throws SkipTestException {
+      logger.atInfo().log("TestPluginForSkippingTest.onTestStarting");
+      throw SkipTestException.create("Fake reason", DesiredTestResult.FAIL, errorId);
+    }
+  }
+
+  private void verifyStackTrace() {
+    String logs = captureLogs.getLogs();
+
+    // Groups multiple "\tat " lines to a "stack trace".
+    List<List<String>> stackTraces = new ArrayList<>();
+    List<String> currentStackTrace = null;
+    for (String line : Splitter.on(Pattern.compile("\\R")).splitToList(logs)) {
+      if (line.startsWith("\tat ")) {
+        if (currentStackTrace == null) {
+          currentStackTrace = new ArrayList<>();
+          stackTraces.add(currentStackTrace);
+        }
+        currentStackTrace.add(line);
+      } else {
+        currentStackTrace = null;
+      }
+    }
+
+    // Uses the 2nd line of a stack trace as its source.
+    ImmutableSet<String> stackTraceSources =
+        stackTraces.stream()
+            .map(
+                stackTrace ->
+                    (stackTrace.size() >= 2 ? stackTrace.get(1) : stackTrace.get(0)).substring(4))
+            .collect(toImmutableSet());
+
+    assertWithMessage(
+            """
+            Stack trace (lines starting with "\\tat ") in test log cannot be from infra code.
+
+
+            Note that the assertion failure below is reverted: the "expected" is the\
+             actual stack trace source, and the "actual" is the expected stack trace\
+             source allowlist.\
+            """)
+        .that(
+            ImmutableList.of(
+                "com.google.devtools.mobileharness.api.model.job.out.Result",
+                "com.google.devtools.mobileharness.infra.client.api.controller.job.JobRunner",
+                "com.google.devtools.mobileharness.infra.client.api.mode.local.LocalModeIntegrationTest"))
+        .comparingElementsUsing(
+            Correspondence.from(
+                (String actual, String expected) ->
+                    requireNonNull(expected).startsWith(requireNonNull(actual)),
+                "is a prefix of"))
+        .containsAtLeastElementsIn(stackTraceSources);
   }
 }

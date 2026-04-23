@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.controller.event.util;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory.createExceptionWithoutStackTrace;
 
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
@@ -181,7 +182,7 @@ public final class SkipInformationHandler {
     ErrorId resultCauseExceptionErrorId =
         getResultCauseExceptionErrorId(skipReasonException, isJob);
     MobileHarnessException resultCauseException =
-        new MobileHarnessException(
+        createExceptionWithoutStackTrace(
             resultCauseExceptionErrorId, messageWithResult, skipReasonException);
     for (SkipInformation otherReason : splitSkipInfos.otherSkipReasons()) {
       resultCauseException.addSuppressed(otherReason.context().exception());

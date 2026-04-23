@@ -15,6 +15,8 @@
 
 load("@rules_java//java:defs.bzl", "java_library")
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "test_command_history_saver",
     srcs = [
@@ -74,6 +76,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test:base",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
         "//src/java/com/google/devtools/mobileharness/shared/util/event:event_bus",
