@@ -92,6 +92,7 @@ public enum AndroidProperty {
   SIM_OPERATOR_ALPHA("gsm.sim.operator.alpha"),
   SIM_STATE("gsm.sim.state"),
   SOC_ID("ro.boot.hw.soc.id"),
+  SOC_MODEL("ro.soc.model"),
   SOC_REV("ro.boot.hw.soc.rev"),
   @DoNotAddToDimension
   TEST_HARNESS("ro.test_harness"),
