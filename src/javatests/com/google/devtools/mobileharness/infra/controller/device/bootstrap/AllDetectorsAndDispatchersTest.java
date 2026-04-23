@@ -30,4 +30,22 @@ public final class AllDetectorsAndDispatchersTest {
     Flags.parseOss(new String[] {});
     assertThat(AllDetectorsAndDispatchers.detectorCandidatesForLabServerOss()).isNotEmpty();
   }
+
+  @Test
+  public void detectorCandidatesForLabServerOss_allFlagsEnabled_isNotEmpty() {
+    Flags.parse(
+        new String[] {
+          "--detect_adb_device=true",
+          "--enable_fastboot_detector=true",
+          "--enable_evb_board_detection=true",
+          "--enable_emulator_detection=true",
+          "--cloud_tf_avd_device_num=1",
+          "--oxygen_android_virtual_device_num=1",
+          "--enable_physical_tf_avd_detection=true",
+          "--android_jit_emulator_num=1",
+          "--gem5_device_num=1",
+          "--enable_maneki_detection=true",
+        });
+    assertThat(AllDetectorsAndDispatchers.detectorCandidatesForLabServerOss()).isNotEmpty();
+  }
 }
