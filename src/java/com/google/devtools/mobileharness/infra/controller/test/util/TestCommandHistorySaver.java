@@ -37,8 +37,8 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
 import java.util.List;
+import java.util.TimeZone;
 import java.util.stream.Stream;
 
 /**
@@ -70,12 +70,14 @@ public class TestCommandHistorySaver {
 
   private static final String FILE_NAME = "command_history.txt";
 
-  private static final String FIRST_LINE = "start_time(sec) end_time(sec) exit_code command";
+  private static final String FIRST_LINE =
+      "command_start_time command_end_time relative_start_time(sec) relative_end_time(sec)"
+          + " exit_code command";
   private static final String SECOND_LINE = "0.000 NA NA # testInfo startTime ";
 
-  // ISO_INSTANT formatter which always emits milliseconds, even when zero.
   private static final DateTimeFormatter FORMATTER =
-      new DateTimeFormatterBuilder().appendInstant(3).toFormatter();
+      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss:SSS z")
+          .withZone(TimeZone.getTimeZone("America/Los_Angeles").toZoneId());
 
   private final CommandHistory commandHistory;
   private final boolean saveAllHistory;
@@ -128,6 +130,8 @@ public class TestCommandHistorySaver {
 
   private static String formatCommandRecord(CommandRecord commandRecord, Instant testStartTime) {
     Stream.Builder<String> builder = Stream.builder();
+    builder.add(FORMATTER.format(commandRecord.startTime()));
+    builder.add(commandRecord.endTime().map(FORMATTER::format).orElse("NA"));
     builder.add(formatCommandTime(Duration.between(testStartTime, commandRecord.startTime())));
     builder.add(
         commandRecord
