@@ -94,7 +94,6 @@ import com.google.devtools.mobileharness.shared.util.junit.rule.PrintTestName;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
-import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionRequest;
@@ -295,9 +294,8 @@ public class OlcServerIntegrationTest {
         .comparingExpectedFieldsOnly()
         .isEqualTo(
             KillServerResponse.newBuilder().setSuccess(Success.getDefaultInstance()).build());
-    // Avoid the stacktrace of StatusRuntimeException due to inappropriate close of the steam.
     requestObserver.onCompleted();
-    Sleeper.defaultSleeper().sleep(Duration.ofSeconds(6L));
+    olcServerProcess.await(Duration.ofSeconds(10));
     assertThat(olcServerProcess.isAlive()).isFalse();
 
     String olcServerStderr = stringBuilders.getOrCreate("olc_server_stderr").toString();
@@ -400,7 +398,7 @@ public class OlcServerIntegrationTest {
         .comparingExpectedFieldsOnly()
         .isEqualTo(
             KillServerResponse.newBuilder().setSuccess(Success.getDefaultInstance()).build());
-    Sleeper.defaultSleeper().sleep(Duration.ofSeconds(6L));
+    olcServerProcess.await(Duration.ofSeconds(10));
     assertThat(olcServerProcess.isAlive()).isFalse();
   }
 
@@ -470,7 +468,7 @@ public class OlcServerIntegrationTest {
         .comparingExpectedFieldsOnly()
         .isEqualTo(
             KillServerResponse.newBuilder().setSuccess(Success.getDefaultInstance()).build());
-    Sleeper.defaultSleeper().sleep(Duration.ofSeconds(6L));
+    olcServerProcess.await(Duration.ofSeconds(10));
     assertThat(olcServerProcess.isAlive()).isFalse();
   }
 
