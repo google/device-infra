@@ -229,6 +229,9 @@ public class OlcServerIntegrationTest {
         .isEqualTo(
             GetVersionResponse.newBuilder().setLabVersion(Version.LAB_VERSION.toString()).build());
 
+    // Checks the lab info service.
+    verifyLabInfoServiceStarted();
+
     // Gets the server log.
     OlcServerLogCollector olcServerLogCollector = new OlcServerLogCollector();
     ControlStub controlStub = new ControlGrpcStub(olcServerChannel);
@@ -275,6 +278,9 @@ public class OlcServerIntegrationTest {
         .comparingExpectedFieldsOnly()
         .ignoringExtraRepeatedFieldElements()
         .isEqualTo(createGetSessionResponse(deviceControlId));
+
+    // Verifies the device info after the device is reserved.
+    verifyDeviceInfo(deviceControlId);
 
     List<SessionDetail> allSessions =
         sessionStub
@@ -326,23 +332,7 @@ public class OlcServerIntegrationTest {
             GetVersionResponse.newBuilder().setLabVersion(Version.LAB_VERSION.toString()).build());
 
     // Checks the lab info service.
-    GetLabInfoResponse getLabInfoResponse =
-        labInfoGrpcStub.getLabInfo(GetLabInfoRequest.getDefaultInstance());
-    List<LabData> labDataList =
-        getLabInfoResponse.getLabQueryResult().getLabView().getLabDataList();
-    assertWithMessage("getLabInfoResponse=[%s]", getLabInfoResponse).that(labDataList).hasSize(1);
-    assertWithMessage("getLabInfoResponse=[%s]", getLabInfoResponse)
-        .that(labDataList.get(0).getDeviceList().getDeviceInfoList())
-        .comparingElementsUsing(
-            Correspondence.from(
-                (DeviceInfo deviceInfo, String uuidSuffix) ->
-                    requireNonNull(deviceInfo)
-                        .getDeviceLocator()
-                        .getId()
-                        .endsWith(requireNonNull(uuidSuffix)),
-                "has a device UUID ending with"))
-        .containsExactly(
-            "NoOpDevice-0", "NoOpDevice-1", "NoOpDevice-2", "NoOpDevice-3", "NoOpDevice-4");
+    verifyLabInfoServiceStarted();
 
     // Creates a session.
     SessionStub sessionStub = new SessionGrpcStub(olcServerChannel);
@@ -370,6 +360,7 @@ public class OlcServerIntegrationTest {
         .ignoringExtraRepeatedFieldElements()
         .isEqualTo(createGetSessionResponse(deviceControlId));
 
+    // Verifies the device info after the device is reserved.
     verifyDeviceInfo(deviceControlId);
 
     String olcServerStderr = stringBuilders.getOrCreate("olc_server_stderr").toString();
@@ -425,23 +416,7 @@ public class OlcServerIntegrationTest {
             GetVersionResponse.newBuilder().setLabVersion(Version.LAB_VERSION.toString()).build());
 
     // Checks the lab info service.
-    GetLabInfoResponse getLabInfoResponse =
-        labInfoGrpcStub.getLabInfo(GetLabInfoRequest.getDefaultInstance());
-    List<LabData> labDataList =
-        getLabInfoResponse.getLabQueryResult().getLabView().getLabDataList();
-    assertWithMessage("getLabInfoResponse=[%s]", getLabInfoResponse).that(labDataList).hasSize(1);
-    assertWithMessage("getLabInfoResponse=[%s]", getLabInfoResponse)
-        .that(labDataList.get(0).getDeviceList().getDeviceInfoList())
-        .comparingElementsUsing(
-            Correspondence.from(
-                (DeviceInfo deviceInfo, String uuidSuffix) ->
-                    requireNonNull(deviceInfo)
-                        .getDeviceLocator()
-                        .getId()
-                        .endsWith(requireNonNull(uuidSuffix)),
-                "has a device UUID ending with"))
-        .containsExactly(
-            "NoOpDevice-0", "NoOpDevice-1", "NoOpDevice-2", "NoOpDevice-3", "NoOpDevice-4");
+    verifyLabInfoServiceStarted();
 
     // Creates a session.
     SessionStub sessionStub = new SessionGrpcStub(olcServerChannel);
@@ -849,6 +824,26 @@ public class OlcServerIntegrationTest {
       result.add(matcher.group());
     }
     return result.build();
+  }
+
+  private void verifyLabInfoServiceStarted() throws GrpcExceptionWithErrorId {
+    GetLabInfoResponse getLabInfoResponse =
+        labInfoGrpcStub.getLabInfo(GetLabInfoRequest.getDefaultInstance());
+    List<LabData> labDataList =
+        getLabInfoResponse.getLabQueryResult().getLabView().getLabDataList();
+    assertWithMessage("getLabInfoResponse=[%s]", getLabInfoResponse).that(labDataList).hasSize(1);
+    assertWithMessage("getLabInfoResponse=[%s]", getLabInfoResponse)
+        .that(labDataList.get(0).getDeviceList().getDeviceInfoList())
+        .comparingElementsUsing(
+            Correspondence.from(
+                (DeviceInfo deviceInfo, String uuidSuffix) ->
+                    requireNonNull(deviceInfo)
+                        .getDeviceLocator()
+                        .getId()
+                        .endsWith(requireNonNull(uuidSuffix)),
+                "has a device UUID ending with"))
+        .containsExactly(
+            "NoOpDevice-0", "NoOpDevice-1", "NoOpDevice-2", "NoOpDevice-3", "NoOpDevice-4");
   }
 
   private void verifyDeviceInfo(String allocatedDeviceControlId) throws GrpcExceptionWithErrorId {
