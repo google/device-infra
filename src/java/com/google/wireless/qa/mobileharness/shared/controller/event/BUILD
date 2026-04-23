@@ -34,6 +34,7 @@ java_library(
     name = "device",
     srcs = [
         "ControllerEvent.java",
+        "LocalDeviceAllcoatedEvent.java",
         "LocalDeviceChangeEvent.java",
         "LocalDeviceDownEvent.java",
         "LocalDeviceErrorEvent.java",
