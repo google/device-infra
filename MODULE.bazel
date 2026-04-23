@@ -22,6 +22,7 @@ bazel_dep(name = "rules_license", version = "1.0.0")
 bazel_dep(name = "rules_pkg", version = "1.2.0")
 bazel_dep(name = "rules_python", version = "1.6.0")
 bazel_dep(name = "rules_swift", version = "2.1.1")
+bazel_dep(name = "cel-spec", version = "0.24.0", repo_name = "dev_cel")
 
 ##############
 # googleapis #
@@ -73,6 +74,31 @@ go_deps = use_extension("@bazel_gazelle//:extensions.bzl", "go_deps")
 go_deps.from_file(
     go_work = "//:go.work",
 )
+go_deps.module(
+    path = "github.com/cncf/xds/go",
+    sum = "h1:aQ3y1lwWyqYPiWZThqv1aFbZMiM9vblcSArJRf2Irls=",
+    version = "v0.0.0-20250501225837-2ac532fd4443",
+)
+go_deps.module(
+    path = "cel.dev/expr",
+    sum = "h1:56OvJKSH3hDGL0ml5uSxZmz3/3Pq4tJ+fb1unVLAFcY=",
+    version = "v0.24.0",
+)
+go_deps.module(
+    path = "github.com/envoyproxy/go-control-plane/envoy",
+    sum = "h1:yg/JjO5E7ubRyKX3m07GF3reDNEnfOboJ0QySbH736g=",
+    version = "v1.36.0",
+)
+go_deps.module(
+    path = "github.com/envoyproxy/go-control-plane",
+    sum = "h1:hbG2kr4RuFj222B6+7T83thSPqLjwBIfQawTkC++2HA=",
+    version = "v0.14.0",
+)
+go_deps.module(
+    path = "github.com/envoyproxy/go-control-plane/ratelimit",
+    sum = "h1:/G9QYbddjL25KvtKTv3an9lx6VBE2cnb8wp1vEGNYGI=",
+    version = "v0.1.0",
+)
 go_deps.module_override(
     patch_strip = 1,
     patches = [
@@ -80,16 +106,63 @@ go_deps.module_override(
     ],
     path = "github.com/bazelbuild/remote-apis-sdks",
 )
+
+# NB 2024-11-18: Solve issues with BUILD file paths in xds.
+# https://github.com/cncf/xds/issues/104
+go_deps.gazelle_override(
+    build_file_generation = "on",
+    directives = [
+        "gazelle:resolve go cel.dev/expr @dev_cel_expr//:expr",
+    ],
+    path = "github.com/cncf/xds/go",
+)
+go_deps.gazelle_override(
+    build_file_generation = "off",
+    path = "cel.dev/expr",
+)
+go_deps.gazelle_override(
+    directives = [
+        "gazelle:resolve go google.golang.org/protobuf/types/known/anypb @org_golang_google_protobuf//types/known/anypb",
+        "gazelle:resolve go google.golang.org/protobuf/types/known/durationpb @org_golang_google_protobuf//types/known/durationpb",
+        "gazelle:resolve go github.com/cncf/xds/go/xds/type/matcher/v3 @com_github_cncf_xds_go//xds/type/matcher/v3:go_default_library",
+        "gazelle:resolve go github.com/cncf/xds/go/xds/core/v3 @com_github_cncf_xds_go//xds/core/v3:go_default_library",
+        "gazelle:resolve go github.com/cncf/xds/go/xds/data/orca/v3 @com_github_cncf_xds_go//xds/data/orca/v3:go_default_library",
+        "gazelle:resolve go github.com/cncf/xds/go/xds/type/v3 @com_github_cncf_xds_go//xds/type/v3:go_default_library",
+        "gazelle:resolve go github.com/cncf/xds/go/udpa/annotations @com_github_cncf_xds_go//udpa/annotations:go_default_library",
+        "gazelle:resolve go github.com/cncf/xds/go/xds/service/orca/v3 @com_github_cncf_xds_go//xds/service/orca/v3:go_default_library",
+        "gazelle:resolve go github.com/cncf/xds/go/udpa/type/v1 @com_github_cncf_xds_go//udpa/type/v1:go_default_library",
+        "gazelle:resolve go github.com/cncf/xds/go/xds/annotations/v3 @com_github_cncf_xds_go//xds/annotations/v3:go_default_library",
+    ],
+    path = "google.golang.org/grpc",
+)
+go_deps.gazelle_override(
+    directives = [
+        "gazelle:resolve go github.com/cncf/xds/go/xds/type/matcher/v3 @com_github_cncf_xds_go//xds/type/matcher/v3:go_default_library",
+        "gazelle:resolve go github.com/cncf/xds/go/xds/core/v3 @com_github_cncf_xds_go//xds/core/v3:go_default_library",
+        "gazelle:resolve go github.com/cncf/xds/go/xds/data/orca/v3 @com_github_cncf_xds_go//xds/data/orca/v3:go_default_library",
+        "gazelle:resolve go github.com/cncf/xds/go/xds/type/v3 @com_github_cncf_xds_go//xds/type/v3:go_default_library",
+        "gazelle:resolve go github.com/cncf/xds/go/udpa/annotations @com_github_cncf_xds_go//udpa/annotations:go_default_library",
+        "gazelle:resolve go github.com/cncf/xds/go/xds/service/orca/v3 @com_github_cncf_xds_go//xds/service/orca/v3:go_default_library",
+        "gazelle:resolve go github.com/cncf/xds/go/udpa/type/v1 @com_github_cncf_xds_go//udpa/type/v1:go_default_library",
+        "gazelle:resolve go github.com/cncf/xds/go/xds/annotations/v3 @com_github_cncf_xds_go//xds/annotations/v3:go_default_library",
+    ],
+    path = "github.com/envoyproxy/go-control-plane",
+)
 use_repo(
     go_deps,
     "com_github_bazelbuild_remote_apis",
     "com_github_bazelbuild_remote_apis_sdks",
+    "com_github_cncf_xds_go",
+    "com_github_envoyproxy_go_control_plane",
+    "com_github_envoyproxy_go_control_plane_envoy",
+    "com_github_envoyproxy_go_control_plane_ratelimit",
     "com_github_golang_glog",
     "com_github_google_uuid",
     "com_github_hanwen_go_fuse_v2",
     "com_github_jotfs_fastcdc_go",
     "com_github_pkg_xattr",
     "com_github_rsocket_rsocket_go",
+    "dev_cel_expr",
     "org_chromium_go_luci",
     "org_golang_google_grpc",
     "org_golang_google_protobuf",

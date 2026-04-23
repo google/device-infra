@@ -30,6 +30,7 @@ message EstablishConduitRequest {
     PROTOCOL_UNSPECIFIED = 0;
     PROTOCOL_TCP = 1;
     PROTOCOL_GRPC = 2;
+    PROTOCOL_HTTP = 3;
   }
   ConduitType type = 1;
   bool auto_reconnect = 2;
@@ -50,6 +51,8 @@ message ServiceLocator {
   oneof locator {
     string xds_address = 1;
     string hostname_port = 2;
+    string virtual_host = 3;
+    string sni = 4;
   }
 }
 
