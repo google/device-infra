@@ -5,6 +5,7 @@ import {HostConfig} from '../../../models/host_config_models';
 import {MockHostScenario} from '../models';
 import {
   createDefaultHostOverview,
+  createDefaultReleaseResponse,
   createDefaultUiStatus,
   createHostActions,
 } from './ui_status_utils';
@@ -44,4 +45,5 @@ export const SCENARIO_HOST_BASIC_EDITABLE: MockHostScenario = {
   },
   defaultDeviceConfig: DEFAULT_DEVICE_CONFIG,
   actions: createHostActions(),
+  releaseResponse: createDefaultReleaseResponse(),
 };

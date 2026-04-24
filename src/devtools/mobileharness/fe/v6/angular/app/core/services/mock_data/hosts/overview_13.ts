@@ -1,13 +1,17 @@
 import {DeviceSummary, HostOverview} from '../../../models/host_overview';
 import {MockHostScenario} from '../models';
 
-import {createDefaultUiStatus, createHostActions} from './ui_status_utils';
+import {
+  createDefaultUiStatus,
+  createDeviceActions,
+  createHostActions,
+} from './ui_status_utils';
 
 const overview: HostOverview = {
   hostName: 'decommission-test-host.prod.example.com',
   ip: '192.168.13.113',
   os: 'gLinux',
-    canUpgrade: false,
+  canUpgrade: false,
   labTypeDisplayNames: ['Satellite Lab'],
   labServer: {
     connectivity: {
@@ -50,6 +54,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:missing',
     model: 'Pixel 6',
     version: '13',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: 'MISSING-DEV-2',
@@ -64,6 +69,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:missing',
     model: 'Pixel 6 Pro',
     version: '13',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: 'MISSING-DEV-3',
@@ -78,6 +84,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:missing',
     model: 'Pixel 7',
     version: '14',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: 'ACTIVE-DEV-4',
@@ -92,6 +99,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:active',
     model: 'Pixel 8',
     version: '14',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
 ];
 

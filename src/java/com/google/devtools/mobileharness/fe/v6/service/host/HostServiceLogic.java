@@ -31,10 +31,10 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostHeaderI
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetPopularFlagsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetPopularFlagsResponse;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetReleaseConfigsRequest;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetReleaseConfigsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ReleaseLabServerRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ReleaseLabServerResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesRequest;
@@ -65,7 +65,8 @@ public interface HostServiceLogic {
   ListenableFuture<UpdatePassThroughFlagsResponse> updatePassThroughFlags(
       UpdatePassThroughFlagsRequest request);
 
-  ListenableFuture<GetReleaseConfigsResponse> getReleaseConfigs(GetReleaseConfigsRequest request);
+  ListenableFuture<PreflightLabServerReleaseResponse> preflightLabServerRelease(
+      PreflightLabServerReleaseRequest request);
 
   ListenableFuture<DecommissionMissingDevicesResponse> decommissionMissingDevices(
       DecommissionMissingDevicesRequest request);
