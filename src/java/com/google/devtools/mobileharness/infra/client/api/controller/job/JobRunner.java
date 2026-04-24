@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.client.api.controller.job;
 import static com.google.common.collect.Comparators.min;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
+import static com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory.createExceptionWithoutStackTrace;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
@@ -216,7 +217,7 @@ public class JobRunner implements Runnable {
   private volatile boolean hasAllocation = false;
 
   /** Future that completes when job files are prepared. */
-  @Nullable private ListenableFuture<?> preparejobFilesFuture;
+  @Nullable private ListenableFuture<?> prepareJobFilesFuture;
 
   /** File util for cleaning job files. */
   private final LocalFileUtil fileUtil;
@@ -403,7 +404,7 @@ public class JobRunner implements Runnable {
    * <p>If the given scope is {@link EventScope#API_PLUGIN} or {@link EventScope#JAR_PLUGIN},
    * registers the handler for the events in {@linkplain com.google.wireless.qa.mobileharness
    * .shared.controller.test.TestRunner.EventScope#TEST_MESSAGE TestRunner.EventScope.TEST_MESSAGE}
-   * of each tests started after the invocation of this method too.
+   * of each test started after the invocation of this method too.
    */
   public void registerEventHandler(Object handler, EventScope scope) {
     scopedEventBus.inScope(scope).register(handler);
@@ -440,7 +441,7 @@ public class JobRunner implements Runnable {
       if (!skipJob) {
         // Checks whether there is test generated.
         if (jobInfo.tests().isEmpty()) {
-          throw new MobileHarnessException(
+          throw createExceptionWithoutStackTrace(
               InfraErrorId.CLIENT_JR_JOB_START_WITHOUT_TEST,
               "No test specified/generated for the job. Please specify the tests you need to run.");
         }
@@ -501,7 +502,7 @@ public class JobRunner implements Runnable {
                   .resultWithCause()
                   .setNonPassing(
                       Test.TestResult.TIMEOUT,
-                      new MobileHarnessException(
+                      createExceptionWithoutStackTrace(
                           InfraErrorId.CLIENT_JR_JOB_EXPIRED, "Job timeout"));
               break;
             }
@@ -571,7 +572,7 @@ public class JobRunner implements Runnable {
       jobInfo
           .warnings()
           .addAndLog(
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_JOB_EXEC_INTERRUPTED, "Job interrupted", e),
               logger);
     } catch (Throwable t) {
@@ -581,7 +582,7 @@ public class JobRunner implements Runnable {
       jobInfo
           .warnings()
           .addAndLog(
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_JOB_EXEC_FATAL_ERROR, "Fatal job error", t));
     } finally {
       // Tears down device allocator.
@@ -716,7 +717,7 @@ public class JobRunner implements Runnable {
       }
 
       if (isResumedJob(jobInfo)) {
-        preparejobFilesFuture =
+        prepareJobFilesFuture =
             logFailure(
                 threadPool.submit(
                     Callables.threadRenaming(
@@ -730,7 +731,7 @@ public class JobRunner implements Runnable {
                 jobInfo.locator().getId());
       } else {
         prepareJobFiles();
-        preparejobFilesFuture = immediateFuture(null);
+        prepareJobFilesFuture = immediateFuture(null);
       }
 
       long preRunJobTimeMs = stopwatch.stop().elapsed().toMillis();
@@ -860,7 +861,7 @@ public class JobRunner implements Runnable {
     }
     Allocation allocation = allocationWithStats.allocation();
     logger.atInfo().log("Allocation: %s", allocation);
-    // Double checks the allocation.
+    // Double-checks the allocation.
     ImmutableList<DeviceLocator> deviceLocators = allocation.getAllDevices();
     TestLocator testLocator = allocation.getTest();
     if (!testLocator.jobLocator().id().equals(jobInfo.locator().getId())) {
@@ -869,7 +870,7 @@ public class JobRunner implements Runnable {
       jobInfo
           .warnings()
           .addAndLog(
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_ALLOC_RESULT_TEST_NOT_IN_JOB, error));
       return;
     }
@@ -882,7 +883,7 @@ public class JobRunner implements Runnable {
       jobInfo
           .warnings()
           .addAndLog(
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_ALLOC_RESULT_TEST_NOT_FOUND, error));
       return;
     }
@@ -892,7 +893,7 @@ public class JobRunner implements Runnable {
       jobInfo
           .warnings()
           .addAndLog(
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_ALLOC_RESULT_TEST_ALREADY_ALLOCATED,
                   "Ignore allocation "
                       + allocation
@@ -996,15 +997,15 @@ public class JobRunner implements Runnable {
 
   /** Checks if the job files are ready. */
   private boolean areJobFilesReady() throws MobileHarnessException, InterruptedException {
-    if (preparejobFilesFuture != null) {
+    if (prepareJobFilesFuture != null) {
       try {
         // Check if ready without blocking.
-        preparejobFilesFuture.get(0, SECONDS);
+        prepareJobFilesFuture.get(0, SECONDS);
       } catch (ExecutionException e) {
         if (e.getCause() instanceof MobileHarnessException) {
           throw (MobileHarnessException) e.getCause();
         } else {
-          throw new MobileHarnessException(
+          throw createExceptionWithoutStackTrace(
               InfraErrorId.CLIENT_JR_JOB_PREPARE_JOB_FILES_ERROR,
               "Failed to prepare job files",
               e.getCause());
@@ -1033,7 +1034,7 @@ public class JobRunner implements Runnable {
       jobInfo
           .warnings()
           .addAndLog(
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_JOB_TEAR_DOWN_ALLOCATOR_FATAL_ERROR,
                   "FATAL job error when tearing down allocator",
                   t));
@@ -1048,7 +1049,7 @@ public class JobRunner implements Runnable {
       logger.at(jobError == null ? Level.INFO : Level.WARNING).log(
           "Job runner post run job%s", jobError == null ? "" : " with exception " + jobError);
 
-      // Catches all Exception of each operations below to make sure the all operations are
+      // Catches all exceptions of each operations below to make sure the all operations are
       // executed. It is OK to swallow InterruptedException here, the job thread is ending soon.
       logger.atInfo().log("Shutdown test thread pool");
       try {
@@ -1058,7 +1059,7 @@ public class JobRunner implements Runnable {
           jobInfo
               .warnings()
               .addAndLog(
-                  new MobileHarnessException(
+                  createExceptionWithoutStackTrace(
                       InfraErrorId.CLIENT_JR_JOB_SHUT_DOWN_THRAD_POOL_INTERRUPTED,
                       String.format(
                           "Failed to terminate test thread pool of job %s within %s",
@@ -1074,7 +1075,7 @@ public class JobRunner implements Runnable {
         jobInfo
             .warnings()
             .addAndLog(
-                new MobileHarnessException(
+                createExceptionWithoutStackTrace(
                     InfraErrorId.CLIENT_JR_JOB_SHUT_DOWN_THREAD_POOL_FATAL_ERROR, errorMessage, e));
       }
 
@@ -1090,7 +1091,7 @@ public class JobRunner implements Runnable {
         jobInfo
             .warnings()
             .addAndLog(
-                new MobileHarnessException(
+                createExceptionWithoutStackTrace(
                     InfraErrorId.CLIENT_JR_JOB_FINALIZE_RESULT_FATAL_ERROR, errorMessage, e));
       }
       jobInfo.status().set(TestStatus.DONE);
@@ -1139,7 +1140,7 @@ public class JobRunner implements Runnable {
         jobInfo
             .warnings()
             .addAndLog(
-                new MobileHarnessException(
+                createExceptionWithoutStackTrace(
                     InfraErrorId.CLIENT_JR_JOB_END_EVENT_POST_FATAL_ERROR,
                     errorMessage + ": " + e.getMessage()));
       }
@@ -1165,7 +1166,7 @@ public class JobRunner implements Runnable {
       jobInfo
           .warnings()
           .addAndLog(
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_JOB_TEAR_DOWN_FATAL_ERROR,
                   "Fatal job error when tearing down job: ",
                   e));
@@ -1185,7 +1186,7 @@ public class JobRunner implements Runnable {
       jobInfo
           .warnings()
           .addAndLog(
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_JOB_CLEAN_UP_DIR_ERROR,
                   "Failed to remove " + dirType + "-file dir",
                   e),
@@ -1234,7 +1235,7 @@ public class JobRunner implements Runnable {
         .add(
             PropertyName.Job.ALLOCATION_FAIL_AFTER_START_TIMEOUT,
             Boolean.toString(isStartTimeoutExpired));
-    MobileHarnessException exception = new MobileHarnessException(errorId, errorMsg);
+    MobileHarnessException exception = createExceptionWithoutStackTrace(errorId, errorMsg);
     if (suppressed != null) {
       exception.addSuppressed(suppressed);
     }
@@ -1257,7 +1258,7 @@ public class JobRunner implements Runnable {
     }
     if (jobInfo.properties().getBoolean(PropertyName.Job.MANUALLY_ABORTED).orElse(false)) {
       MobileHarnessException e =
-          new MobileHarnessException(
+          createExceptionWithoutStackTrace(
               InfraErrorId.CLIENT_JR_JOB_EXEC_INTERRUPTED,
               String.format("Job %s is manually aborted.", jobInfo.locator().getId()));
       jobInfo
@@ -1332,7 +1333,8 @@ public class JobRunner implements Runnable {
               testInfo
                   .resultWithCause()
                   .setNonPassing(
-                      Test.TestResult.ERROR, new MobileHarnessException(errorId, errMsg, cause));
+                      Test.TestResult.ERROR,
+                      createExceptionWithoutStackTrace(errorId, errMsg, cause));
               logAllocUserConfigErrorCauseToProperty(testInfo, errorId, cause);
             }
           } else if (failFastError != null) {
@@ -1341,7 +1343,7 @@ public class JobRunner implements Runnable {
                 .resultWithCause()
                 .setNonPassing(
                     Test.TestResult.ERROR,
-                    new MobileHarnessException(
+                    createExceptionWithoutStackTrace(
                         InfraErrorId.CLIENT_JR_JOB_FAIL_FAST_ERROR,
                         "Job has fail fast error.",
                         ErrorModelConverter.toDeserializedException(failFastError)));
@@ -1351,7 +1353,7 @@ public class JobRunner implements Runnable {
                   .resultWithCause()
                   .setNonPassing(
                       Test.TestResult.ERROR,
-                      new MobileHarnessException(
+                      createExceptionWithoutStackTrace(
                           InfraErrorId.CLIENT_JR_TEST_HAS_JOB_LEVEL_ERROR,
                           "Job has infra errors. Check job level error for more detail.",
                           jobError));
@@ -1367,7 +1369,8 @@ public class JobRunner implements Runnable {
           testInfo.warnings().addAndLog(errorId, jobInfo.locator().getId() + ": " + errMsg, logger);
           testInfo
               .resultWithCause()
-              .setNonPassing(Test.TestResult.ERROR, new MobileHarnessException(errorId, errMsg));
+              .setNonPassing(
+                  Test.TestResult.ERROR, createExceptionWithoutStackTrace(errorId, errMsg));
           hasSuspendedTests = true;
           break;
         case ASSIGNED:
@@ -1390,7 +1393,7 @@ public class JobRunner implements Runnable {
               testIdForDisplayMhfeLink = testInfo.locator().getId();
               break;
             default:
-              throw new MobileHarnessException(
+              throw createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_TEST_HAS_UNKNOWN_RESULT,
                   "Unknown test result " + testInfo.resultWithCause().get().type());
           }
@@ -1408,7 +1411,7 @@ public class JobRunner implements Runnable {
             .resultWithCause()
             .setNonPassing(
                 Test.TestResult.ERROR,
-                new MobileHarnessException(
+                createExceptionWithoutStackTrace(
                     InfraErrorId.CLIENT_JR_JOB_HAS_INFRA_ERROR_TEST,
                     "Job has >= 1 INFRA_ERROR test(s)",
                     jobError));
@@ -1417,10 +1420,10 @@ public class JobRunner implements Runnable {
             .resultWithCause()
             .setNonPassing(
                 Test.TestResult.ERROR,
-                new MobileHarnessException(
+                createExceptionWithoutStackTrace(
                     InfraErrorId.CLIENT_JR_JOB_HAS_ERROR_TEST,
                     "Job has >=1 ERROR test(s). You can get the detailed ERROR info in the test"
-                        + " level.",
+                        + " level, ",
                     jobError));
       }
     } else if (hasFailTests) {
@@ -1428,34 +1431,34 @@ public class JobRunner implements Runnable {
           .resultWithCause()
           .setNonPassing(
               Test.TestResult.FAIL,
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_JOB_HAS_FAIL_TEST,
                   "Job has >=1 FAIL test(s). You can get the detailed FAIL info in the test"
-                      + " level."));
+                      + " level, "));
     } else if (hasAllocErrorTests) {
       jobInfo
           .resultWithCause()
           .setNonPassing(
               Test.TestResult.ERROR,
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_JOB_HAS_ALLOC_ERROR_TEST,
-                  "Job has >=1 ALLOC ERROR test(s). You can get the detailed ALLOC ERROR info in"
-                      + " the test level."));
+                  "Job has >=1 ALLOC ERROR test(s). You can get the detailed ALLOC ERROR info"
+                      + " in the test level, "));
     } else if (hasAllocFailTests) {
       jobInfo
           .resultWithCause()
           .setNonPassing(
               Test.TestResult.ERROR,
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_JOB_HAS_ALLOC_FAIL_TEST,
-                  "Job has >=1 ALLOC FAIL test(s). You can get the detailed ALLOC FAIL info in the"
-                      + " test level."));
+                  "Job has >=1 ALLOC FAIL test(s). You can get the detailed ALLOC FAIL info"
+                      + " in the test level, "));
     } else if (hasSuspendedTests) {
       jobInfo
           .resultWithCause()
           .setNonPassing(
               Test.TestResult.ERROR,
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_JOB_HAS_ALLOC_FAIL_TEST,
                   "Job has >= 1 SUSPENDED test(s)."));
     } else if (hasNotStartedTests) {
@@ -1468,7 +1471,7 @@ public class JobRunner implements Runnable {
             .resultWithCause()
             .setNonPassing(
                 Test.TestResult.ERROR,
-                new MobileHarnessException(
+                createExceptionWithoutStackTrace(
                     InfraErrorId.CLIENT_JR_JOB_EXEC_FATAL_ERROR,
                     "Job has error and the tests are not started."));
       }
@@ -1478,7 +1481,7 @@ public class JobRunner implements Runnable {
             .resultWithCause()
             .setNonPassing(
                 Test.TestResult.SKIP,
-                new MobileHarnessException(
+                createExceptionWithoutStackTrace(
                     InfraErrorId.CLIENT_JR_JOB_HAS_ALL_SKIPPED_TESTS,
                     "All tests of the job are skipped"));
       } else {
@@ -1489,7 +1492,7 @@ public class JobRunner implements Runnable {
           .resultWithCause()
           .setNonPassing(
               Test.TestResult.ERROR,
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_JOB_START_WITHOUT_TEST,
                   "No tests of the job are executed"));
     }
@@ -1606,7 +1609,7 @@ public class JobRunner implements Runnable {
       jobInfo
           .warnings()
           .addAndLog(
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_ALLOC_DIAGNOSTIC_ERROR,
                   "Failed to diagnose the allocation failure",
                   e),
@@ -1656,7 +1659,7 @@ public class JobRunner implements Runnable {
         jobInfo
             .warnings()
             .addAndLog(
-                new MobileHarnessException(
+                createExceptionWithoutStackTrace(
                     InfraErrorId.TR_PLUGIN_INVALID_SKIP_EXCEPTION_ERROR,
                     String.format(
                         "Plugins want to skip job and set job result but it is ignored because the"
@@ -1762,7 +1765,7 @@ public class JobRunner implements Runnable {
         return;
       }
 
-      // A multipmap of (device query index, suitable device id).
+      // A multimap of (device query index, suitable device id).
       ImmutableMultimap.Builder<String, String> suitableDevices = ImmutableMultimap.builder();
       // Iterate over the device query results and their indices.
       Streams.forEachPair(
