@@ -29,6 +29,7 @@ import {MatProgressBarModule} from '@angular/material/progress-bar';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatTableDataSource, MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
+import {ActivatedRoute} from '@angular/router';
 import {map, tap} from 'rxjs/operators';
 import {NavLink} from '../../../../shared/components/nav_link/nav_link';
 
@@ -169,12 +170,22 @@ export class HostOverviewPage implements OnChanges {
   private readonly environment = inject(Environment);
   private readonly comingSoonService = inject(ComingSoonService);
   private readonly appData = inject(APP_DATA);
+  private readonly route = inject(ActivatedRoute);
 
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
 
   readonly objectUtils = objectUtils;
   readonly dateUtils = dateUtils;
   readonly isGoogleInternal = this.environment.isGoogleInternal();
+  readonly isGoogle1p = toSignal(
+    this.route.queryParamMap.pipe(
+      map((params) => {
+        const universe = params.get('universe');
+        return !universe || universe === 'google_1p';
+      }),
+    ),
+    {initialValue: true},
+  );
   readonly ActionBarAction = ActionBarAction;
 
   @Input({required: true}) host!: HostOverview;
@@ -310,24 +321,36 @@ export class HostOverviewPage implements OnChanges {
     'actions',
   ];
 
-  navList: NavItem[] = [
-    {
-      id: 'overview',
-      label: 'Overview',
-    },
-    {
-      id: 'lab-server',
-      label: 'Lab Server',
-    },
-    {
-      id: 'device-list',
-      label: 'Devices',
-    },
-    {
+  readonly navList = computed<NavItem[]>(() => {
+    const baseItems: NavItem[] = [
+      {
+        id: 'overview',
+        label: 'Overview',
+      },
+      {
+        id: 'lab-server',
+        label: 'Lab Server',
+      },
+      {
+        id: 'device-list',
+        label: 'Devices',
+      },
+    ];
+
+    if (this.isGoogle1p()) {
+      baseItems.push({
+        id: 'daemon-server',
+        label: 'Daemon Server',
+      });
+    }
+
+    baseItems.push({
       id: 'host-properties',
       label: 'Host Properties',
-    },
-  ];
+    });
+
+    return baseItems;
+  });
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['host']) {

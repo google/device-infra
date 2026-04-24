@@ -409,7 +409,9 @@
                   @let items = groupedData[source];
 
                   <div class="data-source-group">
-                    <h5 class="dimension-source-title"> {{ source }} ({{ items.length }}) </h5>
+                    @if (source.toLowerCase() !== 'unknown') {
+                      <h5 class="dimension-source-title"> {{ source }} ({{ items.length }}) </h5>
+                    }
                     <div
                       class="data-block"
                       [class.scrollable]="source === 'Detected by OmniLab'"

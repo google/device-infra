@@ -84,8 +84,8 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
   private readonly dialog = inject(MatDialog);
   private readonly deviceService = inject(DEVICE_SERVICE);
   private readonly environment = inject(Environment);
-
   @Input({required: true}) device!: DeviceOverview;
+  @Input() isGoogle1p = true;
 
   navList: NavItem[] = [];
 

@@ -12,7 +12,9 @@
         <header class="card-header">
           <div class="header-host-id">
             <span class="host-id-text">{{ host.hostName }}</span>
-            <span>({{ host.ip }})</span>
+            @if (host.ip) {
+              <span>({{ host.ip }})</span>
+            }
           </div>
 
           <app-host-action-bar [pageData]="pageData"></app-host-action-bar>

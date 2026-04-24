@@ -1,4 +1,4 @@
-<app-master-detail-layout [navList]="navList">
+<app-master-detail-layout [navList]="navList()">
   <app-info-card #overviewSection id="overview" title="Overview" [collapsible]="false">
     @for (link of getDiagnosticLinks('OVERVIEW'); track link.label) {
       <div operations class="operation-button">
@@ -21,20 +21,22 @@
           <dt title="OS">OS</dt>
           <dd title="{{ host.os }}" class="overflow-ellipsis">{{ host.os || 'N/A' }}</dd>
 
-          <dt title="LabType">Lab Type</dt>
-          <dd class="lab-type-wrapper">
-            @if (host.labTypeDisplayNames.length > 0) {
-              @for (labType of host.labTypeDisplayNames; track labType) {
-                <div class="lab-type-chip overflow-ellipsis" title="{{ labType }}">
-                  {{ labType }}
+          @if (isGoogle1p()) {
+            <dt title="LabType">Lab Type</dt>
+            <dd class="lab-type-wrapper">
+              @if (host.labTypeDisplayNames.length > 0) {
+                @for (labType of host.labTypeDisplayNames; track labType) {
+                  <div class="lab-type-chip overflow-ellipsis" title="{{ labType }}">
+                    {{ labType }}
+                  </div>
+                }
+              } @else {
+                <div class="lab-type-chip overflow-ellipsis" title="N/A">
+                  N/A
                 </div>
               }
-            } @else {
-              <div class="lab-type-chip overflow-ellipsis" title="N/A">
-                N/A
-              </div>
-            }
-          </dd>
+            </dd>
+          }
         </dl>
       </div>
     </div>
@@ -109,23 +111,25 @@
           <mat-icon matTooltip="{{ connectivitySemantic.tooltip }}" class="cursor-help">help_outline</mat-icon>
         </dd>
 
-        @if (host.labServer.activity; as activity) {
-          @let activitySemantic = getLabActivitySemantic(activity);
-          <dt>Activity</dt>
-          <dd
-            class="grid-tight-dd {{ activitySemantic.colorClass }}"
-            title="{{ activitySemantic.tooltip }}"
-          >
-            <mat-icon matTooltip="{{ activitySemantic.tooltip }}" [class.spin-animation]="activitySemantic.isSpinning">{{
-              activitySemantic.icon
-            }}</mat-icon>
-            <span matTooltip="{{ activitySemantic.tooltip }}">{{ activitySemantic.text }}</span>
-            <mat-icon matTooltip="{{ activitySemantic.tooltip }}" class="cursor-help">help_outline</mat-icon>
-          </dd>
+        @if (isGoogle1p()) {
+          @if (host.labServer.activity; as activity) {
+            @let activitySemantic = getLabActivitySemantic(activity);
+            <dt>Activity</dt>
+            <dd
+              class="grid-tight-dd {{ activitySemantic.colorClass }}"
+              title="{{ activitySemantic.tooltip }}"
+            >
+              <mat-icon matTooltip="{{ activitySemantic.tooltip }}" [class.spin-animation]="activitySemantic.isSpinning">{{
+                activitySemantic.icon
+              }}</mat-icon>
+              <span matTooltip="{{ activitySemantic.tooltip }}">{{ activitySemantic.text }}</span>
+              <mat-icon matTooltip="{{ activitySemantic.tooltip }}" class="cursor-help">help_outline</mat-icon>
+            </dd>
+          }
         }
 
         <dt>Version</dt>
-        <dd>{{ host.labServer.version }}</dd>
+        <dd>{{ host.labServer.version || 'N/A' }}</dd>
 
         @if (host.labServer.actions?.updatePassThroughFlags; as updateFlags) {
           @if (updateFlags.visible) {

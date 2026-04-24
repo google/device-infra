@@ -121,7 +121,7 @@
           <div class="tab-content-container">
             @if (activeTab() === 'overview') {
               <div class="tab-content">
-                <app-device-overview-tab [device]="device"></app-device-overview-tab>
+                <app-device-overview-tab [device]="device" [isGoogle1p]="isGoogle1p()"></app-device-overview-tab>
               </div>
             }
             @if (activeTab() === 'test-history') {
