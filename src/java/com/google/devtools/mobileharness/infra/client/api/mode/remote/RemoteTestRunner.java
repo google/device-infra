@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.client.api.mode.remote;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory.createExceptionWithoutStackTrace;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toCollection;
@@ -298,7 +299,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     if ((containerModePreference == ContainerModePreference.MANDATORY_CONTAINER && !isContainerMode)
         || (containerModePreference == ContainerModePreference.MANDATORY_NON_CONTAINER
             && isContainerMode)) {
-      throw new MobileHarnessException(
+      throw createExceptionWithoutStackTrace(
           InfraErrorId.TE_DENIED_MANDATORY_CONTAINER_PREFERENCE,
           String.format(
               "Client container mode preference is [%s] but lab final container mode is [%s]",
@@ -569,7 +570,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
             labServerLocator, e.getMessage());
         return new Version(0, 0, 0);
       } else {
-        throw new MobileHarnessException(
+        throw createExceptionWithoutStackTrace(
             InfraErrorId.CLIENT_REMOTE_MODE_SEND_RPC_TO_LAB_SERVER_ERROR,
             String.format("Failed to send RPC to lab server [%s]", labServerLocator),
             e);
@@ -652,7 +653,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     try {
       response = prepareTestStub.createTest(createTestRequest, impersonationUser);
     } catch (RpcExceptionWithErrorId e) {
-      throw new MobileHarnessException(
+      throw createExceptionWithoutStackTrace(
           InfraErrorId.CLIENT_REMOTE_MODE_TEST_CREATE_ERROR,
           "Failed to create test in Lab Server",
           e);
@@ -727,14 +728,14 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
 
       if (response.getTestEngineStatus() == TestEngineStatus.FAILED) {
         logger.atInfo().log("Test engine failed to start");
-        throw new MobileHarnessException(
+        throw createExceptionWithoutStackTrace(
             InfraErrorId.TE_TEST_ENGINE_FAILURE_WHEN_CLIENT_WAITING_TEST_ENGINE_READY,
             "Test engine failed to start",
             ErrorModelConverter.toDeserializedException(response.getExceptionDetail()));
       }
       if (response.getTestEngineStatus() == TestEngineStatus.CLOSED) {
         logger.atInfo().log("Test engine closed");
-        throw new MobileHarnessException(
+        throw createExceptionWithoutStackTrace(
             InfraErrorId.TE_TEST_ENGINE_CLOSED_WHEN_CLIENT_WAITING_TEST_ENGINE_READY,
             "Test engine closed",
             response.hasExceptionDetail()
@@ -743,7 +744,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
       }
       if (response.getResolveFileStatus() == ResolveFileStatus.RESOLVE_FILE_FAILED) {
         logger.atInfo().log("Resolve file failed");
-        throw new MobileHarnessException(
+        throw createExceptionWithoutStackTrace(
             InfraErrorId.TE_RESOLVE_FILE_FAILURE_WHEN_CLIENT_WAITING_FILE_RESOLVED,
             "Resolve file failed",
             ErrorModelConverter.toDeserializedException(response.getResolveFileExceptionDetail()));
@@ -801,7 +802,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
         break;
       } catch (RpcExceptionWithErrorId e) {
         MobileHarnessException newException =
-            new MobileHarnessException(
+            createExceptionWithoutStackTrace(
                 InfraErrorId.TR_FAILED_TO_KICK_OFF_REMOTE_TEST,
                 String.format("Failed to kick off test %s on device %s", testId, deviceLocators),
                 e.getApplicationError().isPresent() ? e.getApplicationError().get() : e);
@@ -857,7 +858,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
             && ErrorIdComparator.equal(
                 e.getApplicationError().get().getErrorId(), InfraErrorId.TM_TEST_NOT_FOUND)) {
           MobileHarnessException newException =
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_REMOTE_MODE_TEST_NOT_FOUND,
                   "Test not found in Lab Server",
                   e.getApplicationError().get());
@@ -874,7 +875,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
             testInfo
                 .warnings()
                 .addAndLog(
-                    new MobileHarnessException(
+                    createExceptionWithoutStackTrace(
                         InfraErrorId.CLIENT_REMOTE_MODE_TEST_GET_STATUS_ERROR,
                         errMsg,
                         e.getApplicationError().isPresent() ? e.getApplicationError().get() : e),
@@ -883,7 +884,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
                   .compareTo(maxConsecutiveErrorDuration)
               > 0) {
             MobileHarnessException newException =
-                new MobileHarnessException(
+                createExceptionWithoutStackTrace(
                     InfraErrorId.CLIENT_REMOTE_MODE_TEST_CONSECUTIVE_GET_STATUS_ERROR,
                     errMsg,
                     e.getApplicationError().isPresent() ? e.getApplicationError().get() : e);
@@ -922,7 +923,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
       testInfo
           .warnings()
           .addAndLog(
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_REMOTE_MODE_TEST_GET_GEN_DATA_ERROR,
                   "Failed to get test generated data from " + testEngineLocator,
                   e),
@@ -989,7 +990,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
       try {
         updateDeviceStatus(resp.getDeviceFeatureList());
       } catch (MobileHarnessException e) {
-        throw new MobileHarnessException(
+        throw createExceptionWithoutStackTrace(
             InfraErrorId.CLIENT_REMOTE_MODE_UPDATE_DEVICE_FEATURE_ERROR,
             "Failed to update the device features",
             e);
@@ -1147,7 +1148,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
           execTestStub.forwardTestMessage(request, impersonationUser);
         } catch (RpcExceptionWithErrorId e) {
           logTestEventError(
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_REMOTE_MODE_TEST_MESSAGE_FORWARD_ERROR,
                   String.format("Failed to forward message %s", testMessageInfo),
                   e),

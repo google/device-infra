@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.controller.test;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory.createExceptionWithoutStackTrace;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
@@ -236,7 +237,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
           .resultWithCause()
           .setNonPassing(
               Test.TestResult.TIMEOUT,
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.TR_TEST_TIMEOUT_AND_KILLED, "Test is TIMEOUT and killed"));
       if (killCount == 1) {
         // Only prints this log the first time a test gets killed.
@@ -339,7 +340,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
             .resultWithCause()
             .setNonPassing(
                 Test.TestResult.TIMEOUT,
-                new MobileHarnessException(
+                createExceptionWithoutStackTrace(
                     InfraErrorId.TR_JOB_TIMEOUT_AND_INTERRUPTED,
                     "Test interrupted due to job timeout",
                     e));
@@ -349,7 +350,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
             .resultWithCause()
             .setNonPassing(
                 Test.TestResult.TIMEOUT,
-                new MobileHarnessException(
+                createExceptionWithoutStackTrace(
                     InfraErrorId.TR_JOB_TIMEOUT_AND_INTERRUPTED,
                     "Test timeout and interrupted",
                     e));
@@ -359,7 +360,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
             .resultWithCause()
             .setNonPassing(
                 Test.TestResult.ERROR,
-                new MobileHarnessException(
+                createExceptionWithoutStackTrace(
                     InfraErrorId.TR_TEST_INTERRUPTED_WHEN_PROCESS_SHUTDOWN,
                     "The process is shutting down.",
                     e));
@@ -375,14 +376,14 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
           // some error such as device disconnected.
           if (SharedPoolJobUtil.isUsingSharedPool(testInfo.jobInfo())) {
             cause =
-                new MobileHarnessException(
+                createExceptionWithoutStackTrace(
                     InfraErrorId.TR_TEST_INTERRUPTED_IN_SHARED_LAB,
                     "Test is interrupted in the shared lab. It can be caused by device"
                         + " disconnection.",
                     e);
           } else {
             cause =
-                new MobileHarnessException(
+                createExceptionWithoutStackTrace(
                     InfraErrorId.TR_TEST_INTERRUPTED_IN_SATELLITE_LAB,
                     "Test is interrupted in the satellite lab. It can be caused by device"
                         + " disconnection",
@@ -391,7 +392,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
         } else {
           // If the test is not timeout, and it runs in client, it's usually killed by user.
           cause =
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.TR_TEST_INTERRUPTED_WHEN_USER_KILL_JOB,
                   "Test interrupted because it's manually killed by user.",
                   e);
@@ -423,7 +424,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
           .resultWithCause()
           .setNonPassing(
               Test.TestResult.ERROR,
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.TR_TEST_RUNNER_FATAL_ERROR, "TR FATAL ERROR: " + e.getMessage(), e));
       testInfo
           .log()
@@ -452,7 +453,8 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
               .resultWithCause()
               .setNonPassing(
                   Test.TestResult.ERROR,
-                  new MobileHarnessException(InfraErrorId.TR_TEST_FINISHED_WITHOUT_RESULT, errMsg));
+                  createExceptionWithoutStackTrace(
+                      InfraErrorId.TR_TEST_FINISHED_WITHOUT_RESULT, errMsg));
           testInfo.log().atWarning().alsoTo(logger).log("%s", errMsg);
         }
 
@@ -754,7 +756,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
       testInfo
           .warnings()
           .addAndLog(
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.TR_POST_RUN_GENERIC_ERROR, "Post-test operations interrupted", e),
               logger);
     } catch (MobileHarnessException e) {
@@ -768,7 +770,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
       testInfo
           .warnings()
           .add(
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.TR_POST_RUN_GENERIC_ERROR, "Post-test operations failed", e));
     } finally {
       testInfo.log().atInfo().alsoTo(logger).log("Post TestEndedEvent to test %s", testLocator);
@@ -975,7 +977,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
       testInfo
           .warnings()
           .addAndLog(
-              new MobileHarnessException(
+              createExceptionWithoutStackTrace(
                   InfraErrorId.TR_PLUGIN_INVALID_SKIP_EXCEPTION_ERROR,
                   String.format(
                       "Plugins want to skip test and set test result but it is ignored because the"
@@ -1007,7 +1009,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
     testInfo
         .warnings()
         .addAndLog(
-            new MobileHarnessException(
+            createExceptionWithoutStackTrace(
                 InfraErrorId.TR_POST_EVENT_ERROR, "Failed to post " + eventType, e),
             logger);
   }

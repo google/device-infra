@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.client.api.controller.job;
 
+import static com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory.createExceptionWithoutStackTrace;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 
@@ -112,7 +113,7 @@ public class JobManager implements Runnable, MessageSenderFinder {
         JobRunner runner = runnerFuture.jobRunner();
         Future<?> future = runnerFuture.jobRunnerFuture();
         if (runner.isRunning() || !future.isDone()) {
-          throw new MobileHarnessException(
+          throw createExceptionWithoutStackTrace(
               InfraErrorId.CLIENT_JR_JOB_START_DUPLICATED_ID,
               "Job " + jobId + " is already running");
         }

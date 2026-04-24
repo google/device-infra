@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.controller.test.manager;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.flogger.LazyArgs.lazy;
+import static com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory.createExceptionWithoutStackTrace;
 import static java.util.Arrays.stream;
 import static java.util.concurrent.TimeUnit.MINUTES;
 
@@ -205,7 +206,7 @@ public class TestManager<T extends TestRunner> implements Runnable {
       if (!deviceIdGetter
           .apply(testRunner.getAllocation())
           .equals(deviceIdGetter.apply(allocation))) {
-        throw new MobileHarnessException(
+        throw createExceptionWithoutStackTrace(
             InfraErrorId.TM_TEST_DUPLICATED_ALLOCATION,
             String.format(
                 "Test %s already has allocation %s. The allocation %s is illegal.",
@@ -317,7 +318,7 @@ public class TestManager<T extends TestRunner> implements Runnable {
     return getTestRunner(testId)
         .orElseThrow(
             () ->
-                new MobileHarnessException(
+                createExceptionWithoutStackTrace(
                     InfraErrorId.TM_TEST_NOT_FOUND,
                     String.format("Test [%s] is not found", testId)));
   }
