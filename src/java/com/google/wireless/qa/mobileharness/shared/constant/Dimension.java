@@ -145,6 +145,10 @@ public final class Dimension {
      * shared/shared_without_recovery/group_shared/partner_shared/dedicated.
      */
     POOL,
+    /** The connection mode for PAT, either 'usb' or 'wifi'. */
+    PAT_CONNECTION_MODE,
+    /** The identifier for the PAT device, such as a hostname for wifi or a serial port for usb. */
+    PAT_ID,
     /** Whether the device is reachable from the host via ping. */
     /** Whether the device is reachable from the host via DIAL. */
     /** The URL suffix for DIAL app. */
