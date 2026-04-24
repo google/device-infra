@@ -66,6 +66,7 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
     this.addSupportedDriver("AndroidInstrumentation");
     // Decorators for Mobly tests.
     this.addSupportedDecorator("AndroidAccountDecorator");
+    this.addSupportedDecorator("AndroidAdbShellDecorator");
     this.addSupportedDecorator("AndroidFilePullerDecorator");
     this.addSupportedDecorator("AndroidFilePusherDecorator");
     this.addSupportedDecorator("AndroidInstallAppsDecorator");
