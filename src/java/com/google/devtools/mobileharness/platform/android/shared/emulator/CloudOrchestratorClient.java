@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.platform.android.shared.emulator;
 
+import static com.google.common.base.Strings.nullToEmpty;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.api.client.http.GenericUrl;
@@ -149,7 +150,12 @@ public class CloudOrchestratorClient {
 
   public void fetchArtifactsAndWait(String hostId, String branch, String target)
       throws MobileHarnessException, InterruptedException {
-    AndroidCiBuild build = new AndroidCiBuild(branch, "", target);
+    fetchArtifactsAndWait(hostId, branch, "", target);
+  }
+
+  public void fetchArtifactsAndWait(String hostId, String branch, String buildId, String target)
+      throws MobileHarnessException, InterruptedException {
+    AndroidCiBuild build = new AndroidCiBuild(branch, nullToEmpty(buildId), target);
     FetchArtifactsRequest req = new FetchArtifactsRequest(new AndroidCiBundle(build, 0));
     Operation op = fetchArtifacts(hostId, req, null);
     waitOperation(hostId, op.name, FetchArtifactsResponse.class);
@@ -224,14 +230,11 @@ public class CloudOrchestratorClient {
       Throwable cause = e.getCause();
       if (cause instanceof HttpResponseException httpResponseException) {
         throw handleHttpException(
-            String.format(
-                "Failed to wait for operation %s after %d retries", operationName, maxRetries),
-            httpResponseException);
+            String.format("Failed to wait for operation %s", operationName), httpResponseException);
       }
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_NETWORK_ERROR,
-          String.format(
-              "Failed to wait for operation %s after %d retries", operationName, maxRetries),
+          String.format("Failed to wait for operation %s", operationName),
           e);
     }
   }
@@ -241,9 +244,20 @@ public class CloudOrchestratorClient {
   public Cvd createCvdWithEnvConfigAndWait(
       String hostId, String cvdId, String branch, String target)
       throws MobileHarnessException, InterruptedException {
+    return createCvdWithEnvConfigAndWait(hostId, cvdId, branch, "", target);
+  }
+
+  @CanIgnoreReturnValue
+  public Cvd createCvdWithEnvConfigAndWait(
+      String hostId, String cvdId, String branch, String buildId, String target)
+      throws MobileHarnessException, InterruptedException {
     Map<String, Object> envConfig = new HashMap<>();
     Map<String, Object> common = new HashMap<>();
-    common.put("host_package", "@ab/" + branch + "/" + target);
+    String buildStr =
+        (buildId != null && !buildId.isEmpty())
+            ? "@ab/" + buildId + "/" + target
+            : "@ab/" + branch + "/" + target;
+    common.put("host_package", buildStr);
     envConfig.put("common", common);
 
     Map<String, Object> instance = new HashMap<>();
@@ -256,7 +270,7 @@ public class CloudOrchestratorClient {
     vm.put("cpus", 4);
     instance.put("vm", vm);
     Map<String, Object> disk = new HashMap<>();
-    disk.put("default_build", "@ab/" + branch + "/" + target);
+    disk.put("default_build", buildStr);
     instance.put("disk", disk);
     Map<String, Object> streaming = new HashMap<>();
     streaming.put("device_id", cvdId);

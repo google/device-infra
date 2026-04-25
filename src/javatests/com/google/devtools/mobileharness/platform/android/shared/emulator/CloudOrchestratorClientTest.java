@@ -152,7 +152,7 @@ public class CloudOrchestratorClientTest {
                     "host-1", "op-retry", Operation.class, 20, Duration.ofMillis(1)));
 
     assertThat(e.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_CLOUD_ORCHESTRATOR_OPERATION_ERROR);
-    assertThat(e.getMessage()).contains("after 20 retries");
+    assertThat(e.getMessage()).contains("Failed to wait for operation");
     assertThat(server.getRequestCount()).isEqualTo(20);
   }
 

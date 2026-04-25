@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.platform.android.shared.emulator;
 
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,14 +39,6 @@ public final class AndroidJitEmulatorUtil {
       Pattern.compile("^([\\w\\.]+):local-virtual-device-(\\d+)$");
   public static final String TF_GLOBAL_CONFIG_PATH = "/mtt/scripts/host-config.xml";
 
-  public static String getAcloudInstanceId(String deviceId) {
-    int instanceIndex = getInstanceIndex(deviceId);
-    if (instanceIndex < 0) {
-      return "";
-    }
-    return String.valueOf(instanceIndex + EMULATOR_INSTANCE_ID_BASE);
-  }
-
   public static String getVirtualDeviceNameInTradefed(String deviceId) {
     if (!Flags.instance().virtualDeviceServerIp.getNonNull().isEmpty()
         && !Flags.instance().virtualDeviceServerUsername.getNonNull().isEmpty()) {
@@ -58,8 +52,22 @@ public final class AndroidJitEmulatorUtil {
     }
   }
 
-  private static int getInstanceIndex(String deviceId) {
-    return Integer.parseInt(deviceId.substring(deviceId.indexOf(':') + 1)) - EMULATOR_BASE_PORT;
+  public static int getPortFromDeviceId(String deviceId) throws MobileHarnessException {
+    int colonIndex = deviceId.indexOf(':');
+    if (colonIndex == -1) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_JIT_EMULATOR_INVALID_DEVICE_ID_ERROR,
+          "Invalid device ID format (missing ':'): " + deviceId);
+    }
+    String portString = deviceId.substring(colonIndex + 1);
+    try {
+      return Integer.parseInt(portString);
+    } catch (NumberFormatException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_JIT_EMULATOR_INVALID_DEVICE_ID_ERROR,
+          "Failed to parse port from device ID: " + deviceId,
+          e);
+    }
   }
 
   public static ImmutableList<String> getAllVirtualDeviceIds() {
@@ -84,7 +92,7 @@ public final class AndroidJitEmulatorUtil {
       }
     } else {
       for (int i = 0; i < emulatorNumber; i++) {
-        emulatorIds.add(String.format("0.0.0.0:%d", EMULATOR_BASE_PORT + i));
+        emulatorIds.add(String.format("127.0.0.1:%d", EMULATOR_BASE_PORT + i));
       }
     }
     return ImmutableList.copyOf(emulatorIds);

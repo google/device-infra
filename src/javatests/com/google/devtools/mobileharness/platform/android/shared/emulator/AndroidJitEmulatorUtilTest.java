@@ -17,8 +17,10 @@
 package com.google.devtools.mobileharness.platform.android.shared.emulator;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import org.junit.Rule;
 import org.junit.Test;
@@ -29,16 +31,6 @@ import org.junit.runners.JUnit4;
 public final class AndroidJitEmulatorUtilTest {
 
   @Rule public final SetFlagsOss flags = new SetFlagsOss();
-
-  @Test
-  public void getAcloudInstanceId() {
-    assertThat(AndroidJitEmulatorUtil.getAcloudInstanceId("localhost:6521")).isEqualTo("2");
-    assertThat(AndroidJitEmulatorUtil.getAcloudInstanceId("localhost:6520")).isEqualTo("1");
-    assertThat(AndroidJitEmulatorUtil.getAcloudInstanceId("localhost:6522")).isEqualTo("3");
-    assertThat(AndroidJitEmulatorUtil.getAcloudInstanceId("localhost:6523")).isEqualTo("4");
-    assertThat(AndroidJitEmulatorUtil.getAcloudInstanceId("localhost:6524")).isEqualTo("5");
-    assertThat(AndroidJitEmulatorUtil.getAcloudInstanceId("localhost:6510")).isEqualTo("");
-  }
 
   @Test
   public void getVirtualDeviceNameInTradefed_local() {
@@ -83,5 +75,33 @@ public final class AndroidJitEmulatorUtilTest {
             AndroidJitEmulatorUtil.getVirtualDeviceNameInTradefed(
                 "gce-device-10.0.0.1-1-mobileharness"))
         .isEqualTo("gce-device-10.0.0.1-1-mobileharness");
+  }
+
+  @Test
+  public void getAllVirtualDeviceIds_defaultSettings_returnsLocalhostPorts() {
+    flags.setAllFlags(ImmutableMap.of("android_jit_emulator_num", "2"));
+
+    com.google.common.collect.ImmutableList<String> deviceIds =
+        AndroidJitEmulatorUtil.getAllVirtualDeviceIds();
+    assertThat(deviceIds).containsExactly("127.0.0.1:6520", "127.0.0.1:6521").inOrder();
+  }
+
+  @Test
+  public void getPortFromDeviceId_success() throws Exception {
+    assertThat(AndroidJitEmulatorUtil.getPortFromDeviceId("127.0.0.1:6520")).isEqualTo(6520);
+  }
+
+  @Test
+  public void getPortFromDeviceId_missingColon_throwsException() {
+    assertThrows(
+        MobileHarnessException.class,
+        () -> AndroidJitEmulatorUtil.getPortFromDeviceId("127.0.0.1"));
+  }
+
+  @Test
+  public void getPortFromDeviceId_invalidPort_throwsException() {
+    assertThrows(
+        MobileHarnessException.class,
+        () -> AndroidJitEmulatorUtil.getPortFromDeviceId("127.0.0.1:abc"));
   }
 }

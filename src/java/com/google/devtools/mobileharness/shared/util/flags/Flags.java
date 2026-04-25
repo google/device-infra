@@ -652,6 +652,22 @@ public class Flags {
       converter = Flag.LongConverter.class)
   public Flag<Long> cloudFileTransferSmallFileSizeKb = cloudFileTransferSmallFileSizeKbDefault;
 
+  private static final Flag<String> cloudOrchestratorServiceUrlDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--cloud_orchestrator_service_url",
+      description = "The URL of the Cloud Orchestrator service.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> cloudOrchestratorServiceUrl = cloudOrchestratorServiceUrlDefault;
+
+  private static final Flag<String> cloudOrchestratorZoneDefault = Flag.value("local");
+
+  @com.beust.jcommander.Parameter(
+      names = "--cloud_orchestrator_zone",
+      description = "The zone of the Cloud Orchestrator service.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> cloudOrchestratorZone = cloudOrchestratorZoneDefault;
+
   private static final Flag<String> cloudPubsubCredFileDefault = Flag.value(null);
 
   @com.beust.jcommander.Parameter(
@@ -2037,7 +2053,9 @@ public class Flags {
 
   @com.beust.jcommander.Parameter(
       names = "--noop_jit_emulator",
-      description = "Make jit emulator no-op and work as placeholder",
+      description =
+          "Make jit emulator no-op and work as placeholder, delegating actual device creation and"
+              + " launch fully to the underlying Tradefed driver.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> noopJitEmulator = noopJitEmulatorDefault;
 

@@ -39,8 +39,28 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/platform/android/shared/emulator:__subpackages__",
     ],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "adb_websocket_bridge",
+    srcs = ["AdbWebSocketBridge.java"],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/shared/emulator:__subpackages__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent/retry",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_squareup_okhttp3_okhttp",
+        "@maven//:com_squareup_okio_okio_jvm",
     ],
 )
 

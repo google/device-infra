@@ -36,10 +36,26 @@ java_test(
     size = "small",
     srcs = ["AndroidJitEmulatorUtilTest.java"],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/emulator:android_jit_emulator_util",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:set_flags_oss",
         "@maven//:com_google_guava_guava",
+        "@maven//:junit_junit",
+    ],
+)
+
+java_test(
+    name = "AdbWebSocketBridgeTest",
+    size = "small",
+    srcs = ["AdbWebSocketBridgeTest.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/shared/emulator:adb_websocket_bridge",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:com_squareup_okhttp3_mockwebserver",
+        "@maven//:com_squareup_okhttp3_okhttp",
+        "@maven//:com_squareup_okio_okio_jvm",
         "@maven//:junit_junit",
     ],
 )
