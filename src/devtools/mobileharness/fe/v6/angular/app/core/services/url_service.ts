@@ -33,18 +33,30 @@ export interface NavigatedMessage {
 }
 
 /**
+ * Interface for the message received from the parent window to trigger navigation.
+ */
+export interface NavigateMessage {
+  type: 'NAVIGATE';
+  url: string;
+}
+
+/**
  * Service to handle URL generation and cross-window communication for navigation.
  */
 @Injectable({providedIn: 'root'})
 export class UrlService implements OnDestroy {
   private readonly isEmbeddedMode: boolean;
   private readonly responses$ = new Subject<ExternalUrlResponse>();
+  readonly navigate$ = new Subject<string>();
   private readonly win: Window | null;
   private readonly messageListener = (event: MessageEvent) => {
     const data = event.data;
-    // Only handle responses that match our external URL response type.
-    if (data && data.type === 'GET_EXTERNAL_URL_RESPONSE') {
-      this.responses$.next(data);
+    if (data) {
+      if (data.type === 'GET_EXTERNAL_URL_RESPONSE') {
+        this.responses$.next(data);
+      } else if (data.type === 'NAVIGATE') {
+        this.navigate$.next(data.url);
+      }
     }
   };
 
@@ -78,6 +90,7 @@ export class UrlService implements OnDestroy {
       this.win.removeEventListener('message', this.messageListener);
     }
     this.responses$.complete();
+    this.navigate$.complete();
   }
 
   /**

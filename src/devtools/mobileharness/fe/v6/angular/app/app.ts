@@ -43,6 +43,7 @@ import {
   APP_DATA,
   type AppData,
 } from 'app/core/models/app_data';
+import {UrlService} from 'app/core/services/url_service';
 import {LoadingService} from 'app/shared/services/loading_service';
 import {ReplaySubject} from 'rxjs';
 import {filter, takeUntil} from 'rxjs/operators';
@@ -78,6 +79,7 @@ export class App implements OnDestroy {
   private readonly router: Router = inject(Router);
   readonly appData: AppData = inject(APP_DATA);
   readonly loadingService = inject(LoadingService);
+  private readonly urlService = inject(UrlService);
   showVersionInfo = true;
   isEmbeddedMode = true;
   isFakeData = false;
@@ -105,6 +107,26 @@ export class App implements OnDestroy {
       .subscribe(() => {
         this.updateShowContent();
       });
+
+    this.urlService.navigate$.pipe(takeUntil(this.destroy)).subscribe((url) => {
+      // Parse the target URL.
+      const newUrl = new URL(url, window.location.origin);
+      // Get current query parameters from the active route.
+      const currentParams = this.route.snapshot.queryParamMap;
+      // Merge the current query parameters into the new URL if they are not already present.
+      // Note: The new URL parameters have high priority and will NOT be overridden by current parameters.
+      // This ensures parameters like `is_embedded_mode` are preserved across navigations if not specified in new URL.
+      for (const key of currentParams.keys) {
+        if (!newUrl.searchParams.has(key)) {
+          const values = currentParams.getAll(key);
+          for (const value of values) {
+            newUrl.searchParams.append(key, value);
+          }
+        }
+      }
+      // Perform client-side navigation with the merged URL.
+      this.router.navigateByUrl(newUrl.pathname + newUrl.search);
+    });
   }
 
   updateShowContent() {
