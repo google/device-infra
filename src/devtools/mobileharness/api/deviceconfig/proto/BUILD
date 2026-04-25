@@ -25,6 +25,7 @@ package(
     default_visibility = [
         "//:deviceinfra_all_pkg",
         "//:omnilab_fusion",
+        "//wireless/android/test_tools/dual_home_lab/atc_lab_tools/mh_config_watchdog:__pkg__",
     ],
 )
 
