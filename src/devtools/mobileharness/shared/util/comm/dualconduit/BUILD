@@ -22,4 +22,5 @@ exports_files([
 ])
 
 # gazelle: prefix com_google_deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit
+# gazelle:resolve go cel.dev/expr @dev_cel//:expr
 gazelle(name = "gazelle")

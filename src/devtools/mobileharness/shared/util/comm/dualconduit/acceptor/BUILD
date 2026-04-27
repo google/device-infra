@@ -29,6 +29,7 @@ go_library(
     importpath = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/acceptor",
     deps = [
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/conduit",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/mesh",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_go_proto",
         "@com_github_rsocket_rsocket_go//:rsocket-go",
         "@com_github_rsocket_rsocket_go//core/transport",

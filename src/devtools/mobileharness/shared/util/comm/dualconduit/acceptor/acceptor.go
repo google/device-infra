@@ -16,6 +16,7 @@ import (
 	"github.com/rsocket/rsocket-go/rx/mono"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/mesh"
 	dconpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb"
 )
 
@@ -23,11 +24,12 @@ import (
 type Service struct {
 	Manager               *conduit.Manager
 	serverTransporter     rsockettransport.ServerTransporter
+	meshServer            *mesh.Server
 	reverseForwardAddress string
 }
 
 // New creates a new Service with a initialized conduit.Manager and ServerTransporter.
-func New(newTransporter func() (rsockettransport.ServerTransporter, error), reverseForwardAddress string) (*Service, error) {
+func New(newTransporter func() (rsockettransport.ServerTransporter, error), meshServer *mesh.Server, reverseForwardAddress string) (*Service, error) {
 	transporter, err := newTransporter()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create server transport: %v", err)
@@ -35,20 +37,28 @@ func New(newTransporter func() (rsockettransport.ServerTransporter, error), reve
 	return &Service{
 		Manager:               conduit.NewManager(),
 		serverTransporter:     transporter,
+		meshServer:            meshServer,
 		reverseForwardAddress: reverseForwardAddress,
 	}, nil
 }
 
-// RegisterService acts as a placeholder for service discovery registration
+// RegisterService registers service discovery with mesh server.
 func (s *Service) RegisterService(ctx context.Context, req *dconpb.EstablishConduitRequest, dynamicPort int) (string, error) {
-	log.Printf("Mock registration for port: %d", dynamicPort)
-	return "acceptor.local", nil
+	physicalAddress := fmt.Sprintf("%s:%d", s.reverseForwardAddress, dynamicPort)
+	protocolStr := "tcp"
+	switch req.Protocol {
+	case dconpb.EstablishConduitRequest_PROTOCOL_GRPC:
+		protocolStr = "grpc"
+	case dconpb.EstablishConduitRequest_PROTOCOL_HTTP:
+		protocolStr = "http"
+	}
+
+	return s.meshServer.RegisterService(ctx, req.ServiceName, req.ClientHostname, physicalAddress, protocolStr)
 }
 
-// DeregisterService acts as a placeholder for service discovery deregistration
+// DeregisterService deregisters service discovery with mesh server.
 func (s *Service) DeregisterService(ctx context.Context, req *dconpb.EstablishConduitRequest) error {
-	log.Printf("Deregistered service for request: %+v", req)
-	return nil
+	return s.meshServer.DeregisterService(ctx, req.ServiceName, req.ClientHostname)
 }
 
 // Run starts the Acceptor service, listening for incoming RSocket connections.
@@ -126,11 +136,16 @@ func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, re
 		log.Printf("Failed to allocate port for reverse conduit: %v", err)
 		return nil, err
 	}
-	dynamicPort := lis.Addr().(*net.TCPAddr).Port
+	tcpAddr, ok := lis.Addr().(*net.TCPAddr)
+	if !ok {
+		lis.Close()
+		return nil, fmt.Errorf("listener address is not a TCP address: %v", lis.Addr())
+	}
+	dynamicPort := tcpAddr.Port
 
 	// Async register and PUSHMETA_DATA to dialer
 	go func() {
-		hostname, regErr := s.RegisterService(ctx, req, dynamicPort)
+		logicalName, regErr := s.RegisterService(ctx, req, dynamicPort)
 		if regErr != nil {
 			log.Printf("Service register failed: %v", regErr)
 			lis.Close()
@@ -143,13 +158,36 @@ func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, re
 			s.DeregisterService(ctx, req)
 		}()
 
-		resp := &dconpb.EstablishConduitResponse{
-			ConduitId: conduitID,
-			ServiceLocator: &dconpb.ServiceLocator{
-				Locator: &dconpb.ServiceLocator_HostnamePort{
-					HostnamePort: fmt.Sprintf("%s:%d", hostname, dynamicPort),
+		var locator *dconpb.ServiceLocator
+		switch req.Protocol {
+		case dconpb.EstablishConduitRequest_PROTOCOL_GRPC:
+			locator = &dconpb.ServiceLocator{
+				Locator: &dconpb.ServiceLocator_XdsAddress{
+					XdsAddress: "xds:///" + logicalName,
 				},
-			},
+			}
+		case dconpb.EstablishConduitRequest_PROTOCOL_HTTP:
+			locator = &dconpb.ServiceLocator{
+				Locator: &dconpb.ServiceLocator_VirtualHost{
+					VirtualHost: logicalName,
+				},
+			}
+		case dconpb.EstablishConduitRequest_PROTOCOL_TCP:
+			locator = &dconpb.ServiceLocator{
+				Locator: &dconpb.ServiceLocator_Sni{
+					Sni: logicalName,
+				},
+			}
+		default:
+			log.Printf("Unsupported protocol for reverse conduit: %v", req.Protocol)
+			lis.Close()
+			con.Close()
+			return
+		}
+
+		resp := &dconpb.EstablishConduitResponse{
+			ConduitId:      conduitID,
+			ServiceLocator: locator,
 		}
 		metadata, err := proto.Marshal(resp)
 		if err != nil {
