@@ -23,6 +23,9 @@ type Conduit struct {
 	closeOnce   sync.Once
 	onRemove    func() // Callback to tell the Manager to drop this Conduit
 	beforeClose func() // Callback to handle signaling before close
+	// Tracks active logical connections in this conduit. For each accepted TCP
+	// connection or incoming RSocket channel, one connection is added.
+	activeConnections sync.WaitGroup
 }
 
 // Context exposes the Conduit's lifecycle so streams can bind to it.
@@ -73,6 +76,9 @@ func (c *Conduit) Close() error {
 		}
 		// 2. Cancel the Go context (notifies all IO pumps to stop)
 		c.cancel()
+
+		// Wait for all registered stream goroutines to finish.
+		c.activeConnections.Wait()
 
 		// 3. Close the physical transport synchronously
 		if c.rsocket != nil {

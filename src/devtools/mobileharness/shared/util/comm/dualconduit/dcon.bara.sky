@@ -56,9 +56,11 @@ dcon_blaze_to_bazel_transforms = [
     dcon_build_file_replace(":pkg_go_grpc", ":go_default_library"),
     dcon_build_file_replace("@protobuf//:any_proto_go_proto", "@org_golang_google_protobuf//types/known/anypb"),
     dcon_build_file_replace("@protobuf//:duration_proto_go_proto", "@org_golang_google_protobuf//types/known/durationpb"),
+    dcon_build_file_replace("//base/go:runfiles", "@rules_go//go/runfiles"),
 ]
 
 dcon_go_imports_map = {
+    "google3/base/go/runfiles": "github.com/bazelbuild/rules_go/go/runfiles",
     "google3/third_party/deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit/auth": "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/auth",
     "google3/third_party/deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dual_conduit_service_go_grpc": "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconsvcpb",
     "google3/third_party/deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dual_conduit_go_proto": "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb",

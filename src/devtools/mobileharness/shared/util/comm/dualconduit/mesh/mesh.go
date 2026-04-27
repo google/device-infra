@@ -55,10 +55,12 @@ type Server struct {
 	mu       sync.Mutex
 	services map[string]ServiceInfo // key: logicalName
 	version  int
+	tcpPort  int
+	httpPort int
 }
 
 // NewServer creates a new Server.
-func NewServer(ctx context.Context) *Server {
+func NewServer(ctx context.Context, httpPort, tcpPort int) *Server {
 	// Create a cache
 	cache := cache.NewSnapshotCache(false, cache.IDHash{}, nil)
 
@@ -69,6 +71,8 @@ func NewServer(ctx context.Context) *Server {
 		cache:    cache,
 		server:   srv,
 		services: make(map[string]ServiceInfo),
+		httpPort: httpPort,
+		tcpPort:  tcpPort,
 	}
 }
 
@@ -107,7 +111,7 @@ func (s *Server) DeregisterService(ctx context.Context, serviceName, hostname st
 
 func (s *Server) updateSnapshot(ctx context.Context) error {
 	version := fmt.Sprintf("v%d", s.version)
-	snap, err := s.GenerateSnapshot(version)
+	snap, err := s.generateSnapshot(version)
 	if err != nil {
 		log.Printf("Failed to generate snapshot: %v", err)
 		return err
@@ -122,8 +126,9 @@ func (s *Server) updateSnapshot(ctx context.Context) error {
 	return nil
 }
 
-// GenerateSnapshot creates a snapshot from active services.
-func (s *Server) GenerateSnapshot(version string) (*cache.Snapshot, error) {
+// generateSnapshot creates a snapshot from active services.
+// Caller must hold s.mu.
+func (s *Server) generateSnapshot(version string) (*cache.Snapshot, error) {
 	var clusters []types.Resource
 	var listeners []types.Resource
 
@@ -163,8 +168,12 @@ func (s *Server) GenerateSnapshot(version string) (*cache.Snapshot, error) {
 			}
 		} else if info.Protocol == "http" {
 			options := &httppb.HttpProtocolOptions{
-				UpstreamProtocolOptions: &httppb.HttpProtocolOptions_AutoConfig{
-					AutoConfig: &httppb.HttpProtocolOptions_AutoHttpConfig{},
+				UpstreamProtocolOptions: &httppb.HttpProtocolOptions_ExplicitHttpConfig_{
+					ExplicitHttpConfig: &httppb.HttpProtocolOptions_ExplicitHttpConfig{
+						ProtocolConfig: &httppb.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{
+							HttpProtocolOptions: &corepb.Http1ProtocolOptions{},
+						},
+					},
 				},
 			}
 			anyOptions, err := anypb.New(options)
@@ -207,34 +216,110 @@ func (s *Server) GenerateSnapshot(version string) (*cache.Snapshot, error) {
 				Name:        logicalName,
 				ApiListener: &listenerpb.ApiListener{ApiListener: apiConfig},
 			})
-		} else if info.Protocol == "http" {
-			// For HTTP, we also use an ApiListener but with specific domain
-			apiConfig, err := makeAPIListenerConfig(clusterName, []string{logicalName})
-			if err != nil {
-				return nil, err
-			}
-			listeners = append(listeners, &listenerpb.Listener{
-				Name:        logicalName,
-				ApiListener: &listenerpb.ApiListener{ApiListener: apiConfig},
+
+		}
+	}
+
+	// Build RouteConfiguration for HTTP services
+	var virtualHosts []*routepb.VirtualHost
+	for logicalName, info := range s.services {
+		if info.Protocol == "http" {
+			clusterName := fmt.Sprintf("cluster.%s.%s", info.ServiceName, info.Hostname)
+			virtualHosts = append(virtualHosts, &routepb.VirtualHost{
+				Name:    logicalName,
+				Domains: []string{logicalName},
+				Routes: []*routepb.Route{{
+					Match: &routepb.RouteMatch{
+						PathSpecifier: &routepb.RouteMatch_Prefix{
+							Prefix: "/",
+						},
+					},
+					Action: &routepb.Route_Route{
+						Route: &routepb.RouteAction{
+							ClusterSpecifier: &routepb.RouteAction_Cluster{
+								Cluster: clusterName,
+							},
+						},
+					},
+				}},
 			})
 		}
 	}
 
-	// Add the base listener if we have TCP services
-	if len(filterChains) > 0 {
+	var routes []types.Resource
+	if len(virtualHosts) > 0 {
+		// Create a RouteConfiguration inline
+		routeConfig := &routepb.RouteConfiguration{
+			Name:         "local_route",
+			VirtualHosts: virtualHosts,
+		}
+
+		anyRouter, err := anypb.New(&routerpb.Router{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal Router config: %w", err)
+		}
+
+		// Create HttpConnectionManager config
+		hcm := &hcmpb.HttpConnectionManager{
+			StatPrefix: "ingress_http",
+			RouteSpecifier: &hcmpb.HttpConnectionManager_RouteConfig{
+				RouteConfig: routeConfig,
+			},
+			HttpFilters: []*hcmpb.HttpFilter{{
+				Name: "envoy.filters.http.router",
+				ConfigType: &hcmpb.HttpFilter_TypedConfig{
+					TypedConfig: anyRouter,
+				},
+			}},
+		}
+
+		anyHcm, err := anypb.New(hcm)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal HttpConnectionManager: %w", err)
+		}
+
 		listeners = append(listeners, &listenerpb.Listener{
-			Name: "base_listener_443",
+			Name: fmt.Sprintf("http_listener_%d", s.httpPort),
 			Address: &corepb.Address{
 				Address: &corepb.Address_SocketAddress{
 					SocketAddress: &corepb.SocketAddress{
 						Protocol: corepb.SocketAddress_TCP,
 						Address:  "0.0.0.0",
 						PortSpecifier: &corepb.SocketAddress_PortValue{
-							PortValue: 443,
+							PortValue: uint32(s.httpPort),
 						},
 					},
 				},
 			},
+			FilterChains: []*listenerpb.FilterChain{{
+				Filters: []*listenerpb.Filter{{
+					Name: "envoy.filters.network.http_connection_manager",
+					ConfigType: &listenerpb.Filter_TypedConfig{
+						TypedConfig: anyHcm,
+					},
+				}},
+			}},
+		})
+	}
+
+	// Add the base listener if we have TCP services
+	if len(filterChains) > 0 {
+		listeners = append(listeners, &listenerpb.Listener{
+			Name: fmt.Sprintf("base_listener_%d", s.tcpPort),
+			Address: &corepb.Address{
+				Address: &corepb.Address_SocketAddress{
+					SocketAddress: &corepb.SocketAddress{
+						Protocol: corepb.SocketAddress_TCP,
+						Address:  "0.0.0.0",
+						PortSpecifier: &corepb.SocketAddress_PortValue{
+							PortValue: uint32(s.tcpPort),
+						},
+					},
+				},
+			},
+			ListenerFilters: []*listenerpb.ListenerFilter{{
+				Name: "envoy.filters.listener.tls_inspector",
+			}},
 			FilterChains: filterChains,
 		})
 	}
@@ -242,6 +327,7 @@ func (s *Server) GenerateSnapshot(version string) (*cache.Snapshot, error) {
 	snap, err := cache.NewSnapshot(version, map[resource.Type][]types.Resource{
 		resource.ClusterType:  clusters,
 		resource.ListenerType: listeners,
+		resource.RouteType:    routes,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create snapshot: %w", err)

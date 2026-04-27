@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("@grpc-java//:java_grpc_library.bzl", "java_grpc_library")
+load("@protobuf//bazel:java_proto_library.bzl", "java_proto_library")
 load("@protobuf//bazel:proto_library.bzl", "proto_library")
 load("@rules_go//proto:def.bzl", "go_proto_library")
 
@@ -36,6 +38,11 @@ go_proto_library(
     proto = ":dual_conduit_proto",
 )
 
+java_proto_library(
+    name = "dual_conduit_java_proto",
+    deps = [":dual_conduit_proto"],
+)
+
 # ==========================================
 # The Service Proto Targets
 # ==========================================
@@ -52,4 +59,15 @@ go_proto_library(
     importpath = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconsvcpb",
     proto = ":dual_conduit_service_proto",
     deps = [":dual_conduit_go_proto"],
+)
+
+java_proto_library(
+    name = "dual_conduit_service_java_proto",
+    deps = [":dual_conduit_service_proto"],
+)
+
+java_grpc_library(
+    name = "dual_conduit_service_java_grpc",
+    srcs = [":dual_conduit_service_proto"],
+    deps = [":dual_conduit_service_java_proto"],
 )

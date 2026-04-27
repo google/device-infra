@@ -37,7 +37,11 @@ func StartListeningLoop(c *Conduit, listen func() (net.Listener, error)) error {
 			continue
 		}
 
-		go handleIngressConnection(c, conn)
+		c.activeConnections.Add(1)
+		go func() {
+			defer c.activeConnections.Done()
+			handleIngressConnection(c, conn)
+		}()
 	}
 }
 
@@ -93,7 +97,9 @@ func AcceptStream(c *Conduit, destEndpoint string, downstream flux.Flux) flux.Fl
 	upstream := rc.ToFlux(streamCtx)
 
 	// Clean up TCP connection when streaming finishes.
+	c.activeConnections.Add(1)
 	go func() {
+		defer c.activeConnections.Done()
 		rc.Wait()
 		cancel()
 		conn.Close()
