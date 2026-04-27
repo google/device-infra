@@ -70,6 +70,7 @@ public abstract class DetectionResult {
     PARIS,
     SIMULATOR,
     STATIC_TESTBED,
+    STARFISH,
     TTB,
     VIDEO,
     WINDOWS,
