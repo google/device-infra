@@ -17,15 +17,20 @@ load("@rules_java//java:defs.bzl", "java_library")
 
 package(default_applicable_licenses = ["//:license"])
 
+package_group(
+    name = "flags_visibility",
+    includes = [
+        "//:deviceinfra_all_pkg",
+        "//:omnilab_fusion",
+    ],
+)
+
 java_library(
     name = "flags",
     srcs = [
         "Flags.java",
     ],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-        "//:omnilab_fusion",
-    ],
+    visibility = [":flags_visibility"],
     deps = [
         ":duration_flag",
         ":flag",
