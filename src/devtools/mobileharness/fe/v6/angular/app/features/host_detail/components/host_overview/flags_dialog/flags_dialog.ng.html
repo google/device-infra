@@ -1,0 +1,174 @@
+<app-dialog
+  title="Pass-through Flags"
+  subtitle="Editing startup arguments for <strong>{{ data.hostName }}</strong>"
+  type="host"
+  width="64rem"
+  height="80vh"
+  maxHeight="90vh"
+  footerType="normal">
+  <div header-prefix class="header-icon-wrapper">
+    <mat-icon>tune</mat-icon>
+  </div>
+  <mat-dialog-content class="dialog-content flags-dialog-wrapper" style="padding: 0;">
+    <div class="flags-dialog-body">
+      <!-- Main Editor Column -->
+      <div class="flags-dialog-editor-col">
+        <!-- Mode Switcher -->
+        <div class="flags-dialog-mode-switcher">
+          <p class="description-text">Configure additional startup arguments for the Lab Server binary.</p>
+          <div class="mode-buttons-group">
+            <button (click)="toggleMode(true)"
+                    [class.active]="isListMode()"
+                    class="mode-btn">
+              @if (isListMode()) {
+                <mat-icon class="mr-1">check</mat-icon>
+              }
+              <span>List View</span>
+            </button>
+            <button (click)="toggleMode(false)"
+                    [class.active]="!isListMode()"
+                    class="mode-btn">
+              @if (!isListMode()) {
+                <mat-icon class="mr-1">check</mat-icon>
+              }
+              <span>Text View</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="editor-container">
+          <!-- List Mode View -->
+          @if (isListMode()) {
+            <div class="list-view-container">
+              <!-- Add Flag Input -->
+              <div class="add-input-row">
+                <mat-form-field appearance="outline" class="flag-form-field" subscriptSizing="dynamic">
+                  <mat-icon matPrefix>add</mat-icon>
+                  <input matInput
+                         [(ngModel)]="addInput"
+                         (keydown.enter)="addFlag()"
+                         placeholder="Type flag, e.g. --debug_mode=true"
+                         class="flag-input"
+                         aria-label="Type pass-through flag">
+                </mat-form-field>
+                <button mat-stroked-button
+                        (click)="addFlag()"
+                        [disabled]="!addInput().trim()"
+                        class="add-btn"
+                        title="Add Flag">
+                  <mat-icon>add</mat-icon>
+                </button>
+              </div>
+
+              <!-- Current Flags List -->
+              <div class="list-header">
+                <span class="title">Current Flags</span>
+                <button (click)="clearAll()" class="clear-btn">
+                  <mat-icon>delete_sweep</mat-icon> Clear All
+                </button>
+              </div>
+
+              <div class="flags-list-wrapper">
+                @if (currentFlagsArray().length === 0) {
+                  <div class="empty-state">
+                    <div class="icon-circle">
+                      <mat-icon>data_array</mat-icon>
+                    </div>
+                    <p class="empty-title">No flags configured</p>
+                    <p class="empty-subtitle">Use the input above or choose a preset from the side to get started.</p>
+                  </div>
+                } @else {
+                  <ul class="divide-y">
+                    @for (flag of displayedFlags(); track $index) {
+                      <li class="flag-item">
+                        <div class="flag-content">
+                          <span class="flag-text">{{ flag.name }}</span>
+                          @if (flag.description) {
+                            <div class="flag-desc">
+                              <mat-icon>subdirectory_arrow_right</mat-icon>
+                              <span>{{ flag.description }}</span>
+                            </div>
+                          }
+                        </div>
+                        <button (click)="removeFlag($index)" class="delete-btn" title="Remove flag">
+                          <mat-icon>delete_outline</mat-icon>
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                }
+              </div>
+            </div>
+          } @else {
+            <!-- Textarea Mode View -->
+            <div class="textarea-container">
+              <textarea [ngModel]="currentFlagsArray().join(' ')"
+                        (ngModelChange)="updateFlagsFromText($event)"
+                        class="flags-textarea custom-scrollbar"
+                        placeholder="Enter flags separated by spaces, e.g.\n--nomute_android --noandroid_device_daemon"></textarea>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Right Column: Presets -->
+      <div class="flags-dialog-presets-col">
+        <div class="presets-header">
+          <div class="header-title">
+            <mat-icon>auto_awesome</mat-icon>
+            <h3>Quick Presets</h3>
+          </div>
+          <p class="header-subtitle">Common configurations for rapid input.</p>
+        </div>
+        <div class="presets-list custom-scrollbar">
+          @if (isLoadingPresets()) {
+            <div class="loading-spinner">
+              <mat-progress-spinner mode="indeterminate" diameter="24"></mat-progress-spinner>
+            </div>
+          } @else if (filteredPresets().length === 0) {
+            <div class="empty-presets">
+              No matching presets found.
+            </div>
+          } @else {
+            @for (preset of displayedPresets(); track preset.name) {
+              <div class="preset-card">
+                <div class="card-header">
+                  <span class="preset-name">{{ preset.name }}</span>
+                  <button (click)="appendPreset(preset)"
+                          [disabled]="preset.isAdded"
+                          class="append-btn"
+                          [title]="preset.isAdded ? 'Already added' : 'Add to flags'">
+                    @if (preset.isAdded) {
+                      <mat-icon>check</mat-icon>
+                    } @else {
+                      <mat-icon>add</mat-icon>
+                    }
+                  </button>
+                </div>
+                <div class="preset-cmd">{{ preset.cmd }}</div>
+                <div class="preset-desc">{{ preset.description }}</div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+    </div>
+  </mat-dialog-content>
+
+  <ng-template #actionsTemplate>
+    <div class="footer-actions">
+      @if (errorMessage()) {
+        <span class="error-text">{{ errorMessage() }}</span>
+      }
+      <button class="secondary-button" (click)="discardChanges()" [disabled]="!isDirty() || isSaving()">Discard Changes</button>
+      <button class="primary-button" (click)="save()" [disabled]="!isDirty() || isSaving()">
+        @if (isSaving()) {
+          <mat-progress-spinner mode="indeterminate" diameter="16" class="button-spinner"></mat-progress-spinner>
+          Saving...
+        } @else {
+          Save
+        }
+      </button>
+    </div>
+  </ng-template>
+</app-dialog>

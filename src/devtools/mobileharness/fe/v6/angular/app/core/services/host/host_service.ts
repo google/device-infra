@@ -2,12 +2,12 @@ import {InjectionToken} from '@angular/core';
 import {Observable} from 'rxjs';
 import {
   DecommissionHostResponse,
-  ReleaseLabServerRequest,
-  ReleaseLabServerResponse,
   GetHostDebugInfoResponse,
   HostHeaderInfo,
-  HostReleaseConfig,
   PopularFlag,
+  PreflightLabServerReleaseResponse,
+  ReleaseLabServerRequest,
+  ReleaseLabServerResponse,
   RestartLabServerResponse,
   StartLabServerResponse,
   StopLabServerResponse,
@@ -70,7 +70,9 @@ export abstract class HostService {
   /**
    * Retrieves release configurations for a host.
    */
-  abstract getReleaseConfigs(hostName: string): Observable<HostReleaseConfig[]>;
+  abstract preflightLabServerRelease(
+    hostName: string,
+  ): Observable<PreflightLabServerReleaseResponse>;
 
   /**
    * Decommissions missing devices on a specific host.
