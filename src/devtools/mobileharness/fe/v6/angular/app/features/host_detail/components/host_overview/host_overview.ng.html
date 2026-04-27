@@ -140,43 +140,21 @@
                 >help_outline</mat-icon
               >
             </dt>
-            <dd [class.grid-tight-dd]="!isEditingFlags()">
-              @if(isEditingFlags()) {
-                <div class="flags-edit-container">
-                  <textarea
-                    [(ngModel)]="editedFlags"
-                    class="flags-textarea"
-                    rows="5"
-                    placeholder="Enter flags..."
-                  ></textarea>
-                  <div class="flags-edit-actions">
-                    <button (click)="cancelEditFlags()" class="flags-edit-button cancel" [disabled]="isSavingFlags()">Cancel</button>
-                    <button (click)="saveFlags()" class="flags-edit-button save" [disabled]="isSavingFlags()">
-                      @if (isSavingFlags()) {
-                        <mat-progress-spinner mode="indeterminate" diameter="16" class="button-spinner"></mat-progress-spinner>
-                        Saving...
-                      } @else {
-                        Save
-                      }
-                    </button>
-                  </div>
-                </div>
+            <dd class="grid-tight-dd">
+              @if (passThroughFlags()) {
+                <div class="monospace-block">{{ passThroughFlags() }}</div>
               } @else {
-                @if (host.labServer.passThroughFlags) {
-                  <div class="monospace-block">{{ host.labServer.passThroughFlags }}</div>
-                } @else {
-                  <span class="text-gray-500">None</span>
-                }
-
-                <button
-                  mat-icon-button
-                  (click)="updateFlags.isReady ? startEditFlags() : showComingSoonPopup('Pass Through Flags')"
-                  [disabled]="!updateFlags.enabled"
-                  [matTooltip]="updateFlags.tooltip || 'Edit Pass Through Flags'"
-                  class="edit-flags-button">
-                  <mat-icon>edit</mat-icon>
-                </button>
+                <span class="text-gray-500">None</span>
               }
+
+              <button
+                mat-icon-button
+                (click)="updateFlags.isReady ? openFlagsDialog() : showComingSoonPopup('Pass Through Flags')"
+                [disabled]="!updateFlags.enabled"
+                [matTooltip]="updateFlags.tooltip || 'Edit Pass Through Flags'"
+                class="edit-flags-button">
+                <mat-icon>edit</mat-icon>
+              </button>
             </dd>
           }
         }

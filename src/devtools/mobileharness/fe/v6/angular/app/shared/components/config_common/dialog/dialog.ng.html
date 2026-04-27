@@ -1,6 +1,7 @@
 <div class="config-modal-container">
-  <div class="config-modal-card" [style.max-width]="width" [style.height]="height">
+  <div class="config-modal-card" [style.max-width]="width" [style.height]="height" [style.max-height]="maxHeight">
     <header class="config-header">
+      <ng-content select="[header-prefix]"></ng-content>
       <div class="header-title-container">
         <h2 class="config-title">{{ title }}</h2>
         <p class="config-subtitle" [innerHTML]="subtitle | safeHtmlPipe"></p>
@@ -9,7 +10,7 @@
         <div class="header-menu">
           <ng-content select="[header-button]"></ng-content>
         </div>
-        <button mat-icon-button mat-dialog-close class="close-button">
+        <button mat-icon-button [mat-dialog-close]="'close'" class="close-button">
           <mat-icon>close</mat-icon>
         </button>
       </div>

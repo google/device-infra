@@ -69,7 +69,10 @@ import {RemoteControlService} from '../../../../shared/services/remote_control_s
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {dateUtils} from '../../../../shared/utils/date_utils';
 import {objectUtils} from '../../../../shared/utils/object_utils';
+import {ActionNoPermissionContent} from './action_no_permission_content/action_no_permission_content';
 import {DecommissionContent} from './decommission_content/decommission_content';
+import {FlagsDialog} from './flags_dialog/flags_dialog';
+import {ReleaseDialog} from './release_dialog/release_dialog';
 
 const HEALTH_SEMANTIC_MAP: Record<
   string,
@@ -197,9 +200,7 @@ export class HostOverviewPage implements OnChanges {
     );
   });
 
-  isEditingFlags = signal(false);
-  editedFlags = '';
-  isSavingFlags = signal(false);
+  readonly passThroughFlags = signal<string>('');
 
   deviceDataSource = new MatTableDataSource<DeviceSummary>();
   selection = new SelectionModel<DeviceSummary>(true, []);
@@ -355,6 +356,7 @@ export class HostOverviewPage implements OnChanges {
   ngOnChanges(changes: SimpleChanges) {
     if (changes['host']) {
       this.selection.clear();
+      this.passThroughFlags.set(this.host.labServer.passThroughFlags);
       this.loadDevices();
     }
   }
@@ -398,50 +400,43 @@ export class HostOverviewPage implements OnChanges {
   }
 
   // Flags editing
-  startEditFlags() {
-    this.editedFlags = this.host.labServer.passThroughFlags;
-    this.isEditingFlags.set(true);
-  }
+  openFlagsDialog() {
+    const dialogRef = this.dialog.open(FlagsDialog, {
+      data: {
+        hostName: this.host.hostName,
+        currentFlags: this.passThroughFlags(),
+      },
+      width: '72rem',
+      maxHeight: '90vh',
+      autoFocus: false,
+    });
 
-  cancelEditFlags() {
-    this.isEditingFlags.set(false);
-  }
-
-  saveFlags() {
-    if (this.editedFlags === this.host.labServer.passThroughFlags) {
-      this.isEditingFlags.set(false);
-      return;
-    }
-
-    this.isSavingFlags.set(true);
-    this.hostService
-      .updatePassThroughFlags(this.host.hostName, this.editedFlags)
+    dialogRef
+      .afterClosed()
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.host.labServer.passThroughFlags = this.editedFlags;
-          this.isEditingFlags.set(false);
-          this.isSavingFlags.set(false);
-          this.showRestartDialog();
-        },
-        error: (err) => {
-          this.snackBar.showError(`Failed to save flags: ${err.message}`);
-          this.isSavingFlags.set(false);
-        },
+      .subscribe((result) => {
+        if (result === 'close') {
+          return;
+        }
+
+        this.passThroughFlags.set(result);
+        this.host.labServer.passThroughFlags = result;
+        this.showRestartDialog();
       });
   }
 
   showRestartDialog() {
     const dialogData = {
-      title: 'Restart Required',
-      content: `Pass through flags for ${this.host.hostName} have been updated. A Lab Server restart is required for changes to take effect. Restart now?`,
-      type: 'warning',
-      primaryButtonLabel: 'Restart Now',
+      title: 'Flags Updated',
+      content: `Pass-through flags have been updated successfully. Would you like to perform a release now to apply these changes?`,
+      customIcon: 'rocket_launch',
+      primaryButtonLabel: 'Release Now',
       secondaryButtonLabel: 'Later',
     };
 
     const restartDialogRef = this.dialog.open(ConfirmDialog, {
       data: dialogData,
+      panelClass: 'confirm-dialog-panel',
       disableClose: true,
     });
 
@@ -456,7 +451,48 @@ export class HostOverviewPage implements OnChanges {
   }
 
   onRelease() {
-    this.showComingSoonPopup('Release');
+    this.hostService
+      .preflightLabServerRelease(this.host.hostName)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((response) => {
+        if (response.permissionDenied) {
+          const dialogData = {
+            title: 'No Access',
+            contentComponent: ActionNoPermissionContent,
+            contentComponentInputs: {
+              hostName: this.host.hostName,
+            },
+            type: 'error',
+            customIcon: 'lock_outline',
+            primaryButtonLabel: 'Close',
+          };
+
+          this.dialog.open(ConfirmDialog, {
+            data: dialogData,
+            panelClass: 'confirm-dialog-panel',
+          });
+
+          return;
+        }
+
+        const releaseDialogRef = this.dialog.open(ReleaseDialog, {
+          data: {
+            hostName: this.host.hostName,
+            releaseConfigs: response.ready?.versions || [],
+            passThroughFlags: this.passThroughFlags,
+          },
+          autoFocus: false,
+        });
+
+        releaseDialogRef
+          .afterClosed()
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe((result) => {
+            if (!result) {
+              return;
+            }
+          });
+      });
   }
 
   onDeploy() {
