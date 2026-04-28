@@ -106,6 +106,7 @@ java_library(
     srcs = ["AndroidDesktopExecutorDevice.java"],
     deps = [
         ":base_device",
+        "//java/com/google/common/labs/base:base8",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",

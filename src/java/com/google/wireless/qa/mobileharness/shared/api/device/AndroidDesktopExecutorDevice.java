@@ -16,6 +16,8 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.device;
 
+import static com.google.common.labs.base.Substring.first;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -99,6 +101,11 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
     deviceIdOverride = getDeviceIdOverride(testInfo);
     testInfo.log().atInfo().alsoTo(logger).log("deviceIdOverride: %s", deviceIdOverride);
     if (deviceIdOverride != null) {
+      String dutName =
+          deviceIdOverride.contains(":")
+              ? first(":").toEnd().removeFrom(deviceIdOverride)
+              : deviceIdOverride;
+      testInfo.properties().add("dut_name", dutName);
       try {
         // TODO: Support multi-duts units in the future.
         adbInternalUtil.connect(deviceIdOverride);
