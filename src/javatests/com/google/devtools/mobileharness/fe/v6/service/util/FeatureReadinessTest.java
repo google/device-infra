@@ -72,4 +72,9 @@ public final class FeatureReadinessTest {
   public void isLabServerStartReady_returnsTrue() {
     assertThat(featureReadiness.isLabServerStartReady()).isTrue();
   }
+
+  @Test
+  public void isLabServerReleaseReady_returnsTrue() {
+    assertThat(featureReadiness.isLabServerReleaseReady()).isTrue();
+  }
 }

@@ -28,6 +28,8 @@ java_library(
     testonly = 1,
     srcs = glob(["*.java"]),
     deps = [
+        "//devtools/deviceinfra/service/release/proto:release_store_service_java_stubby",
+        "//java/com/google/net/rpc3",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
