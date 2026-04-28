@@ -40,6 +40,7 @@ java_library(
     deps = [
         ":flag",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core/converter",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:info_picocli_picocli",

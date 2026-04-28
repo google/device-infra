@@ -20,13 +20,25 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.reflect.TypeToken;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.flags.core.converter.DurationConverter;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
+import java.time.Duration;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
 import picocli.CommandLine;
+import picocli.CommandLine.IParameterPreprocessor;
+import picocli.CommandLine.ITypeConverter;
+import picocli.CommandLine.Model.ArgSpec;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Model.ISetter;
 import picocli.CommandLine.Model.OptionSpec;
@@ -35,6 +47,9 @@ import picocli.CommandLine.Model.OptionSpec;
 public final class FlagsManager {
 
   public static final Class<?> FLAGS_CLASS = Flags.class;
+
+  private static final ImmutableMap<Class<?>, ITypeConverter<?>> TYPE_CONVERTERS =
+      ImmutableMap.of(Duration.class, new DurationConverter());
 
   private static final Object FLAG_SCAN_LOCK = new Object();
   private static volatile Class<?> flagsClass = FLAGS_CLASS;
@@ -53,6 +68,7 @@ public final class FlagsManager {
     CommandLine cmd = new CommandLine(spec);
     cmd.setUnmatchedArgumentsAllowed(true);
     cmd.setOverwrittenOptionsAllowed(true);
+    registerConverters(cmd);
 
     cmd.parseArgs(args);
   }
@@ -83,6 +99,7 @@ public final class FlagsManager {
   static void setFromString(FlagEntry entry, String valueString) {
     CommandLine cmd =
         new CommandLine(CommandSpec.create().addOption(entry.metadata().optionSpec()));
+    registerConverters(cmd);
     // Uses "--option=value" to ensure boolean flags are set correctly.
     cmd.parseArgs(
         String.format("%s=%s", toOptionName(entry.metadata().spec().name()), valueString));
@@ -125,14 +142,14 @@ public final class FlagsManager {
               field.getName());
 
           ParameterizedType genericType = (ParameterizedType) field.getGenericType();
-          Class<?> type = (Class<?>) genericType.getActualTypeArguments()[0];
+          TypeToken<?> type = TypeToken.of(genericType.getActualTypeArguments()[0]);
 
           field.setAccessible(true);
           Flag<?> flag = (Flag<?>) field.get(null);
 
           checkState(flag != null, "Flag field %s must not be null", field.getName());
 
-          OptionSpec optionSpec = createOptionSpec(flag, spec, type);
+          OptionSpec optionSpec = createOptionSpec(type, spec, flag);
           FlagMetadata metadata = new FlagMetadata(type, spec, optionSpec);
 
           builder.put(spec.name(), new FlagEntry(flag, metadata));
@@ -145,19 +162,48 @@ public final class FlagsManager {
     }
   }
 
-  private static OptionSpec createOptionSpec(Flag<?> flag, FlagSpec spec, Class<?> type) {
-    return OptionSpec.builder(toOptionName(spec.name()))
-        .description(spec.help())
-        .type(type)
-        .setter(new FlagSetter(flag))
-        .build();
+  private static void registerConverters(CommandLine cmd) {
+    for (Map.Entry<Class<?>, ITypeConverter<?>> entry : TYPE_CONVERTERS.entrySet()) {
+      @SuppressWarnings("unchecked") // The type of the converter matches the key class.
+      Class<Object> type = (Class<Object>) entry.getKey();
+      @SuppressWarnings("unchecked") // The type of the converter matches the key class.
+      ITypeConverter<Object> converter = (ITypeConverter<Object>) entry.getValue();
+      cmd.registerConverter(type, converter);
+    }
+  }
+
+  private static OptionSpec createOptionSpec(TypeToken<?> type, FlagSpec spec, Flag<?> flag) {
+    OptionSpec.Builder builder =
+        OptionSpec.builder(toOptionName(spec.name()))
+            .description(spec.help())
+            .type(type.getRawType())
+            .setter(new FlagSetter(flag));
+
+    // Handles collection types.
+    if (type.isSubtypeOf(TypeToken.of(Collection.class))) {
+      builder.splitRegex(",");
+      Class<?> componentType =
+          type.resolveType(Collection.class.getTypeParameters()[0]).getRawType();
+      builder.auxiliaryTypes(componentType);
+      builder.preprocessor(new CollectionFlagPreprocessor());
+    }
+
+    return builder.build();
   }
 
   private static String toOptionName(String name) {
     return "--" + name;
   }
 
-  record FlagMetadata(Class<?> type, FlagSpec spec, OptionSpec optionSpec) {}
+  private static Object getEmptyCollection(Class<?> type) {
+    if (Set.class.isAssignableFrom(type)) {
+      return ImmutableSet.of();
+    } else {
+      return ImmutableList.of();
+    }
+  }
+
+  record FlagMetadata(TypeToken<?> type, FlagSpec spec, OptionSpec optionSpec) {}
 
   record FlagEntry(Flag<?> flag, FlagMetadata metadata) {}
 
@@ -170,6 +216,30 @@ public final class FlagsManager {
       Flag<V> flag = (Flag<V>) this.flag;
       flag.setValue(value);
       return value;
+    }
+  }
+
+  private static class CollectionFlagPreprocessor implements IParameterPreprocessor {
+
+    @Override
+    public boolean preprocess(
+        Stack<String> args,
+        CommandSpec commandSpec,
+        ArgSpec argSpec,
+        Map<String, Object> parsedArgs) {
+      if (args.isEmpty()) {
+        return false;
+      }
+
+      // For a collection flag, if its text is an empty string, returns an empty collection.
+      String value = args.peek();
+      if (value.isEmpty()) {
+        args.pop();
+        argSpec.setValue(getEmptyCollection(argSpec.type()));
+        return true;
+      }
+
+      return false;
     }
   }
 

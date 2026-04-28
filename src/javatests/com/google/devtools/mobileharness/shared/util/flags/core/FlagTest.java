@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.shared.util.flags.core;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
+import java.time.Duration;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -26,23 +27,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import picocli.CommandLine.ParameterException;
 
 @RunWith(JUnit4.class)
 public class FlagTest {
-
-  public static class FlagsForTesting {
-
-    @FlagSpec(name = "foo", help = "An integer flag.")
-    public static final Flag<Integer> foo = Flag.value(123);
-
-    @FlagSpec(name = "bar", help = "A string flag.")
-    public static final Flag<String> bar = Flag.value("default_bar");
-
-    @FlagSpec(name = "baz", help = "A boolean flag.")
-    public static final Flag<Boolean> baz = Flag.value(false);
-
-    private FlagsForTesting() {}
-  }
 
   @BeforeClass
   public static void setUpClass() {
@@ -61,6 +49,10 @@ public class FlagTest {
     FlagsManager.resetAllFlagsForTest();
   }
 
+  // ===============================================================================================
+  // Basic Parsing (Single Value Flags)
+  // ===============================================================================================
+
   @Test
   public void testDefaultValues() {
     // Verifies default values are correctly loaded.
@@ -68,7 +60,7 @@ public class FlagTest {
   }
 
   @Test
-  public void testParseArgs() {
+  public void testParseArgs_string_withEquals() {
     // Prepares arguments.
     String[] args = {"--bar=new_val"};
     assertThat(FlagsForTesting.bar.wasSetFromString()).isFalse();
@@ -80,6 +72,248 @@ public class FlagTest {
     assertThat(FlagsForTesting.bar.get()).isEqualTo("new_val");
     assertThat(FlagsForTesting.bar.wasSetFromString()).isTrue();
   }
+
+  @Test
+  public void testParseArgs_integer_withSpace() {
+    // Prepares arguments.
+    String[] args = {"--foo", "456"};
+
+    // Parses arguments.
+    FlagsManager.parse(args);
+
+    // Verifies new values are applied.
+    assertThat(FlagsForTesting.foo.get()).isEqualTo(456);
+  }
+
+  @Test
+  public void testParseArgs_integer_invalidValue_throwsException() {
+    // Prepares arguments.
+    String[] args = {"--foo=abc"};
+
+    // Verifies that parsing throws ParameterException.
+    assertThrows(ParameterException.class, () -> FlagsManager.parse(args));
+  }
+
+  @Test
+  public void testParseArgs_boolean_noValue() {
+    // Prepares arguments.
+    String[] args = {"--baz"};
+
+    // Parses arguments.
+    FlagsManager.parse(args);
+
+    // Verifies new values are applied.
+    assertThat(FlagsForTesting.baz.get()).isTrue();
+  }
+
+  @Test
+  public void testParseArgs_boolean_withEquals_true() {
+    // Prepares arguments.
+    String[] args = {"--baz=true"};
+
+    // Parses arguments.
+    FlagsManager.parse(args);
+
+    // Verifies new values are applied.
+    assertThat(FlagsForTesting.baz.get()).isTrue();
+  }
+
+  @Test
+  public void testParseArgs_boolean_withEquals_false() {
+    // Prepares arguments.
+    String[] args = {"--baz=false"};
+
+    // Parses arguments.
+    FlagsManager.parse(args);
+
+    // Verifies new values are applied.
+    assertThat(FlagsForTesting.baz.get()).isFalse();
+  }
+
+  @Test
+  public void testParseArgs_boolean_withSpace_false() {
+    // Prepares arguments.
+    String[] args = {"--baz", "false"};
+
+    // Parses arguments.
+    FlagsManager.parse(args);
+
+    // Verifies new values are applied (flag is STILL set to true, "false" is ignored/positional).
+    assertThat(FlagsForTesting.baz.get()).isTrue();
+  }
+
+  @Test
+  public void testParseArgs_duration() {
+    // Prepares arguments.
+    String[] args = {"--timeout=1h30m"};
+
+    // Parses arguments.
+    FlagsManager.parse(args);
+
+    // Verifies new values are applied.
+    assertThat(FlagsForTesting.timeout.get()).isEqualTo(Duration.ofHours(1).plusMinutes(30));
+  }
+
+  // ===============================================================================================
+  // Collection Flags (List and Set)
+  // ===============================================================================================
+
+  @Test
+  public void testParseArgs_listString_commaSeparated() {
+    // Prepares arguments.
+    String[] args = {"--names=a,b,c"};
+
+    // Parses arguments.
+    FlagsManager.parse(args);
+
+    // Verifies new values are applied.
+    assertThat(FlagsForTesting.names.get()).containsExactly("a", "b", "c").inOrder();
+  }
+
+  @Test
+  public void testParseArgs_listString_multipleOccurrences() {
+    // Prepares arguments.
+    String[] args = {"--names=a", "--names=b"};
+
+    // Parses arguments.
+    FlagsManager.parse(args);
+
+    // Verifies new values are applied.
+    assertThat(FlagsForTesting.names.get()).containsExactly("b");
+  }
+
+  @Test
+  public void testParseArgs_listString_spaceSeparated() {
+    // Prepares arguments.
+    String[] args = {"--names", "a", "b"};
+
+    // Parses arguments.
+    FlagsManager.parse(args);
+
+    // Verifies new values are applied.
+    assertThat(FlagsForTesting.names.get()).containsExactly("a");
+  }
+
+  @Test
+  public void testParseArgs_listString_combined() {
+    // Prepares arguments.
+    String[] args = {"--names=a,b", "--names=c,d"};
+
+    // Parses arguments.
+    FlagsManager.parse(args);
+
+    // Verifies new values are applied.
+    assertThat(FlagsForTesting.names.get()).containsExactly("c", "d").inOrder();
+  }
+
+  @Test
+  public void testParseArgs_listString_emptyValue() {
+    // Prepares arguments.
+    String[] args = {"--names="};
+
+    // Parses arguments.
+    FlagsManager.parse(args);
+
+    // Verifies new values are applied.
+    assertThat(FlagsForTesting.names.get()).isEmpty();
+  }
+
+  @Test
+  public void testParseArgs_listInteger_commaSeparated() {
+    // Prepares arguments.
+    String[] args = {"--ids=1,2,3"};
+
+    // Parses arguments.
+    FlagsManager.parse(args);
+
+    // Verifies new values are applied.
+    assertThat(FlagsForTesting.ids.get()).containsExactly(1, 2, 3).inOrder();
+  }
+
+  @Test
+  public void testParseArgs_listInteger_multipleOccurrences() {
+    // Prepares arguments.
+    String[] args = {"--ids=1", "--ids=2"};
+
+    // Parses arguments.
+    FlagsManager.parse(args);
+
+    // Verifies new values are applied.
+    assertThat(FlagsForTesting.ids.get()).containsExactly(2);
+  }
+
+  @Test
+  public void testParseArgs_listInteger_combined() {
+    // Prepares arguments.
+    String[] args = {"--ids=1,2", "--ids=3,4"};
+
+    // Parses arguments.
+    FlagsManager.parse(args);
+
+    // Verifies new values are applied.
+    assertThat(FlagsForTesting.ids.get()).containsExactly(3, 4).inOrder();
+  }
+
+  @Test
+  public void testParseArgs_listInteger_emptyValue() {
+    // Prepares arguments.
+    String[] args = {"--ids="};
+
+    // Parses arguments.
+    FlagsManager.parse(args);
+
+    // Verifies new values are applied.
+    assertThat(FlagsForTesting.ids.get()).isEmpty();
+  }
+
+  @Test
+  public void testParseArgs_listInteger_invalidValue_throwsException() {
+    // Prepares arguments.
+    String[] args = {"--ids=1,a,2"};
+
+    // Verifies that parsing throws ParameterException.
+    assertThrows(ParameterException.class, () -> FlagsManager.parse(args));
+  }
+
+  @Test
+  public void testParseArgs_setInteger_duplicates() {
+    // Prepares arguments.
+    String[] args = {"--idsSet=1,2,1"};
+
+    // Parses arguments.
+    FlagsManager.parse(args);
+
+    // Verifies new values are applied.
+    assertThat(FlagsForTesting.idsSet.get()).containsExactly(1, 2).inOrder();
+  }
+
+  @Test
+  public void testParseArgs_setInteger_ordering() {
+    // Prepares arguments.
+    String[] args = {"--idsSet=2,1,3"};
+
+    // Parses arguments.
+    FlagsManager.parse(args);
+
+    // Verifies new values are applied.
+    assertThat(FlagsForTesting.idsSet.get()).containsExactly(2, 1, 3).inOrder();
+  }
+
+  @Test
+  public void testParseArgs_setInteger_duplicates_ordering() {
+    // Prepares arguments.
+    String[] args = {"--idsSet=2,1,2"};
+
+    // Parses arguments.
+    FlagsManager.parse(args);
+
+    // Verifies new values are applied.
+    assertThat(FlagsForTesting.idsSet.get()).containsExactly(2, 1).inOrder();
+  }
+
+  // ===============================================================================================
+  // Edge Cases & Error Handling
+  // ===============================================================================================
 
   @Test
   public void testGetNonNull_whenNull_throwsException() {
@@ -101,6 +335,10 @@ public class FlagTest {
     // Verifies known flag is updated and unknown is ignored.
     assertThat(FlagsForTesting.foo.get()).isEqualTo(20);
   }
+
+  // ===============================================================================================
+  // SetFlags Rule
+  // ===============================================================================================
 
   @Test
   public void testSetFlagsRule() {
