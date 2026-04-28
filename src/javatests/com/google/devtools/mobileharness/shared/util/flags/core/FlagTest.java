@@ -55,102 +55,195 @@ public class FlagTest {
 
   @Test
   public void testDefaultValues() {
-    // Verifies default values are correctly loaded.
     assertThat(FlagsForTesting.foo.get()).isEqualTo(123);
   }
 
   @Test
   public void testParseArgs_string_withEquals() {
-    // Prepares arguments.
     String[] args = {"--bar=new_val"};
     assertThat(FlagsForTesting.bar.wasSetFromString()).isFalse();
 
-    // Parses arguments.
     FlagsManager.parse(args);
 
-    // Verifies new values are applied.
     assertThat(FlagsForTesting.bar.get()).isEqualTo("new_val");
     assertThat(FlagsForTesting.bar.wasSetFromString()).isTrue();
   }
 
   @Test
   public void testParseArgs_integer_withSpace() {
-    // Prepares arguments.
     String[] args = {"--foo", "456"};
 
-    // Parses arguments.
     FlagsManager.parse(args);
 
-    // Verifies new values are applied.
     assertThat(FlagsForTesting.foo.get()).isEqualTo(456);
   }
 
   @Test
   public void testParseArgs_integer_invalidValue_throwsException() {
-    // Prepares arguments.
     String[] args = {"--foo=abc"};
 
-    // Verifies that parsing throws ParameterException.
     assertThrows(ParameterException.class, () -> FlagsManager.parse(args));
   }
 
   @Test
   public void testParseArgs_boolean_noValue() {
-    // Prepares arguments.
     String[] args = {"--baz"};
 
-    // Parses arguments.
     FlagsManager.parse(args);
 
-    // Verifies new values are applied.
     assertThat(FlagsForTesting.baz.get()).isTrue();
+    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
   }
 
   @Test
   public void testParseArgs_boolean_withEquals_true() {
-    // Prepares arguments.
     String[] args = {"--baz=true"};
 
-    // Parses arguments.
     FlagsManager.parse(args);
 
-    // Verifies new values are applied.
     assertThat(FlagsForTesting.baz.get()).isTrue();
+    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
   }
 
   @Test
   public void testParseArgs_boolean_withEquals_false() {
-    // Prepares arguments.
     String[] args = {"--baz=false"};
 
-    // Parses arguments.
     FlagsManager.parse(args);
 
-    // Verifies new values are applied.
     assertThat(FlagsForTesting.baz.get()).isFalse();
+    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+  }
+
+  @Test
+  public void testParseArgs_boolean_withEquals_yes() {
+    String[] args = {"--baz=yes"};
+
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.baz.get()).isTrue();
+    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+  }
+
+  @Test
+  public void testParseArgs_boolean_withEquals_no() {
+    String[] args = {"--baz=no"};
+
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.baz.get()).isFalse();
+    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+  }
+
+  @Test
+  public void testParseArgs_boolean_withEquals_y() {
+    String[] args = {"--baz=Y"};
+
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.baz.get()).isTrue();
+    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+  }
+
+  @Test
+  public void testParseArgs_boolean_withEquals_n() {
+    String[] args = {"--baz=N"};
+
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.baz.get()).isFalse();
+    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+  }
+
+  @Test
+  public void testParseArgs_boolean_withEquals_one() {
+    String[] args = {"--baz=1"};
+
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.baz.get()).isTrue();
+    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+  }
+
+  @Test
+  public void testParseArgs_boolean_withEquals_zero() {
+    String[] args = {"--baz=0"};
+
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.baz.get()).isFalse();
+    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+  }
+
+  @Test
+  public void testParseArgs_boolean_withEquals_empty() {
+    String[] args = {"--baz="};
+
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.baz.get()).isFalse();
+    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
   }
 
   @Test
   public void testParseArgs_boolean_withSpace_false() {
-    // Prepares arguments.
     String[] args = {"--baz", "false"};
 
-    // Parses arguments.
     FlagsManager.parse(args);
 
-    // Verifies new values are applied (flag is STILL set to true, "false" is ignored/positional).
+    // Flag is STILL set to true, "false" is ignored/positional.
     assertThat(FlagsForTesting.baz.get()).isTrue();
+    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+  }
+
+  @Test
+  public void testParseArgs_boolean_withSpace_emptyString() {
+    String[] args = {"--baz", ""};
+
+    FlagsManager.parse(args);
+
+    // Flag is STILL set to true, "" is ignored/positional.
+    assertThat(FlagsForTesting.baz.get()).isTrue();
+    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+  }
+
+  @Test
+  public void testParseArgs_boolean_noPrefixed() {
+    String[] args = {"--nobaz"};
+
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.baz.get()).isFalse();
+    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+  }
+
+  @Test
+  public void testParseArgs_boolean_noPrefixed_withEquals_empty() {
+    String[] args = {"--nobaz="};
+
+    assertThrows(ParameterException.class, () -> FlagsManager.parse(args));
+  }
+
+  @Test
+  public void testParseArgs_boolean_noPrefixed_withEquals_true() {
+    String[] args = {"--nobaz=true"};
+
+    assertThrows(ParameterException.class, () -> FlagsManager.parse(args));
+  }
+
+  @Test
+  public void testParseArgs_boolean_noPrefixed_withEquals_false() {
+    String[] args = {"--nobaz=false"};
+
+    assertThrows(ParameterException.class, () -> FlagsManager.parse(args));
   }
 
   @Test
   public void testParseArgs_duration() {
-    // Prepares arguments.
     String[] args = {"--timeout=1h30m"};
 
-    // Parses arguments.
     FlagsManager.parse(args);
 
-    // Verifies new values are applied.
     assertThat(FlagsForTesting.timeout.get()).isEqualTo(Duration.ofHours(1).plusMinutes(30));
   }
 
@@ -160,154 +253,125 @@ public class FlagTest {
 
   @Test
   public void testParseArgs_listString_commaSeparated() {
-    // Prepares arguments.
     String[] args = {"--names=a,b,c"};
 
-    // Parses arguments.
     FlagsManager.parse(args);
 
-    // Verifies new values are applied.
     assertThat(FlagsForTesting.names.get()).containsExactly("a", "b", "c").inOrder();
   }
 
   @Test
   public void testParseArgs_listString_multipleOccurrences() {
-    // Prepares arguments.
     String[] args = {"--names=a", "--names=b"};
 
-    // Parses arguments.
     FlagsManager.parse(args);
 
-    // Verifies new values are applied.
     assertThat(FlagsForTesting.names.get()).containsExactly("b");
   }
 
   @Test
   public void testParseArgs_listString_spaceSeparated() {
-    // Prepares arguments.
     String[] args = {"--names", "a", "b"};
 
-    // Parses arguments.
     FlagsManager.parse(args);
 
-    // Verifies new values are applied.
     assertThat(FlagsForTesting.names.get()).containsExactly("a");
   }
 
   @Test
   public void testParseArgs_listString_combined() {
-    // Prepares arguments.
     String[] args = {"--names=a,b", "--names=c,d"};
 
-    // Parses arguments.
     FlagsManager.parse(args);
 
-    // Verifies new values are applied.
     assertThat(FlagsForTesting.names.get()).containsExactly("c", "d").inOrder();
   }
 
   @Test
   public void testParseArgs_listString_emptyValue() {
-    // Prepares arguments.
     String[] args = {"--names="};
 
-    // Parses arguments.
     FlagsManager.parse(args);
 
-    // Verifies new values are applied.
     assertThat(FlagsForTesting.names.get()).isEmpty();
   }
 
   @Test
   public void testParseArgs_listInteger_commaSeparated() {
-    // Prepares arguments.
     String[] args = {"--ids=1,2,3"};
 
-    // Parses arguments.
     FlagsManager.parse(args);
 
-    // Verifies new values are applied.
     assertThat(FlagsForTesting.ids.get()).containsExactly(1, 2, 3).inOrder();
   }
 
   @Test
   public void testParseArgs_listInteger_multipleOccurrences() {
-    // Prepares arguments.
     String[] args = {"--ids=1", "--ids=2"};
 
-    // Parses arguments.
     FlagsManager.parse(args);
 
-    // Verifies new values are applied.
     assertThat(FlagsForTesting.ids.get()).containsExactly(2);
   }
 
   @Test
   public void testParseArgs_listInteger_combined() {
-    // Prepares arguments.
     String[] args = {"--ids=1,2", "--ids=3,4"};
 
-    // Parses arguments.
     FlagsManager.parse(args);
 
-    // Verifies new values are applied.
     assertThat(FlagsForTesting.ids.get()).containsExactly(3, 4).inOrder();
   }
 
   @Test
   public void testParseArgs_listInteger_emptyValue() {
-    // Prepares arguments.
     String[] args = {"--ids="};
 
-    // Parses arguments.
     FlagsManager.parse(args);
 
-    // Verifies new values are applied.
     assertThat(FlagsForTesting.ids.get()).isEmpty();
   }
 
   @Test
   public void testParseArgs_listInteger_invalidValue_throwsException() {
-    // Prepares arguments.
     String[] args = {"--ids=1,a,2"};
 
-    // Verifies that parsing throws ParameterException.
     assertThrows(ParameterException.class, () -> FlagsManager.parse(args));
   }
 
   @Test
-  public void testParseArgs_setInteger_duplicates() {
-    // Prepares arguments.
-    String[] args = {"--idsSet=1,2,1"};
+  public void testParseArgs_listBoolean_commaSeparated() {
+    String[] args = {"--boolList=true,yes,1,false"};
 
-    // Parses arguments.
     FlagsManager.parse(args);
 
-    // Verifies new values are applied.
+    assertThat(FlagsForTesting.boolList.get()).containsExactly(true, true, true, false).inOrder();
+  }
+
+  @Test
+  public void testParseArgs_setInteger_duplicates() {
+    String[] args = {"--idsSet=1,2,1"};
+
+    FlagsManager.parse(args);
+
     assertThat(FlagsForTesting.idsSet.get()).containsExactly(1, 2).inOrder();
   }
 
   @Test
   public void testParseArgs_setInteger_ordering() {
-    // Prepares arguments.
     String[] args = {"--idsSet=2,1,3"};
 
-    // Parses arguments.
     FlagsManager.parse(args);
 
-    // Verifies new values are applied.
     assertThat(FlagsForTesting.idsSet.get()).containsExactly(2, 1, 3).inOrder();
   }
 
   @Test
   public void testParseArgs_setInteger_duplicates_ordering() {
-    // Prepares arguments.
     String[] args = {"--idsSet=2,1,2"};
 
-    // Parses arguments.
     FlagsManager.parse(args);
 
-    // Verifies new values are applied.
     assertThat(FlagsForTesting.idsSet.get()).containsExactly(2, 1).inOrder();
   }
 
@@ -317,22 +381,17 @@ public class FlagTest {
 
   @Test
   public void testGetNonNull_whenNull_throwsException() {
-    // Prepares a flag with null value.
     Flag<String> nullFlag = Flag.value(null);
 
-    // Verifies that getNonNull throws IllegalStateException when value is null.
     assertThrows(IllegalStateException.class, nullFlag::getNonNull);
   }
 
   @Test
   public void testUnknownFlagIgnored() {
-    // Prepares arguments with unknown flag.
     String[] args = {"--foo=20", "--unknown=abc"};
 
-    // Parses arguments.
     FlagsManager.parse(args);
 
-    // Verifies known flag is updated and unknown is ignored.
     assertThat(FlagsForTesting.foo.get()).isEqualTo(20);
   }
 
@@ -342,62 +401,79 @@ public class FlagTest {
 
   @Test
   public void testSetFlagsRule() {
-    // Overrides flag value via rule.
     setFlags.set("bar", "value_from_rule");
+
     assertThat(FlagsForTesting.bar.get()).isEqualTo("value_from_rule");
     assertThat(FlagsForTesting.bar.wasSetFromString()).isTrue();
 
-    // Resets rule.
     setFlags.reset();
 
-    // Verifies value is restored to default.
     assertThat(FlagsForTesting.bar.get()).isEqualTo("default_bar");
     assertThat(FlagsForTesting.bar.wasSetFromString()).isFalse();
   }
 
   @Test
   public void testSetFlagsRule_restoresToCommandLineValue() {
-    // Simulates global command line parsing.
     FlagsManager.parse(new String[] {"--bar=global_val"});
+
     assertThat(FlagsForTesting.bar.get()).isEqualTo("global_val");
 
-    // Overrides flag value via rule.
     setFlags.set("bar", "rule_val");
+
     assertThat(FlagsForTesting.bar.get()).isEqualTo("rule_val");
 
-    // Resets rule.
     setFlags.reset();
 
-    // Verifies value is restored to the command line value.
     assertThat(FlagsForTesting.bar.get()).isEqualTo("global_val");
   }
 
   @Test
   public void testSetFlagsRule_multipleOverrides_restoresToOriginal() {
-    // Captures original value before overrides.
     String originalVal = FlagsForTesting.bar.get();
 
-    // Applies multiple overrides.
     setFlags.set("bar", "value_1");
     setFlags.set("bar", "value_2");
+
     assertThat(FlagsForTesting.bar.get()).isEqualTo("value_2");
 
-    // Resets rule.
     setFlags.reset();
 
-    // Verifies original value is restored.
     assertThat(FlagsForTesting.bar.get()).isEqualTo(originalVal);
   }
 
   @Test
+  public void testSetFlagsRule_setNull() {
+    setFlags.set("bar", null);
+
+    assertThat(FlagsForTesting.bar.get()).isNull();
+    assertThat(FlagsForTesting.bar.wasSetFromString()).isTrue();
+
+    setFlags.reset();
+
+    assertThat(FlagsForTesting.bar.get()).isEqualTo("default_bar");
+    assertThat(FlagsForTesting.bar.wasSetFromString()).isFalse();
+  }
+
+  @Test
   public void testSetFlagsRule_nonExistentFlag_throwsException() {
-    // Verifies that setting a non-existent flag throws an exception.
     assertThrows(IllegalArgumentException.class, () -> setFlags.set("non_existent_flag", "value"));
   }
 
   @Test
   public void testSetFlagsRule_invalidType_throwsException() {
-    // Verifies that setting an invalid value type via rule throws an exception.
     assertThrows(RuntimeException.class, () -> setFlags.set("foo", "not_a_number"));
+  }
+
+  @Test
+  public void testSetFlagsRule_noPrefixed() {
+    setFlags.set("nobaz", null);
+
+    assertThat(FlagsForTesting.baz.get()).isFalse();
+    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+  }
+
+  @Test
+  public void testSetFlagsRule_noPrefixed_withValue_throwsException() {
+    assertThrows(IllegalArgumentException.class, () -> setFlags.set("nobaz", "true"));
   }
 }

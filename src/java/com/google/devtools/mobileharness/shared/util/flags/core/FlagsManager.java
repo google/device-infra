@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.reflect.TypeToken;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.flags.core.converter.BooleanConverter;
 import com.google.devtools.mobileharness.shared.util.flags.core.converter.DurationConverter;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.lang.reflect.Field;
@@ -49,7 +50,9 @@ public final class FlagsManager {
   public static final Class<?> FLAGS_CLASS = Flags.class;
 
   private static final ImmutableMap<Class<?>, ITypeConverter<?>> TYPE_CONVERTERS =
-      ImmutableMap.of(Duration.class, new DurationConverter());
+      ImmutableMap.of(
+          Duration.class, new DurationConverter(),
+          Boolean.class, new BooleanConverter());
 
   private static final Object FLAG_SCAN_LOCK = new Object();
   private static volatile Class<?> flagsClass = FLAGS_CLASS;
@@ -97,12 +100,28 @@ public final class FlagsManager {
   }
 
   static void setFromString(FlagEntry entry, String valueString) {
-    CommandLine cmd =
-        new CommandLine(CommandSpec.create().addOption(entry.metadata().optionSpec()));
+    OptionSpec option = entry.metadata().optionSpec();
+
+    if (option.arity().max() > 0 && valueString == null) {
+      entry.flag().setValue(null);
+      return;
+    }
+
+    CommandLine cmd = new CommandLine(CommandSpec.create().addOption(option));
     registerConverters(cmd);
-    // Uses "--option=value" to ensure boolean flags are set correctly.
-    cmd.parseArgs(
-        String.format("%s=%s", toOptionName(entry.metadata().spec().name()), valueString));
+
+    if (option.arity().max() == 0) {
+      // Arity 0 options (e.g., --nofoo) take no arguments. Passing a value is invalid.
+      checkArgument(
+          valueString == null,
+          "Invalid boolean syntax for %s: %s",
+          option.longestName(),
+          valueString);
+      cmd.parseArgs(option.longestName());
+    } else {
+      // Uses "--option=value" to ensure boolean flags are set correctly.
+      cmd.parseArgs(String.format("%s=%s", option.longestName(), valueString));
+    }
   }
 
   private static void ensureFlagsScanned() {
@@ -149,10 +168,12 @@ public final class FlagsManager {
 
           checkState(flag != null, "Flag field %s must not be null", field.getName());
 
-          OptionSpec optionSpec = createOptionSpec(type, spec, flag);
-          FlagMetadata metadata = new FlagMetadata(type, spec, optionSpec);
+          addFlagEntry(builder, type, spec, flag, /* isPositive= */ true);
 
-          builder.put(spec.name(), new FlagEntry(flag, metadata));
+          // Supports --nofoo for boolean flags.
+          if (type.getRawType() == Boolean.class) {
+            addFlagEntry(builder, type, spec, flag, /* isPositive= */ false);
+          }
         }
       }
 
@@ -172,12 +193,32 @@ public final class FlagsManager {
     }
   }
 
-  private static OptionSpec createOptionSpec(TypeToken<?> type, FlagSpec spec, Flag<?> flag) {
+  private static void addFlagEntry(
+      ImmutableMap.Builder<String, FlagEntry> builder,
+      TypeToken<?> type,
+      FlagSpec spec,
+      Flag<?> flag,
+      boolean isPositive) {
+    String key = isPositive ? spec.name() : "no" + spec.name();
+    OptionSpec optionSpec = createOptionSpec(type, spec, flag, isPositive);
+    FlagMetadata metadata = new FlagMetadata(type, spec, optionSpec, isPositive);
+    builder.put(key, new FlagEntry(flag, metadata));
+  }
+
+  private static OptionSpec createOptionSpec(
+      TypeToken<?> type, FlagSpec spec, Flag<?> flag, boolean isPositive) {
+    String name = isPositive ? "--" + spec.name() : "--no" + spec.name();
     OptionSpec.Builder builder =
-        OptionSpec.builder(toOptionName(spec.name()))
+        OptionSpec.builder(name)
             .description(spec.help())
             .type(type.getRawType())
             .setter(new FlagSetter(flag));
+
+    // Handles negative boolean type.
+    if (!isPositive) {
+      builder.setter(new FalseSetter(flag));
+      builder.arity("0");
+    }
 
     // Handles collection types.
     if (type.isSubtypeOf(TypeToken.of(Collection.class))) {
@@ -191,10 +232,6 @@ public final class FlagsManager {
     return builder.build();
   }
 
-  private static String toOptionName(String name) {
-    return "--" + name;
-  }
-
   private static Object getEmptyCollection(Class<?> type) {
     if (Set.class.isAssignableFrom(type)) {
       return ImmutableSet.of();
@@ -203,7 +240,8 @@ public final class FlagsManager {
     }
   }
 
-  record FlagMetadata(TypeToken<?> type, FlagSpec spec, OptionSpec optionSpec) {}
+  record FlagMetadata(
+      TypeToken<?> type, FlagSpec spec, OptionSpec optionSpec, boolean isPositive) {}
 
   record FlagEntry(Flag<?> flag, FlagMetadata metadata) {}
 
@@ -216,6 +254,18 @@ public final class FlagsManager {
       Flag<V> flag = (Flag<V>) this.flag;
       flag.setValue(value);
       return value;
+    }
+  }
+
+  private record FalseSetter(Flag<?> flag) implements ISetter {
+
+    @SuppressWarnings("unchecked") // Type check is in scanFlags().
+    @CanIgnoreReturnValue
+    @Override
+    public <V> V set(V value) {
+      Flag<Boolean> flag = (Flag<Boolean>) this.flag;
+      flag.setValue(false);
+      return (V) Boolean.FALSE;
     }
   }
 

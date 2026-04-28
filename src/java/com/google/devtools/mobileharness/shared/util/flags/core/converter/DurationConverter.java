@@ -18,15 +18,17 @@ package com.google.devtools.mobileharness.shared.util.flags.core.converter;
 
 import static com.google.common.base.CharMatcher.whitespace;
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.base.CharMatcher;
 import com.google.common.collect.ImmutableMap;
+import com.google.errorprone.annotations.FormatMethod;
+import com.google.errorprone.annotations.FormatString;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import picocli.CommandLine.ITypeConverter;
+import picocli.CommandLine.TypeConversionException;
 
 /** Converter for {@link Duration}. */
 public class DurationConverter implements ITypeConverter<Duration> {
@@ -48,10 +50,10 @@ public class DurationConverter implements ITypeConverter<Duration> {
 
   @Override
   public Duration convert(String value) {
-    checkArgument(value != null, "input value cannot be null");
-    checkArgument(!value.isEmpty(), "input value cannot be empty");
-    checkArgument(!value.equals("-"), "input value cannot be '-'");
-    checkArgument(!value.equals("+"), "input value cannot be '+'");
+    checkFormat(value != null, "input value cannot be null");
+    checkFormat(!value.isEmpty(), "input value cannot be empty");
+    checkFormat(!value.equals("-"), "input value cannot be '-'");
+    checkFormat(!value.equals("+"), "input value cannot be '+'");
 
     value = whitespace().trimFrom(value);
 
@@ -66,13 +68,13 @@ public class DurationConverter implements ITypeConverter<Duration> {
     Matcher matcher = UNIT_PATTERN.matcher(value);
     while (matcher.find(index) && matcher.start() == index) {
       // Prevent strings like ".s" or "d" by requiring at least one digit.
-      checkArgument(ASCII_DIGIT.matchesAnyOf(matcher.group(0)));
+      checkFormat(ASCII_DIGIT.matchesAnyOf(matcher.group(0)), "expected at least one digit");
       try {
         String unit = matcher.group("unit");
 
         long whole = Long.parseLong(firstNonNull(matcher.group("whole"), "0"));
         Duration singleUnit = ABBREVIATION_TO_DURATION.get(unit);
-        checkArgument(singleUnit != null, "invalid unit (%s)", unit);
+        checkFormat(singleUnit != null, "invalid unit (%s)", unit);
         // TODO: Consider using saturated duration math here
         duration = duration.plus(singleUnit.multipliedBy(whole));
 
@@ -80,16 +82,22 @@ public class DurationConverter implements ITypeConverter<Duration> {
         double frac = Double.parseDouble("0" + firstNonNull(matcher.group("frac"), ""));
         duration = duration.plus(Duration.ofNanos((long) (nanosPerUnit * frac)));
       } catch (ArithmeticException e) {
-        throw new IllegalArgumentException(e);
+        throw new TypeConversionException("duration overflow: " + e.getMessage());
       }
       index = matcher.end();
     }
-    if (index < value.length()) {
-      throw new IllegalArgumentException("Could not parse entire duration: " + value);
-    }
+    checkFormat(index >= value.length(), "could not parse entire duration: %s", value);
     if (negative) {
       duration = duration.negated();
     }
     return duration;
+  }
+
+  @FormatMethod
+  private static void checkFormat(
+      boolean condition, @FormatString String errorMessageFormat, Object... args) {
+    if (!condition) {
+      throw new TypeConversionException(String.format(errorMessageFormat, args));
+    }
   }
 }

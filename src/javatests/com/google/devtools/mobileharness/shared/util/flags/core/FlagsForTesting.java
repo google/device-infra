@@ -43,6 +43,9 @@ public class FlagsForTesting {
   @FlagSpec(name = "ids", help = "A list of integers.")
   public static final Flag<List<Integer>> ids = Flag.value(ImmutableList.of());
 
+  @FlagSpec(name = "boolList", help = "A list of booleans.")
+  public static final Flag<List<Boolean>> boolList = Flag.value(ImmutableList.of());
+
   @FlagSpec(name = "idsSet", help = "A set of integers.")
   public static final Flag<Set<Integer>> idsSet = Flag.value(ImmutableSet.of());
 

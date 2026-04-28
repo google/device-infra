@@ -19,9 +19,13 @@ package(default_applicable_licenses = ["//:license"])
 
 java_library(
     name = "converter",
-    srcs = ["DurationConverter.java"],
+    srcs = [
+        "BooleanConverter.java",
+        "DurationConverter.java",
+    ],
     visibility = ["//src/java/com/google/devtools/mobileharness/shared/util/flags/core:__pkg__"],
     deps = [
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:info_picocli_picocli",
     ],
