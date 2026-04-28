@@ -16,12 +16,20 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionMissingDevicesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionMissingDevicesResponse;
+import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingDeviceRequest;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingDevicesRequest;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.LabSyncStub;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -30,19 +38,50 @@ import javax.inject.Singleton;
 public final class DecommissionMissingDevicesHandler {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private final LabSyncStub labSyncStub;
+  private final Environment environment;
+
   @Inject
-  DecommissionMissingDevicesHandler() {}
+  DecommissionMissingDevicesHandler(LabSyncStub labSyncStub, Environment environment) {
+    this.labSyncStub = labSyncStub;
+    this.environment = environment;
+  }
 
   public ListenableFuture<DecommissionMissingDevicesResponse> decommissionMissingDevices(
-      DecommissionMissingDevicesRequest request) {
-    // TODO: Use the universe parameter.
-    @SuppressWarnings("unused")
-    String universe = request.getUniverse();
-    logger.atInfo().log(
-        "Decommissioning missing devices for host %s: %s",
-        request.getHostName(), request.getDeviceIdsList());
+      DecommissionMissingDevicesRequest request, UniverseScope universe) {
+    if (environment.isAts()) {
+      throw new UnsupportedOperationException(
+          "Decommissioning missing devices is not supported in the ATS environment.");
+    }
 
-    // TODO: Implement logic to decommission devices.
-    return immediateFuture(DecommissionMissingDevicesResponse.getDefaultInstance());
+    logger.atInfo().log(
+        "Decommissioning missing devices for host %s in universe %s: %s",
+        request.getHostName(), universe, request.getDeviceIdsList());
+
+    if (!(universe instanceof UniverseScope.SelfUniverse)) {
+      logger.atWarning().log(
+          "Decommissioning missing devices is only supported for Scenario 1 (google_1p). "
+              + "Current universe: %s",
+          universe);
+      return immediateFuture(DecommissionMissingDevicesResponse.getDefaultInstance());
+    }
+
+    RemoveMissingDevicesRequest masterRequest =
+        RemoveMissingDevicesRequest.newBuilder()
+            .addAllRemoveMissingDeviceRequest(
+                request.getDeviceIdsList().stream()
+                    .map(
+                        deviceId ->
+                            RemoveMissingDeviceRequest.newBuilder()
+                                .setDeviceUuid(deviceId)
+                                .setLabHostName(request.getHostName())
+                                .build())
+                    .collect(toImmutableList()))
+            .build();
+
+    return Futures.transform(
+        labSyncStub.removeMissingDevices(masterRequest, /* useClientRpcAuthority= */ true),
+        unused -> DecommissionMissingDevicesResponse.getDefaultInstance(),
+        directExecutor());
   }
 }

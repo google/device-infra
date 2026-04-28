@@ -17,13 +17,13 @@
 package com.google.devtools.mobileharness.fe.v6.service.host;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.fe.v6.service.host.builder.RemoteControlUrlBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.LabSyncStub;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -66,6 +67,7 @@ public final class HostServiceLogicImplTest {
   @Bind @Mock private UniverseFactory universeFactory;
   @Bind @Mock private InstantSource instantSource;
   @Bind @Mock private FeatureManagerFactory featureManagerFactory;
+  @Bind @Mock private LabSyncStub labSyncStub;
   @Mock private FeatureManager featureManager;
 
   private HostServiceLogicImpl hostServiceLogicImpl;
@@ -75,9 +77,9 @@ public final class HostServiceLogicImplTest {
     when(universeFactory.create(anyString())).thenReturn(new UniverseScope.SelfUniverse());
     when(featureManagerFactory.create(any())).thenReturn(featureManager);
     when(labInfoProvider.getLabInfoAsync(any(), any()))
-        .thenReturn(Futures.immediateFuture(GetLabInfoResponse.getDefaultInstance()));
+        .thenReturn(immediateFuture(GetLabInfoResponse.getDefaultInstance()));
     when(hostAuxiliaryInfoProvider.getHostReleaseInfo(anyString(), any()))
-        .thenReturn(Futures.immediateFuture(Optional.empty()));
+        .thenReturn(immediateFuture(Optional.empty()));
     hostServiceLogicImpl =
         Guice.createInjector(BoundFieldModule.of(this)).getInstance(HostServiceLogicImpl.class);
   }

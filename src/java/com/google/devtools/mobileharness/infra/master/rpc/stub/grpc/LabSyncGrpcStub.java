@@ -23,6 +23,8 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceGrpc;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabResponse;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingDevicesRequest;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingDevicesResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignOutDeviceRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignOutDeviceResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest;
@@ -41,6 +43,7 @@ public class LabSyncGrpcStub implements LabSyncStub {
   private final LabSyncServiceGrpc.LabSyncServiceFutureStub asyncStub;
 
   @Inject
+  @SuppressWarnings("UnnecessarilyVisible")
   public LabSyncGrpcStub(MasterGrpcStubHelper helper) {
     this.helper = helper;
     this.stub =
@@ -75,6 +78,22 @@ public class LabSyncGrpcStub implements LabSyncStub {
   @Override
   public ListenableFuture<SignOutDeviceResponse> signOutDevice(SignOutDeviceRequest request) {
     return asyncStub.signOutDevice(request);
+  }
+
+  @Override
+  public ListenableFuture<RemoveMissingDevicesResponse> removeMissingDevices(
+      RemoveMissingDevicesRequest request) {
+    return asyncStub.removeMissingDevices(request);
+  }
+
+  @Override
+  public ListenableFuture<RemoveMissingDevicesResponse> removeMissingDevices(
+      RemoveMissingDevicesRequest request, boolean useClientRpcAuthority) {
+    if (useClientRpcAuthority) {
+      throw new UnsupportedOperationException(
+          "useClientRpcAuthority is not supported in gRPC stub");
+    }
+    return removeMissingDevices(request);
   }
 
   @Override

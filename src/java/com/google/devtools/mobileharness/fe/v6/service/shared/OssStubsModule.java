@@ -42,8 +42,10 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.providers.RoutedUn
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.LabSyncStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.JobSyncGrpcStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabInfoGrpcStub;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabSyncGrpcStub;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.Annotation.DeviceConfigGrpcStub;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.DeviceConfigStub;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.grpc.DeviceConfigGrpcStubModule;
@@ -67,6 +69,7 @@ public final class OssStubsModule extends AbstractModule {
     bind(MasterGrpcStubHelper.class).toInstance(new MasterGrpcStubHelper(olcServerChannel));
     bind(LabInfoStub.class).to(LabInfoGrpcStub.class).in(Singleton.class);
     bind(JobSyncStub.class).to(JobSyncGrpcStub.class).in(Singleton.class);
+    bind(LabSyncStub.class).to(LabSyncGrpcStub.class).in(Singleton.class);
 
     if (Flags.instance().feConnectToConfigServer.getNonNull()) {
 

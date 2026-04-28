@@ -21,6 +21,7 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.CheckRemoteControlEligibilityHandler;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.DecommissionMissingDevicesHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostDeviceSummariesHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostHeaderInfoHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostOverviewHandler;
@@ -70,6 +71,7 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   private final CheckRemoteControlEligibilityHandler checkRemoteControlEligibilityHandler;
   private final RemoteControlDevicesHandler remoteControlDevicesHandler;
   private final GetHostHeaderInfoHandler getHostHeaderInfoHandler;
+  private final DecommissionMissingDevicesHandler decommissionMissingDevicesHandler;
   private final UniverseFactory universeFactory;
 
   @Inject
@@ -79,12 +81,14 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
       CheckRemoteControlEligibilityHandler checkRemoteControlEligibilityHandler,
       RemoteControlDevicesHandler remoteControlDevicesHandler,
       GetHostHeaderInfoHandler getHostHeaderInfoHandler,
+      DecommissionMissingDevicesHandler decommissionMissingDevicesHandler,
       UniverseFactory universeFactory) {
     this.getHostOverviewHandler = getHostOverviewHandler;
     this.getHostDeviceSummariesHandler = getHostDeviceSummariesHandler;
     this.checkRemoteControlEligibilityHandler = checkRemoteControlEligibilityHandler;
     this.remoteControlDevicesHandler = remoteControlDevicesHandler;
     this.getHostHeaderInfoHandler = getHostHeaderInfoHandler;
+    this.decommissionMissingDevicesHandler = decommissionMissingDevicesHandler;
     this.universeFactory = universeFactory;
   }
 
@@ -164,11 +168,13 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   @Override
   public ListenableFuture<DecommissionMissingDevicesResponse> decommissionMissingDevices(
       DecommissionMissingDevicesRequest request) {
-    // TODO: Use the universe parameter.
-    @SuppressWarnings("unused")
-    String universe = request.getUniverse();
-    // TODO: Implement this method.
-    return immediateFuture(DecommissionMissingDevicesResponse.getDefaultInstance());
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return decommissionMissingDevicesHandler.decommissionMissingDevices(request, universe);
   }
 
   @Override

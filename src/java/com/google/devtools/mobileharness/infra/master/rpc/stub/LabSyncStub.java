@@ -20,6 +20,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabResponse;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingDevicesRequest;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingDevicesResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignOutDeviceRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignOutDeviceResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest;
@@ -38,4 +40,14 @@ public interface LabSyncStub extends AutoCloseable {
 
   /** Signs out device. No effect if the device does not exist. */
   ListenableFuture<SignOutDeviceResponse> signOutDevice(SignOutDeviceRequest request);
+
+  /** Removes missing devices on master. */
+  ListenableFuture<RemoveMissingDevicesResponse> removeMissingDevices(
+      RemoveMissingDevicesRequest request);
+
+  /** Removes missing devices on master with optional client RPC authority. */
+  default ListenableFuture<RemoveMissingDevicesResponse> removeMissingDevices(
+      RemoveMissingDevicesRequest request, boolean useClientRpcAuthority) {
+    return removeMissingDevices(request);
+  }
 }
