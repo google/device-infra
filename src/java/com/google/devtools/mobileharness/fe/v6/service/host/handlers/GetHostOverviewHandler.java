@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.Futures;
@@ -127,8 +128,13 @@ public final class GetHostOverviewHandler {
 
               Optional<String> labTypeOpt = hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType);
 
+              Optional<HostReleaseInfo.ComponentInfo> daemonReleaseOpt =
+                  hostReleaseInfoOpt.flatMap(HostReleaseInfo::daemonServerReleaseInfo);
+              DaemonServerInfo.Status daemonStatus = DaemonStatuses.create(daemonReleaseOpt);
+
               HostHeaderInfo headerInfo =
-                  hostHeaderInfoBuilder.build(hostName, universe, labInfoOpt, labTypeOpt);
+                  hostHeaderInfoBuilder.build(
+                      hostName, universe, labInfoOpt, labTypeOpt, daemonStatus);
 
               return HostOverviewPageData.newBuilder()
                   .setHeaderInfo(headerInfo)
@@ -188,8 +194,12 @@ public final class GetHostOverviewHandler {
     builder.setCanUpgrade(true);
 
     Optional<String> labTypeOpt = hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType);
+    ImmutableList<String> labTypes = HostTypes.determineLabTypeDisplayNames(labInfoOpt, labTypeOpt);
+    boolean isCoreOrFusion = HostTypes.isCoreOrFusion(labTypes);
+
     return builder
-        .addAllLabTypeDisplayNames(HostTypes.determineLabTypeDisplayNames(labInfoOpt, labTypeOpt))
+        .addAllLabTypeDisplayNames(labTypes)
+        .setShowPassThroughFlags(!isCoreOrFusion)
         .setLabServer(
             buildLabServerInfo(labInfoOpt, hostReleaseInfoOpt, passThroughFlagsOpt, universe))
         .setDaemonServer(buildDaemonServerInfo(hostReleaseInfoOpt))
@@ -219,12 +229,21 @@ public final class GetHostOverviewHandler {
                 labInfoOpt, hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType))
             .contains(HostTypes.LAB_TYPE_CORE);
 
-    builder.setActivity(LabActivities.create(labReleaseOpt, connectivityStatus, isCoreLab));
+    LabServerInfo.Activity activity =
+        LabActivities.create(labReleaseOpt, connectivityStatus, isCoreLab);
+    builder.setActivity(activity);
 
     passThroughFlagsOpt.ifPresent(builder::setPassThroughFlags);
 
     Optional<String> labTypeOpt = hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType);
-    builder.setActions(labServerActionsBuilder.build(universe, labInfoOpt, labTypeOpt));
+
+    Optional<HostReleaseInfo.ComponentInfo> daemonReleaseOpt =
+        hostReleaseInfoOpt.flatMap(HostReleaseInfo::daemonServerReleaseInfo);
+    DaemonServerInfo.Status daemonStatus = DaemonStatuses.create(daemonReleaseOpt);
+
+    builder.setActions(
+        labServerActionsBuilder.build(
+            universe, labInfoOpt, labTypeOpt, activity, connectivityStatus, daemonStatus));
 
     return builder.build();
   }

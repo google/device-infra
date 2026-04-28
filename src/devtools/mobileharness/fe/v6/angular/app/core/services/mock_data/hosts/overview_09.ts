@@ -1,13 +1,18 @@
 import {DeviceSummary, HostOverview} from '../../../models/host_overview';
 import {MockHostScenario} from '../models';
 
-import {createDefaultUiStatus, createHostActions} from './ui_status_utils';
+import {
+  createDefaultHostOverview,
+  createDefaultUiStatus,
+  createHostActions,
+} from './ui_status_utils';
 
 const overview: HostOverview = {
+  ...createDefaultHostOverview('host-i-9.example.com'),
   hostName: 'host-i-9.example.com',
   ip: '192.168.8.108',
   os: 'gLinux',
-    canUpgrade: false,
+  canUpgrade: false,
   labTypeDisplayNames: ['Satellite Lab'],
   labServer: {
     connectivity: {

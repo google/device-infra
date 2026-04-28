@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
+import com.google.devtools.mobileharness.api.model.proto.Lab.LabStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
@@ -157,6 +158,7 @@ public final class GetHostOverviewHandlerTest {
             .getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Fusion Lab");
     assertThat(overview.getLabServer().getActions().getRelease().getEnabled()).isFalse();
+    assertThat(overview.getShowPassThroughFlags()).isFalse();
   }
 
   @Test
@@ -181,6 +183,7 @@ public final class GetHostOverviewHandlerTest {
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Core Lab");
+    assertThat(overview.getShowPassThroughFlags()).isFalse();
   }
 
   @Test
@@ -201,13 +204,48 @@ public final class GetHostOverviewHandlerTest {
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Satellite Lab");
+    assertThat(overview.getShowPassThroughFlags()).isTrue();
   }
 
   @Test
   public void getHostOverview_labType_satellite_releaseButtonVisible() throws Exception {
-    mockLabInfoWithProperty("lab_type", "satellite");
-    when(mockFeatureManager.isLabServerDeployFeatureEnabled()).thenReturn(true);
-    when(featureReadiness.isLabServerDeployReady()).thenReturn(true);
+    GetLabInfoResponse response =
+        GetLabInfoResponse.newBuilder()
+            .setLabQueryResult(
+                LabQueryResult.newBuilder()
+                    .setLabView(
+                        LabView.newBuilder()
+                            .addLabData(
+                                LabData.newBuilder()
+                                    .setLabInfo(
+                                        LabInfo.newBuilder()
+                                            .setLabStatus(LabStatus.LAB_RUNNING)
+                                            .setLabServerFeature(
+                                                LabServerFeature.newBuilder()
+                                                    .setHostProperties(
+                                                        HostProperties.newBuilder()
+                                                            .addHostProperty(
+                                                                HostProperty.newBuilder()
+                                                                    .setKey("lab_type")
+                                                                    .setValue("satellite"))))))))
+            .build();
+    when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
+        .thenReturn(immediateFuture(response));
+
+    HostReleaseInfo.ComponentInfo daemonInfo =
+        HostReleaseInfo.ComponentInfo.builder().setVersion("1.0.0").build();
+    HostReleaseInfo hostReleaseInfo =
+        HostReleaseInfo.builder()
+            .setLabType(Optional.of("satellite"))
+            .setDaemonServerReleaseInfo(Optional.of(daemonInfo))
+            .build();
+    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(HOST_NAME), any(UniverseScope.class)))
+        .thenReturn(immediateFuture(Optional.of(hostReleaseInfo)));
+
+    when(mockFeatureManager.isLabServerReleaseFeatureEnabled()).thenReturn(true);
+    when(featureReadiness.isLabServerReleaseReady()).thenReturn(true);
+    when(mockFeatureManager.isLabServerStartFeatureEnabled()).thenReturn(true);
+    when(featureReadiness.isLabServerStartReady()).thenReturn(true);
 
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))

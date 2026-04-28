@@ -22,6 +22,7 @@ import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -35,6 +36,14 @@ public final class HostTypes {
   private static final String LAB_TYPE_ATE = "ATE Lab";
   private static final String LAB_TYPE_FIELD = "Riemann Field Lab";
   private static final String LAB_TYPE_UNKNOWN = "Unknown";
+
+  public static boolean isCoreOrFusion(List<String> labTypes) {
+    return labTypes.contains(LAB_TYPE_CORE) || labTypes.contains(LAB_TYPE_FUSION);
+  }
+
+  public static boolean isCoreOrFusion(Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
+    return isCoreOrFusion(determineLabTypeDisplayNames(labInfoOpt, labTypeOpt));
+  }
 
   public static ImmutableList<String> determineLabTypeDisplayNames(
       Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {

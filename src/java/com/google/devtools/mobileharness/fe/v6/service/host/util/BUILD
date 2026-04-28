@@ -57,17 +57,3 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/provider",
     ],
 )
-
-java_library(
-    name = "host_action_button_creator",
-    srcs = [
-        "HostActionButtonCreator.java",
-    ],
-    visibility = ["//visibility:public"],
-    deps = [
-        ":host_types",
-        "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
-        "//src/devtools/mobileharness/fe/v6/service/proto/device:device_resources_java_proto",
-        "@maven//:javax_inject_jsr330_api",
-    ],
-)

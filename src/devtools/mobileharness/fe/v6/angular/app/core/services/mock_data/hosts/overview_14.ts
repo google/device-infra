@@ -1,9 +1,14 @@
 import {DeviceSummary, HostOverview} from '../../../models/host_overview';
 import {MockHostScenario} from '../models';
 
-import {createDefaultUiStatus, createHostActions} from './ui_status_utils';
+import {
+  createDefaultHostOverview,
+  createDefaultUiStatus,
+  createHostActions,
+} from './ui_status_utils';
 
 const overview: HostOverview = {
+  ...createDefaultHostOverview('at1-ab7.atc.google.com'),
   hostName: 'at1-ab7.atc.google.com',
   ip: '2001:4860:1016:3:8aae:ddff:fe0b:a998',
   os: 'Linux',

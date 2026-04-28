@@ -17,24 +17,17 @@
 package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
-import com.google.devtools.mobileharness.fe.v6.service.host.util.HostActionButtonCreator;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.Optional;
-import java.util.function.BooleanSupplier;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -44,7 +37,6 @@ public final class HostConfigButtonBuilderTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
-  @Mock private HostActionButtonCreator mockHostActionButtonCreator;
   @Mock private FeatureManagerFactory mockFeatureManagerFactory;
   @Mock private FeatureManager mockFeatureManager;
 
@@ -53,32 +45,27 @@ public final class HostConfigButtonBuilderTest {
 
   @Before
   public void setUp() {
-    hostConfigButtonBuilder =
-        new HostConfigButtonBuilder(mockHostActionButtonCreator, mockFeatureManagerFactory);
+    hostConfigButtonBuilder = new HostConfigButtonBuilder(mockFeatureManagerFactory);
     when(mockFeatureManagerFactory.create(UNIVERSE)).thenReturn(mockFeatureManager);
   }
 
   @Test
-  public void build_verifiesSuppliersOnLines38And39() {
+  public void build_returnsExpectedState() {
     when(mockFeatureManager.isConfigurationFeatureEnabled()).thenReturn(true);
 
-    var unused = hostConfigButtonBuilder.build(UNIVERSE, Optional.empty(), Optional.empty());
+    var result = hostConfigButtonBuilder.build(UNIVERSE, Optional.empty(), Optional.empty());
 
-    ArgumentCaptor<BooleanSupplier> readySupplierCaptor =
-        ArgumentCaptor.forClass(BooleanSupplier.class);
-    ArgumentCaptor<BooleanSupplier> enabledSupplierCaptor =
-        ArgumentCaptor.forClass(BooleanSupplier.class);
+    assertThat(result.getVisible()).isTrue();
+    assertThat(result.getEnabled()).isTrue();
+    assertThat(result.getTooltip()).isEqualTo("Configure the host configuration");
+  }
 
-    verify(mockHostActionButtonCreator)
-        .buildButton(
-            any(LabInfo.class),
-            eq(""),
-            any(BooleanSupplier.class),
-            readySupplierCaptor.capture(),
-            enabledSupplierCaptor.capture(),
-            eq("Configure the host configuration"));
+  @Test
+  public void build_configFeatureDisabled_returnsInvisible() {
+    when(mockFeatureManager.isConfigurationFeatureEnabled()).thenReturn(false);
 
-    assertThat(readySupplierCaptor.getValue().getAsBoolean()).isTrue();
-    assertThat(enabledSupplierCaptor.getValue().getAsBoolean()).isTrue();
+    var result = hostConfigButtonBuilder.build(UNIVERSE, Optional.empty(), Optional.empty());
+
+    assertThat(result.getVisible()).isFalse();
   }
 }

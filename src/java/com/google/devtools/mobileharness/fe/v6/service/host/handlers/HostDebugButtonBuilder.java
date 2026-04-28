@@ -17,13 +17,13 @@
 package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
-import com.google.devtools.mobileharness.fe.v6.service.host.util.HostActionButtonCreator;
+import com.google.devtools.mobileharness.fe.v6.service.host.util.HostTypes;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.Optional;
-import java.util.function.BooleanSupplier;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -31,33 +31,42 @@ import javax.inject.Singleton;
 @Singleton
 public class HostDebugButtonBuilder {
 
-  private final HostActionButtonCreator hostActionButtonCreator;
   private final FeatureManagerFactory featureManagerFactory;
   private final FeatureReadiness featureReadiness;
 
   @Inject
   HostDebugButtonBuilder(
-      HostActionButtonCreator hostActionButtonCreator,
-      FeatureManagerFactory featureManagerFactory,
-      FeatureReadiness featureReadiness) {
-    this.hostActionButtonCreator = hostActionButtonCreator;
+      FeatureManagerFactory featureManagerFactory, FeatureReadiness featureReadiness) {
     this.featureManagerFactory = featureManagerFactory;
     this.featureReadiness = featureReadiness;
   }
 
   public ActionButtonState build(
-      UniverseScope universe, Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
+      UniverseScope universe,
+      Optional<LabInfo> labInfoOpt,
+      Optional<String> labTypeOpt,
+      DaemonServerInfo.Status daemonStatus) {
 
-    BooleanSupplier buttonVisibleSupplier =
-        () -> featureManagerFactory.create(universe).isHostDebugFeatureEnabled();
-    BooleanSupplier buttonReadySupplier = () -> featureReadiness.isHostDebugReady();
+    if (!featureManagerFactory.create(universe).isHostDebugFeatureEnabled()) {
+      return ActionButtonState.newBuilder().setVisible(false).build();
+    }
 
-    return hostActionButtonCreator.buildButton(
-        labInfoOpt.orElse(LabInfo.getDefaultInstance()),
-        labTypeOpt.orElse(""),
-        buttonVisibleSupplier,
-        buttonReadySupplier,
-        () -> true,
-        "Debug the host");
+    boolean isCoreLab =
+        HostTypes.determineLabTypeDisplayNames(labInfoOpt, labTypeOpt)
+            .contains(HostTypes.LAB_TYPE_CORE);
+
+    if (isCoreLab) {
+      return ActionButtonState.newBuilder().setVisible(false).build();
+    }
+
+    boolean isReady = featureReadiness.isHostDebugReady();
+    boolean daemonMissing = daemonStatus.getState() == DaemonServerInfo.State.MISSING;
+
+    return ActionButtonState.newBuilder()
+        .setVisible(true)
+        .setEnabled(!daemonMissing)
+        .setIsReady(isReady)
+        .setTooltip("Debug the host")
+        .build();
   }
 }

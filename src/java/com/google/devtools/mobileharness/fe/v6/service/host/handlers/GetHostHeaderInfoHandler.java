@@ -29,6 +29,8 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.LabViewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostReleaseInfo;
+import com.google.devtools.mobileharness.fe.v6.service.host.util.DaemonStatuses;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostHeaderInfoRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
@@ -82,7 +84,12 @@ public class GetHostHeaderInfoHandler {
 
               Optional<String> labTypeOpt = hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType);
 
-              return hostHeaderInfoBuilder.build(hostName, universe, labInfoOpt, labTypeOpt);
+              Optional<HostReleaseInfo.ComponentInfo> daemonReleaseOpt =
+                  hostReleaseInfoOpt.flatMap(HostReleaseInfo::daemonServerReleaseInfo);
+              DaemonServerInfo.Status daemonStatus = DaemonStatuses.create(daemonReleaseOpt);
+
+              return hostHeaderInfoBuilder.build(
+                  hostName, universe, labInfoOpt, labTypeOpt, daemonStatus);
             },
             executor);
   }

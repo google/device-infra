@@ -73,6 +73,7 @@ export function createDefaultHostOverview(hostName: string): HostOverview {
       passThroughFlags: '',
       actions: createLabServerActions('RUNNING'),
     },
+    showPassThroughFlags: true,
     daemonServer: {
       status: {
         state: 'RUNNING',
@@ -165,16 +166,6 @@ export function createLabServerActions(
           : '',
       isReady: false,
     },
-    deploy: {
-      enabled: !isMissing && actionEnabled,
-      visible: true,
-      tooltip: isMissing
-        ? 'Cannot deploy to a missing host'
-        : isCoreLab
-          ? 'Cannot deploy in a Shared Lab'
-          : '',
-      isReady: false,
-    },
     start: {
       enabled: !isRunning && !isMissing && actionEnabled,
       visible: !isRunning && !isMissing,
@@ -202,16 +193,6 @@ export function createLabServerActions(
         ? 'Lab server is not running'
         : isCoreLab
           ? 'Cannot stop in a Shared Lab'
-          : '',
-      isReady: true,
-    },
-    updatePassThroughFlags: {
-      enabled: !isMissing && actionEnabled,
-      visible: true,
-      tooltip: isMissing
-        ? 'Cannot update flags for a missing host'
-        : isCoreLab
-          ? 'Cannot update flags in a Shared Lab'
           : '',
       isReady: true,
     },

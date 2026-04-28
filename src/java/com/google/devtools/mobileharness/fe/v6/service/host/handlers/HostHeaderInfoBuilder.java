@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostActions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
@@ -47,15 +48,18 @@ public class HostHeaderInfoBuilder {
       String hostName,
       UniverseScope universe,
       Optional<LabInfo> labInfoOpt,
-      Optional<String> labTypeOpt) {
+      Optional<String> labTypeOpt,
+      DaemonServerInfo.Status daemonStatus) {
     return HostHeaderInfo.newBuilder()
         .setHostName(hostName)
         .setActions(
             HostActions.newBuilder()
                 .setConfiguration(hostConfigButtonBuilder.build(universe, labInfoOpt, labTypeOpt))
-                .setDebug(hostDebugButtonBuilder.build(universe, labInfoOpt, labTypeOpt))
+                .setDebug(
+                    hostDebugButtonBuilder.build(universe, labInfoOpt, labTypeOpt, daemonStatus))
                 .setDecommission(
-                    hostDecommissionButtonBuilder.build(universe, labInfoOpt, labTypeOpt)))
+                    hostDecommissionButtonBuilder.build(
+                        universe, labInfoOpt, labTypeOpt, daemonStatus)))
         .build();
   }
 }

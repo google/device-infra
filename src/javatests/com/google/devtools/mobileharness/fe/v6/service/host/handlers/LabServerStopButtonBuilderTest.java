@@ -17,14 +17,16 @@
 package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostConnectivityStatus;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
+import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -54,25 +56,137 @@ public final class LabServerStopButtonBuilderTest {
   }
 
   @Test
-  public void build_featureDisabled_returnsInvisibleAndDoesNotCheckReadiness() {
+  public void build_featureDisabled_returnsInvisible() {
     when(mockFeatureManager.isLabServerStopFeatureEnabled()).thenReturn(false);
 
-    var result = labServerStopButtonBuilder.build(UNIVERSE);
+    var result =
+        labServerStopButtonBuilder.build(
+            UNIVERSE,
+            Optional.empty(),
+            Optional.empty(),
+            LabServerInfo.Activity.getDefaultInstance(),
+            HostConnectivityStatus.getDefaultInstance(),
+            DaemonServerInfo.Status.getDefaultInstance());
 
-    verify(mockFeatureReadiness, never()).isLabServerStopReady();
     assertThat(result.getVisible()).isFalse();
-    assertThat(result.getEnabled()).isFalse();
   }
 
   @Test
-  public void build_featureEnabled_returnsInvisibleAndChecksReadiness() {
+  public void build_isFusionOrCore_returnsInvisible() {
+    when(mockFeatureManager.isLabServerStopFeatureEnabled()).thenReturn(true);
+
+    var result =
+        labServerStopButtonBuilder.build(
+            UNIVERSE,
+            Optional.empty(),
+            Optional.of("fusion"),
+            LabServerInfo.Activity.getDefaultInstance(),
+            HostConnectivityStatus.getDefaultInstance(),
+            DaemonServerInfo.Status.getDefaultInstance());
+
+    assertThat(result.getVisible()).isFalse();
+  }
+
+  @Test
+  public void build_visibleConditionMetAndReady_returnsVisibleAndEnabled() {
     when(mockFeatureManager.isLabServerStopFeatureEnabled()).thenReturn(true);
     when(mockFeatureReadiness.isLabServerStopReady()).thenReturn(true);
 
-    var result = labServerStopButtonBuilder.build(UNIVERSE);
+    HostConnectivityStatus runningStatus =
+        HostConnectivityStatus.newBuilder().setState(HostConnectivityStatus.State.RUNNING).build();
+    DaemonServerInfo.Status daemonRunning =
+        DaemonServerInfo.Status.newBuilder().setState(DaemonServerInfo.State.RUNNING).build();
+    LabServerInfo.Activity startedActivity =
+        LabServerInfo.Activity.newBuilder().setState(LabServerInfo.ActivityState.STARTED).build();
 
-    verify(mockFeatureReadiness).isLabServerStopReady();
-    assertThat(result.getVisible()).isFalse();
+    var result =
+        labServerStopButtonBuilder.build(
+            UNIVERSE,
+            Optional.empty(),
+            Optional.empty(),
+            startedActivity,
+            runningStatus,
+            daemonRunning);
+
+    assertThat(result.getVisible()).isTrue();
+    assertThat(result.getEnabled()).isTrue();
+    assertThat(result.getTooltip()).contains("stops the lab server");
+  }
+
+  @Test
+  public void build_visibleConditionMetAndReadyDisconnectedActivity_returnsVisibleAndEnabled() {
+    when(mockFeatureManager.isLabServerStopFeatureEnabled()).thenReturn(true);
+    when(mockFeatureReadiness.isLabServerStopReady()).thenReturn(true);
+
+    HostConnectivityStatus runningStatus =
+        HostConnectivityStatus.newBuilder().setState(HostConnectivityStatus.State.RUNNING).build();
+    DaemonServerInfo.Status daemonRunning =
+        DaemonServerInfo.Status.newBuilder().setState(DaemonServerInfo.State.RUNNING).build();
+    LabServerInfo.Activity disconnectedActivity =
+        LabServerInfo.Activity.newBuilder()
+            .setState(LabServerInfo.ActivityState.STARTED_BUT_DISCONNECTED)
+            .build();
+
+    var result =
+        labServerStopButtonBuilder.build(
+            UNIVERSE,
+            Optional.empty(),
+            Optional.empty(),
+            disconnectedActivity,
+            runningStatus,
+            daemonRunning);
+
+    assertThat(result.getVisible()).isTrue();
+    assertThat(result.getEnabled()).isTrue();
+  }
+
+  @Test
+  public void build_visibleConditionMetAndReadyErrorActivity_returnsVisibleAndEnabled() {
+    when(mockFeatureManager.isLabServerStopFeatureEnabled()).thenReturn(true);
+    when(mockFeatureReadiness.isLabServerStopReady()).thenReturn(true);
+
+    HostConnectivityStatus runningStatus =
+        HostConnectivityStatus.newBuilder().setState(HostConnectivityStatus.State.RUNNING).build();
+    DaemonServerInfo.Status daemonRunning =
+        DaemonServerInfo.Status.newBuilder().setState(DaemonServerInfo.State.RUNNING).build();
+    LabServerInfo.Activity errorActivity =
+        LabServerInfo.Activity.newBuilder().setState(LabServerInfo.ActivityState.ERROR).build();
+
+    var result =
+        labServerStopButtonBuilder.build(
+            UNIVERSE,
+            Optional.empty(),
+            Optional.empty(),
+            errorActivity,
+            runningStatus,
+            daemonRunning);
+
+    assertThat(result.getVisible()).isTrue();
+    assertThat(result.getEnabled()).isTrue();
+  }
+
+  @Test
+  public void build_hostNotRunningButVisibleConditionMet_returnsVisibleAndEnabled() {
+    when(mockFeatureManager.isLabServerStopFeatureEnabled()).thenReturn(true);
+    when(mockFeatureReadiness.isLabServerStopReady()).thenReturn(true);
+
+    HostConnectivityStatus missingStatus =
+        HostConnectivityStatus.newBuilder().setState(HostConnectivityStatus.State.MISSING).build();
+    DaemonServerInfo.Status daemonRunning =
+        DaemonServerInfo.Status.newBuilder().setState(DaemonServerInfo.State.RUNNING).build();
+    LabServerInfo.Activity startedActivity =
+        LabServerInfo.Activity.newBuilder().setState(LabServerInfo.ActivityState.STARTED).build();
+
+    var result =
+        labServerStopButtonBuilder.build(
+            UNIVERSE,
+            Optional.empty(),
+            Optional.empty(),
+            startedActivity,
+            missingStatus,
+            daemonRunning);
+
+    assertThat(result.getVisible()).isTrue();
     assertThat(result.getEnabled()).isTrue();
   }
 }

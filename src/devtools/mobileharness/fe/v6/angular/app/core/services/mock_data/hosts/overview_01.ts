@@ -3,7 +3,11 @@ import {HostConfig} from '../../../models/host_config_models';
 import {DeviceSummary, HostOverview} from '../../../models/host_overview';
 import {MockHostScenario} from '../models';
 
-import {createDefaultUiStatus, createHostActions} from './ui_status_utils';
+import {
+  createDefaultHostOverview,
+  createDefaultUiStatus,
+  createHostActions,
+} from './ui_status_utils';
 
 const DEFAULT_DEVICE_CONFIG: DeviceConfig = {
   permissions: {owners: ['admin1'], executors: ['user1']},
@@ -35,10 +39,11 @@ const HOST_CONFIG: HostConfig = {
 };
 
 const overview: HostOverview = {
+  ...createDefaultHostOverview('host-a-1.example.com'),
   hostName: 'host-a-1.example.com',
   ip: '192.168.1.101',
   os: 'gLinux',
-    canUpgrade: false,
+  canUpgrade: false,
   labTypeDisplayNames: [
     'Satellite Lab',
     'SLaaS',

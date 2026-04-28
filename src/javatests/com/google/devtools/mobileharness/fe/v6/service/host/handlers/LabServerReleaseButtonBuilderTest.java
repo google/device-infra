@@ -19,8 +19,6 @@ package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.Mockito.when;
 
-import com.google.devtools.mobileharness.api.model.proto.Lab.LabStatus;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
@@ -37,7 +35,7 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
-public final class HostDebugButtonBuilderTest {
+public final class LabServerReleaseButtonBuilderTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
@@ -45,7 +43,7 @@ public final class HostDebugButtonBuilderTest {
   @Mock private FeatureManager mockFeatureManager;
   @Mock private FeatureReadiness mockFeatureReadiness;
 
-  private HostDebugButtonBuilder hostDebugButtonBuilder;
+  private LabServerReleaseButtonBuilder labServerReleaseButtonBuilder;
   private static final UniverseScope UNIVERSE = new UniverseScope.SelfUniverse();
   private static final DaemonServerInfo.Status DAEMON_RUNNING =
       DaemonServerInfo.Status.newBuilder().setState(DaemonServerInfo.State.RUNNING).build();
@@ -54,60 +52,72 @@ public final class HostDebugButtonBuilderTest {
 
   @Before
   public void setUp() {
-    hostDebugButtonBuilder =
-        new HostDebugButtonBuilder(mockFeatureManagerFactory, mockFeatureReadiness);
+    labServerReleaseButtonBuilder =
+        new LabServerReleaseButtonBuilder(mockFeatureManagerFactory, mockFeatureReadiness);
     when(mockFeatureManagerFactory.create(UNIVERSE)).thenReturn(mockFeatureManager);
   }
 
   @Test
-  public void build_debugFeatureDisabled_returnsInvisible() {
-    when(mockFeatureManager.isHostDebugFeatureEnabled()).thenReturn(false);
+  public void build_featureDisabled_returnsInvisible() {
+    when(mockFeatureManager.isLabServerReleaseFeatureEnabled()).thenReturn(false);
 
     var result =
-        hostDebugButtonBuilder.build(UNIVERSE, Optional.empty(), Optional.empty(), DAEMON_RUNNING);
+        labServerReleaseButtonBuilder.build(
+            UNIVERSE, Optional.empty(), Optional.empty(), true, DAEMON_RUNNING);
 
     assertThat(result.getVisible()).isFalse();
   }
 
   @Test
-  public void build_debugFeatureEnabledNotReady_returnsComingSoon() {
-    when(mockFeatureManager.isHostDebugFeatureEnabled()).thenReturn(true);
-    when(mockFeatureReadiness.isHostDebugReady()).thenReturn(false);
+  public void build_noActionVisibleAndNotDaemonMissing_returnsInvisible() {
+    when(mockFeatureManager.isLabServerReleaseFeatureEnabled()).thenReturn(true);
 
     var result =
-        hostDebugButtonBuilder.build(UNIVERSE, Optional.empty(), Optional.empty(), DAEMON_RUNNING);
+        labServerReleaseButtonBuilder.build(
+            UNIVERSE, Optional.empty(), Optional.empty(), false, DAEMON_RUNNING);
 
-    assertThat(result.getVisible()).isTrue();
-    assertThat(result.getEnabled()).isTrue();
-    assertThat(result.getIsReady()).isFalse();
-    assertThat(result.getTooltip()).isEqualTo("Debug the host");
+    assertThat(result.getVisible()).isFalse();
   }
 
   @Test
-  public void build_debugFeatureEnabledReady_returnsVisibleAndEnabled() {
-    when(mockFeatureManager.isHostDebugFeatureEnabled()).thenReturn(true);
-    when(mockFeatureReadiness.isHostDebugReady()).thenReturn(true);
+  public void build_noActionVisibleButDaemonMissing_returnsVisibleAndDisabled() {
+    when(mockFeatureManager.isLabServerReleaseFeatureEnabled()).thenReturn(true);
+    when(mockFeatureReadiness.isLabServerReleaseReady()).thenReturn(true);
 
     var result =
-        hostDebugButtonBuilder.build(UNIVERSE, Optional.empty(), Optional.empty(), DAEMON_RUNNING);
-
-    assertThat(result.getVisible()).isTrue();
-    assertThat(result.getEnabled()).isTrue();
-    assertThat(result.getTooltip()).isEqualTo("Debug the host");
-  }
-
-  @Test
-  public void build_debugFeatureEnabledHostMissing_returnsVisibleAndDisabled() {
-    when(mockFeatureManager.isHostDebugFeatureEnabled()).thenReturn(true);
-    when(mockFeatureReadiness.isHostDebugReady()).thenReturn(true);
-
-    LabInfo labInfo = LabInfo.newBuilder().setLabStatus(LabStatus.LAB_MISSING).build();
-
-    var result =
-        hostDebugButtonBuilder.build(
-            UNIVERSE, Optional.of(labInfo), Optional.empty(), DAEMON_MISSING);
+        labServerReleaseButtonBuilder.build(
+            UNIVERSE, Optional.empty(), Optional.empty(), false, DAEMON_MISSING);
 
     assertThat(result.getVisible()).isTrue();
     assertThat(result.getEnabled()).isFalse();
+    assertThat(result.getTooltip()).contains("daemon server is missing");
+  }
+
+  @Test
+  public void build_actionVisibleDaemonRunning_returnsVisibleAndEnabled() {
+    when(mockFeatureManager.isLabServerReleaseFeatureEnabled()).thenReturn(true);
+    when(mockFeatureReadiness.isLabServerReleaseReady()).thenReturn(true);
+
+    var result =
+        labServerReleaseButtonBuilder.build(
+            UNIVERSE, Optional.empty(), Optional.empty(), true, DAEMON_RUNNING);
+
+    assertThat(result.getVisible()).isTrue();
+    assertThat(result.getEnabled()).isTrue();
+    assertThat(result.getTooltip()).contains("Deploy a release");
+  }
+
+  @Test
+  public void build_actionVisibleButDaemonMissing_returnsVisibleAndDisabled() {
+    when(mockFeatureManager.isLabServerReleaseFeatureEnabled()).thenReturn(true);
+    when(mockFeatureReadiness.isLabServerReleaseReady()).thenReturn(true);
+
+    var result =
+        labServerReleaseButtonBuilder.build(
+            UNIVERSE, Optional.empty(), Optional.empty(), true, DAEMON_MISSING);
+
+    assertThat(result.getVisible()).isTrue();
+    assertThat(result.getEnabled()).isFalse();
+    assertThat(result.getTooltip()).contains("daemon server is missing");
   }
 }

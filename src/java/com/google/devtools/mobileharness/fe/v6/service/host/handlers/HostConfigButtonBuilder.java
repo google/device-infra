@@ -17,12 +17,10 @@
 package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
-import com.google.devtools.mobileharness.fe.v6.service.host.util.HostActionButtonCreator;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.Optional;
-import java.util.function.BooleanSupplier;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -30,29 +28,24 @@ import javax.inject.Singleton;
 @Singleton
 public class HostConfigButtonBuilder {
 
-  private final HostActionButtonCreator hostActionButtonCreator;
   private final FeatureManagerFactory featureManagerFactory;
 
   @Inject
-  HostConfigButtonBuilder(
-      HostActionButtonCreator hostActionButtonCreator,
-      FeatureManagerFactory featureManagerFactory) {
-    this.hostActionButtonCreator = hostActionButtonCreator;
+  HostConfigButtonBuilder(FeatureManagerFactory featureManagerFactory) {
     this.featureManagerFactory = featureManagerFactory;
   }
 
   public ActionButtonState build(
       UniverseScope universe, Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
 
-    BooleanSupplier buttonVisibleSupplier =
-        () -> featureManagerFactory.create(universe).isConfigurationFeatureEnabled();
+    if (!featureManagerFactory.create(universe).isConfigurationFeatureEnabled()) {
+      return ActionButtonState.newBuilder().setVisible(false).build();
+    }
 
-    return hostActionButtonCreator.buildButton(
-        labInfoOpt.orElse(LabInfo.getDefaultInstance()),
-        labTypeOpt.orElse(""),
-        buttonVisibleSupplier,
-        () -> true,
-        () -> true,
-        "Configure the host configuration");
+    return ActionButtonState.newBuilder()
+        .setVisible(true)
+        .setEnabled(true)
+        .setTooltip("Configure the host configuration")
+        .build();
   }
 }

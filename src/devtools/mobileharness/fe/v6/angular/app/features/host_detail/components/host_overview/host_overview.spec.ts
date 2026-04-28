@@ -33,13 +33,6 @@ describe('HostOverview Component', () => {
           isReady: true,
           tooltip: 'Already stopped',
         },
-        deploy: {visible: true, enabled: true, isReady: true, tooltip: ''},
-        updatePassThroughFlags: {
-          visible: true,
-          enabled: true,
-          isReady: true,
-          tooltip: '',
-        },
       },
     },
     daemonServer: {
@@ -59,6 +52,7 @@ describe('HostOverview Component', () => {
     os: 'gLinux',
     diagnosticLinks: [],
     canUpgrade: false,
+    showPassThroughFlags: true,
   };
 
   let fixture: ComponentFixture<HostOverviewPage>;

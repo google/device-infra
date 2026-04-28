@@ -44,6 +44,8 @@ message HostOverview {
   repeated DiagnosticLink diagnostic_links = 8;
   // Whether a newer release version is available for this host.
   bool can_upgrade = 9;
+  // Whether to show the pass-through flags in the host overview.
+  bool show_pass_through_flags = 10;
 }
 
 // Represents a link to a diagnostic tool or log.
@@ -88,11 +90,11 @@ message HostActions {
 // Represents the state of action buttons for a lab server.
 message LabServerActions {
   device.ActionButtonState release = 1;
-  device.ActionButtonState deploy = 2;
   device.ActionButtonState start = 3;
   device.ActionButtonState restart = 4;
   device.ActionButtonState stop = 5;
-  device.ActionButtonState update_pass_through_flags = 6;
+
+  reserved 2, 6;
 }
 
 // Result of a single diagnostic command.
@@ -131,7 +133,7 @@ message ReleasePort {
   int32 port_number = 2;
 }
 
-// Host-level connectivity status with OmniLab master.
+// Lab Server connectivity status with OmniLab master via heartbeat.
 // FE will map State to icon/color: RUNNING->green/check_circle,
 // MISSING->red/error
 message HostConnectivityStatus {
@@ -139,6 +141,15 @@ message HostConnectivityStatus {
     STATE_UNSPECIFIED = 0;
     RUNNING = 1;
     MISSING = 2;
+    // This state likely indicates that the backend system responsible for
+    // monitoring host connectivity cannot definitively determine if the host is
+    // RUNNING or MISSING. This could be due to:
+    // + Temporary network issues preventing status checks.
+    // + Errors within the monitoring system itself.
+    // + The host being in a transient state that doesn't clearly map to running
+    // or missing.
+    // + A new host that has just been registered but whose status hasn't been
+    // polled yet.
     UNKNOWN = 3;
   }
   // The semantic state of connectivity.
@@ -167,6 +178,13 @@ message LabServerInfo {
     DRAINED = 6;
     STOPPING = 7;
     STOPPED = 8;
+    // This state suggests that the system cannot determine the lab server's
+    // current activity. Possible reasons include:
+    // The lab server process is unresponsive or in an unexpected state.
+    // + Communication errors between the FE service and the lab server.
+    // + The state reported by the lab server doesn't match any of the other
+    // + defined ActivityState values (e.g., STARTED, STOPPED, ERROR, etc.).
+    // + Initial state before the first status poll is completed.
     UNKNOWN = 9;
   }
   message Activity {
@@ -196,6 +214,12 @@ message DaemonServerInfo {
     STATE_UNSPECIFIED = 0;
     RUNNING = 1;
     MISSING = 2;
+    // This state indicates that the system cannot definitively determine the
+    // Daemon server's status (i.e., it's not clearly RUNNING or MISSING). The
+    // reasons are likely similar to the Host's UNKNOWN state:
+    // + Temporary communication issues with the Daemon process.
+    // + Errors in the status collection mechanism.
+    // + The Daemon process is in an anomalous or transient state.
     UNKNOWN = 3;
   }
   message Status {

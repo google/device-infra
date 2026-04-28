@@ -50,8 +50,8 @@
             [disabled]="!actions.release.enabled"
             [matTooltip]="actions.release.tooltip"
           >
-            <mat-icon>upgrade</mat-icon>
-            <span class="operation-text">Release</span>
+              <mat-icon>upgrade</mat-icon>
+              <span class="operation-text">Release</span>
           </button>
         }
         @if (actions.restart.visible) {
@@ -60,8 +60,8 @@
             [disabled]="!actions.restart.enabled"
             [matTooltip]="actions.restart.tooltip"
           >
-            <mat-icon>restart_alt</mat-icon>
-            <span class="operation-text">Restart</span>
+              <mat-icon>restart_alt</mat-icon>
+              <span class="operation-text">Restart</span>
           </button>
         }
         @if (actions.start.visible) {
@@ -70,8 +70,8 @@
             [disabled]="!actions.start.enabled"
             [matTooltip]="actions.start.tooltip"
           >
-            <mat-icon>play_arrow</mat-icon>
-            <span class="operation-text">Start</span>
+              <mat-icon>play_arrow</mat-icon>
+              <span class="operation-text">Start</span>
           </button>
         }
         @if (actions.stop.visible) {
@@ -80,8 +80,8 @@
             [disabled]="!actions.stop.enabled"
             [matTooltip]="actions.stop.tooltip"
           >
-            <mat-icon>stop_circle</mat-icon>
-            <span class="operation-text">Stop</span>
+              <mat-icon>stop_circle</mat-icon>
+              <span class="operation-text">Stop</span>
           </button>
         }
       }
@@ -131,8 +131,9 @@
         <dt>Version</dt>
         <dd>{{ host.labServer.version || 'N/A' }}</dd>
 
-        @if (host.labServer.actions?.updatePassThroughFlags; as updateFlags) {
-          @if (updateFlags.visible) {
+        <!-- we use the button state of release action to determine whether to show the pass through flags -->
+        @if (host.labServer.actions?.release; as updateFlags) {
+          @if (host.showPassThroughFlags) {
             <dt>Pass Through Flags
               <mat-icon
                 class="cursor-help"
@@ -167,15 +168,16 @@
                 } @else {
                   <span class="text-gray-500">None</span>
                 }
-
-                <button
-                  mat-icon-button
-                  (click)="updateFlags.isReady ? startEditFlags() : showComingSoonPopup('Pass Through Flags')"
-                  [disabled]="!updateFlags.enabled"
-                  [matTooltip]="updateFlags.tooltip || 'Edit Pass Through Flags'"
-                  class="edit-flags-button">
-                  <mat-icon>edit</mat-icon>
-                </button>
+                @if (updateFlags.visible) {
+                  <button
+                    mat-icon-button
+                    (click)="updateFlags.isReady ? startEditFlags() : showComingSoonPopup('Release')"
+                    [disabled]="!updateFlags.enabled"
+                    [matTooltip]="'Edit Pass Through Flags'"
+                    class="edit-flags-button">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                }
               }
             </dd>
           }

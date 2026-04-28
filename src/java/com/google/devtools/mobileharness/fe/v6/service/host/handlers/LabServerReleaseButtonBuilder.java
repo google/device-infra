@@ -17,14 +17,12 @@
 package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
-import com.google.devtools.mobileharness.fe.v6.service.host.util.HostActionButtonCreator;
-import com.google.devtools.mobileharness.fe.v6.service.host.util.HostTypes;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.Optional;
-import java.util.function.BooleanSupplier;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -32,37 +30,47 @@ import javax.inject.Singleton;
 @Singleton
 public class LabServerReleaseButtonBuilder {
 
-  private final HostActionButtonCreator hostActionButtonCreator;
   private final FeatureManagerFactory featureManagerFactory;
   private final FeatureReadiness featureReadiness;
 
   @Inject
   LabServerReleaseButtonBuilder(
-      HostActionButtonCreator hostActionButtonCreator,
-      FeatureManagerFactory featureManagerFactory,
-      FeatureReadiness featureReadiness) {
-    this.hostActionButtonCreator = hostActionButtonCreator;
+      FeatureManagerFactory featureManagerFactory, FeatureReadiness featureReadiness) {
     this.featureManagerFactory = featureManagerFactory;
     this.featureReadiness = featureReadiness;
   }
 
   public ActionButtonState build(
-      UniverseScope universe, Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
+      UniverseScope universe,
+      Optional<LabInfo> labInfoOpt,
+      Optional<String> labTypeOpt,
+      boolean anyActionVisible,
+      DaemonServerInfo.Status daemonStatus) {
 
-    BooleanSupplier buttonVisibleSupplier =
-        () -> featureManagerFactory.create(universe).isLabServerReleaseFeatureEnabled();
-    BooleanSupplier buttonReadySupplier = () -> featureReadiness.isLabServerReleaseReady();
-    BooleanSupplier buttonEnabledSupplier =
-        () ->
-            !HostTypes.determineLabTypeDisplayNames(labInfoOpt, labTypeOpt)
-                .contains(HostTypes.LAB_TYPE_FUSION);
+    if (!featureManagerFactory.create(universe).isLabServerReleaseFeatureEnabled()) {
+      return ActionButtonState.newBuilder().setVisible(false).build();
+    }
 
-    return hostActionButtonCreator.buildButton(
-        labInfoOpt.orElse(LabInfo.getDefaultInstance()),
-        labTypeOpt.orElse(""),
-        buttonVisibleSupplier,
-        buttonReadySupplier,
-        buttonEnabledSupplier,
-        "Release the lab server");
+    boolean daemonMissing = daemonStatus.getState() == DaemonServerInfo.State.MISSING;
+
+    if (!anyActionVisible && !daemonMissing) {
+      return ActionButtonState.newBuilder().setVisible(false).build();
+    }
+
+    boolean daemonRunning = daemonStatus.getState() == DaemonServerInfo.State.RUNNING;
+
+    boolean isReady = featureReadiness.isLabServerReleaseReady();
+
+    String tooltip =
+        daemonRunning
+            ? "Deploy a release or edit Pass Through Flags"
+            : "Can not release because daemon server is missing";
+
+    return ActionButtonState.newBuilder()
+        .setVisible(true)
+        .setEnabled(daemonRunning)
+        .setIsReady(isReady)
+        .setTooltip(tooltip)
+        .build();
   }
 }

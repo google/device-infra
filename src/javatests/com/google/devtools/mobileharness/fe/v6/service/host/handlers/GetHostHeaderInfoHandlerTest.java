@@ -60,7 +60,7 @@ public final class GetHostHeaderInfoHandlerTest {
         .thenReturn(Futures.immediateFuture(GetLabInfoResponse.getDefaultInstance()));
     when(mockHostAuxiliaryInfoProvider.getHostReleaseInfo(any(), any()))
         .thenReturn(Futures.immediateFuture(Optional.empty()));
-    when(mockHostHeaderInfoBuilder.build(any(), any(), any(), any()))
+    when(mockHostHeaderInfoBuilder.build(any(), any(), any(), any(), any()))
         .thenReturn(HostHeaderInfo.newBuilder().setHostName("my_host").build());
   }
 

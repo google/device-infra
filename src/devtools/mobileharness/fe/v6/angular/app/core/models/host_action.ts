@@ -15,11 +15,9 @@ export declare interface HostActions {
  */
 export declare interface LabServerActions {
   readonly release: ActionButtonState;
-  readonly deploy: ActionButtonState;
   readonly start: ActionButtonState;
   readonly restart: ActionButtonState;
   readonly stop: ActionButtonState;
-  readonly updatePassThroughFlags: ActionButtonState;
 }
 
 /**

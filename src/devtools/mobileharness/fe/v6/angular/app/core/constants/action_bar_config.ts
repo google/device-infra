@@ -7,12 +7,11 @@ export enum ActionBarAction {
   // Host Actions
   HOST_CONFIGURATION = 'HOST_CONFIGURATION',
   HOST_DEBUG = 'HOST_DEBUG',
-  HOST_DEPLOY = 'HOST_DEPLOY',
   HOST_START = 'HOST_START',
   HOST_RESTART = 'HOST_RESTART',
   HOST_STOP = 'HOST_STOP',
   HOST_DECOMMISSION = 'HOST_DECOMMISSION',
-  HOST_UPDATE_PASS_THROUGH_FLAGS = 'HOST_UPDATE_PASS_THROUGH_FLAGS',
+
   HOST_RELEASE = 'HOST_RELEASE',
 
   // Device Actions
@@ -53,9 +52,7 @@ export const ACTION_BAR_CONFIG: Record<ActionBarAction, ActionMetadata> = {
   [ActionBarAction.HOST_DEBUG]: {
     displayName: 'Debug',
   },
-  [ActionBarAction.HOST_DEPLOY]: {
-    displayName: 'Deploy',
-  },
+
   [ActionBarAction.HOST_START]: {
     displayName: 'Start Server',
   },
@@ -68,9 +65,7 @@ export const ACTION_BAR_CONFIG: Record<ActionBarAction, ActionMetadata> = {
   [ActionBarAction.HOST_DECOMMISSION]: {
     displayName: 'Decommission',
   },
-  [ActionBarAction.HOST_UPDATE_PASS_THROUGH_FLAGS]: {
-    displayName: 'Update Pass Through Flags',
-  },
+
   [ActionBarAction.HOST_RELEASE]: {
     displayName: 'Release',
   },

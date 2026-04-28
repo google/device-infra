@@ -239,6 +239,8 @@ export declare interface HostOverview {
   readonly diagnosticLinks?: DiagnosticLink[];
   /** Whether a newer release version is available for this host. */
   readonly canUpgrade: boolean;
+  /** Whether to show the pass-through flags in the host overview. */
+  readonly showPassThroughFlags: boolean;
 }
 
 /**

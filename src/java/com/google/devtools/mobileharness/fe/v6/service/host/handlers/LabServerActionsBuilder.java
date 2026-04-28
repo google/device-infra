@@ -17,7 +17,11 @@
 package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.ActionButtonState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostConnectivityStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerActions;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -28,40 +32,52 @@ import javax.inject.Singleton;
 public class LabServerActionsBuilder {
 
   private final LabServerReleaseButtonBuilder labServerReleaseButtonBuilder;
-  private final LabServerDeployButtonBuilder labServerDeployButtonBuilder;
   private final LabServerStartButtonBuilder labServerStartButtonBuilder;
   private final LabServerRestartButtonBuilder labServerRestartButtonBuilder;
   private final LabServerStopButtonBuilder labServerStopButtonBuilder;
-  private final LabServerUpdatePassThroughFlagsButtonBuilder
-      labServerUpdatePassThroughFlagsButtonBuilder;
 
   @Inject
   LabServerActionsBuilder(
       LabServerReleaseButtonBuilder labServerReleaseButtonBuilder,
-      LabServerDeployButtonBuilder labServerDeployButtonBuilder,
       LabServerStartButtonBuilder labServerStartButtonBuilder,
       LabServerRestartButtonBuilder labServerRestartButtonBuilder,
-      LabServerStopButtonBuilder labServerStopButtonBuilder,
-      LabServerUpdatePassThroughFlagsButtonBuilder labServerUpdatePassThroughFlagsButtonBuilder) {
+      LabServerStopButtonBuilder labServerStopButtonBuilder) {
     this.labServerReleaseButtonBuilder = labServerReleaseButtonBuilder;
-    this.labServerDeployButtonBuilder = labServerDeployButtonBuilder;
     this.labServerStartButtonBuilder = labServerStartButtonBuilder;
     this.labServerRestartButtonBuilder = labServerRestartButtonBuilder;
     this.labServerStopButtonBuilder = labServerStopButtonBuilder;
-    this.labServerUpdatePassThroughFlagsButtonBuilder =
-        labServerUpdatePassThroughFlagsButtonBuilder;
   }
 
-  /** Builds {@link LabServerActions} based on universe. */
+  /** Builds {@link LabServerActions} based on universe and status. */
   public LabServerActions build(
-      UniverseScope universe, Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
+      UniverseScope universe,
+      Optional<LabInfo> labInfoOpt,
+      Optional<String> labTypeOpt,
+      LabServerInfo.Activity activity,
+      HostConnectivityStatus connectivityStatus,
+      DaemonServerInfo.Status daemonStatus) {
+
+    ActionButtonState start =
+        labServerStartButtonBuilder.build(
+            universe, labInfoOpt, labTypeOpt, activity, connectivityStatus, daemonStatus);
+    ActionButtonState restart =
+        labServerRestartButtonBuilder.build(
+            universe, labInfoOpt, labTypeOpt, activity, connectivityStatus, daemonStatus);
+    ActionButtonState stop =
+        labServerStopButtonBuilder.build(
+            universe, labInfoOpt, labTypeOpt, activity, connectivityStatus, daemonStatus);
+
+    boolean anyActionVisible = start.getVisible() || restart.getVisible() || stop.getVisible();
+
+    ActionButtonState release =
+        labServerReleaseButtonBuilder.build(
+            universe, labInfoOpt, labTypeOpt, anyActionVisible, daemonStatus);
+
     return LabServerActions.newBuilder()
-        .setRelease(labServerReleaseButtonBuilder.build(universe, labInfoOpt, labTypeOpt))
-        .setDeploy(labServerDeployButtonBuilder.build(universe, labInfoOpt, labTypeOpt))
-        .setStart(labServerStartButtonBuilder.build(universe))
-        .setRestart(labServerRestartButtonBuilder.build(universe))
-        .setStop(labServerStopButtonBuilder.build(universe))
-        .setUpdatePassThroughFlags(labServerUpdatePassThroughFlagsButtonBuilder.build(universe))
+        .setRelease(release)
+        .setStart(start)
+        .setRestart(restart)
+        .setStop(stop)
         .build();
   }
 }

@@ -19,6 +19,7 @@ function createHostOverview(
     os: 'gLinux',
     canUpgrade: false,
     labTypeDisplayNames: ['Satellite Lab'],
+    showPassThroughFlags: true,
     labServer: {
       connectivity: {
         state: connectivityState,
