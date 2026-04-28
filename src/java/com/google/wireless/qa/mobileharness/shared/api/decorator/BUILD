@@ -232,6 +232,20 @@ java_library(
 )
 
 java_library(
+    name = "android_emulator_video_decorator",
+    srcs = ["AndroidEmulatorVideoDecorator.java"],
+    deps = [
+        ":base_decorator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_emulator_video_decorator_spec_java_proto",
+    ],
+)
+
+java_library(
     name = "android_file_puller_decorator",
     srcs = ["AndroidFilePullerDecorator.java"],
     deps = [

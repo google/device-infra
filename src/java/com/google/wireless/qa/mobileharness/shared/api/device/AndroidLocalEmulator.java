@@ -80,6 +80,7 @@ public class AndroidLocalEmulator extends AndroidDevice {
     addSupportedDeviceType(AndroidLocalEmulator.class.getSimpleName());
     addDimension(DIMENSION_NAME_INTERNET, Dimension.Value.TRUE);
     addDimension(Dimension.Name.DEVICE_FORM, Dimension.Value.VIRTUAL);
+    addSupportedDecorator("AndroidEmulatorVideoDecorator");
     updateDimension(
         Ascii.toLowerCase(Dimension.Name.SUPPORTS_GMSCORE.name()), Dimension.Value.TRUE);
     setCommunication(getDeviceId());

@@ -184,6 +184,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_clean_apps_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_device_features_check_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_device_settings_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_emulator_video_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_file_puller_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_install_apps_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_lab_test_support_settings_decorator",
