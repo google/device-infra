@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.google.wireless.qa.mobileharness.tool.android.language"
     android:versionCode="5"
     android:versionName="1.0.5" >
 
-    <!-- This is an instrumentation app, targetSdkVersion minimum (23) check on Q won't be triggered
-         when calling methods in instrumentation apps, no need to upgrade targetSdkVersion here. -->
-    <uses-sdk android:minSdkVersion="19" android:targetSdkVersion="19"/>
-    <uses-permission android:name="android.permission.WRITE_SETTINGS"/>
-    <uses-permission android:name="android.permission.CHANGE_CONFIGURATION"/>
+    <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="36"/>
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:ignore="ProtectedPermissions"/>
+    <uses-permission android:name="android.permission.CHANGE_CONFIGURATION" tools:ignore="ProtectedPermissions"/>
 
     <application android:label="SwitchLanguageUtil">
         <uses-library android:name="android.test.runner" />

@@ -1360,6 +1360,41 @@ public class AndroidSystemSettingUtil {
     batteryStatsCommandWithRetry(serial, "--reset", expectedOutput, errMsgPrefix);
   }
 
+  /** The mode of an appops permission. */
+  public enum AppOpsMode {
+    ALLOW("allow"),
+    DENY("deny"),
+    IGNORE("ignore");
+
+    public final String value;
+
+    AppOpsMode(String value) {
+      this.value = value;
+    }
+  }
+
+  /**
+   * Set appops to allow or deny a permission.
+   *
+   * @param serial device serial to apply the permission to
+   * @param packageName the package name of the app
+   * @param permissionName the permission name for the app
+   * @param mode the appops mode to set, i.e., allow, deny or ignore
+   * @throws MobileHarnessException if error occurs when setting the permission
+   * @throws InterruptedException if the thread executing the command is interrupted
+   */
+  public void setAppOpsPermission(
+      String serial, String packageName, String permissionName, AppOpsMode mode)
+      throws MobileHarnessException, InterruptedException {
+    String[] cmd = new String[] {ADB_SHELL_APPOPS, "set", packageName, permissionName, mode.value};
+    try {
+      var unused = adb.runShellWithRetry(serial, Joiner.on(' ').join(cmd), Duration.ofSeconds(3));
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_SYSTEM_SETTING_SET_APPOPS_PERMISSION_ERROR, e.getMessage(), e);
+    }
+  }
+
   /**
    * Sets the logical discharge/charge status of the device (L and above only).
    *
