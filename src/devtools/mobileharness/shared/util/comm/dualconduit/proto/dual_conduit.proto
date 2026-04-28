@@ -38,6 +38,7 @@ message EstablishConduitRequest {
   string service_name = 3;
   // The hostname of the client initiating the conduit.
   string client_hostname = 4;
+  // Note: This protocol is only needed for reverse conduits.
   // The protocol of the backend service (e.g., grpc, tcp).
   Protocol protocol = 5;
   // The destination endpoint of the backend service.

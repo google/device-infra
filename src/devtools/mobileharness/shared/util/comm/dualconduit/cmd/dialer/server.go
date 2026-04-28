@@ -7,10 +7,14 @@ import (
 	"fmt"
 	"log"
 	"net"
-
 	"net/url"
+	"os"
+	"os/signal"
+
+	"syscall"
 
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/dialer"
+	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/flagutil"
 	dconsvcpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconsvcpb"
 	dcontransport "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/transport"
 	rsockettransport "github.com/rsocket/rsocket-go/core/transport"
@@ -36,6 +40,8 @@ func main() {
 	flag.BoolVar(&cfg.Debug, "debug", false, "Enable debug logging and reflection")
 	flag.IntVar(&port, "port", 50051, "Port to listen on for Dialer gRPC service")
 	flag.StringVar(&cfg.Hostname, "hostname", "", "Hostname override for pre-flight check")
+	var forwardConduits flagutil.MultiString
+	flag.Var(&forwardConduits, "L", "Establish forward conduit (format: entry_port:destination_endpoint), can be specified multiple times")
 
 	flag.Parse()
 
@@ -65,6 +71,29 @@ func main() {
 		log.Fatalf("Pre-flight check failed: %v", err)
 	}
 
+	for _, fc := range forwardConduits {
+		req, err := flagutil.ParseForwardConduitFlag(fc)
+		if err != nil {
+			log.Fatalf("Failed to parse -L flag %q: %v", fc, err)
+		}
+		req.ClientHostname = cfg.Hostname
+		if req.ClientHostname == "" {
+			hostname, err := os.Hostname()
+			if err != nil {
+				log.Printf("Failed to get hostname: %v", err)
+				// Proceed with an empty ClientHostname if os.Hostname fails.
+			} else {
+				req.ClientHostname = hostname
+			}
+		}
+
+		resp, err := dialerSvc.EstablishConduit(context.Background(), req)
+		if err != nil {
+			log.Fatalf("Failed to establish forward conduit for %q: %v", fc, err)
+		}
+		log.Printf("Established forward conduit: %s, locator: %+v", resp.ConduitId, resp.ServiceLocator)
+	}
+
 	// 2. Start Dialer gRPC server
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
@@ -77,6 +106,18 @@ func main() {
 	if cfg.Debug {
 		reflection.Register(s)
 	}
+
+	// Handle graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		sig := <-sigChan
+		log.Printf("Received signal %v, shutting down...", sig)
+		dialerSvc.Manager.Shutdown()
+		s.GracefulStop()
+		log.Println("Graceful shutdown complete.")
+		os.Exit(0)
+	}()
 
 	log.Printf("Dialer gRPC server listening on port %d", port)
 	if err := s.Serve(lis); err != nil {
