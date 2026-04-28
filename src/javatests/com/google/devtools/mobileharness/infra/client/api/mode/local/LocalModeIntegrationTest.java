@@ -413,7 +413,6 @@ public class LocalModeIntegrationTest {
             """)
         .that(
             ImmutableList.of(
-                "com.google.devtools.mobileharness.api.model.job.out.Result",
                 "com.google.devtools.mobileharness.infra.client.api.mode.local.LocalModeIntegrationTest"))
         .comparingElementsUsing(
             Correspondence.from(

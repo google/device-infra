@@ -94,3 +94,21 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/log",
     ],
 )
+
+java_library(
+    name = "result_internal_util",
+    srcs = ["ResultInternalUtil.java"],
+    # Only add visibility for OmniLab infra code.
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote/util:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:__pkg__",
+    ],
+    deps = [
+        ":out",
+        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+    ],
+)

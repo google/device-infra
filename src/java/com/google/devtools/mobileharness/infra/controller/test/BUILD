@@ -137,6 +137,7 @@ java_library(
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",
+        "//src/java/com/google/devtools/mobileharness/api/model/job/out:result_internal_util",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test:client_test_events",
         "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:message_sender",
         "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:message_subscriber_backend",

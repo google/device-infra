@@ -25,6 +25,7 @@ import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
+import com.google.devtools.mobileharness.api.model.job.out.ResultInternalUtil;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.shared.trace.proto.SpanProto.ParentSpan;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.message.TestMessageInfo;
@@ -262,14 +263,16 @@ public class LabRpcProtoConverter {
         break;
       default:
         if (resultCause == null) {
-          testResult.setNonPassing(
+          ResultInternalUtil.setNonPassing(
+              testResult,
               resultType,
               new MobileHarnessException(
                   InfraErrorId.LAB_NON_PASSING_TEST_RESULT_WITHOUT_CAUSE,
-                  String.format(
-                      "Test result [%s] from lab side without result cause", resultType)));
+                  String.format("Test result [%s] from lab side without result cause", resultType)),
+              /* logStackTrace= */ false);
         } else {
-          testResult.setNonPassing(resultType, resultCause);
+          ResultInternalUtil.setNonPassing(
+              testResult, resultType, resultCause, /* logStackTrace= */ false);
         }
     }
   }

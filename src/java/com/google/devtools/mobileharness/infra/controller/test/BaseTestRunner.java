@@ -31,6 +31,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
+import com.google.devtools.mobileharness.api.model.job.out.ResultInternalUtil;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
@@ -233,12 +234,12 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
   @Override
   public final void postKill(boolean timeout, int killCount) {
     if (timeout) {
-      testInfo
-          .resultWithCause()
-          .setNonPassing(
-              Test.TestResult.TIMEOUT,
-              createExceptionWithoutStackTrace(
-                  InfraErrorId.TR_TEST_TIMEOUT_AND_KILLED, "Test is TIMEOUT and killed"));
+      ResultInternalUtil.setNonPassing(
+          testInfo.resultWithCause(),
+          Test.TestResult.TIMEOUT,
+          createExceptionWithoutStackTrace(
+              InfraErrorId.TR_TEST_TIMEOUT_AND_KILLED, "Test is TIMEOUT and killed"),
+          /* logStackTrace= */ false);
       if (killCount == 1) {
         // Only prints this log the first time a test gets killed.
         testInfo
@@ -264,7 +265,8 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
       // it here. Also see b/19134904.
       test.status().set(TestStatus.DONE);
       if (test.resultWithCause().get().type() == TestResult.UNKNOWN) {
-        test.resultWithCause().setNonPassing(Test.TestResult.ERROR, error);
+        ResultInternalUtil.setNonPassing(
+            test.resultWithCause(), Test.TestResult.ERROR, error, /* logStackTrace= */ false);
         test.log().atWarning().alsoTo(logger).log("%s", error.getMessage());
       }
     }
@@ -336,34 +338,32 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
     } catch (InterruptedException e) {
       if (testInfo.jobInfo().timer().isExpired()) {
         // Job is timeout and test thread pool is shutdown.
-        testInfo
-            .resultWithCause()
-            .setNonPassing(
-                Test.TestResult.TIMEOUT,
-                createExceptionWithoutStackTrace(
-                    InfraErrorId.TR_JOB_TIMEOUT_AND_INTERRUPTED,
-                    "Test interrupted due to job timeout",
-                    e));
+        ResultInternalUtil.setNonPassing(
+            testInfo.resultWithCause(),
+            Test.TestResult.TIMEOUT,
+            createExceptionWithoutStackTrace(
+                InfraErrorId.TR_JOB_TIMEOUT_AND_INTERRUPTED,
+                "Test interrupted due to job timeout",
+                e),
+            /* logStackTrace= */ false);
       } else if (testInfo.timer().isExpired()) {
         // Job is timeout and test thread pool is shutdown.
-        testInfo
-            .resultWithCause()
-            .setNonPassing(
-                Test.TestResult.TIMEOUT,
-                createExceptionWithoutStackTrace(
-                    InfraErrorId.TR_JOB_TIMEOUT_AND_INTERRUPTED,
-                    "Test timeout and interrupted",
-                    e));
+        ResultInternalUtil.setNonPassing(
+            testInfo.resultWithCause(),
+            Test.TestResult.TIMEOUT,
+            createExceptionWithoutStackTrace(
+                InfraErrorId.TR_JOB_TIMEOUT_AND_INTERRUPTED, "Test timeout and interrupted", e),
+            /* logStackTrace= */ false);
       } else if (SystemUtil.isProcessShuttingDown()) {
         // The process is shutting down.
-        testInfo
-            .resultWithCause()
-            .setNonPassing(
-                Test.TestResult.ERROR,
-                createExceptionWithoutStackTrace(
-                    InfraErrorId.TR_TEST_INTERRUPTED_WHEN_PROCESS_SHUTDOWN,
-                    "The process is shutting down.",
-                    e));
+        ResultInternalUtil.setNonPassing(
+            testInfo.resultWithCause(),
+            Test.TestResult.ERROR,
+            createExceptionWithoutStackTrace(
+                InfraErrorId.TR_TEST_INTERRUPTED_WHEN_PROCESS_SHUTDOWN,
+                "The process is shutting down.",
+                e),
+            /* logStackTrace= */ false);
       } else {
         // If job is not timeout but test timeout, TestManager has already marked the test as
         // TIMEOUT and can not be overwritten here.
@@ -398,7 +398,8 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
                   e);
           testResult = Test.TestResult.ABORT;
         }
-        testInfo.resultWithCause().setNonPassing(testResult, cause);
+        ResultInternalUtil.setNonPassing(
+            testInfo.resultWithCause(), testResult, cause, /* logStackTrace= */ false);
         testException = e;
       }
       testInfo
@@ -410,7 +411,11 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
     } catch (MobileHarnessException e) {
       // Marks this to {@link TestResult#ERROR} in case the driver has already changed the
       // {@link TestResult}.
-      testInfo.resultWithCause().setNonPassing(ResultUtil.getResultByException(e), e);
+      ResultInternalUtil.setNonPassing(
+          testInfo.resultWithCause(),
+          ResultUtil.getResultByException(e),
+          e,
+          /* logStackTrace= */ false);
       testInfo
           .log()
           .atWarning()
@@ -420,12 +425,12 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
     } catch (Throwable e) {
       // Marks this to {@link TestResult#ERROR} in case the driver has already changed the
       // {@link TestResult}.
-      testInfo
-          .resultWithCause()
-          .setNonPassing(
-              Test.TestResult.ERROR,
-              createExceptionWithoutStackTrace(
-                  InfraErrorId.TR_TEST_RUNNER_FATAL_ERROR, "TR FATAL ERROR: " + e.getMessage(), e));
+      ResultInternalUtil.setNonPassing(
+          testInfo.resultWithCause(),
+          Test.TestResult.ERROR,
+          createExceptionWithoutStackTrace(
+              InfraErrorId.TR_TEST_RUNNER_FATAL_ERROR, "TR FATAL ERROR: " + e.getMessage(), e),
+          /* logStackTrace= */ false);
       testInfo
           .log()
           .atWarning()
@@ -449,12 +454,12 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
         // Makes sure we finalize the test result.
         if (testInfo.resultWithCause().get().type() == TestResult.UNKNOWN) {
           String errMsg = "Test result not found when test finished normally. Mark as ERROR.";
-          testInfo
-              .resultWithCause()
-              .setNonPassing(
-                  Test.TestResult.ERROR,
-                  createExceptionWithoutStackTrace(
-                      InfraErrorId.TR_TEST_FINISHED_WITHOUT_RESULT, errMsg));
+          ResultInternalUtil.setNonPassing(
+              testInfo.resultWithCause(),
+              Test.TestResult.ERROR,
+              createExceptionWithoutStackTrace(
+                  InfraErrorId.TR_TEST_FINISHED_WITHOUT_RESULT, errMsg),
+              /* logStackTrace= */ false);
           testInfo.log().atWarning().alsoTo(logger).log("%s", errMsg);
         }
 
@@ -995,11 +1000,11 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
     if (skipResultWithCause.resultWithCause().type().equals(Test.TestResult.PASS)) {
       testInfo.resultWithCause().setPass();
     } else {
-      testInfo
-          .resultWithCause()
-          .setNonPassing(
-              skipResultWithCause.resultWithCause().type(),
-              skipResultWithCause.resultWithCause().causeExceptionNonEmpty());
+      ResultInternalUtil.setNonPassing(
+          testInfo.resultWithCause(),
+          skipResultWithCause.resultWithCause().type(),
+          skipResultWithCause.resultWithCause().causeExceptionNonEmpty(),
+          /* logStackTrace= */ false);
     }
     return true;
   }

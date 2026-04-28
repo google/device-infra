@@ -50,6 +50,7 @@ import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.TestLocator;
+import com.google.devtools.mobileharness.api.model.job.out.ResultInternalUtil;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Job.AllocationExitStrategy;
 import com.google.devtools.mobileharness.api.model.proto.Test;
@@ -498,12 +499,12 @@ public class JobRunner implements Runnable {
             }
             if (jobInfo.timer().isExpired()) {
               jobInfo.log().atWarning().alsoTo(logger).log("Job expired");
-              jobInfo
-                  .resultWithCause()
-                  .setNonPassing(
-                      Test.TestResult.TIMEOUT,
-                      createExceptionWithoutStackTrace(
-                          InfraErrorId.CLIENT_JR_JOB_EXPIRED, "Job timeout"));
+              ResultInternalUtil.setNonPassing(
+                  jobInfo.resultWithCause(),
+                  Test.TestResult.TIMEOUT,
+                  createExceptionWithoutStackTrace(
+                      InfraErrorId.CLIENT_JR_JOB_EXPIRED, "Job timeout"),
+                  /* logStackTrace= */ false);
               break;
             }
             Instant beforeSleep = clock.instant();
@@ -555,13 +556,18 @@ public class JobRunner implements Runnable {
       }
     } catch (JobCancelledException e) {
       // Job is killed by user from FE. It only happens in remote mode.
-      jobInfo.resultWithCause().setNonPassing(Test.TestResult.ABORT, e);
+      ResultInternalUtil.setNonPassing(
+          jobInfo.resultWithCause(), Test.TestResult.ABORT, e, /* logStackTrace= */ false);
       jobInfo.tests().getAll().values().stream()
           .filter(testInfo -> testInfo.status().get() != TestStatus.DONE)
           .forEach(
               testInfo -> {
                 testInfo.status().set(TestStatus.DONE);
-                testInfo.resultWithCause().setNonPassing(Test.TestResult.ABORT, e);
+                ResultInternalUtil.setNonPassing(
+                    testInfo.resultWithCause(),
+                    Test.TestResult.ABORT,
+                    e,
+                    /* logStackTrace= */ false);
               });
     } catch (MobileHarnessException e) {
       jobError = e;
@@ -974,7 +980,8 @@ public class JobRunner implements Runnable {
         testManager.startTest(testRunner);
       } catch (MobileHarnessException e) {
         TestResult result = ResultUtil.getResultByException(e);
-        testInfo.resultWithCause().setNonPassing(result, e);
+        ResultInternalUtil.setNonPassing(
+            testInfo.resultWithCause(), result, e, /* logStackTrace= */ false);
         testInfo.status().set(TestStatus.DONE);
         logger
             .atSevere()
@@ -1261,10 +1268,8 @@ public class JobRunner implements Runnable {
           createExceptionWithoutStackTrace(
               InfraErrorId.CLIENT_JR_JOB_EXEC_INTERRUPTED,
               String.format("Job %s is manually aborted.", jobInfo.locator().getId()));
-      jobInfo
-          .resultWithCause()
-          .setNonPassing(
-              com.google.devtools.mobileharness.api.model.proto.Test.TestResult.ABORT, e);
+      ResultInternalUtil.setNonPassing(
+          jobInfo.resultWithCause(), TestResult.ABORT, e, /* logStackTrace= */ false);
       // For tests that already have allocated device, it depends on the test runner to set the test
       // result.
       jobInfo.tests().getAll().values().stream()
@@ -1272,7 +1277,11 @@ public class JobRunner implements Runnable {
           .forEach(
               testInfo -> {
                 testInfo.status().set(TestStatus.DONE);
-                testInfo.resultWithCause().setNonPassing(Test.TestResult.ABORT, e);
+                ResultInternalUtil.setNonPassing(
+                    testInfo.resultWithCause(),
+                    Test.TestResult.ABORT,
+                    e,
+                    /* logStackTrace= */ false);
               });
       return;
     }
@@ -1330,33 +1339,33 @@ public class JobRunner implements Runnable {
                   .warnings()
                   .addAndLog(errorId, jobInfo.locator().getId() + ": " + errMsg, logger);
               hasAllocErrorTests = !hasAllocFailTests;
-              testInfo
-                  .resultWithCause()
-                  .setNonPassing(
-                      Test.TestResult.ERROR,
-                      createExceptionWithoutStackTrace(errorId, errMsg, cause));
+              ResultInternalUtil.setNonPassing(
+                  testInfo.resultWithCause(),
+                  Test.TestResult.ERROR,
+                  createExceptionWithoutStackTrace(errorId, errMsg, cause),
+                  /* logStackTrace= */ false);
               logAllocUserConfigErrorCauseToProperty(testInfo, errorId, cause);
             }
           } else if (failFastError != null) {
             hasAllocFailTests = true;
-            testInfo
-                .resultWithCause()
-                .setNonPassing(
-                    Test.TestResult.ERROR,
-                    createExceptionWithoutStackTrace(
-                        InfraErrorId.CLIENT_JR_JOB_FAIL_FAST_ERROR,
-                        "Job has fail fast error.",
-                        ErrorModelConverter.toDeserializedException(failFastError)));
+            ResultInternalUtil.setNonPassing(
+                testInfo.resultWithCause(),
+                Test.TestResult.ERROR,
+                createExceptionWithoutStackTrace(
+                    InfraErrorId.CLIENT_JR_JOB_FAIL_FAST_ERROR,
+                    "Job has fail fast error.",
+                    ErrorModelConverter.toDeserializedException(failFastError)),
+                /* logStackTrace= */ false);
           } else {
             if (!jobInfo.resultWithCause().get().type().equals(TestResult.PASS)) {
-              testInfo
-                  .resultWithCause()
-                  .setNonPassing(
-                      Test.TestResult.ERROR,
-                      createExceptionWithoutStackTrace(
-                          InfraErrorId.CLIENT_JR_TEST_HAS_JOB_LEVEL_ERROR,
-                          "Job has infra errors. Check job level error for more detail.",
-                          jobError));
+              ResultInternalUtil.setNonPassing(
+                  testInfo.resultWithCause(),
+                  Test.TestResult.ERROR,
+                  createExceptionWithoutStackTrace(
+                      InfraErrorId.CLIENT_JR_TEST_HAS_JOB_LEVEL_ERROR,
+                      "Job has infra errors. Check job level error for more detail.",
+                      jobError),
+                  /* logStackTrace= */ false);
             }
             hasNotStartedTests = true;
           }
@@ -1367,10 +1376,11 @@ public class JobRunner implements Runnable {
           ErrorId errorId = InfraErrorId.CLIENT_JR_MNM_ALLOC_DEVICE_EXCEEDS_CEILING;
           String errMsg = "Test is suspended for quota issues. ";
           testInfo.warnings().addAndLog(errorId, jobInfo.locator().getId() + ": " + errMsg, logger);
-          testInfo
-              .resultWithCause()
-              .setNonPassing(
-                  Test.TestResult.ERROR, createExceptionWithoutStackTrace(errorId, errMsg));
+          ResultInternalUtil.setNonPassing(
+              testInfo.resultWithCause(),
+              Test.TestResult.ERROR,
+              createExceptionWithoutStackTrace(errorId, errMsg),
+              /* logStackTrace= */ false);
           hasSuspendedTests = true;
           break;
         case ASSIGNED:
@@ -1407,94 +1417,94 @@ public class JobRunner implements Runnable {
               .getErrorId()
               .type()
               .equals(ErrorType.INFRA_ISSUE)) {
-        jobInfo
-            .resultWithCause()
-            .setNonPassing(
-                Test.TestResult.ERROR,
-                createExceptionWithoutStackTrace(
-                    InfraErrorId.CLIENT_JR_JOB_HAS_INFRA_ERROR_TEST,
-                    "Job has >= 1 INFRA_ERROR test(s)",
-                    jobError));
+        ResultInternalUtil.setNonPassing(
+            jobInfo.resultWithCause(),
+            Test.TestResult.ERROR,
+            createExceptionWithoutStackTrace(
+                InfraErrorId.CLIENT_JR_JOB_HAS_INFRA_ERROR_TEST,
+                "Job has >= 1 INFRA_ERROR test(s)",
+                jobError),
+            /* logStackTrace= */ false);
       } else {
-        jobInfo
-            .resultWithCause()
-            .setNonPassing(
-                Test.TestResult.ERROR,
-                createExceptionWithoutStackTrace(
-                    InfraErrorId.CLIENT_JR_JOB_HAS_ERROR_TEST,
-                    "Job has >=1 ERROR test(s). You can get the detailed ERROR info in the test"
-                        + " level, ",
-                    jobError));
+        ResultInternalUtil.setNonPassing(
+            jobInfo.resultWithCause(),
+            Test.TestResult.ERROR,
+            createExceptionWithoutStackTrace(
+                InfraErrorId.CLIENT_JR_JOB_HAS_ERROR_TEST,
+                "Job has >=1 ERROR test(s). You can get the detailed ERROR info in the test"
+                    + " level, ",
+                jobError),
+            /* logStackTrace= */ false);
       }
     } else if (hasFailTests) {
-      jobInfo
-          .resultWithCause()
-          .setNonPassing(
-              Test.TestResult.FAIL,
-              createExceptionWithoutStackTrace(
-                  InfraErrorId.CLIENT_JR_JOB_HAS_FAIL_TEST,
-                  "Job has >=1 FAIL test(s). You can get the detailed FAIL info in the test"
-                      + " level, "));
+      ResultInternalUtil.setNonPassing(
+          jobInfo.resultWithCause(),
+          Test.TestResult.FAIL,
+          createExceptionWithoutStackTrace(
+              InfraErrorId.CLIENT_JR_JOB_HAS_FAIL_TEST,
+              "Job has >=1 FAIL test(s). You can get the detailed FAIL info in the test"
+                  + " level, "),
+          /* logStackTrace= */ false);
     } else if (hasAllocErrorTests) {
-      jobInfo
-          .resultWithCause()
-          .setNonPassing(
-              Test.TestResult.ERROR,
-              createExceptionWithoutStackTrace(
-                  InfraErrorId.CLIENT_JR_JOB_HAS_ALLOC_ERROR_TEST,
-                  "Job has >=1 ALLOC ERROR test(s). You can get the detailed ALLOC ERROR info"
-                      + " in the test level, "));
+      ResultInternalUtil.setNonPassing(
+          jobInfo.resultWithCause(),
+          Test.TestResult.ERROR,
+          createExceptionWithoutStackTrace(
+              InfraErrorId.CLIENT_JR_JOB_HAS_ALLOC_ERROR_TEST,
+              "Job has >=1 ALLOC ERROR test(s). You can get the detailed ALLOC ERROR info"
+                  + " in the test level, "),
+          /* logStackTrace= */ false);
     } else if (hasAllocFailTests) {
-      jobInfo
-          .resultWithCause()
-          .setNonPassing(
-              Test.TestResult.ERROR,
-              createExceptionWithoutStackTrace(
-                  InfraErrorId.CLIENT_JR_JOB_HAS_ALLOC_FAIL_TEST,
-                  "Job has >=1 ALLOC FAIL test(s). You can get the detailed ALLOC FAIL info"
-                      + " in the test level, "));
+      ResultInternalUtil.setNonPassing(
+          jobInfo.resultWithCause(),
+          Test.TestResult.ERROR,
+          createExceptionWithoutStackTrace(
+              InfraErrorId.CLIENT_JR_JOB_HAS_ALLOC_FAIL_TEST,
+              "Job has >=1 ALLOC FAIL test(s). You can get the detailed ALLOC FAIL info"
+                  + " in the test level, "),
+          /* logStackTrace= */ false);
     } else if (hasSuspendedTests) {
-      jobInfo
-          .resultWithCause()
-          .setNonPassing(
-              Test.TestResult.ERROR,
-              createExceptionWithoutStackTrace(
-                  InfraErrorId.CLIENT_JR_JOB_HAS_ALLOC_FAIL_TEST,
-                  "Job has >= 1 SUSPENDED test(s)."));
+      ResultInternalUtil.setNonPassing(
+          jobInfo.resultWithCause(),
+          Test.TestResult.ERROR,
+          createExceptionWithoutStackTrace(
+              InfraErrorId.CLIENT_JR_JOB_HAS_ALLOC_FAIL_TEST, "Job has >= 1 SUSPENDED test(s)."),
+          /* logStackTrace= */ false);
     } else if (hasNotStartedTests) {
       if (jobError instanceof MobileHarnessException) {
-        jobInfo
-            .resultWithCause()
-            .setNonPassing(Test.TestResult.ERROR, (MobileHarnessException) jobError);
+        ResultInternalUtil.setNonPassing(
+            jobInfo.resultWithCause(),
+            Test.TestResult.ERROR,
+            (MobileHarnessException) jobError,
+            /* logStackTrace= */ false);
       } else {
-        jobInfo
-            .resultWithCause()
-            .setNonPassing(
-                Test.TestResult.ERROR,
-                createExceptionWithoutStackTrace(
-                    InfraErrorId.CLIENT_JR_JOB_EXEC_FATAL_ERROR,
-                    "Job has error and the tests are not started."));
+        ResultInternalUtil.setNonPassing(
+            jobInfo.resultWithCause(),
+            Test.TestResult.ERROR,
+            createExceptionWithoutStackTrace(
+                InfraErrorId.CLIENT_JR_JOB_EXEC_FATAL_ERROR,
+                "Job has error and the tests are not started."),
+            /* logStackTrace= */ false);
       }
     } else if (testCount > 0) {
       if (testCount == skipTestCount) {
-        jobInfo
-            .resultWithCause()
-            .setNonPassing(
-                Test.TestResult.SKIP,
-                createExceptionWithoutStackTrace(
-                    InfraErrorId.CLIENT_JR_JOB_HAS_ALL_SKIPPED_TESTS,
-                    "All tests of the job are skipped"));
+        ResultInternalUtil.setNonPassing(
+            jobInfo.resultWithCause(),
+            Test.TestResult.SKIP,
+            createExceptionWithoutStackTrace(
+                InfraErrorId.CLIENT_JR_JOB_HAS_ALL_SKIPPED_TESTS,
+                "All tests of the job are skipped"),
+            /* logStackTrace= */ false);
       } else {
         jobInfo.resultWithCause().setPass();
       }
     } else {
-      jobInfo
-          .resultWithCause()
-          .setNonPassing(
-              Test.TestResult.ERROR,
-              createExceptionWithoutStackTrace(
-                  InfraErrorId.CLIENT_JR_JOB_START_WITHOUT_TEST,
-                  "No tests of the job are executed"));
+      ResultInternalUtil.setNonPassing(
+          jobInfo.resultWithCause(),
+          Test.TestResult.ERROR,
+          createExceptionWithoutStackTrace(
+              InfraErrorId.CLIENT_JR_JOB_START_WITHOUT_TEST, "No tests of the job are executed"),
+          /* logStackTrace= */ false);
     }
   }
 
@@ -1680,17 +1690,17 @@ public class JobRunner implements Runnable {
             testInfo.resultWithCause().setPass();
           }
         } else {
-          jobInfo
-              .resultWithCause()
-              .setNonPassing(
-                  skipResultWithCause.resultWithCause().type(),
-                  skipResultWithCause.resultWithCause().causeProtoNonEmpty());
+          ResultInternalUtil.setNonPassing(
+              jobInfo.resultWithCause(),
+              skipResultWithCause.resultWithCause().type(),
+              skipResultWithCause.resultWithCause().causeProtoNonEmpty(),
+              /* logStackTrace= */ false);
           for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
-            testInfo
-                .resultWithCause()
-                .setNonPassing(
-                    skipResultWithCause.resultWithCause().type(),
-                    skipResultWithCause.resultWithCause().causeExceptionNonEmpty());
+            ResultInternalUtil.setNonPassing(
+                testInfo.resultWithCause(),
+                skipResultWithCause.resultWithCause().type(),
+                skipResultWithCause.resultWithCause().causeExceptionNonEmpty(),
+                /* logStackTrace= */ false);
           }
         }
         return true;

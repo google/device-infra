@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.api.model.job.out;
 
+import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugCurrentStackTrace;
+
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
 import com.google.common.annotations.VisibleForTesting;
@@ -29,7 +31,6 @@ import com.google.devtools.mobileharness.api.model.job.in.Params;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.ResultProto;
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
-import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.Objects;
 import java.util.Optional;
@@ -121,11 +122,10 @@ public class Result {
       if (logChangedResult) {
         if (params.getBool(PARAM_PRINT_STACK_TRACE_FOR_PASS_TEST, true)) {
           logger.atInfo().log(
-              "Result %s -> PASS, caller=%s",
-              this,
-              MoreThrowables.shortDebugCurrentStackTrace(/* maxLength= */ 4L, /* skip= */ 1L));
+              "Set result: %s -> PASS, caller=%s",
+              this, shortDebugCurrentStackTrace(/* maxLength= */ 4L, /* skip= */ 1L));
         } else {
-          logger.atInfo().log("Result %s -> PASS", this);
+          logger.atInfo().log("Set result: %s -> PASS", this);
         }
       }
 
@@ -143,10 +143,21 @@ public class Result {
    */
   @CanIgnoreReturnValue
   public Result setNonPassing(TestResult result, MobileHarnessException cause) {
+    return setNonPassing(result, cause, /* logStackTrace= */ true);
+  }
+
+  /**
+   * Do NOT make this method public.
+   *
+   * @param logStackTrace whether to log the current stack trace when successfully setting
+   */
+  @CanIgnoreReturnValue
+  Result setNonPassing(TestResult result, MobileHarnessException cause, boolean logStackTrace) {
     return setNonPassing(
         result,
         com.google.devtools.common.metrics.stability.converter.ErrorModelConverter
-            .toExceptionDetail(cause));
+            .toExceptionDetail(cause),
+        logStackTrace);
   }
 
   /**
@@ -156,6 +167,17 @@ public class Result {
    */
   @CanIgnoreReturnValue
   public Result setNonPassing(TestResult result, ExceptionProto.ExceptionDetail cause) {
+    return setNonPassing(result, cause, /* logStackTrace= */ true);
+  }
+
+  /**
+   * Do NOT make this method public.
+   *
+   * @param logStackTrace whether to log the current stack trace when successfully setting
+   */
+  @CanIgnoreReturnValue
+  Result setNonPassing(
+      TestResult result, ExceptionProto.ExceptionDetail cause, boolean logStackTrace) {
     Preconditions.checkArgument(result != TestResult.PASS && result != TestResult.UNKNOWN);
     Preconditions.checkNotNull(cause);
 
@@ -203,8 +225,14 @@ public class Result {
         return this;
       }
 
-      logger.atInfo().withStackTrace(StackSize.FULL).log(
-          "Result %s -> %s", this, formatResultWithDetailedCause(result, cause));
+      logger.atInfo().withStackTrace(logStackTrace ? StackSize.FULL : StackSize.NONE).log(
+          "Set result: %s -> %s%s",
+          this,
+          formatResultWithDetailedCause(result, cause),
+          logStackTrace
+              ? ""
+              : ", current_stack_trace="
+                  + shortDebugCurrentStackTrace(/* maxLength= */ 4L, /* skip= */ 2L));
       this.result = result;
       if (this.cause == null) {
         this.cause = cause;
@@ -359,7 +387,7 @@ public class Result {
         // Timeout test may require rebooting the device: b/33743212.
         logger.atWarning().log("Prevent overriding %s result to UNKNOWN", this);
       } else if (result != TestResult.UNKNOWN) {
-        logger.atInfo().log("Result %s -> UNKNOWN", this);
+        logger.atInfo().log("Set result: %s -> UNKNOWN", this);
         result = TestResult.UNKNOWN;
         cause = null;
         timing.touch();
