@@ -220,7 +220,17 @@ public final class GetHostOverviewHandler {
     Optional<HostReleaseInfo.ComponentInfo> labReleaseOpt =
         hostReleaseInfoOpt.flatMap(HostReleaseInfo::labServerReleaseInfo);
 
-    if (labReleaseOpt.isPresent()) {
+    Optional<String> propertyVersionOpt =
+        labInfoOpt.flatMap(
+            labInfo ->
+                labInfo.getLabServerFeature().getHostProperties().getHostPropertyList().stream()
+                    .filter(p -> p.getKey().equals("host_version"))
+                    .map(HostProperty::getValue)
+                    .findFirst());
+
+    if (propertyVersionOpt.isPresent()) {
+      builder.setVersion(propertyVersionOpt.get());
+    } else if (labReleaseOpt.isPresent()) {
       labReleaseOpt.get().version().ifPresent(builder::setVersion);
     }
 

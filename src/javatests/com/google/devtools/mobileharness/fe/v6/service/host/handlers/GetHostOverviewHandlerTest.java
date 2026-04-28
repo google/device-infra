@@ -465,6 +465,54 @@ public final class GetHostOverviewHandlerTest {
     assertThat(overview.getDiagnosticLinksList()).isEmpty();
   }
 
+  @Test
+  public void getHostOverview_labServerVersion_fromProp() throws Exception {
+    mockLabInfoWithProperty("host_version", "4.358.0");
+
+    HostOverview overview =
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
+            .getOverviewContent();
+    assertThat(overview.getLabServer().getVersion()).isEqualTo("4.358.0");
+  }
+
+  @Test
+  public void getHostOverview_labServerVersion_propPreferredOverRelease() throws Exception {
+    mockLabInfoWithProperty("host_version", "4.358.0-prop");
+
+    HostReleaseInfo.ComponentInfo compInfo =
+        HostReleaseInfo.ComponentInfo.builder().setVersion("4.357.0-release").build();
+    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(HOST_NAME), any(UniverseScope.class)))
+        .thenReturn(
+            immediateFuture(
+                Optional.of(
+                    HostReleaseInfo.builder()
+                        .setLabServerReleaseInfo(Optional.of(compInfo))
+                        .build())));
+
+    HostOverview overview =
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
+            .getOverviewContent();
+    assertThat(overview.getLabServer().getVersion()).isEqualTo("4.358.0-prop");
+  }
+
+  @Test
+  public void getHostOverview_labServerVersion_fallbackToRelease() throws Exception {
+    HostReleaseInfo.ComponentInfo compInfo =
+        HostReleaseInfo.ComponentInfo.builder().setVersion("4.357.0-release").build();
+    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(HOST_NAME), any(UniverseScope.class)))
+        .thenReturn(
+            immediateFuture(
+                Optional.of(
+                    HostReleaseInfo.builder()
+                        .setLabServerReleaseInfo(Optional.of(compInfo))
+                        .build())));
+
+    HostOverview overview =
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
+            .getOverviewContent();
+    assertThat(overview.getLabServer().getVersion()).isEqualTo("4.357.0-release");
+  }
+
   private void mockLabInfoWithProperty(String key, String value) {
     GetLabInfoResponse response =
         GetLabInfoResponse.newBuilder()
