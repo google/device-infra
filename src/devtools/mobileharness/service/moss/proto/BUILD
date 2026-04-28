@@ -16,6 +16,8 @@
 load("@protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
 load("@protobuf//bazel:java_proto_library.bzl", "java_proto_library")
 load("@protobuf//bazel:proto_library.bzl", "proto_library")
+load("@protobuf//bazel:py_proto_library.bzl", "py_proto_library")
+load("@rules_python//python:proto.bzl", "py_proto_library")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -34,6 +36,12 @@ proto_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_proto",
     ],
+)
+
+py_proto_library(
+    name = "result_py_pb2",
+    visibility = ["//visibility:public"],
+    deps = [":result_proto"],
 )
 
 java_proto_library(
