@@ -907,7 +907,8 @@ public class TradefedTest extends BaseDriver
     }
 
     // Appends allocated device(s) serial
-    if (getDevice().hasDimension(Dimension.Name.DEVICE_CLASS_NAME, "AndroidJitEmulator")) {
+    if (getDevice().hasDimension(Dimension.Name.DEVICE_CLASS_NAME, "AndroidJitEmulator")
+        && Flags.noopJitEmulator.getNonNull()) {
       logger.atInfo().log("Adding TF-based virtual device name to Tradefed run command");
       getDeviceIds()
           .forEach(

@@ -44,6 +44,7 @@ import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
@@ -65,13 +66,8 @@ public class AndroidJitEmulator extends AndroidDevice {
   @ParamAnnotation(required = false, help = "The build ID of the Android JIT emulator build.")
   public static final String PARAM_BUILD_ID = "android_jit_emulator_build_id";
 
-  @ParamAnnotation(
-      required = false,
-      help = "Path to local host image (e.g., cvd-host_package.tar.gz).")
-  public static final String PARAM_HOST_IMAGE = "android_jit_emulator_host_image";
-
-  @ParamAnnotation(required = false, help = "Path to local device image zip.")
-  public static final String PARAM_DEVICE_IMAGE = "android_jit_emulator_device_image";
+  public static final String FILE_TAG_HOST_IMAGE = "cvd-host_package.tar.gz";
+  public static final String FILE_TAG_DEVICE_IMAGE = "device";
 
   // A static lock to ensure only one thread is interacting with Cloud Orchestrator at a time
   // across all instances.
@@ -92,6 +88,8 @@ public class AndroidJitEmulator extends AndroidDevice {
 
   @Nullable private AdbWebSocketBridge adbWebSocketBridge;
 
+  private final AdbWebSocketBridgeFactory adbWebSocketBridgeFactory;
+
   public AndroidJitEmulator(String deviceId) {
     this(
         deviceId,
@@ -99,6 +97,7 @@ public class AndroidJitEmulator extends AndroidDevice {
         new ValidatorFactory(),
         new AndroidAdbUtil(),
         new CloudOrchestratorClientFactory(),
+        new AdbWebSocketBridgeFactory(),
         Sleeper.defaultSleeper());
   }
 
@@ -109,11 +108,13 @@ public class AndroidJitEmulator extends AndroidDevice {
       @Nullable ValidatorFactory validatorFactory,
       AndroidAdbUtil androidAdbUtil,
       CloudOrchestratorClientFactory cloudOrchestratorClientFactory,
+      AdbWebSocketBridgeFactory adbWebSocketBridgeFactory,
       Sleeper sleeper) {
     super(deviceId, apiConfig, validatorFactory);
     this.deviceId = deviceId;
     this.androidAdbUtil = androidAdbUtil;
     this.cloudOrchestratorClientFactory = cloudOrchestratorClientFactory;
+    this.adbWebSocketBridgeFactory = adbWebSocketBridgeFactory;
     this.sleeper = sleeper;
   }
 
@@ -154,13 +155,18 @@ public class AndroidJitEmulator extends AndroidDevice {
           BasicErrorId.LOCAL_NETWORK_ERROR,
           "cloud_orchestrator_service_url flag is required for JIT emulator setup.");
     }
-    // TODO: Remove this lock once we find better way of managing concurrent hosts creation through
-    // the Cloud Orchestrator API.
+    // TODO: Remove this lock once we find better way of managing concurrent hosts
+    // creation through the Cloud Orchestrator API.
     logger.atInfo().log("Waiting for Cloud Orchestrator lock...");
     cloudOrchestratorLock.lockInterruptibly();
     try {
       logger.atInfo().log("Acquired Cloud Orchestrator lock.");
       createCvdWithClient(serviceUrl, testInfo);
+    } catch (MobileHarnessException | InterruptedException | RuntimeException e) {
+      logger.atWarning().log("Failed to set up JIT emulator. Cleaning up...");
+      stopWebSocketBridgeAndDisconnectAdb();
+      deleteCvd(serviceUrl);
+      throw e;
     } finally {
       cloudOrchestratorLock.unlock();
     }
@@ -196,15 +202,21 @@ public class AndroidJitEmulator extends AndroidDevice {
         testInfo.jobInfo().params().get(PARAM_TARGET, "aosp_cf_x86_64_only_phone-userdebug");
     String buildId = testInfo.jobInfo().params().get(PARAM_BUILD_ID, "");
 
-    String hostImagePath = testInfo.jobInfo().params().get(PARAM_HOST_IMAGE, "");
-    String deviceImagePath = testInfo.jobInfo().params().get(PARAM_DEVICE_IMAGE, "");
+    String hostImagePath =
+        Optional.ofNullable(testInfo.jobInfo().files().get(FILE_TAG_HOST_IMAGE))
+            .flatMap(files -> files.stream().findFirst())
+            .orElse("");
+    String deviceImagePath =
+        Optional.ofNullable(testInfo.jobInfo().files().get(FILE_TAG_DEVICE_IMAGE))
+            .flatMap(files -> files.stream().findFirst())
+            .orElse("");
 
     if (hostImagePath.isEmpty() != deviceImagePath.isEmpty()) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_JIT_EMULATOR_INVALID_PARAMETER_ERROR,
           String.format(
               "Both %s and %s must be provided together. Got host_image: %s, device_image: %s",
-              PARAM_HOST_IMAGE, PARAM_DEVICE_IMAGE, hostImagePath, deviceImagePath));
+              FILE_TAG_HOST_IMAGE, FILE_TAG_DEVICE_IMAGE, hostImagePath, deviceImagePath));
     }
 
     Cvd cvd;
@@ -242,7 +254,7 @@ public class AndroidJitEmulator extends AndroidDevice {
               + "/adb";
 
       logger.atInfo().log("Starting WebSocket bridge on port %d to %s", localPort, wsUrl);
-      adbWebSocketBridge = new AdbWebSocketBridge(wsUrl, "user" + ":", localPort);
+      adbWebSocketBridge = adbWebSocketBridgeFactory.create(wsUrl, "user" + ":", localPort);
       adbWebSocketBridge.start();
 
       // Wait a bit for bridge to start listening
@@ -262,35 +274,52 @@ public class AndroidJitEmulator extends AndroidDevice {
       return PostTestDeviceOp.NONE;
     }
 
+    stopWebSocketBridgeAndDisconnectAdb();
+    deleteCvd(Flags.cloudOrchestratorServiceUrl.getNonNull());
+    return PostTestDeviceOp.NONE;
+  }
+
+  private void stopWebSocketBridgeAndDisconnectAdb() {
     if (adbWebSocketBridge != null) {
+      try {
+        int localPort = AndroidJitEmulatorUtil.getPortFromDeviceId(deviceId);
+        if (localPort > 0) {
+          androidAdbUtil.disconnect("127.0.0.1:" + localPort);
+        }
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log("Failed to disconnect ADB");
+      } catch (InterruptedException e) {
+        logger.atWarning().withCause(e).log("Interrupted during ADB disconnection");
+        Thread.currentThread().interrupt();
+      }
+
       logger.atInfo().log("Stopping WebSocket bridge");
       adbWebSocketBridge.stop();
       adbWebSocketBridge = null;
-      int localPort = AndroidJitEmulatorUtil.getPortFromDeviceId(deviceId);
-      if (localPort > 0) {
-        try {
-          androidAdbUtil.disconnect("127.0.0.1:" + localPort);
-        } catch (MobileHarnessException e) {
-          logger.atWarning().withCause(e).log("Failed to disconnect ADB");
-        }
-      }
     }
+  }
 
-    String serviceUrl = Flags.cloudOrchestratorServiceUrl.getNonNull();
-    if (!serviceUrl.isEmpty()) {
-      logger.atInfo().log("Waiting for Cloud Orchestrator lock...");
+  private void deleteCvd(String serviceUrl) {
+    if (serviceUrl.isEmpty()) {
+      logger.atWarning().log(
+          "cloud_orchestrator_service_url flag is NOT set, skipping CVD deletion.");
+      return;
+    }
+    logger.atInfo().log("Waiting for Cloud Orchestrator lock for cleanup...");
+    try {
       cloudOrchestratorLock.lockInterruptibly();
       try {
-        logger.atInfo().log("Acquired Cloud Orchestrator lock.");
+        logger.atInfo().log("Acquired Cloud Orchestrator lock for cleanup.");
         deleteCvdWithClient(serviceUrl);
       } finally {
         cloudOrchestratorLock.unlock();
       }
-    } else {
-      logger.atWarning().log(
-          "cloud_orchestrator_service_url flag is NOT set, skipping CVD deletion.");
+    } catch (InterruptedException e) {
+      logger.atWarning().withCause(e).log("Interrupted during CVD deletion lock");
+      Thread.currentThread().interrupt();
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log("Failed to delete CVD during cleanup");
     }
-    return PostTestDeviceOp.NONE;
   }
 
   @GuardedBy("cloudOrchestratorLock")
@@ -352,6 +381,13 @@ public class AndroidJitEmulator extends AndroidDevice {
   public static class CloudOrchestratorClientFactory {
     public CloudOrchestratorClient create(String serviceUrl, String version, String zone) {
       return new CloudOrchestratorClient(serviceUrl, version, zone);
+    }
+  }
+
+  /** Factory for creating {@link AdbWebSocketBridge}. */
+  public static class AdbWebSocketBridgeFactory {
+    public AdbWebSocketBridge create(String wsUrl, String auth, int localPort) {
+      return new AdbWebSocketBridge(wsUrl, auth, localPort);
     }
   }
 }
