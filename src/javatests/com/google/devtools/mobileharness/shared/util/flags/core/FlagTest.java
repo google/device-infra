@@ -488,7 +488,7 @@ public class FlagTest {
 
   @Test
   public void testGetNonNull_whenNull_throwsException() {
-    Flag<String> nullFlag = Flag.value(null);
+    Flag<String> nullFlag = Flag.nullString();
 
     assertThrows(IllegalStateException.class, nullFlag::getNonNull);
   }
