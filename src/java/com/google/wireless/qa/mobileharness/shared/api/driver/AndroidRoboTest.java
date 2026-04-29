@@ -75,7 +75,8 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
           0, TestResult.PASS,
           1, TestResult.SKIP,
           2, TestResult.FAIL,
-          3, TestResult.ERROR);
+          3, TestResult.ERROR,
+          4, TestResult.ABORT);
   private final Aapt aapt;
   private final Adb adb;
   private final PreProcessor preProcessor;
@@ -247,20 +248,37 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
   }
 
   private void setResult(TestInfo testInfo, TestResult result) throws MobileHarnessException {
-    if (!result.equals(TestResult.ERROR)) {
-      if (result.equals(TestResult.PASS)) {
-        testInfo.resultWithCause().setPass();
-      } else {
-        testInfo
-            .resultWithCause()
-            .setNonPassing(
-                result,
-                new MobileHarnessException(
-                    AndroidErrorId.ANDROID_ROBO_TEST_COMMAND_EXECUTION_ERROR, "Robo Cli failed."));
-      }
-      return;
+    switch (result) {
+      case ABORT ->
+          testInfo
+              .resultWithCause()
+              .setNonPassing(
+                  result,
+                  new MobileHarnessException(
+                      AndroidErrorId.ANDROID_ROBO_TEST_COMMAND_EXECUTION_ERROR,
+                      "UTP robo test aborted."));
+      case SKIP ->
+          testInfo
+              .resultWithCause()
+              .setNonPassing(
+                  result,
+                  new MobileHarnessException(
+                      AndroidErrorId.ANDROID_ROBO_TEST_COMMAND_EXECUTION_ERROR,
+                      "UTP robo test inconclusive. Mark result as SKIP"));
+      case ERROR -> readAndSetExceptionDetail(testInfo);
+      case PASS -> testInfo.resultWithCause().setPass();
+      default ->
+          testInfo
+              .resultWithCause()
+              .setNonPassing(
+                  TestResult.ERROR,
+                  new MobileHarnessException(
+                      AndroidErrorId.ANDROID_ROBO_TEST_COMMAND_EXECUTION_ERROR,
+                      "Unexpected UTP robo test result. Result: " + result));
     }
-    // If Error, read the exception detail proto.
+  }
+
+  private void readAndSetExceptionDetail(TestInfo testInfo) throws MobileHarnessException {
     Path exceptionDetailProtoPath =
         Path.of(testInfo.getGenFileDir(), MH_EXCEPTION_DETAIL_PROTO_FILE_NAME);
     try {
