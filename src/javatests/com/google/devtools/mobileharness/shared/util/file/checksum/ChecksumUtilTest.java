@@ -151,7 +151,7 @@ public final class ChecksumUtilTest {
 
     // Add a short delay because if file's two modification times are very very close (at microsec
     // level), it will get fingerprint from cache at the latter call and cause test flaky.
-    Sleeper.defaultSleeper().sleep(Duration.ofMillis(2));
+    Sleeper.defaultSleeper().sleep(Duration.ofMillis(100));
     fileUtil.writeToFile(file + "/Md5.empty", "aa");
     assertThat(util.fingerprint(file)).isEqualTo("508dbabd27b77402dc9865b17442176d");
   }
