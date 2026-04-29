@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.shared.util.flags.core;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
+import com.google.common.collect.ImmutableMap;
 import java.time.Duration;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -247,6 +248,33 @@ public class FlagTest {
     assertThat(FlagsForTesting.timeout.get()).isEqualTo(Duration.ofHours(1).plusMinutes(30));
   }
 
+  @Test
+  public void testParseArgs_enum() {
+    String[] args = {"--testEnum=VALUE_B"};
+
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.testEnum.get()).isEqualTo(FlagsForTesting.TestEnum.VALUE_B);
+  }
+
+  @Test
+  public void testParseArgs_enum_caseInsensitive_throwsException() {
+    String[] args = {"--testEnum=value_b"};
+
+    assertThrows(ParameterException.class, () -> FlagsManager.parse(args));
+  }
+
+  @Test
+  public void testParseArgs_enumList() {
+    String[] args = {"--enumList=VALUE_A,VALUE_B"};
+
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.enumList.get())
+        .containsExactly(FlagsForTesting.TestEnum.VALUE_A, FlagsForTesting.TestEnum.VALUE_B)
+        .inOrder();
+  }
+
   // ===============================================================================================
   // Collection Flags (List and Set)
   // ===============================================================================================
@@ -373,6 +401,85 @@ public class FlagTest {
     FlagsManager.parse(args);
 
     assertThat(FlagsForTesting.idsSet.get()).containsExactly(2, 1).inOrder();
+  }
+
+  // ===============================================================================================
+  // Map Flags
+  // ===============================================================================================
+
+  @Test
+  public void testParseArgs_mapString_commaSeparated() {
+    String[] args = {"--stringMap=k1=v1,k2=v2"};
+
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.stringMap.get())
+        .containsExactlyEntriesIn(ImmutableMap.of("k1", "v1", "k2", "v2"));
+  }
+
+  @Test
+  public void testParseArgs_mapNonStringKey_commaSeparated() {
+    String[] args = {"--intKeyMap=1=v1,2=v2"};
+
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.intKeyMap.get())
+        .containsExactlyEntriesIn(ImmutableMap.of(1, "v1", 2, "v2"));
+  }
+
+  @Test
+  public void testParseArgs_mapString_multipleOccurrences_overwrites() {
+    String[] args = {"--stringMap=k1=v1", "--stringMap=k2=v2"};
+
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.stringMap.get())
+        .containsExactlyEntriesIn(ImmutableMap.of("k2", "v2"));
+  }
+
+  @Test
+  public void testParseArgs_mapString_emptyValue() {
+    String[] args = {"--stringMap="};
+
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.stringMap.get()).isEmpty();
+  }
+
+  @Test
+  public void testParseArgs_mapValueParsing_integerAndDuration() {
+    String[] args = {"--intMap=k1=123,k2=456", "--durationMap=t1=1h30m"};
+
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.intMap.get())
+        .containsExactlyEntriesIn(ImmutableMap.of("k1", 123, "k2", 456));
+    assertThat(FlagsForTesting.durationMap.get())
+        .containsExactlyEntriesIn(ImmutableMap.of("t1", Duration.ofHours(1).plusMinutes(30)));
+  }
+
+  @Test
+  public void testParseArgs_mapString_duplicateKeysInSingleArg_throwsException() {
+    String[] args = {"--stringMap=k1=v1,k1=v2"};
+
+    assertThrows(Exception.class, () -> FlagsManager.parse(args));
+  }
+
+  @Test
+  public void testParseArgs_mapString_entrySyntaxError_throwsException() {
+    String[] args = {"--stringMap=k1v1"};
+
+    assertThrows(Exception.class, () -> FlagsManager.parse(args));
+  }
+
+  @Test
+  public void testParseArgs_mapString_whitespaceTrimming() {
+    String[] args = {"--stringMap= k1 = v1 , k2 = v2 "};
+
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.stringMap.get())
+        .containsExactlyEntriesIn(ImmutableMap.of("k1", "v1", "k2", "v2"));
   }
 
   // ===============================================================================================

@@ -17,9 +17,11 @@
 package com.google.devtools.mobileharness.shared.util.flags.core;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /** Flags for testing. */
@@ -48,6 +50,29 @@ public class FlagsForTesting {
 
   @FlagSpec(name = "idsSet", help = "A set of integers.")
   public static final Flag<Set<Integer>> idsSet = Flag.value(ImmutableSet.of());
+
+  @FlagSpec(name = "stringMap", help = "A map of strings.")
+  public static final Flag<Map<String, String>> stringMap = Flag.value(ImmutableMap.of());
+
+  @FlagSpec(name = "intMap", help = "A map of string keys to integer values.")
+  public static final Flag<Map<String, Integer>> intMap = Flag.value(ImmutableMap.of());
+
+  @FlagSpec(name = "durationMap", help = "A map of string keys to duration values.")
+  public static final Flag<Map<String, Duration>> durationMap = Flag.value(ImmutableMap.of());
+
+  @FlagSpec(name = "intKeyMap", help = "A map of integer keys to string values.")
+  public static final Flag<Map<Integer, String>> intKeyMap = Flag.value(ImmutableMap.of());
+
+  public enum TestEnum {
+    VALUE_A,
+    VALUE_B,
+  }
+
+  @FlagSpec(name = "testEnum", help = "A test enum flag.")
+  public static final Flag<TestEnum> testEnum = Flag.value(TestEnum.VALUE_A);
+
+  @FlagSpec(name = "enumList", help = "A list of test enums.")
+  public static final Flag<List<TestEnum>> enumList = Flag.value(ImmutableList.of());
 
   private FlagsForTesting() {}
 }

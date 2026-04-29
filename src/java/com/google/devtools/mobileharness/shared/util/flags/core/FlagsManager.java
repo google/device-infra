@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -34,9 +35,11 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.time.Duration;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
+import java.util.stream.Collectors;
 import picocli.CommandLine;
 import picocli.CommandLine.IParameterPreprocessor;
 import picocli.CommandLine.ITypeConverter;
@@ -44,11 +47,17 @@ import picocli.CommandLine.Model.ArgSpec;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Model.ISetter;
 import picocli.CommandLine.Model.OptionSpec;
+import picocli.CommandLine.ParameterException;
 
 /** Manager for managing flags. */
 public final class FlagsManager {
 
   public static final Class<?> FLAGS_CLASS = Flags.class;
+
+  private static final String ENTRY_SEPARATOR = ",";
+  private static final char KEY_VALUE_SEPARATOR = '=';
+  private static final String BOOLEAN_NEGATIVE_PREFIX = "no";
+  private static final Splitter ENTRY_SPLITTER = Splitter.on(ENTRY_SEPARATOR);
 
   private static final ImmutableMap<Class<?>, ITypeConverter<?>> TYPE_CONVERTERS =
       ImmutableMap.of(
@@ -211,17 +220,16 @@ public final class FlagsManager {
       FlagSpec spec,
       Flag<?> flag,
       boolean isPositive) {
-    String key = isPositive ? spec.name() : "no" + spec.name();
-    OptionSpec optionSpec = createOptionSpec(type, spec, flag, isPositive);
+    String flagName = isPositive ? spec.name() : BOOLEAN_NEGATIVE_PREFIX + spec.name();
+    OptionSpec optionSpec = createOptionSpec(type, spec, flag, flagName, isPositive);
     FlagMetadata metadata = new FlagMetadata(type, spec, optionSpec, isPositive);
-    builder.put(key, new FlagEntry(flag, metadata));
+    builder.put(flagName, new FlagEntry(flag, metadata));
   }
 
   private static OptionSpec createOptionSpec(
-      TypeToken<?> type, FlagSpec spec, Flag<?> flag, boolean isPositive) {
-    String name = isPositive ? "--" + spec.name() : "--no" + spec.name();
+      TypeToken<?> type, FlagSpec spec, Flag<?> flag, String flagName, boolean isPositive) {
     OptionSpec.Builder builder =
-        OptionSpec.builder(name)
+        OptionSpec.builder("--" + flagName)
             .description(spec.help())
             .type(type.getRawType())
             .setter(new FlagSetter(flag));
@@ -234,11 +242,20 @@ public final class FlagsManager {
 
     // Handles collection types.
     if (type.isSubtypeOf(TypeToken.of(Collection.class))) {
-      builder.splitRegex(",");
+      builder.splitRegex(ENTRY_SEPARATOR);
       Class<?> componentType =
           type.resolveType(Collection.class.getTypeParameters()[0]).getRawType();
       builder.auxiliaryTypes(componentType);
       builder.preprocessor(new CollectionFlagPreprocessor());
+    }
+
+    // Handles map type.
+    if (type.isSubtypeOf(TypeToken.of(Map.class))) {
+      builder.splitRegex(ENTRY_SEPARATOR);
+      Class<?> keyType = type.resolveType(Map.class.getTypeParameters()[0]).getRawType();
+      Class<?> valueType = type.resolveType(Map.class.getTypeParameters()[1]).getRawType();
+      builder.auxiliaryTypes(keyType, valueType);
+      builder.preprocessor(new MapFlagPreprocessor());
     }
 
     return builder.build();
@@ -302,6 +319,57 @@ public final class FlagsManager {
         argSpec.setValue(getEmptyCollection(argSpec.type()));
         return true;
       }
+
+      return false;
+    }
+  }
+
+  private static class MapFlagPreprocessor implements IParameterPreprocessor {
+
+    @Override
+    public boolean preprocess(
+        Stack<String> args,
+        CommandSpec commandSpec,
+        ArgSpec argSpec,
+        Map<String, Object> parsedArgs) {
+      if (args.isEmpty()) {
+        return false;
+      }
+
+      String text = args.pop();
+
+      // For a map flag, if its text is an empty string, returns an empty map.
+      if (text.trim().isEmpty()) {
+        argSpec.setValue(ImmutableMap.of());
+        return true;
+      }
+
+      Map<String, String> parsedEntries = new LinkedHashMap<>();
+      for (String entry : ENTRY_SPLITTER.split(text)) {
+        int keyValueSeparatorIndex = entry.indexOf(KEY_VALUE_SEPARATOR);
+        if (keyValueSeparatorIndex == -1) {
+          throw new ParameterException(
+              commandSpec.commandLine(), "Invalid map entry syntax: " + entry);
+        }
+        String keyString = entry.substring(0, keyValueSeparatorIndex).trim();
+        String valueString = entry.substring(keyValueSeparatorIndex + 1).trim();
+
+        // Checks duplicated keys.
+        if (parsedEntries.containsKey(keyString)) {
+          throw new ParameterException(
+              commandSpec.commandLine(),
+              String.format("Duplicate map key '%s' in '%s'", keyString, text));
+        }
+
+        parsedEntries.put(keyString, valueString);
+      }
+
+      // Normalizes whitespace trimmed string and returns back to Picocli processor.
+      String normalizedText =
+          parsedEntries.entrySet().stream()
+              .map(e -> e.getKey() + KEY_VALUE_SEPARATOR + e.getValue())
+              .collect(Collectors.joining(ENTRY_SEPARATOR));
+      args.push(normalizedText);
 
       return false;
     }

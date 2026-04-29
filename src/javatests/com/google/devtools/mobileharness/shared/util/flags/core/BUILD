@@ -36,6 +36,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:flags_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:com_google_guava_guava",
         "@maven//:info_picocli_picocli",
         "@maven//:junit_junit",
     ],
