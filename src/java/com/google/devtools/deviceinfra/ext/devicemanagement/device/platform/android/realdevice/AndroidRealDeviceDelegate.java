@@ -205,6 +205,16 @@ public abstract class AndroidRealDeviceDelegate {
               .put(FastbootProperty.PRODUCT, Dimension.Name.TYPE)
               .buildOrThrow();
 
+  /**
+   * Set of fastboot properties that should not be converted to lower case when being set as
+   * dimensions. This is needed because some fastboot properties have values that are case
+   * sensitive, such as {@link FastbootProperty.SERIALNO}.
+   */
+  private static final ImmutableSet<FastbootProperty>
+      FASTBOOT_PROPERTIES_NOT_CONVERT_TO_LOWER_CASE_IN_DIMENSIONS =
+          ImmutableSet.of(
+              FastbootProperty.SERIALNO, FastbootProperty.PRODUCT, FastbootProperty.UNLOCKED);
+
   protected AndroidRealDeviceDelegate(
       AndroidDevice device,
       AndroidDeviceDelegate androidDeviceDelegate,
@@ -391,7 +401,10 @@ public abstract class AndroidRealDeviceDelegate {
         value = fastboot.getVar(deviceId, fastbootProperty);
         if (!Strings.isNullOrEmpty(value)) {
           device.updateDimension(
-              fastbootPropertyToDimensionName.get(fastbootProperty), Ascii.toLowerCase(value));
+              fastbootPropertyToDimensionName.get(fastbootProperty),
+              FASTBOOT_PROPERTIES_NOT_CONVERT_TO_LOWER_CASE_IN_DIMENSIONS.contains(fastbootProperty)
+                  ? value
+                  : Ascii.toLowerCase(value));
           fastbootPropertyToValue.put(fastbootProperty, value);
         } else {
           fastbootPropertyToValue.put(fastbootProperty, "");
