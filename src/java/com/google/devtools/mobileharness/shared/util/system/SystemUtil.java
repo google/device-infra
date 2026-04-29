@@ -334,6 +334,11 @@ public class SystemUtil {
     return getOsName().startsWith("Linux");
   }
 
+  /** Returns whether the server is an Arm farm lab server. */
+  public boolean isArmFarm() {
+    return isArmFarm.get();
+  }
+
   /**
    * Checks whether the KVM is enabled.
    *
