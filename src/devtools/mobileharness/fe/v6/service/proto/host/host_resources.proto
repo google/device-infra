@@ -118,13 +118,53 @@ message FlagPreset {
   string description = 3;
 }
 
-// Configuration for a specific Lab Server release.
-message HostReleaseConfig {
+message ChangeRecord {
+  int64 cl = 1;
+  string author = 2;
+  string text = 3;
+  repeated int32 bugs = 4;
+}
+
+message BugRecord {
+  int32 bug = 1;
+  string text = 2;
+}
+
+message ChangeLogGroup {
   string name = 1;
-  string version = 2;
-  ReleasePort port = 3;
-  repeated string sync_cmd = 4;
-  repeated string async_cmd = 5;
+  message Item {
+    oneof type {
+      ChangeRecord change = 1;
+      BugRecord bug = 2;
+    }
+  }
+  repeated Item items = 2;
+}
+
+message FileRecord {
+  string name = 1;
+  string path = 2;
+}
+
+message CommandRecord {
+  string name = 1;
+  string command = 2;
+}
+
+message ReleaseDetails {
+  repeated ChangeLogGroup change_logs = 1;
+  repeated FileRecord files = 2;
+  repeated CommandRecord sync_commands = 3;
+  repeated CommandRecord async_commands = 4;
+}
+
+message DeployableVersion {
+  string name = 1;        // Release name
+  string version = 2;     // Version string (e.g. "v4.358.0")
+  string status = 3;      // "Latest", "Current", or empty
+  string build_time = 4;  // Build timestamp
+  repeated ReleasePort ports = 5;
+  ReleaseDetails release_details = 6;
 }
 
 // Port configuration for a release.

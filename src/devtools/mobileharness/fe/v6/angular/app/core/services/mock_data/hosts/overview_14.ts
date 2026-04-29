@@ -4,6 +4,7 @@ import {MockHostScenario} from '../models';
 import {
   createDefaultHostOverview,
   createDefaultUiStatus,
+  createDeviceActions,
   createHostActions,
 } from './ui_status_utils';
 
@@ -122,6 +123,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:android-test-executor',
     model: 'pixel 7 pro',
     version: '36',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: '2A311FDH300A2H',
@@ -156,6 +158,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:android-test-executor',
     model: 'pixel 7 pro',
     version: '36',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: '2A311FDH300AAZ',
@@ -190,6 +193,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:android-test-executor',
     model: 'pixel 7 pro',
     version: '36',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: '2B011FDH300169',
@@ -224,6 +228,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:android-test-executor',
     model: 'pixel 7 pro',
     version: '36',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: '2B011FDH300FDY',
@@ -258,6 +263,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:android-test-executor',
     model: 'pixel 7 pro',
     version: '36',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: '2B011FDH300FFC',
@@ -292,6 +298,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:android-test-executor',
     model: 'pixel 7 pro',
     version: '36',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: '2B021FDH30015J',
@@ -326,6 +333,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:android-test-executor',
     model: 'pixel 7 pro',
     version: '36',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: '2B021FDH3007X2',
@@ -360,6 +368,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:android-test-executor',
     model: 'pixel 7 pro',
     version: '36',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: '2B021FDH300833',
@@ -394,6 +403,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:android-test-executor',
     model: 'pixel 7 pro',
     version: '36',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: '2B021FDH30087D',
@@ -428,6 +438,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:android-test-executor',
     model: 'pixel 7 pro',
     version: '36',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: '2B021FDH300891',
@@ -462,6 +473,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:android-test-executor',
     model: 'pixel 7 pro',
     version: '36',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: '2B021FDH3008EP',
@@ -496,6 +508,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:android-test-executor',
     model: 'pixel 7 pro',
     version: '36',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: '2B021FDH3008GN',
@@ -513,6 +526,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:android-test-executor',
     model: '',
     version: '',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: '2B021FDH3008GP',
@@ -547,6 +561,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:android-test-executor',
     model: 'pixel 7 pro',
     version: '36',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: '2B021FDH3008MN',
@@ -581,6 +596,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:android-test-executor',
     model: 'pixel 7 pro',
     version: '36',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: 'at1-ab7.atc.google.com:33487',
@@ -598,6 +614,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:android-test-executor',
     model: '',
     version: '',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: 'at1-ab7.atc.google.com:35137',
@@ -615,6 +632,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:android-test-executor',
     model: '',
     version: '',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: 'at1-ab7.atc.google.com:35555',
@@ -632,6 +650,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:android-test-executor',
     model: '',
     version: '',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: 'at1-ab7.atc.google.com:36735',
@@ -649,6 +668,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:android-test-executor',
     model: '',
     version: '',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: 'at1-ab7.atc.google.com:38191',
