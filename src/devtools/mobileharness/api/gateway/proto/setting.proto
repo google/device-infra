@@ -47,17 +47,8 @@ message JobConfig {
   repeated mobileharness.shared.StrPair property = 11;
   optional mobileharness.shared.spec.JobSpec job_spec = 12;
 
-  // Do NOT set this field explicitly. It is the parsing result of BlazeTarget.
-  optional JobConfigFromTarget job_config_from_target = 13 [deprecated = true];
   optional string master_spec = 14;
   optional mobileharness.shared.Priority priority = 15 [default = DEFAULT];
 
-  reserved 9, 10;
-}
-
-// MH's JobConfig from test target.
-message JobConfigFromTarget {
-  optional mobileharness.client.JobConfig mh_job_config = 1;
-  repeated string nonstandard_flag = 2;
-  optional string gen_dir_path = 3;
+  reserved 9, 10, 13;
 }

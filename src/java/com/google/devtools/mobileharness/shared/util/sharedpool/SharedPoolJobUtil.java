@@ -102,15 +102,11 @@ public final class SharedPoolJobUtil {
 
   /** Returns whether a gateway {@code jobConfig} is using default performance pool. */
   public static boolean isUsingDefaultPerformancePool(Setting.JobConfig jobConfig) {
-    boolean inPerformancePool =
-        jobConfig.getDimensionList().stream()
-            .anyMatch(
-                dimension ->
-                    dimension.getName().equals(Ascii.toLowerCase(Name.PERFORMANCE_POOL.toString()))
-                        && Value.DEFAULT_PERFORMANCE_POOL_SHARED.equals(dimension.getValue()));
-    // Check MH JobConfig
-    return inPerformancePool
-        || isUsingDefaultPerformancePool(jobConfig.getJobConfigFromTarget().getMhJobConfig());
+    return jobConfig.getDimensionList().stream()
+        .anyMatch(
+            dimension ->
+                dimension.getName().equals(Ascii.toLowerCase(Name.PERFORMANCE_POOL.toString()))
+                    && dimension.getValue().equals(Value.DEFAULT_PERFORMANCE_POOL_SHARED));
   }
 
   /** Returns whether {@code job} is user performance pool in shared pool. */
