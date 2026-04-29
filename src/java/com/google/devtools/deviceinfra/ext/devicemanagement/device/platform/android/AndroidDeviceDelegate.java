@@ -515,6 +515,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidSwitchLanguageDecorator");
     device.addSupportedDecorator("AndroidSwitchUserDecorator");
     device.addSupportedDecorator("PythonVersionCheckDecorator");
+    device.addSupportedDecorator("UnifiedTestResultUploaderDecorator");
     // keep-sorted end
   }
 
