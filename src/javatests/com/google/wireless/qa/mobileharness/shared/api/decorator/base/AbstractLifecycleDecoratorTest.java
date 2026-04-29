@@ -29,6 +29,8 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -66,6 +68,7 @@ public final class AbstractLifecycleDecoratorTest {
   @Before
   public void setUp() {
     when(decorated.getDevice()).thenReturn(device);
+    when(testInfo.log()).thenReturn(new Log(new Timing()));
     decorator = spy(new TestLifecycleDecorator(decorated, testInfo));
   }
 

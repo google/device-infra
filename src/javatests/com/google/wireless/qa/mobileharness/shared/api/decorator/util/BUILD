@@ -25,16 +25,11 @@ java_library(
     name = "tests",
     srcs = glob(["*.java"]),
     deps = [
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:abstract_lifecycle_decorator",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:step_skippable_lifecycle_decorator",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/util:step_skippable_lifecycle_decorator_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/out",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:junit_junit",
-        "@maven//:org_mockito_mockito_core",
     ],
 )
 

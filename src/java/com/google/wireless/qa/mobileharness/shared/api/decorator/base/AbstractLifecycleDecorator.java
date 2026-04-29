@@ -43,16 +43,16 @@ public abstract class AbstractLifecycleDecorator extends BaseDecorator {
   public final void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     String className = getClass().getSimpleName();
 
-    logger.atInfo().log("Decorator %s setup starting.", className);
+    testInfo.log().atInfo().alsoTo(logger).log("Decorator %s setup starting.", className);
     setUp(testInfo);
-    logger.atInfo().log("Decorator %s setup finished.", className);
+    testInfo.log().atInfo().alsoTo(logger).log("Decorator %s setup finished.", className);
 
     try {
       getDecorated().run(testInfo);
     } finally {
-      logger.atInfo().log("Decorator %s teardown starting.", className);
+      testInfo.log().atInfo().alsoTo(logger).log("Decorator %s teardown starting.", className);
       tearDown(testInfo);
-      logger.atInfo().log("Decorator %s teardown finished.", className);
+      testInfo.log().atInfo().alsoTo(logger).log("Decorator %s teardown finished.", className);
     }
   }
 }
