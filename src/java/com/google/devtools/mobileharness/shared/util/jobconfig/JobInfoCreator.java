@@ -73,6 +73,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -132,6 +133,8 @@ public final class JobInfoCreator {
       String sessionGenDir,
       @Nullable Timing timing)
       throws MobileHarnessException, InterruptedException {
+    Map<String, String> propertiesMap = new LinkedHashMap<>();
+    jobConfig.getPropertyList().forEach(prop -> propertiesMap.put(prop.getName(), prop.getValue()));
     return createJobInfo(
         jobId,
         actualUser,
@@ -139,6 +142,7 @@ public final class JobInfoCreator {
         originalSubmitTimestamp,
         jobConfig,
         /* mhJobConfig= */ null,
+        propertiesMap,
         /* nonstandardFlags= */ ImmutableList.of(),
         /* genDirPath= */ null,
         sessionTmpDir,
@@ -154,6 +158,7 @@ public final class JobInfoCreator {
       @Nullable Timestamp originalSubmitTimestamp,
       com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfig jobConfig,
       @Nullable com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig,
+      Map<String, String> properties,
       List<String> nonstandardFlags,
       @Nullable String genDirPath,
       String sessionTmpDir,
@@ -215,9 +220,6 @@ public final class JobInfoCreator {
               genDirPath,
               false,
               timing);
-      for (StrPair property : jobConfig.getPropertyList()) {
-        jobInfo.properties().add(property.getName(), property.getValue());
-      }
       for (StrPair param : jobConfig.getParamList()) {
         if (!jobInfo.params().has(param.getName())) {
           jobInfo.params().add(param.getName(), param.getValue());
@@ -235,6 +237,8 @@ public final class JobInfoCreator {
               sessionTmpDir,
               timing);
     }
+    properties.forEach((key, value) -> jobInfo.properties().add(key, value));
+
     return jobInfo;
   }
 
@@ -444,9 +448,6 @@ public final class JobInfoCreator {
     }
 
     jobInfo.tests().addAll(jobConfig.getTestList());
-    for (StrPair property : jobConfig.getPropertyList()) {
-      jobInfo.properties().add(property.getName(), property.getValue());
-    }
 
     try {
       jobInfo
