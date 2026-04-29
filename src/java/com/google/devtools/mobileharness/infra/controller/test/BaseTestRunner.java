@@ -702,8 +702,10 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
       testInfo
           .warnings()
           .add(
-              InfraErrorId.TR_INVALID_TEST_MESSAGE_SUBSCRIBERS,
-              String.format("Invalid test message subscribers: %s", invalidMessageSubscribers));
+              createExceptionWithoutStackTrace(
+                  InfraErrorId.TR_INVALID_TEST_MESSAGE_SUBSCRIBERS,
+                  String.format(
+                      "Invalid test message subscribers: %s", invalidMessageSubscribers)));
     }
     messageSender.initializeLocalSubscribers(messageSubscribers);
     testMessagePoster.asyncDisableAndHandleCache();

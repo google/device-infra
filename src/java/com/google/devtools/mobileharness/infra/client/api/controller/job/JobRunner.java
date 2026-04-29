@@ -1337,7 +1337,10 @@ public class JobRunner implements Runnable {
               }
               testInfo
                   .warnings()
-                  .addAndLog(errorId, jobInfo.locator().getId() + ": " + errMsg, logger);
+                  .addAndLog(
+                      createExceptionWithoutStackTrace(
+                          errorId, jobInfo.locator().getId() + ": " + errMsg),
+                      logger);
               hasAllocErrorTests = !hasAllocFailTests;
               ResultInternalUtil.setNonPassing(
                   testInfo.resultWithCause(),
@@ -1375,7 +1378,12 @@ public class JobRunner implements Runnable {
         case SUSPENDED:
           ErrorId errorId = InfraErrorId.CLIENT_JR_MNM_ALLOC_DEVICE_EXCEEDS_CEILING;
           String errMsg = "Test is suspended for quota issues. ";
-          testInfo.warnings().addAndLog(errorId, jobInfo.locator().getId() + ": " + errMsg, logger);
+          testInfo
+              .warnings()
+              .addAndLog(
+                  createExceptionWithoutStackTrace(
+                      errorId, jobInfo.locator().getId() + ": " + errMsg),
+                  logger);
           ResultInternalUtil.setNonPassing(
               testInfo.resultWithCause(),
               Test.TestResult.ERROR,
@@ -1600,7 +1608,10 @@ public class JobRunner implements Runnable {
                         .getNonNull());
             jobInfo
                 .warnings()
-                .addAndLog(InfraErrorId.CLIENT_JR_ALLOC_DIAGNOSTIC_ERROR, message, logger);
+                .addAndLog(
+                    createExceptionWithoutStackTrace(
+                        InfraErrorId.CLIENT_JR_ALLOC_DIAGNOSTIC_ERROR, message),
+                    logger);
             return Optional.empty();
           } else {
             allocDiagnostician.diagnoseJob(noPerfectCandidate);
