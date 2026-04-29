@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.platform.android.logcat.LogcatParser.Lo
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -51,9 +52,16 @@ public class AndroidRuntimeCrashDetector implements LineProcessor {
       new ConcurrentHashMap<>();
 
   private final MonitoringConfig monitoringConfig;
+  private final ExecutorService executorService;
+  private final CrashDialogDetector crashDialogDetector;
 
-  public AndroidRuntimeCrashDetector(MonitoringConfig config) {
+  public AndroidRuntimeCrashDetector(
+      MonitoringConfig config,
+      CrashDialogDetector crashDialogDetector,
+      ExecutorService executorService) {
     this.monitoringConfig = config;
+    this.crashDialogDetector = crashDialogDetector;
+    this.executorService = executorService;
   }
 
   @Override
@@ -68,6 +76,8 @@ public class AndroidRuntimeCrashDetector implements LineProcessor {
       return;
     }
     detectedCrashEvents.put(line.pid(), crashedProcess.get());
+    executorService.execute(
+        () -> crashDialogDetector.scan(monitoringConfig.reportAsFailurePackages()));
   }
 
   private Optional<CrashedProcess> processArtLines(List<String> lines) {
