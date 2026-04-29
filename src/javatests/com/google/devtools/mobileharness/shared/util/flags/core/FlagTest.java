@@ -476,4 +476,134 @@ public class FlagTest {
   public void testSetFlagsRule_noPrefixed_withValue_throwsException() {
     assertThrows(IllegalArgumentException.class, () -> setFlags.set("nobaz", "true"));
   }
+
+  // ===============================================================================================
+  // Strict Collection Validation Tests
+  // ===============================================================================================
+
+  @Test
+  public void testScanFlags_rawList_throwsException() {
+    FlagsManager.setFlagsClassForTest(InvalidFlagsForTesting.RawListFlag.class);
+
+    try {
+      IllegalStateException e =
+          assertThrows(IllegalStateException.class, () -> FlagsManager.parse(new String[0]));
+
+      assertThat(e).hasMessageThat().contains("must not contain raw types");
+    } finally {
+      FlagsManager.setFlagsClassForTest(FlagsForTesting.class);
+    }
+  }
+
+  @Test
+  public void testScanFlags_rawMyList_throwsException() {
+    FlagsManager.setFlagsClassForTest(InvalidFlagsForTesting.RawMyListFlag.class);
+
+    try {
+      IllegalStateException e =
+          assertThrows(IllegalStateException.class, () -> FlagsManager.parse(new String[0]));
+
+      assertThat(e).hasMessageThat().contains("must not contain raw types");
+    } finally {
+      FlagsManager.setFlagsClassForTest(FlagsForTesting.class);
+    }
+  }
+
+  @Test
+  public void testScanFlags_wildcardList_throwsException() {
+    FlagsManager.setFlagsClassForTest(InvalidFlagsForTesting.WildcardListFlag.class);
+
+    try {
+      IllegalStateException e =
+          assertThrows(IllegalStateException.class, () -> FlagsManager.parse(new String[0]));
+
+      assertThat(e).hasMessageThat().contains("must not contain raw types");
+    } finally {
+      FlagsManager.setFlagsClassForTest(FlagsForTesting.class);
+    }
+  }
+
+  @Test
+  public void testScanFlags_wildcardInsideList_throwsException() {
+    FlagsManager.setFlagsClassForTest(InvalidFlagsForTesting.WildcardInsideListFlag.class);
+
+    try {
+      IllegalStateException e =
+          assertThrows(IllegalStateException.class, () -> FlagsManager.parse(new String[0]));
+
+      assertThat(e).hasMessageThat().contains("must not contain raw types");
+    } finally {
+      FlagsManager.setFlagsClassForTest(FlagsForTesting.class);
+    }
+  }
+
+  @Test
+  public void testScanFlags_nonGenericRawList_throwsException() {
+    FlagsManager.setFlagsClassForTest(InvalidFlagsForTesting.NonGenericRawListFlag.class);
+
+    try {
+      IllegalStateException e =
+          assertThrows(IllegalStateException.class, () -> FlagsManager.parse(new String[0]));
+
+      assertThat(e).hasMessageThat().contains("must not contain raw types");
+    } finally {
+      FlagsManager.setFlagsClassForTest(FlagsForTesting.class);
+    }
+  }
+
+  @Test
+  public void testScanFlags_deeplyNestedWildcard_throwsException() {
+    FlagsManager.setFlagsClassForTest(InvalidFlagsForTesting.DeeplyNestedWildcardFlag.class);
+
+    try {
+      IllegalStateException e =
+          assertThrows(IllegalStateException.class, () -> FlagsManager.parse(new String[0]));
+
+      assertThat(e).hasMessageThat().contains("must not contain raw types");
+    } finally {
+      FlagsManager.setFlagsClassForTest(FlagsForTesting.class);
+    }
+  }
+
+  @Test
+  public void testScanFlags_listWithRawElement_throwsException() {
+    FlagsManager.setFlagsClassForTest(InvalidFlagsForTesting.ListWithRawElementFlag.class);
+
+    try {
+      IllegalStateException e =
+          assertThrows(IllegalStateException.class, () -> FlagsManager.parse(new String[0]));
+
+      assertThat(e).hasMessageThat().contains("must not contain raw types");
+    } finally {
+      FlagsManager.setFlagsClassForTest(FlagsForTesting.class);
+    }
+  }
+
+  @Test
+  public void testScanFlags_wildcardFlag_throwsException() {
+    FlagsManager.setFlagsClassForTest(InvalidFlagsForTesting.WildcardFlag.class);
+
+    try {
+      IllegalStateException e =
+          assertThrows(IllegalStateException.class, () -> FlagsManager.parse(new String[0]));
+
+      assertThat(e).hasMessageThat().contains("must not contain raw types");
+    } finally {
+      FlagsManager.setFlagsClassForTest(FlagsForTesting.class);
+    }
+  }
+
+  @Test
+  public void testScanFlags_rawClassFlag_throwsException() {
+    FlagsManager.setFlagsClassForTest(InvalidFlagsForTesting.RawClassFlag.class);
+
+    try {
+      IllegalStateException e =
+          assertThrows(IllegalStateException.class, () -> FlagsManager.parse(new String[0]));
+
+      assertThat(e).hasMessageThat().contains("must not contain raw types");
+    } finally {
+      FlagsManager.setFlagsClassForTest(FlagsForTesting.class);
+    }
+  }
 }

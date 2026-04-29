@@ -27,6 +27,7 @@ import com.google.common.reflect.TypeToken;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.flags.core.converter.BooleanConverter;
 import com.google.devtools.mobileharness.shared.util.flags.core.converter.DurationConverter;
+import com.google.devtools.mobileharness.shared.util.reflection.TypeUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -163,6 +164,17 @@ public final class FlagsManager {
           ParameterizedType genericType = (ParameterizedType) field.getGenericType();
           TypeToken<?> type = TypeToken.of(genericType.getActualTypeArguments()[0]);
 
+          // Checks type completeness.
+          try {
+            TypeUtil.checkCompleteness(type.getType());
+          } catch (IllegalArgumentException e) {
+            throw new IllegalStateException(
+                String.format(
+                    "Flag field %s must not contain raw types, wildcards or type variables",
+                    field.getName()),
+                e);
+          }
+
           field.setAccessible(true);
           Flag<?> flag = (Flag<?>) field.get(null);
 
@@ -252,6 +264,8 @@ public final class FlagsManager {
     public <V> V set(V value) {
       @SuppressWarnings("unchecked") // Type check is in scanFlags().
       Flag<V> flag = (Flag<V>) this.flag;
+
+      // Sets value or overrides previous value if any.
       flag.setValue(value);
       return value;
     }

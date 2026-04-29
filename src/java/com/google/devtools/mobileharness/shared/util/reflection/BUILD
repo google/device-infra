@@ -48,3 +48,10 @@ java_library(
     visibility = ["//:deviceinfra_all_pkg"],
     deps = ["//src/java/com/google/devtools/mobileharness/api/model/error"],
 )
+
+java_library(
+    name = "type_util",
+    srcs = ["TypeUtil.java"],
+    visibility = ["//:deviceinfra_all_pkg"],
+    deps = ["@maven//:com_google_guava_guava"],
+)

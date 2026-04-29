@@ -22,34 +22,13 @@ package(
 )
 
 java_library(
-    name = "core",
-    srcs = glob(
-        ["*.java"],
-        exclude = [
-            "FlagsForTesting.java",
-            "InvalidFlagsForTesting.java",
-        ],
-    ),
+    name = "reflection",
+    srcs = glob(["*.java"]),
     deps = [
-        ":flags_for_testing",
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:flag",
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:flags_manager",
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
+        "//src/java/com/google/devtools/mobileharness/shared/util/reflection:type_util",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "@maven//:info_picocli_picocli",
-        "@maven//:junit_junit",
-    ],
-)
-
-java_library(
-    name = "flags_for_testing",
-    srcs = [
-        "FlagsForTesting.java",
-        "InvalidFlagsForTesting.java",
-    ],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:flag",
         "@maven//:com_google_guava_guava",
+        "@maven//:junit_junit",
     ],
 )
 
@@ -58,5 +37,5 @@ junit_test_suites(
     sizes = [
         "small",
     ],
-    deps = [":core"],
+    deps = [":reflection"],
 )
