@@ -59,7 +59,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.logging.Level;
@@ -132,8 +131,6 @@ public class AndroidConnectivityUtil {
 
   private static final String WIFI_DISABLED_STATUS_IN_DUMPSYS_WIFI = "Wi-Fi is disabled";
 
-  private static final String WIFI_SCAN_IDLE_STATE = "IdleState";
-
   /** The pattern of network link address. */
   private static final Pattern PATTERN_NETWORK_LINK_ADDRESSES =
       Pattern.compile("LinkAddresses: \\[(.*?)\\]");
@@ -172,8 +169,6 @@ public class AndroidConnectivityUtil {
           "curState=CompletedState[\\s\\S]*mWifiInfo[\\s\\S]*"
               + "RSSI: *(?<result>-?[1-9]\\d*|0)"
               + " *,");
-
-  private static final Pattern LINE_PATTERN = Pattern.compile("curState=(?<scanresults>.*)");
 
   /** The pattern of ip address. */
   private static final Pattern PATTERN_NETWORK_LINK_ADDRESS = Pattern.compile("(.*)/(.*)");
@@ -862,7 +857,7 @@ public class AndroidConnectivityUtil {
       return true;
     }
 
-    boolean wifiScanDone = waitForWifiScanResults(serial, sdkVersion, log);
+    boolean wifiScanDone = waitForWifiScanResults(serial, sdkVersion, ssid, log);
     if (!wifiScanDone) {
       // For debugging purpose, dump wifi scan results to logs.
       SharedLogUtil.logMsg(
@@ -877,28 +872,26 @@ public class AndroidConnectivityUtil {
 
     String wifiLatestScanResult = getWifiLatestScanResults(serial, sdkVersion);
     boolean pwdEmptyOrNull = Strings.isNullOrEmpty(pwd);
-    Pattern ssidPattern = Pattern.compile(String.format("(^|\\s)%s(\\s|$)", ssid));
-    for (String line : Splitters.LINE_SPLITTER.split(wifiLatestScanResult)) {
-      if (ssidPattern.matcher(line).find()) {
-        if (PATTERN_WIFI_SECURITY_MODE.matcher(line).find()) {
-          SharedLogUtil.logMsg(
-              logger,
-              Level.INFO,
-              log,
-              /* cause= */ null,
-              "Found SSID %s (secured) in wifiscanner, password is required.",
-              ssid);
-          return !pwdEmptyOrNull;
-        } else {
-          SharedLogUtil.logMsg(
-              logger,
-              Level.INFO,
-              log,
-              /* cause= */ null,
-              "Found SSID %s (unsecured) in wifiscanner, no password should be given.",
-              ssid);
-          return pwdEmptyOrNull;
-        }
+    String ssidLine = getWifiScanResultLineForSsid(wifiLatestScanResult, ssid);
+    if (ssidLine != null) {
+      if (PATTERN_WIFI_SECURITY_MODE.matcher(ssidLine).find()) {
+        SharedLogUtil.logMsg(
+            logger,
+            Level.INFO,
+            log,
+            /* cause= */ null,
+            "Found SSID %s (secured) in wifiscanner, password is required.",
+            ssid);
+        return !pwdEmptyOrNull;
+      } else {
+        SharedLogUtil.logMsg(
+            logger,
+            Level.INFO,
+            log,
+            /* cause= */ null,
+            "Found SSID %s (unsecured) in wifiscanner, no password should be given.",
+            ssid);
+        return pwdEmptyOrNull;
       }
     }
     // For debugging purpose, dump real time wifi scan results to logs.
@@ -1229,11 +1222,12 @@ public class AndroidConnectivityUtil {
    * <p>Tested from API 15 to API 28, and Q.
    */
   @VisibleForTesting
-  boolean waitForWifiScanResults(String serial, int sdkVersion, @Nullable LogCollector<?> log)
+  boolean waitForWifiScanResults(
+      String serial, int sdkVersion, String ssid, @Nullable LogCollector<?> log)
       throws InterruptedException {
     return AndroidAdbUtil.waitForDeviceReady(
         UtilArgs.builder().setSerial(serial).build(),
-        utilArgs -> checkWifiScanResultsReady(utilArgs.serial(), sdkVersion, log),
+        utilArgs -> checkWifiScanResultsReady(utilArgs.serial(), sdkVersion, ssid, log),
         WaitArgs.builder()
             .setSleeper(sleeper)
             .setClock(clock)
@@ -1242,14 +1236,13 @@ public class AndroidConnectivityUtil {
             .build());
   }
 
-  /** Helper method for {@link #waitForWifiScanResults(String, int, LogCollector)}. */
+  /** Helper method for waitForWifiScanResults. */
   private boolean checkWifiScanResultsReady(
-      String serial, int sdkVersion, @Nullable LogCollector<?> log) {
+      String serial, int sdkVersion, String ssid, @Nullable LogCollector<?> log) {
     try {
       SharedLogUtil.logMsg(
           logger, Level.INFO, log, /* cause= */ null, "Checking wifi scan status...");
-      return checkWifiScanResults(
-          dumpWifiScanResults(serial, sdkVersion), isSdkVersionAboveNougat(sdkVersion));
+      return checkWifiScanResults(dumpWifiScanResults(serial, sdkVersion), ssid);
     } catch (MobileHarnessException e) {
       SharedLogUtil.logMsg(
           logger,
@@ -1287,31 +1280,19 @@ public class AndroidConnectivityUtil {
   }
 
   @VisibleForTesting
-  static boolean checkWifiScanResults(String wifiScanResults, boolean isAboveNougat) {
-    return isAboveNougat
-        ? Objects.equals(parseSingleScanStateMachineCurState(wifiScanResults), WIFI_SCAN_IDLE_STATE)
-        : !parseLatestScanResults(wifiScanResults).isEmpty();
+  static boolean checkWifiScanResults(String wifiScanResults, String ssid) {
+    return getWifiScanResultLineForSsid(parseLatestScanResults(wifiScanResults), ssid) != null;
   }
 
-  private static String parseSingleScanStateMachineCurState(String wifiScanResults) {
-    String start = "WifiSingleScanStateMachine:";
-    boolean isOn = false;
-
+  @Nullable
+  private static String getWifiScanResultLineForSsid(String wifiScanResults, String ssid) {
+    Pattern ssidPattern = Pattern.compile("(^|\\s)" + Pattern.quote(ssid) + "(\\s|$)");
     for (String line : Splitters.LINE_SPLITTER.split(wifiScanResults)) {
-      line = line.trim();
-      if (!isOn && line.equals(start)) {
-        isOn = true;
-        continue;
-      }
-
-      if (isOn) {
-        Matcher matcher = LINE_PATTERN.matcher(line);
-        if (matcher.find()) {
-          return matcher.group("scanresults").trim();
-        }
+      if (ssidPattern.matcher(line).find()) {
+        return line;
       }
     }
-    return "";
+    return null;
   }
 
   @VisibleForTesting
@@ -1337,7 +1318,7 @@ public class AndroidConnectivityUtil {
         }
       }
     }
-    return "";
+    return isOn ? joiner.toString() : "";
   }
 
   @VisibleForTesting
