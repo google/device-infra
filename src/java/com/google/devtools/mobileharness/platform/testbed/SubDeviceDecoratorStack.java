@@ -75,7 +75,8 @@ public class SubDeviceDecoratorStack {
             testInfo,
             decoratorClasses,
             /* driverWrapper= */ null,
-            /* decoratorExtender= */ null);
+            /* decoratorExtender= */ null,
+            /* portRegistry= */ null);
     // Register all created drivers and decorators
     ClassUtil.getAllSubscribersOfDriver(decoratorStack).forEach(eventBus::register);
     return new SubDeviceDecoratorStack(testInfo, syncer, decoratorStack);

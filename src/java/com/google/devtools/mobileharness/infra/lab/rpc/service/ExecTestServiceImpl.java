@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.lab.rpc.service;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.google.cloud.test.device.remote.service.port.PortRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
@@ -90,6 +91,7 @@ public class ExecTestServiceImpl {
 
   private final LabDirectTestRunnerHolder testRunnerHolder;
   private final DeviceHelperFactory deviceHelperFactory;
+  private final PortRegistry portRegistry;
 
   private final LabResponseProtoGenerator labResponseProtoGenerator;
 
@@ -112,7 +114,8 @@ public class ExecTestServiceImpl {
   ExecTestServiceImpl(
       LabDirectTestRunnerHolder testRunnerHolder,
       DeviceHelperFactory deviceHelperFactory,
-      @Assisted ListeningExecutorService threadPool) {
+      @Assisted ListeningExecutorService threadPool,
+      PortRegistry portRegistry) {
     this(
         testRunnerHolder,
         deviceHelperFactory,
@@ -121,14 +124,16 @@ public class ExecTestServiceImpl {
         null,
         TestMessageManager.getInstance(),
         new ForwardingTestMessageBuffer(testRunnerHolder),
-        new TestInfoCreator(testRunnerHolder, new LocalFileUtil()));
+        new TestInfoCreator(testRunnerHolder, new LocalFileUtil()),
+        portRegistry);
   }
 
   public ExecTestServiceImpl(
       LabDirectTestRunnerHolder testRunnerHolder,
       DeviceHelperFactory deviceHelperFactory,
       ListeningExecutorService threadPool,
-      @Nullable EventBus globalInternalEventBus) {
+      @Nullable EventBus globalInternalEventBus,
+      PortRegistry portRegistry) {
     this(
         testRunnerHolder,
         deviceHelperFactory,
@@ -137,7 +142,8 @@ public class ExecTestServiceImpl {
         globalInternalEventBus,
         TestMessageManager.getInstance(),
         new ForwardingTestMessageBuffer(testRunnerHolder),
-        new TestInfoCreator(testRunnerHolder, new LocalFileUtil()));
+        new TestInfoCreator(testRunnerHolder, new LocalFileUtil()),
+        portRegistry);
   }
 
   @VisibleForTesting
@@ -149,7 +155,8 @@ public class ExecTestServiceImpl {
       @Nullable EventBus globalInternalEventBus,
       TestMessageManager testMessageManager,
       ForwardingTestMessageBuffer forwardingTestMessageBuffer,
-      TestInfoCreator testInfoCreator) {
+      TestInfoCreator testInfoCreator,
+      PortRegistry portRegistry) {
     this.testRunnerHolder = testRunnerHolder;
     this.deviceHelperFactory = deviceHelperFactory;
     this.labResponseProtoGenerator = labResponseProtoGenerator;
@@ -158,6 +165,7 @@ public class ExecTestServiceImpl {
     this.testMessageManager = testMessageManager;
     this.forwardingTestMessageBuffer = forwardingTestMessageBuffer;
     this.testInfoCreator = testInfoCreator;
+    this.portRegistry = portRegistry;
   }
 
   @CanIgnoreReturnValue
@@ -242,7 +250,12 @@ public class ExecTestServiceImpl {
     try {
       testRunner =
           new LabLocalTestRunner(
-              connectorTestRunnerLauncher, setting, devices, threadPool, labFileNotifier);
+              connectorTestRunnerLauncher,
+              setting,
+              devices,
+              threadPool,
+              labFileNotifier,
+              portRegistry);
     } catch (TestRunnerLauncherConnectedException e) {
       logger.atSevere().log(
           "Skipped the duplicated kickOffTest request for the running allocation %s. "

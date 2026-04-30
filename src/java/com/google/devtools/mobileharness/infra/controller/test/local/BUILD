@@ -29,6 +29,7 @@ java_library(
     deps = [
         ":local_test_builtin_plugins",
         ":local_test_flow",
+        "//java/com/google/cloud/test/device/remote/service/port",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
@@ -83,6 +84,8 @@ java_library(
     visibility = [
     ],
     deps = [
+        "//java/com/google/cloud/test/device/remote/service/port",
+        "//java/com/google/devtools/omnilab/device/lab/server/mobileharness/testrunner/inject:port_registry_provider",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",

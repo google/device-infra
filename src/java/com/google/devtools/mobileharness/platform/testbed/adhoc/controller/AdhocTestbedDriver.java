@@ -415,7 +415,8 @@ public class AdhocTestbedDriver extends BaseDriver {
         getTest(),
         ClassUtil.getDecoratorClasses(Lists.reverse(decoratorNamesInExecutingOrder)),
         null /* Do not send driver event to each decorator. */,
-        decoratorExtender);
+        decoratorExtender,
+        null /* portRegistry */);
   }
 
   private static Device createAdhocTestbedDevice(List<Device> devices, TestInfo testInfo)

@@ -22,6 +22,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.joining;
 
+import com.google.cloud.test.device.remote.service.port.PortRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
@@ -106,9 +107,18 @@ public class LocalTestFlow {
   private final AdhocTestbedDriverFactory adhocTestbedDriverFactory;
   private final ListeningExecutorService testThreadPool;
   private final TestFlowConverter testFlowConverter;
+  private final PortRegistry portRegistry;
 
-  public LocalTestFlow(ListeningExecutorService threadPool, TestFlowConverter testFlowConverter) {
-    this(threadPool, new DriverFactory(), new AdhocTestbedDriverFactory(), testFlowConverter);
+  public LocalTestFlow(
+      ListeningExecutorService threadPool,
+      TestFlowConverter testFlowConverter,
+      PortRegistry portRegistry) {
+    this(
+        threadPool,
+        new DriverFactory(),
+        new AdhocTestbedDriverFactory(),
+        testFlowConverter,
+        portRegistry);
   }
 
   @VisibleForTesting
@@ -116,11 +126,13 @@ public class LocalTestFlow {
       ListeningExecutorService threadPool,
       DriverFactory driverFactory,
       AdhocTestbedDriverFactory adhocTestbedDriverFactory,
-      TestFlowConverter testFlowConverter) {
+      TestFlowConverter testFlowConverter,
+      PortRegistry portRegistry) {
     this.testThreadPool = threadPool;
     this.driverFactory = driverFactory;
     this.adhocTestbedDriverFactory = adhocTestbedDriverFactory;
     this.testFlowConverter = testFlowConverter;
+    this.portRegistry = portRegistry;
   }
 
   /** Loads plugins. Should be invoked when test is initializing. */
@@ -539,7 +551,8 @@ public class LocalTestFlow {
           ClassUtil.getDecoratorClasses(
               Lists.reverse(testFlow.flow().getDecoratorStack(0).getDecoratorNameList())),
           driverWrapper,
-          decoratorExtender);
+          decoratorExtender,
+          portRegistry);
     } else {
       return adhocTestbedDriverFactory.create(
           devices, testInfo, testThreadPool, driverFactory, driverWrapper, decoratorExtender);

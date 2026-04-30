@@ -52,6 +52,8 @@ java_library(
     srcs = ["DriverFactory.java"],
     deps = [
         ":driver",
+        "//java/com/google/cloud/test/device/remote/service/port",
+        "//java/com/google/devtools/omnilab/device/lab/server/mobileharness/testrunner/inject:port_registry_provider",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:common_library_module",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator",

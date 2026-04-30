@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.driver;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.google.cloud.test.device.remote.service.port.PortRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
@@ -125,11 +126,12 @@ public class DriverFactory {
       TestInfo testInfo,
       List<Class<? extends Decorator>> decoratorClasses,
       @Nullable BiFunction<Driver, String, Decorator> driverWrapper,
-      @Nullable BiFunction<Driver, Class<? extends Decorator>, Decorator> decoratorExtender)
+      @Nullable BiFunction<Driver, Class<? extends Decorator>, Decorator> decoratorExtender,
+      PortRegistry portRegistry)
       throws MobileHarnessException {
     for (Class<? extends Decorator> decoratorClass : decoratorClasses) {
       driver = decoratorExtender == null ? driver : decoratorExtender.apply(driver, decoratorClass);
-      driver = decorateDriver(driver, testInfo, decoratorClass);
+      driver = decorateDriver(driver, testInfo, decoratorClass, portRegistry);
       driver =
           driverWrapper == null
               ? driver
@@ -149,7 +151,10 @@ public class DriverFactory {
    */
   @VisibleForTesting
   protected Decorator decorateDriver(
-      Driver decoratedDriver, TestInfo testInfo, Class<? extends Decorator> decoratorClass)
+      Driver decoratedDriver,
+      TestInfo testInfo,
+      Class<? extends Decorator> decoratorClass,
+      PortRegistry portRegistry)
       throws MobileHarnessException {
     // Gets the module class if any.
     Optional<Class<? extends Module>> moduleClass = getModuleClass(decoratorClass);
@@ -160,7 +165,8 @@ public class DriverFactory {
 
     if (moduleClass.isPresent() || decoratorConstructor.isEmpty()) {
       // Uses Guice to instantiate the decorator.
-      return injectDecorator(decoratorClass, moduleClass.orElse(null), testInfo, decoratedDriver);
+      return injectDecorator(
+          decoratorClass, moduleClass.orElse(null), testInfo, decoratedDriver, portRegistry);
     } else {
       // Calls the constructor.
       try {
@@ -227,18 +233,20 @@ public class DriverFactory {
       Class<T> decoratorClass,
       @Nullable Class<? extends Module> moduleClass,
       TestInfo testInfo,
-      Driver decoratedDriver)
+      Driver decoratedDriver,
+      PortRegistry portRegistry)
       throws MobileHarnessException {
-    return injectInstance(
-        decoratorClass,
-        moduleClass,
-        /* context= */ ImmutableMap.of(
-            TestInfo.class,
-            testInfo,
-            Driver.class,
-            decoratedDriver,
-            Device.class,
-            decoratedDriver.getDevice()));
+    ImmutableMap.Builder<Class<?>, Object> contextBuilder =
+        ImmutableMap.<Class<?>, Object>builder()
+            .put(TestInfo.class, testInfo)
+            .put(Driver.class, decoratedDriver)
+            .put(Device.class, decoratedDriver.getDevice());
+
+    if (portRegistry != null) {
+      contextBuilder.put(PortRegistry.class, portRegistry);
+    }
+
+    return injectInstance(decoratorClass, moduleClass, /* context= */ contextBuilder.build());
   }
 
   /**

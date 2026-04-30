@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.lab.controller;
 
+import com.google.cloud.test.device.remote.service.port.PortRegistry;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
@@ -38,7 +39,8 @@ public class LabLocalTestRunner extends LocalTestRunner {
       DirectTestRunnerSetting setting,
       List<Device> devices,
       ListeningExecutorService threadPool,
-      LabFileNotifier labFileNotifier)
+      LabFileNotifier labFileNotifier,
+      PortRegistry portRegistry)
       throws TestRunnerLauncherConnectedException {
     super(
         launcher,

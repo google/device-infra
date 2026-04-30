@@ -180,6 +180,7 @@ java_library(
     name = "lab_local_test_runner",
     srcs = ["LabLocalTestRunner.java"],
     deps = [
+        "//java/com/google/cloud/test/device/remote/service/port",
         "//src/devtools/mobileharness/infra/controller/test/local/utp/proto:incompatible_reason_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:abstract_test_runner",

@@ -25,12 +25,16 @@ import static java.util.stream.Collectors.joining;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.google.cloud.test.device.remote.service.port.NamedHostAndPort;
+import com.google.cloud.test.device.remote.service.port.PortRegistry;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.reflect.ClassPath;
 import com.google.common.reflect.ClassPath.ClassInfo;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.omnilab.device.lab.server.mobileharness.testrunner.inject.PortRegistryProvider;
+import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ConstraintsForTesting;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
@@ -44,10 +48,12 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.DriverDecor
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -81,6 +87,7 @@ public class InstantiationTest {
   private Device device;
 
   @Inject private DriverFactory driverFactory;
+  @Inject private PortRegistry portRegistry;
 
   @BeforeClass
   public static void fetchDriverDecorator() throws Exception {
@@ -96,7 +103,17 @@ public class InstantiationTest {
         .thenReturn(tmpFolder.newFolder("test_tmp_file_dir").getAbsolutePath());
     when(decoratedDriver.getTest()).thenReturn(testInfo);
 
-    Guice.createInjector().injectMembers(this);
+    Guice.createInjector(
+            new AbstractModule() {
+              @Override
+              protected void configure() {
+                Set<NamedHostAndPort> staticPorts = Collections.emptySet();
+                PortRegistry portRegistry = new PortRegistry(staticPorts);
+                bind(PortRegistry.class).toInstance(portRegistry);
+                requestStaticInjection(PortRegistryProvider.class);
+              }
+            })
+        .injectMembers(this);
   }
 
   @Test
@@ -123,7 +140,8 @@ public class InstantiationTest {
               testInfo,
               ImmutableList.of(decoratorClass),
               /* driverWrapper= */ null,
-              /* decoratorExtender= */ null);
+              /* decoratorExtender= */ null,
+              portRegistry);
         } catch (Throwable e) {
           throw addHelp(e, decoratorClass);
         }

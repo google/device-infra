@@ -89,6 +89,7 @@ java_library(
     name = "exec_test",
     srcs = ["ExecTestServiceImpl.java"],
     deps = [
+        "//java/com/google/cloud/test/device/remote/service/port",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out",

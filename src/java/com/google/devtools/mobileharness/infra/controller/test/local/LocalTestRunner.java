@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.controller.test.local;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.google.cloud.test.device.remote.service.port.PortRegistry;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -74,11 +75,12 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
       DirectTestRunnerSetting setting,
       List<Device> devices,
       ListeningExecutorService threadPool,
-      TestFlowConverter testFlowConverter)
+      TestFlowConverter testFlowConverter,
+      PortRegistry portRegistry)
       throws TestRunnerLauncherConnectedException {
     super(launcher, setting, threadPool);
     this.devices = ImmutableList.copyOf(devices);
-    this.testFlow = new LocalTestFlow(threadPool, testFlowConverter);
+    this.testFlow = new LocalTestFlow(threadPool, testFlowConverter, portRegistry);
   }
 
   @Override
