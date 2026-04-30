@@ -43,6 +43,8 @@ import {
   APP_DATA,
   type AppData,
 } from 'app/core/models/app_data';
+import {UrlService} from 'app/core/services/url_service';
+import {navigateWithPreservedParams} from 'app/core/utils/url_utils';
 import {LoadingService} from 'app/shared/services/loading_service';
 import {ReplaySubject} from 'rxjs';
 import {filter, takeUntil} from 'rxjs/operators';
@@ -78,6 +80,7 @@ export class App implements OnDestroy {
   private readonly router: Router = inject(Router);
   readonly appData: AppData = inject(APP_DATA);
   readonly loadingService = inject(LoadingService);
+  private readonly urlService = inject(UrlService);
   showVersionInfo = true;
   isEmbeddedMode = true;
   isFakeData = false;
@@ -105,6 +108,10 @@ export class App implements OnDestroy {
       .subscribe(() => {
         this.updateShowContent();
       });
+
+    this.urlService.navigate$.pipe(takeUntil(this.destroy)).subscribe((url) => {
+      navigateWithPreservedParams(url, this.router, this.route);
+    });
   }
 
   updateShowContent() {
