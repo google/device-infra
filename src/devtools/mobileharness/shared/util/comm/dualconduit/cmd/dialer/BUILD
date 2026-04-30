@@ -62,4 +62,5 @@ oci_push(
     name = "dialer_push",
     image = ":dialer_image",
     remote_tags = ["latest"],
+    tags = ["deviceinfra_need_gcloud_auth"],
 )

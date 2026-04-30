@@ -20,17 +20,16 @@ load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 package(default_applicable_licenses = ["//:license"])
 
 go_binary(
-    name = "acceptor",
+    name = "helloworld",
     srcs = ["server.go"],
     goarch = "amd64",
     goos = "linux",
     pure = "on",
     deps = [
-        "//src/devtools/mobileharness/shared/util/comm/dualconduit/acceptor",
-        "//src/devtools/mobileharness/shared/util/comm/dualconduit/mesh",
-        "//src/devtools/mobileharness/shared/util/comm/dualconduit/transport",
-        "@com_github_rsocket_rsocket_go//core/transport",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld:helloworld_service_go_grpc",
         "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//reflection",
     ],
 )
 
@@ -38,27 +37,27 @@ go_binary(
 # Build and push Docker image.
 # ==========================================
 pkg_tar(
-    name = "acceptor_tar",
-    srcs = [":acceptor"],
+    name = "helloworld_tar",
+    srcs = [":helloworld"],
     package_dir = "/dualconduit",
 )
 
 oci_image(
-    name = "acceptor_image",
+    name = "helloworld_image",
     base = "@distroless_static",
-    entrypoint = ["/dualconduit/acceptor"],
-    tars = [":acceptor_tar"],
+    entrypoint = ["/dualconduit/helloworld"],
+    tars = [":helloworld_tar"],
 )
 
 oci_load(
-    name = "acceptor_load",
-    image = ":acceptor_image",
-    repo_tags = ["dualconduit/acceptor:latest"],
+    name = "helloworld_load",
+    image = ":helloworld_image",
+    repo_tags = ["dualconduit/helloworld:latest"],
 )
 
 oci_push(
-    name = "acceptor_push",
-    image = ":acceptor_image",
+    name = "helloworld_push",
+    image = ":helloworld_image",
     remote_tags = ["latest"],
     tags = ["deviceinfra_need_gcloud_auth"],
 )

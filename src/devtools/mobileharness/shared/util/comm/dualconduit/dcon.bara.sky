@@ -8,6 +8,8 @@ DCON_BUILD_FILES = [
 ]
 
 GOOGLE3_DCON_EXCLUDES = [
+    "src/devtools/mobileharness/shared/util/comm/dualconduit/tests/BUILD",
+    "src/devtools/mobileharness/shared/util/comm/dualconduit/tests/integration_test.go",
 ]
 
 def dcon_build_file_replace(before_target, after_target):
