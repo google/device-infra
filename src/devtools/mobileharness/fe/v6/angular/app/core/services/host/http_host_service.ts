@@ -113,7 +113,7 @@ export class HttpHostService extends HostService {
       .post<CheckRemoteControlEligibilityResponse>(
         `${this.apiUrl}/${hostName}/checkRemoteControlEligibility`,
         {
-          targets,
+          'targets': targets,
         },
       )
       .pipe(
