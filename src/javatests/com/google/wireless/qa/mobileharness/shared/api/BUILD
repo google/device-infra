@@ -29,6 +29,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/module:tradefed_test_module",
     ],
     deps = [
+        "//java/com/google/cloud/test/device/remote/service/port",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:constraints_for_testing",
