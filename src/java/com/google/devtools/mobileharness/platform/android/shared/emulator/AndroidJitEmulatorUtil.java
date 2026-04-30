@@ -52,6 +52,14 @@ public final class AndroidJitEmulatorUtil {
     }
   }
 
+  /**
+   * Extracts the port from the device ID.
+   *
+   * @param deviceId the device ID (e.g., "127.0.0.1:6520")
+   * @return the parsed port
+   * @throws MobileHarnessException if the device ID format is invalid or the port is not a positive
+   *     integer
+   */
   public static int getPortFromDeviceId(String deviceId) throws MobileHarnessException {
     int colonIndex = deviceId.indexOf(':');
     if (colonIndex == -1) {
@@ -61,7 +69,13 @@ public final class AndroidJitEmulatorUtil {
     }
     String portString = deviceId.substring(colonIndex + 1);
     try {
-      return Integer.parseInt(portString);
+      int port = Integer.parseInt(portString);
+      if (port <= 0) {
+        throw new MobileHarnessException(
+            AndroidErrorId.ANDROID_JIT_EMULATOR_INVALID_DEVICE_ID_ERROR,
+            "Invalid port in device ID (must be > 0): " + deviceId);
+      }
+      return port;
     } catch (NumberFormatException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_JIT_EMULATOR_INVALID_DEVICE_ID_ERROR,
@@ -70,6 +84,11 @@ public final class AndroidJitEmulatorUtil {
     }
   }
 
+  /**
+   * Gets all virtual device IDs based on flags.
+   *
+   * @return the list of virtual device IDs
+   */
   public static ImmutableList<String> getAllVirtualDeviceIds() {
     int emulatorNumber = Flags.instance().androidJitEmulatorNum.getNonNull();
     List<String> emulatorIds = new ArrayList<>();

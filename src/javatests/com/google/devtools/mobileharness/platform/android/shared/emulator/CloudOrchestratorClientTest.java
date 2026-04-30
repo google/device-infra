@@ -19,7 +19,9 @@ package com.google.devtools.mobileharness.platform.android.shared.emulator;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
+import com.google.api.client.http.HttpHeaders;
 import com.google.api.client.http.HttpResponseException;
+import com.google.common.io.Files;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -39,6 +41,7 @@ import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudO
 import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudOrchestratorMessages.ListHostsResponse;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudOrchestratorMessages.Operation;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudOrchestratorMessages.OperationError;
+import java.io.File;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -60,6 +63,31 @@ public class CloudOrchestratorClientTest {
   public void setUp() {
     client = new CloudOrchestratorClient(server.url("/").toString(), "v1", "local");
     client.setRequestRetryDelay(Duration.ofMillis(1));
+  }
+
+  @Test
+  public void hasHttpStatusCode_wrappedException_returnsTrue() {
+    HttpResponseException httpException =
+        new HttpResponseException.Builder(404, "Not Found", new HttpHeaders()).build();
+    Exception wrapped = new Exception(new Exception(httpException));
+
+    assertThat(CloudOrchestratorClient.hasHttpStatusCode(wrapped, 404)).isTrue();
+  }
+
+  @Test
+  public void hasHttpStatusCode_differentStatusCode_returnsFalse() {
+    HttpResponseException httpException =
+        new HttpResponseException.Builder(404, "Not Found", new HttpHeaders()).build();
+    Exception wrapped = new Exception(new Exception(httpException));
+
+    assertThat(CloudOrchestratorClient.hasHttpStatusCode(wrapped, 500)).isFalse();
+  }
+
+  @Test
+  public void hasHttpStatusCode_noHttpResponseException_returnsFalse() {
+    Exception wrapped = new Exception(new Exception("Some error"));
+
+    assertThat(CloudOrchestratorClient.hasHttpStatusCode(wrapped, 404)).isFalse();
   }
 
   @Test
@@ -513,5 +541,112 @@ public class CloudOrchestratorClientTest {
     HttpResponseException httpEx = (HttpResponseException) e.getCause();
     assertThat(httpEx.getStatusCode()).isEqualTo(502);
     assertThat(httpEx.getContent()).contains("bad gateway");
+  }
+
+  @Test
+  public void createImageDirectory_success() throws Exception {
+    server.enqueue(
+        new MockResponse()
+            .setBody("{\"name\": \"op-create-dir\"}")
+            .addHeader("Content-Type", "application/json"));
+
+    Operation op = client.createImageDirectory("host-1");
+
+    assertThat(op.name).isEqualTo("op-create-dir");
+    var request = server.takeRequest();
+    assertThat(request.getMethod()).isEqualTo("POST");
+    assertThat(request.getPath()).isEqualTo("/v1/zones/local/hosts/host-1/cvd_imgs_dirs");
+  }
+
+  @Test
+  public void updateImageDirectory_success() throws Exception {
+    server.enqueue(
+        new MockResponse()
+            .setBody("{\"name\": \"op-update-dir\"}")
+            .addHeader("Content-Type", "application/json"));
+
+    Operation op = client.updateImageDirectory("host-1", "dir-1", "checksum-1");
+
+    assertThat(op.name).isEqualTo("op-update-dir");
+    var request = server.takeRequest();
+    assertThat(request.getMethod()).isEqualTo("PUT");
+    assertThat(request.getPath()).isEqualTo("/v1/zones/local/hosts/host-1/cvd_imgs_dirs/dir-1");
+    assertThat(request.getBody().readUtf8()).contains("\"UserArtifactChecksum\":\"checksum-1\"");
+  }
+
+  @Test
+  public void extractArtifact_success() throws Exception {
+    server.enqueue(
+        new MockResponse()
+            .setBody("{\"name\": \"op-extract\"}")
+            .addHeader("Content-Type", "application/json"));
+
+    Operation op = client.extractArtifact("host-1", "checksum-1");
+
+    assertThat(op.name).isEqualTo("op-extract");
+    var request = server.takeRequest();
+    assertThat(request.getMethod()).isEqualTo("POST");
+    assertThat(request.getPath())
+        .isEqualTo("/v1/zones/local/hosts/host-1/v1/userartifacts/checksum-1/:extract");
+  }
+
+  @Test
+  public void artifactExists_true() throws Exception {
+    server.enqueue(new MockResponse().setResponseCode(200).setBody("{}"));
+
+    boolean exists = client.artifactExists("host-1", "checksum-1");
+
+    assertThat(exists).isTrue();
+    var request = server.takeRequest();
+    assertThat(request.getMethod()).isEqualTo("GET");
+    assertThat(request.getPath())
+        .isEqualTo("/v1/zones/local/hosts/host-1/v1/userartifacts/checksum-1");
+  }
+
+  @Test
+  public void artifactExists_false() throws Exception {
+    server.enqueue(new MockResponse().setResponseCode(404));
+
+    boolean exists = client.artifactExists("host-1", "checksum-1");
+
+    assertThat(exists).isFalse();
+  }
+
+  @Test
+  public void createCvdWithLocalImageAndWait_success() throws Exception {
+    server.enqueue(new MockResponse().setBody("{\"name\": \"op-123\", \"done\": true}"));
+    server.enqueue(
+        new MockResponse()
+            .setBody("{\"cvds\": [{\"webrtc_device_id\": \"cvd-1\"}]}")
+            .addHeader("Content-Type", "application/json"));
+
+    var cvd =
+        client.createCvdWithLocalImageAndWait(
+            "host-1", "cvd-1", "dir-1", "checksum-1", "checksum-2");
+
+    assertThat(cvd.webrtcDeviceId).isEqualTo("cvd-1");
+    var req = server.takeRequest();
+    assertThat(req.getMethod()).isEqualTo("POST");
+    assertThat(req.getPath()).isEqualTo("/v1/zones/local/hosts/host-1/cvds");
+    String body = req.getBody().readUtf8();
+    assertThat(body)
+        .contains("\"host_package\":\"@image_dirs/dir-1/checksum-1_extracted/host_tools\"");
+    assertThat(body).contains("\"default_build\":\"@image_dirs/dir-1/checksum-2_extracted\"");
+  }
+
+  @Test
+  public void uploadArtifact_success() throws Exception {
+    server.enqueue(new MockResponse().setResponseCode(200));
+
+    File file = File.createTempFile("test_image", ".bin");
+    file.deleteOnExit();
+    Files.asByteSink(file).write(new byte[] {1, 2, 3});
+
+    client.uploadArtifact("host-1", "checksum-1", file);
+
+    var request = server.takeRequest();
+    assertThat(request.getMethod()).isEqualTo("PUT");
+    assertThat(request.getPath())
+        .isEqualTo("/v1/zones/local/hosts/host-1/v1/userartifacts/checksum-1");
   }
 }

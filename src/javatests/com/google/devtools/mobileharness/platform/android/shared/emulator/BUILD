@@ -25,6 +25,7 @@ java_test(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/emulator:cloud_orchestrator_client",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:com_google_guava_guava",
         "@maven//:com_google_http_client_google_http_client",
         "@maven//:com_squareup_okhttp3_mockwebserver",
         "@maven//:junit_junit",
@@ -57,5 +58,20 @@ java_test(
         "@maven//:com_squareup_okhttp3_okhttp",
         "@maven//:com_squareup_okio_okio_jvm",
         "@maven//:junit_junit",
+    ],
+)
+
+java_test(
+    name = "CloudOrchestratorLocalImagePreparerTest",
+    size = "small",
+    srcs = ["CloudOrchestratorLocalImagePreparerTest.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/shared/emulator:cloud_orchestrator_client",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_http_client_google_http_client",
+        "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
 )

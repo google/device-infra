@@ -19,19 +19,24 @@ package com.google.devtools.mobileharness.platform.android.shared.emulator;
 import static com.google.common.base.Strings.nullToEmpty;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.google.api.client.http.ByteArrayContent;
 import com.google.api.client.http.GenericUrl;
 import com.google.api.client.http.HttpContent;
+import com.google.api.client.http.HttpHeaders;
+import com.google.api.client.http.HttpMediaType;
 import com.google.api.client.http.HttpRequest;
 import com.google.api.client.http.HttpRequestFactory;
 import com.google.api.client.http.HttpResponse;
 import com.google.api.client.http.HttpResponseException;
 import com.google.api.client.http.HttpTransport;
+import com.google.api.client.http.MultipartContent;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.http.json.JsonHttpContent;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.io.Files;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -51,6 +56,8 @@ import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryExcep
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryStrategy;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryingCallable;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.gson.stream.MalformedJsonException;
+import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Base64;
@@ -187,6 +194,136 @@ public class CloudOrchestratorClient {
   }
 
   /**
+   * Creates an empty image directory on the host.
+   *
+   * @param hostId the ID of the host
+   * @return the long-running operation
+   * @throws MobileHarnessException if the API call fails
+   */
+  @CanIgnoreReturnValue
+  public Operation createImageDirectory(String hostId) throws MobileHarnessException {
+    return post("/hosts/" + hostId + "/cvd_imgs_dirs", null, Operation.class);
+  }
+
+  /**
+   * Adds an artifact to an image directory.
+   *
+   * @param hostId the ID of the host
+   * @param dirId the ID of the image directory
+   * @param checksum the checksum of the artifact to add
+   * @return the long-running operation
+   * @throws MobileHarnessException if the API call fails
+   */
+  @CanIgnoreReturnValue
+  public Operation updateImageDirectory(String hostId, String dirId, String checksum)
+      throws MobileHarnessException {
+    Map<String, String> req = new HashMap<>();
+    req.put("UserArtifactChecksum", checksum);
+    return put("/hosts/" + hostId + "/cvd_imgs_dirs/" + dirId, req, Operation.class);
+  }
+
+  /**
+   * Extracts an artifact on the host.
+   *
+   * @param hostId the ID of the host
+   * @param checksum the checksum of the artifact to extract
+   * @return the long-running operation
+   * @throws MobileHarnessException if the API call fails
+   */
+  @CanIgnoreReturnValue
+  public Operation extractArtifact(String hostId, String checksum) throws MobileHarnessException {
+    return post(
+        "/hosts/" + hostId + "/v1/userartifacts/" + checksum + "/:extract", null, Operation.class);
+  }
+
+  /**
+   * Uploads a file as an artifact in chunks.
+   *
+   * @param hostId the ID of the host
+   * @param checksum the checksum of the file
+   * @param file the file to upload
+   * @throws MobileHarnessException if the API call fails
+   * @throws IOException if file operations fail
+   */
+  public void uploadArtifact(String hostId, String checksum, File file)
+      throws MobileHarnessException, IOException {
+    long fileSize = file.length();
+    // 16 MB chunks. This matches the default chunk size in the `cvdr` implementation.
+    long chunkSizeBytes = 16 * 1024 * 1024;
+    int totalChunks = (int) ((fileSize + chunkSizeBytes - 1) / chunkSizeBytes);
+
+    for (int i = 0; i < totalChunks; i++) {
+      long offset = i * chunkSizeBytes;
+      long size = Math.min(chunkSizeBytes, fileSize - offset);
+
+      MultipartContent multipartContent = new MultipartContent();
+      String boundary = multipartContent.getBoundary();
+      multipartContent.setMediaType(
+          new HttpMediaType("multipart/form-data").setParameter("boundary", boundary));
+
+      HttpHeaders offsetHeaders = new HttpHeaders();
+      offsetHeaders.set("Content-Disposition", "form-data; name=\"chunk_offset_bytes\"");
+      HttpContent offsetContent = ByteArrayContent.fromString("text/plain", String.valueOf(offset));
+      multipartContent.addPart(new MultipartContent.Part(offsetHeaders, offsetContent));
+
+      HttpHeaders sizeHeaders = new HttpHeaders();
+      sizeHeaders.set("Content-Disposition", "form-data; name=\"file_size_bytes\"");
+      HttpContent sizeContent = ByteArrayContent.fromString("text/plain", String.valueOf(fileSize));
+      multipartContent.addPart(new MultipartContent.Part(sizeHeaders, sizeContent));
+
+      HttpHeaders fileHeaders = new HttpHeaders();
+      fileHeaders.set(
+          "Content-Disposition",
+          String.format("form-data; name=\"file\"; filename=\"%s\"", file.getName()));
+
+      byte[] chunkData = Files.asByteSource(file).slice(offset, size).read();
+      ByteArrayContent fileContent = new ByteArrayContent("application/octet-stream", chunkData);
+      multipartContent.addPart(new MultipartContent.Part(fileHeaders, fileContent));
+
+      String path = "/hosts/" + hostId + "/v1/userartifacts/" + checksum;
+      try {
+        var unused = put(path, multipartContent, null);
+      } catch (MobileHarnessException e) {
+        if (hasHttpStatusCode(e, 409)) {
+          // Chunk already exists, ignore
+        } else {
+          throw e;
+        }
+      }
+    }
+  }
+
+  /**
+   * Checks if an artifact with the given checksum exists on the host.
+   *
+   * @param hostId the ID of the host
+   * @param checksum the checksum of the artifact
+   * @return true if the artifact exists, false otherwise
+   * @throws MobileHarnessException if the API call fails (other than 404)
+   */
+  public boolean artifactExists(String hostId, String checksum) throws MobileHarnessException {
+    String path = "/hosts/" + hostId + "/v1/userartifacts/" + checksum;
+    try {
+      get(path, Map.class, DEFAULT_REQUEST_TIMEOUT);
+      return true;
+    } catch (MobileHarnessException e) {
+      if (hasHttpStatusCode(e, 404)) {
+        return false;
+      }
+      Throwable cause = e;
+      while (cause != null) {
+        // Fallback to upload if the response is not valid JSON, consistent with cvdr Go client
+        // behavior which proceeds to upload on any GET failure.
+        if (cause instanceof MalformedJsonException) {
+          return false;
+        }
+        cause = cause.getCause();
+      }
+      throw e;
+    }
+  }
+
+  /**
    * Waits for a long-running operation to complete.
    *
    * @param hostId the host ID if the operation belongs to a host, null otherwise
@@ -286,6 +423,52 @@ public class CloudOrchestratorClient {
       throws MobileHarnessException, InterruptedException {
     CreateCvdRequest createReq = new CreateCvdRequest(envConfig);
     return createCvdAndWait(hostId, createReq, buildApiCreds);
+  }
+
+  /**
+   * Creates a CVD using local images.
+   *
+   * @param hostId the ID of the host
+   * @param cvdId the ID to assign to the CVD
+   * @param imageDirId the ID of the image directory containing the artifacts
+   * @param hostPkgChecksum the checksum of the host package
+   * @param deviceImgChecksum the checksum of the device image
+   * @return the created CVD
+   * @throws MobileHarnessException if the API call fails
+   * @throws InterruptedException if the thread is interrupted
+   */
+  public Cvd createCvdWithLocalImageAndWait(
+      String hostId,
+      String cvdId,
+      String imageDirId,
+      String hostPkgChecksum,
+      String deviceImgChecksum)
+      throws MobileHarnessException, InterruptedException {
+    Map<String, Object> envConfig = new HashMap<>();
+    Map<String, Object> common = new HashMap<>();
+    common.put(
+        "host_package",
+        "@image_dirs/" + imageDirId + "/" + hostPkgChecksum + "_extracted/host_tools");
+    envConfig.put("common", common);
+
+    Map<String, Object> instance = new HashMap<>();
+    instance.put("@import", "phone");
+    Map<String, Object> vm = new HashMap<>();
+
+    // TODO: Consider making these VM parameters configurable.
+    vm.put("memory_mb", 8192);
+    vm.put("setupwizard_mode", "OPTIONAL");
+    vm.put("cpus", 4);
+    instance.put("vm", vm);
+    Map<String, Object> disk = new HashMap<>();
+    disk.put("default_build", "@image_dirs/" + imageDirId + "/" + deviceImgChecksum + "_extracted");
+    instance.put("disk", disk);
+    Map<String, Object> streaming = new HashMap<>();
+    streaming.put("device_id", cvdId);
+    instance.put("streaming", streaming);
+
+    envConfig.put("instances", ImmutableList.of(instance));
+    return createCvdWithEnvConfigAndWait(hostId, envConfig, null);
   }
 
   /** Creates a CVD and waits for completion. Max timeout is 10 minutes. */
@@ -388,6 +571,28 @@ public class CloudOrchestratorClient {
     }
   }
 
+  @CanIgnoreReturnValue
+  private <T> T put(String path, @Nullable Object body, Class<T> responseClass)
+      throws MobileHarnessException {
+    int maxRetries = 5;
+    try {
+      return RetryingCallable.newBuilder(
+              () -> executeRequest("PUT", path, body, responseClass, null),
+              RetryStrategy.exponentialBackoff(requestRetryDelay, 2, maxRetries))
+          .setPredicate(this::isRetriable)
+          .build()
+          .call();
+    } catch (RetryException e) {
+      Throwable cause = e.getCause();
+      if (cause instanceof HttpResponseException httpResponseException) {
+        throw handleHttpException(
+            "Failed to send PUT request after retries", httpResponseException);
+      }
+      throw new MobileHarnessException(
+          BasicErrorId.LOCAL_NETWORK_ERROR, "Failed to send PUT request after retries", e);
+    }
+  }
+
   private <T> T executeRequest(
       String method,
       String path,
@@ -407,7 +612,16 @@ public class CloudOrchestratorClient {
       @Nullable Duration timeout)
       throws IOException {
     GenericUrl url = new GenericUrl(rootEndpoint + path);
-    HttpContent content = body != null ? new JsonHttpContent(JSON_FACTORY, body) : null;
+    HttpContent content;
+    // If the body is already HttpContent (e.g. MultipartContent for chunked upload),
+    // use it directly. Otherwise, wrap it in JsonHttpContent if it's not null.
+    if (body instanceof HttpContent httpContent) {
+      content = httpContent;
+    } else if (body != null) {
+      content = new JsonHttpContent(JSON_FACTORY, body);
+    } else {
+      content = null;
+    }
     HttpRequest request = requestFactory.buildRequest(method, url, content);
 
     if (buildApiCreds != null) {
@@ -427,7 +641,14 @@ public class CloudOrchestratorClient {
     HttpResponse response = request.execute();
     try {
       if (responseClass != null) {
-        return response.parseAs(responseClass);
+        try {
+          return response.parseAs(responseClass);
+        } catch (IllegalArgumentException e) {
+          if (e.getMessage().contains("no JSON input found")) {
+            return null;
+          }
+          throw e;
+        }
       }
       return null;
     } finally {
@@ -460,5 +681,22 @@ public class CloudOrchestratorClient {
         AndroidErrorId.ANDROID_CLOUD_ORCHESTRATOR_OPERATION_ERROR,
         String.format("%s: %d %s", message, e.getStatusCode(), e.getMessage()),
         e);
+  }
+
+  /**
+   * Returns true if the exception chain contains an HttpResponseException with the given status
+   * code.
+   */
+  public static boolean hasHttpStatusCode(Throwable t, int statusCode) {
+    Throwable cause = t;
+    while (cause != null) {
+      if (cause instanceof HttpResponseException httpResponseException) {
+        if (httpResponseException.getStatusCode() == statusCode) {
+          return true;
+        }
+      }
+      cause = cause.getCause();
+    }
+    return false;
   }
 }

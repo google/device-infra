@@ -19,6 +19,7 @@ package com.google.wireless.qa.mobileharness.shared.api.device;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
@@ -28,6 +29,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidPro
 import com.google.devtools.mobileharness.platform.android.shared.emulator.AdbWebSocketBridge;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.AndroidJitEmulatorUtil;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudOrchestratorClient;
+import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudOrchestratorLocalImagePreparer;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudOrchestratorMessages.CreateHostRequest;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudOrchestratorMessages.Cvd;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudOrchestratorMessages.DockerInstance;
@@ -38,6 +40,8 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.validator.ValidatorFactory;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import java.io.File;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
@@ -60,6 +64,14 @@ public class AndroidJitEmulator extends AndroidDevice {
 
   @ParamAnnotation(required = false, help = "The build ID of the Android JIT emulator build.")
   public static final String PARAM_BUILD_ID = "android_jit_emulator_build_id";
+
+  @ParamAnnotation(
+      required = false,
+      help = "Path to local host image (e.g., cvd-host_package.tar.gz).")
+  public static final String PARAM_HOST_IMAGE = "android_jit_emulator_host_image";
+
+  @ParamAnnotation(required = false, help = "Path to local device image zip.")
+  public static final String PARAM_DEVICE_IMAGE = "android_jit_emulator_device_image";
 
   // A static lock to ensure only one thread is interacting with Cloud Orchestrator at a time
   // across all instances.
@@ -162,7 +174,7 @@ public class AndroidJitEmulator extends AndroidDevice {
     client.setBasicAuth("user", "");
 
     int port = AndroidJitEmulatorUtil.getPortFromDeviceId(deviceId);
-    String cvdId = "cvd-" + (port > 0 ? port : (deviceId.hashCode() & 0xffff));
+    String cvdId = "cvd-" + port;
 
     List<HostInstance> hosts = client.listHosts();
     String hostId;
@@ -184,13 +196,40 @@ public class AndroidJitEmulator extends AndroidDevice {
         testInfo.jobInfo().params().get(PARAM_TARGET, "aosp_cf_x86_64_only_phone-userdebug");
     String buildId = testInfo.jobInfo().params().get(PARAM_BUILD_ID, "");
 
-    // TODO: Support user-supplied images to launch AVD.
+    String hostImagePath = testInfo.jobInfo().params().get(PARAM_HOST_IMAGE, "");
+    String deviceImagePath = testInfo.jobInfo().params().get(PARAM_DEVICE_IMAGE, "");
 
-    // 1. Fetch artifacts
-    client.fetchArtifactsAndWait(hostId, branch, buildId, target);
+    if (hostImagePath.isEmpty() != deviceImagePath.isEmpty()) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_JIT_EMULATOR_INVALID_PARAMETER_ERROR,
+          String.format(
+              "Both %s and %s must be provided together. Got host_image: %s, device_image: %s",
+              PARAM_HOST_IMAGE, PARAM_DEVICE_IMAGE, hostImagePath, deviceImagePath));
+    }
 
-    // 2. Create CVD with env_config
-    Cvd cvd = client.createCvdWithEnvConfigAndWait(hostId, cvdId, branch, buildId, target);
+    Cvd cvd;
+    if (!hostImagePath.isEmpty() && !deviceImagePath.isEmpty()) {
+      logger.atInfo().log("Using local images to launch AVD.");
+      CloudOrchestratorLocalImagePreparer manager = new CloudOrchestratorLocalImagePreparer(client);
+      try {
+        CloudOrchestratorLocalImagePreparer.ImagePreparationResult result =
+            manager.prepareImagesAndWait(
+                hostId, new File(hostImagePath), new File(deviceImagePath));
+        cvd =
+            client.createCvdWithLocalImageAndWait(
+                hostId,
+                cvdId,
+                result.imageDirId(),
+                result.hostPkgChecksum(),
+                result.deviceImgChecksum());
+      } catch (IOException e) {
+        throw new MobileHarnessException(
+            BasicErrorId.LOCAL_FILE_OR_DIR_NOT_FOUND, "Failed to prepare local images", e);
+      }
+    } else {
+      client.fetchArtifactsAndWait(hostId, branch, buildId, target);
+      cvd = client.createCvdWithEnvConfigAndWait(hostId, cvdId, branch, buildId, target);
+    }
 
     logger.atInfo().log("Created CVD: %s, ADB Serial: %s", cvd.name, cvd.adbSerial);
     this.cvdHostId = hostId;
@@ -274,6 +313,7 @@ public class AndroidJitEmulator extends AndroidDevice {
 
     if (cvdHostId != null && cvdGroup != null) {
       try {
+        logger.atInfo().log("Deleting CVD %s on host %s", cvdGroup, cvdHostId);
         client.deleteCvdAndWait(cvdHostId, cvdGroup);
       } catch (MobileHarnessException e) {
         logger.atWarning().withCause(e).log(
