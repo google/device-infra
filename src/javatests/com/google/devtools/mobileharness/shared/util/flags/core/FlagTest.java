@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.shared.util.flags.core;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.base.Throwables;
 import java.time.Duration;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -56,223 +56,288 @@ public class FlagTest {
 
   @Test
   public void testDefaultValues() {
-    assertThat(FlagsForTesting.foo.get()).isEqualTo(123);
+    assertThat(FlagsForTesting.integerFlag.get()).isEqualTo(123);
   }
 
   @Test
   public void testParseArgs_string_withEquals() {
-    String[] args = {"--bar=new_val"};
-    assertThat(FlagsForTesting.bar.wasSetFromString()).isFalse();
+    String[] args = {"--string_flag=new_val"};
+    assertThat(FlagsForTesting.stringFlag.wasSetFromString()).isFalse();
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.bar.get()).isEqualTo("new_val");
-    assertThat(FlagsForTesting.bar.wasSetFromString()).isTrue();
+    assertThat(FlagsForTesting.stringFlag.get()).isEqualTo("new_val");
+    assertThat(FlagsForTesting.stringFlag.wasSetFromString()).isTrue();
   }
 
   @Test
   public void testParseArgs_integer_withSpace() {
-    String[] args = {"--foo", "456"};
+    String[] args = {"--integer_flag", "456"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.foo.get()).isEqualTo(456);
+    assertThat(FlagsForTesting.integerFlag.get()).isEqualTo(456);
   }
 
   @Test
   public void testParseArgs_integer_invalidValue_throwsException() {
-    String[] args = {"--foo=abc"};
+    String[] args = {"--integer_flag=abc"};
 
     assertThrows(ParameterException.class, () -> FlagsManager.parse(args));
   }
 
   @Test
   public void testParseArgs_boolean_noValue() {
-    String[] args = {"--baz"};
+    String[] args = {"--boolean_flag"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.baz.get()).isTrue();
-    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.get()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.wasSetFromString()).isTrue();
   }
 
   @Test
   public void testParseArgs_boolean_withEquals_true() {
-    String[] args = {"--baz=true"};
+    String[] args = {"--boolean_flag=true"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.baz.get()).isTrue();
-    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.get()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.wasSetFromString()).isTrue();
   }
 
   @Test
   public void testParseArgs_boolean_withEquals_false() {
-    String[] args = {"--baz=false"};
+    String[] args = {"--boolean_flag=false"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.baz.get()).isFalse();
-    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.get()).isFalse();
+    assertThat(FlagsForTesting.booleanFlag.wasSetFromString()).isTrue();
   }
 
   @Test
   public void testParseArgs_boolean_withEquals_yes() {
-    String[] args = {"--baz=yes"};
+    String[] args = {"--boolean_flag=yes"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.baz.get()).isTrue();
-    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.get()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.wasSetFromString()).isTrue();
   }
 
   @Test
   public void testParseArgs_boolean_withEquals_no() {
-    String[] args = {"--baz=no"};
+    String[] args = {"--boolean_flag=no"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.baz.get()).isFalse();
-    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.get()).isFalse();
+    assertThat(FlagsForTesting.booleanFlag.wasSetFromString()).isTrue();
   }
 
   @Test
   public void testParseArgs_boolean_withEquals_y() {
-    String[] args = {"--baz=Y"};
+    String[] args = {"--boolean_flag=Y"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.baz.get()).isTrue();
-    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.get()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.wasSetFromString()).isTrue();
   }
 
   @Test
   public void testParseArgs_boolean_withEquals_n() {
-    String[] args = {"--baz=N"};
+    String[] args = {"--boolean_flag=N"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.baz.get()).isFalse();
-    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.get()).isFalse();
+    assertThat(FlagsForTesting.booleanFlag.wasSetFromString()).isTrue();
   }
 
   @Test
   public void testParseArgs_boolean_withEquals_one() {
-    String[] args = {"--baz=1"};
+    String[] args = {"--boolean_flag=1"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.baz.get()).isTrue();
-    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.get()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.wasSetFromString()).isTrue();
   }
 
   @Test
   public void testParseArgs_boolean_withEquals_zero() {
-    String[] args = {"--baz=0"};
+    String[] args = {"--boolean_flag=0"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.baz.get()).isFalse();
-    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.get()).isFalse();
+    assertThat(FlagsForTesting.booleanFlag.wasSetFromString()).isTrue();
   }
 
   @Test
   public void testParseArgs_boolean_withEquals_empty() {
-    String[] args = {"--baz="};
+    String[] args = {"--boolean_flag="};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.baz.get()).isFalse();
-    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.get()).isFalse();
+    assertThat(FlagsForTesting.booleanFlag.wasSetFromString()).isTrue();
   }
 
   @Test
   public void testParseArgs_boolean_withSpace_false() {
-    String[] args = {"--baz", "false"};
+    String[] args = {"--boolean_flag", "false"};
 
     FlagsManager.parse(args);
 
     // Flag is STILL set to true, "false" is ignored/positional.
-    assertThat(FlagsForTesting.baz.get()).isTrue();
-    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.get()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.wasSetFromString()).isTrue();
   }
 
   @Test
   public void testParseArgs_boolean_withSpace_emptyString() {
-    String[] args = {"--baz", ""};
+    String[] args = {"--boolean_flag", ""};
 
     FlagsManager.parse(args);
 
     // Flag is STILL set to true, "" is ignored/positional.
-    assertThat(FlagsForTesting.baz.get()).isTrue();
-    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.get()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.wasSetFromString()).isTrue();
   }
 
   @Test
   public void testParseArgs_boolean_noPrefixed() {
-    String[] args = {"--nobaz"};
+    String[] args = {"--noboolean_flag"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.baz.get()).isFalse();
-    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.get()).isFalse();
+    assertThat(FlagsForTesting.booleanFlag.wasSetFromString()).isTrue();
   }
 
   @Test
   public void testParseArgs_boolean_noPrefixed_withEquals_empty() {
-    String[] args = {"--nobaz="};
+    String[] args = {"--noboolean_flag="};
 
     assertThrows(ParameterException.class, () -> FlagsManager.parse(args));
   }
 
   @Test
   public void testParseArgs_boolean_noPrefixed_withEquals_true() {
-    String[] args = {"--nobaz=true"};
+    String[] args = {"--noboolean_flag=true"};
 
     assertThrows(ParameterException.class, () -> FlagsManager.parse(args));
   }
 
   @Test
   public void testParseArgs_boolean_noPrefixed_withEquals_false() {
-    String[] args = {"--nobaz=false"};
+    String[] args = {"--noboolean_flag=false"};
 
     assertThrows(ParameterException.class, () -> FlagsManager.parse(args));
   }
 
   @Test
   public void testParseArgs_duration() {
-    String[] args = {"--timeout=1h30m"};
+    String[] args = {"--duration_flag=1h30m"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.timeout.get()).isEqualTo(Duration.ofHours(1).plusMinutes(30));
+    assertThat(FlagsForTesting.durationFlag.get()).isEqualTo(Duration.ofHours(1).plusMinutes(30));
   }
 
   @Test
   public void testParseArgs_enum() {
-    String[] args = {"--testEnum=VALUE_B"};
+    String[] args = {"--enum_flag=VALUE_B"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.testEnum.get()).isEqualTo(FlagsForTesting.TestEnum.VALUE_B);
+    assertThat(FlagsForTesting.enumFlag.get()).isEqualTo(FlagsForTesting.TestEnum.VALUE_B);
   }
 
   @Test
   public void testParseArgs_enum_caseInsensitive_throwsException() {
-    String[] args = {"--testEnum=value_b"};
+    String[] args = {"--enum_flag=value_b"};
 
     assertThrows(ParameterException.class, () -> FlagsManager.parse(args));
   }
 
   @Test
   public void testParseArgs_enumList() {
-    String[] args = {"--enumList=VALUE_A,VALUE_B"};
+    String[] args = {"--enum_list_flag=VALUE_A,VALUE_B"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.enumList.get())
+    assertThat(FlagsForTesting.enumListFlag.get())
         .containsExactly(FlagsForTesting.TestEnum.VALUE_A, FlagsForTesting.TestEnum.VALUE_B)
         .inOrder();
+  }
+
+  @Test
+  public void testParseArgs_validConstraints_success() {
+    String[] args = {
+      "--positive_integer_flag=5",
+      "--nonnegative_integer_flag=0",
+      "--positive_long_flag=15",
+      "--nonnegative_long_flag=0"
+    };
+
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.positiveIntegerFlag.get()).isEqualTo(5);
+    assertThat(FlagsForTesting.nonnegativeIntegerFlag.get()).isEqualTo(0);
+    assertThat(FlagsForTesting.positiveLongFlag.get()).isEqualTo(15L);
+    assertThat(FlagsForTesting.nonnegativeLongFlag.get()).isEqualTo(0L);
+  }
+
+  @Test
+  public void testParseArgs_positiveInt_invalidValue_throwsException() {
+    String[] args = {"--positive_integer_flag=-5"};
+
+    Exception e = assertThrows(Exception.class, () -> FlagsManager.parse(args));
+
+    Throwable rootCause = Throwables.getRootCause(e);
+    assertThat(rootCause).isInstanceOf(IllegalArgumentException.class);
+    assertThat(rootCause).hasMessageThat().contains("must be greater than 0");
+  }
+
+  @Test
+  public void testParseArgs_nonnegativeInt_invalidValue_throwsException() {
+    String[] args = {"--nonnegative_integer_flag=-1"};
+
+    Exception e = assertThrows(Exception.class, () -> FlagsManager.parse(args));
+
+    Throwable rootCause = Throwables.getRootCause(e);
+    assertThat(rootCause).isInstanceOf(IllegalArgumentException.class);
+    assertThat(rootCause).hasMessageThat().contains("must be greater than or equal to 0");
+  }
+
+  @Test
+  public void testParseArgs_nullConstraints_unassigned_success() {
+    assertThat(FlagsForTesting.nullPositiveIntegerFlag.get()).isNull();
+    assertThat(FlagsForTesting.nullNonnegativeIntegerFlag.get()).isNull();
+  }
+
+  @Test
+  public void testParseArgs_nullPositiveInt_validValue_success() {
+    String[] args = {"--null_positive_integer_flag=5"};
+
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.nullPositiveIntegerFlag.get()).isEqualTo(5);
+  }
+
+  @Test
+  public void testParseArgs_nullPositiveInt_invalidValue_throwsException() {
+    String[] args = {"--null_positive_integer_flag=-5"};
+
+    Exception e = assertThrows(Exception.class, () -> FlagsManager.parse(args));
+
+    Throwable rootCause = Throwables.getRootCause(e);
+    assertThat(rootCause).isInstanceOf(IllegalArgumentException.class);
+    assertThat(rootCause).hasMessageThat().contains("must be greater than 0");
   }
 
   // ===============================================================================================
@@ -281,126 +346,128 @@ public class FlagTest {
 
   @Test
   public void testParseArgs_listString_commaSeparated() {
-    String[] args = {"--names=a,b,c"};
+    String[] args = {"--string_list_flag=a,b,c"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.names.get()).containsExactly("a", "b", "c").inOrder();
+    assertThat(FlagsForTesting.stringListFlag.get()).containsExactly("a", "b", "c").inOrder();
   }
 
   @Test
   public void testParseArgs_listString_multipleOccurrences() {
-    String[] args = {"--names=a", "--names=b"};
+    String[] args = {"--string_list_flag=a", "--string_list_flag=b"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.names.get()).containsExactly("b");
+    assertThat(FlagsForTesting.stringListFlag.get()).containsExactly("b");
   }
 
   @Test
   public void testParseArgs_listString_spaceSeparated() {
-    String[] args = {"--names", "a", "b"};
+    String[] args = {"--string_list_flag", "a", "b"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.names.get()).containsExactly("a");
+    assertThat(FlagsForTesting.stringListFlag.get()).containsExactly("a");
   }
 
   @Test
   public void testParseArgs_listString_combined() {
-    String[] args = {"--names=a,b", "--names=c,d"};
+    String[] args = {"--string_list_flag=a,b", "--string_list_flag=c,d"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.names.get()).containsExactly("c", "d").inOrder();
+    assertThat(FlagsForTesting.stringListFlag.get()).containsExactly("c", "d").inOrder();
   }
 
   @Test
   public void testParseArgs_listString_emptyValue() {
-    String[] args = {"--names="};
+    String[] args = {"--string_list_flag="};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.names.get()).isEmpty();
+    assertThat(FlagsForTesting.stringListFlag.get()).isEmpty();
   }
 
   @Test
   public void testParseArgs_listInteger_commaSeparated() {
-    String[] args = {"--ids=1,2,3"};
+    String[] args = {"--integer_list_flag=1,2,3"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.ids.get()).containsExactly(1, 2, 3).inOrder();
+    assertThat(FlagsForTesting.integerListFlag.get()).containsExactly(1, 2, 3).inOrder();
   }
 
   @Test
   public void testParseArgs_listInteger_multipleOccurrences() {
-    String[] args = {"--ids=1", "--ids=2"};
+    String[] args = {"--integer_list_flag=1", "--integer_list_flag=2"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.ids.get()).containsExactly(2);
+    assertThat(FlagsForTesting.integerListFlag.get()).containsExactly(2);
   }
 
   @Test
   public void testParseArgs_listInteger_combined() {
-    String[] args = {"--ids=1,2", "--ids=3,4"};
+    String[] args = {"--integer_list_flag=1,2", "--integer_list_flag=3,4"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.ids.get()).containsExactly(3, 4).inOrder();
+    assertThat(FlagsForTesting.integerListFlag.get()).containsExactly(3, 4).inOrder();
   }
 
   @Test
   public void testParseArgs_listInteger_emptyValue() {
-    String[] args = {"--ids="};
+    String[] args = {"--integer_list_flag="};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.ids.get()).isEmpty();
+    assertThat(FlagsForTesting.integerListFlag.get()).isEmpty();
   }
 
   @Test
   public void testParseArgs_listInteger_invalidValue_throwsException() {
-    String[] args = {"--ids=1,a,2"};
+    String[] args = {"--integer_list_flag=1,a,2"};
 
     assertThrows(ParameterException.class, () -> FlagsManager.parse(args));
   }
 
   @Test
   public void testParseArgs_listBoolean_commaSeparated() {
-    String[] args = {"--boolList=true,yes,1,false"};
+    String[] args = {"--boolean_list_flag=true,yes,1,false"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.boolList.get()).containsExactly(true, true, true, false).inOrder();
+    assertThat(FlagsForTesting.booleanListFlag.get())
+        .containsExactly(true, true, true, false)
+        .inOrder();
   }
 
   @Test
   public void testParseArgs_setInteger_duplicates() {
-    String[] args = {"--idsSet=1,2,1"};
+    String[] args = {"--integer_set_flag=1,2,1"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.idsSet.get()).containsExactly(1, 2).inOrder();
+    assertThat(FlagsForTesting.integerSetFlag.get()).containsExactly(1, 2).inOrder();
   }
 
   @Test
   public void testParseArgs_setInteger_ordering() {
-    String[] args = {"--idsSet=2,1,3"};
+    String[] args = {"--integer_set_flag=2,1,3"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.idsSet.get()).containsExactly(2, 1, 3).inOrder();
+    assertThat(FlagsForTesting.integerSetFlag.get()).containsExactly(2, 1, 3).inOrder();
   }
 
   @Test
   public void testParseArgs_setInteger_duplicates_ordering() {
-    String[] args = {"--idsSet=2,1,2"};
+    String[] args = {"--integer_set_flag=2,1,2"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.idsSet.get()).containsExactly(2, 1).inOrder();
+    assertThat(FlagsForTesting.integerSetFlag.get()).containsExactly(2, 1).inOrder();
   }
 
   // ===============================================================================================
@@ -409,77 +476,74 @@ public class FlagTest {
 
   @Test
   public void testParseArgs_mapString_commaSeparated() {
-    String[] args = {"--stringMap=k1=v1,k2=v2"};
+    String[] args = {"--string_string_map_flag=k1=v1,k2=v2"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.stringMap.get())
-        .containsExactlyEntriesIn(ImmutableMap.of("k1", "v1", "k2", "v2"));
+    assertThat(FlagsForTesting.stringStringMapFlag.get()).containsExactly("k1", "v1", "k2", "v2");
   }
 
   @Test
   public void testParseArgs_mapNonStringKey_commaSeparated() {
-    String[] args = {"--intKeyMap=1=v1,2=v2"};
+    String[] args = {"--integer_string_map_flag=1=v1,2=v2"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.intKeyMap.get())
-        .containsExactlyEntriesIn(ImmutableMap.of(1, "v1", 2, "v2"));
+    assertThat(FlagsForTesting.integerStringMapFlag.get()).containsExactly(1, "v1", 2, "v2");
   }
 
   @Test
   public void testParseArgs_mapString_multipleOccurrences_overwrites() {
-    String[] args = {"--stringMap=k1=v1", "--stringMap=k2=v2"};
+    String[] args = {"--string_string_map_flag=k1=v1", "--string_string_map_flag=k2=v2"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.stringMap.get())
-        .containsExactlyEntriesIn(ImmutableMap.of("k2", "v2"));
+    assertThat(FlagsForTesting.stringStringMapFlag.get()).containsExactly("k2", "v2");
   }
 
   @Test
   public void testParseArgs_mapString_emptyValue() {
-    String[] args = {"--stringMap="};
+    String[] args = {"--string_string_map_flag="};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.stringMap.get()).isEmpty();
+    assertThat(FlagsForTesting.stringStringMapFlag.get()).isEmpty();
   }
 
   @Test
   public void testParseArgs_mapValueParsing_integerAndDuration() {
-    String[] args = {"--intMap=k1=123,k2=456", "--durationMap=t1=1h30m"};
+    String[] args = {
+      "--string_integer_map_flag=k1=123,k2=456", "--string_duration_map_flag=t1=1h30m"
+    };
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.intMap.get())
-        .containsExactlyEntriesIn(ImmutableMap.of("k1", 123, "k2", 456));
-    assertThat(FlagsForTesting.durationMap.get())
-        .containsExactlyEntriesIn(ImmutableMap.of("t1", Duration.ofHours(1).plusMinutes(30)));
+    assertThat(FlagsForTesting.stringIntegerMapFlag.get()).containsExactly("k1", 123, "k2", 456);
+    assertThat(FlagsForTesting.stringDurationMapFlag.get())
+        .containsExactly("t1", Duration.ofHours(1).plusMinutes(30));
   }
 
   @Test
   public void testParseArgs_mapString_duplicateKeysInSingleArg_throwsException() {
-    String[] args = {"--stringMap=k1=v1,k1=v2"};
+    String[] args = {"--string_string_map_flag=k1=v1,k1=v2"};
 
     assertThrows(Exception.class, () -> FlagsManager.parse(args));
   }
 
   @Test
   public void testParseArgs_mapString_entrySyntaxError_throwsException() {
-    String[] args = {"--stringMap=k1v1"};
+    String[] args = {"--string_string_map_flag=k1v1"};
 
     assertThrows(Exception.class, () -> FlagsManager.parse(args));
   }
 
   @Test
   public void testParseArgs_mapString_whitespaceTrimming() {
-    String[] args = {"--stringMap= k1 = v1 , k2 = v2 "};
+    String[] args = {"--string_string_map_flag= k1 = v1 , k2 = v2 "};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.stringMap.get())
-        .containsExactlyEntriesIn(ImmutableMap.of("k1", "v1", "k2", "v2"));
+    assertThat(FlagsForTesting.stringStringMapFlag.get()).containsExactly("k1", "v1", "k2", "v2");
   }
 
   // ===============================================================================================
@@ -495,11 +559,11 @@ public class FlagTest {
 
   @Test
   public void testUnknownFlagIgnored() {
-    String[] args = {"--foo=20", "--unknown=abc"};
+    String[] args = {"--integer_flag=20", "--unknown=abc"};
 
     FlagsManager.parse(args);
 
-    assertThat(FlagsForTesting.foo.get()).isEqualTo(20);
+    assertThat(FlagsForTesting.integerFlag.get()).isEqualTo(20);
   }
 
   // ===============================================================================================
@@ -508,57 +572,57 @@ public class FlagTest {
 
   @Test
   public void testSetFlagsRule() {
-    setFlags.set("bar", "value_from_rule");
+    setFlags.set("string_flag", "value_from_rule");
 
-    assertThat(FlagsForTesting.bar.get()).isEqualTo("value_from_rule");
-    assertThat(FlagsForTesting.bar.wasSetFromString()).isTrue();
+    assertThat(FlagsForTesting.stringFlag.get()).isEqualTo("value_from_rule");
+    assertThat(FlagsForTesting.stringFlag.wasSetFromString()).isTrue();
 
     setFlags.reset();
 
-    assertThat(FlagsForTesting.bar.get()).isEqualTo("default_bar");
-    assertThat(FlagsForTesting.bar.wasSetFromString()).isFalse();
+    assertThat(FlagsForTesting.stringFlag.get()).isEqualTo("default_bar");
+    assertThat(FlagsForTesting.stringFlag.wasSetFromString()).isFalse();
   }
 
   @Test
   public void testSetFlagsRule_restoresToCommandLineValue() {
-    FlagsManager.parse(new String[] {"--bar=global_val"});
+    FlagsManager.parse(new String[] {"--string_flag=global_val"});
 
-    assertThat(FlagsForTesting.bar.get()).isEqualTo("global_val");
+    assertThat(FlagsForTesting.stringFlag.get()).isEqualTo("global_val");
 
-    setFlags.set("bar", "rule_val");
+    setFlags.set("string_flag", "rule_val");
 
-    assertThat(FlagsForTesting.bar.get()).isEqualTo("rule_val");
+    assertThat(FlagsForTesting.stringFlag.get()).isEqualTo("rule_val");
 
     setFlags.reset();
 
-    assertThat(FlagsForTesting.bar.get()).isEqualTo("global_val");
+    assertThat(FlagsForTesting.stringFlag.get()).isEqualTo("global_val");
   }
 
   @Test
   public void testSetFlagsRule_multipleOverrides_restoresToOriginal() {
-    String originalVal = FlagsForTesting.bar.get();
+    String originalVal = FlagsForTesting.stringFlag.get();
 
-    setFlags.set("bar", "value_1");
-    setFlags.set("bar", "value_2");
+    setFlags.set("string_flag", "value_1");
+    setFlags.set("string_flag", "value_2");
 
-    assertThat(FlagsForTesting.bar.get()).isEqualTo("value_2");
+    assertThat(FlagsForTesting.stringFlag.get()).isEqualTo("value_2");
 
     setFlags.reset();
 
-    assertThat(FlagsForTesting.bar.get()).isEqualTo(originalVal);
+    assertThat(FlagsForTesting.stringFlag.get()).isEqualTo(originalVal);
   }
 
   @Test
   public void testSetFlagsRule_setNull() {
-    setFlags.set("bar", null);
+    setFlags.set("nullable_string_flag", null);
 
-    assertThat(FlagsForTesting.bar.get()).isNull();
-    assertThat(FlagsForTesting.bar.wasSetFromString()).isTrue();
+    assertThat(FlagsForTesting.nullableStringFlag.get()).isNull();
+    assertThat(FlagsForTesting.nullableStringFlag.wasSetFromString()).isTrue();
 
     setFlags.reset();
 
-    assertThat(FlagsForTesting.bar.get()).isEqualTo("default_bar");
-    assertThat(FlagsForTesting.bar.wasSetFromString()).isFalse();
+    assertThat(FlagsForTesting.nullableStringFlag.get()).isNull();
+    assertThat(FlagsForTesting.nullableStringFlag.wasSetFromString()).isFalse();
   }
 
   @Test
@@ -568,20 +632,49 @@ public class FlagTest {
 
   @Test
   public void testSetFlagsRule_invalidType_throwsException() {
-    assertThrows(RuntimeException.class, () -> setFlags.set("foo", "not_a_number"));
+    assertThrows(RuntimeException.class, () -> setFlags.set("integer_flag", "not_a_number"));
   }
 
   @Test
   public void testSetFlagsRule_noPrefixed() {
-    setFlags.set("nobaz", null);
+    setFlags.set("noboolean_flag", null);
 
-    assertThat(FlagsForTesting.baz.get()).isFalse();
-    assertThat(FlagsForTesting.baz.wasSetFromString()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.get()).isFalse();
+    assertThat(FlagsForTesting.booleanFlag.wasSetFromString()).isTrue();
   }
 
   @Test
   public void testSetFlagsRule_noPrefixed_withValue_throwsException() {
-    assertThrows(IllegalArgumentException.class, () -> setFlags.set("nobaz", "true"));
+    assertThrows(IllegalArgumentException.class, () -> setFlags.set("noboolean_flag", "true"));
+  }
+
+  @Test
+  public void testSetFlagsRule_positiveInt_invalidValue_throwsException() {
+    Exception e = assertThrows(Exception.class, () -> setFlags.set("positive_integer_flag", "-5"));
+
+    Throwable rootCause = Throwables.getRootCause(e);
+    assertThat(rootCause).isInstanceOf(IllegalArgumentException.class);
+    assertThat(rootCause).hasMessageThat().contains("must be greater than 0");
+  }
+
+  @Test
+  public void testSetFlagsRule_nonnegativeInt_invalidValue_throwsException() {
+    Exception e =
+        assertThrows(Exception.class, () -> setFlags.set("nonnegative_integer_flag", "-1"));
+
+    Throwable rootCause = Throwables.getRootCause(e);
+    assertThat(rootCause).isInstanceOf(IllegalArgumentException.class);
+    assertThat(rootCause).hasMessageThat().contains("must be greater than or equal to 0");
+  }
+
+  @Test
+  public void testSetFlagsRule_nullPositiveInt_invalidValue_throwsException() {
+    Exception e =
+        assertThrows(Exception.class, () -> setFlags.set("null_positive_integer_flag", "-5"));
+
+    Throwable rootCause = Throwables.getRootCause(e);
+    assertThat(rootCause).isInstanceOf(IllegalArgumentException.class);
+    assertThat(rootCause).hasMessageThat().contains("must be greater than 0");
   }
 
   // ===============================================================================================
@@ -709,6 +802,38 @@ public class FlagTest {
           assertThrows(IllegalStateException.class, () -> FlagsManager.parse(new String[0]));
 
       assertThat(e).hasMessageThat().contains("must not contain raw types");
+    } finally {
+      FlagsManager.setFlagsClassForTest(FlagsForTesting.class);
+    }
+  }
+
+  @Test
+  public void testScanFlags_invalidPositiveIntegerDefaultValue_throwsException() {
+    FlagsManager.setFlagsClassForTest(
+        InvalidFlagsForTesting.InvalidPositiveIntegerDefaultValue.class);
+
+    try {
+      ExceptionInInitializerError e =
+          assertThrows(ExceptionInInitializerError.class, () -> FlagsManager.parse(new String[0]));
+
+      assertThat(e).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
+      assertThat(e).hasCauseThat().hasMessageThat().contains("must be greater than 0");
+    } finally {
+      FlagsManager.setFlagsClassForTest(FlagsForTesting.class);
+    }
+  }
+
+  @Test
+  public void testScanFlags_invalidNonnegativeIntegerDefaultValue_throwsException() {
+    FlagsManager.setFlagsClassForTest(
+        InvalidFlagsForTesting.InvalidNonnegativeIntegerDefaultValue.class);
+
+    try {
+      ExceptionInInitializerError e =
+          assertThrows(ExceptionInInitializerError.class, () -> FlagsManager.parse(new String[0]));
+
+      assertThat(e).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
+      assertThat(e).hasCauseThat().hasMessageThat().contains("must be greater than or equal to 0");
     } finally {
       FlagsManager.setFlagsClassForTest(FlagsForTesting.class);
     }

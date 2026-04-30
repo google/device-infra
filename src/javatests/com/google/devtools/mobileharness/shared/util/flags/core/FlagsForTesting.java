@@ -27,52 +27,76 @@ import java.util.Set;
 /** Flags for testing. */
 public class FlagsForTesting {
 
-  @FlagSpec(name = "foo", help = "An integer flag.")
-  public static final Flag<Integer> foo = Flag.value(123);
+  @FlagSpec(name = "boolean_flag", help = "Boolean flag.")
+  public static final Flag<Boolean> booleanFlag = Flag.value(false);
 
-  @FlagSpec(name = "bar", help = "A string flag.")
-  public static final Flag<String> bar = Flag.value("default_bar");
+  @FlagSpec(name = "boolean_list_flag", help = "Boolean list flag.")
+  public static final Flag<List<Boolean>> booleanListFlag = Flag.value(ImmutableList.of());
 
-  @FlagSpec(name = "baz", help = "A boolean flag.")
-  public static final Flag<Boolean> baz = Flag.value(false);
+  @FlagSpec(name = "duration_flag", help = "Duration flag.")
+  public static final Flag<Duration> durationFlag = Flag.value(Duration.ZERO);
 
-  @FlagSpec(name = "timeout", help = "A duration flag.")
-  public static final Flag<Duration> timeout = Flag.value(Duration.ZERO);
+  @FlagSpec(name = "enum_flag", help = "Enum flag.")
+  public static final Flag<TestEnum> enumFlag = Flag.value(TestEnum.VALUE_A);
 
-  @FlagSpec(name = "names", help = "A list of strings.")
-  public static final Flag<List<String>> names = Flag.value(ImmutableList.of());
+  @FlagSpec(name = "enum_list_flag", help = "Enum list flag.")
+  public static final Flag<List<TestEnum>> enumListFlag = Flag.value(ImmutableList.of());
 
-  @FlagSpec(name = "ids", help = "A list of integers.")
-  public static final Flag<List<Integer>> ids = Flag.value(ImmutableList.of());
+  @FlagSpec(name = "integer_flag", help = "Integer flag.")
+  public static final Flag<Integer> integerFlag = Flag.value(123);
 
-  @FlagSpec(name = "boolList", help = "A list of booleans.")
-  public static final Flag<List<Boolean>> boolList = Flag.value(ImmutableList.of());
+  @FlagSpec(name = "integer_list_flag", help = "Integer list flag.")
+  public static final Flag<List<Integer>> integerListFlag = Flag.value(ImmutableList.of());
 
-  @FlagSpec(name = "idsSet", help = "A set of integers.")
-  public static final Flag<Set<Integer>> idsSet = Flag.value(ImmutableSet.of());
+  @FlagSpec(name = "integer_set_flag", help = "Integer set flag.")
+  public static final Flag<Set<Integer>> integerSetFlag = Flag.value(ImmutableSet.of());
 
-  @FlagSpec(name = "stringMap", help = "A map of strings.")
-  public static final Flag<Map<String, String>> stringMap = Flag.value(ImmutableMap.of());
+  @FlagSpec(name = "integer_string_map_flag", help = "Integer string map flag.")
+  public static final Flag<Map<Integer, String>> integerStringMapFlag =
+      Flag.value(ImmutableMap.of());
 
-  @FlagSpec(name = "intMap", help = "A map of string keys to integer values.")
-  public static final Flag<Map<String, Integer>> intMap = Flag.value(ImmutableMap.of());
+  @FlagSpec(name = "nonnegative_integer_flag", help = "Non-negative integer flag.")
+  public static final Flag<Integer> nonnegativeIntegerFlag = Flag.nonnegativeValue(0);
 
-  @FlagSpec(name = "durationMap", help = "A map of string keys to duration values.")
-  public static final Flag<Map<String, Duration>> durationMap = Flag.value(ImmutableMap.of());
+  @FlagSpec(name = "nonnegative_long_flag", help = "Non-negative long flag.")
+  public static final Flag<Long> nonnegativeLongFlag = Flag.nonnegativeValue(0L);
 
-  @FlagSpec(name = "intKeyMap", help = "A map of integer keys to string values.")
-  public static final Flag<Map<Integer, String>> intKeyMap = Flag.value(ImmutableMap.of());
+  @FlagSpec(name = "nullable_string_flag", help = "Nullable string flag.")
+  public static final Flag<String> nullableStringFlag = Flag.nullString();
+
+  @FlagSpec(name = "null_nonnegative_integer_flag", help = "Null non-negative integer flag.")
+  public static final Flag<Integer> nullNonnegativeIntegerFlag = Flag.nullNonnegativeValue();
+
+  @FlagSpec(name = "null_positive_integer_flag", help = "Null positive integer flag.")
+  public static final Flag<Integer> nullPositiveIntegerFlag = Flag.nullPositiveValue();
+
+  @FlagSpec(name = "positive_integer_flag", help = "Positive integer flag.")
+  public static final Flag<Integer> positiveIntegerFlag = Flag.positiveValue(10);
+
+  @FlagSpec(name = "positive_long_flag", help = "Positive long flag.")
+  public static final Flag<Long> positiveLongFlag = Flag.positiveValue(10L);
+
+  @FlagSpec(name = "string_duration_map_flag", help = "String duration map flag.")
+  public static final Flag<Map<String, Duration>> stringDurationMapFlag =
+      Flag.value(ImmutableMap.of());
+
+  @FlagSpec(name = "string_flag", help = "String flag.")
+  public static final Flag<String> stringFlag = Flag.value("default_bar");
+
+  @FlagSpec(name = "string_integer_map_flag", help = "String integer map flag.")
+  public static final Flag<Map<String, Integer>> stringIntegerMapFlag =
+      Flag.value(ImmutableMap.of());
+
+  @FlagSpec(name = "string_list_flag", help = "String list flag.")
+  public static final Flag<List<String>> stringListFlag = Flag.value(ImmutableList.of());
+
+  @FlagSpec(name = "string_string_map_flag", help = "String string map flag.")
+  public static final Flag<Map<String, String>> stringStringMapFlag = Flag.value(ImmutableMap.of());
 
   public enum TestEnum {
     VALUE_A,
     VALUE_B,
   }
-
-  @FlagSpec(name = "testEnum", help = "A test enum flag.")
-  public static final Flag<TestEnum> testEnum = Flag.value(TestEnum.VALUE_A);
-
-  @FlagSpec(name = "enumList", help = "A list of test enums.")
-  public static final Flag<List<TestEnum>> enumList = Flag.value(ImmutableList.of());
 
   private FlagsForTesting() {}
 }

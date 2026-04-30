@@ -108,5 +108,19 @@ public class InvalidFlagsForTesting {
     private RawClassFlag() {}
   }
 
+  public static class InvalidPositiveIntegerDefaultValue {
+    @FlagSpec(name = "invalid_pos_int_def", help = "help")
+    public static final Flag<Integer> flag = Flag.positiveValue(-1);
+
+    private InvalidPositiveIntegerDefaultValue() {}
+  }
+
+  public static class InvalidNonnegativeIntegerDefaultValue {
+    @FlagSpec(name = "invalid_nonneg_int_def", help = "help")
+    public static final Flag<Integer> flag = Flag.nonnegativeValue(-1);
+
+    private InvalidNonnegativeIntegerDefaultValue() {}
+  }
+
   private InvalidFlagsForTesting() {}
 }
