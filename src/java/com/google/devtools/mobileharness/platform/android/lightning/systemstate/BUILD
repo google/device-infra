@@ -48,10 +48,7 @@ java_library(
     srcs = [
         "AndroidFrpUtil.java",
     ],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-        "//:omnilab_fusion",
-    ],
+    visibility = ["//:deviceinfra_all_pkg"],
     deps = [
         ":systemstate",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
