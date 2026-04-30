@@ -109,6 +109,25 @@ public final class Flag<T> {
         baseValidator.validate(value);
       };
     }
+
+    /**
+     * Returns a validator that checks the value is within the specified closed interval [lower,
+     * upper].
+     */
+    static <T extends Comparable<T>> Validator<T> interval(T lower, T upper) {
+      checkNotNull(lower);
+      checkNotNull(upper);
+      checkArgument(lower.compareTo(upper) <= 0, "Lower bound must be <= upper bound");
+      return value -> {
+        checkNotNull(value, "Flag value must not be null");
+        checkArgument(
+            value.compareTo(lower) >= 0 && value.compareTo(upper) <= 0,
+            "Flag value must be in interval [%s, %s] (provided: %s)",
+            lower,
+            upper,
+            value);
+      };
+    }
   }
 
   public static <T> Flag<T> value(@Nullable T defaultValue) {

@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.shared.util.flags.core;
 
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.HashMap;
 import java.util.Map;
 import javax.annotation.Nullable;
@@ -31,20 +32,27 @@ public class SetFlags implements TestRule {
   /**
    * Overrides the value of a flag by its name.
    *
-   * @throws IllegalArgumentException if the flag name is unknown
+   * @throws IllegalStateException if the flag name is unknown
    */
-  public void set(String name, String value) {
+  @CanIgnoreReturnValue
+  public SetFlags set(String name, String value) {
     FlagsManager.FlagEntry entry = FlagsManager.getFlagByName(name);
     saveBackup(entry.flag());
     FlagsManager.setFromString(entry, value);
+    return this;
   }
 
-  /** Immediately restores all flags modified by this rule to their state before modification. */
-  public void reset() {
-    for (FlagBackup backup : backups.values()) {
-      backup.restore();
-    }
-    backups.clear();
+  /**
+   * Resets the value of a flag to its default value by its name.
+   *
+   * @throws IllegalStateException if the flag name is unknown
+   */
+  @CanIgnoreReturnValue
+  public SetFlags reset(String name) {
+    FlagsManager.FlagEntry entry = FlagsManager.getFlagByName(name);
+    saveBackup(entry.flag());
+    entry.flag().resetForTest();
+    return this;
   }
 
   @Override
@@ -55,6 +63,14 @@ public class SetFlags implements TestRule {
   private void saveBackup(Flag<?> flag) {
     backups.computeIfAbsent(
         flag, (Flag<?> key) -> new FlagBackup(key, key.get(), key.wasSetFromString()));
+  }
+
+  /** Immediately restores all flags modified by this rule to their state before modification. */
+  private void restoreFlags() {
+    for (FlagBackup backup : backups.values()) {
+      backup.restore();
+    }
+    backups.clear();
   }
 
   private class SetFlagsStatement extends Statement {
@@ -70,7 +86,7 @@ public class SetFlags implements TestRule {
       try {
         base.evaluate();
       } finally {
-        reset();
+        restoreFlags();
       }
     }
   }

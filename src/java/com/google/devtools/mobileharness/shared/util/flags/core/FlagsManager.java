@@ -35,7 +35,6 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.time.Duration;
 import java.util.Collection;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
@@ -105,7 +104,7 @@ public final class FlagsManager {
     ensureFlagsScanned();
 
     FlagEntry entry = allFlags.get(name);
-    checkArgument(entry != null, "Unknown flag name: %s", name);
+    checkState(entry != null, "Unknown flag name: %s", name);
     return entry;
   }
 
@@ -344,30 +343,21 @@ public final class FlagsManager {
         return true;
       }
 
-      Map<String, String> parsedEntries = new LinkedHashMap<>();
-      for (String entry : ENTRY_SPLITTER.split(text)) {
-        int keyValueSeparatorIndex = entry.indexOf(KEY_VALUE_SEPARATOR);
-        if (keyValueSeparatorIndex == -1) {
-          throw new ParameterException(
-              commandSpec.commandLine(), "Invalid map entry syntax: " + entry);
-        }
-        String keyString = entry.substring(0, keyValueSeparatorIndex).trim();
-        String valueString = entry.substring(keyValueSeparatorIndex + 1).trim();
-
-        // Checks duplicated keys.
-        if (parsedEntries.containsKey(keyString)) {
-          throw new ParameterException(
-              commandSpec.commandLine(),
-              String.format("Duplicate map key '%s' in '%s'", keyString, text));
-        }
-
-        parsedEntries.put(keyString, valueString);
-      }
-
-      // Normalizes whitespace trimmed string and returns back to Picocli processor.
+      // Removes white spaces.
       String normalizedText =
-          parsedEntries.entrySet().stream()
-              .map(e -> e.getKey() + KEY_VALUE_SEPARATOR + e.getValue())
+          ENTRY_SPLITTER
+              .splitToStream(text)
+              .map(
+                  entry -> {
+                    int separatorIndex = entry.indexOf(KEY_VALUE_SEPARATOR);
+                    if (separatorIndex == -1) {
+                      throw new ParameterException(
+                          commandSpec.commandLine(), "Invalid map entry syntax: " + entry);
+                    }
+                    return entry.substring(0, separatorIndex).trim()
+                        + KEY_VALUE_SEPARATOR
+                        + entry.substring(separatorIndex + 1).trim();
+                  })
               .collect(Collectors.joining(ENTRY_SEPARATOR));
       args.push(normalizedText);
 

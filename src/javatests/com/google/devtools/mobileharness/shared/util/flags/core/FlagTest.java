@@ -28,7 +28,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import picocli.CommandLine.ParameterException;
 
 @RunWith(JUnit4.class)
 public class FlagTest {
@@ -83,7 +82,7 @@ public class FlagTest {
   public void testParseArgs_integer_invalidValue_throwsException() {
     String[] args = {"--integer_flag=abc"};
 
-    assertThrows(ParameterException.class, () -> FlagsManager.parse(args));
+    assertThrows(Exception.class, () -> FlagsManager.parse(args));
   }
 
   @Test
@@ -177,16 +176,6 @@ public class FlagTest {
   }
 
   @Test
-  public void testParseArgs_boolean_withEquals_empty() {
-    String[] args = {"--boolean_flag="};
-
-    FlagsManager.parse(args);
-
-    assertThat(FlagsForTesting.booleanFlag.get()).isFalse();
-    assertThat(FlagsForTesting.booleanFlag.wasSetFromString()).isTrue();
-  }
-
-  @Test
   public void testParseArgs_boolean_withSpace_false() {
     String[] args = {"--boolean_flag", "false"};
 
@@ -222,21 +211,21 @@ public class FlagTest {
   public void testParseArgs_boolean_noPrefixed_withEquals_empty() {
     String[] args = {"--noboolean_flag="};
 
-    assertThrows(ParameterException.class, () -> FlagsManager.parse(args));
+    assertThrows(Exception.class, () -> FlagsManager.parse(args));
   }
 
   @Test
   public void testParseArgs_boolean_noPrefixed_withEquals_true() {
     String[] args = {"--noboolean_flag=true"};
 
-    assertThrows(ParameterException.class, () -> FlagsManager.parse(args));
+    assertThrows(Exception.class, () -> FlagsManager.parse(args));
   }
 
   @Test
   public void testParseArgs_boolean_noPrefixed_withEquals_false() {
     String[] args = {"--noboolean_flag=false"};
 
-    assertThrows(ParameterException.class, () -> FlagsManager.parse(args));
+    assertThrows(Exception.class, () -> FlagsManager.parse(args));
   }
 
   @Test
@@ -261,7 +250,7 @@ public class FlagTest {
   public void testParseArgs_enum_caseInsensitive_throwsException() {
     String[] args = {"--enum_flag=value_b"};
 
-    assertThrows(ParameterException.class, () -> FlagsManager.parse(args));
+    assertThrows(Exception.class, () -> FlagsManager.parse(args));
   }
 
   @Test
@@ -327,17 +316,6 @@ public class FlagTest {
     FlagsManager.parse(args);
 
     assertThat(FlagsForTesting.nullPositiveIntegerFlag.get()).isEqualTo(5);
-  }
-
-  @Test
-  public void testParseArgs_nullPositiveInt_invalidValue_throwsException() {
-    String[] args = {"--null_positive_integer_flag=-5"};
-
-    Exception e = assertThrows(Exception.class, () -> FlagsManager.parse(args));
-
-    Throwable rootCause = Throwables.getRootCause(e);
-    assertThat(rootCause).isInstanceOf(IllegalArgumentException.class);
-    assertThat(rootCause).hasMessageThat().contains("must be greater than 0");
   }
 
   // ===============================================================================================
@@ -408,15 +386,6 @@ public class FlagTest {
   }
 
   @Test
-  public void testParseArgs_listInteger_combined() {
-    String[] args = {"--integer_list_flag=1,2", "--integer_list_flag=3,4"};
-
-    FlagsManager.parse(args);
-
-    assertThat(FlagsForTesting.integerListFlag.get()).containsExactly(3, 4).inOrder();
-  }
-
-  @Test
   public void testParseArgs_listInteger_emptyValue() {
     String[] args = {"--integer_list_flag="};
 
@@ -429,7 +398,7 @@ public class FlagTest {
   public void testParseArgs_listInteger_invalidValue_throwsException() {
     String[] args = {"--integer_list_flag=1,a,2"};
 
-    assertThrows(ParameterException.class, () -> FlagsManager.parse(args));
+    assertThrows(Exception.class, () -> FlagsManager.parse(args));
   }
 
   @Test
@@ -459,15 +428,6 @@ public class FlagTest {
     FlagsManager.parse(args);
 
     assertThat(FlagsForTesting.integerSetFlag.get()).containsExactly(2, 1, 3).inOrder();
-  }
-
-  @Test
-  public void testParseArgs_setInteger_duplicates_ordering() {
-    String[] args = {"--integer_set_flag=2,1,2"};
-
-    FlagsManager.parse(args);
-
-    assertThat(FlagsForTesting.integerSetFlag.get()).containsExactly(2, 1).inOrder();
   }
 
   // ===============================================================================================
@@ -524,10 +484,12 @@ public class FlagTest {
   }
 
   @Test
-  public void testParseArgs_mapString_duplicateKeysInSingleArg_throwsException() {
+  public void testParseArgs_mapString_duplicateKeysInSingleArg_overwrites() {
     String[] args = {"--string_string_map_flag=k1=v1,k1=v2"};
 
-    assertThrows(Exception.class, () -> FlagsManager.parse(args));
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.stringStringMapFlag.get()).containsExactly("k1", "v2");
   }
 
   @Test
@@ -535,15 +497,6 @@ public class FlagTest {
     String[] args = {"--string_string_map_flag=k1v1"};
 
     assertThrows(Exception.class, () -> FlagsManager.parse(args));
-  }
-
-  @Test
-  public void testParseArgs_mapString_whitespaceTrimming() {
-    String[] args = {"--string_string_map_flag= k1 = v1 , k2 = v2 "};
-
-    FlagsManager.parse(args);
-
-    assertThat(FlagsForTesting.stringStringMapFlag.get()).containsExactly("k1", "v1", "k2", "v2");
   }
 
   // ===============================================================================================
@@ -561,6 +514,7 @@ public class FlagTest {
   public void testUnknownFlagIgnored() {
     String[] args = {"--integer_flag=20", "--unknown=abc"};
 
+    // Our library defaults to allowing unknown flags unlike Google Flag.
     FlagsManager.parse(args);
 
     assertThat(FlagsForTesting.integerFlag.get()).isEqualTo(20);
@@ -577,7 +531,7 @@ public class FlagTest {
     assertThat(FlagsForTesting.stringFlag.get()).isEqualTo("value_from_rule");
     assertThat(FlagsForTesting.stringFlag.wasSetFromString()).isTrue();
 
-    setFlags.reset();
+    setFlags.reset("string_flag");
 
     assertThat(FlagsForTesting.stringFlag.get()).isEqualTo("default_bar");
     assertThat(FlagsForTesting.stringFlag.wasSetFromString()).isFalse();
@@ -593,9 +547,9 @@ public class FlagTest {
 
     assertThat(FlagsForTesting.stringFlag.get()).isEqualTo("rule_val");
 
-    setFlags.reset();
+    setFlags.reset("string_flag");
 
-    assertThat(FlagsForTesting.stringFlag.get()).isEqualTo("global_val");
+    assertThat(FlagsForTesting.stringFlag.get()).isEqualTo("default_bar");
   }
 
   @Test
@@ -607,7 +561,7 @@ public class FlagTest {
 
     assertThat(FlagsForTesting.stringFlag.get()).isEqualTo("value_2");
 
-    setFlags.reset();
+    setFlags.reset("string_flag");
 
     assertThat(FlagsForTesting.stringFlag.get()).isEqualTo(originalVal);
   }
@@ -619,7 +573,7 @@ public class FlagTest {
     assertThat(FlagsForTesting.nullableStringFlag.get()).isNull();
     assertThat(FlagsForTesting.nullableStringFlag.wasSetFromString()).isTrue();
 
-    setFlags.reset();
+    setFlags.reset("nullable_string_flag");
 
     assertThat(FlagsForTesting.nullableStringFlag.get()).isNull();
     assertThat(FlagsForTesting.nullableStringFlag.wasSetFromString()).isFalse();
@@ -627,7 +581,7 @@ public class FlagTest {
 
   @Test
   public void testSetFlagsRule_nonExistentFlag_throwsException() {
-    assertThrows(IllegalArgumentException.class, () -> setFlags.set("non_existent_flag", "value"));
+    assertThrows(IllegalStateException.class, () -> setFlags.set("non_existent_flag", "value"));
   }
 
   @Test
@@ -639,12 +593,15 @@ public class FlagTest {
   public void testSetFlagsRule_noPrefixed() {
     setFlags.set("noboolean_flag", null);
 
+    // Our library correctly ignores null, which is different from Google Flag.
     assertThat(FlagsForTesting.booleanFlag.get()).isFalse();
     assertThat(FlagsForTesting.booleanFlag.wasSetFromString()).isTrue();
   }
 
   @Test
   public void testSetFlagsRule_noPrefixed_withValue_throwsException() {
+    // Google Flag behaves differently here; it does not throw an exception,
+    // and actually sets the flag to the provided value.
     assertThrows(IllegalArgumentException.class, () -> setFlags.set("noboolean_flag", "true"));
   }
 

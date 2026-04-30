@@ -18,13 +18,14 @@ package com.google.devtools.mobileharness.shared.util.flags.core;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.shared.util.flags.core.ext.DurationFlag;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /** Flags for testing. */
+@SuppressWarnings("NonPrivateFlag")
 public class FlagsForTesting {
 
   @FlagSpec(name = "boolean_flag", help = "Boolean flag.")
@@ -34,22 +35,22 @@ public class FlagsForTesting {
   public static final Flag<List<Boolean>> booleanListFlag = Flag.value(ImmutableList.of());
 
   @FlagSpec(name = "duration_flag", help = "Duration flag.")
-  public static final Flag<Duration> durationFlag = Flag.value(Duration.ZERO);
+  public static final Flag<Duration> durationFlag = DurationFlag.zero();
 
   @FlagSpec(name = "enum_flag", help = "Enum flag.")
   public static final Flag<TestEnum> enumFlag = Flag.value(TestEnum.VALUE_A);
 
   @FlagSpec(name = "enum_list_flag", help = "Enum list flag.")
-  public static final Flag<List<TestEnum>> enumListFlag = Flag.value(ImmutableList.of());
+  public static final Flag<List<TestEnum>> enumListFlag = Flag.enumList(TestEnum.class);
 
   @FlagSpec(name = "integer_flag", help = "Integer flag.")
   public static final Flag<Integer> integerFlag = Flag.value(123);
 
   @FlagSpec(name = "integer_list_flag", help = "Integer list flag.")
-  public static final Flag<List<Integer>> integerListFlag = Flag.value(ImmutableList.of());
+  public static final Flag<List<Integer>> integerListFlag = Flag.integerList();
 
   @FlagSpec(name = "integer_set_flag", help = "Integer set flag.")
-  public static final Flag<Set<Integer>> integerSetFlag = Flag.value(ImmutableSet.of());
+  public static final Flag<Set<Integer>> integerSetFlag = Flag.integerSet();
 
   @FlagSpec(name = "integer_string_map_flag", help = "Integer string map flag.")
   public static final Flag<Map<Integer, String>> integerStringMapFlag =
@@ -88,10 +89,10 @@ public class FlagsForTesting {
       Flag.value(ImmutableMap.of());
 
   @FlagSpec(name = "string_list_flag", help = "String list flag.")
-  public static final Flag<List<String>> stringListFlag = Flag.value(ImmutableList.of());
+  public static final Flag<List<String>> stringListFlag = Flag.stringList();
 
   @FlagSpec(name = "string_string_map_flag", help = "String string map flag.")
-  public static final Flag<Map<String, String>> stringStringMapFlag = Flag.value(ImmutableMap.of());
+  public static final Flag<Map<String, String>> stringStringMapFlag = Flag.stringMap();
 
   public enum TestEnum {
     VALUE_A,

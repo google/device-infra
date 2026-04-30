@@ -24,8 +24,8 @@ java_library(
         "FlagSpec.java",
     ],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/shared/util/flags/core:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/flags:__subpackages__",
     ],
     deps = [
         "@maven//:com_google_code_findbugs_jsr305",
@@ -57,6 +57,7 @@ java_library(
         ":flag",
         ":flags_manager",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:junit_junit",
     ],
 )
