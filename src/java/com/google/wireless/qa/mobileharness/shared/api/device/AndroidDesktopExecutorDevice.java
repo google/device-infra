@@ -99,6 +99,10 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
     deviceIdOverride = getDeviceIdOverride(testInfo);
     testInfo.log().atInfo().alsoTo(logger).log("deviceIdOverride: %s", deviceIdOverride);
     if (deviceIdOverride != null) {
+      int lastColonIndex = deviceIdOverride.lastIndexOf(':');
+      String dutName =
+          lastColonIndex == -1 ? deviceIdOverride : deviceIdOverride.substring(0, lastColonIndex);
+      testInfo.properties().add("dut_name", dutName);
       try {
         // TODO: Support multi-duts units in the future.
         adbInternalUtil.connect(deviceIdOverride);
