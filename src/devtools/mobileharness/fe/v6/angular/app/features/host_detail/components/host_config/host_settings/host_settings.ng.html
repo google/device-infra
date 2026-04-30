@@ -68,7 +68,8 @@
           @case ('host-permissions') {
             <app-host-permissions
               workflow="settings"
-              [(permissions)]="hostConfig.permissions!"
+              [permissions]="hostConfig.permissions!"
+              (permissionsChange)="onHostPermissionsChange($event)"
               [uiStatus]="hostPermissionsUiStatus"
             ></app-host-permissions>
           }
