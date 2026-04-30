@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.shared.util.reflection.ClientClassUtil;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.lister.Lister;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.List;
@@ -44,6 +45,12 @@ public class TestLister {
 
   @ParamAnnotation(required = false, help = "The filter of test lister by regular expression.")
   public static final String PARAM_LISTER_FILTER = "lister_filter";
+
+  @VisibleForTesting
+  enum JobTrackingPropertyName implements PropertyName {
+    SHARD_GENERATION_MODE,
+    TESTS_SKIPPED_BY_LISTER_FILTER,
+  }
 
   /** Factory for creating {@link Lister} instances. */
   private final ListerFactory listFactory;
@@ -64,8 +71,11 @@ public class TestLister {
   public void onJobStart(JobStartEvent event) throws MobileHarnessException, InterruptedException {
     JobInfo jobInfo = event.getJob();
     if (!jobInfo.tests().isEmpty()) {
+      jobInfo.properties().add(JobTrackingPropertyName.SHARD_GENERATION_MODE, "MANUAL");
       return;
     }
+
+    jobInfo.properties().add(JobTrackingPropertyName.SHARD_GENERATION_MODE, "LISTER");
 
     // Only use test lister when no test specified.
     String driver = jobInfo.type().getDriver();
@@ -105,22 +115,30 @@ public class TestLister {
       jobInfo.log().atInfo().alsoTo(logger).log("lister_filter enabled: %s", filterRegex);
     }
     // Filters the tests added by the lister.
+    int testRemovedCount = 0;
     for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
       String testName = testInfo.locator().getName();
       if (filterPattern != null && !filterPattern.matcher(testName).matches()) {
         jobInfo.log().atInfo().alsoTo(logger).log("Test %s ignored by lister_filter", testName);
         String testId = testInfo.locator().getId();
         jobInfo.tests().remove(testId);
+        testRemovedCount++;
       }
     }
     // Filters the tests returned by the lister.
     for (String test : tests) {
       if (filterPattern != null && !filterPattern.matcher(test).matches()) {
         jobInfo.log().atInfo().alsoTo(logger).log("Test %s ignored by lister_filter", test);
+        testRemovedCount++;
       } else {
         jobInfo.tests().add(test.replace("$", "\\$"));
       }
     }
+    jobInfo
+        .properties()
+        .add(
+            JobTrackingPropertyName.TESTS_SKIPPED_BY_LISTER_FILTER,
+            Integer.toString(testRemovedCount));
     jobInfo
         .log()
         .atInfo()
