@@ -22,6 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.omnilab.device.lab.server.mobileharness.testrunner.inject.PortRegistryProvider;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -238,7 +239,9 @@ public class DriverFactory {
             Driver.class,
             decoratedDriver,
             Device.class,
-            decoratedDriver.getDevice()));
+            decoratedDriver.getDevice(),
+            PortRegistryProvider.class,
+            new PortRegistryProvider()));
   }
 
   /**
