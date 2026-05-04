@@ -16,11 +16,14 @@
 
 package com.google.devtools.mobileharness.platform.android.lightning.apkinstaller;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.annotations.Beta;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.hash.Hashing;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
@@ -52,6 +55,7 @@ import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.io.File;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -236,7 +240,7 @@ public class ApkInstaller {
     try {
       int deviceSdkVersion = systemSettingUtil.getDeviceSdkVersion(deviceId);
       if (isMultiUserSupported(deviceSdkVersion)) {
-        userId = getCurrentUser(deviceId, deviceSdkVersion).get();
+        userId = getCurrentUser(deviceId, deviceSdkVersion);
       }
     } catch (MobileHarnessException e) {
       logger.atWarning().withCause(e).log("Failed to get device %s sdk version.", deviceId);
@@ -293,9 +297,15 @@ public class ApkInstaller {
   public void install(Device device, Installable installable, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
     String packageName = getPackageName(installable);
+    int deviceSdkVersion = systemSettingUtil.getDeviceSdkVersion(device.getDeviceId());
+    String userId = getUserId(device, deviceSdkVersion, installable);
+    UtilArgs utilArgs = buildUtilArgs(device.getDeviceId(), userId, deviceSdkVersion);
+
+    androidPackageManagerUtil.disablePackageVerifier(
+        utilArgs.serial(), utilArgs.sdkVersion().orElse(0)); // b/27476500
 
     try {
-      doInstall(device, installable, packageName, log);
+      doInstall(device, utilArgs, installable, packageName, log);
       return;
     } catch (MobileHarnessException e) {
       PackageManagerErrors.throwIfUnrecoverableUserError(e.getMessage(), packageName, e);
@@ -323,7 +333,7 @@ public class ApkInstaller {
     }
 
     try {
-      doInstall(device, installable, packageName, log);
+      doInstall(device, utilArgs, installable, packageName, log);
     } catch (MobileHarnessException e) {
       PackageManagerErrors.throwIfUnrecoverableUserError(e.getMessage(), packageName, e);
       PackageManagerErrors.throwIfPostRetryUserError(e.getMessage(), packageName, e);
@@ -358,7 +368,7 @@ public class ApkInstaller {
     int deviceSdkVersion = systemSettingUtil.getDeviceSdkVersion(deviceId);
     String userId = MULTI_USER_DEFAULT_ID;
     if (isMultiUserSupported(deviceSdkVersion)) {
-      userId = installArgs.userId().orElse(getCurrentUser(deviceId, deviceSdkVersion).get());
+      userId = installArgs.userId().orElse(getCurrentUser(deviceId, deviceSdkVersion));
     }
 
     // Checks whether the apk has been installed.
@@ -597,7 +607,7 @@ public class ApkInstaller {
       // For sdkVersion < MULTI_USER_START_SDK_VERSION, user "all".
       String userId = MULTI_USER_DEFAULT_ID;
       if (isMultiUserSupported(deviceSdkVersion)) {
-        userId = getCurrentUser(deviceId, deviceSdkVersion).get();
+        userId = getCurrentUser(deviceId, deviceSdkVersion);
       }
       uninstallApk(device, userId, deviceSdkVersion, packageName, logFailures, log);
     } catch (MobileHarnessException e) {
@@ -814,24 +824,25 @@ public class ApkInstaller {
   }
 
   /* Get current running user or return user 0 if failed. */
-  private Optional<String> getCurrentUser(String deviceId, int deviceSdkVersion)
-      throws InterruptedException {
+  private String getCurrentUser(String deviceId, int deviceSdkVersion) throws InterruptedException {
     // Try to get current running user or null.
     try {
       if (isMultiUserSupported(deviceSdkVersion)) {
-        return Optional.of(
-            Integer.toString(androidUserUtil.getCurrentUser(deviceId, deviceSdkVersion)));
+        return Integer.toString(androidUserUtil.getCurrentUser(deviceId, deviceSdkVersion));
       }
     } catch (MobileHarnessException e) {
       logger.atWarning().withCause(e).log(
           "Failed to get current user ID with exception %s", e.getMessage());
     }
-    return Optional.of("0");
+    return "0";
   }
 
-  private String getPackageName(Installable installable) throws MobileHarnessException {
+  private String getPackageName(Installable installable)
+      throws MobileHarnessException, InterruptedException {
     if (installable instanceof ApkSet apkSet) {
       return bundletool.getPackageNameFromApks(apkSet.apks());
+    } else if (installable instanceof Apk apk) {
+      return aapt.getApkPackageName(apk.apks().get(0).toString());
     }
     throw new MobileHarnessException(
         AndroidErrorId.ANDROID_APK_INSTALLER_UNKNOWN_INSTALLABLE_ERROR,
@@ -839,10 +850,23 @@ public class ApkInstaller {
   }
 
   private void doInstall(
-      Device device, Installable installable, String packageName, @Nullable LogCollector<?> log)
+      Device device,
+      UtilArgs utilArgs,
+      Installable installable,
+      String packageName,
+      @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
     if (installable instanceof ApkSet apkSet) {
       bundletool.installApks(apkSet.toInstallApksArgs(device.getDeviceId()));
+    } else if (installable instanceof Apk apk) {
+      androidPackageManagerUtil.installPackageNoRetry(
+          utilArgs,
+          apk.toInstallCmdArgs(),
+          /* isRemoteInstall= */ false,
+          Streams.concat(apk.apks().stream(), apk.dexMetadataPaths().stream())
+              .map(Path::toString)
+              .collect(toImmutableList()),
+          apk.commandTimeout());
     } else {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_APK_INSTALLER_UNKNOWN_INSTALLABLE_ERROR,
@@ -854,6 +878,32 @@ public class ApkInstaller {
         "Successfully installed package %s on device %s",
         packageName,
         device.getDeviceId());
+    // Sleep to await system idle (b/169651299)
+    if (installable.sleepAfterInstall().compareTo(Duration.ZERO) > 0) {
+      SharedLogUtil.logMsg(
+          logger, log, "Sleep for %s after installation.", installable.sleepAfterInstall());
+      sleeper.sleep(installable.sleepAfterInstall());
+    }
+  }
+
+  /**
+   * Returns the user ID to use for the given {@link Installable}.
+   *
+   * <p>User ID is dependent on installable and device version. If not applicable, returns {@code
+   * ApkInstaller.MULTI_USER_DEFAULT_ID} which is the internal placeholder.
+   */
+  private String getUserId(Device device, int deviceSdkVersion, Installable installable)
+      throws InterruptedException {
+    if (!isMultiUserSupported(deviceSdkVersion)) {
+      return MULTI_USER_DEFAULT_ID;
+    }
+    if (installable instanceof Apk apk) {
+      if (apk.userId().isPresent()) {
+        return apk.userId().get();
+      }
+      return getCurrentUser(device.getDeviceId(), deviceSdkVersion);
+    }
+    return MULTI_USER_DEFAULT_ID;
   }
 
   /**

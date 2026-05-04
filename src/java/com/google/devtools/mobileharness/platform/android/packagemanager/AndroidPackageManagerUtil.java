@@ -49,6 +49,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.util.ArrayUtil;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
@@ -1167,7 +1168,8 @@ public class AndroidPackageManagerUtil {
    * @throws MobileHarnessException if install command fails or the install output does not contain
    *     the success signal
    */
-  private String installPackageNoRetry(
+  @CanIgnoreReturnValue
+  public String installPackageNoRetry(
       UtilArgs utilArgs,
       InstallCmdArgs installCmdArgs,
       boolean isRemoteInstall,
