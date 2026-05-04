@@ -219,6 +219,7 @@ java_library(
     srcs = ["MoblyTest.java"],
     deps = [
         ":base_driver",
+        "//java/com/google/devtools/mobileharness/platform/ios/realdevice/idevice:idevicebin",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:log_java_proto",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
