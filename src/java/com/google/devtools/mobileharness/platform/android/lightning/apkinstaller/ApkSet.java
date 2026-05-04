@@ -28,6 +28,7 @@ public record ApkSet(
     boolean allowTestOnly,
     boolean grantRuntimePermissions,
     boolean allowUninstallAndRetry,
+    Duration sleepAfterInstall,
     Duration commandTimeout)
     implements Installable {
 
@@ -49,6 +50,7 @@ public record ApkSet(
         .setAllowTestOnly(false)
         .setGrantRuntimePermissions(false)
         .setAllowUninstallAndRetry(false)
+        .setSleepAfterInstall(Duration.ZERO)
         .setCommandTimeout(Duration.ofMinutes(5));
   }
 
@@ -70,6 +72,9 @@ public record ApkSet(
 
     /** Whether to uninstall and retry installation if the 1st attempt fails (default false). */
     public abstract Builder setAllowUninstallAndRetry(boolean allowUninstallAndRetry);
+
+    /** Sleep after install (default zero / no sleep). */
+    public abstract Builder setSleepAfterInstall(Duration sleepAfterInstall);
 
     /** Command timeout for underlying tooling (default 5 minutes). */
     public abstract Builder setCommandTimeout(Duration commandTimeout);

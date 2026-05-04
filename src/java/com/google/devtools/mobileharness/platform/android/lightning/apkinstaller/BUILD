@@ -20,6 +20,7 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "apkinstaller",
     srcs = [
+        "Apk.java",
         "ApkInstallArgs.java",
         "ApkInstaller.java",
         "ApkSet.java",
