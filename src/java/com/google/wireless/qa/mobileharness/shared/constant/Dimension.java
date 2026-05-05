@@ -183,6 +183,8 @@ public final class Dimension {
     SUPPORTS_ADHOC,
     /** Whether a device is responsive on serial. */
     SERIAL_RESPONSIVE,
+    /** The path to the source file that generated the tenant device config. */
+    TENANT_CONFIG_SOURCE_PATH,
     /** The total memory size in MB. */
     TOTAL_MEMORY,
     /** The virtual device id in Tradefed. */
