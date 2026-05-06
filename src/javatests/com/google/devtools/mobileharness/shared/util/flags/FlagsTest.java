@@ -21,7 +21,6 @@ import com.google.devtools.mobileharness.shared.util.flags.core.FlagSpec;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -29,7 +28,6 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class FlagsTest {
 
-  @Ignore("b/506875938")
   @Test
   public void flags_areOrderedByName() {
     Field[] fields = Flags.class.getDeclaredFields();

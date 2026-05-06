@@ -54,6 +54,9 @@ public class Flags {
   @FlagSpec(name = "acloud_path", help = "Path to the acloud binary.")
   public static final Flag<String> acloudPath = Flag.value("/bin/acloud_prebuilt");
 
+  @FlagSpec(name = "adb", help = "Android ADB path, overriding the SDK location.")
+  public static final Flag<String> adbPathFromUser = Flag.value("");
+
   @FlagSpec(
       name = "adb_command_retry_attempts",
       help = "The max retry attempts for executing adb command. Default is 2.")
@@ -63,9 +66,6 @@ public class Flags {
       name = "adb_command_retry_interval",
       help = "The wait interval between retry attempts for executing adb command. Default is 0.")
   public static final Flag<Duration> adbCommandRetryInterval = DurationFlag.zero();
-
-  @FlagSpec(name = "adb", help = "Android ADB path, overriding the SDK location.")
-  public static final Flag<String> adbPathFromUser = Flag.value("");
 
   @FlagSpec(name = "adb_dont_kill_server", help = "Don't ever kill the adb server.")
   public static final Flag<Boolean> adbDontKillServer = Flag.value(false);
@@ -151,17 +151,17 @@ public class Flags {
   public static final Flag<String> androidAuthTestSupportSignedApkPath = Flag.value("");
 
   @FlagSpec(
-      name = "android_desktop_executor_group",
-      help =
-          "The executor group of the Android Desktop device. Used to set network_zone dimension.")
-  public static final Flag<String> androidDesktopExecutorGroup = Flag.value("");
-
-  @FlagSpec(
       name = "android_desktop_executor_devices_num",
       help =
           "If the number is greater than 0, the lab server will create that many number of"
               + " AndroidDesktopExecutorDevices.")
   public static final Flag<Integer> androidDesktopExecutorDevicesNum = Flag.value(0);
+
+  @FlagSpec(
+      name = "android_desktop_executor_group",
+      help =
+          "The executor group of the Android Desktop device. Used to set network_zone dimension.")
+  public static final Flag<String> androidDesktopExecutorGroup = Flag.value("");
 
   @FlagSpec(
       name = "android_device_daemon",
@@ -218,6 +218,11 @@ public class Flags {
   public static final Flag<Boolean> atsConsoleOlcServerCopyServerResource = Flag.value(true);
 
   @FlagSpec(
+      name = "ats_console_olc_server_embedded_mode",
+      help = "Whether ATS console and OLC server are in the single process. Default is false.")
+  public static final Flag<Boolean> atsConsoleOlcServerEmbeddedMode = Flag.value(false);
+
+  @FlagSpec(
       name = "ats_console_olc_server_min_lab_version",
       help = "Minimum OLC server lab version string required by ATS console. Default is 4.309.1.")
   public static final Flag<String> atsConsoleOlcServerMinLabVersion = Flag.value("4.309.1");
@@ -234,11 +239,6 @@ public class Flags {
 
   @FlagSpec(name = "ats_console_olc_server_path", help = "Path of OLC server in ATS console.")
   public static final Flag<String> atsConsoleOlcServerPath = Flag.nullString();
-
-  @FlagSpec(
-      name = "ats_console_olc_server_embedded_mode",
-      help = "Whether ATS console and OLC server are in the single process. Default is false.")
-  public static final Flag<Boolean> atsConsoleOlcServerEmbeddedMode = Flag.value(false);
 
   @FlagSpec(
       name = "ats_console_olc_server_starting_timeout",
@@ -361,21 +361,6 @@ public class Flags {
   public static final Flag<Boolean> clearAndroidDeviceMultiUsers = Flag.value(true);
 
   @FlagSpec(
-      name = "cloud_file_transfer_maximum_attempts",
-      help = "Attempts to transferring a file. Default is 3.")
-  public static final Flag<Integer> cloudFileTransferMaximumAttempts = Flag.value(3);
-
-  @FlagSpec(
-      name = "cloud_file_transfer_timeout",
-      help = "Retry times if failed to transfer a file. Default is 20 minutes.")
-  public static final Flag<Duration> cloudFileTransferTimeout = DurationFlag.minutes(20L);
-
-  @FlagSpec(
-      name = "cloud_file_transfer_upload_shard_size",
-      help = "Size (in megabytes) of shards during uploading")
-  public static final Flag<Integer> cloudFileTransferUploadShardSize = Flag.value(200);
-
-  @FlagSpec(
       name = "cloud_file_transfer_download_shard_size",
       help = "Size (in megabytes) of shards during uploading")
   public static final Flag<Integer> cloudFileTransferDownloadShardSize = Flag.value(200);
@@ -386,9 +371,24 @@ public class Flags {
   public static final Flag<Duration> cloudFileTransferInitialTimeout = DurationFlag.seconds(5L);
 
   @FlagSpec(
+      name = "cloud_file_transfer_maximum_attempts",
+      help = "Attempts to transferring a file. Default is 3.")
+  public static final Flag<Integer> cloudFileTransferMaximumAttempts = Flag.value(3);
+
+  @FlagSpec(
       name = "cloud_file_transfer_small_file_size_kb",
       help = "The bytes limitation for a *small* file, which will send/get direct without GCS.")
   public static final Flag<Long> cloudFileTransferSmallFileSizeKb = Flag.value(256L);
+
+  @FlagSpec(
+      name = "cloud_file_transfer_timeout",
+      help = "Retry times if failed to transfer a file. Default is 20 minutes.")
+  public static final Flag<Duration> cloudFileTransferTimeout = DurationFlag.minutes(20L);
+
+  @FlagSpec(
+      name = "cloud_file_transfer_upload_shard_size",
+      help = "Size (in megabytes) of shards during uploading")
+  public static final Flag<Integer> cloudFileTransferUploadShardSize = Flag.value(200);
 
   @FlagSpec(
       name = "cloud_orchestrator_service_url",
@@ -407,14 +407,14 @@ public class Flags {
   public static final Flag<String> cloudPubsubProjectId = Flag.nullString();
 
   @FlagSpec(
-      name = "cloud_pubsub_topic_id",
-      help = "The topic ID of the Cloud Pub/Sub topic to upload monitoring data to.")
-  public static final Flag<String> cloudPubsubTopicId = Flag.nullString();
-
-  @FlagSpec(
       name = "cloud_pubsub_publish_interval",
       help = "The period duration between two publish actions.")
   public static final Flag<Duration> cloudPubsubPublishInterval = DurationFlag.minutes(1);
+
+  @FlagSpec(
+      name = "cloud_pubsub_topic_id",
+      help = "The topic ID of the Cloud Pub/Sub topic to upload monitoring data to.")
+  public static final Flag<String> cloudPubsubTopicId = Flag.nullString();
 
   @FlagSpec(
       name = "command_port",
@@ -517,19 +517,14 @@ public class Flags {
   public static final Flag<List<String>> deviceListToDebugAllocation = Flag.stringList();
 
   @FlagSpec(
-      name = "device_removal_threshold",
-      help = "Threshold for considering a device to be removed from Master.")
-  public static final Flag<Duration> deviceRemovalThreshold = DurationFlag.days(14);
-
-  @FlagSpec(
-      name = "enforce_mtaas_device_checkin_group",
-      help = "Whether to enforce the mtaas device checkin group on the device. Default is false.")
-  public static final Flag<Boolean> enforceMtaasDeviceCheckinGroup = Flag.value(false);
-
-  @FlagSpec(
       name = "device_ping_google",
       help = "Whether to enable dimension ping_google_stability. Default is false.")
   public static final Flag<Boolean> pingGoogle = Flag.value(false);
+
+  @FlagSpec(
+      name = "device_removal_threshold",
+      help = "Threshold for considering a device to be removed from Master.")
+  public static final Flag<Duration> deviceRemovalThreshold = DurationFlag.days(14);
 
   @FlagSpec(name = "dexdump", help = "File path of the dexdump tool")
   public static final Flag<String> dexdumpPath = Flag.value("");
@@ -623,6 +618,11 @@ public class Flags {
       help = "Whether to enable client file transfer. Default is true.")
   public static final Flag<Boolean> enableClientFileTransfer = Flag.value(true);
 
+  @FlagSpec(
+      name = "enable_cloud_file_transfer",
+      help = "Whether enable cloud file transfer. Default is false.")
+  public static final Flag<Boolean> enableCloudFileTransfer = Flag.value(false);
+
   @FlagSpec(name = "enable_cloud_logging", help = "Whether to enable cloud logging.")
   public static final Flag<Boolean> enableCloudLogging = Flag.value(true);
 
@@ -637,11 +637,6 @@ public class Flags {
       name = "enable_cloud_pubsub_monitoring",
       help = "Whether to enable sending lab monitoring data to Cloud Pub/Sub. Default is false.")
   public static final Flag<Boolean> enableCloudPubsubMonitoring = Flag.value(false);
-
-  @FlagSpec(
-      name = "enable_cloud_file_transfer",
-      help = "Whether enable cloud file transfer. Default is false.")
-  public static final Flag<Boolean> enableCloudFileTransfer = Flag.value(false);
 
   @FlagSpec(
       name = "enable_cts_verifier_result_reporter",
@@ -720,14 +715,6 @@ public class Flags {
               + " default value of this flag is true.")
   public static final Flag<Boolean> createFailedDevice = Flag.value(true);
 
-  @FlagSpec(name = "enable_file_cleaner", help = "Whether to enable file cleaner.")
-  public static final Flag<Boolean> enableFileCleaner = Flag.value(true);
-
-  @FlagSpec(
-      name = "enable_file_system_io_check",
-      help = "For file cleaner, enable/disable checkFileSystemIo in each check interval.")
-  public static final Flag<Boolean> enableFileSystemIoCheck = Flag.value(true);
-
   @FlagSpec(
       name = "enable_fastboot_detector",
       help = "Whether to enable fastboot detector. Default is true.")
@@ -739,6 +726,14 @@ public class Flags {
           "Whether to enable fastboot support when initializing AndroidRealDevice."
               + " Default is true.")
   public static final Flag<Boolean> enableFastbootInAndroidRealDevice = Flag.value(true);
+
+  @FlagSpec(name = "enable_file_cleaner", help = "Whether to enable file cleaner.")
+  public static final Flag<Boolean> enableFileCleaner = Flag.value(true);
+
+  @FlagSpec(
+      name = "enable_file_system_io_check",
+      help = "For file cleaner, enable/disable checkFileSystemIo in each check interval.")
+  public static final Flag<Boolean> enableFileSystemIoCheck = Flag.value(true);
 
   @FlagSpec(
       name = "enable_grpc_lab_server",
@@ -851,6 +846,11 @@ public class Flags {
           "Whether to enable flash safety checks, which disables flash support when risky devices"
               + " don't have DPM installed.")
   public static final Flag<Boolean> enforceFlashSafetyChecks = Flag.value(false);
+
+  @FlagSpec(
+      name = "enforce_mtaas_device_checkin_group",
+      help = "Whether to enforce the mtaas device checkin group on the device. Default is false.")
+  public static final Flag<Boolean> enforceMtaasDeviceCheckinGroup = Flag.value(false);
 
   @FlagSpec(
       name = "enforce_safe_discharge",
@@ -967,11 +967,6 @@ public class Flags {
   public static final Flag<Integer> gcsUtilThreads = Flag.value(50);
 
   @FlagSpec(
-      name = "internal_service_cred_file",
-      help = "Path to the credential key file to access internal services.")
-  public static final Flag<String> internalServiceCredentialFile = Flag.nullString();
-
-  @FlagSpec(
       name = "get_test_status_rpc_call_interval",
       help = "Default RPC call interval when getting the test result.")
   public static final Flag<Duration> getTestStatusRpcCallInterval = DurationFlag.seconds(5L);
@@ -983,6 +978,11 @@ public class Flags {
       name = "ignore_check_device_failure",
       help = "Whether to ignore failures during checking device. Default is false.")
   public static final Flag<Boolean> ignoreCheckDeviceFailure = Flag.value(false);
+
+  @FlagSpec(
+      name = "internal_service_cred_file",
+      help = "Path to the credential key file to access internal services.")
+  public static final Flag<String> internalServiceCredentialFile = Flag.nullString();
 
   @FlagSpec(
       name = "internal_storage_alert_mb",
@@ -1199,12 +1199,12 @@ public class Flags {
       help = "Whether enable the cloudrpc monitor. default is true.")
   public static final Flag<Boolean> monitorCloudRpc = Flag.value(true);
 
+  @FlagSpec(name = "monitor_gcs", help = "Whether enable the gcs monitor. default is true.")
+  public static final Flag<Boolean> monitorGcs = Flag.value(true);
+
   @SuppressWarnings("unused")
   @FlagSpec(name = "monitor_lab", help = "Whether enable the lab monitor. default is true.")
   public static final Flag<Boolean> monitorLab = Flag.value(true);
-
-  @FlagSpec(name = "monitor_gcs", help = "Whether enable the gcs monitor. default is true.")
-  public static final Flag<Boolean> monitorGcs = Flag.value(true);
 
   @FlagSpec(name = "monitor_signals", help = "Whether to monitor signals. Default is true.")
   public static final Flag<Boolean> monitorSignals = Flag.value(true);
@@ -1377,6 +1377,11 @@ public class Flags {
   public static final Flag<Boolean> shouldManageDevices = Flag.value(true);
 
   @FlagSpec(
+      name = "simplified_log_format",
+      help = "True to use simplified log format. Default is false.")
+  public static final Flag<Boolean> simplifiedLogFormat = Flag.value(false);
+
+  @FlagSpec(
       name = "skip_check_device_internet",
       help =
           "Whether to skip checking device connect to Internet via ping. Default is false. When set"
@@ -1411,11 +1416,6 @@ public class Flags {
           "Whether to skip recovering device network by connecting device to saved ssid. Default "
               + "is false.")
   public static final Flag<Boolean> skipRecoverDeviceNetwork = Flag.value(false);
-
-  @FlagSpec(
-      name = "simplified_log_format",
-      help = "True to use simplified log format. Default is false.")
-  public static final Flag<Boolean> simplifiedLogFormat = Flag.value(false);
 
   @FlagSpec(
       name = "socket_port",
