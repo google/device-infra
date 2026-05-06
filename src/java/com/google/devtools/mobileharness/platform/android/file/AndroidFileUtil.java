@@ -1072,10 +1072,12 @@ public class AndroidFileUtil {
    *
    * @param serial serial number of the device
    * @param fileOrDirPathPattern path pattern of the files or directories to be deleted
+   * @return true if file was present and removed, false if file was not present
    */
-  public void removeFiles(String serial, String fileOrDirPathPattern)
+  @CanIgnoreReturnValue
+  public boolean removeFiles(String serial, String fileOrDirPathPattern)
       throws MobileHarnessException, InterruptedException {
-    removeFiles(serial, fileOrDirPathPattern, DEFAULT_REMOVE_FILES_TIMEOUT);
+    return removeFiles(serial, fileOrDirPathPattern, DEFAULT_REMOVE_FILES_TIMEOUT);
   }
 
   /**
@@ -1084,11 +1086,17 @@ public class AndroidFileUtil {
    * @param serial serial number of the device
    * @param fileOrDirPathPattern path pattern of the files or directories to be deleted
    * @param timeout max execution time of each attempt
+   * @return true if file was present and removed, false if file was not present
    */
-  public void removeFiles(String serial, String fileOrDirPathPattern, Duration timeout)
+  @CanIgnoreReturnValue
+  public boolean removeFiles(String serial, String fileOrDirPathPattern, Duration timeout)
       throws MobileHarnessException, InterruptedException {
     String output = null;
     Exception exception = null;
+
+    if (!isFileOrDirExisted(serial, fileOrDirPathPattern)) {
+      return false;
+    }
 
     if (fileOrDirPathPattern.indexOf('*') >= 0 && fileOrDirPathPattern.indexOf('(') == -1) {
       logger.atWarning().log(
@@ -1103,7 +1111,7 @@ public class AndroidFileUtil {
     } catch (MobileHarnessException e) {
       String errorMsg = e.getMessage();
       if (errorMsg.contains(OUTPUT_NO_FILE_OR_DIR)) {
-        return;
+        return false;
       } else if (errorMsg.contains(INVALID_ARGUMENT_REMOVE_FILES)) {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_FILE_UTIL_REMOVE_FILE_INVALID_ARGUMENT, errorMsg, e);
@@ -1113,7 +1121,7 @@ public class AndroidFileUtil {
     }
 
     if (output != null && (output.isEmpty() || output.contains(OUTPUT_NO_FILE_OR_DIR))) {
-      return;
+      return true;
     } else {
       logger.atWarning().log(
           "Remove files serial=%s, command=%s, timeout=%s", serial, command, timeout);

@@ -1289,17 +1289,24 @@ public final class AndroidFileUtilTest {
     String args =
         String.format(
             AndroidFileUtil.ADB_SHELL_TEMPLATE_REMOVE_FILES_PATTERN, "'/sdcard\"'\\''(xxxx'");
-    when(adb.runShellWithRetry(SERIAL, args, Duration.ofSeconds(60)))
+    when(adb.runShellWithRetry(SERIAL, "ls " + fileOrDirPathPattern))
+        .thenReturn(fileOrDirPathPattern);
+    when(adb.runShellWithRetry(SERIAL, args, AndroidFileUtil.DEFAULT_REMOVE_FILES_TIMEOUT))
         .thenReturn("error:" + AndroidFileUtil.OUTPUT_NO_FILE_OR_DIR)
         .thenReturn("error")
         .thenThrow(
             new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE,
+                "error: " + AndroidFileUtil.OUTPUT_NO_FILE_OR_DIR))
+        .thenThrow(
+            new MobileHarnessException(
                 AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "adb error"));
 
-    androidFileUtil.removeFiles(SERIAL, fileOrDirPathPattern);
+    assertThat(androidFileUtil.removeFiles(SERIAL, fileOrDirPathPattern)).isTrue();
     assertThrows(
         MobileHarnessException.class,
         () -> androidFileUtil.removeFiles(SERIAL, fileOrDirPathPattern));
+    assertThat(androidFileUtil.removeFiles(SERIAL, fileOrDirPathPattern)).isFalse();
     assertThrows(
         MobileHarnessException.class,
         () -> androidFileUtil.removeFiles(SERIAL, fileOrDirPathPattern));
@@ -1311,11 +1318,13 @@ public final class AndroidFileUtilTest {
     String args =
         String.format(
             AndroidFileUtil.ADB_SHELL_TEMPLATE_REMOVE_FILES_PATTERN, fileOrDirPathPattern);
-    when(adb.runShellWithRetry(SERIAL, args, Duration.ofSeconds(60)))
+    when(adb.runShellWithRetry(SERIAL, "ls " + fileOrDirPathPattern))
+        .thenReturn(fileOrDirPathPattern);
+    when(adb.runShellWithRetry(SERIAL, args, AndroidFileUtil.DEFAULT_REMOVE_FILES_TIMEOUT))
         .thenReturn("error:" + AndroidFileUtil.OUTPUT_NO_FILE_OR_DIR)
         .thenReturn("error");
 
-    androidFileUtil.removeFiles(SERIAL, fileOrDirPathPattern);
+    assertThat(androidFileUtil.removeFiles(SERIAL, fileOrDirPathPattern)).isTrue();
     assertThrows(
         MobileHarnessException.class,
         () -> androidFileUtil.removeFiles(SERIAL, fileOrDirPathPattern));
@@ -1327,7 +1336,9 @@ public final class AndroidFileUtilTest {
     String args =
         String.format(
             AndroidFileUtil.ADB_SHELL_TEMPLATE_REMOVE_FILES_PATTERN, fileOrDirPathPattern);
-    when(adb.runShellWithRetry(SERIAL, args, Duration.ofSeconds(60)))
+    when(adb.runShellWithRetry(SERIAL, "ls " + fileOrDirPathPattern))
+        .thenReturn(fileOrDirPathPattern);
+    when(adb.runShellWithRetry(SERIAL, args, AndroidFileUtil.DEFAULT_REMOVE_FILES_TIMEOUT))
         .thenThrow(
             new MobileHarnessException(
                 AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE,
@@ -1341,6 +1352,15 @@ public final class AndroidFileUtilTest {
                     () -> androidFileUtil.removeFiles(SERIAL, fileOrDirPathPattern))
                 .getErrorId())
         .isEqualTo(AndroidErrorId.ANDROID_FILE_UTIL_REMOVE_FILE_INVALID_ARGUMENT);
+  }
+
+  @Test
+  public void removeFiles_notExists() throws Exception {
+    String fileOrDirPathPattern = "/sdcard/not_exists";
+    when(adb.runShellWithRetry(SERIAL, "ls " + fileOrDirPathPattern))
+        .thenReturn(fileOrDirPathPattern + ": " + AndroidFileUtil.OUTPUT_NO_FILE_OR_DIR);
+
+    assertThat(androidFileUtil.removeFiles(SERIAL, fileOrDirPathPattern)).isFalse();
   }
 
   @Test
