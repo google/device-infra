@@ -44,8 +44,7 @@ public class ConsoleUtil {
   private static final ImmutableSet<String> HIDDEN_LOGGER_NAMES =
       ImmutableSet.of(ConsoleUtil.class.getName(), "com.google.protobuf.TextFormat");
 
-  private final int minLogRecordImportance =
-      Flags.instance().atsConsoleMinLogRecordImportance.getNonNull();
+  private final int minLogRecordImportance = Flags.atsConsoleMinLogRecordImportance.getNonNull();
   private final LogHandler logHandler = new LogHandler();
   @Nullable private final LineReader lineReader;
   private final boolean printAbove;
@@ -53,7 +52,7 @@ public class ConsoleUtil {
   @Inject
   ConsoleUtil(@Nullable @ConsoleLineReader LineReader lineReader) {
     this.lineReader = lineReader;
-    this.printAbove = Flags.instance().atsConsolePrintAboveInput.getNonNull();
+    this.printAbove = Flags.atsConsolePrintAboveInput.getNonNull();
   }
 
   /**

@@ -97,6 +97,6 @@ public final class LogEntryUploadManager extends AbstractScheduledService {
   @Override
   protected Scheduler scheduler() {
     return Scheduler.newFixedDelaySchedule(
-        Duration.ofSeconds(1), Flags.instance().logUploadDelay.getNonNull());
+        Duration.ofSeconds(1), Flags.logUploadDelay.getNonNull());
   }
 }

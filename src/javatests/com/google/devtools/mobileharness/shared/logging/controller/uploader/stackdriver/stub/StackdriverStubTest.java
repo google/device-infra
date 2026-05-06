@@ -22,6 +22,7 @@ import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import com.google.devtools.mobileharness.shared.util.comm.server.ServerBuilderFactory;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.logging.v2.LoggingServiceV2Grpc;
 import com.google.logging.v2.WriteLogEntriesRequest;
 import com.google.logging.v2.WriteLogEntriesResponse;
@@ -36,9 +37,11 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-/** Unit tests for {@link StackdriverStub}. */
 @RunWith(JUnit4.class)
 public class StackdriverStubTest {
+
+  @Rule public final SetFlags flags = new SetFlags();
+
   private static final String SECRET_FILE_NAME = "fake_secret.json";
 
   @Rule public final GrpcCleanupRule grpcCleanup = new GrpcCleanupRule();

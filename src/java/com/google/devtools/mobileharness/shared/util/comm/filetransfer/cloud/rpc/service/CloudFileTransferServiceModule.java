@@ -37,7 +37,7 @@ import javax.inject.Singleton;
 public final class CloudFileTransferServiceModule extends AbstractModule {
   @Override
   protected void configure() {
-    if (Flags.instance().enableCloudFileTransfer.getNonNull()) {
+    if (Flags.enableCloudFileTransfer.getNonNull()) {
       Multibinder.newSetBinder(binder(), BindableService.class, LocalOnlyGrpcService.class)
           .addBinding()
           .to(CloudFileTransferServiceGrpcImpl.class);

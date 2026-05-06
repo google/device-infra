@@ -106,6 +106,7 @@ java_library(
         ":cache_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:data_size",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:flags_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/wireless/qa/mobileharness/shared:log",

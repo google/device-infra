@@ -81,7 +81,7 @@ public final class FailedDeviceDetectorTest {
   }
 
   private void ensureDeviceAdded(String id) {
-    for (int i = 0; i < Flags.instance().maxInitFailuresBeforeFail.getNonNull(); i++) {
+    for (int i = 0; i < Flags.maxInitFailuresBeforeFail.getNonNull(); i++) {
       table.add(id);
     }
   }

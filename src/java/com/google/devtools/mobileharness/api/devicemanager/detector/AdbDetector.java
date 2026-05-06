@@ -140,7 +140,7 @@ public class AdbDetector implements Detector {
   public List<DetectionResult> detectDevices() throws MobileHarnessException, InterruptedException {
     try {
       Map<String, DeviceState> ids = adbInternalUtil.getDeviceSerialsAsMap();
-      int maxNoDeviceDetectionRounds = Flags.instance().adbMaxNoDeviceDetectionRounds.getNonNull();
+      int maxNoDeviceDetectionRounds = Flags.adbMaxNoDeviceDetectionRounds.getNonNull();
       if (needCheckAdbProcess(maxNoDeviceDetectionRounds)) {
         if (ids.isEmpty() && getCachedDevices().isEmpty()) {
           if (noDeviceDetectionRounds.getAndIncrement() == maxNoDeviceDetectionRounds) {

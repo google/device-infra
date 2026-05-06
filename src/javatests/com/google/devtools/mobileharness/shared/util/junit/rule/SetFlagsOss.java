@@ -16,38 +16,29 @@
 
 package com.google.devtools.mobileharness.shared.util.junit.rule;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
-import org.junit.rules.TestWatcher;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
+import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
-/** Sets flags for testing. */
-public class SetFlagsOss extends TestWatcher {
+/**
+ * Sets flags for testing.
+ *
+ * <p>Similar to standard JUnit {@code SetFlags} rules, but supporting both Mobile Harness
+ * open-source flags and Google internal flags.
+ */
+public class SetFlagsOss implements TestRule {
 
-  /**
-   * Sets all flags for a test.
-   *
-   * <p>Note that this method should be called at most once per test.
-   */
+  private final SetFlags setFlags = new SetFlags();
+
+  /** Sets all flags for a test. */
   public void setAllFlags(ImmutableMap<String, String> flags) {
-    ImmutableList<String> flagsList =
-        flags.entrySet().stream()
-            .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
-            .collect(toImmutableList());
-    Flags.parseOss(flagsList.toArray(new String[0]));
-  }
-
-  @Override
-  protected void finished(Description description) {
-    Flags.resetToDefault();
+    flags.forEach(setFlags::set);
   }
 
   @Override
   public Statement apply(Statement base, Description description) {
-    return super.apply(base, description);
+    return setFlags.apply(base, description);
   }
 }

@@ -634,6 +634,27 @@ public class FlagTest {
   }
 
   @Test
+  public void testSetFlagsRule_boolean_withValue() {
+    setFlags.set("boolean_flag", "true");
+
+    assertThat(FlagsForTesting.booleanFlag.get()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.wasSetFromString()).isTrue();
+
+    setFlags.set("boolean_flag", "false");
+
+    assertThat(FlagsForTesting.booleanFlag.get()).isFalse();
+    assertThat(FlagsForTesting.booleanFlag.wasSetFromString()).isTrue();
+  }
+
+  @Test
+  public void testSetFlagsRule_boolean_setNull() {
+    setFlags.set("boolean_flag", null);
+
+    assertThat(FlagsForTesting.booleanFlag.get()).isTrue();
+    assertThat(FlagsForTesting.booleanFlag.wasSetFromString()).isTrue();
+  }
+
+  @Test
   public void testSetFlagsRule_positiveInt_invalidValue_throwsException() {
     Exception e = assertThrows(Exception.class, () -> setFlags.set("positive_integer_flag", "-5"));
 

@@ -18,7 +18,7 @@ package com.google.devtools.mobileharness.service.deviceconfig;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.service.grpc.DeviceConfigGrpcImpl;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.flags.core.FlagsManager;
 import com.google.inject.Guice;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -69,7 +69,7 @@ final class DeviceConfigServer {
   }
 
   public static void main(String[] args) throws InterruptedException, IOException {
-    Flags.parse(args);
+    FlagsManager.parse(args);
 
     DeviceConfigServer deviceConfigServer =
         Guice.createInjector(new DeviceConfigModule()).getInstance(DeviceConfigServer.class);

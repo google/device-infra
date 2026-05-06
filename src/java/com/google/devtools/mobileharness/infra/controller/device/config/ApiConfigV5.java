@@ -185,7 +185,7 @@ public class ApiConfigV5 implements ApiConfig {
   public List<StrPair> getSupportedDimensions(String deviceControlId) {
     Optional<DeviceId> deviceId = deviceIdManager.getDeviceIdFromControlId(deviceControlId);
     List<StrPair> deviceExtraDimensions = new ArrayList<>();
-    List<String> labels = Flags.instance().extraDeviceLabels.getNonNull();
+    List<String> labels = Flags.extraDeviceLabels.getNonNull();
     if (!labels.isEmpty()) {
       labels.forEach(
           label ->

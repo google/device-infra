@@ -270,8 +270,8 @@ public class SessionRequestHandlerUtil {
     Map<String, String> extraDimensions = new HashMap<>();
     // TODO: b/444562857 - Remove enableTestHarnessCheckForRequiredTests flag once test harness
     // dimension allocation issue is fixed.
-    if (Flags.instance().isOmniMode.getNonNull()
-        && Flags.instance().enableTestHarnessCheckForRequiredTests.getNonNull()
+    if (Flags.isOmniMode.getNonNull()
+        && Flags.enableTestHarnessCheckForRequiredTests.getNonNull()
         && needTestHarnessPropertyFalse(sessionRequestInfo)) {
       extraDimensions.put(toLowerCase(AndroidProperty.PERSIST_TEST_HARNESS.name()), Value.FALSE);
     }
@@ -457,7 +457,7 @@ public class SessionRequestHandlerUtil {
   }
 
   private static String getTradefedRequiredDeviceType(SessionRequestInfo info) {
-    if (Flags.instance().atsRunTfOnAndroidRealDevice.getNonNull()) {
+    if (Flags.atsRunTfOnAndroidRealDevice.getNonNull()) {
       return ANDROID_REAL_DEVICE_TYPE;
     }
     return info.deviceType().orElse(ANDROID_DEVICE_TYPE);
@@ -475,7 +475,7 @@ public class SessionRequestHandlerUtil {
     addSessionClientIdToJobInfo(jobInfo, sessionRequestInfo);
     jobInfo.properties().add(Job.IS_XTS_TF_JOB, "true");
     injectCommonParams(jobInfo);
-    if (Flags.instance().enablePersistentCache.getNonNull()) {
+    if (Flags.enablePersistentCache.getNonNull()) {
       urlForWorkerResolve(sessionRequestInfo)
           .ifPresent(url -> addUrlToPersistentCacheList(jobInfo, url));
     }
@@ -487,7 +487,7 @@ public class SessionRequestHandlerUtil {
   }
 
   public static Optional<String> urlForWorkerResolve(SessionRequestInfo sessionRequestInfo) {
-    if (Flags.instance().transferResourcesFromController.getNonNull()) {
+    if (Flags.transferResourcesFromController.getNonNull()) {
       return sessionRequestInfo.androidXtsZip(); // Local url in controller.
     } else {
       return sessionRequestInfo
@@ -750,7 +750,7 @@ public class SessionRequestHandlerUtil {
       waitForRequestedDevicesToBeReady(sessionRequestInfo);
     }
     Optional<DeviceInfo> deviceInfo =
-        Flags.instance().enableAtsMode.getNonNull()
+        Flags.enableAtsMode.getNonNull()
             ? getDeviceInfoFromMaster(sessionRequestInfo)
             : getDeviceInfoFromLocal(sessionRequestInfo);
 

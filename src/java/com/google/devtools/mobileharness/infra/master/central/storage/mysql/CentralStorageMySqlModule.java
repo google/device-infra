@@ -44,12 +44,9 @@ public class CentralStorageMySqlModule extends AbstractModule {
   @Singleton
   @Annotations.DatabaseConnections
   DatabaseConnections provideDatabaseConnections() throws MobileHarnessException {
-    String jdbcUrl = Flags.instance().masterCentralDatabaseJdbcUrl.getNonNull();
+    String jdbcUrl = Flags.masterCentralDatabaseJdbcUrl.getNonNull();
     Properties properties = new Properties();
-    Flags.instance()
-        .masterCentralDatabaseJdbcProperty
-        .getNonNull()
-        .forEach(properties::setProperty);
+    Flags.masterCentralDatabaseJdbcProperty.getNonNull().forEach(properties::setProperty);
     DatabaseConnections databaseConnections = new DatabaseConnections();
     databaseConnections.initialize(jdbcUrl, properties, /* statementCacheSize= */ 100);
     logger.atInfo().log(

@@ -309,7 +309,7 @@ public class AndroidDesktopDeviceHelper {
   }
 
   static Optional<String> getParisCheckHealthScriptPath() {
-    String parisPath = Flags.instance().parisPath.getNonNull();
+    String parisPath = Flags.parisPath.getNonNull();
     if (!parisPath.isEmpty()) {
       return Optional.of(parisPath);
     }

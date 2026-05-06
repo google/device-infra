@@ -150,6 +150,6 @@ public class FeatureManager {
       return universe instanceof UniverseScope.SelfUniverse;
     }
     // OSS/ATS: availability depends on the flag.
-    return Flags.instance().feEnableConfiguration.getNonNull();
+    return Flags.feEnableConfiguration.getNonNull();
   }
 }

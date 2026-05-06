@@ -33,12 +33,12 @@ public final class DirCommon {
 
   /** Returns the public directory. */
   public static String getPublicDirRoot() {
-    return Flags.instance().publicDir.getNonNull();
+    return Flags.publicDir.getNonNull();
   }
 
   /** Returns the root of the temporary directory. */
   public static String getTempDirRoot() {
-    return Flags.instance().tmpDirRoot.getNonNull();
+    return Flags.tmpDirRoot.getNonNull();
   }
 
   private DirCommon() {}

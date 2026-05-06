@@ -89,8 +89,7 @@ public final class LocalFileHandlerModule extends AbstractModule {
       localFileUtil.prepareDir(logFileDir);
       localFileUtil.grantFileOrDirFullAccess(logFileDir);
       FileHandler fileHandler =
-          new FileHandler(
-              logFilePattern, LOG_FILE_SIZE_LIMIT, Flags.instance().logFileNumber.get());
+          new FileHandler(logFilePattern, LOG_FILE_SIZE_LIMIT, Flags.logFileNumber.get());
       fileHandler.setFormatter(MobileHarnessLogFormatter.getDefaultFormatter());
       fileHandler.setLevel(Level.INFO);
       return Optional.of(fileHandler);

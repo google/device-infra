@@ -63,7 +63,7 @@ public class AndroidRealDeviceDispatcher extends CacheableDispatcher {
 
     // Checks fastboot.
     List<String> errors = new ArrayList<>();
-    if (Flags.instance().enableFastbootInAndroidRealDevice.getNonNull()) {
+    if (Flags.enableFastbootInAndroidRealDevice.getNonNull()) {
       try {
         new Fastboot().checkFastboot();
       } catch (MobileHarnessException e) {

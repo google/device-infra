@@ -73,10 +73,10 @@ public class Adb {
 
   /** Default max attempt times if requiring retry. */
   @VisibleForTesting
-  static final int DEFAULT_RETRY_ATTEMPTS = Flags.instance().adbCommandRetryAttempts.getNonNull();
+  static final int DEFAULT_RETRY_ATTEMPTS = Flags.adbCommandRetryAttempts.getNonNull();
 
   @VisibleForTesting
-  static final Duration RETRY_INTERVAL = Flags.instance().adbCommandRetryInterval.getNonNull();
+  static final Duration RETRY_INTERVAL = Flags.adbCommandRetryInterval.getNonNull();
 
   @VisibleForTesting final Sleeper sleeper = Sleeper.defaultSleeper();
 
@@ -147,7 +147,7 @@ public class Adb {
   public Command getAdbCommand() {
     return Command.of(getAdbPath())
         .timeout(DEFAULT_ADB_COMMAND_TIMEOUT)
-        .redirectStderr(Flags.instance().defaultAdbCommandRedirectStderr.getNonNull())
+        .redirectStderr(Flags.defaultAdbCommandRedirectStderr.getNonNull())
         .successExitCodes(ImmutableSet.of(DEFAULT_ADB_SUCCESS_EXIT_CODE));
   }
 
@@ -788,8 +788,7 @@ public class Adb {
     if (originalPeriod.isEmpty()) {
       return originalTimeout;
     }
-    Duration newPeriod =
-        originalPeriod.get().plus(Flags.instance().extraAdbCommandTimeout.getNonNull());
+    Duration newPeriod = originalPeriod.get().plus(Flags.extraAdbCommandTimeout.getNonNull());
     return originalTimeout.withFixed(newPeriod);
   }
 

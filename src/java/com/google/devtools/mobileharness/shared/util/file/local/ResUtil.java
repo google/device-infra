@@ -65,13 +65,12 @@ public class ResUtil {
   /** This method should only be called by {@link #DEFAULT_RES_DIR}. */
   private static String initializeResDir() {
     if (systemUtil.isBlazeTest()) {
-      String result = PathUtil.join(getBazelTestTmpDir(), Flags.instance().resDirName.getNonNull());
+      String result = PathUtil.join(getBazelTestTmpDir(), Flags.resDirName.getNonNull());
       String location = "Bazel test";
       logger.atInfo().log("Running on %s, use %s as RES_DIR.", location, result);
       return result;
     } else {
-      String result =
-          PathUtil.join(DirCommon.getTempDirRoot(), Flags.instance().resDirName.getNonNull());
+      String result = PathUtil.join(DirCommon.getTempDirRoot(), Flags.resDirName.getNonNull());
       logger.atInfo().log("Running on Lab server, use %s as RES_DIR.", result);
       LocalFileUtil fileUtil = new LocalFileUtil();
       // Cleans up the res dir. Otherwise, the lab server may fail to extract the adb binary
@@ -102,7 +101,7 @@ public class ResUtil {
     this.resDir = resDir;
     this.extResDir = Suppliers.memoize(() -> PathUtil.join(resDir.get(), "external"));
     this.fileUtil = fileUtil;
-    String jarPath = Flags.instance().externalResJar.getNonNull();
+    String jarPath = Flags.externalResJar.getNonNull();
     if (!Strings.isNullOrEmpty(jarPath)
         && fileUtil.isFileExist(jarPath)
         && jarPath.endsWith(".jar")) {
@@ -145,7 +144,7 @@ public class ResUtil {
       }
 
       // Use the resource in supplemental resource directory if exists.
-      String supplementalResDir = Flags.instance().supplementalResDir.getNonNull();
+      String supplementalResDir = Flags.supplementalResDir.getNonNull();
       if (!Strings.isNullOrEmpty(supplementalResDir)) {
         filePath = PathUtil.join(supplementalResDir, resPathInJar);
         if (fileUtil.isFileExist(filePath)) {

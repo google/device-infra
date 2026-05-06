@@ -296,7 +296,7 @@ public class AndroidConnectivityUtil {
    */
   public boolean connectToWifi(ConnectToWifiArgs args, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
-    if (Flags.instance().disableWifiUtilFunc.getNonNull()) {
+    if (Flags.disableWifiUtilFunc.getNonNull()) {
       SharedLogUtil.logMsg(
           logger,
           Level.INFO,
@@ -662,7 +662,7 @@ public class AndroidConnectivityUtil {
    * @return whether the ping is successfully
    */
   public boolean pingSuccessfully(String serial) throws InterruptedException {
-    if (Flags.instance().disableWifiUtilFunc.getNonNull()) {
+    if (Flags.disableWifiUtilFunc.getNonNull()) {
       logger.atInfo().log(
           "Wifi util functionality is disabled. Skip pinging for device %s.", serial);
       return false;
@@ -1323,7 +1323,7 @@ public class AndroidConnectivityUtil {
 
   @VisibleForTesting
   static Duration getLongPingTimeout() {
-    return Flags.instance().longPingTimeout.get();
+    return Flags.longPingTimeout.get();
   }
 
   /*

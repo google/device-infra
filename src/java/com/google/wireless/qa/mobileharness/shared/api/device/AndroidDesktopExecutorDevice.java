@@ -79,7 +79,7 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
     if (getDimension("network_zone").isEmpty()) {
       addDimension("network_zone", "unspecified");
     }
-    String executorGroup = Flags.instance().androidDesktopExecutorGroup.getNonNull();
+    String executorGroup = Flags.androidDesktopExecutorGroup.getNonNull();
     if (!executorGroup.isEmpty()) {
       updateDimension("network_zone", executorGroup);
     }

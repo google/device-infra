@@ -40,8 +40,8 @@ public final class AndroidJitEmulatorUtil {
   public static final String TF_GLOBAL_CONFIG_PATH = "/mtt/scripts/host-config.xml";
 
   public static String getVirtualDeviceNameInTradefed(String deviceId) {
-    if (!Flags.instance().virtualDeviceServerIp.getNonNull().isEmpty()
-        && !Flags.instance().virtualDeviceServerUsername.getNonNull().isEmpty()) {
+    if (!Flags.virtualDeviceServerIp.getNonNull().isEmpty()
+        && !Flags.virtualDeviceServerUsername.getNonNull().isEmpty()) {
       return deviceId;
     }
     Matcher matcher = LOCAL_NOOP_EMULATOR_ID_PATTERN.matcher(deviceId);
@@ -90,19 +90,19 @@ public final class AndroidJitEmulatorUtil {
    * @return the list of virtual device IDs
    */
   public static ImmutableList<String> getAllVirtualDeviceIds() {
-    int emulatorNumber = Flags.instance().androidJitEmulatorNum.getNonNull();
+    int emulatorNumber = Flags.androidJitEmulatorNum.getNonNull();
     List<String> emulatorIds = new ArrayList<>();
 
-    if (Flags.instance().noopJitEmulator.getNonNull()) {
-      if (!Flags.instance().virtualDeviceServerIp.getNonNull().isEmpty()
-          && !Flags.instance().virtualDeviceServerUsername.getNonNull().isEmpty()) {
+    if (Flags.noopJitEmulator.getNonNull()) {
+      if (!Flags.virtualDeviceServerIp.getNonNull().isEmpty()
+          && !Flags.virtualDeviceServerUsername.getNonNull().isEmpty()) {
         for (int i = 0; i < emulatorNumber; i++) {
           emulatorIds.add(
               String.format(
                   "gce-device-%s-%d-%s",
-                  Flags.instance().virtualDeviceServerIp.getNonNull(),
+                  Flags.virtualDeviceServerIp.getNonNull(),
                   i,
-                  Flags.instance().virtualDeviceServerUsername.getNonNull()));
+                  Flags.virtualDeviceServerUsername.getNonNull()));
         }
       } else {
         for (int i = 0; i < emulatorNumber; i++) {

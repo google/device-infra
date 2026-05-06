@@ -46,6 +46,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stu
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.flags.core.FlagsManager;
 import com.google.devtools.mobileharness.shared.util.system.SystemPropertiesUtil;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -74,7 +75,7 @@ public class AtsLocalRunner {
             .addToHead(BuiltinFlags.atsConsoleFlags())
             .addToEnd(ImmutableList.copyOf(args));
     logger.atInfo().log("Device infra service flags: %s", finalFlags.flags());
-    Flags.parse(finalFlags.flags());
+    FlagsManager.parse(finalFlags.flags());
 
     Injector injector =
         Guice.createInjector(
@@ -150,9 +151,9 @@ public class AtsLocalRunner {
                 .setConfig(
                     Any.pack(
                         AtsLocalSessionPluginConfig.newBuilder()
-                            .setTestConfig(Flags.instance().alrTestConfig.getNonNull())
-                            .addAllArtifact(Flags.instance().alrArtifacts.getNonNull())
-                            .addAllDeviceSerial(Flags.instance().alrSerials.getNonNull())
+                            .setTestConfig(Flags.alrTestConfig.getNonNull())
+                            .addAllArtifact(Flags.alrArtifacts.getNonNull())
+                            .addAllDeviceSerial(Flags.alrSerials.getNonNull())
                             .build())))
         .build();
   }
@@ -194,12 +195,12 @@ public class AtsLocalRunner {
   }
 
   public static Path getOlcServerBinary() {
-    return Path.of(Flags.instance().alrOlcServerPath.getNonNull());
+    return Path.of(Flags.alrOlcServerPath.getNonNull());
   }
 
   private static class ServerLogObserver implements StreamObserver<GetLogResponse> {
     private static final int MIN_LOG_RECORD_IMPORTANCE =
-        Flags.instance().alrOlcServerMinLogRecordImportance.getNonNull();
+        Flags.alrOlcServerMinLogRecordImportance.getNonNull();
 
     @Override
     public void onNext(GetLogResponse response) {

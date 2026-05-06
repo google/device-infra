@@ -59,7 +59,7 @@ public class Perfetto {
       LocalFileUtil fileUtil = new LocalFileUtil();
       SystemUtil systemUtil = new SystemUtil();
 
-      String perfettoPathFromFlag = Flags.instance().perfettoScriptPath.get();
+      String perfettoPathFromFlag = Flags.perfettoScriptPath.get();
 
       if (!isNullOrEmpty(perfettoPathFromFlag)) {
         // Use the Perfetto specified by the flag.

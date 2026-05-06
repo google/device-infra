@@ -311,7 +311,7 @@ public abstract class AndroidDeviceDelegate {
   public void preRunTest(TestInfo testInfo, boolean isRooted)
       throws MobileHarnessException, InterruptedException {
     try {
-      if (Flags.instance().enableDeviceSystemSettingsChange.getNonNull() && isRooted) {
+      if (Flags.enableDeviceSystemSettingsChange.getNonNull() && isRooted) {
         boolean enableDexPreVerification =
             testInfo.jobInfo().params().isTrue(PARAM_DEX_PRE_VERIFICATION);
         // Set dex pre-verification only for rooted device.

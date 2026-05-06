@@ -177,11 +177,9 @@ class OlcServerRunnerImpl implements OlcServerRunner {
     // Connects to database.
     if (enableDatabase) {
       Properties properties = new Properties();
-      Flags.instance().olcDatabaseJdbcProperty.getNonNull().forEach(properties::setProperty);
+      Flags.olcDatabaseJdbcProperty.getNonNull().forEach(properties::setProperty);
       olcDatabaseConnections.initialize(
-          Flags.instance().olcDatabaseJdbcUrl.getNonNull(),
-          properties,
-          /* statementCacheSize= */ 100);
+          Flags.olcDatabaseJdbcUrl.getNonNull(), properties, /* statementCacheSize= */ 100);
 
       // Prints table names.
       logger.atInfo().log(
@@ -192,8 +190,7 @@ class OlcServerRunnerImpl implements OlcServerRunner {
     lifecycleManager = startRpcServers();
 
     // Starts monitoring.
-    if (Flags.instance().enableCloudPubsubMonitoring.getNonNull()
-        && monitorPipelineLauncher != null) {
+    if (Flags.enableCloudPubsubMonitoring.getNonNull() && monitorPipelineLauncher != null) {
       logger.atInfo().log("Starting monitoring service.");
       monitorPipelineLauncher.start();
     }
@@ -229,16 +226,16 @@ class OlcServerRunnerImpl implements OlcServerRunner {
     // Creates RPC server for non-worker.
     ImmutableList.Builder<LabeledServer> servers = ImmutableList.builder();
     ServerBuilder<?> serverBuilderForNonWorker =
-        Flags.instance().useAlts.getNonNull()
+        Flags.useAlts.getNonNull()
             ? ServerBuilderFactory.createAltsServerBuilder(
-                Flags.instance().olcServerPort.getNonNull(),
-                ImmutableSet.copyOf(Flags.instance().restrictOlcServiceToUsers.getNonNull()))
+                Flags.olcServerPort.getNonNull(),
+                ImmutableSet.copyOf(Flags.restrictOlcServiceToUsers.getNonNull()))
             : ServerBuilderFactory.createNettyServerBuilder(
-                Flags.instance().olcServerPort.getNonNull(), /* localhost= */ false);
+                Flags.olcServerPort.getNonNull(), /* localhost= */ false);
     serverBuilderForNonWorker.executor(threadPool).intercept(new ClientAddressServerInterceptor());
     servicesForNonWorker.forEach(serverBuilderForNonWorker::addService);
 
-    if (Flags.instance().enableGrpcRelay.getNonNull()) {
+    if (Flags.enableGrpcRelay.getNonNull()) {
       serverBuilderForNonWorker =
           serverUtils.enableGrpcRelay(serverBuilderForNonWorker, servicesDualMode);
     } else {
@@ -250,7 +247,7 @@ class OlcServerRunnerImpl implements OlcServerRunner {
     if (!servicesForWorker.isEmpty()) {
       ServerBuilder<?> serverBuilderForWorker =
           ServerBuilderFactory.createNettyServerBuilder(
-                  Flags.instance().atsWorkerGrpcPort.getNonNull(), /* localhost= */ false)
+                  Flags.atsWorkerGrpcPort.getNonNull(), /* localhost= */ false)
               .executor(threadPool)
               .intercept(new ClientAddressServerInterceptor());
       servicesForWorker.forEach(serverBuilderForWorker::addService);

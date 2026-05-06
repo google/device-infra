@@ -536,7 +536,7 @@ public class AtsSessionPlugin {
     // The intention is to make sure if any device goes offline between job runs, the next job
     // shouldn't be blocked on waiting for the device to become online, so we cache the devices
     // here.
-    if (Flags.instance().atsConsoleCacheXtsDevices.getNonNull()) {
+    if (Flags.atsConsoleCacheXtsDevices.getNonNull()) {
       synchronized (cachedDeviceControlIds) {
         event
             .getLocalDevices()

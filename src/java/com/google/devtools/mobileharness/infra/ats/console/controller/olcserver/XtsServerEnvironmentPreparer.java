@@ -65,15 +65,15 @@ public class XtsServerEnvironmentPreparer implements ServerEnvironmentPreparer {
 
     String xtsType = commandHelper.getXtsType();
     Path xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
-    Path initialServerBinary = Path.of(Flags.instance().atsConsoleOlcServerPath.getNonNull());
+    Path initialServerBinary = Path.of(Flags.atsConsoleOlcServerPath.getNonNull());
 
-    Path xtsServerResDirRoot = Path.of(Flags.instance().xtsServerResDirRoot.getNonNull());
+    Path xtsServerResDirRoot = Path.of(Flags.xtsServerResDirRoot.getNonNull());
 
     // Prepare olc server work dir.
     Path serverWorkDir = xtsServerResDirRoot.resolve("olc_server_work");
     localFileUtil.prepareDir(serverWorkDir);
 
-    if (Flags.instance().atsConsoleOlcServerCopyServerResource.getNonNull()) {
+    if (Flags.atsConsoleOlcServerCopyServerResource.getNonNull()) {
       // Prepares server resource dir.
       Path serverResDir = xtsServerResDirRoot.resolve("olc_server_res");
       logger.atInfo().with(IMPORTANCE, DEBUG).log("Preparing xTS resource dir [%s]", serverResDir);
@@ -130,18 +130,18 @@ public class XtsServerEnvironmentPreparer implements ServerEnvironmentPreparer {
    */
   private Path getJavaBinaryPath(String xtsType, Path xtsRootDir, Path serverResDir)
       throws MobileHarnessException, InterruptedException {
-    if (!Flags.instance().xtsJdkDir.getNonNull().isEmpty()) {
+    if (!Flags.xtsJdkDir.getNonNull().isEmpty()) {
       logger
           .atInfo()
           .with(IMPORTANCE, IMPORTANT)
           .log(
               "Use the JDK files from %s passed in via the flag --xts_jdk_dir for the server",
-              Flags.instance().xtsJdkDir.getNonNull());
-      Path jdkDir = Path.of(Flags.instance().xtsJdkDir.getNonNull());
+              Flags.xtsJdkDir.getNonNull());
+      Path jdkDir = Path.of(Flags.xtsJdkDir.getNonNull());
       grantFileOrDirFullAccess(jdkDir);
       return jdkDir.resolve("bin/java");
     }
-    if (!Flags.instance().atsConsoleOlcServerCopyServerResource.getNonNull()) {
+    if (!Flags.atsConsoleOlcServerCopyServerResource.getNonNull()) {
       return xtsCommandUtil.getJavaBinary(xtsType, xtsRootDir);
     }
     boolean useXtsJavaBinary = xtsCommandUtil.useXtsJavaBinary(xtsType, xtsRootDir);

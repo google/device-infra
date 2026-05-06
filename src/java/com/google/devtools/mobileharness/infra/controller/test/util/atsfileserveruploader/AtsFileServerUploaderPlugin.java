@@ -46,7 +46,7 @@ public class AtsFileServerUploaderPlugin {
   private final String atsFileServer;
 
   public AtsFileServerUploaderPlugin() {
-    this(new LocalFileUtil(), Flags.instance().atsFileServer.getNonNull());
+    this(new LocalFileUtil(), Flags.atsFileServer.getNonNull());
   }
 
   @VisibleForTesting

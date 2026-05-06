@@ -136,7 +136,7 @@ public class ProxyDeviceManager {
                         toImmutableMap(Entry::getKey, e -> e.getValue().getLeaseDevicesFuture())));
 
             // Leases devices asynchronously immediately.
-            if (Flags.instance().proxyModeLeaseDevicesImmediately.getNonNull()) {
+            if (Flags.proxyModeLeaseDevicesImmediately.getNonNull()) {
               job.tests.values().forEach(Test::leaseDevicesAsync);
             }
           }
@@ -247,7 +247,7 @@ public class ProxyDeviceManager {
         tests.put(testLocator, test);
 
         // Lease devices immediately.
-        if (Flags.instance().proxyModeLeaseDevicesImmediately.getNonNull()) {
+        if (Flags.proxyModeLeaseDevicesImmediately.getNonNull()) {
           test.leaseDevicesAsync();
         }
 

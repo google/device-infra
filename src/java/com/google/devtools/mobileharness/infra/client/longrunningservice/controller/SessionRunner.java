@@ -194,8 +194,7 @@ public class SessionRunner implements Callable<Void> {
     Throwable sessionError = null;
     try {
       // Checks started and running session number.
-      int maxStartedRunningSessionNum =
-          Flags.instance().olcServerMaxStartedRunningSessionNum.getNonNull();
+      int maxStartedRunningSessionNum = Flags.olcServerMaxStartedRunningSessionNum.getNonNull();
       synchronized (startedRunningSessionIds) {
         while (true) {
           if (sessionAborted) {

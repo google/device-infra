@@ -138,7 +138,7 @@ public class AdbDetectorTest {
   public void detectDevices_recover() throws Exception {
     when(adbInternalUtil.getDeviceSerialsAsMap()).thenReturn(ImmutableMap.of());
 
-    for (int i = 0; i <= Flags.instance().adbMaxNoDeviceDetectionRounds.getNonNull(); i++) {
+    for (int i = 0; i <= Flags.adbMaxNoDeviceDetectionRounds.getNonNull(); i++) {
       var unused = detector.detectDevices();
     }
 

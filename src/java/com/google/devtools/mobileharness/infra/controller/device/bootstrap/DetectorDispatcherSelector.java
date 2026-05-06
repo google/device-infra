@@ -62,12 +62,12 @@ public final class DetectorDispatcherSelector {
     ImmutableList<Detector> detectorCandidates;
     if (component == Component.LOCAL_MODE) {
       detectorCandidates =
-          Flags.instance().alwaysUseOssDetectorAndDispatcher.getNonNull()
+          Flags.alwaysUseOssDetectorAndDispatcher.getNonNull()
               ? AllDetectorsAndDispatchers.detectorCandidatesForLocalModeOss()
               : AllDetectorsAndDispatchers.detectorCandidatesForLocalModeOss();
     } else {
       detectorCandidates =
-          Flags.instance().alwaysUseOssDetectorAndDispatcher.getNonNull()
+          Flags.alwaysUseOssDetectorAndDispatcher.getNonNull()
               ? AllDetectorsAndDispatchers.detectorCandidatesForLabServerOss()
               : AllDetectorsAndDispatchers.detectorCandidatesForLabServerOss();
     }
@@ -77,13 +77,13 @@ public final class DetectorDispatcherSelector {
   private ImmutableList<Class<? extends Dispatcher>> selectSupportedDispatchers() {
     DispatcherManager dispatcherManager = DispatcherManager.getInstance();
     if (component == Component.LOCAL_MODE) {
-      if (Flags.instance().alwaysUseOssDetectorAndDispatcher.getNonNull()) {
+      if (Flags.alwaysUseOssDetectorAndDispatcher.getNonNull()) {
         AllDetectorsAndDispatchers.addDispatchersForLocalModeOss(dispatcherManager);
       } else {
         AllDetectorsAndDispatchers.addDispatchersForLocalModeOss(dispatcherManager);
       }
     } else {
-      if (Flags.instance().alwaysUseOssDetectorAndDispatcher.getNonNull()) {
+      if (Flags.alwaysUseOssDetectorAndDispatcher.getNonNull()) {
         AllDetectorsAndDispatchers.addDispatchersForLabServerOss(dispatcherManager);
       } else {
         AllDetectorsAndDispatchers.addDispatchersForLabServerOss(dispatcherManager);

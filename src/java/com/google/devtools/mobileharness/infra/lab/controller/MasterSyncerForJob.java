@@ -163,7 +163,7 @@ public class MasterSyncerForJob implements Runnable {
     }
     // Gets the alive job ids from master.
     Set<String> aliveJobsInMaster;
-    if (!Flags.instance().labServerCheckJobsFromMaster.getNonNull()) {
+    if (!Flags.labServerCheckJobsFromMaster.getNonNull()) {
       aliveJobsInMaster = null;
     } else {
       try {

@@ -51,7 +51,7 @@ public class NoOpDeviceDetector implements Detector {
   @SuppressWarnings("MixedMutabilityReturnType")
   @Override
   public List<DetectionResult> detectDevices() throws MobileHarnessException, InterruptedException {
-    if (!Flags.instance().noOpDeviceRandomOffline.getNonNull() || RANDOM.nextInt(100) >= 1) {
+    if (!Flags.noOpDeviceRandomOffline.getNonNull() || RANDOM.nextInt(100) >= 1) {
       return detectionResults;
     }
 
@@ -67,17 +67,15 @@ public class NoOpDeviceDetector implements Detector {
   }
 
   private static ImmutableList<DetectionResult> createDetectionResults() {
-    String noOpDeviceType = Flags.instance().noOpDeviceType.getNonNull();
+    String noOpDeviceType = Flags.noOpDeviceType.getNonNull();
     String deviceIdPrefix = noOpDeviceType.isEmpty() ? "NoOpDevice" : noOpDeviceType;
 
-    return IntStream.range(0, Flags.instance().noOpDeviceNum.getNonNull())
+    return IntStream.range(0, Flags.noOpDeviceNum.getNonNull())
         .mapToObj(
             offset ->
                 DetectionResult.of(
                     String.format(
-                        "%s-%d",
-                        deviceIdPrefix,
-                        Flags.instance().noOpDeviceStartIndex.getNonNull() + offset),
+                        "%s-%d", deviceIdPrefix, Flags.noOpDeviceStartIndex.getNonNull() + offset),
                     DetectionType.NO_OP))
         .collect(toImmutableList());
   }

@@ -67,8 +67,6 @@ public class BatchPipelineService<T extends Message> extends AbstractScheduledSe
   @Override
   protected Scheduler scheduler() {
     return Scheduler.newFixedRateSchedule(
-        INITIAL_DELAY.toSeconds(),
-        Flags.instance().cloudPubsubPublishInterval.get().toSeconds(),
-        SECONDS);
+        INITIAL_DELAY.toSeconds(), Flags.cloudPubsubPublishInterval.get().toSeconds(), SECONDS);
   }
 }

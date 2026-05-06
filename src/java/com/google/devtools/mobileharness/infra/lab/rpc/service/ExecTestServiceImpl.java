@@ -180,7 +180,7 @@ public class ExecTestServiceImpl {
     }
 
     List<Device> devices;
-    if (Flags.instance().enableDeviceTestDecoupling.get()) {
+    if (Flags.enableDeviceTestDecoupling.get()) {
       if (!(testRunnerHolder instanceof ProxyTestManager proxyTestManager)) {
         throw new MobileHarnessException(
             InfraErrorId.LAB_RPC_EXEC_TEST_DECOUPLING_NOT_SUPPORTED,

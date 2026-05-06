@@ -65,8 +65,8 @@ public class MessagingUtil {
    * started by the current process if any, which can be used by sub-processes.
    */
   public OptionalInt getLocalMessagingServerPort() {
-    if (Flags.instance().enableMessagingService.getNonNull()) {
-      return OptionalInt.of(Flags.instance().grpcPort.getNonNull());
+    if (Flags.enableMessagingService.getNonNull()) {
+      return OptionalInt.of(Flags.grpcPort.getNonNull());
     } else {
       return OptionalInt.empty();
     }

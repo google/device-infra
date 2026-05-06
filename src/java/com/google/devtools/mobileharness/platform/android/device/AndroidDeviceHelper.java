@@ -157,7 +157,7 @@ public class AndroidDeviceHelper {
   public boolean updatePersistTestHarnessRequiredDimension(BaseDevice device)
       throws InterruptedException, MobileHarnessException {
     boolean isDimensionChanged = false;
-    if (Flags.instance().keepTestHarnessFalse.getNonNull()) {
+    if (Flags.keepTestHarnessFalse.getNonNull()) {
       String deviceId = device.getDeviceId();
 
       String key = Ascii.toLowerCase(AndroidProperty.PERSIST_TEST_HARNESS.name());

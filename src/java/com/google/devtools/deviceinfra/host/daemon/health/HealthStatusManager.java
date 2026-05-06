@@ -188,7 +188,7 @@ public class HealthStatusManager {
 
   /** Compares the given timeout with the one from the flag and returns the shorter one. */
   static Duration calculateTimeout(Optional<Duration> timeoutOpt) {
-    Duration timeout = Flags.instance().maxDrainTimeout.getNonNull();
+    Duration timeout = Flags.maxDrainTimeout.getNonNull();
     if (timeoutOpt.isPresent() && timeoutOpt.get().compareTo(timeout) < 0) {
       timeout = timeoutOpt.get();
     }

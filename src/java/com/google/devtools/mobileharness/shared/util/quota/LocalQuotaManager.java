@@ -59,11 +59,11 @@ class LocalQuotaManager extends QuotaManager {
         () ->
             ImmutableMap.of(
                 QuotaKey.ADB_PUSH_LARGE_FILE,
-                Flags.instance().maxConcurrentAdbPushLargeFile.getNonNull(),
+                Flags.maxConcurrentAdbPushLargeFile.getNonNull(),
                 QuotaKey.UNZIP_LARGE_FILE,
-                Flags.instance().maxConcurrentUnzipLargeFile.getNonNull(),
+                Flags.maxConcurrentUnzipLargeFile.getNonNull(),
                 QuotaKey.FASTBOOT_FLASH_DEVICE,
-                Flags.instance().maxConcurrentFlashDevice.getNonNull(),
+                Flags.maxConcurrentFlashDevice.getNonNull(),
                 QuotaKey.TF_CONTAINER_INSTANCE,
                 1));
   }

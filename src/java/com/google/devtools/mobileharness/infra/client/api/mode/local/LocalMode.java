@@ -166,13 +166,13 @@ public class LocalMode implements ExecMode, ServiceProvider {
           ApiConfig.getInstance()
               .initialize(
                   /* isDefaultPublic= */ true,
-                  /* isDefaultSynced= */ !Flags.instance().enableDeviceConfigManager.getNonNull(),
+                  /* isDefaultSynced= */ !Flags.enableDeviceConfigManager.getNonNull(),
                   "");
 
           // Subscribes LocalDeviceUpEvent.
           globalInternalBus.register(this);
 
-          if (Flags.instance().enableProxyMode.getNonNull()) {
+          if (Flags.enableProxyMode.getNonNull()) {
             // Initializes ProxyDeviceManager.
             proxyDeviceManager =
                 Guice.createInjector(
@@ -203,7 +203,7 @@ public class LocalMode implements ExecMode, ServiceProvider {
           localDeviceManagerFuture.set(localDeviceManager);
 
           // Starts device config manager.
-          if (Flags.instance().enableDeviceConfigManager.getNonNull()) {
+          if (Flags.enableDeviceConfigManager.getNonNull()) {
             logFailure(
                 LazyInitializer.threadPool.submit(
                     threadRenaming(
@@ -310,7 +310,7 @@ public class LocalMode implements ExecMode, ServiceProvider {
     ImmutableList<Device> devices;
     TestRunnerLauncher<TestRunner> launcher;
 
-    if (Flags.instance().enableProxyMode.getNonNull()) {
+    if (Flags.enableProxyMode.getNonNull()) {
       TestInfo testInfo = setting.testInfo();
       JobInfo jobInfo = testInfo.jobInfo();
       ProxyDevices proxyDevices =

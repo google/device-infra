@@ -31,7 +31,7 @@ public final class AndroidDesktopExecutorDetectorTest {
   @Test
   public void detectDevices_returnsExpectedDevices() {
     disableStateCheckingForTest();
-    Flags.instance().androidDesktopExecutorDevicesNum.setForTest(3);
+    Flags.androidDesktopExecutorDevicesNum.setForTest(3);
     AndroidDesktopExecutorDetector detector = new AndroidDesktopExecutorDetector();
 
     List<DetectionResult> detectionResults = detector.detectDevices();

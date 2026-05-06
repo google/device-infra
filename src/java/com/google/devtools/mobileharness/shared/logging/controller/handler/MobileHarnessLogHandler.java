@@ -40,7 +40,7 @@ public class MobileHarnessLogHandler extends Handler {
   MobileHarnessLogHandler(LogEntryQueue logEntryQueue, LogEntryUtil logEntryUtil) {
     this.logEntryQueue = logEntryQueue;
     this.logEntryUtil = logEntryUtil;
-    if (!Flags.instance().enableStackdriverDebugMode.getNonNull()) {
+    if (!Flags.enableStackdriverDebugMode.getNonNull()) {
       setLevel(Level.INFO);
     }
   }

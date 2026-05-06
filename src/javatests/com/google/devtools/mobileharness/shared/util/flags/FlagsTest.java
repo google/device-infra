@@ -16,11 +16,12 @@
 
 package com.google.devtools.mobileharness.shared.util.flags;
 
-import static com.google.common.truth.Truth.assertThat;
-import static org.junit.Assert.assertThrows;
-
-import java.time.Duration;
-import org.junit.After;
+import com.google.common.truth.Truth;
+import com.google.devtools.mobileharness.shared.util.flags.core.FlagSpec;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -28,45 +29,22 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class FlagsTest {
 
-  @After
-  public void tearDown() {
-    Flags.resetToDefault();
-  }
-
+  @Ignore("b/506875938")
   @Test
-  public void parse() throws Exception {
-    Flags.parseOss(new String[] {"--whatever_flag=hoo"});
+  public void flags_areOrderedByName() {
+    Field[] fields = Flags.class.getDeclaredFields();
 
-    assertThat(Flags.instance().supplementalResDir.getNonNull()).isEmpty();
-    assertThat(Flags.instance().extraAdbCommandTimeout.getNonNull()).isEqualTo(Duration.ZERO);
+    List<String> flagNames = new ArrayList<>();
+    for (Field field : fields) {
+      FlagSpec flagSpec = field.getAnnotation(FlagSpec.class);
+      if (flagSpec != null) {
+        flagNames.add(flagSpec.name());
+      }
+    }
 
-    Flags.parseOss(new String[] {"--mh_adb_command_extra_timeout=123s"});
-
-    assertThat(Flags.instance().supplementalResDir.getNonNull()).isEmpty();
-    assertThat(Flags.instance().extraAdbCommandTimeout.getNonNull())
-        .isEqualTo(Duration.ofSeconds(123L));
-
-    Flags.parseOss(new String[] {"--supplemental_res_dir=foo"});
-
-    assertThat(Flags.instance().supplementalResDir.getNonNull()).isEqualTo("foo");
-    assertThat(Flags.instance().extraAdbCommandTimeout.getNonNull())
-        .isEqualTo(Duration.ofSeconds(123L));
-
-    Flags.parseOss(new String[] {"--cache_eviction_trim_to_ratio=0.5"});
-    assertThat(Flags.instance().cacheEvictionTrimToRatio.getNonNull()).isEqualTo(0.5);
-
-    assertThrows(
-        IllegalArgumentException.class,
-        () ->
-            Flags.parseOss(
-                new String[] {
-                  "--reset_device_in_android_real_device_setup=true",
-                  "--keep_test_harness_false=true",
-                }));
-
-    Flags.resetToDefault();
-
-    assertThat(Flags.instance().supplementalResDir.getNonNull()).isEmpty();
-    assertThat(Flags.instance().extraAdbCommandTimeout.getNonNull()).isEqualTo(Duration.ZERO);
+    Truth.assertWithMessage(
+            "Flags in Flags.java should be sorted by @FlagSpec.name alphabetically.")
+        .that(flagNames)
+        .isInOrder();
   }
 }

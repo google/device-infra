@@ -32,31 +32,8 @@ java_library(
     ],
     visibility = [":flags_visibility"],
     deps = [
-        ":duration_flag",
-        ":flag",
-        "@maven//:com_beust_jcommander",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "flag",
-    srcs = [
-        "Flag.java",
-    ],
-    deps = [
-        "@maven//:com_beust_jcommander",
-        "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "duration_flag",
-    srcs = ["DurationFlag.java"],
-    deps = [
-        ":flag",
-        "@maven//:com_beust_jcommander",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:flag",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core/ext:duration_flag",
         "@maven//:com_google_guava_guava",
     ],
 )

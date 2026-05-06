@@ -147,7 +147,7 @@ public class AtsDdaSessionPlugin {
     Duration heartbeatTimeout =
         config.hasHeartbeatTimeout()
             ? toJavaDuration(config.getHeartbeatTimeout())
-            : Flags.instance().atsDdaLeaseExpirationTime.getNonNull();
+            : Flags.atsDdaLeaseExpirationTime.getNonNull();
 
     DeviceRequirement deviceRequirement = config.getDeviceRequirement();
     // TODO: Adds default decorators here.

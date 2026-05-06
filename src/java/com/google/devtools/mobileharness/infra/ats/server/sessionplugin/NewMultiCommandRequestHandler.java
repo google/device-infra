@@ -603,10 +603,9 @@ final class NewMultiCommandRequestHandler {
       return path.replace(ATS_GOOGLE_CLOUD_STORAGE_PREFIX, RemoteFileType.GCS.prefix());
     }
     if (PathUtil.basename(path).equals(ACLOUD_FILENAME)
-        && !path.startsWith(Flags.instance().atsStoragePath.getNonNull())) {
+        && !path.startsWith(Flags.atsStoragePath.getNonNull())) {
       String acloudPath =
-          PathUtil.join(
-              Flags.instance().atsStoragePath.getNonNull(), "mh_resources", ACLOUD_FILENAME);
+          PathUtil.join(Flags.atsStoragePath.getNonNull(), "mh_resources", ACLOUD_FILENAME);
       if (!localFileUtil.isFileOrDirExist(acloudPath)) {
         localFileUtil.prepareDir(Path.of(acloudPath).getParent().toString());
         localFileUtil.copyFileOrDir(path, acloudPath);
@@ -615,7 +614,7 @@ final class NewMultiCommandRequestHandler {
     }
     return PathUtil.join(
         RemoteFileType.ATS_FILE_SERVER.prefix(),
-        PathUtil.makeRelative(Flags.instance().atsStoragePath.getNonNull(), path));
+        PathUtil.makeRelative(Flags.atsStoragePath.getNonNull(), path));
   }
 
   @SuppressWarnings("ThrowSpecificExceptions")

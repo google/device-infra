@@ -60,8 +60,8 @@ public class ApiConfigFileProcessor {
   }
 
   public Optional<LabDeviceConfig> readConfigFile() throws MobileHarnessException {
-    String apiConfigPath = Flags.instance().apiConfigFile.getNonNull();
-    String labDeviceConfigPath = Flags.instance().labDeviceConfigFile.getNonNull();
+    String apiConfigPath = Flags.apiConfigFile.getNonNull();
+    String labDeviceConfigPath = Flags.labDeviceConfigFile.getNonNull();
     if (!labDeviceConfigPath.isEmpty()) {
       return readConfigFileInternal(labDeviceConfigPath, /* isLabDeviceConfig= */ true);
     } else if (!apiConfigPath.isEmpty()) {

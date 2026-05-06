@@ -190,7 +190,7 @@ public class FileCleaner implements Runnable {
 
       // Removes the PUBLIC_GEN_DIR.
       String genFileDir = DirUtil.getPublicGenDir();
-      if (isDurationPositive(Flags.instance().jobGenFileExpiredTime.getNonNull())) {
+      if (isDurationPositive(Flags.jobGenFileExpiredTime.getNonNull())) {
         logger.atInfo().log(
             "Skip removing the PUBLIC_GEN_FILES folder %s because flag"
                 + " job_gen_file_expired_time is non zero.",
@@ -243,15 +243,13 @@ public class FileCleaner implements Runnable {
       // The following directories are some sub directories of DirUtil.getTempDir(). Uses
       // different
       // TTL for different sub directories.
-      managedDirs.putIfAbsent(
-          DirUtil.getReceivedDir(), Flags.instance().fileExpireTime.getNonNull());
+      managedDirs.putIfAbsent(DirUtil.getReceivedDir(), Flags.fileExpireTime.getNonNull());
       // The following directories are "job level" directories.
       managedDirs.putIfAbsent(DirUtil.getRunDir(), JobSetting.MAX_JOB_TIMEOUT);
       // The following directories are "test level" directories.
       Duration genFileExpireTime =
-          Flags.instance().jobGenFileExpiredTime.getNonNull().compareTo(JobSetting.MAX_TEST_TIMEOUT)
-                  > 0
-              ? Flags.instance().jobGenFileExpiredTime.getNonNull()
+          Flags.jobGenFileExpiredTime.getNonNull().compareTo(JobSetting.MAX_TEST_TIMEOUT) > 0
+              ? Flags.jobGenFileExpiredTime.getNonNull()
               : JobSetting.MAX_TEST_TIMEOUT;
       managedDirs.putIfAbsent(DirUtil.getPublicGenDir(), genFileExpireTime);
       managedDirs.putIfAbsent(DirUtil.getPrivateGenDir(), genFileExpireTime);
@@ -264,7 +262,7 @@ public class FileCleaner implements Runnable {
       while (!Thread.currentThread().isInterrupted()) {
         // Checks file system IO
         try {
-          if (Flags.instance().enableFileSystemIoCheck.getNonNull()) {
+          if (Flags.enableFileSystemIoCheck.getNonNull()) {
             checkFileSystemIo();
           }
         } catch (RuntimeException e) {
@@ -296,7 +294,7 @@ public class FileCleaner implements Runnable {
         }
 
         // Cleans zombie files.
-        if (Flags.instance().enableZombieFileClean.getNonNull()) {
+        if (Flags.enableZombieFileClean.getNonNull()) {
           try {
             cleanZombieFiles();
           } catch (MobileHarnessException e) {
@@ -308,7 +306,7 @@ public class FileCleaner implements Runnable {
 
         // Checks disk space.
         try {
-          if (Flags.instance().enableDiskCheck.getNonNull()) {
+          if (Flags.enableDiskCheck.getNonNull()) {
             checkDiskSpace();
           }
         } catch (MobileHarnessException e) {
@@ -316,7 +314,7 @@ public class FileCleaner implements Runnable {
         } catch (RuntimeException e) {
           logger.atSevere().withCause(e).log("FATAL ERROR");
         }
-        sleeper.sleep(Flags.instance().checkFilesInterval.getNonNull());
+        sleeper.sleep(Flags.checkFilesInterval.getNonNull());
       }
     } catch (InterruptedException e) {
       logger.atInfo().log("Interrupted");

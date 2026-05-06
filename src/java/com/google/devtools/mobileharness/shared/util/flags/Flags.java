@@ -17,12 +17,11 @@
 package com.google.devtools.mobileharness.shared.util.flags;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.devtools.mobileharness.shared.util.flags.Flags.TenantConfigMode.NOOP;
-import static java.util.Arrays.stream;
 
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
-import java.lang.reflect.Modifier;
+import com.google.devtools.mobileharness.shared.util.flags.core.Flag;
+import com.google.devtools.mobileharness.shared.util.flags.core.FlagSpec;
+import com.google.devtools.mobileharness.shared.util.flags.core.ext.DurationFlag;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -45,703 +44,398 @@ import java.util.Map;
  * }
  * }</pre>
  */
-@com.beust.jcommander.Parameters(separators = "=")
-@SuppressWarnings({
-  "BooleanFlagNameStartingWithNo",
-  "NonPrivateFlag",
-  "UnnecessarilyFullyQualified",
-  "unused"
-})
+@SuppressWarnings({"NonPrivateFlag"})
 public class Flags {
 
-  private static final Flag<String> aaptPathDefault = Flag.value("");
+  @FlagSpec(name = "aapt", help = "Android AAPT path, overriding the SDK location")
+  public static final Flag<String> aaptPath = Flag.value("");
 
-  @com.beust.jcommander.Parameter(
-      names = "--aapt",
-      description = "Android AAPT path.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> aaptPath = aaptPathDefault;
+  @SuppressWarnings("unused")
+  @FlagSpec(name = "acloud_path", help = "Path to the acloud binary.")
+  public static final Flag<String> acloudPath = Flag.value("/bin/acloud_prebuilt");
 
-  private static final Flag<String> acloudPathDefault = Flag.value("/bin/acloud_prebuilt");
+  @FlagSpec(
+      name = "adb_command_retry_attempts",
+      help = "The max retry attempts for executing adb command. Default is 2.")
+  public static final Flag<Integer> adbCommandRetryAttempts = Flag.value(2);
 
-  @com.beust.jcommander.Parameter(
-      names = "--acloud_path",
-      description = "Path to the acloud binary.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> acloudPath = acloudPathDefault;
+  @FlagSpec(
+      name = "adb_command_retry_interval",
+      help = "The wait interval between retry attempts for executing adb command. Default is 0.")
+  public static final Flag<Duration> adbCommandRetryInterval = DurationFlag.zero();
 
-  private static final Flag<Integer> adbCommandRetryAttemptsDefault = Flag.value(2);
+  @FlagSpec(name = "adb", help = "Android ADB path, overriding the SDK location.")
+  public static final Flag<String> adbPathFromUser = Flag.value("");
 
-  @com.beust.jcommander.Parameter(
-      names = "--adb_command_retry_attempts",
-      description = "The max retry attempts for executing adb command. Default is 2.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> adbCommandRetryAttempts = adbCommandRetryAttemptsDefault;
-
-  private static final Flag<Duration> adbCommandRetryIntervalDefault =
-      DurationFlag.value(Duration.ZERO);
-
-  @com.beust.jcommander.Parameter(
-      names = "--adb_command_retry_interval",
-      description =
-          "The wait interval between retry attempts for executing adb command. Default is 0.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> adbCommandRetryInterval = adbCommandRetryIntervalDefault;
-
-  private static final Flag<String> adbPathFromUserDefault = Flag.value("");
-
-  @com.beust.jcommander.Parameter(
-      names = "--adb",
-      description = "Android ADB path.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> adbPathFromUser = adbPathFromUserDefault;
-
-  private static final Flag<Boolean> adbDontKillServerDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--adb_dont_kill_server",
-      description = "Don't ever kill the adb server.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> adbDontKillServer = adbDontKillServerDefault;
+  @FlagSpec(name = "adb_dont_kill_server", help = "Don't ever kill the adb server.")
+  public static final Flag<Boolean> adbDontKillServer = Flag.value(false);
 
   /**
    * Force the reboot of adb server regardless of other flags conditions. e.g. If both this flag and
    * {@code adb_dont_kill_server} are set, this flag will override {@code adb_dont_kill_server}.
    */
-  private static final Flag<Boolean> adbForceKillServerDefault = Flag.value(false);
+  @FlagSpec(name = "adb_kill_server", help = "Force to kill the adb server.")
+  public static final Flag<Boolean> adbForceKillServer = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--adb_kill_server",
-      description = "Force to kill the adb server.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> adbForceKillServer = adbForceKillServerDefault;
+  @FlagSpec(name = "adb_libusb", help = "Start the adb server with flag ADB_LIBUSB=1.")
+  public static final Flag<Boolean> adbLibusb = Flag.value(false);
 
-  private static final Flag<Boolean> adbLibusbDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--adb_libusb",
-      description = "Start the adb server with flag ADB_LIBUSB=1.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> adbLibusb = adbLibusbDefault;
-
-  private static final Flag<Integer> adbMaxNoDeviceDetectionRoundsDefault = Flag.value(20);
-
-  @com.beust.jcommander.Parameter(
-      names = "--adb_max_no_device_detection_rounds",
-      description =
+  @FlagSpec(
+      name = "adb_max_no_device_detection_rounds",
+      help =
           "The max rounds of detection when ADB detects no devices. If reaches, will restart ADB. 0"
-              + " to disable the feature. Default is 20.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> adbMaxNoDeviceDetectionRounds = adbMaxNoDeviceDetectionRoundsDefault;
+              + " to disable the feature. Default is 20.")
+  public static final Flag<Integer> adbMaxNoDeviceDetectionRounds = Flag.value(20);
 
-  private static final Flag<Boolean> addRequiredDimensionForPartnerSharedPoolDefault =
-      Flag.value(false);
+  @FlagSpec(
+      name = "add_required_dimension_for_partner_shared_pool",
+      help = "Add the required dimension pool:partner_shared")
+  public static final Flag<Boolean> addRequiredDimensionForPartnerSharedPool = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--add_required_dimension_for_partner_shared_pool",
-      description = "Add the required dimension pool:partner_shared",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> addRequiredDimensionForPartnerSharedPool =
-      addRequiredDimensionForPartnerSharedPoolDefault;
+  @FlagSpec(
+      name = "add_supported_dimension_for_omni_mode_usage",
+      help = "Add the supported dimension for Omni mode usage.")
+  public static final Flag<String> addSupportedDimensionForOmniModeUsage = Flag.nullString();
 
-  private static final Flag<String> addSupportedDimensionForOmniModeUsageDefault = Flag.value(null);
+  @FlagSpec(
+      name = "allow_insecure_plugin",
+      help = "Whether to allow plugins built from untrusted sources.")
+  public static final Flag<Boolean> allowInsecurePlugin = Flag.value(true);
 
-  @com.beust.jcommander.Parameter(
-      names = "--add_supported_dimension_for_omni_mode_usage",
-      description = "Add the supported dimension for Omni mode usage.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> addSupportedDimensionForOmniModeUsage =
-      addSupportedDimensionForOmniModeUsageDefault;
-
-  private static final Flag<Boolean> allowInsecurePluginDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--allow_insecure_plugin",
-      description = "Whether to allow plugins built from untrusted sources.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> allowInsecurePlugin = allowInsecurePluginDefault;
-
-  private static final Flag<List<String>> alrArtifactsDefault = Flag.stringList();
-
-  @com.beust.jcommander.Parameter(
-      names = "--alr_artifact",
-      description =
+  @FlagSpec(
+      name = "alr_artifact",
+      help =
           "Paths to test artifacts for the ATS local runner. Both directory paths and file paths"
-              + " are supported.",
-      converter = Flag.StringListConverter.class)
-  public Flag<List<String>> alrArtifacts = alrArtifactsDefault;
+              + " are supported.")
+  public static final Flag<List<String>> alrArtifacts = Flag.stringList();
 
-  private static final Flag<Integer> alrOlcServerMinLogRecordImportanceDefault = Flag.value(150);
+  @FlagSpec(
+      name = "alr_olc_server_min_log_record_importance",
+      help = "Minimum OLC server log record importance shown in ATS local runner. Default is 150.")
+  public static final Flag<Integer> alrOlcServerMinLogRecordImportance = Flag.value(150);
 
-  @com.beust.jcommander.Parameter(
-      names = "--alr_olc_server_min_log_record_importance",
-      description =
-          "Minimum OLC server log record importance shown in ATS local runner. Default is 150.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> alrOlcServerMinLogRecordImportance =
-      alrOlcServerMinLogRecordImportanceDefault;
+  @FlagSpec(name = "alr_olc_server_path", help = "Path of OLC server for ATS local runner.")
+  public static final Flag<String> alrOlcServerPath = Flag.nullString();
 
-  private static final Flag<String> alrOlcServerPathDefault = Flag.value(null);
+  @FlagSpec(
+      name = "alr_serials",
+      help = "Comma separated serials to specify devices for ATS local runner.")
+  public static final Flag<List<String>> alrSerials = Flag.stringList();
 
-  @com.beust.jcommander.Parameter(
-      names = "--alr_olc_server_path",
-      description = "Path of OLC server for ATS local runner.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> alrOlcServerPath = alrOlcServerPathDefault;
+  @FlagSpec(name = "alr_test_config", help = "Path to the test configuration for ATS local runner.")
+  public static final Flag<String> alrTestConfig = Flag.nullString();
 
-  private static final Flag<List<String>> alrSerialsDefault = Flag.stringList();
+  @FlagSpec(
+      name = "always_use_oss_detector_and_dispatcher",
+      help = "True to always use OSS detectors and dispatchers. Default is false.")
+  public static final Flag<Boolean> alwaysUseOssDetectorAndDispatcher = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--alr_serials",
-      description = "Comma separated serials to specify devices for ATS local runner.",
-      converter = Flag.StringListConverter.class)
-  public Flag<List<String>> alrSerials = alrSerialsDefault;
+  @FlagSpec(
+      name = "android_account_manager_apk_path",
+      help = "File path for the Android account manager apk.")
+  public static final Flag<String> androidAccountManagerApkPath = Flag.value("");
 
-  private static final Flag<String> alrTestConfigDefault = Flag.value(null);
+  @FlagSpec(
+      name = "android_account_manager_signed_apk_path",
+      help = "File path for the Android account manager signed apk.")
+  public static final Flag<String> androidAccountManagerSignedApkPath = Flag.value("");
 
-  @com.beust.jcommander.Parameter(
-      names = "--alr_test_config",
-      description = "Path to the test configuration for ATS local runner.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> alrTestConfig = alrTestConfigDefault;
+  @FlagSpec(
+      name = "android_auth_test_support_apk_path",
+      help = "File path for the Android auth test support apk.")
+  public static final Flag<String> androidAuthTestSupportApkPath = Flag.value("");
 
-  private static final Flag<Boolean> alwaysUseOssDetectorAndDispatcherDefault = Flag.value(false);
+  @FlagSpec(
+      name = "android_auth_test_support_signed_apk_path",
+      help = "File path for the Android auth test support signed apk.")
+  public static final Flag<String> androidAuthTestSupportSignedApkPath = Flag.value("");
 
-  @com.beust.jcommander.Parameter(
-      names = "--always_use_oss_detector_and_dispatcher",
-      description = "True to always use OSS detectors and dispatchers. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> alwaysUseOssDetectorAndDispatcher = alwaysUseOssDetectorAndDispatcherDefault;
+  @FlagSpec(
+      name = "android_desktop_executor_group",
+      help =
+          "The executor group of the Android Desktop device. Used to set network_zone dimension.")
+  public static final Flag<String> androidDesktopExecutorGroup = Flag.value("");
 
-  private static final Flag<String> androidAccountManagerApkPathDefault = Flag.value("");
+  @FlagSpec(
+      name = "android_desktop_executor_devices_num",
+      help =
+          "If the number is greater than 0, the lab server will create that many number of"
+              + " AndroidDesktopExecutorDevices.")
+  public static final Flag<Integer> androidDesktopExecutorDevicesNum = Flag.value(0);
 
-  @com.beust.jcommander.Parameter(
-      names = "--android_account_manager_apk_path",
-      description = "File path for the Android account manager apk.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> androidAccountManagerApkPath = androidAccountManagerApkPathDefault;
+  @FlagSpec(
+      name = "android_device_daemon",
+      help = "Whether to install Mobile Harness Android daemon app on the device.")
+  public static final Flag<Boolean> enableDaemon = Flag.value(true);
 
-  private static final Flag<String> androidAccountManagerSignedApkPathDefault = Flag.value("");
+  @FlagSpec(
+      name = "android_factory_reset_wait_time",
+      help =
+          "The wait time for a device to be disconnected after calling factory reset. Default is 30"
+              + " seconds.")
+  public static final Flag<Duration> androidFactoryResetWaitTime = DurationFlag.seconds(30L);
 
-  @com.beust.jcommander.Parameter(
-      names = "--android_account_manager_signed_apk_path",
-      description = "File path for the Android account manager signed apk.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> androidAccountManagerSignedApkPath =
-      androidAccountManagerSignedApkPathDefault;
+  @FlagSpec(
+      name = "android_jit_emulator_num",
+      help =
+          "The maximum number of android Just-in-time emulators that could be run on the server"
+              + " simultaneously.")
+  public static final Flag<Integer> androidJitEmulatorNum = Flag.value(0);
 
-  private static final Flag<String> androidAuthTestSupportApkPathDefault = Flag.value("");
+  @FlagSpec(name = "api_config", help = "Path of the text format protobuf API config file.")
+  public static final Flag<String> apiConfigFile = Flag.value("");
 
-  @com.beust.jcommander.Parameter(
-      names = "--android_auth_test_support_apk_path",
-      description = "File path for the Android auth test support apk.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> androidAuthTestSupportApkPath = androidAuthTestSupportApkPathDefault;
+  @FlagSpec(name = "as_on_borg", help = "Override the actual runtime system as Borg for debugging.")
+  public static final Flag<Boolean> asOnBorg = Flag.value(false);
 
-  private static final Flag<String> androidAuthTestSupportSignedApkPathDefault = Flag.value("");
-
-  @com.beust.jcommander.Parameter(
-      names = "--android_auth_test_support_signed_apk_path",
-      description = "File path for the Android auth test support signed apk.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> androidAuthTestSupportSignedApkPath =
-      androidAuthTestSupportSignedApkPathDefault;
-
-  private static final Flag<String> androidDesktopExecutorGroupDefault = Flag.value("");
-
-  @com.beust.jcommander.Parameter(
-      names = "--android_desktop_executor_group",
-      description =
-          "The executor group of the Android Desktop device. Used to set network_zone dimension.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> androidDesktopExecutorGroup = androidDesktopExecutorGroupDefault;
-
-  private static final Flag<Integer> androidDesktopExecutorDevicesNumDefault = Flag.value(0);
-
-  @com.beust.jcommander.Parameter(
-      names = "--android_desktop_executor_devices_num",
-      description =
-          "If the number is greater than 0, the labserver will create that many number of"
-              + " AndroidDesktopExecutorDevices.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> androidDesktopExecutorDevicesNum = androidDesktopExecutorDevicesNumDefault;
-
-  private static final Flag<Boolean> enableDaemonDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--android_device_daemon",
-      description = "Whether to install Mobile Harness Android daemon app on the device.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableDaemon = enableDaemonDefault;
-
-  private static final Flag<Duration> androidFactoryResetWaitTimeDefault =
-      DurationFlag.value(Duration.ofSeconds(30L));
-
-  @com.beust.jcommander.Parameter(
-      names = "--android_factory_reset_wait_time",
-      description =
-          "The wait time for a device to be disconnected after calling factory reset."
-              + " Default is 30 seconds.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> androidFactoryResetWaitTime = androidFactoryResetWaitTimeDefault;
-
-  private static final Flag<Integer> androidJitEmulatorNumDefault = Flag.value(0);
-
-  @com.beust.jcommander.Parameter(
-      names = "--android_jit_emulator_num",
-      description =
-          "The naximum number of android Just-in-time emulators that could be run on the server"
-              + " simultaneously.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> androidJitEmulatorNum = androidJitEmulatorNumDefault;
-
-  private static final Flag<String> apiConfigFileDefault = Flag.value("");
-
-  @com.beust.jcommander.Parameter(
-      names = "--api_config",
-      description = "Path of the text format protobuf API config file.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> apiConfigFile = apiConfigFileDefault;
-
-  private static final Flag<Boolean> asOnBorgDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--as_on_borg",
-      description = "Override the actual runtime system as Borg for debugging.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> asOnBorg = asOnBorgDefault;
-
-  private static final Flag<Boolean> atsConsoleAlwaysRestartOlcServerDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--ats_console_always_restart_olc_server",
-      description =
+  @FlagSpec(
+      name = "ats_console_always_restart_olc_server",
+      help =
           "Whether to always restart OLC server (if possible) when starting ATS console instead of"
-              + " reusing an existing one. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> atsConsoleAlwaysRestartOlcServer = atsConsoleAlwaysRestartOlcServerDefault;
+              + " reusing an existing one. Default is false.")
+  public static final Flag<Boolean> atsConsoleAlwaysRestartOlcServer = Flag.value(false);
 
-  private static final Flag<Boolean> atsConsoleCacheXtsDevicesDefault = Flag.value(true);
+  @FlagSpec(
+      name = "ats_console_cache_xts_devices",
+      help = "Whether to cache devices during xTS execution in ATS console. Default is true.")
+  public static final Flag<Boolean> atsConsoleCacheXtsDevices = Flag.value(true);
 
-  @com.beust.jcommander.Parameter(
-      names = "--ats_console_cache_xts_devices",
-      description =
-          "Whether to cache devices during xTS execution in ATS console. Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> atsConsoleCacheXtsDevices = atsConsoleCacheXtsDevicesDefault;
+  @FlagSpec(
+      name = "ats_console_list_device_timeout",
+      help = "Timeout of listing devices in ATS console. Default is 3 seconds.")
+  public static final Flag<Duration> atsConsoleListDeviceTimeout = DurationFlag.seconds(3L);
 
-  private static final Flag<Duration> atsConsoleListDeviceTimeoutDefault =
-      DurationFlag.value(Duration.ofSeconds(3L));
+  @FlagSpec(
+      name = "ats_console_min_log_record_importance",
+      help = "Minimum console log record importance shown in ATS console. Default is 150.")
+  public static final Flag<Integer> atsConsoleMinLogRecordImportance = Flag.value(150);
 
-  @com.beust.jcommander.Parameter(
-      names = "--ats_console_list_device_timeout",
-      description = "Timeout of listing devices in ATS console. Default is 3 seconds.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> atsConsoleListDeviceTimeout = atsConsoleListDeviceTimeoutDefault;
-
-  private static final Flag<Integer> atsConsoleMinLogRecordImportanceDefault = Flag.value(150);
-
-  @com.beust.jcommander.Parameter(
-      names = "--ats_console_min_log_record_importance",
-      description = "Minimum console log record importance shown in ATS console. Default is 150.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> atsConsoleMinLogRecordImportance = atsConsoleMinLogRecordImportanceDefault;
-
-  private static final Flag<Boolean> atsConsoleOlcServerCopyServerResourceDefault =
-      Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--ats_console_olc_server_copy_server_resource",
-      description =
+  @FlagSpec(
+      name = "ats_console_olc_server_copy_server_resource",
+      help =
           "Whether to copy OLC binary and JDK to xTS resource dir before ATS console starts OLC."
-              + " Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> atsConsoleOlcServerCopyServerResource =
-      atsConsoleOlcServerCopyServerResourceDefault;
+              + " Default is true.")
+  public static final Flag<Boolean> atsConsoleOlcServerCopyServerResource = Flag.value(true);
 
-  private static final Flag<String> atsConsoleOlcServerMinLabVersionDefault = Flag.value("4.309.1");
+  @FlagSpec(
+      name = "ats_console_olc_server_min_lab_version",
+      help = "Minimum OLC server lab version string required by ATS console. Default is 4.309.1.")
+  public static final Flag<String> atsConsoleOlcServerMinLabVersion = Flag.value("4.309.1");
 
-  @com.beust.jcommander.Parameter(
-      names = "--ats_console_olc_server_min_lab_version",
-      description =
-          "Minimum OLC server lab version string required by ATS console. Default is 4.309.1",
-      converter = Flag.StringConverter.class)
-  public Flag<String> atsConsoleOlcServerMinLabVersion = atsConsoleOlcServerMinLabVersionDefault;
+  @FlagSpec(
+      name = "ats_console_olc_server_min_log_record_importance",
+      help = "Minimum OLC server log record importance shown in ATS console. Default is 150.")
+  public static final Flag<Integer> atsConsoleOlcServerMinLogRecordImportance = Flag.value(150);
 
-  private static final Flag<Integer> atsConsoleOlcServerMinLogRecordImportanceDefault =
-      Flag.value(150);
+  @FlagSpec(
+      name = "ats_console_olc_server_output_path",
+      help = "Path of OLC server stdout/stderr in ATS console. Default is /dev/null.")
+  public static final Flag<String> atsConsoleOlcServerOutputPath = Flag.value("/dev/null");
 
-  @com.beust.jcommander.Parameter(
-      names = "--ats_console_olc_server_min_log_record_importance",
-      description =
-          "Minimum OLC server log record importance shown in ATS console. Default is 150.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> atsConsoleOlcServerMinLogRecordImportance =
-      atsConsoleOlcServerMinLogRecordImportanceDefault;
+  @FlagSpec(name = "ats_console_olc_server_path", help = "Path of OLC server in ATS console.")
+  public static final Flag<String> atsConsoleOlcServerPath = Flag.nullString();
 
-  private static final Flag<String> atsConsoleOlcServerOutputPathDefault = Flag.value("/dev/null");
+  @FlagSpec(
+      name = "ats_console_olc_server_embedded_mode",
+      help = "Whether ATS console and OLC server are in the single process. Default is false.")
+  public static final Flag<Boolean> atsConsoleOlcServerEmbeddedMode = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--ats_console_olc_server_output_path",
-      description = "Path of OLC server stdout/stderr in ATS console. Default is /dev/null.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> atsConsoleOlcServerOutputPath = atsConsoleOlcServerOutputPathDefault;
+  @FlagSpec(
+      name = "ats_console_olc_server_starting_timeout",
+      help = "OLC server starting timeout of ATS console. Default is 1 minutes")
+  public static final Flag<Duration> atsConsoleOlcServerStartingTimeout = DurationFlag.minutes(1L);
 
-  private static final Flag<String> atsConsoleOlcServerPathDefault = Flag.value(null);
+  @FlagSpec(
+      name = "ats_console_olc_server_xmx",
+      help = "-Xmx of OLC server of ATS console. Default is \"24g\".")
+  public static final Flag<String> atsConsoleOlcServerXmx = Flag.value("24g");
 
-  @com.beust.jcommander.Parameter(
-      names = "--ats_console_olc_server_path",
-      description = "Path of OLC server in ATS console.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> atsConsoleOlcServerPath = atsConsoleOlcServerPathDefault;
-
-  private static final Flag<Boolean> atsConsoleOlcServerEmbeddedModeDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--ats_console_olc_server_embedded_mode",
-      description =
-          "Whether ATS console and OLC server are in the single process. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> atsConsoleOlcServerEmbeddedMode = atsConsoleOlcServerEmbeddedModeDefault;
-
-  private static final Flag<Duration> atsConsoleOlcServerStartingTimeoutDefault =
-      DurationFlag.value(Duration.ofMinutes(1L));
-
-  @com.beust.jcommander.Parameter(
-      names = "--ats_console_olc_server_starting_timeout",
-      description = "OLC server starting timeout of ATS console. Default is 1 minutes",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> atsConsoleOlcServerStartingTimeout =
-      atsConsoleOlcServerStartingTimeoutDefault;
-
-  private static final Flag<String> atsConsoleOlcServerXmxDefault = Flag.value("24g");
-
-  @com.beust.jcommander.Parameter(
-      names = "--ats_console_olc_server_xmx",
-      description = "-Xmx of OLC server of ATS console. Default is \"24g\".",
-      converter = Flag.StringConverter.class)
-  public Flag<String> atsConsoleOlcServerXmx = atsConsoleOlcServerXmxDefault;
-
-  private static final Flag<Boolean> atsConsolePrintAboveInputDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--ats_console_print_above_input",
-      description =
+  @FlagSpec(
+      name = "ats_console_print_above_input",
+      help =
           "Whether to print ATS console output above the input line rather than in the input line."
-              + " Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> atsConsolePrintAboveInput = atsConsolePrintAboveInputDefault;
+              + " Default is true.")
+  public static final Flag<Boolean> atsConsolePrintAboveInput = Flag.value(true);
 
-  private static final Flag<Duration> atsConsoleShutdownWaitSessionTimeoutDefault =
-      DurationFlag.value(Duration.ofSeconds(10L));
+  @FlagSpec(
+      name = "ats_console_shutdown_wait_session_timeout",
+      help = "When ATS console shuts down, timeout of waiting sessions end. Default is 10s.")
+  public static final Flag<Duration> atsConsoleShutdownWaitSessionTimeout =
+      DurationFlag.seconds(10L);
 
-  @com.beust.jcommander.Parameter(
-      names = "--ats_console_shutdown_wait_session_timeout",
-      description = "When ATS console shuts down, timeout of waiting sessions end. Default is 10s.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> atsConsoleShutdownWaitSessionTimeout =
-      atsConsoleShutdownWaitSessionTimeoutDefault;
+  @FlagSpec(
+      name = "ats_dda_lease_expiration_time",
+      help = "Lease expiration time of ATS DDA. Default is 5 minutes")
+  public static final Flag<Duration> atsDdaLeaseExpirationTime = DurationFlag.minutes(5L);
 
-  private static final Flag<Duration> atsDdaLeaseExpirationTimeDefault =
-      DurationFlag.value(Duration.ofMinutes(5L));
+  @FlagSpec(
+      name = "ats_device_recovery_timeout",
+      help = "The timeout for ATS pre and post test device recovery. Default is 5 minutes.")
+  public static final Flag<Duration> atsDeviceRecoveryTimeout = DurationFlag.minutes(5L);
 
-  @com.beust.jcommander.Parameter(
-      names = "--ats_dda_lease_expiration_time",
-      description = "Lease expiration time of ATS DDA. Default is 5 minutes",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> atsDdaLeaseExpirationTime = atsDdaLeaseExpirationTimeDefault;
+  @FlagSpec(
+      name = "ats_device_removal_time",
+      help = "The interval before removing a missing device. Default is 7 days.")
+  public static final Flag<Duration> atsDeviceRemovalTime = DurationFlag.days(7L);
 
-  private static final Flag<Duration> atsDeviceRecoveryTimeoutDefault =
-      DurationFlag.value(Duration.ofMinutes(5L));
+  @FlagSpec(
+      name = "ats_file_server",
+      help = "The ATS file server address:port, Default is localhost:8006.")
+  public static final Flag<String> atsFileServer = Flag.value("localhost:8006");
 
-  @com.beust.jcommander.Parameter(
-      names = "--ats_device_recovery_timeout",
-      description = "The timeout for ATS pre and post test device recovery. Default is 5 minutes.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> atsDeviceRecoveryTimeout = atsDeviceRecoveryTimeoutDefault;
+  @FlagSpec(
+      name = "ats_lab_removal_time",
+      help = "The interval before removing a missing lab. Default is 7 days.")
+  public static final Flag<Duration> atsLabRemovalTime = DurationFlag.days(7L);
 
-  private static final Flag<Duration> atsDeviceRemovalTimeDefault =
-      DurationFlag.value(Duration.ofDays(7L));
-
-  @com.beust.jcommander.Parameter(
-      names = "--ats_device_removal_time",
-      description = "The interval before removing a missing device. Default is 7 days.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> atsDeviceRemovalTime = atsDeviceRemovalTimeDefault;
-
-  private static final Flag<String> atsFileServerDefault = Flag.value("localhost:8006");
-
-  @com.beust.jcommander.Parameter(
-      names = "--ats_file_server",
-      description = "The ATS file server address:port, Default is localhost:8006.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> atsFileServer = atsFileServerDefault;
-
-  private static final Flag<Duration> atsLabRemovalTimeDefault =
-      DurationFlag.value(Duration.ofDays(7L));
-
-  @com.beust.jcommander.Parameter(
-      names = "--ats_lab_removal_time",
-      description = "The interval before removing a missing lab. Default is 7 days.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> atsLabRemovalTime = atsLabRemovalTimeDefault;
-
-  private static final Flag<Boolean> atsRunTfOnAndroidRealDeviceDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--ats_run_tf_on_android_real_device",
-      description =
+  @FlagSpec(
+      name = "ats_run_tf_on_android_real_device",
+      help =
           "Whether to require to run ATS TF jobs on Android real device. Otherwise, Android "
-              + "emulator is allowed. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> atsRunTfOnAndroidRealDevice = atsRunTfOnAndroidRealDeviceDefault;
+              + "emulator is allowed. Default is false.")
+  public static final Flag<Boolean> atsRunTfOnAndroidRealDevice = Flag.value(false);
 
-  private static final Flag<String> atsStoragePathDefault = Flag.value("/data");
+  @FlagSpec(name = "ats_storage_path", help = "The ATS server storage path.")
+  public static final Flag<String> atsStoragePath = Flag.value("/data");
 
-  @com.beust.jcommander.Parameter(
-      names = "--ats_storage_path",
-      description = "The ATS storage path, Default is /data.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> atsStoragePath = atsStoragePathDefault;
+  @FlagSpec(
+      name = "ats_worker_grpc_port",
+      help = "Grpc port for ATS worker connections. By default, it is 7031.")
+  public static final Flag<Integer> atsWorkerGrpcPort = Flag.value(7031);
 
-  private static final Flag<Integer> atsWorkerGrpcPortDefault = Flag.value(7031);
+  @FlagSpec(
+      name = "ats_xts_work_dir",
+      help =
+          "The work directory of ATS xTS process. Default value is empty string, which is to let"
+              + " Omnilab lab server determine location.")
+  public static final Flag<String> atsXtsWorkDir = Flag.value("");
 
-  @com.beust.jcommander.Parameter(
-      names = "--ats_worker_grpc_port",
-      description = "Grpc port for ATS worker connections. By default, it is 7031.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> atsWorkerGrpcPort = atsWorkerGrpcPortDefault;
+  @FlagSpec(
+      name = "cache_eviction_check_interval",
+      help = "Interval to check cache eviction. Default is 5 minutes.")
+  public static final Flag<Duration> cacheEvictionCheckInterval = DurationFlag.minutes(5L);
 
-  private static final Flag<String> atsXtsWorkDirDefault = Flag.value("");
+  @FlagSpec(
+      name = "cache_eviction_trim_to_ratio",
+      help = "Cache eviction will trim the cache to this ratio of the max cache size.")
+  public static final Flag<Double> cacheEvictionTrimToRatio = Flag.value(0.8);
 
-  @com.beust.jcommander.Parameter(
-      names = "--ats_xts_work_dir",
-      description = "The work directory of ATS xTS process.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> atsXtsWorkDir = atsXtsWorkDirDefault;
+  @FlagSpec(
+      name = "cache_installed_apks",
+      help = "Cache installed apk in device property to avoid installing again.")
+  public static final Flag<Boolean> cacheInstalledApks = Flag.value(true);
 
-  private static final Flag<Duration> cacheEvictionCheckIntervalDefault =
-      DurationFlag.value(Duration.ofMinutes(5L));
+  @FlagSpec(
+      name = "cache_pushed_files",
+      help = "Cache pushed dirs/files with their MD5 in device property to avoid pushing again.")
+  public static final Flag<Boolean> cachePushedFiles = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--cache_eviction_check_interval",
-      description = "Interval to check cache eviction. Default is 5 minutes.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> cacheEvictionCheckInterval = cacheEvictionCheckIntervalDefault;
+  @FlagSpec(
+      name = "check_android_device_sim_card_type",
+      help = "Whether to check the sim card type of Android devices. Default is false.")
+  public static final Flag<Boolean> checkAndroidDeviceSimCardType = Flag.value(false);
 
-  private static final Flag<Double> cacheEvictionTrimToRatioDefault = Flag.value(0.8);
+  @FlagSpec(
+      name = "check_device_interval",
+      help = "Interval for checking devices in local device runner. Default is 5 minutes.")
+  public static final Flag<Duration> checkDeviceInterval = DurationFlag.minutes(5L);
 
-  @com.beust.jcommander.Parameter(
-      names = "--cache_eviction_trim_to_ratio",
-      description = "Cache eviction will trim the cache to this ratio of the max cache size.",
-      converter = Flag.DoubleConverter.class)
-  public Flag<Double> cacheEvictionTrimToRatio = cacheEvictionTrimToRatioDefault;
+  @FlagSpec(
+      name = "check_fastboot_tools",
+      help = "Whether to check presence of fastboot tools on the host. Default is true.")
+  public static final Flag<Boolean> checkFastbootTools = Flag.value(true);
 
-  private static final Flag<Boolean> cacheInstalledApksDefault = Flag.value(true);
+  @FlagSpec(
+      name = "check_file_interval",
+      help = "For file cleaner, sleep interval for checking and removing expired files or dirs.")
+  public static final Flag<Duration> checkFilesInterval = DurationFlag.minutes(5L);
 
-  @com.beust.jcommander.Parameter(
-      names = "--cache_installed_apks",
-      description = "Cache installed apk in device property to avoid installing again.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> cacheInstalledApks = cacheInstalledApksDefault;
+  @FlagSpec(
+      name = "check_insecure_plugin",
+      help = "Whether to check plugins built from untrusted sources.")
+  public static final Flag<Boolean> checkInsecurePlugin = Flag.value(false);
 
-  private static final Flag<Boolean> cachePushedFilesDefault = Flag.value(false);
+  @FlagSpec(
+      name = "clear_android_device_multi_users",
+      help = "Whether to clear multi users in device setup and post-test. Default is true.")
+  public static final Flag<Boolean> clearAndroidDeviceMultiUsers = Flag.value(true);
 
-  @com.beust.jcommander.Parameter(
-      names = "--cache_pushed_files",
-      description =
-          "Cache pushed dirs/files with their MD5 in device property to avoid pushing again."
-              + "Disabled by default.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> cachePushedFiles = cachePushedFilesDefault;
+  @FlagSpec(
+      name = "cloud_file_transfer_maximum_attempts",
+      help = "Attempts to transferring a file. Default is 3.")
+  public static final Flag<Integer> cloudFileTransferMaximumAttempts = Flag.value(3);
 
-  private static final Flag<Boolean> checkAndroidDeviceSimCardTypeDefault = Flag.value(false);
+  @FlagSpec(
+      name = "cloud_file_transfer_timeout",
+      help = "Retry times if failed to transfer a file. Default is 20 minutes.")
+  public static final Flag<Duration> cloudFileTransferTimeout = DurationFlag.minutes(20L);
 
-  @com.beust.jcommander.Parameter(
-      names = "--check_android_device_sim_card_type",
-      description = "Whether to check the sim card type of Android devices. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> checkAndroidDeviceSimCardType = checkAndroidDeviceSimCardTypeDefault;
+  @FlagSpec(
+      name = "cloud_file_transfer_upload_shard_size",
+      help = "Size (in megabytes) of shards during uploading")
+  public static final Flag<Integer> cloudFileTransferUploadShardSize = Flag.value(200);
 
-  private static final Flag<Duration> checkDeviceIntervalDefault =
-      DurationFlag.value(Duration.ofMinutes(5L));
+  @FlagSpec(
+      name = "cloud_file_transfer_download_shard_size",
+      help = "Size (in megabytes) of shards during uploading")
+  public static final Flag<Integer> cloudFileTransferDownloadShardSize = Flag.value(200);
 
-  @com.beust.jcommander.Parameter(
-      names = "--check_device_interval",
-      description =
-          "Interval to check device in local device runner when the device is IDLE. "
-              + "Default is \"5m\"",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> checkDeviceInterval = checkDeviceIntervalDefault;
+  @FlagSpec(
+      name = "cloud_file_transfer_initial_timeout",
+      help = "Timeout while starting uploading/downloading.")
+  public static final Flag<Duration> cloudFileTransferInitialTimeout = DurationFlag.seconds(5L);
 
-  private static final Flag<Duration> checkFilesIntervalDefault =
-      DurationFlag.value(Duration.ofMinutes(5L));
+  @FlagSpec(
+      name = "cloud_file_transfer_small_file_size_kb",
+      help = "The bytes limitation for a *small* file, which will send/get direct without GCS.")
+  public static final Flag<Long> cloudFileTransferSmallFileSizeKb = Flag.value(256L);
 
-  @com.beust.jcommander.Parameter(
-      names = "--check_file_interval",
-      description =
-          "For file cleaner, sleep interval for checking and removing expired files or dirs.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> checkFilesInterval = checkFilesIntervalDefault;
+  @FlagSpec(
+      name = "cloud_orchestrator_service_url",
+      help = "The URL of the Cloud Orchestrator service.")
+  public static final Flag<String> cloudOrchestratorServiceUrl = Flag.value("");
 
-  private static final Flag<Boolean> checkInsecurePluginDefault = Flag.value(false);
+  @FlagSpec(name = "cloud_orchestrator_zone", help = "The zone of the Cloud Orchestrator service.")
+  public static final Flag<String> cloudOrchestratorZone = Flag.value("local");
 
-  @com.beust.jcommander.Parameter(
-      names = "--check_insecure_plugin",
-      description = "Whether to check plugins built from untrusted sources.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> checkInsecurePlugin = checkInsecurePluginDefault;
+  @FlagSpec(name = "cloud_pubsub_cred_file", help = "The credential file to use for Cloud Pub/Sub.")
+  public static final Flag<String> cloudPubsubCredFile = Flag.nullString();
 
-  private static final Flag<Boolean> clearAndroidDeviceMultiUsersDefault = Flag.value(true);
+  @FlagSpec(
+      name = "cloud_pubsub_project_id",
+      help = "The project ID of the Cloud Pub/Sub topic to upload monitoring data to.")
+  public static final Flag<String> cloudPubsubProjectId = Flag.nullString();
 
-  @com.beust.jcommander.Parameter(
-      names = "--clear_android_device_multi_users",
-      description = "Whether to clear multi users in device setup and post-test. Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> clearAndroidDeviceMultiUsers = clearAndroidDeviceMultiUsersDefault;
+  @FlagSpec(
+      name = "cloud_pubsub_topic_id",
+      help = "The topic ID of the Cloud Pub/Sub topic to upload monitoring data to.")
+  public static final Flag<String> cloudPubsubTopicId = Flag.nullString();
 
-  private static final Flag<Integer> cloudFileTransferMaximumAttemptsDefault = Flag.value(3);
+  @FlagSpec(
+      name = "cloud_pubsub_publish_interval",
+      help = "The period duration between two publish actions.")
+  public static final Flag<Duration> cloudPubsubPublishInterval = DurationFlag.minutes(1);
 
-  @com.beust.jcommander.Parameter(
-      names = "--cloud_file_transfer_maximum_attempts",
-      description = "Attempts to transferring a file. Default is 3.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> cloudFileTransferMaximumAttempts = cloudFileTransferMaximumAttemptsDefault;
+  @FlagSpec(
+      name = "command_port",
+      help = "Command port for the lab server to issue command to Daemon.")
+  public static final Flag<Integer> commandPort = Flag.value(9995);
 
-  private static final Flag<Duration> cloudFileTransferTimeoutDefault =
-      DurationFlag.value(Duration.ofMinutes(20L));
+  @FlagSpec(name = "config_service_grpc_port", help = "gRPC port of the config service.")
+  public static final Flag<Integer> configServiceGrpcPort = Flag.value(8081);
 
-  @com.beust.jcommander.Parameter(
-      names = "--cloud_file_transfer_timeout",
-      description = "Retry times if failed to transfer a file. Default is 20 minutes.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> cloudFileTransferTimeout = cloudFileTransferTimeoutDefault;
+  @FlagSpec(name = "config_service_grpc_target", help = "gRPC target of the config service.")
+  public static final Flag<String> configServiceGrpcTarget = Flag.value("localhost:8081");
 
-  private static final Flag<Integer> cloudFileTransferUploadShardSizeDefault = Flag.value(200);
+  @FlagSpec(
+      name = "config_service_jdbc_url",
+      help = "The JDBC URL of the config service backend storage.")
+  public static final Flag<String> configServiceJdbcUrl = Flag.value("jdbc:mysql:///ats_db");
 
-  @com.beust.jcommander.Parameter(
-      names = "--cloud_file_transfer_upload_shard_size",
-      description = "Size (in megabytes) of shards during uploading",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> cloudFileTransferUploadShardSize = cloudFileTransferUploadShardSizeDefault;
-
-  private static final Flag<Integer> cloudFileTransferDownloadShardSizeDefault = Flag.value(200);
-
-  @com.beust.jcommander.Parameter(
-      names = "--cloud_file_transfer_download_shard_size",
-      description = "Size (in megabytes) of shards during uploading",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> cloudFileTransferDownloadShardSize =
-      cloudFileTransferDownloadShardSizeDefault;
-
-  private static final Flag<Duration> cloudFileTransferInitialTimeoutDefault =
-      DurationFlag.value(Duration.ofSeconds(5L));
-
-  @com.beust.jcommander.Parameter(
-      names = "--cloud_file_transfer_initial_timeout",
-      description = "Timeout while starting uploading/downloading.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> cloudFileTransferInitialTimeout = cloudFileTransferInitialTimeoutDefault;
-
-  private static final Flag<Long> cloudFileTransferSmallFileSizeKbDefault = Flag.value(256L);
-
-  @com.beust.jcommander.Parameter(
-      names = "--cloud_file_transfer_small_file_size_kb",
-      description =
-          "The bytes limitation for a *small* file, which will send/get direct without GCS.",
-      converter = Flag.LongConverter.class)
-  public Flag<Long> cloudFileTransferSmallFileSizeKb = cloudFileTransferSmallFileSizeKbDefault;
-
-  private static final Flag<String> cloudOrchestratorServiceUrlDefault = Flag.value("");
-
-  @com.beust.jcommander.Parameter(
-      names = "--cloud_orchestrator_service_url",
-      description = "The URL of the Cloud Orchestrator service.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> cloudOrchestratorServiceUrl = cloudOrchestratorServiceUrlDefault;
-
-  private static final Flag<String> cloudOrchestratorZoneDefault = Flag.value("local");
-
-  @com.beust.jcommander.Parameter(
-      names = "--cloud_orchestrator_zone",
-      description = "The zone of the Cloud Orchestrator service.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> cloudOrchestratorZone = cloudOrchestratorZoneDefault;
-
-  private static final Flag<String> cloudPubsubCredFileDefault = Flag.value(null);
-
-  @com.beust.jcommander.Parameter(
-      names = "--cloud_pubsub_cred_file",
-      description = "The credential file to use for Cloud Pub/Sub.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> cloudPubsubCredFile = cloudPubsubCredFileDefault;
-
-  private static final Flag<String> cloudPubsubProjectIdDefault = Flag.value(null);
-
-  @com.beust.jcommander.Parameter(
-      names = "--cloud_pubsub_project_id",
-      description = "The project ID of the Cloud Pub/Sub topic to upload monitoring data to.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> cloudPubsubProjectId = cloudPubsubProjectIdDefault;
-
-  private static final Flag<String> cloudPubsubTopicIdDefault = Flag.value(null);
-
-  @com.beust.jcommander.Parameter(
-      names = "--cloud_pubsub_topic_id",
-      description = "The topic ID of the Cloud Pub/Sub topic to upload monitoring data to.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> cloudPubsubTopicId = cloudPubsubTopicIdDefault;
-
-  private static final Flag<Duration> cloudPubsubPublishIntervalDefault =
-      DurationFlag.value(Duration.ofMinutes(1L));
-
-  @com.beust.jcommander.Parameter(
-      names = "--cloud_pubsub_publish_interval",
-      description = "The period duration between two publish actions.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> cloudPubsubPublishInterval = cloudPubsubPublishIntervalDefault;
-
-  private static final Flag<Integer> commandPortDefault = Flag.value(9995);
-
-  @com.beust.jcommander.Parameter(
-      names = "--command_port",
-      description = "Command port for the lab server to issue command to Daemon.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> commandPort = commandPortDefault;
-
-  private static final Flag<Integer> configServiceGrpcPortDefault = Flag.value(8081);
-
-  @com.beust.jcommander.Parameter(
-      names = "--config_service_grpc_port",
-      description = "gRPC port of the config service.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> configServiceGrpcPort = configServiceGrpcPortDefault;
-
-  private static final Flag<String> configServiceGrpcTargetDefault = Flag.value("localhost:8081");
-
-  @com.beust.jcommander.Parameter(
-      names = "--config_service_grpc_target",
-      description = "gRPC target of the config service.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> configServiceGrpcTarget = configServiceGrpcTargetDefault;
-
-  private static final Flag<String> configServiceJdbcUrlDefault =
-      Flag.value("jdbc:mysql:///ats_db");
-
-  @com.beust.jcommander.Parameter(
-      names = "--config_service_jdbc_url",
-      description = "The JDBC URL of the config service backend storage.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> configServiceJdbcUrl = configServiceJdbcUrlDefault;
-
-  private static final Flag<String> configServiceLocalStorageDirDefault =
-      Flag.value("/tmp/ats/config");
-
-  @com.beust.jcommander.Parameter(
-      names = "--config_service_local_storage_dir",
-      description = "Local storage directory of the config service.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> configServiceLocalStorageDir = configServiceLocalStorageDirDefault;
+  @FlagSpec(
+      name = "config_service_local_storage_dir",
+      help = "Local storage directory of the config service.")
+  public static final Flag<String> configServiceLocalStorageDir = Flag.value("/tmp/ats/config");
 
   /** Backend storage type for the config service. */
   public enum ConfigServiceStorageType {
@@ -749,1007 +443,617 @@ public class Flags {
     JDBC_CONNECTOR
   }
 
-  private static final Flag<ConfigServiceStorageType> configServiceStorageTypeDefault =
+  @FlagSpec(
+      name = "config_service_storage_type",
+      help = "Type of the backend storage for the config service.")
+  public static final Flag<ConfigServiceStorageType> configServiceStorageType =
       Flag.value(ConfigServiceStorageType.LOCAL_FILE);
 
-  @com.beust.jcommander.Parameter(
-      names = "--config_service_storage_type",
-      description = "Type of the backend storage for the config service.")
-  public Flag<ConfigServiceStorageType> configServiceStorageType = configServiceStorageTypeDefault;
-
-  private static final Flag<Boolean> connectToLabServerUsingIpDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--connect_to_lab_server_using_ip",
-      description =
+  @FlagSpec(
+      name = "connect_to_lab_server_using_ip",
+      help =
           "True to use IP to connect to lab servers and false to use host name."
-              + "Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> connectToLabServerUsingIp = connectToLabServerUsingIpDefault;
+              + "Default is false.")
+  public static final Flag<Boolean> connectToLabServerUsingIp = Flag.value(false);
 
-  private static final Flag<Boolean> connectToLabServerUsingMasterDetectedIpDefault =
-      Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--connect_to_lab_server_using_master_detected_ip",
-      description =
+  @FlagSpec(
+      name = "connect_to_lab_server_using_master_detected_ip",
+      help =
           "True to use master-detected IP to connect to lab servers and false to use lab-reported"
-              + " IP. Need connect_to_lab_server_using_ip to be true. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> connectToLabServerUsingMasterDetectedIp =
-      connectToLabServerUsingMasterDetectedIpDefault;
+              + " IP. Need connect_to_lab_server_using_ip to be true. Default is false.")
+  public static final Flag<Boolean> connectToLabServerUsingMasterDetectedIp = Flag.value(false);
 
-  private static final Flag<String> daBundletoolDefault = Flag.value(null);
+  @FlagSpec(name = "da_bundletool", help = "Path of bundletool jar for device action")
+  public static final Flag<String> daBundletool = Flag.nullString();
 
-  @com.beust.jcommander.Parameter(
-      names = "--da_bundletool",
-      description = "Path of bundletool jar for device action",
-      converter = Flag.StringConverter.class)
-  public Flag<String> daBundletool = daBundletoolDefault;
+  @FlagSpec(name = "da_cred_file", help = "Path to credential json file for use in device action.")
+  public static final Flag<String> daCredFile = Flag.nullString();
 
-  private static final Flag<String> daCredFileDefault = Flag.value(null);
+  @FlagSpec(name = "da_gen_file_dir", help = "Path to device action gen file dir.")
+  public static final Flag<String> daGenFileDir = Flag.nullString();
 
-  @com.beust.jcommander.Parameter(
-      names = "--da_cred_file",
-      description = "Path to credential json file for use in device action.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> daCredFile = daCredFileDefault;
+  @FlagSpec(
+      name = "debug_random_exit",
+      help = "Randomly exit and rely on prod scheduling for restart, only for debug/test purpose.")
+  public static final Flag<Boolean> debugRandomExit = Flag.value(false);
 
-  private static final Flag<String> daGenFileDirDefault = Flag.value(null);
+  @FlagSpec(name = "detect_adb_device", help = "Whether to enable ADB detector. Default is true.")
+  public static final Flag<Boolean> detectAdbDevice = Flag.value(true);
 
-  @com.beust.jcommander.Parameter(
-      names = "--da_gen_file_dir",
-      description = "Path to device action gen file dir.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> daGenFileDir = daGenFileDirDefault;
+  @SuppressWarnings("NumericFlagWithTimeUnit")
+  @FlagSpec(
+      name = "detect_device_interval_sec",
+      help = "Interval in seconds for detecting the current active devices.")
+  public static final Flag<Integer> detectDeviceIntervalSec = Flag.value(1);
 
-  private static final Flag<Boolean> debugRandomExitDefault = Flag.value(false);
+  @FlagSpec(name = "device_admin_apk_path", help = "Path to the device admin APK.")
+  public static final Flag<String> deviceAdminApkPath = Flag.value("");
 
-  @com.beust.jcommander.Parameter(
-      names = "--debug_random_exit",
-      description =
-          "Randomly exit and rely on prod scheduling for restart, only for debug/test purpose.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> debugRandomExit = debugRandomExitDefault;
+  @FlagSpec(name = "device_admin_cli_path", help = "Path to the device admin CLI binary.")
+  public static final Flag<String> deviceAdminCliPath = Flag.value("");
 
-  private static final Flag<Boolean> detectAdbDeviceDefault = Flag.value(true);
+  @FlagSpec(
+      name = "device_admin_kms_key",
+      help = "Path to the Cloud KMS key for signing device admin messages.")
+  public static final Flag<String> deviceAdminKmsKey = Flag.value("");
 
-  @com.beust.jcommander.Parameter(
-      names = "--detect_adb_device",
-      description = "Whether to enable ADB detector. Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> detectAdbDevice = detectAdbDeviceDefault;
+  @FlagSpec(
+      name = "device_admin_kms_key_cred",
+      help =
+          "Path to the credential file to access the KMS key specified by"
+              + " --device_admin_kms_key.")
+  public static final Flag<String> deviceAdminKmsKeyCred = Flag.value("");
 
-  private static final Flag<Integer> detectDeviceIntervalSecDefault = Flag.value(1);
-
-  @com.beust.jcommander.Parameter(
-      names = "--detect_device_interval_sec",
-      description = "Interval in seconds for detecting the current active devices.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> detectDeviceIntervalSec = detectDeviceIntervalSecDefault;
-
-  private static final Flag<String> deviceAdminApkPathDefault = Flag.value("");
-
-  @com.beust.jcommander.Parameter(
-      names = "--device_admin_apk_path",
-      description = "Path to the device admin APK.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> deviceAdminApkPath = deviceAdminApkPathDefault;
-
-  private static final Flag<String> deviceAdminCliPathDefault = Flag.value("");
-
-  @com.beust.jcommander.Parameter(
-      names = "--device_admin_cli_path",
-      description = "Path to the device admin CLI binary.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> deviceAdminCliPath = deviceAdminCliPathDefault;
-
-  private static final Flag<String> deviceAdminKmsKeyDefault = Flag.value("");
-
-  @com.beust.jcommander.Parameter(
-      names = "--device_admin_kms_key",
-      description = "Path to the KMS key for signing device admin messages.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> deviceAdminKmsKey = deviceAdminKmsKeyDefault;
-
-  private static final Flag<String> deviceAdminKmsKeyCredDefault = Flag.value("");
-
-  @com.beust.jcommander.Parameter(
-      names = "--device_admin_kms_key_cred",
-      description =
-          "Path to the credetinal file to access the KMS key specified by --device_admin_kms_key.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> deviceAdminKmsKeyCred = deviceAdminKmsKeyCredDefault;
-
-  private static final Flag<Boolean> deviceAdminLockRequiredDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--device_admin_lock_required",
-      description =
+  @FlagSpec(
+      name = "device_admin_lock_required",
+      help =
           "Whether to require the Android real device to be locked by device admin when setup."
-              + " Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> deviceAdminLockRequired = deviceAdminLockRequiredDefault;
+              + " Default is false.")
+  public static final Flag<Boolean> deviceAdminLockRequired = Flag.value(false);
 
-  private static final Flag<List<String>> deviceListToDebugAllocationDefault = Flag.stringList();
+  @FlagSpec(
+      name = "device_list_to_debug_allocation",
+      help = "The list of serial ids of the devices to debug allocation.")
+  public static final Flag<List<String>> deviceListToDebugAllocation = Flag.stringList();
 
-  @com.beust.jcommander.Parameter(
-      names = "--device_list_to_debug_allocation",
-      description = "The list of serial ids of the devices to debug allocation.",
-      converter = Flag.StringListConverter.class)
-  public Flag<List<String>> deviceListToDebugAllocation = deviceListToDebugAllocationDefault;
+  @FlagSpec(
+      name = "device_removal_threshold",
+      help = "Threshold for considering a device to be removed from Master.")
+  public static final Flag<Duration> deviceRemovalThreshold = DurationFlag.days(14);
 
-  private static final Flag<Duration> deviceRemovalThresholdDefault =
-      DurationFlag.value(Duration.ofDays(14));
+  @FlagSpec(
+      name = "enforce_mtaas_device_checkin_group",
+      help = "Whether to enforce the mtaas device checkin group on the device. Default is false.")
+  public static final Flag<Boolean> enforceMtaasDeviceCheckinGroup = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--device_removal_threshold",
-      description = "Threshold for considering a device to be removed from Master.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> deviceRemovalThreshold = deviceRemovalThresholdDefault;
+  @FlagSpec(
+      name = "device_ping_google",
+      help = "Whether to enable dimension ping_google_stability. Default is false.")
+  public static final Flag<Boolean> pingGoogle = Flag.value(false);
 
-  private static final Flag<Boolean> enforceMtaasDeviceCheckinGroupDefault = Flag.value(false);
+  @FlagSpec(name = "dexdump", help = "File path of the dexdump tool")
+  public static final Flag<String> dexdumpPath = Flag.value("");
 
-  @com.beust.jcommander.Parameter(
-      names = "--enforce_mtaas_device_checkin_group",
-      description =
-          "Whether to enforce the mtaas device checkin group on the device. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enforceMtaasDeviceCheckinGroup = enforceMtaasDeviceCheckinGroupDefault;
-
-  private static final Flag<Boolean> pingGoogleDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--device_ping_google",
-      description = "Whether to enable dimension ping_google_stability. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> pingGoogle = pingGoogleDefault;
-
-  private static final Flag<String> dexdumpPathDefault = Flag.value("");
-
-  @com.beust.jcommander.Parameter(
-      names = "--dexdump",
-      description = "File path of the dexdump tool",
-      converter = Flag.StringConverter.class)
-  public Flag<String> dexdumpPath = dexdumpPathDefault;
-
-  private static final Flag<Boolean> disableCallingDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--disable_calling",
-      description =
+  @FlagSpec(
+      name = "disable_calling",
+      help =
           "Whether to disable outbound calling. "
-              + "By default it is TRUE. After calling is disabled, only reboot can re-enable it.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> disableCalling = disableCallingDefault;
+              + "By default it is TRUE. After calling is disabled, only reboot can re-enable it.")
+  public static final Flag<Boolean> disableCalling = Flag.value(true);
 
-  private static final Flag<Boolean> disableCellBroadcastReceiverDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--disable_cellbroadcastreceiver",
-      description =
+  @FlagSpec(
+      name = "disable_cellbroadcastreceiver",
+      help =
           "Whether to disable cellbroadcast receiver. It stops the device to receive any "
               + "message sent by cellbroadcast, e.g., emergency alert. Test runner is in charge to "
-              + "enable cellbroadcast receiver if the test wants the function.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> disableCellBroadcastReceiver = disableCellBroadcastReceiverDefault;
+              + "enable cellbroadcast receiver if the test wants the function.")
+  public static final Flag<Boolean> disableCellBroadcastReceiver = Flag.value(false);
 
-  private static final Flag<Boolean> disableDeviceQuerierDefault = Flag.value(false);
+  @FlagSpec(
+      name = "disable_device_querier",
+      help = "Whether to disable device querier in client. Default is false.")
+  public static final Flag<Boolean> disableDeviceQuerier = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--disable_device_querier",
-      description = "Whether to disable device querier in client. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> disableDeviceQuerier = disableDeviceQuerierDefault;
+  @FlagSpec(
+      name = "disable_device_reboot",
+      help = "Whether to disable device reboot. Default is false.")
+  public static final Flag<Boolean> disableDeviceReboot = Flag.value(false);
 
-  private static final Flag<Boolean> disableDeviceRebootDefault = Flag.value(false);
+  @FlagSpec(
+      name = "disable_device_reboot_for_ro_properties",
+      help = "Whether to disable 'device reboot for read-only properties'. Default is false.")
+  public static final Flag<Boolean> disableDeviceRebootForRoProperties = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--disable_device_reboot",
-      description = "Whether to disable device reboot. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> disableDeviceReboot = disableDeviceRebootDefault;
+  @FlagSpec(
+      name = "disable_wait_for_device",
+      help = "Whether to disable 'adb wait-for-device'. Default is false.")
+  public static final Flag<Boolean> disableWaitForDevice = Flag.value(false);
 
-  private static final Flag<Boolean> disableDeviceRebootForRoPropertiesDefault = Flag.value(false);
+  @FlagSpec(
+      name = "disable_wifi_util_func",
+      help = "Whether to disable WifiUtil functionality on device. Default is false.")
+  public static final Flag<Boolean> disableWifiUtilFunc = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--disable_device_reboot_for_ro_properties",
-      description =
-          "Whether to disable 'device reboot for read-only properties'. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> disableDeviceRebootForRoProperties =
-      disableDeviceRebootForRoPropertiesDefault;
+  @SuppressWarnings("DurationFlagWithUnits")
+  @FlagSpec(
+      name = "dispatch_device_interval_sec",
+      help = "Interval for dispatching the current active devices")
+  public static final Flag<Duration> dispatchDeviceInterval = DurationFlag.seconds(1L);
 
-  private static final Flag<Boolean> disableWaitForDeviceDefault = Flag.value(false);
+  @FlagSpec(
+      name = "enable_android_device_ready_check",
+      help = "Whether to enable android device ready check.")
+  public static final Flag<Boolean> enableAndroidDeviceReadyCheck = Flag.value(true);
 
-  @com.beust.jcommander.Parameter(
-      names = "--disable_wait_for_device",
-      description = "Whether to disable 'adb wait-for-device'. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> disableWaitForDevice = disableWaitForDeviceDefault;
+  @FlagSpec(
+      name = "enable_ate_dual_stack",
+      help = "Whether to enable ATE dual stack mode, which runs tests from both MH and TFC.")
+  public static final Flag<Boolean> enableAteDualStack = Flag.value(false);
 
-  private static final Flag<Boolean> disableWifiUtilFuncDefault = Flag.value(false);
+  @FlagSpec(
+      name = "enable_ats_console_olc_server",
+      help = "Whether to enable OmniLab long-running client in ATS console. Default is true.")
+  public static final Flag<Boolean> enableAtsConsoleOlcServer = Flag.value(true);
 
-  @com.beust.jcommander.Parameter(
-      names = "--disable_wifi_util_func",
-      description = "Whether to disable WifiUtil functionality on device. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> disableWifiUtilFunc = disableWifiUtilFuncDefault;
-
-  private static final Flag<Duration> dispatchDeviceIntervalDefault =
-      DurationFlag.value(Duration.ofSeconds(1L));
-
-  @com.beust.jcommander.Parameter(
-      names = "--dispatch_device_interval_sec",
-      description = "Interval for dispatching the current active devices",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> dispatchDeviceInterval = dispatchDeviceIntervalDefault;
-
-  private static final Flag<Boolean> enableAndroidDeviceReadyCheckDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_android_device_ready_check",
-      description = "Whether to enable android device ready check.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableAndroidDeviceReadyCheck = enableAndroidDeviceReadyCheckDefault;
-
-  private static final Flag<Boolean> enableAteDualStackDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_ate_dual_stack",
-      description = "Whether to enable ATE dual stack mode, which runs tests from both MH and TFC.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableAteDualStack = enableAteDualStackDefault;
-
-  private static final Flag<Boolean> enableAtsConsoleOlcServerDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_ats_console_olc_server",
-      description =
-          "Whether to enable OmniLab long-running client in ATS console. Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableAtsConsoleOlcServer = enableAtsConsoleOlcServerDefault;
-
-  private static final Flag<Boolean> enableAtsConsoleOlcServerLogDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_ats_console_olc_server_log",
-      description =
+  @FlagSpec(
+      name = "enable_ats_console_olc_server_log",
+      help =
           "If true, start printing OLC server streaming log in ATS console (run log command) when"
               + " console starts. If false, start/stop the streaming log when \"run\" command"
-              + " starts/stops. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableAtsConsoleOlcServerLog = enableAtsConsoleOlcServerLogDefault;
+              + " starts/stops. Default is false.")
+  public static final Flag<Boolean> enableAtsConsoleOlcServerLog = Flag.value(true);
 
-  private static final Flag<Boolean> enableAtsModeDefault = Flag.value(false);
+  @FlagSpec(
+      name = "enable_ats_mode",
+      help = "Enable ATS mode if it's true. This flag is intended to serve ATS UI traffic only.")
+  public static final Flag<Boolean> enableAtsMode = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_ats_mode",
-      description =
-          "Enable ATS mode if it's true. This flag is intended to serve ATS UI traffic only.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableAtsMode = enableAtsModeDefault;
+  @FlagSpec(
+      name = "enable_caching_reserved_device",
+      help = "Whether to enable caching reserved device. Default is false.")
+  public static final Flag<Boolean> enableCachingReservedDevice = Flag.value(false);
 
-  private static final Flag<Boolean> enableCachingReservedDeviceDefault = Flag.value(false);
+  @FlagSpec(
+      name = "enable_client_experiment_manager",
+      help = "Whether to enable client experiment manager. Default is true.")
+  public static final Flag<Boolean> enableClientExperimentManager = Flag.value(true);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_caching_reserved_device",
-      description = "Whether to enable caching reserved device. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableCachingReservedDevice = enableCachingReservedDeviceDefault;
+  @FlagSpec(
+      name = "enable_client_file_transfer",
+      help = "Whether to enable client file transfer. Default is true.")
+  public static final Flag<Boolean> enableClientFileTransfer = Flag.value(true);
 
-  private static final Flag<Boolean> enableClientExperimentManagerDefault = Flag.value(true);
+  @FlagSpec(name = "enable_cloud_logging", help = "Whether to enable cloud logging.")
+  public static final Flag<Boolean> enableCloudLogging = Flag.value(true);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_client_experiment_manager",
-      description = "Whether to enable client experiment manager. Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableClientExperimentManager = enableClientExperimentManagerDefault;
-
-  private static final Flag<Boolean> enableClientFileTransferDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_client_file_transfer",
-      description = "Whether to enable client file transfer. Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableClientFileTransfer = enableClientFileTransferDefault;
-
-  private static final Flag<Boolean> enableCloudLoggingDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_cloud_logging",
-      description = "Whether to enable cloud logging.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableCloudLogging = enableCloudLoggingDefault;
-
-  private static final Flag<Boolean> enableCloudMetricsDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_cloud_metrics",
-      description =
+  @FlagSpec(
+      name = "enable_cloud_metrics",
+      help =
           "Whether to enable sending metrics to Google Cloud. It should only be enabled when"
-              + " deploying in Google Cloud.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableCloudMetrics = enableCloudMetricsDefault;
+              + " deploying in Google Cloud.")
+  public static final Flag<Boolean> enableCloudMetrics = Flag.value(false);
 
-  private static final Flag<Boolean> enableCloudPubsubMonitoringDefault = Flag.value(false);
+  @FlagSpec(
+      name = "enable_cloud_pubsub_monitoring",
+      help = "Whether to enable sending lab monitoring data to Cloud Pub/Sub. Default is false.")
+  public static final Flag<Boolean> enableCloudPubsubMonitoring = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_cloud_pubsub_monitoring",
-      description =
-          "Whether to enable sending lab monitoring data to Cloud Pub/Sub. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableCloudPubsubMonitoring = enableCloudPubsubMonitoringDefault;
+  @FlagSpec(
+      name = "enable_cloud_file_transfer",
+      help = "Whether enable cloud file transfer. Default is false.")
+  public static final Flag<Boolean> enableCloudFileTransfer = Flag.value(false);
 
-  private static final Flag<Boolean> enableCloudFileTransferDefault = Flag.value(false);
+  @FlagSpec(
+      name = "enable_cts_verifier_result_reporter",
+      help = "Whether enable result reporter for cts verifier.")
+  public static final Flag<Boolean> enableCtsVerifierResultReporter = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_cloud_file_transfer",
-      description = "Whether enable cloud file transfer. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableCloudFileTransfer = enableCloudFileTransferDefault;
+  @FlagSpec(
+      name = "enable_debug_mode",
+      help = "Whether enable debug mode to print more detailed logs.")
+  public static final Flag<Boolean> enableDebugMode = Flag.value(false);
 
-  private static final Flag<Boolean> enableCtsVerifierResultReporterDefault = Flag.value(false);
+  @FlagSpec(
+      name = "enable_device_airplane_mode",
+      help = "Turn device airplane mode on or off. True is on, false is off. Default is false.")
+  public static final Flag<Boolean> enableDeviceAirplaneMode = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_cts_verifier_result_reporter",
-      description = "Whether enable result reporter for cts verifier.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableCtsVerifierResultReporter = enableCtsVerifierResultReporterDefault;
+  @FlagSpec(
+      name = "enable_device_config_manager",
+      help = "Whether to enable device config manager. Default is true.")
+  public static final Flag<Boolean> enableDeviceConfigManager = Flag.value(true);
 
-  private static final Flag<Boolean> enableDebugModeDefault = Flag.value(false);
+  @FlagSpec(
+      name = "enable_device_resource_service",
+      help = "Whether to enable device resource service. default is false.")
+  public static final Flag<Boolean> enableDeviceResourceService = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_debug_mode",
-      description = "Whether enable debug mode to print more detailed logs.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableDebugMode = enableDebugModeDefault;
-
-  private static final Flag<Boolean> enableDeviceAirplaneModeDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_device_airplane_mode",
-      description =
-          "Turn device airplane mode on or off. True is on, false is off. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableDeviceAirplaneMode = enableDeviceAirplaneModeDefault;
-
-  private static final Flag<Boolean> enableDeviceConfigManagerDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_device_config_manager",
-      description = "Whether to enable device config manager. Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableDeviceConfigManager = enableDeviceConfigManagerDefault;
-
-  private static final Flag<Boolean> enableDeviceResourceServiceDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_device_resource_service",
-      description = "Whether to enable device resource service. default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableDeviceResourceService = enableDeviceResourceServiceDefault;
-
-  private static final Flag<Boolean> enableDeviceStateChangeRecoverDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_device_state_change_recover",
-      description =
+  @FlagSpec(
+      name = "enable_device_state_change_recover",
+      help =
           "Whether to change device state, like from recovery mode to normal mode, to recover the"
-              + " device. Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableDeviceStateChangeRecover = enableDeviceStateChangeRecoverDefault;
+              + " device. Default is true.")
+  public static final Flag<Boolean> enableDeviceStateChangeRecover = Flag.value(true);
 
-  private static final Flag<Boolean> enableDeviceSystemSettingsChangeDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_device_system_settings_change",
-      description =
+  @FlagSpec(
+      name = "enable_device_system_settings_change",
+      help =
           "Whether to change device system settings, like enable/disable airplane mode, etc."
-              + " Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableDeviceSystemSettingsChange = enableDeviceSystemSettingsChangeDefault;
+              + " Default is true.")
+  public static final Flag<Boolean> enableDeviceSystemSettingsChange = Flag.value(true);
 
-  private static final Flag<Boolean> enableDeviceTestDecouplingDefault = Flag.value(false);
+  @FlagSpec(
+      name = "enable_device_test_decoupling",
+      help = "Whether to enable device/test decoupling mode. Default is false.")
+  public static final Flag<Boolean> enableDeviceTestDecoupling = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_device_test_decoupling",
-      description = "Whether to enable device/test decoupling mode. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableDeviceTestDecoupling = enableDeviceTestDecouplingDefault;
+  @FlagSpec(
+      name = "enable_disk_check",
+      help = "For file cleaner, enable/disable checkDiskSpace in each check interval.")
+  public static final Flag<Boolean> enableDiskCheck = Flag.value(true);
 
-  private static final Flag<Boolean> enableDiskCheckDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_disk_check",
-      description = "For file cleaner, enable/disable checkDiskSpace in each check interval.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableDiskCheck = enableDiskCheckDefault;
-
-  private static final Flag<Boolean> enableEmulatorDetectionDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_emulator_detection",
-      description =
+  // Removes this flag once b/152073867 is fixed
+  @FlagSpec(
+      name = "enable_emulator_detection",
+      help =
           "Whether this lab server is enabled for emulator detection. When emulator detection is"
               + " disabled, the emulator device will be considered as the real device. Do NOT set"
-              + " it to false in remote labs. Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableEmulatorDetection = enableEmulatorDetectionDefault;
+              + " it to false in remote labs. Default is true.")
+  public static final Flag<Boolean> enableEmulatorDetection = Flag.value(true);
 
-  private static final Flag<Boolean> enableExternalConfigServiceDefault = Flag.value(false);
+  @FlagSpec(
+      name = "enable_external_config_service",
+      help = "Whether to enable external config service. Default is false.")
+  public static final Flag<Boolean> enableExternalConfigService = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_external_config_service",
-      description = "Whether to enable external config service. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableExternalConfigService = enableExternalConfigServiceDefault;
+  @FlagSpec(
+      name = "enable_external_master_server",
+      help = "Whether to enable external master server. Default is false.")
+  public static final Flag<Boolean> enableExternalMasterServer = Flag.value(false);
 
-  private static final Flag<Boolean> enableExternalMasterServerDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_external_master_server",
-      description = "Whether to enable external master server. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableExternalMasterServer = enableExternalMasterServerDefault;
-
-  private static final Flag<Boolean> createFailedDeviceDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_failed_device_creation",
-      description =
+  @FlagSpec(
+      name = "enable_failed_device_creation",
+      help =
           "Whether the lab server should create FailedDevice when devices constantly fail to"
               + " initialize. In some rare use cases devices might not finish initialization but"
               + " still be able to work sometimes. This flag does not work in shared lab, the"
-              + " default value of this flag is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> createFailedDevice = createFailedDeviceDefault;
+              + " default value of this flag is true.")
+  public static final Flag<Boolean> createFailedDevice = Flag.value(true);
 
-  private static final Flag<Boolean> enableFileCleanerDefault = Flag.value(true);
+  @FlagSpec(name = "enable_file_cleaner", help = "Whether to enable file cleaner.")
+  public static final Flag<Boolean> enableFileCleaner = Flag.value(true);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_file_cleaner",
-      description = "Whether to enable file cleaner.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableFileCleaner = enableFileCleanerDefault;
+  @FlagSpec(
+      name = "enable_file_system_io_check",
+      help = "For file cleaner, enable/disable checkFileSystemIo in each check interval.")
+  public static final Flag<Boolean> enableFileSystemIoCheck = Flag.value(true);
 
-  private static final Flag<Boolean> enableFileSystemIoCheckDefault = Flag.value(true);
+  @FlagSpec(
+      name = "enable_fastboot_detector",
+      help = "Whether to enable fastboot detector. Default is true.")
+  public static final Flag<Boolean> enableFastbootDetector = Flag.value(true);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_file_system_io_check",
-      description = "For file cleaner, enable/disable checkFileSystemIo in each check interval.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableFileSystemIoCheck = enableFileSystemIoCheckDefault;
-
-  private static final Flag<Boolean> enableFastbootDetectorDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_fastboot_detector",
-      description = "Whether to enable fastboot detector. Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableFastbootDetector = enableFastbootDetectorDefault;
-
-  private static final Flag<Boolean> enableFastbootInAndroidRealDeviceDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_fastboot_in_android_real_device",
-      description =
+  @FlagSpec(
+      name = "enable_fastboot_in_android_real_device",
+      help =
           "Whether to enable fastboot support when initializing AndroidRealDevice."
-              + "Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableFastbootInAndroidRealDevice = enableFastbootInAndroidRealDeviceDefault;
+              + " Default is true.")
+  public static final Flag<Boolean> enableFastbootInAndroidRealDevice = Flag.value(true);
 
-  private static final Flag<Boolean> enableGrpcLabServerDefault = Flag.value(false);
+  @FlagSpec(
+      name = "enable_grpc_lab_server",
+      help = "Whether to enable gRPC connection to lab server. Default is false.")
+  public static final Flag<Boolean> enableGrpcLabServer = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_grpc_lab_server",
-      description = "Whether to enable gRPC connection to lab server. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableGrpcLabServer = enableGrpcLabServerDefault;
+  @FlagSpec(name = "enable_grpc_relay", help = "Whether to enable gRPC relay. Default is false.")
+  public static final Flag<Boolean> enableGrpcRelay = Flag.value(false);
 
-  private static final Flag<Boolean> enableGrpcRelayDefault = Flag.value(false);
+  @FlagSpec(name = "enable_master_syncer", help = "Whether to enable master syncer in lab.")
+  public static final Flag<Boolean> enableMasterSyncer = Flag.value(true);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_grpc_relay",
-      description = "Whether to enable gRPC relay. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableGrpcRelay = enableGrpcRelayDefault;
+  @FlagSpec(
+      name = "enable_messaging_service",
+      help = "Whether to enable OmniLab messaging service. Default is true.")
+  public static final Flag<Boolean> enableMessagingService = Flag.value(true);
 
-  private static final Flag<Boolean> enableMasterSyncerDefault = Flag.value(true);
+  @FlagSpec(
+      name = "enable_mobly_resultstore_upload",
+      help = "Whether to enable Mobly result store upload. Default is false.")
+  public static final Flag<Boolean> enableMoblyResultstoreUpload = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_master_syncer",
-      description = "Whether to enable master syncer in lab.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableMasterSyncer = enableMasterSyncerDefault;
+  @FlagSpec(
+      name = "enable_olc_publisher_extended_device_info",
+      help = "Whether to enable extended device info in OLC publisher.")
+  public static final Flag<Boolean> enableOlcPublisherExtendedDeviceInfo = Flag.value(false);
 
-  private static final Flag<Boolean> enableMessagingServiceDefault = Flag.value(true);
+  @FlagSpec(name = "enable_paris", help = "Whether this server supports paris detection.")
+  public static final Flag<Boolean> enableParis = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_messaging_service",
-      description = "Whether to enable OmniLab messaging service. Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableMessagingService = enableMessagingServiceDefault;
+  @FlagSpec(name = "enable_persistent_cache", help = "Whether to enable persistent cache.")
+  public static final Flag<Boolean> enablePersistentCache = Flag.value(false);
 
-  private static final Flag<Boolean> enableMoblyResultstoreUploadDefault = Flag.value(false);
+  @FlagSpec(name = "enable_proxy_mode", help = "Whether to enable proxy mode.")
+  public static final Flag<Boolean> enableProxyMode = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_mobly_resultstore_upload",
-      description = "Whether to enable Mobly result store upload. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableMoblyResultstoreUpload = enableMoblyResultstoreUploadDefault;
+  @FlagSpec(name = "enable_rdh", help = "Whether to enable the remote DeviceProxyHostService.")
+  public static final Flag<Boolean> enableRdh = Flag.value(false);
 
-  private static final Flag<Boolean> enableOlcPublisherExtendedDeviceInfoDefault =
-      Flag.value(false);
+  @FlagSpec(name = "enable_root_device", help = "Whether to root devices. Default is true.")
+  public static final Flag<Boolean> enableRootDevice = Flag.value(true);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_olc_publisher_extended_device_info",
-      description = "Whether to enable extended device info in OLC publisher.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableOlcPublisherExtendedDeviceInfo =
-      enableOlcPublisherExtendedDeviceInfoDefault;
-
-  private static final Flag<Boolean> enableParisDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_paris",
-      description = "Whether this server supports paris detection.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableParis = enableParisDefault;
-
-  private static final Flag<Boolean> enablePersistentCacheDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_persistent_cache",
-      description = "Whether to enable persistent cache.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enablePersistentCache = enablePersistentCacheDefault;
-
-  private static final Flag<Boolean> enableProxyModeDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_proxy_mode",
-      description = "Whether to enable proxy mode.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableProxyMode = enableProxyModeDefault;
-
-  private static final Flag<Boolean> enableRdhDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_rdh",
-      description = "Whether to enable the remote DeviceProxyHostService.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableRdh = enableRdhDefault;
-
-  private static final Flag<Boolean> enableRootDeviceDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_root_device",
-      description = "Whether to root devices. Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableRootDevice = enableRootDeviceDefault;
-
-  private static final Flag<Boolean> enableSimpleSchedulerShuffleDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_simple_scheduler_shuffle",
-      description =
+  @FlagSpec(
+      name = "enable_simple_scheduler_shuffle",
+      help =
           "Whether to enable the shuffle of the devices in the single scheduler, to randomly"
-              + " allocate devices for the same requests. The default value is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableSimpleSchedulerShuffle = enableSimpleSchedulerShuffleDefault;
+              + " allocate devices for the same requests. The default value is false.")
+  public static final Flag<Boolean> enableSimpleSchedulerShuffle = Flag.value(false);
 
-  private static final Flag<Boolean> enableStackdriverDebugModeDefault = Flag.value(false);
+  @FlagSpec(
+      name = "enable_stackdriver_debug_mode",
+      help = "Whether enable debug mode to print more detailed logs in Stackdriver.")
+  public static final Flag<Boolean> enableStackdriverDebugMode = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_stackdriver_debug_mode",
-      description = "Whether enable debug mode to print more detailed logs in Stackdriver.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableStackdriverDebugMode = enableStackdriverDebugModeDefault;
+  @FlagSpec(
+      name = "enable_stubby_file_transfer",
+      help = "Whether to enable stubby file transfer. default is true.")
+  public static final Flag<Boolean> enableStubbyFileTransfer = Flag.value(true);
 
-  private static final Flag<Boolean> enableStubbyFileTransferDefault = Flag.value(true);
+  @FlagSpec(
+      name = "enable_stubby_rpc_server",
+      help = "Whether to enable stubby RPC server. default is true.")
+  public static final Flag<Boolean> enableStubbyRpcServer = Flag.value(true);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_stubby_file_transfer",
-      description = "Whether to enable stubby file transfer. default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableStubbyFileTransfer = enableStubbyFileTransferDefault;
+  // TODO: b/444562857 - Remove this flag after figuring out why devices cannot be allocated with
+  // required dimension.
+  @FlagSpec(
+      name = "enable_test_harness_check_for_required_tests",
+      help =
+          "Whether to enable test harness check for required tests in ATS server (b/444562857)."
+              + " Default is false.")
+  public static final Flag<Boolean> enableTestHarnessCheckForRequiredTests = Flag.value(false);
 
-  private static final Flag<Boolean> enableStubbyRpcServerDefault = Flag.value(true);
+  @FlagSpec(
+      name = "enable_test_log_collector",
+      help = "Whether to enable test log collector. Default is false.")
+  public static final Flag<Boolean> enableTestLogCollector = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_stubby_rpc_server",
-      description = "Whether to enable stubby RPC server. default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableStubbyRpcServer = enableStubbyRpcServerDefault;
+  @FlagSpec(
+      name = "enable_trace_span_processor",
+      help = "Whether to enable trace span processor. Default is true.")
+  public static final Flag<Boolean> enableTraceSpanProcessor = Flag.value(true);
 
-  private static final Flag<Boolean> enableTestHarnessCheckForRequiredTestsDefault =
-      Flag.value(false);
+  @FlagSpec(
+      name = "enable_wrangler_agent_dummy_allocation",
+      help =
+          "Whether to enable dummy allocation (always return success without OLC communication).")
+  public static final Flag<Boolean> enableWranglerAgentDummyAllocation = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_test_harness_check_for_required_tests",
-      description =
-          "Whether to enable test harness check for required tests in ATS server. Default is"
-              + " false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableTestHarnessCheckForRequiredTests =
-      enableTestHarnessCheckForRequiredTestsDefault;
+  @FlagSpec(
+      name = "enable_xts_dynamic_downloader",
+      help = "Whether to enable xts dynamic downloader. Default is false.")
+  public static final Flag<Boolean> enableXtsDynamicDownloader = Flag.value(false);
 
-  private static final Flag<Boolean> enableTestLogCollectorDefault = Flag.value(false);
+  @FlagSpec(
+      name = "enable_xts_tradefed_invocation_agent",
+      help = "Whether to enable xts tradefed invocation agent. Default is false.")
+  public static final Flag<Boolean> enableXtsTradefedInvocationAgent = Flag.value(true);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enable_test_log_collector",
-      description = "Whether to enable test log collector. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableTestLogCollector = enableTestLogCollectorDefault;
-
-  private static final Flag<Boolean> enableTraceSpanProcessorDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_trace_span_processor",
-      description = "Whether to enable trace span processor. Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableTraceSpanProcessor = enableTraceSpanProcessorDefault;
-
-  private static final Flag<Boolean> enableWranglerAgentDummyAllocationDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_wrangler_agent_dummy_allocation",
-      description =
-          "Whether to enable dummy allocation (always return success without OLC communication).",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableWranglerAgentDummyAllocation =
-      enableWranglerAgentDummyAllocationDefault;
-
-  private static final Flag<Boolean> enableXtsDynamicDownloaderDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_xts_dynamic_downloader",
-      description = "Whether to enable xts dynamic downloader. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableXtsDynamicDownloader = enableXtsDynamicDownloaderDefault;
-
-  private static final Flag<Boolean> enableXtsTradefedInvocationAgentDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_xts_tradefed_invocation_agent",
-      description = "Whether to enable xts tradefed invocation agent. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableXtsTradefedInvocationAgent = enableXtsTradefedInvocationAgentDefault;
-
-  private static final Flag<Boolean> enableZombieFileCleanDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_zombie_file_clean",
-      description =
+  @FlagSpec(
+      name = "enable_zombie_file_clean",
+      help =
           "For file cleaner, enable/disable cleanZombieFile in each check interval. By default is"
-              + " false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableZombieFileClean = enableZombieFileCleanDefault;
+              + " false.")
+  public static final Flag<Boolean> enableZombieFileClean = Flag.value(false);
 
-  private static final Flag<Boolean> enforceFlashSafetyChecksDefault = Flag.value(false);
+  @FlagSpec(
+      name = "enforce_flash_safety_checks",
+      help =
+          "Whether to enable flash safety checks, which disables flash support when risky devices"
+              + " don't have DPM installed.")
+  public static final Flag<Boolean> enforceFlashSafetyChecks = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--enforce_flash_safety_checks",
-      description =
-          "Whether to enable flash safety checks, which disables flash support when devices are in"
-              + " risky status.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enforceFlashSafetyChecks = enforceFlashSafetyChecksDefault;
-
-  private static final Flag<Boolean> enforceSafeDischargeDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enforce_safe_discharge",
-      description =
+  @FlagSpec(
+      name = "enforce_safe_discharge",
+      help =
           "Enable enforcing safe discharge mode for supported devices. For supported devices this "
               + "will try to keep battery level at safe_charge_level. For devices which do not "
               + "support safe_charge_level, this will try to turn charge off and on when reached "
-              + "stop_charge_level and start_charge_level respectively.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enforceSafeDischarge = enforceSafeDischargeDefault;
+              + "stop_charge_level and start_charge_level respectively.")
+  public static final Flag<Boolean> enforceSafeDischarge = Flag.value(false);
 
-  private static final Flag<Duration> ephemeralRemovalThresholdDefault =
-      DurationFlag.value(Duration.ofHours(1));
+  @FlagSpec(
+      name = "ephemeral_removal_threshold",
+      help =
+          "If a MISSING ephemeral lab or device's last modify time is older than this threshold, it"
+              + " will be removed from Master.")
+  public static final Flag<Duration> ephemeralRemovalThreshold = DurationFlag.hours(1);
 
-  @com.beust.jcommander.Parameter(
-      names = "--ephemeral_removal_threshold",
-      description =
-          "If a MISSING ephemeral lab or device's last modify time is older than this"
-              + " threshold, it will be removed from Master.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> ephemeralRemovalThreshold = ephemeralRemovalThresholdDefault;
+  @FlagSpec(
+      name = "external_adb_initializer_template",
+      help =
+          "Whether to use the external adb initializer template to initialize adb. Default is"
+              + " false.")
+  public static final Flag<Boolean> externalAdbInitializerTemplate = Flag.value(true);
 
-  private static final Flag<String> externalResJarDefault = Flag.value("");
+  @FlagSpec(
+      name = "external_res_jar",
+      help =
+          "Absolute path to the jar file of external resources. This jar contains the resources"
+              + " that are not in binary jar.")
+  public static final Flag<String> externalResJar = Flag.value("");
 
-  @com.beust.jcommander.Parameter(
-      names = "--external_res_jar",
-      description =
-          "Absolute path to the jar file of external resources. This jar contains the"
-              + "resources that are not in binary jar.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> externalResJar = externalResJarDefault;
-
-  private static final Flag<String> adbKeyPathsFromUserDefault = Flag.value("");
-
-  @com.beust.jcommander.Parameter(
-      names = "--extra_adb_keys",
-      description =
+  @FlagSpec(
+      name = "extra_adb_keys",
+      help =
           ("Colon-separated list of adb keys (files or directories) to be used (see ADB_VENDOR_KEYS"
-              + " in adb --help for formatting details)."),
-      converter = Flag.StringConverter.class)
-  public Flag<String> adbKeyPathsFromUser = adbKeyPathsFromUserDefault;
+              + " in adb --help for formatting details)."))
+  public static final Flag<String> adbKeyPathsFromUser = Flag.value("");
 
-  private static final Flag<List<String>> extraDeviceLabelsDefault = Flag.stringList();
-
-  @com.beust.jcommander.Parameter(
-      names = "--extra_device_labels",
-      description =
+  @FlagSpec(
+      name = "extra_device_labels",
+      help =
           "Device labels which will be appended to the dimensions of all the devices "
-              + "in the current host.",
-      converter = Flag.StringListConverter.class)
-  public Flag<List<String>> extraDeviceLabels = extraDeviceLabelsDefault;
+              + "in the current host.")
+  public static final Flag<List<String>> extraDeviceLabels = Flag.stringList();
 
-  private static final Flag<String> fastbootPathFromUserDefault = Flag.value("");
+  @FlagSpec(name = "fastboot", help = "File path of the fastboot tool")
+  public static final Flag<String> fastbootPathFromUser = Flag.value("");
 
-  @com.beust.jcommander.Parameter(
-      names = "--fastboot",
-      description = "File path of the fastboot tool",
-      converter = Flag.StringConverter.class)
-  public Flag<String> fastbootPathFromUser = fastbootPathFromUserDefault;
+  @FlagSpec(
+      name = "fe_connect_to_config_server",
+      help = "Whether to connect to the config server in the FE server.")
+  public static final Flag<Boolean> feConnectToConfigServer = Flag.value(false);
 
-  private static final Flag<Boolean> feConnectToConfigServerDefault = Flag.value(false);
+  @FlagSpec(
+      name = "fe_enable_configuration",
+      help = "Enables the device configuration feature in the Mobile Harness FE UI.")
+  public static final Flag<Boolean> feEnableConfiguration = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--fe_connect_to_config_server",
-      description = "Whether to connect to the config server in the FE server.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> feConnectToConfigServer = feConnectToConfigServerDefault;
+  @FlagSpec(name = "fe_grpc_port", help = "gRPC port to listen on for FE servers.")
+  public static final Flag<Integer> feGrpcPort = Flag.value(8080);
 
-  private static final Flag<Boolean> feEnableConfigurationDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--fe_enable_configuration",
-      description = "Enables the device configuration feature in the Mobile Harness FE UI.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> feEnableConfiguration = feEnableConfigurationDefault;
-
-  private static final Flag<Integer> feGrpcPortDefault = Flag.value(8080);
-
-  @com.beust.jcommander.Parameter(
-      names = "--fe_grpc_port",
-      description = "gRPC port to listen on for FE servers.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> feGrpcPort = feGrpcPortDefault;
-
-  private static final Flag<Duration> fileExpireTimeDefault =
-      DurationFlag.value(Duration.ofHours(3L));
-
-  @com.beust.jcommander.Parameter(
-      names = "--file_expire_time",
-      description =
+  @FlagSpec(
+      name = "file_expire_time",
+      help =
           "For file cleaner, file expire time for default managed directories, such as receive file"
-              + " directory.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> fileExpireTime = fileExpireTimeDefault;
+              + " directory.")
+  public static final Flag<Duration> fileExpireTime = DurationFlag.hours(3L);
 
-  private static final Flag<String> fileTransferBucketDefault = Flag.value("");
+  @FlagSpec(
+      name = "file_transfer_cloud_bucket",
+      help = "Google Cloud Storage bucket of file transfer.")
+  public static final Flag<String> fileTransferBucket = Flag.value("");
 
-  @com.beust.jcommander.Parameter(
-      names = "--file_transfer_cloud_bucket",
-      description = "Google Cloud Storage bucket of file transfer.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> fileTransferBucket = fileTransferBucketDefault;
+  @FlagSpec(
+      name = "file_transfer_cloud_cache_ttl",
+      help = "TTL of File Transfer caches in Google Cloud Storage. Default is 12 hours.")
+  public static final Flag<Duration> fileTransferCloudCacheTtl = DurationFlag.hours(12);
 
-  private static final Flag<Duration> fileTransferCloudCacheTtlDefault =
-      DurationFlag.value(Duration.ofHours(12));
+  @FlagSpec(
+      name = "file_transfer_cred_file",
+      help = "The credential file path for the service account to use file transfer.")
+  public static final Flag<String> fileTransferCredFile = Flag.nullString();
 
-  @com.beust.jcommander.Parameter(
-      names = "--file_transfer_cloud_cache_ttl",
-      description = "TTL of File Transfer caches in Google Cloud Storage. Default is 12 hours.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> fileTransferCloudCacheTtl = fileTransferCloudCacheTtlDefault;
+  @FlagSpec(
+      name = "file_transfer_local_cache_ttl",
+      help = "TTL of File Transfer caches in Google Cloud Storage. Default is 3 hour.")
+  public static final Flag<Duration> fileTransferLocalCacheTtl = DurationFlag.hours(3);
 
-  private static final Flag<String> fileTransferCredFileDefault = Flag.value(null);
-
-  @com.beust.jcommander.Parameter(
-      names = "--file_transfer_cred_file",
-      description = "The credential file path for the service account to use file transfer.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> fileTransferCredFile = fileTransferCredFileDefault;
-
-  private static final Flag<Duration> fileTransferLocalCacheTtlDefault =
-      DurationFlag.value(Duration.ofHours(3));
-
-  @com.beust.jcommander.Parameter(
-      names = "--file_transfer_local_cache_ttl",
-      description = "TTL of File Transfer caches in Google Cloud Storage. Default is 3 hour.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> fileTransferLocalCacheTtl = fileTransferLocalCacheTtlDefault;
-
-  private static final Flag<Boolean> forceDeviceRebootAfterTestDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--force_device_reboot_after_test",
-      description =
+  @FlagSpec(
+      name = "force_device_reboot_after_test",
+      help =
           "Whether to force a device reboot after each test. This option has the highest priority"
-              + " to determine whether the device should reboot after each test. When thisoption is"
-              + " true, other related flags (e.g. --disable_device_reboot) or related"
+              + " to determine whether the device should reboot after each test. When this option"
+              + " is true, other related flags (e.g. --disable_device_reboot) or related"
               + " implementations (e.g Device#canReboot()) may be ignored in some cases. This is an"
               + " advanced flag, make sure you understand the effects when using this flag. The"
-              + " default value is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> forceDeviceRebootAfterTest = forceDeviceRebootAfterTestDefault;
+              + " default value is false.")
+  public static final Flag<Boolean> forceDeviceRebootAfterTest = Flag.value(false);
 
-  private static final Flag<Boolean> forceToUseGrpcDefault = Flag.value(false);
+  @FlagSpec(name = "force_to_use_grpc", help = "Force to use GRPC for debugging.")
+  public static final Flag<Boolean> forceToUseGrpc = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--force_to_use_grpc",
-      description = "Force to use GRPC for debugging.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> forceToUseGrpc = forceToUseGrpcDefault;
+  @FlagSpec(
+      name = "gcs_resolver_credential_file",
+      help = "The credential file path for the service account to use GCS resolver.")
+  public static final Flag<String> gcsResolverCredentialFile = Flag.nullString();
 
-  private static final Flag<String> gcsResolverCredentialFileDefault = Flag.value(null);
+  @FlagSpec(name = "gcs_resolver_project_id", help = "The project ID of the GCS resolver.")
+  public static final Flag<String> gcsResolverProjectId = Flag.nullString();
 
-  @com.beust.jcommander.Parameter(
-      names = "--gcs_resolver_credential_file",
-      description = "The credential file path for the service account to use GCS resolver.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> gcsResolverCredentialFile = gcsResolverCredentialFileDefault;
+  @FlagSpec(
+      name = "gcs_util_threads",
+      help = "Thread pool size for uploading/downloading GCS files in parallel.")
+  public static final Flag<Integer> gcsUtilThreads = Flag.value(50);
 
-  private static final Flag<String> gcsResolverProjectIdDefault = Flag.value(null);
+  @FlagSpec(
+      name = "internal_service_cred_file",
+      help = "Path to the credential key file to access internal services.")
+  public static final Flag<String> internalServiceCredentialFile = Flag.nullString();
 
-  @com.beust.jcommander.Parameter(
-      names = "--gcs_resolver_project_id",
-      description = "The project ID of the GCS resolver.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> gcsResolverProjectId = gcsResolverProjectIdDefault;
+  @FlagSpec(
+      name = "get_test_status_rpc_call_interval",
+      help = "Default RPC call interval when getting the test result.")
+  public static final Flag<Duration> getTestStatusRpcCallInterval = DurationFlag.seconds(5L);
 
-  private static final Flag<Integer> gcsUtilThreadsDefault = Flag.value(50);
+  @FlagSpec(name = "grpc_port", help = "Port of server gRPC services. Default is 9994.")
+  public static final Flag<Integer> grpcPort = Flag.value(9994);
 
-  @com.beust.jcommander.Parameter(
-      names = "--gcs_util_threads",
-      description = "Thread pool size for uploading/downloading GCS files in parallel.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> gcsUtilThreads = gcsUtilThreadsDefault;
+  @FlagSpec(
+      name = "ignore_check_device_failure",
+      help = "Whether to ignore failures during checking device. Default is false.")
+  public static final Flag<Boolean> ignoreCheckDeviceFailure = Flag.value(false);
 
-  private static final Flag<String> internalServiceCredentialFileDefault = Flag.value(null);
+  @FlagSpec(
+      name = "internal_storage_alert_mb",
+      help =
+          "The threshold for insufficient internal storage alert. If the internal storage is lower"
+              + " than the threshold, the device dimension 'internal_storage_status' will go from"
+              + " 'ok' to 'low'. Unit is MB. Default is 200 MB.")
+  public static final Flag<Integer> internalStorageAlert = Flag.value(200);
 
-  @com.beust.jcommander.Parameter(
-      names = "--internal_service_cred_file",
-      description = "Path to the credential key file to access internal services.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> internalServiceCredentialFile = internalServiceCredentialFileDefault;
+  @FlagSpec(
+      name = "is_omni_mode",
+      help = "Whether the ATS controller is in Omni mode. Default is false.")
+  public static final Flag<Boolean> isOmniMode = Flag.value(false);
 
-  private static final Flag<Duration> getTestStatusRpcCallIntervalDefault =
-      DurationFlag.value(Duration.ofSeconds(5L));
+  @FlagSpec(name = "java_command_path", help = "The path of Java")
+  public static final Flag<String> javaCommandPath = Flag.value("java");
 
-  @com.beust.jcommander.Parameter(
-      names = "--get_test_status_rpc_call_interval",
-      description = "Default RPC call interval when getting the test result.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> getTestStatusRpcCallInterval = getTestStatusRpcCallIntervalDefault;
+  @FlagSpec(
+      name = "job_configs_json",
+      help =
+          "File path of json string that is parsed from mobileharness.client.JobConfigs. It will "
+              + "be overrode by the values defined in mobile_test blaze target. So *DO NOT* "
+              + "specify it while using mobile_test. ")
+  public static final Flag<String> jobConfigsJson = Flag.value("");
 
-  private static final Flag<Integer> grpcPortDefault = Flag.value(9994);
-
-  @com.beust.jcommander.Parameter(
-      names = "--grpc_port",
-      description = "Port of server gRPC services. Default is 9994.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> grpcPort = grpcPortDefault;
-
-  private static final Flag<Boolean> ignoreCheckDeviceFailureDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--ignore_check_device_failure",
-      description = "Whether to ignore failures during checking device. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> ignoreCheckDeviceFailure = ignoreCheckDeviceFailureDefault;
-
-  private static final Flag<Integer> internalStorageAlertDefault = Flag.value(200);
-
-  @com.beust.jcommander.Parameter(
-      names = "--internal_storage_alert_mb",
-      description =
-          "The threshold for insufficient internal storage alert. If the internal storage is lower "
-              + "than the threshold, the device dimension 'internal_storage_status' will go from "
-              + "'ok' to 'low'. Unit is MB. Default is 200 MB.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> internalStorageAlert = internalStorageAlertDefault;
-
-  private static final Flag<Boolean> isOmniModeDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--is_omni_mode",
-      description = "Whether the controller is in Omni mode. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> isOmniMode = isOmniModeDefault;
-
-  private static final Flag<String> javaCommandPathDefault = Flag.value("java");
-
-  @com.beust.jcommander.Parameter(
-      names = "--java_command_path",
-      description = "The path of Java",
-      converter = Flag.StringConverter.class)
-  public Flag<String> javaCommandPath = javaCommandPathDefault;
-
-  private static final Flag<String> jobConfigsJsonDefault = Flag.value("");
-
-  @com.beust.jcommander.Parameter(
-      names = "--job_configs_json",
-      description = "File path of json string that is parsed from mobileharness.client.JobConfigs.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> jobConfigsJson = jobConfigsJsonDefault;
-
-  private static final Flag<Duration> jobGenFileExpiredTimeDefault =
-      DurationFlag.value(Duration.ZERO);
-
-  @com.beust.jcommander.Parameter(
-      names = "--job_gen_file_expired_time",
-      description =
+  @FlagSpec(
+      name = "job_gen_file_expired_time",
+      help =
           "How soon to clean up the genfile after each test. Default is 0, which means the genfile "
               + "is removed immediately when a test finishes. It has the risk to blow up the disk "
-              + " of the lab host when setting to non-zero.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> jobGenFileExpiredTime = jobGenFileExpiredTimeDefault;
+              + " of the lab host when setting to non zero.")
+  public static final Flag<Duration> jobGenFileExpiredTime = DurationFlag.zero();
 
-  private static final Flag<Boolean> keepTestHarnessFalseDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--keep_test_harness_false",
-      description =
+  @FlagSpec(
+      name = "keep_test_harness_false",
+      help =
           "If true, keep the device property persist.sys.test_harness false by adding required"
               + " dimension. Moreover reset_device_in_android_real_device_setup flag can't be true"
-              + " in this case. Only turn on the flag in omni mode for CTS device pool.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> keepTestHarnessFalse = keepTestHarnessFalseDefault;
+              + " in this case. Only turn on the flag in omni mode for CTS device pool.")
+  public static final Flag<Boolean> keepTestHarnessFalse = Flag.value(false);
 
-  private static final Flag<String> labDeviceConfigFileDefault = Flag.value("");
+  @FlagSpec(
+      name = "lab_device_config",
+      help = "Path of the text format protobuf lab device config file.")
+  public static final Flag<String> labDeviceConfigFile = Flag.value("");
 
-  @com.beust.jcommander.Parameter(
-      names = "--lab_device_config",
-      description = "Path of the text format protobuf lab device config file.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> labDeviceConfigFile = labDeviceConfigFileDefault;
+  @FlagSpec(
+      name = "lab_expiration_threshold",
+      help =
+          "If a lab's last modify time is older than this threshold, it will be marked as missing.")
+  public static final Flag<Duration> labExpirationThreshold = DurationFlag.minutes(4);
 
-  private static final Flag<Duration> labExpirationThresholdDefault =
-      DurationFlag.value(Duration.ofMinutes(4));
-
-  @com.beust.jcommander.Parameter(
-      names = "--lab_expiration_threshold",
-      description =
-          "If a lab's last modify time is older than this threshold, it will be marked as missing.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> labExpirationThreshold = labExpirationThresholdDefault;
-
-  private static final Flag<Duration> labRemovalThresholdDefault =
-      DurationFlag.value(Duration.ofDays(30));
-
-  @com.beust.jcommander.Parameter(
-      names = "--lab_removal_threshold",
-      description =
+  @FlagSpec(
+      name = "lab_removal_threshold",
+      help =
           "If a MISSING lab's last modify time is older than this threshold, it will be removed"
-              + " from Master.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> labRemovalThreshold = labRemovalThresholdDefault;
+              + " from Master.")
+  public static final Flag<Duration> labRemovalThreshold = DurationFlag.days(30);
 
-  private static final Flag<Boolean> labServerCheckJobsFromMasterDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--lab_server_check_jobs_from_master",
-      description =
+  @FlagSpec(
+      name = "lab_server_check_jobs_from_master",
+      help =
           "If true, lab server will periodically check jobs from master to remove expired jobs."
-              + " Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> labServerCheckJobsFromMaster = labServerCheckJobsFromMasterDefault;
+              + " Default is true.")
+  public static final Flag<Boolean> labServerCheckJobsFromMaster = Flag.value(true);
 
-  private static final Flag<String> localTenantDeviceConfigPathDefault = Flag.value("");
-
-  @com.beust.jcommander.Parameter(
-      names = "--local_tenant_device_config_path",
-      description = "Path of the text format protobuf for the local tenant device config file.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> localTenantDeviceConfigPath = localTenantDeviceConfigPathDefault;
+  @SuppressWarnings("unused")
+  @FlagSpec(
+      name = "local_tenant_device_config_path",
+      help = "Path of the text format protobuf for the local tenant device config file.")
+  public static final Flag<String> localTenantDeviceConfigPath = Flag.value("");
 
   /** Source for the tenant device config. */
   public enum TenantConfigMode {
@@ -1758,82 +1062,48 @@ public class Flags {
     REMOTE
   }
 
-  private static final Flag<Integer> logFileNumberDefault = Flag.value(100);
+  @FlagSpec(name = "log_file_number", help = "Max number of the rotated log files in local host.")
+  public static final Flag<Integer> logFileNumber = Flag.value(100);
 
-  @com.beust.jcommander.Parameter(
-      names = "--log_file_number",
-      description = "Max number of the rotated log files in local host.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> logFileNumber = logFileNumberDefault;
+  @FlagSpec(
+      name = "log_file_size_no_limit",
+      help = "True to write all log content into one file. Default is false.")
+  public static final Flag<Boolean> logFileSizeNoLimit = Flag.value(false);
 
-  private static final Flag<Boolean> logFileSizeNoLimitDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--log_file_size_no_limit",
-      description = "True to write all log content into one file. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> logFileSizeNoLimit = logFileSizeNoLimitDefault;
-
-  private static final Flag<Duration> logUploadDelayDefault =
-      DurationFlag.value(Duration.ofSeconds(60L));
-
-  @com.beust.jcommander.Parameter(
-      names = "--log_upload_delay",
-      description =
+  @FlagSpec(
+      help =
           "The interval in seconds between end of last periodic log uploading to the start of the"
               + " next one.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> logUploadDelay = logUploadDelayDefault;
+      name = "log_upload_delay")
+  public static final Flag<Duration> logUploadDelay = DurationFlag.seconds(60);
 
-  private static final Flag<Integer> loggerConsoleHandlerMinLogRecordImportanceDefault =
-      Flag.value(100);
-
-  @com.beust.jcommander.Parameter(
-      names = "--logger_console_handler_min_log_record_importance",
-      description =
+  @FlagSpec(
+      name = "logger_console_handler_min_log_record_importance",
+      help =
           "Minimum console log record importance shown in System.err. Check LogRecordImportance for"
-              + " importance of log records. Default is 100.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> loggerConsoleHandlerMinLogRecordImportance =
-      loggerConsoleHandlerMinLogRecordImportanceDefault;
+              + " importance of log records. Default is 100.")
+  public static final Flag<Integer> loggerConsoleHandlerMinLogRecordImportance = Flag.value(100);
 
-  private static final Flag<Duration> longPingTimeoutDefault =
-      DurationFlag.value(Duration.ofMinutes(1L));
+  @FlagSpec(name = "long_ping_timeout", help = "Set the default timeout for long ping commands.")
+  public static final Flag<Duration> longPingTimeout = DurationFlag.minutes(1L);
 
-  @com.beust.jcommander.Parameter(
-      names = "--long_ping_timeout",
-      description = "Set the default timeout for long ping commands.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> longPingTimeout = longPingTimeoutDefault;
-
-  private static final Flag<Long> lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnosticDefault =
+  @FlagSpec(
+      help =
+          "The lower limit of jvm -Xmx that allows to generate allocation diagnostic without OOM.",
+      name = "lower_limit_of_jvm_max_memory_allow_for_allocation_diagnostic")
+  public static final Flag<Long> lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnostic =
       Flag.value(512L * 1024 * 1024);
 
-  @com.beust.jcommander.Parameter(
-      names = "--lower_limit_of_jvm_max_memory_allow_for_allocation_diagnostic",
-      description =
-          "The lower limit of jvm -Xmx that allows to generate allocation diagnostic without OOM.",
-      converter = Flag.LongConverter.class)
-  public Flag<Long> lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnostic =
-      lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnosticDefault;
+  @FlagSpec(
+      name = "master_central_database_jdbc_property",
+      help = "Master central database JDBC property. e.g. user=root,password=password")
+  public static final Flag<Map<String, String>> masterCentralDatabaseJdbcProperty =
+      Flag.stringMap();
 
-  private static final Flag<Map<String, String>> masterCentralDatabaseJdbcPropertyDefault =
-      Flag.value(ImmutableMap.of());
-
-  @com.beust.jcommander.Parameter(
-      names = "--master_central_database_jdbc_property",
-      description = "Master central database JDBC property. e.g. user=root,password=password",
-      converter = Flag.StringMapConverter.class)
-  public Flag<Map<String, String>> masterCentralDatabaseJdbcProperty =
-      masterCentralDatabaseJdbcPropertyDefault;
-
-  private static final Flag<String> masterCentralDatabaseJdbcUrlDefault = Flag.value(null);
-
-  @com.beust.jcommander.Parameter(
-      names = "--master_central_database_jdbc_url",
-      description = "Master central database JDBC URL, e.g. jdbc:mysql://localhost/master_db.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> masterCentralDatabaseJdbcUrl = masterCentralDatabaseJdbcUrlDefault;
+  @FlagSpec(
+      name = "master_central_database_jdbc_url",
+      help = "Master central database JDBC URL, e.g. jdbc:mysql://localhost/master_db.")
+  public static final Flag<String> masterCentralDatabaseJdbcUrl = Flag.nullString();
 
   /** The backend type of the master central and scheduler database. */
   public enum MasterDatabaseBackend {
@@ -1841,810 +1111,458 @@ public class Flags {
     MYSQL
   }
 
-  private static final Flag<MasterDatabaseBackend> masterDatabaseBackendDefault =
+  @FlagSpec(
+      name = "master_database_backend",
+      help = "The backend type of the master central and scheduler database.")
+  public static final Flag<MasterDatabaseBackend> masterDatabaseBackend =
       Flag.value(MasterDatabaseBackend.MYSQL);
 
-  @com.beust.jcommander.Parameter(
-      names = "--master_database_backend",
-      description = "The backend type of the master central and scheduler database.")
-  public Flag<MasterDatabaseBackend> masterDatabaseBackend = masterDatabaseBackendDefault;
-
-  private static final Flag<String> masterGrpcTargetDefault = Flag.value("localhost:9990");
-
-  @com.beust.jcommander.Parameter(
-      names = "--master_grpc_target",
-      description =
+  @FlagSpec(
+      name = "master_grpc_target",
+      help =
           "gRPC target string of master server. Default is localhost:9990. See"
-              + " ManagedChannelBuilder.forTarget().",
-      converter = Flag.StringConverter.class)
-  public Flag<String> masterGrpcTarget = masterGrpcTargetDefault;
+              + " ManagedChannelBuilder.forTarget().")
+  public static final Flag<String> masterGrpcTarget = Flag.value("localhost:9990");
 
-  private static final Flag<Integer> maxConcurrentAdbPushLargeFileDefault = Flag.value(4);
+  @FlagSpec(
+      name = "max_concurrent_adb_push_large_file",
+      help = "Maximum number of concurrent ADB push commands for large files")
+  public static final Flag<Integer> maxConcurrentAdbPushLargeFile = Flag.nonnegativeValue(4);
 
-  @com.beust.jcommander.Parameter(
-      names = "--max_concurrent_adb_push_large_file",
-      description = "Maximum number of concurrent ADB push commands for large files",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> maxConcurrentAdbPushLargeFile = maxConcurrentAdbPushLargeFileDefault;
-
-  private static final Flag<Integer> maxConcurrentFlashDeviceDefault = Flag.value(2);
-
-  @com.beust.jcommander.Parameter(
-      names = "--max_concurrent_flash_device",
-      description =
+  @FlagSpec(
+      name = "max_concurrent_flash_device",
+      help =
           "Maximum number of concurrent device flashing. "
               + "Do not set this flag too larger than max_concurrent_adb_push_large_file, "
               + "because flashing img to different partitions is controlled by that flag. "
               + "Setting this flag too larger may cause cache device timeout if there are "
-              + "many devices on the lab to be flashed at the same time.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> maxConcurrentFlashDevice = maxConcurrentFlashDeviceDefault;
+              + "many devices on the lab to be flashed at the same time.")
+  public static final Flag<Integer> maxConcurrentFlashDevice = Flag.nonnegativeValue(2);
 
-  private static final Flag<Integer> maxConcurrentUnzipLargeFileDefault = Flag.value(2);
+  @FlagSpec(
+      name = "max_concurrent_unzip_large_file",
+      help = "Maximum number of concurrent large file unzipping")
+  public static final Flag<Integer> maxConcurrentUnzipLargeFile = Flag.nonnegativeValue(2);
 
-  @com.beust.jcommander.Parameter(
-      names = "--max_concurrent_unzip_large_file",
-      description = "Maximum number of concurrent large file unzipping",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> maxConcurrentUnzipLargeFile = maxConcurrentUnzipLargeFileDefault;
-
-  private static final Flag<Duration> maxConsecutiveGetTestStatusErrorDurationDefault =
-      DurationFlag.value(Duration.ofSeconds(1L));
-
-  @com.beust.jcommander.Parameter(
-      names = "--max_consecutive_get_test_status_error_duration",
-      description =
+  @FlagSpec(
+      name = "max_consecutive_get_test_status_error_duration",
+      help =
           "How long we can wait for the next successful RPC call before marking the test as ERROR"
-              + " when the RPC fails.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> maxConsecutiveGetTestStatusErrorDuration =
-      maxConsecutiveGetTestStatusErrorDurationDefault;
+              + " when the RPC fails.")
+  public static final Flag<Duration> maxConsecutiveGetTestStatusErrorDuration =
+      DurationFlag.seconds(1L);
 
-  private static final Flag<Duration> maxDrainTimeoutDefault =
-      DurationFlag.value(Duration.ofDays(3L));
-
-  @com.beust.jcommander.Parameter(
-      names = "--max_drain_timeout",
-      description =
+  @FlagSpec(
+      name = "max_drain_timeout",
+      help =
           "Maximum timeout for releases to be drained. The release will be marked as DRAINED if it"
-              + " execeeds the timeout. Default is 3 days.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> maxDrainTimeout = maxDrainTimeoutDefault;
+              + " exceeds the timeout. This timeout may be overwritten by the maxDrainTimeout from"
+              + " the Daemon Server if it is shorter. Default is 3 days.")
+  public static final Flag<Duration> maxDrainTimeout = DurationFlag.days(3L);
 
-  private static final Flag<Long> maxPersistentCacheSizeInGigabytesDefault = Flag.value(200L);
+  @FlagSpec(
+      name = "max_persistent_cache_size_in_gigabytes",
+      help = "Maximum size in gigabytes for persistent cache.")
+  public static final Flag<Long> maxPersistentCacheSizeInGigabytes = Flag.value(200L);
 
-  @com.beust.jcommander.Parameter(
-      names = "--max_persistent_cache_size_in_gigabytes",
-      description = "Maximum size in gigabytes for persistent cache.",
-      converter = Flag.LongConverter.class)
-  public Flag<Long> maxPersistentCacheSizeInGigabytes = maxPersistentCacheSizeInGigabytesDefault;
+  @FlagSpec(
+      name = "mh_adb_command_default_redirect_stderr",
+      help =
+          "Default redirect_stderr setting for each Device Infra(DI) ADB command executed by DI Adb"
+              + " library. Default is true (stderr will be redirected to stdout).")
+  public static final Flag<Boolean> defaultAdbCommandRedirectStderr = Flag.value(true);
 
-  private static final Flag<Boolean> defaultAdbCommandRedirectStderrDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--mh_adb_command_default_redirect_stderr",
-      description =
-          "Default redirect_stderr setting for each Device Infra(DI) ADB command executed by DI"
-              + " Adb library. Default is true (stderr will be redirected to stdout).",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> defaultAdbCommandRedirectStderr = defaultAdbCommandRedirectStderrDefault;
-
-  private static final Flag<Duration> extraAdbCommandTimeoutDefault =
-      DurationFlag.value(Duration.ZERO);
-
-  @com.beust.jcommander.Parameter(
-      names = "--mh_adb_command_extra_timeout",
-      description =
+  @FlagSpec(
+      name = "mh_adb_command_extra_timeout",
+      help =
           "Extra timeout for each Device Infra(DI) ADB command executed by DI Adb library. Default"
               + " is 0. Example: '4m'. When DI Adb library (used by most of DI Android utilities)"
               + " executes an ADB command, the timeout of the command will be the original timeout"
               + " plus this extra timeout. For example, when the extra timeout is 4 minutes, if an"
               + " ADB command does not specify timeout (uses the default 5 minutes timeout), then"
               + " the timeout will be 9 minutes, if an ADB command specifies 10 seconds timeout,"
-              + " then the timeout will be 4 minutes and 10 seconds.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> extraAdbCommandTimeout = extraAdbCommandTimeoutDefault;
+              + " then the timeout will be 4 minutes and 10 seconds.")
+  public static final Flag<Duration> extraAdbCommandTimeout = DurationFlag.zero();
 
-  private static final Flag<Integer> maxInitFailuresBeforeFailDefault = Flag.value(3);
-
-  @com.beust.jcommander.Parameter(
-      names = "--mh_dm_max_init_failures_before_fail",
-      description =
+  @FlagSpec(
+      name = "mh_dm_max_init_failures_before_fail",
+      help =
           "After how many INIT failures do we consider the device to be a FailedDevice. The default"
-              + "value is 3 times.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> maxInitFailuresBeforeFail = maxInitFailuresBeforeFailDefault;
+              + " value is 3 times.")
+  public static final Flag<Integer> maxInitFailuresBeforeFail = Flag.value(3);
 
-  private static final Flag<String> mhProxySpecDefault = Flag.value("");
+  @FlagSpec(name = "mhproxy_spec", help = "GSLB blade target for MH Proxy.")
+  public static final Flag<String> mhProxySpec = Flag.value("");
 
-  @com.beust.jcommander.Parameter(
-      names = "--mhproxy_spec",
-      description = "GSLB blade target for MH Proxy.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> mhProxySpec = mhProxySpecDefault;
+  @FlagSpec(
+      name = "monitor_cloudrpc",
+      help = "Whether enable the cloudrpc monitor. default is true.")
+  public static final Flag<Boolean> monitorCloudRpc = Flag.value(true);
 
-  private static final Flag<Boolean> monitorCloudRpcDefault = Flag.value(true);
+  @SuppressWarnings("unused")
+  @FlagSpec(name = "monitor_lab", help = "Whether enable the lab monitor. default is true.")
+  public static final Flag<Boolean> monitorLab = Flag.value(true);
 
-  @com.beust.jcommander.Parameter(
-      names = "--monitor_cloudrpc",
-      description = "Whether enable the cloudrpc monitor. default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> monitorCloudRpc = monitorCloudRpcDefault;
+  @FlagSpec(name = "monitor_gcs", help = "Whether enable the gcs monitor. default is true.")
+  public static final Flag<Boolean> monitorGcs = Flag.value(true);
 
-  private static final Flag<Boolean> monitorLabDefault = Flag.value(true);
+  @FlagSpec(name = "monitor_signals", help = "Whether to monitor signals. Default is true.")
+  public static final Flag<Boolean> monitorSignals = Flag.value(true);
 
-  @com.beust.jcommander.Parameter(
-      names = "--monitor_lab",
-      description = "Whether enable the lab monitor. default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> monitorLab = monitorLabDefault;
-
-  private static final Flag<Boolean> monitorGcsDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--monitor_gcs",
-      description = "Whether enable the gcs monitor. default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> monitorGcs = monitorGcsDefault;
-
-  private static final Flag<Boolean> monitorSignalsDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--monitor_signals",
-      description = "Whether to monitor signals. Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> monitorSignals = monitorSignalsDefault;
-
-  private static final Flag<Boolean> muteAndroidDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--mute_android",
-      description =
+  @FlagSpec(
+      name = "mute_android",
+      help =
           "Whether to mute Android rooted devices. "
-              + "By default it is TRUE. After a device is muted, only reboot can re-enable sounds.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> muteAndroid = muteAndroidDefault;
+              + "By default it is TRUE. After a device is muted, only reboot can re-enable it.")
+  public static final Flag<Boolean> muteAndroid = Flag.value(true);
 
-  private static final Flag<Integer> noOpDeviceNumDefault = Flag.value(0);
+  @SuppressWarnings("BooleanFlagNameStartingWithNo")
+  @FlagSpec(
+      name = "no_op_device_num",
+      help = "The number of NoOpDevice to be started. If set all other devices will be disabled.")
+  public static final Flag<Integer> noOpDeviceNum = Flag.value(0);
 
-  @com.beust.jcommander.Parameter(
-      names = "--no_op_device_num",
-      description =
-          "The number of NoOpDevice to be started. If set all other devices will be disabled.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> noOpDeviceNum = noOpDeviceNumDefault;
+  @SuppressWarnings("BooleanFlagNameStartingWithNo")
+  @FlagSpec(
+      name = "no_op_device_random_offline",
+      help = "If enabled, randomly take some NoOpDevice offline.")
+  public static final Flag<Boolean> noOpDeviceRandomOffline = Flag.value(false);
 
-  private static final Flag<Boolean> noOpDeviceRandomOfflineDefault = Flag.value(false);
+  @SuppressWarnings("BooleanFlagNameStartingWithNo")
+  @FlagSpec(name = "no_op_device_start_index", help = "The start index of NoOpDevice.")
+  public static final Flag<Integer> noOpDeviceStartIndex = Flag.value(0);
 
-  @com.beust.jcommander.Parameter(
-      names = "--no_op_device_random_offline",
-      description = "If enabled, randomly take some NoOpDevice offline.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> noOpDeviceRandomOffline = noOpDeviceRandomOfflineDefault;
+  @SuppressWarnings("BooleanFlagNameStartingWithNo")
+  @FlagSpec(
+      name = "no_op_device_type",
+      help = "Device type string supported, e.g. AndroidRealDevice, only for debug/test purpose.")
+  public static final Flag<String> noOpDeviceType = Flag.value("");
 
-  private static final Flag<Integer> noOpDeviceStartIndexDefault = Flag.value(0);
-
-  @com.beust.jcommander.Parameter(
-      names = "--no_op_device_start_index",
-      description = "The start index of NoOpDevice.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> noOpDeviceStartIndex = noOpDeviceStartIndexDefault;
-
-  private static final Flag<String> noOpDeviceTypeDefault = Flag.value("");
-
-  @com.beust.jcommander.Parameter(
-      names = "--no_op_device_type",
-      description =
-          "Device type string supported, e.g. AndroidRealDevice, only for debug/test purpose.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> noOpDeviceType = noOpDeviceTypeDefault;
-
-  private static final Flag<Boolean> noOpLabServerDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--no_op_lab_server",
-      description =
+  @SuppressWarnings("BooleanFlagNameStartingWithNo")
+  @FlagSpec(
+      name = "no_op_lab_server",
+      help =
           "If true, the lab server will sleep forever rather than starting services and connecting"
-              + " to master. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> noOpLabServer = noOpLabServerDefault;
+              + " to master. Default is false.")
+  public static final Flag<Boolean> noOpLabServer = Flag.value(false);
 
-  private static final Flag<Boolean> noopJitEmulatorDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--noop_jit_emulator",
-      description =
+  @SuppressWarnings("BooleanFlagNameStartingWithNo")
+  @FlagSpec(
+      name = "noop_jit_emulator",
+      help =
           "Make jit emulator no-op and work as placeholder, delegating actual device creation and"
-              + " launch fully to the underlying Tradefed driver.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> noopJitEmulator = noopJitEmulatorDefault;
+              + " launch fully to the underlying Tradefed driver.")
+  public static final Flag<Boolean> noopJitEmulator = Flag.value(false);
 
-  private static final Flag<Map<String, String>> olcDatabaseJdbcPropertyDefault =
-      Flag.value(ImmutableMap.of());
+  @FlagSpec(name = "olc_database_jdbc_property", help = "OLC database JDBC property.")
+  public static final Flag<Map<String, String>> olcDatabaseJdbcProperty = Flag.stringMap();
 
-  @com.beust.jcommander.Parameter(
-      names = "--olc_database_jdbc_property",
-      description = "OLC database JDBC property.",
-      converter = Flag.StringMapConverter.class)
-  public Flag<Map<String, String>> olcDatabaseJdbcProperty = olcDatabaseJdbcPropertyDefault;
+  @FlagSpec(name = "olc_database_jdbc_url", help = "OLC database JDBC URL.")
+  public static final Flag<String> olcDatabaseJdbcUrl = Flag.nullString();
 
-  private static final Flag<String> olcDatabaseJdbcUrlDefault = Flag.value(null);
+  @FlagSpec(
+      name = "olc_server_max_started_running_session_num",
+      help = "OLC server max started and running session number. Default is 200.")
+  public static final Flag<Integer> olcServerMaxStartedRunningSessionNum = Flag.value(200);
 
-  @com.beust.jcommander.Parameter(
-      names = "--olc_database_jdbc_url",
-      description = "OLC database JDBC URL.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> olcDatabaseJdbcUrl = olcDatabaseJdbcUrlDefault;
+  @FlagSpec(name = "olc_server_port", help = "OLC server port. By default, it is 7030.")
+  public static final Flag<Integer> olcServerPort = Flag.value(7030);
 
-  private static final Flag<Integer> olcServerMaxStartedRunningSessionNumDefault = Flag.value(200);
+  @FlagSpec(name = "paris_path", help = "The user provided path to run paris health check/repair")
+  public static final Flag<String> parisPath = Flag.value("");
 
-  @com.beust.jcommander.Parameter(
-      names = "--olc_server_max_started_running_session_num",
-      description = "OLC server max started and running session number. Default is 200.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> olcServerMaxStartedRunningSessionNum =
-      olcServerMaxStartedRunningSessionNumDefault;
+  @FlagSpec(
+      name = "perfetto_script_path",
+      help = "File path for the perfetto script used by the Perfetto decorator.")
+  public static final Flag<String> perfettoScriptPath = Flag.value("");
 
-  private static final Flag<Integer> olcServerPortDefault = Flag.value(7030);
+  @FlagSpec(name = "persistent_cache_dir", help = "Root directory for persistent cache.")
+  public static final Flag<String> persistentCacheDir = Flag.nullString();
 
-  @com.beust.jcommander.Parameter(
-      names = "--olc_server_port",
-      description = "OLC server port. By default, it is 7030.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> olcServerPort = olcServerPortDefault;
+  @FlagSpec(
+      name = "prepare_device_after_test",
+      help = "If true, prepare the device after test. Default is false.")
+  public static final Flag<Boolean> prepareDeviceAfterTest = Flag.value(false);
 
-  private static final Flag<String> parisPathDefault = Flag.value("");
-
-  @com.beust.jcommander.Parameter(
-      names = "--paris_path",
-      description = "The user provided path to run paris health check/repair",
-      converter = Flag.StringConverter.class)
-  public Flag<String> parisPath = parisPathDefault;
-
-  private static final Flag<String> perfettoScriptPathDefault = Flag.value("");
-
-  @com.beust.jcommander.Parameter(
-      names = "--perfetto_script_path",
-      description = "File path for the perfetto script used by the Perfetto decorator.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> perfettoScriptPath = perfettoScriptPathDefault;
-
-  private static final Flag<String> persistentCacheDirDefault = Flag.value(null);
-
-  @com.beust.jcommander.Parameter(
-      names = "--persistent_cache_dir",
-      description = "Root directory for persistent cache.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> persistentCacheDir = persistentCacheDirDefault;
-
-  private static final Flag<Boolean> prepareDeviceAfterTestDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--prepare_device_after_test",
-      description = "If true, prepare the device after test. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> prepareDeviceAfterTest = prepareDeviceAfterTestDefault;
-
-  private static final Flag<Boolean> printLabStatsDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--print_lab_stats",
-      description =
+  @FlagSpec(
+      name = "print_lab_stats",
+      help =
           "If true, print binary stats of Lab, and return silently. All other settings will be "
-              + "ignored.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> printLabStats = printLabStatsDefault;
+              + "ignored.")
+  public static final Flag<Boolean> printLabStats = Flag.value(false);
 
-  private static final Flag<Boolean> proxyModeLeaseDevicesImmediatelyDefault = Flag.value(true);
+  @FlagSpec(
+      name = "proxy_mode_lease_devices_immediately",
+      help = "Always lease all devices immediately in proxy mode. Default is true.")
+  public static final Flag<Boolean> proxyModeLeaseDevicesImmediately = Flag.value(true);
 
-  @com.beust.jcommander.Parameter(
-      names = "--proxy_mode_lease_devices_immediately",
-      description = "Always lease all devices immediately in proxy mode. Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> proxyModeLeaseDevicesImmediately = proxyModeLeaseDevicesImmediatelyDefault;
-
-  private static final Flag<String> publicDirDefault = Flag.value(getPublicDirDefaultOss());
-
-  @com.beust.jcommander.Parameter(
-      names = "--public_dir",
-      description = "The public directory.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> publicDir = publicDirDefault;
+  @FlagSpec(name = "public_dir", altName = "publicDir", help = "The public directory.")
+  public static final Flag<String> publicDir = Flag.value(getPublicDirDefaultOss());
 
   private static String getPublicDirDefaultOss() {
     return "/tmp";
   }
 
-  private static final Flag<Boolean> realTimeJobDefault = Flag.value(false);
+  @FlagSpec(
+      name = "real_time_job",
+      help = "If this flag is true, all submitted jobs will run as real-time jobs.")
+  public static final Flag<Boolean> realTimeJob = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--real_time_job",
-      description = "If this flag is true, all submitted jobs will run as real-time jobs.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> realTimeJob = realTimeJobDefault;
+  @FlagSpec(
+      name = "real_time_test",
+      help = "If this flag is true, all tests will run as real-time tests.")
+  public static final Flag<Boolean> realTimeTest = Flag.value(false);
 
-  private static final Flag<Boolean> realTimeTestDefault = Flag.value(false);
+  @FlagSpec(
+      name = "remove_job_gen_files_when_finished",
+      help = "If this flag is true, all job generated files are removed after the job is done.")
+  public static final Flag<Boolean> removeJobGenFilesWhenFinished = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--real_time_test",
-      description = "If this flag is true, all tests will run as real-time tests.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> realTimeTest = realTimeTestDefault;
-
-  private static final Flag<Boolean> removeJobGenFilesWhenFinishedDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--remove_job_gen_files_when_finished",
-      description =
-          "If this flag is true, all job generated files are removed after the job is done.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> removeJobGenFilesWhenFinished = removeJobGenFilesWhenFinishedDefault;
-
-  private static final Flag<Boolean> resetDeviceInAndroidRealDeviceSetupDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--reset_device_in_android_real_device_setup",
-      description =
+  @FlagSpec(
+      name = "reset_device_in_android_real_device_setup",
+      help =
           "If this flag is true, Android real device will be reset first in setup process. The flag"
-              + " can't be set to true if keep_test_harness_false is true. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> resetDeviceInAndroidRealDeviceSetup =
-      resetDeviceInAndroidRealDeviceSetupDefault;
+              + " can't be set to true if keep_test_harness_false is true. Default is false.")
+  public static final Flag<Boolean> resetDeviceInAndroidRealDeviceSetup = Flag.value(false);
 
-  private static final Flag<String> resDirNameDefault = Flag.value("mh_res_files");
+  @FlagSpec(name = "resource_dir_name", help = "Name of resource directory.")
+  public static final Flag<String> resDirName = Flag.value("mh_res_files");
 
-  @com.beust.jcommander.Parameter(
-      names = "--resource_dir_name",
-      description = "Name of resource directory.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> resDirName = resDirNameDefault;
+  @FlagSpec(
+      name = "restrict_olc_service_to_users",
+      help =
+          "A list of authorized users. If the list is nonempty, restrict the OLC service to users"
+              + " on the list.")
+  public static final Flag<List<String>> restrictOlcServiceToUsers = Flag.stringList();
 
-  private static final Flag<List<String>> restrictOlcServiceToUsersDefault = Flag.stringList();
+  @FlagSpec(
+      name = "reverse_tunneling_lab_server",
+      help = "Whether lab servers have been reverse tunneled to client. Default is false.")
+  public static final Flag<Boolean> reverseTunnelingLabServer = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--restrict_olc_service_to_users",
-      description =
-          "A list of authorized users. If the list is nonempty, "
-              + "restrict the OLC service to users on the list.",
-      converter = Flag.StringListConverter.class)
-  public Flag<List<String>> restrictOlcServiceToUsers = restrictOlcServiceToUsersDefault;
+  @FlagSpec(name = "rpc_port", help = "Stubby port of the server")
+  public static final Flag<Integer> rpcPort = Flag.value(9999);
 
-  private static final Flag<Boolean> reverseTunnelingLabServerDefault = Flag.value(false);
+  @FlagSpec(
+      name = "run_dynamic_download_mcts_only",
+      help = "If true, only run dynamic download mcts. Default is false.")
+  public static final Flag<Boolean> runDynamicDownloadMctsOnly = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--reverse_tunneling_lab_server",
-      description = "Whether lab servers have been reverse tunneled to client. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> reverseTunnelingLabServer = reverseTunnelingLabServerDefault;
-
-  private static final Flag<Integer> rpcPortDefault = Flag.value(9999);
-
-  @com.beust.jcommander.Parameter(
-      names = "--rpc_port",
-      description = "Stubby port of the server",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> rpcPort = rpcPortDefault;
-
-  private static final Flag<Boolean> runDynamicDownloadMctsOnlyDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--run_dynamic_download_mcts_only",
-      description = "If true, only run dynamic download mcts. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> runDynamicDownloadMctsOnly = runDynamicDownloadMctsOnlyDefault;
-
-  private static final Flag<Integer> safeChargeLevelDefault = Flag.value(50);
-
-  @com.beust.jcommander.Parameter(
-      names = "--safe_charge_level",
-      description =
+  @FlagSpec(
+      name = "safe_charge_level",
+      help =
           "Battery level devices should be kept at. Devices will be charged at most to this level."
-              + "Only works for devices which support this (i.e., marlin, sailfish).",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> safeChargeLevel = safeChargeLevelDefault;
+              + "Only works for devices which support this (i.e., marlin, sailfish).")
+  public static final Flag<Integer> safeChargeLevel = Flag.value(50);
 
-  private static final Flag<Boolean> servViaCloudRpcDefault = Flag.value(true);
+  @FlagSpec(
+      name = "serv_via_cloud_rpc",
+      help = "Whether to serve the inbound gRPC requests via Cloud RPC. Default is true.")
+  public static final Flag<Boolean> servViaCloudRpc = Flag.value(true);
 
-  @com.beust.jcommander.Parameter(
-      names = "--serv_via_cloud_rpc",
-      description = "Whether to serve the inbound gRPC requests via Cloud RPC. Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> servViaCloudRpc = servViaCloudRpcDefault;
-
-  private static final Flag<Boolean> setTestHarnessPropertyDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--set_test_harness_property",
-      description =
+  @FlagSpec(
+      name = "set_test_harness_property",
+      help =
           "Whether to set ro.test_harness property on Android devices. If set restarting Zygote"
-              + " will skip setup wizard. By default, it is TRUE.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> setTestHarnessProperty = setTestHarnessPropertyDefault;
+              + " will skip setup wizard. By default, it is TRUE.")
+  public static final Flag<Boolean> setTestHarnessProperty = Flag.value(true);
 
-  private static final Flag<Boolean> shouldManageDevicesDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--should_manage_devices",
-      description =
+  @FlagSpec(
+      name = "should_manage_devices",
+      help =
           "Whether the lab server should actively manage and recover devices from bad state, or"
               + " just let a test fail. True for traditional deployments, false for labs where some"
-              + " other component manages and recovers the devices. By default, it is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> shouldManageDevices = shouldManageDevicesDefault;
+              + " other component manages and recovers the devices, e.g. http://go/m&mlabs. For"
+              + " Shared Lab, it is false. For Satellite Lab, it is true. By default, it is true.")
+  public static final Flag<Boolean> shouldManageDevices = Flag.value(true);
 
-  private static final Flag<Boolean> skipCheckDeviceInternetDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--skip_check_device_internet",
-      description =
+  @FlagSpec(
+      name = "skip_check_device_internet",
+      help =
           "Whether to skip checking device connect to Internet via ping. Default is false. When set"
               + " to true, it means you have confidence that the device can successfully connect to"
               + " Internet, and OmniLab will set dimension internet to true without checking the"
-              + " connection.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> skipCheckDeviceInternet = skipCheckDeviceInternetDefault;
+              + " connection.")
+  public static final Flag<Boolean> skipCheckDeviceInternet = Flag.value(false);
 
-  private static final Flag<Boolean> skipConnectDeviceToWifiDefault = Flag.value(false);
+  @FlagSpec(
+      name = "skip_connect_device_to_wifi",
+      help = "Whether to skip connecting device to their default wifi network. Default is false.")
+  public static final Flag<Boolean> skipConnectDeviceToWifi = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--skip_connect_device_to_wifi",
-      description =
-          "Whether to skip connecting device to their default Wi-Fi network. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> skipConnectDeviceToWifi = skipConnectDeviceToWifiDefault;
-
-  private static final Flag<Boolean> skipLabJobGenFileCleanupDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--skip_lab_job_gen_file_cleanup",
-      description =
+  @FlagSpec(
+      name = "skip_lab_job_gen_file_cleanup",
+      help =
           "whether to skip job gen file cleanup when job ended. Default is false. Use when the gen"
               + " files are placed in /tmp directory and make sure they can be cleaned by operating"
-              + " system.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> skipLabJobGenFileCleanup = skipLabJobGenFileCleanupDefault;
+              + " system.")
+  public static final Flag<Boolean> skipLabJobGenFileCleanup = Flag.value(false);
 
-  private static final Flag<Boolean> skipNetworkDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--skip_network",
-      description =
+  @FlagSpec(
+      name = "skip_network",
+      help =
           "Whether to skip network connection when set up and periodically check the device."
-              + " Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> skipNetwork = skipNetworkDefault;
+              + " Default is false. Only used for satellite labs")
+  public static final Flag<Boolean> skipNetwork = Flag.value(false);
 
-  private static final Flag<Boolean> skipRecoverDeviceNetworkDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--skip_recover_device_network",
-      description =
+  @FlagSpec(
+      name = "skip_recover_device_network",
+      help =
           "Whether to skip recovering device network by connecting device to saved ssid. Default "
-              + "is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> skipRecoverDeviceNetwork = skipRecoverDeviceNetworkDefault;
+              + "is false.")
+  public static final Flag<Boolean> skipRecoverDeviceNetwork = Flag.value(false);
 
-  private static final Flag<Boolean> simplifiedLogFormatDefault = Flag.value(false);
+  @FlagSpec(
+      name = "simplified_log_format",
+      help = "True to use simplified log format. Default is false.")
+  public static final Flag<Boolean> simplifiedLogFormat = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--simplified_log_format",
-      description = "True to use simplified log format. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> simplifiedLogFormat = simplifiedLogFormatDefault;
+  @FlagSpec(
+      name = "socket_port",
+      help = "Socket port of the file transfer service of the lab server")
+  public static final Flag<Integer> socketPort = Flag.value(9998);
 
-  private static final Flag<Integer> socketPortDefault = Flag.value(9998);
+  @FlagSpec(
+      name = "stackdriver_cred_file",
+      help = "Path to the credential key file for stackdriver api.")
+  public static final Flag<String> stackdriverCredentialFile = Flag.nullString();
 
-  @com.beust.jcommander.Parameter(
-      names = "--socket_port",
-      description = "Socket port of the file transfer service of the lab server",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> socketPort = socketPortDefault;
+  @FlagSpec(name = "stackdriver_gcp_project_name", help = "The GCP name of stackdriver logging")
+  public static final Flag<String> stackdriverGcpProjectName = Flag.value("");
 
-  private static final Flag<String> stackdriverCredentialFileDefault = Flag.value(null);
+  @FlagSpec(name = "stackdriver_resource_type", help = "The resource type of stackdriver logging")
+  public static final Flag<String> stackdriverResourceType = Flag.value("deployment");
 
-  @com.beust.jcommander.Parameter(
-      names = "--stackdriver_cred_file",
-      description = "Path to the credential key file for stackdriver api.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> stackdriverCredentialFile = stackdriverCredentialFileDefault;
-
-  private static final Flag<String> stackdriverGcpProjectNameDefault = Flag.value("");
-
-  @com.beust.jcommander.Parameter(
-      names = "--stackdriver_gcp_project_name",
-      description = "The GCP name of stackdriver logging",
-      converter = Flag.StringConverter.class)
-  public Flag<String> stackdriverGcpProjectName = stackdriverGcpProjectNameDefault;
-
-  private static final Flag<String> stackdriverResourceTypeDefault = Flag.value("deployment");
-
-  @com.beust.jcommander.Parameter(
-      names = "--stackdriver_resource_type",
-      description = "The resource type of stackdriver logging",
-      converter = Flag.StringConverter.class)
-  public Flag<String> stackdriverResourceType = stackdriverResourceTypeDefault;
-
-  private static final Flag<Integer> startChargeLevelDefault = Flag.value(40);
-
-  @com.beust.jcommander.Parameter(
-      names = "--start_charge_level",
-      description =
+  @FlagSpec(
+      name = "start_charge_level",
+      help =
           "Battery level at which charging should start. Only works for devices which support this "
-              + "(i.e., angler, bullhead)",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> startChargeLevel = startChargeLevelDefault;
+              + "(i.e., angler, bullhead)")
+  public static final Flag<Integer> startChargeLevel = Flag.value(40);
 
-  private static final Flag<Integer> stopChargeLevelDefault = Flag.value(80);
-
-  @com.beust.jcommander.Parameter(
-      names = "--stop_charge_level",
-      description =
+  @FlagSpec(
+      name = "stop_charge_level",
+      help =
           "Battery level at which charging should stop. Only works for devices which support this "
-              + "(i.e., angler, bullhead)",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> stopChargeLevel = stopChargeLevelDefault;
+              + "(i.e., angler, bullhead)")
+  public static final Flag<Integer> stopChargeLevel = Flag.value(80);
 
   // The flag for dynamically loading resource files from the supplemental directory instead of
   // unpacking from the JAR binary. It allows updating resource files without rebuilding the JAR
   // binary. Please only use it for local development and do not use it in production.
-  private static final Flag<String> supplementalResDirDefault = Flag.value("");
-
-  @com.beust.jcommander.Parameter(
-      names = "--supplemental_res_dir",
-      description =
+  // See b/255255107.
+  @FlagSpec(
+      name = "supplemental_res_dir",
+      help =
           "Absolute path to the supplemental resource directory. If a resource exists in the"
               + " supplemental dir, this util won't extract it from the jar package. Please do not"
-              + " use it in production environment.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> supplementalResDir = supplementalResDirDefault;
+              + " use it in production environment.")
+  public static final Flag<String> supplementalResDir = Flag.value("");
 
-  private static final Flag<TenantConfigMode> tenantConfigModeDefault = Flag.value(NOOP);
+  @SuppressWarnings("unused")
+  @FlagSpec(
+      name = "tenant_device_config_mode",
+      help = "Source for the tenant device config. One of NOOP, LOCAL, or REMOTE.")
+  public static final Flag<TenantConfigMode> tenantConfigMode = Flag.value(TenantConfigMode.NOOP);
 
-  @com.beust.jcommander.Parameter(
-      names = "--tenant_device_config_mode",
-      description = "Source for the tenant device config. One of NOOP, LOCAL, or REMOTE.")
-  public Flag<TenantConfigMode> tenantConfigMode = tenantConfigModeDefault;
+  @FlagSpec(
+      name = "testbed_config_paths",
+      help = "The source to load the local testbed configurations from.")
+  public static final Flag<List<String>> testbedConfigPaths =
+      Flag.stringList("/usr/local/google/mobileharness/testbeds");
 
-  private static final Flag<List<String>> testbedConfigPathsDefault =
-      Flag.stringList(getTmpDirRootDefaultOss() + "/testbeds");
-
-  @com.beust.jcommander.Parameter(
-      names = "--testbed_config_paths",
-      description = "The source to load the local testbed configurations from.",
-      converter = Flag.StringListConverter.class)
-  public Flag<List<String>> testbedConfigPaths = testbedConfigPathsDefault;
-
-  private static final Flag<String> tmpDirRootDefault = Flag.value(getTmpDirRootDefaultOss());
-
-  @com.beust.jcommander.Parameter(
-      names = "--tmp_dir_root",
-      description = "The tmp Dir Root.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> tmpDirRoot = tmpDirRootDefault;
+  @FlagSpec(name = "tmp_dir_root", altName = "tmpDirRoot", help = "The tmp Dir Root.")
+  public static final Flag<String> tmpDirRoot = Flag.value(getTmpDirRootDefaultOss());
 
   private static String getTmpDirRootDefaultOss() {
     return Strings.nullToEmpty(System.getenv("HOME")) + "/mobileharness";
   }
 
-  private static final Flag<String> tradefedBinaryDirDefault = Flag.value("/bin/tradefed");
+  @FlagSpec(name = "tradefed_binary_dir", help = "The directory of tradefed binaries.")
+  public static final Flag<String> tradefedBinaryDir = Flag.value("/bin/tradefed");
 
-  @com.beust.jcommander.Parameter(
-      names = "--tradefed_binary_dir",
-      description = "The directory of tradefed binaries.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> tradefedBinaryDir = tradefedBinaryDirDefault;
-
-  private static final Flag<String> tradefedCurlDownloadLimitRateDefault = Flag.value(null);
-
-  @com.beust.jcommander.Parameter(
-      names = "--tradefed_curl_download_limit_rate",
-      description =
+  @FlagSpec(
+      name = "tradefed_curl_download_limit_rate",
+      help =
           "The limit rate of curl download for Tradefed. The value should be given with a letter"
               + " suffix using one of K, M and G for kilobytes, megabytes and gigabytes per second."
-              + " Default is null and curl will try to saturate all available network connections.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> tradefedCurlDownloadLimitRate = tradefedCurlDownloadLimitRateDefault;
+              + " Default is null and curl will try to saturate all available network connections.")
+  public static final Flag<String> tradefedCurlDownloadLimitRate = Flag.nullString();
 
-  private static final Flag<String> tradefedHostConfigDefault = Flag.value("");
+  @FlagSpec(name = "tradefed_host_config", help = "The host config xml file for tradefed to use.")
+  public static final Flag<String> tradefedHostConfig = Flag.value("");
 
-  @com.beust.jcommander.Parameter(
-      names = "--tradefed_host_config",
-      description = "The host config xml file for tradefed to use.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> tradefedHostConfig = tradefedHostConfigDefault;
-
-  private static final Flag<Boolean> transferResourcesFromControllerDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--transfer_resources_from_controller",
-      description =
+  @FlagSpec(
+      name = "transfer_resources_from_controller",
+      help =
           "Whether to transfer all resources from the controller to workers. The default is true."
-              + " Only set it to false when the controller and workers cross different networks.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> transferResourcesFromController = transferResourcesFromControllerDefault;
+              + " Only set it to false when the controller and workers cross different networks.")
+  public static final Flag<Boolean> transferResourcesFromController = Flag.value(true);
 
-  private static final Flag<Boolean> useAltsDefault = Flag.value(false);
+  @FlagSpec(
+      name = "use_alts",
+      help = "Use ALTS for OLC server auth.This is supported by GCP vm. The default is false.")
+  public static final Flag<Boolean> useAlts = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--use_alts",
-      description =
-          "Use ALTS for OLC server auth.This is supported by GCP vm. " + "The default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> useAlts = useAltsDefault;
+  @FlagSpec(
+      name = "use_emulator_name_in_uuid",
+      help =
+          "Whether to use the emulator name in the device UUID. This is to make Omnilab device"
+              + " naming scheme consistent with ATS server's. Default is false.")
+  public static final Flag<Boolean> useEmulatorNameInUuid = Flag.value(false);
 
-  private static final Flag<Boolean> useEmulatorNameInUuidDefault = Flag.value(false);
+  @FlagSpec(name = "use_tf_retry", help = "Delegate retry to TF. The default is false.")
+  public static final Flag<Boolean> useTfRetry = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--use_emulator_name_in_uuid",
-      description =
-          "Whether to use the emulator name in the device UUID. This is to make Omnilab"
-              + " device naming scheme consistent with ATS server's. Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> useEmulatorNameInUuid = useEmulatorNameInUuidDefault;
+  @FlagSpec(
+      name = "virtual_device_server_ip",
+      help = "The IP address of the remote virtual device server.")
+  public static final Flag<String> virtualDeviceServerIp = Flag.value("");
 
-  private static final Flag<Boolean> useTfRetryDefault = Flag.value(false);
+  @FlagSpec(
+      name = "virtual_device_server_username",
+      help = "The username of the remote virtual device server.")
+  public static final Flag<String> virtualDeviceServerUsername = Flag.value("");
 
-  @com.beust.jcommander.Parameter(
-      names = "--use_tf_retry",
-      description = "Delegate retry to TF. The default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> useTfRetry = useTfRetryDefault;
+  @FlagSpec(
+      name = "xts_disable_tf_result_log",
+      help = "Disable xTS TF result logs in terminal. Default is true.")
+  public static final Flag<Boolean> xtsDisableTfResultLog = Flag.value(true);
 
-  private static final Flag<String> virtualDeviceServerIpDefault = Flag.value("");
+  @FlagSpec(name = "xts_jdk_dir", help = "The xTS JDK directory.")
+  public static final Flag<String> xtsJdkDir = Flag.value("");
 
-  @com.beust.jcommander.Parameter(
-      names = "--virtual_device_server_ip",
-      description = "The IP address of the remote virtual device server.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> virtualDeviceServerIp = virtualDeviceServerIpDefault;
-
-  private static final Flag<String> virtualDeviceServerUsernameDefault = Flag.value("");
-
-  @com.beust.jcommander.Parameter(
-      names = "--virtual_device_server_username",
-      description = "The username of the remote virtual device server.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> virtualDeviceServerUsername = virtualDeviceServerUsernameDefault;
-
-  private static final Flag<Boolean> xtsDisableTfResultLogDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--xts_disable_tf_result_log",
-      description = "Disable xTS TF result logs in terminal. Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> xtsDisableTfResultLog = xtsDisableTfResultLogDefault;
-
-  private static final Flag<String> xtsJdkDirDefault = Flag.value("");
-
-  @com.beust.jcommander.Parameter(
-      names = "--xts_jdk_dir",
-      description = "The xTS JDK directory.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> xtsJdkDir = xtsJdkDirDefault;
-
-  private static final Flag<String> xtsResDirRootDefault = Flag.value(getXtsResDirRootDefaultOss());
-
-  @com.beust.jcommander.Parameter(
-      names = "--xts_res_dir_root",
-      description = "The xTS resources dir root.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> xtsResDirRoot = xtsResDirRootDefault;
+  @FlagSpec(name = "xts_res_dir_root", help = "The xTS resources dir root.")
+  public static final Flag<String> xtsResDirRoot = Flag.value(getXtsResDirRootDefaultOss());
 
   private static String getXtsResDirRootDefaultOss() {
     return Strings.nullToEmpty(System.getenv("HOME")) + "/xts";
   }
 
-  private static final Flag<Boolean> xtsRetryReportMergerParallelTestCaseMergeDefault =
-      Flag.value(false);
+  @FlagSpec(
+      name = "xts_retry_report_merger_parallel_test_case_merge",
+      help =
+          "Whether to merge test cases in parallel in the xTS retry report merger. Default is"
+              + " false.")
+  public static final Flag<Boolean> xtsRetryReportMergerParallelTestCaseMerge = Flag.value(false);
 
-  @com.beust.jcommander.Parameter(
-      names = "--xts_retry_report_merger_parallel_test_case_merge",
-      description =
-          "Whether to merge test cases in parallel in the xTS retry report merger. "
-              + "Default is false.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> xtsRetryReportMergerParallelTestCaseMerge =
-      xtsRetryReportMergerParallelTestCaseMergeDefault;
-
-  private static final Flag<String> xtsServerResDirRootDefault =
+  @FlagSpec(name = "xts_server_res_dir_root", help = "The xTS server resources dir root.")
+  public static final Flag<String> xtsServerResDirRoot =
       Flag.value(getXtsServerResDirRootDefaultOss());
-
-  @com.beust.jcommander.Parameter(
-      names = "--xts_server_res_dir_root",
-      description = "The xTS server resources dir root.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> xtsServerResDirRoot = xtsServerResDirRootDefault;
 
   private static String getXtsServerResDirRootDefaultOss() {
     return Strings.nullToEmpty(System.getenv("HOME")) + "/xts_server";
   }
 
-  private static final Flag<String> xtsTfXmxDefault = Flag.value("24g");
+  @FlagSpec(name = "xts_tf_xmx", help = "-Xmx of TF of TradefedTest. Default is \"24g\".")
+  public static final Flag<String> xtsTfXmx = Flag.value("24g");
 
-  @com.beust.jcommander.Parameter(
-      names = "--xts_tf_xmx",
-      description = "-Xmx of TF of XtsTradeTest. Default is \"24g\".",
-      converter = Flag.StringConverter.class)
-  public Flag<String> xtsTfXmx = xtsTfXmxDefault;
-
-  private static final Flags INSTANCE = new Flags();
-
-  public static Flags instance() {
-    return INSTANCE;
-  }
-
-  /** See {@link #parse(String[])}. */
-  public static void parse(List<String> args) {
-    parse(args.toArray(new String[0]));
-  }
-
-  /**
-   * Parses flags.
-   *
-   * <p>Call this method in the main method.
-   *
-   * <p>This method will also switch between the OSS/internal version.
-   */
-  public static void parse(String[] args) {
-    parseOss(args);
-  }
-
-  /** Parses flags in OSS. */
-  public static void parseOss(String[] args) {
-    com.beust.jcommander.JCommander commander = new com.beust.jcommander.JCommander(instance());
-    commander.setAcceptUnknownOptions(true);
-    commander.setAllowParameterOverwriting(true);
-    commander.parse(args);
-    checkConstraints();
-  }
-
-  private static void checkConstraints() {
+  public static void checkConstraints() {
     checkArgument(
-        !Flags.instance().resetDeviceInAndroidRealDeviceSetup.getNonNull()
-            || !Flags.instance().keepTestHarnessFalse.getNonNull(),
+        !Flags.resetDeviceInAndroidRealDeviceSetup.getNonNull()
+            || !Flags.keepTestHarnessFalse.getNonNull(),
         "--reset_device_in_android_real_device_setup and --keep_test_harness_false cannot be both"
             + " true.");
-  }
-
-  /**
-   * Resets all flags to their default values.
-   *
-   * <p>Only available in OSS. Does nothing in non-OSS.
-   *
-   * <p>Should be called in @After in UT.
-   */
-  public static void resetToDefault() {
-    doResetToDefault();
-  }
-
-  private static void doResetToDefault() {
-    stream(Flags.class.getFields())
-        .filter(field -> !Modifier.isStatic(field.getModifiers()))
-        .filter(
-            field ->
-                stream(field.getAnnotations())
-                    .anyMatch(
-                        annotation ->
-                            annotation
-                                .annotationType()
-                                .getName()
-                                .equals("com.beust.jcommander.Parameter")))
-        // For all public non-static @com.beust.jcommander.Parameter fields:
-        .forEach(
-            field -> {
-              String defaultValueFieldName = field.getName() + "Default";
-              try {
-                field.set(
-                    instance(), Flags.class.getDeclaredField(defaultValueFieldName).get(null));
-              } catch (ReflectiveOperationException e) {
-                throw new LinkageError(
-                    String.format(
-                        "Class Flags should define a private static final field \"%s\" as the"
-                            + " default value of the field \"%s\"",
-                        defaultValueFieldName, field.getName()),
-                    e);
-              }
-            });
   }
 
   private Flags() {}

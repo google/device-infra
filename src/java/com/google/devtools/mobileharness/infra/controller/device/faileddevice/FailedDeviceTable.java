@@ -56,8 +56,7 @@ public class FailedDeviceTable {
 
   private static final FailedDeviceTable INSTANCE = new FailedDeviceTable();
 
-  private final int maxInitFailuresBeforeFail =
-      Flags.instance().maxInitFailuresBeforeFail.getNonNull();
+  private final int maxInitFailuresBeforeFail = Flags.maxInitFailuresBeforeFail.getNonNull();
 
   /** Returns the singleton. */
   public static FailedDeviceTable getInstance() {

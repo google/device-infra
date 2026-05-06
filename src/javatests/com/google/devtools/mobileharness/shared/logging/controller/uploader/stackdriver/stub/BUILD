@@ -35,7 +35,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/server:sever_builder_factory",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "@grpc-java//core",
         "@grpc-java//stub",

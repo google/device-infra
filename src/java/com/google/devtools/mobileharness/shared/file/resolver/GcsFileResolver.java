@@ -141,8 +141,8 @@ public class GcsFileResolver extends AbstractFileResolver {
     String bucket = matcher.group("bucket");
     String filePath = matcher.group("path");
     String project = matcher.group("project");
-    if (project == null && Flags.instance().gcsResolverProjectId.get() != null) {
-      project = Flags.instance().gcsResolverProjectId.get();
+    if (project == null && Flags.gcsResolverProjectId.get() != null) {
+      project = Flags.gcsResolverProjectId.get();
     }
     if (project == null) {
       throw new MobileHarnessException(
@@ -157,8 +157,8 @@ public class GcsFileResolver extends AbstractFileResolver {
 
   @Nullable
   private static String getCredentialFile(String project) {
-    if (Flags.instance().gcsResolverCredentialFile.get() != null) {
-      return Flags.instance().gcsResolverCredentialFile.get();
+    if (Flags.gcsResolverCredentialFile.get() != null) {
+      return Flags.gcsResolverCredentialFile.get();
     }
     return null;
   }

@@ -100,7 +100,7 @@ public class AndroidRealDevice extends AndroidDevice {
 
   @Override
   public boolean canReboot() {
-    return !Flags.instance().disableDeviceReboot.getNonNull();
+    return !Flags.disableDeviceReboot.getNonNull();
   }
 
   @Override

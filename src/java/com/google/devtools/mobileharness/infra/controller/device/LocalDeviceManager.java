@@ -133,8 +133,7 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
                   threadRenaming(
                       () -> {
                         Duration detectDeviceInterval =
-                            Duration.ofSeconds(
-                                Flags.instance().detectDeviceIntervalSec.getNonNull());
+                            Duration.ofSeconds(Flags.detectDeviceIntervalSec.getNonNull());
                         // Use the detector's detection interval if specified, otherwise, use the
                         // global interval instead.
                         Optional<Duration> detectionIntervalPerDetector =
@@ -189,7 +188,7 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
         });
     while (!Thread.currentThread().isInterrupted()) {
       try {
-        Sleeper.defaultSleeper().sleep(Flags.instance().dispatchDeviceInterval.getNonNull());
+        Sleeper.defaultSleeper().sleep(Flags.dispatchDeviceInterval.getNonNull());
         DetectionResults detectionResults = getCachedDetectionResults();
         localDeviceDispatch.dispatchDevices(detectionResults);
       } catch (InterruptedException e) {

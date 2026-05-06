@@ -411,8 +411,7 @@ public class FileOperator {
   }
 
   private static boolean isCacheFilesEnabled(String desPathOnDevice) {
-    return Flags.instance().cachePushedFiles.getNonNull()
-        && !isDesPathOnDeviceUnderTmpDirs(desPathOnDevice);
+    return Flags.cachePushedFiles.getNonNull() && !isDesPathOnDeviceUnderTmpDirs(desPathOnDevice);
   }
 
   private static boolean isDesPathOnDeviceUnderTmpDirs(String desPathOnDevice) {

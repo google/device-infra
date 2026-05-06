@@ -107,7 +107,7 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
       String httpSourcePath =
           String.join(
               "/",
-              Flags.instance().atsFileServer.getNonNull(),
+              Flags.atsFileServer.getNonNull(),
               PathUtil.join("file", UrlEscapers.urlFragmentEscaper().escape(sourcePath)));
       try {
         httpSourcePath = new URI(httpSourcePath).normalize().toString();
@@ -156,7 +156,7 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
     String httpHashPath =
         String.join(
             "/",
-            Flags.instance().atsFileServer.getNonNull(),
+            Flags.atsFileServer.getNonNull(),
             PathUtil.join("hash", UrlEscapers.urlFragmentEscaper().escape(sourcePath)));
     try {
       httpHashPath = new URI(httpHashPath).normalize().toString();
@@ -233,8 +233,8 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
     // Add -L to handle redirects.
     List<String> command =
         new ArrayList<>(Arrays.asList("curl", "-C", "-", "-o", destination, "-fL", httpSourcePath));
-    if (Flags.instance().tradefedCurlDownloadLimitRate.get() != null) {
-      String limitRate = Flags.instance().tradefedCurlDownloadLimitRate.get();
+    if (Flags.tradefedCurlDownloadLimitRate.get() != null) {
+      String limitRate = Flags.tradefedCurlDownloadLimitRate.get();
       checkArgument(isLimitRateValue(limitRate), "Invalid curl download rate limit: %s", limitRate);
       command.add("--limit-rate");
       command.add(limitRate);

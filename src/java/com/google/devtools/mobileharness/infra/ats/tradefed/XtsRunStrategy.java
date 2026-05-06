@@ -347,7 +347,7 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
     Path linkLibDir = XtsDirUtil.getXtsLibDir(workDir, xtsType);
     Path linkLib64Dir = XtsDirUtil.getXtsLib64Dir(workDir, xtsType);
 
-    if (Flags.instance().xtsJdkDir.getNonNull().isEmpty()) {
+    if (Flags.xtsJdkDir.getNonNull().isEmpty()) {
       // Create symlinks for the downloaded JDK only for the dynamic download jobs.
       if (testInfo.properties().has(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_JDK_PROPERTY_KEY)) {
         Path downloadedJdkPath =
@@ -365,8 +365,8 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
       // Create symlinks for the JDK passed in via the flag by the user.
       logger.atInfo().log(
           "Use the JDK files from %s passed in via the flag --xts_jdk_dir",
-          Flags.instance().xtsJdkDir.getNonNull());
-      Path jdkDir = Path.of(Flags.instance().xtsJdkDir.getNonNull());
+          Flags.xtsJdkDir.getNonNull());
+      Path jdkDir = Path.of(Flags.xtsJdkDir.getNonNull());
       localFileUtil.grantFileOrDirFullAccess(jdkDir);
       createSymlink(linkJdkDir, jdkDir);
     }

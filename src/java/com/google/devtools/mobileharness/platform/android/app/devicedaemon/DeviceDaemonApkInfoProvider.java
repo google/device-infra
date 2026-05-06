@@ -37,6 +37,6 @@ public class DeviceDaemonApkInfoProvider {
 
   /** Returns {@code true} if device daemon app is enabled. */
   public static boolean isDeviceDaemonEnabled() {
-    return Flags.instance().enableDaemon.get();
+    return Flags.enableDaemon.get();
   }
 }

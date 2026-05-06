@@ -207,7 +207,7 @@ public class SessionResultHandlerUtil {
         // directory will be prepared when needed.
         localFileUtil.prepareDir(logDir);
         tmpTradefedTestResultsDir =
-            Path.of(localFileUtil.createTempDir(Flags.instance().tmpDirRoot.getNonNull()));
+            Path.of(localFileUtil.createTempDir(Flags.tmpDirRoot.getNonNull()));
         if (sessionRequestInfo == null) {
           return Optional.empty();
         }
@@ -1009,8 +1009,7 @@ public class SessionResultHandlerUtil {
 
   private Optional<String> getLabGenFileDir(TestInfo test) {
     String path =
-        PathUtil.join(
-            Flags.instance().atsStoragePath.getNonNull(), "genfiles", test.locator().getId());
+        PathUtil.join(Flags.atsStoragePath.getNonNull(), "genfiles", test.locator().getId());
     if (localFileUtil.isDirExist(path)) {
       return Optional.of(path);
     } else {

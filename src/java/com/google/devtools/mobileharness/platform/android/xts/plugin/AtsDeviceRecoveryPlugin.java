@@ -71,7 +71,7 @@ public final class AtsDeviceRecoveryPlugin {
     }
     // Give the devices under test total of ats_device_recovery_timeout time to be ready and
     // perform recovery steps.
-    Instant endTime = Instant.now().plus(Flags.instance().atsDeviceRecoveryTimeout.getNonNull());
+    Instant endTime = Instant.now().plus(Flags.atsDeviceRecoveryTimeout.getNonNull());
     for (Device device : devices.values()) {
       if (device.getDeviceTypes().contains("AndroidRealDevice")) {
         recoverDevice(device.getDeviceId(), endTime);

@@ -61,7 +61,7 @@ public class AdhocTestbedSchedulingUtil {
 
     // Shuffles device list.
     List<DeviceScheduleUnit> devices;
-    if (Flags.instance().enableSimpleSchedulerShuffle.getNonNull()) {
+    if (Flags.enableSimpleSchedulerShuffle.getNonNull()) {
       devices = new ArrayList<>(devicePool);
       Collections.shuffle(devices);
     } else {

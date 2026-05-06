@@ -86,7 +86,7 @@ public class ServerLogPrinter {
 
   /** Enables/disables the printer. */
   public void enable(boolean enable) throws MobileHarnessException, InterruptedException {
-    if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
+    if (Flags.atsConsoleOlcServerEmbeddedMode.getNonNull()) {
       return;
     }
     synchronized (lock) {

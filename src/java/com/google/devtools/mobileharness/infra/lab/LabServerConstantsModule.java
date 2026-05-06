@@ -35,24 +35,18 @@ public final class LabServerConstantsModule extends AbstractModule {
     String shardName = getShardName();
     bind(String.class).annotatedWith(CloudRpcDnsAddress.class).toInstance(cloudRpcDnsName);
     bind(String.class).annotatedWith(CloudRpcShardName.class).toInstance(shardName);
-    bind(Integer.class)
-        .annotatedWith(LabRpcPort.class)
-        .toInstance(Flags.instance().rpcPort.getNonNull());
-    bind(Integer.class)
-        .annotatedWith(LabGrpcPort.class)
-        .toInstance(Flags.instance().grpcPort.getNonNull());
+    bind(Integer.class).annotatedWith(LabRpcPort.class).toInstance(Flags.rpcPort.getNonNull());
+    bind(Integer.class).annotatedWith(LabGrpcPort.class).toInstance(Flags.grpcPort.getNonNull());
     bind(Boolean.class)
         .annotatedWith(ServViaCloudRpc.class)
-        .toInstance(Flags.instance().servViaCloudRpc.getNonNull());
+        .toInstance(Flags.servViaCloudRpc.getNonNull());
     bind(Boolean.class).annotatedWith(ServViaStubby.class).toInstance(enableStubbyRpcServer());
-    bind(Integer.class)
-        .annotatedWith(RpcPort.class)
-        .toInstance(Flags.instance().rpcPort.getNonNull());
+    bind(Integer.class).annotatedWith(RpcPort.class).toInstance(Flags.rpcPort.getNonNull());
   }
 
   private static String getCloudRpcName() {
 
-    return Flags.instance().mhProxySpec.getNonNull();
+    return Flags.mhProxySpec.getNonNull();
   }
 
   private static String getShardName() {
@@ -60,6 +54,6 @@ public final class LabServerConstantsModule extends AbstractModule {
   }
 
   private static boolean enableStubbyRpcServer() {
-    return Flags.instance().enableStubbyRpcServer.getNonNull() && !DeviceUtil.inSharedLab();
+    return Flags.enableStubbyRpcServer.getNonNull() && !DeviceUtil.inSharedLab();
   }
 }

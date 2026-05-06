@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.shared.logging.parameter.LogProject;
 import com.google.devtools.mobileharness.shared.logging.parameter.StackdriverLogUploaderParameters;
 import com.google.devtools.mobileharness.shared.util.concurrent.ExternalServiceManager;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.flags.core.FlagsManager;
 import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
 import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;
 import com.google.devtools.mobileharness.shared.util.system.SystemPropertiesUtil;
@@ -61,7 +62,7 @@ public class LabServerLauncher {
     ImmutableList<String> mainArgs = preprocessMainArgs(args);
 
     // Parses flags.
-    Flags.parse(mainArgs);
+    FlagsManager.parse(mainArgs);
 
     // Initializes system properties.
     LabServer.initSystemProperties();
@@ -70,13 +71,13 @@ public class LabServerLauncher {
     ImmutableMap<String, String> systemProperties = SystemPropertiesUtil.getSystemProperties();
 
     // Runs in print_lab_stats mode.
-    if (Flags.instance().printLabStats.getNonNull()) {
+    if (Flags.printLabStats.getNonNull()) {
       System.out.println("version: " + Version.LAB_VERSION);
       SYSTEM_UTIL.exit(ExitCode.Shared.OK);
     }
 
     // Runs in no_op_lab_server mode.
-    if (Flags.instance().noOpLabServer.getNonNull()) {
+    if (Flags.noOpLabServer.getNonNull()) {
       Thread.currentThread().join();
     }
 
@@ -151,7 +152,7 @@ public class LabServerLauncher {
   }
 
   private static void initializeCloudLogging() {
-    if (Flags.instance().enableCloudLogging.getNonNull()) {
+    if (Flags.enableCloudLogging.getNonNull()) {
       MobileHarnessHostLogManager mobileHarnessHostLogManager =
           Guice.createInjector(
                   new MobileHarnessHostLogManagerModule(

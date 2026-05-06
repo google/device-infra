@@ -51,7 +51,7 @@ final class AllDetectorsAndDispatchers {
         .addAll(detectorCandidatesForLocalModeInternalOssAndLabServerOss())
         .add(new FailedDeviceDetector());
 
-    if (Flags.instance().enableFastbootDetector.getNonNull()) {
+    if (Flags.enableFastbootDetector.getNonNull()) {
       detectorCandidates.add(new FastbootDetector());
     }
 
@@ -63,25 +63,25 @@ final class AllDetectorsAndDispatchers {
     ImmutableList.Builder<Detector> detectorCandidates = ImmutableList.builder();
 
     // Android Desktop Executor detector.
-    if (Flags.instance().androidDesktopExecutorDevicesNum.getNonNull() > 0) {
+    if (Flags.androidDesktopExecutorDevicesNum.getNonNull() > 0) {
       detectorCandidates.add(createDetector("AndroidDesktopExecutorDetector"));
       return detectorCandidates.build();
     }
 
     // ADB detector.
-    if (Flags.instance().detectAdbDevice.getNonNull()) {
+    if (Flags.detectAdbDevice.getNonNull()) {
       detectorCandidates.add(new AdbDetector());
     }
 
     // Android JIT emulator detector.
-    if (Flags.instance().enableEmulatorDetection.getNonNull()) {
-      if (Flags.instance().androidJitEmulatorNum.getNonNull() > 0) {
+    if (Flags.enableEmulatorDetection.getNonNull()) {
+      if (Flags.androidJitEmulatorNum.getNonNull() > 0) {
         detectorCandidates.add(createDetector("AndroidJitEmulatorDetector"));
       }
     }
 
     // NoOpDevice detector.
-    if (Flags.instance().noOpDeviceNum.getNonNull() > 0) {
+    if (Flags.noOpDeviceNum.getNonNull() > 0) {
       detectorCandidates.add(new NoOpDeviceDetector());
     }
 
@@ -104,30 +104,30 @@ final class AllDetectorsAndDispatchers {
 
   private static void addDispatchersForAll(DispatcherManager dispatcherManager) {
     // AndroidRealDevice dispatcher.
-    if (Flags.instance().detectAdbDevice.getNonNull()) {
+    if (Flags.detectAdbDevice.getNonNull()) {
       dispatcherManager.add(AndroidRealDeviceDispatcher.class);
     }
 
     // NoOpDevice dispatcher.
-    if (Flags.instance().noOpDeviceNum.getNonNull() > 0) {
+    if (Flags.noOpDeviceNum.getNonNull() > 0) {
       dispatcherManager.add(NoOpDeviceDispatcher.class);
     }
 
     // Android JIT emulator dispatcher.
-    if (Flags.instance().enableEmulatorDetection.getNonNull()) {
-      if (Flags.instance().androidJitEmulatorNum.getNonNull() > 0) {
+    if (Flags.enableEmulatorDetection.getNonNull()) {
+      if (Flags.androidJitEmulatorNum.getNonNull() > 0) {
         dispatcherManager.add(loadDispatcherClass("AndroidJitEmulatorDispatcher"));
       }
     }
 
     // Android Desktop Executor dispatcher.
-    if (Flags.instance().androidDesktopExecutorDevicesNum.getNonNull() > 0) {
+    if (Flags.androidDesktopExecutorDevicesNum.getNonNull() > 0) {
       dispatcherManager.add(loadDispatcherClass("AndroidDesktopExecutorDeviceDispatcher"));
     }
   }
 
   private static void addDispatchersForLocalModeLabServerOss(DispatcherManager dispatcherManager) {
-    if (Flags.instance().enableEmulatorDetection.getNonNull()) {
+    if (Flags.enableEmulatorDetection.getNonNull()) {
       dispatcherManager.add(AndroidLocalEmulatorDispatcher.class);
       dispatcherManager.addDependency(
           AndroidRealDeviceDispatcher.class.getSimpleName(),

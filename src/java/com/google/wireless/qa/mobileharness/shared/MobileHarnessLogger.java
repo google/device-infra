@@ -101,16 +101,14 @@ public class MobileHarnessLogger {
     checkState(
         !isInitialized.getAndSet(true), "Mobile Harness logger has already been initialized");
     MobileHarnessLogger.logFileDirName = logFileDirName;
-    if (Flags.instance().enableDebugMode.getNonNull()) {
+    if (Flags.enableDebugMode.getNonNull()) {
       DEBUG_LOG_LEVELS.forEach((className, level) -> getLoggerByName(className).setLevel(level));
     }
     Logger rootLogger = getLoggerByName("");
     rootLogger.setLevel(Level.ALL);
     try {
       createFileHandler(
-              /* subDir= */ "",
-              DirCommon.DEFAULT_LOG_FILE_NAME,
-              Flags.instance().logFileNumber.getNonNull())
+              /* subDir= */ "", DirCommon.DEFAULT_LOG_FILE_NAME, Flags.logFileNumber.getNonNull())
           .ifPresent(rootLogger::addHandler);
     } catch (MobileHarnessException e) {
       throw new IllegalArgumentException(e);
@@ -123,7 +121,7 @@ public class MobileHarnessLogger {
       // Sets min importance for ConsoleHandler.
       if (handler instanceof ConsoleHandler) {
         int loggerConsoleHandlerMinLogRecordImportance =
-            Flags.instance().loggerConsoleHandlerMinLogRecordImportance.getNonNull();
+            Flags.loggerConsoleHandlerMinLogRecordImportance.getNonNull();
         addFilter(
             handler,
             record ->
@@ -224,7 +222,7 @@ public class MobileHarnessLogger {
     prepareDir(logDir);
     String logFilePattern = PathUtil.join(logDir, logFileNamePattern);
     try {
-      if (Flags.instance().logFileSizeNoLimit.getNonNull()) {
+      if (Flags.logFileSizeNoLimit.getNonNull()) {
         return Optional.of(new FileHandler(logFilePattern));
       } else {
         return Optional.of(new FileHandler(logFilePattern, LOG_FILE_SIZE_LIMIT, fileNum));

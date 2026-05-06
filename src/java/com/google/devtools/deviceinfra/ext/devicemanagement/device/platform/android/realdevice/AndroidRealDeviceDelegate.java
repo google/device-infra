@@ -287,7 +287,7 @@ public abstract class AndroidRealDeviceDelegate {
           "Set up online mode device (%s). SetupFailureTimes=%d",
           deviceId, deviceStat != null ? deviceStat.getConsecutiveSetupFailureTimes() : -1);
       setUpOnlineModeDevice();
-    } else if (Flags.instance().enableFastbootInAndroidRealDevice.getNonNull()) {
+    } else if (Flags.enableFastbootInAndroidRealDevice.getNonNull()) {
       if (fastboot.getDeviceSerials().contains(deviceId)) {
         setUpFastbootModeDevice();
       } else if (androidAdbInternalUtil
@@ -521,13 +521,13 @@ public abstract class AndroidRealDeviceDelegate {
    * the device setup process later.
    */
   private void resetDevice() throws MobileHarnessException, InterruptedException {
-    if (!Flags.instance().resetDeviceInAndroidRealDeviceSetup.get()) {
+    if (!Flags.resetDeviceInAndroidRealDeviceSetup.get()) {
       return;
     }
 
     // Unlock the device admin policy before actually resetting the device. If the device is locked,
     // resetting device will be ignored by Android and we don't know if the reset was successful.
-    if (Flags.instance().deviceAdminLockRequired.getNonNull()) {
+    if (Flags.deviceAdminLockRequired.getNonNull()) {
       unlockWithDeviceAdmin();
     }
     int sdkVersion = systemSettingUtil.getDeviceSdkVersion(deviceId);
@@ -716,7 +716,7 @@ public abstract class AndroidRealDeviceDelegate {
       device.addDimension(Dimension.Name.SCREENSHOT_ABLE, String.valueOf(true));
     }
 
-    if (Flags.instance().checkAndroidDeviceSimCardType.getNonNull()) {
+    if (Flags.checkAndroidDeviceSimCardType.getNonNull()) {
       try {
         telephonyHelper.updateSimDimensions(device);
       } catch (MobileHarnessException e) {
@@ -770,19 +770,19 @@ public abstract class AndroidRealDeviceDelegate {
     // TODO Based on the current behavior, a lock failure will cause the device to fail
     // to setup and then reboot. Carefully consider whether we should catch and log the exception
     // and continue the setup process if the lock operation fails.
-    if (Flags.instance().deviceAdminLockRequired.getNonNull()) {
+    if (Flags.deviceAdminLockRequired.getNonNull()) {
       lockWithDeviceAdmin();
     }
 
     // Disables airplane mode, enables unknown source. Only works with SDK version >= 17.
     Integer sdkVersion = device.getSdkVersion();
-    if (Flags.instance().enableDeviceSystemSettingsChange.getNonNull()
+    if (Flags.enableDeviceSystemSettingsChange.getNonNull()
         && sdkVersion != null
         && sdkVersion >= 17) {
       logger.atInfo().log("Checking device %s airplane mode...", deviceId);
       try {
         boolean currentAirplaneMode = systemSettingUtil.getAirplaneMode(deviceId);
-        boolean targetAirplaneMode = Flags.instance().enableDeviceAirplaneMode.getNonNull();
+        boolean targetAirplaneMode = Flags.enableDeviceAirplaneMode.getNonNull();
         if (currentAirplaneMode ^ targetAirplaneMode) {
           logger.atInfo().log(
               "Device %s current airplane mode is [%s], set its airplane mode to [%s].",
@@ -866,7 +866,7 @@ public abstract class AndroidRealDeviceDelegate {
   }
 
   private void setUpRecoveryModeDevice() throws MobileHarnessException, InterruptedException {
-    if (!Flags.instance().enableDeviceStateChangeRecover.getNonNull()) {
+    if (!Flags.enableDeviceStateChangeRecover.getNonNull()) {
       configureRecoveryDevice();
       return;
     }
@@ -912,8 +912,7 @@ public abstract class AndroidRealDeviceDelegate {
   }
 
   public boolean checkDevice() throws MobileHarnessException, InterruptedException {
-    if (!ifSkipCheckAbnormalDevice()
-        && Flags.instance().enableDeviceStateChangeRecover.getNonNull()) {
+    if (!ifSkipCheckAbnormalDevice() && Flags.enableDeviceStateChangeRecover.getNonNull()) {
       Optional<Boolean> abnormalDeviceCheckResult = checkAbnormalDevice();
       if (abnormalDeviceCheckResult.isPresent()) {
         return abnormalDeviceCheckResult.get();
@@ -948,7 +947,7 @@ public abstract class AndroidRealDeviceDelegate {
     }
 
     // Checks the device which is the fastboot mode.
-    if (Flags.instance().enableFastbootInAndroidRealDevice.getNonNull()
+    if (Flags.enableFastbootInAndroidRealDevice.getNonNull()
         && fastboot.getDeviceSerials().contains(deviceId)) {
       if (device.getDeviceTypes().contains(AndroidRealDeviceConstants.ANDROID_FASTBOOT_DEVICE)) {
         if (isWipeRecoveryDevice()
@@ -996,9 +995,7 @@ public abstract class AndroidRealDeviceDelegate {
   boolean checkOnlineModeDevice() throws MobileHarnessException, InterruptedException {
     boolean isDimensionChanged = androidDeviceDelegate.checkDevice();
     boolean isNetworkChanged =
-        alwaysCheckNetwork()
-            ? checkNetwork()
-            : !Flags.instance().skipNetwork.getNonNull() && checkNetwork();
+        alwaysCheckNetwork() ? checkNetwork() : !Flags.skipNetwork.getNonNull() && checkNetwork();
     if (onlyCheckNetworkWhenCheckOnlineModeDevice()) {
       return isDimensionChanged || isNetworkChanged;
     }
@@ -1018,10 +1015,10 @@ public abstract class AndroidRealDeviceDelegate {
             | checkGmscoreSignature()
             | extraChecksForOnlineModeDevice();
     checkSuwAppDisabled();
-    if (!Flags.instance().skipNetwork.getNonNull()) {
+    if (!Flags.skipNetwork.getNonNull()) {
       isDimensionChanged = isDimensionChanged | checkWifiRssi();
     }
-    if (Flags.instance().pingGoogle.getNonNull()) {
+    if (Flags.pingGoogle.getNonNull()) {
       Instant currentTime = clock.instant();
       // Checks if the time gap is more than 30 minutes.
       if (isNetworkChanged
@@ -1124,7 +1121,7 @@ public abstract class AndroidRealDeviceDelegate {
    * @return whether the device's checkin group dimension changed.
    */
   boolean updateCheckinGroupStatus() throws MobileHarnessException, InterruptedException {
-    if (Flags.instance().enforceMtaasDeviceCheckinGroup.getNonNull()) {
+    if (Flags.enforceMtaasDeviceCheckinGroup.getNonNull()) {
       if (device
           .getDimension(Dimension.Name.MTAAS_DEVICE_CHECKIN_GROUP)
           .contains(Dimension.Value.TRUE)) {
@@ -1194,7 +1191,7 @@ public abstract class AndroidRealDeviceDelegate {
         startActivityController();
       }
       // Disables the NFC if feasible.
-      if (Flags.instance().enableDeviceSystemSettingsChange.getNonNull()
+      if (Flags.enableDeviceSystemSettingsChange.getNonNull()
           && device.getBooleanProperty(AndroidRealDeviceConstants.PROPERTY_NAME_ROOTED)) {
         try {
           Integer sdkVersion = device.getSdkVersion();
@@ -1390,7 +1387,7 @@ public abstract class AndroidRealDeviceDelegate {
 
   /** Reboots the Android real device. */
   public void reboot() throws MobileHarnessException, InterruptedException {
-    if (Flags.instance().disableDeviceReboot.getNonNull()) {
+    if (Flags.disableDeviceReboot.getNonNull()) {
       logger.atInfo().log("Device reboot is disabled, skip rebooting device %s.", deviceId);
       return;
     }
@@ -1417,7 +1414,7 @@ public abstract class AndroidRealDeviceDelegate {
           systemStateUtil.reboot(deviceId, RebootMode.BOOTLOADER);
           break;
       }
-    } else if (Flags.instance().enableFastbootInAndroidRealDevice.getNonNull()
+    } else if (Flags.enableFastbootInAndroidRealDevice.getNonNull()
         && fastboot.getDeviceSerials().contains(deviceId)) {
       switch (DeviceState.valueOf(
           device.getProperty(AndroidRealDeviceConstants.PROPERTY_NAME_REBOOT_TO_STATE))) {
@@ -1554,14 +1551,14 @@ public abstract class AndroidRealDeviceDelegate {
 
   /** Gets the timeout value for {@link #setUp()}. */
   public Duration getSetupTimeout() throws MobileHarnessException, InterruptedException {
-    if (Flags.instance().enableFastbootInAndroidRealDevice.getNonNull()) {
+    if (Flags.enableFastbootInAndroidRealDevice.getNonNull()) {
       Optional<Duration> setupTimeoutForRecoveryAndFastbootDevice =
           getSetupTimeoutForRecoveryAndFastbootDevice();
       if (setupTimeoutForRecoveryAndFastbootDevice.isPresent()) {
         return setupTimeoutForRecoveryAndFastbootDevice.get();
       }
     }
-    if (Flags.instance().resetDeviceInAndroidRealDeviceSetup.getNonNull()) {
+    if (Flags.resetDeviceInAndroidRealDeviceSetup.getNonNull()) {
       return BaseDeviceHelper.getBaseDeviceSetupTimeout()
           .plus(AndroidRealDeviceConstants.DEVICE_RESET_IN_SETUP_TIMEOUT_SHIFT);
     }
@@ -1653,8 +1650,8 @@ public abstract class AndroidRealDeviceDelegate {
             .filter(ReadOnlyPropertySetting::needRebootToSetProperty)
             .collect(toImmutableList());
     boolean canRebootToClearReadOnlyProperties =
-        !Flags.instance().disableDeviceReboot.getNonNull()
-            && !Flags.instance().disableDeviceRebootForRoProperties.getNonNull();
+        !Flags.disableDeviceReboot.getNonNull()
+            && !Flags.disableDeviceRebootForRoProperties.getNonNull();
 
     // Reboots if necessary and allowed.
     boolean hasRebooted = false;
@@ -1685,7 +1682,7 @@ public abstract class AndroidRealDeviceDelegate {
     }
 
     // Disables packages.
-    if (Flags.instance().disableCellBroadcastReceiver.getNonNull()) {
+    if (Flags.disableCellBroadcastReceiver.getNonNull()) {
       try {
         androidPkgManagerUtil.disablePackage(deviceId, "com.android.cellbroadcastreceiver");
       } catch (MobileHarnessException e) {
@@ -1703,20 +1700,20 @@ public abstract class AndroidRealDeviceDelegate {
     return ImmutableList.of(
         ReadOnlyPropertySetting.create(
             AndroidProperty.DISABLE_CALL,
-            Flags.instance().disableCalling.getNonNull() ? "true" : "false",
-            !Flags.instance().disableCalling.getNonNull(),
+            Flags.disableCalling.getNonNull() ? "true" : "false",
+            !Flags.disableCalling.getNonNull(),
             deviceId,
             androidAdbUtil),
         ReadOnlyPropertySetting.create(
             AndroidProperty.TEST_HARNESS,
-            Flags.instance().setTestHarnessProperty.getNonNull() ? "1" : "0",
-            !Flags.instance().setTestHarnessProperty.getNonNull(),
+            Flags.setTestHarnessProperty.getNonNull() ? "1" : "0",
+            !Flags.setTestHarnessProperty.getNonNull(),
             deviceId,
             androidAdbUtil),
         ReadOnlyPropertySetting.create(
             AndroidProperty.SILENT,
-            Flags.instance().muteAndroid.getNonNull() ? "1" : "0",
-            !Flags.instance().muteAndroid.getNonNull(),
+            Flags.muteAndroid.getNonNull() ? "1" : "0",
+            !Flags.muteAndroid.getNonNull(),
             deviceId,
             androidAdbUtil));
   }
@@ -1811,7 +1808,7 @@ public abstract class AndroidRealDeviceDelegate {
   private void connectToWifi(
       String serial, int sdkVersion, String ssid, String pwd, boolean scanSsid)
       throws MobileHarnessException, InterruptedException {
-    if (Flags.instance().disableWifiUtilFunc.getNonNull()) {
+    if (Flags.disableWifiUtilFunc.getNonNull()) {
       logger.atInfo().log(
           "Wifi util functionality is disabled. Skip connecting device %s to wifi.", serial);
       return;
@@ -1848,7 +1845,7 @@ public abstract class AndroidRealDeviceDelegate {
   @VisibleForTesting
   boolean checkNetwork() throws MobileHarnessException, InterruptedException {
     if (needToInstallWifiApk()) {
-      if (Flags.instance().disableWifiUtilFunc.getNonNull()) {
+      if (Flags.disableWifiUtilFunc.getNonNull()) {
         logger.atInfo().log(
             "Wifi util functionality is disabled. Skip installing WifiUtil apk on device %s.",
             deviceId);
@@ -1952,7 +1949,7 @@ public abstract class AndroidRealDeviceDelegate {
         Ascii.toLowerCase(AndroidSetWifiDecorator.DEFAULT_WIFI_SSID.name()), defaultWifi.getSsid());
     device.setProperty(
         Ascii.toLowerCase(AndroidSetWifiDecorator.DEFAULT_WIFI_PSK.name()), defaultWifi.getPsk());
-    if (Flags.instance().skipConnectDeviceToWifi.getNonNull()) {
+    if (Flags.skipConnectDeviceToWifi.getNonNull()) {
       // Don't reconnect the devices to the default wifi network
       logger.atInfo().log(
           "Skip connecting device %s to WIFI because --skip_connect_device_to_wifi is set to true.",
@@ -2005,13 +2002,13 @@ public abstract class AndroidRealDeviceDelegate {
    * @return the ssid.
    */
   private Optional<String> recoverWifiConnectionIfRequired() throws InterruptedException {
-    if (Flags.instance().skipRecoverDeviceNetwork.getNonNull()) {
+    if (Flags.skipRecoverDeviceNetwork.getNonNull()) {
       logger.atInfo().log(
           "Skip recover device %s network because --skip_recover_device_network is set to true.",
           deviceId);
       return Optional.empty();
     }
-    if (Flags.instance().skipConnectDeviceToWifi.getNonNull()) {
+    if (Flags.skipConnectDeviceToWifi.getNonNull()) {
       logger.atInfo().log(
           "Skip recover device %s network because --skip_connect_device_to_wifi is set to true.",
           deviceId);
@@ -2281,7 +2278,7 @@ public abstract class AndroidRealDeviceDelegate {
       dimensionFreeStorage = Dimension.Name.FREE_INTERNAL_STORAGE;
       dimensionFreeStoragePercentage = Dimension.Name.FREE_INTERNAL_STORAGE_PERCENTAGE;
       externalOrInternal = AndroidRealDeviceConstants.STRING_INTERNAL;
-      freeStorageAlertMb = Flags.instance().internalStorageAlert.getNonNull();
+      freeStorageAlertMb = Flags.internalStorageAlert.getNonNull();
     }
     logger.atInfo().log("Checking device %s %s storage usage...", deviceId, externalOrInternal);
 
@@ -2436,7 +2433,7 @@ public abstract class AndroidRealDeviceDelegate {
         break;
       }
     }
-    if (!serviceAvailable && !Flags.instance().disableDeviceReboot.getNonNull()) {
+    if (!serviceAvailable && !Flags.disableDeviceReboot.getNonNull()) {
       AndroidDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_REAL_DEVICE_ONLINE_DEVICE_NOT_READY,
@@ -2653,7 +2650,7 @@ public abstract class AndroidRealDeviceDelegate {
   }
 
   private boolean shouldFactoryResetViaTestHarness() {
-    return !Flags.instance().keepTestHarnessFalse.getNonNull() && isTestHarnessRecoveryDevice();
+    return !Flags.keepTestHarnessFalse.getNonNull() && isTestHarnessRecoveryDevice();
   }
 
   /** Checks whether the device support test harness recovering. */
@@ -2710,13 +2707,13 @@ public abstract class AndroidRealDeviceDelegate {
    * <p>See {@link RuntimeChargingUtil.SupportedDeviceModel} for supported device models.
    */
   private void enforceSafeDischargeLevelIfNeeded() throws InterruptedException {
-    if (notAllowSafeDischarge() || !Flags.instance().enforceSafeDischarge.getNonNull()) {
+    if (notAllowSafeDischarge() || !Flags.enforceSafeDischarge.getNonNull()) {
       return;
     }
     logger.atInfo().log("Enforcing safe discharge level for device %s", deviceId);
-    Integer safeChargeLevelInt = Flags.instance().safeChargeLevel.getNonNull();
-    Integer stopChargeLevelInt = Flags.instance().stopChargeLevel.getNonNull();
-    Integer startChargeLevelInt = Flags.instance().startChargeLevel.getNonNull();
+    Integer safeChargeLevelInt = Flags.safeChargeLevel.getNonNull();
+    Integer stopChargeLevelInt = Flags.stopChargeLevel.getNonNull();
+    Integer startChargeLevelInt = Flags.startChargeLevel.getNonNull();
     try {
       chargingUtil.setFullChargeLevel(device, safeChargeLevelInt);
     } catch (MobileHarnessException e) {
@@ -2750,7 +2747,7 @@ public abstract class AndroidRealDeviceDelegate {
    */
   private void enableDeviceChargeBeforeTest(TestInfo testInfo) throws InterruptedException {
     String testId = testInfo.locator().getId();
-    if (!Flags.instance().enforceSafeDischarge.getNonNull()) {
+    if (!Flags.enforceSafeDischarge.getNonNull()) {
       logger.atInfo().log(
           "Ignoring attempt to enable device %s charging before test %s because disabled"
               + " enforceSafeDischarge.",
@@ -2803,7 +2800,7 @@ public abstract class AndroidRealDeviceDelegate {
   }
 
   void installMtaasToolsAndTriggerCheckin() throws MobileHarnessException, InterruptedException {
-    if (Flags.instance().enforceMtaasDeviceCheckinGroup.getNonNull()) {
+    if (Flags.enforceMtaasDeviceCheckinGroup.getNonNull()) {
       mtaasToolsInstantiator.install(device);
       triggerCheckin();
     }
@@ -2862,11 +2859,11 @@ public abstract class AndroidRealDeviceDelegate {
   protected abstract boolean needExtraForceRootDevice();
 
   protected boolean getFlagClearAndroidDeviceMultiUsers() {
-    return Flags.instance().clearAndroidDeviceMultiUsers.getNonNull();
+    return Flags.clearAndroidDeviceMultiUsers.getNonNull();
   }
 
   protected boolean getFlagSkipCheckDeviceInternet() {
-    return Flags.instance().skipCheckDeviceInternet.getNonNull();
+    return Flags.skipCheckDeviceInternet.getNonNull();
   }
 
   private void cacheDevice(String deviceId, Duration expireTime) {

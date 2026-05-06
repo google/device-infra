@@ -260,7 +260,7 @@ public class TradefedTest extends BaseDriver
   }
 
   private void handleDeviceErrorForProvisioning(TestInfo testInfo) {
-    if (Flags.instance().enableXtsTradefedInvocationAgent.getNonNull()) {
+    if (Flags.enableXtsTradefedInvocationAgent.getNonNull()) {
       checkDeviceErrorFromRuntimeInfo(testInfo);
     }
     if (deviceErrorForProvisioningDetected.get()) {
@@ -463,9 +463,8 @@ public class TradefedTest extends BaseDriver
     // Creates JVM flags.
     ImmutableList.Builder<String> jvmFlagsBuilder =
         ImmutableList.<String>builder()
-            .add(
-                "-Xmx" + Flags.instance().xtsTfXmx.getNonNull(), "-XX:+HeapDumpOnOutOfMemoryError");
-    if (Flags.instance().enableXtsTradefedInvocationAgent.getNonNull()) {
+            .add("-Xmx" + Flags.xtsTfXmx.getNonNull(), "-XX:+HeapDumpOnOutOfMemoryError");
+    if (Flags.enableXtsTradefedInvocationAgent.getNonNull()) {
       jvmFlagsBuilder.add(
           String.format(
               "-javaagent:%s=%s:%s",
@@ -983,9 +982,9 @@ public class TradefedTest extends BaseDriver
   @VisibleForTesting
   Path createWorkDir() {
     return Path.of(
-        Flags.instance().atsXtsWorkDir.getNonNull().isEmpty()
+        Flags.atsXtsWorkDir.getNonNull().isEmpty()
             ? requireNonNull(JAVA_IO_TMPDIR.value())
-            : Flags.instance().atsXtsWorkDir.getNonNull(),
+            : Flags.atsXtsWorkDir.getNonNull(),
         String.format("tradefed-root-dir-%s", this.testId));
   }
 

@@ -236,8 +236,8 @@ public class TradefedConfigGenerator {
     for (TestResource testResource : testResources) {
       serializeOption(serializer, "test-resource", serializeTestResource(testResource));
     }
-    if (Flags.instance().tradefedCurlDownloadLimitRate.get() != null) {
-      String limitRate = Flags.instance().tradefedCurlDownloadLimitRate.get();
+    if (Flags.tradefedCurlDownloadLimitRate.get() != null) {
+      String limitRate = Flags.tradefedCurlDownloadLimitRate.get();
       checkArgument(isLimitRateValue(limitRate), "Invalid curl download rate limit: %s", limitRate);
       serializeOption(serializer, "curl-limit-rate", limitRate);
     }

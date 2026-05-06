@@ -60,7 +60,7 @@ public class NoOpDevice extends BaseDevice {
 
     addDimension("label", "noop");
 
-    String supportedDeviceType = Flags.instance().noOpDeviceType.getNonNull();
+    String supportedDeviceType = Flags.noOpDeviceType.getNonNull();
     if (!Strings.isNullOrEmpty(supportedDeviceType)) {
       addSupportedDeviceType(supportedDeviceType);
       // To make j/c/g/devtools/mobileharness/infra/master/scheduler/DeviceUtil.java happy.

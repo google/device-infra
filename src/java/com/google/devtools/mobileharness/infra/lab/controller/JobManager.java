@@ -476,8 +476,8 @@ public class JobManager {
     Dirs jobDirs = job.getJobExecutionUnit().dirs();
 
     if (jobDirs.hasGenFileDir()) {
-      Duration jobGenFileExpiredTime = Flags.instance().jobGenFileExpiredTime.getNonNull();
-      if (Flags.instance().skipLabJobGenFileCleanup.getNonNull()) {
+      Duration jobGenFileExpiredTime = Flags.jobGenFileExpiredTime.getNonNull();
+      if (Flags.skipLabJobGenFileCleanup.getNonNull()) {
         logger.atInfo().log(
             "Skip gen file cleanup for job %s, gen file dir: %s.", jobId, jobDirs.genFileDir());
       } else if (!jobGenFileExpiredTime.isNegative() && !jobGenFileExpiredTime.isZero()) {

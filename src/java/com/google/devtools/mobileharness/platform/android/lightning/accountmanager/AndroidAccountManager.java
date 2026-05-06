@@ -350,14 +350,14 @@ public class AndroidAccountManager {
     switch (apkType) {
       case ACCOUNT_MANAGER:
         if (installSignedVersion) {
-          String apkPathFromFlag = Flags.instance().androidAccountManagerSignedApkPath.get();
+          String apkPathFromFlag = Flags.androidAccountManagerSignedApkPath.get();
           if (!isNullOrEmpty(apkPathFromFlag)) {
             return apkPathFromFlag;
           } else {
             return getResourceFile(ACCOUNT_MANAGER_SIGNED_APK_PATH);
           }
         } else {
-          String apkPathFromFlag = Flags.instance().androidAccountManagerApkPath.get();
+          String apkPathFromFlag = Flags.androidAccountManagerApkPath.get();
           if (!isNullOrEmpty(apkPathFromFlag)) {
             return apkPathFromFlag;
           } else {
@@ -366,14 +366,14 @@ public class AndroidAccountManager {
         }
       case AUTH_TEST_SUPPORT:
         if (installSignedVersion) {
-          String apkPathFromFlag = Flags.instance().androidAuthTestSupportSignedApkPath.get();
+          String apkPathFromFlag = Flags.androidAuthTestSupportSignedApkPath.get();
           if (!isNullOrEmpty(apkPathFromFlag)) {
             return apkPathFromFlag;
           } else {
             return getResourceFile(AUTH_TEST_SUPPORT_SIGNED_APK_PATH);
           }
         } else {
-          String apkPathFromFlag = Flags.instance().androidAuthTestSupportApkPath.get();
+          String apkPathFromFlag = Flags.androidAuthTestSupportApkPath.get();
           if (!isNullOrEmpty(apkPathFromFlag)) {
             return apkPathFromFlag;
           } else {

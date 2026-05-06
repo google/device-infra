@@ -40,25 +40,21 @@ public final class FlagBasedResourceHelper implements ResourceHelper {
 
   private static final Supplier<Aapt> AAPT_SUPPLIER = Suppliers.memoize(Aapt::new);
 
-  private static final Path JAVA_BIN =
-      Path.of(Flags.instance().javaCommandPath.getNonNull()).normalize();
+  private static final Path JAVA_BIN = Path.of(Flags.javaCommandPath.getNonNull()).normalize();
 
   private static final Path TMP_FILE_ROOT = Path.of(DirCommon.getTempDirRoot()).normalize();
 
   private static final Supplier<Path> TMP_FILE_DIR_SUPPLIER =
       Suppliers.memoize(() -> createSessionDir(TMP_FILE_ROOT));
 
-  private static final Path GEN_FILE_ROOT =
-      Path.of(Flags.instance().daGenFileDir.getNonNull()).normalize();
+  private static final Path GEN_FILE_ROOT = Path.of(Flags.daGenFileDir.getNonNull()).normalize();
 
   private static final Supplier<Path> GEN_FILE_DIR_SUPPLIER =
       Suppliers.memoize(() -> createSessionDir(GEN_FILE_ROOT));
 
-  private static final Path BUNDLETOOL_JAR =
-      Path.of(Flags.instance().daBundletool.getNonNull()).normalize();
+  private static final Path BUNDLETOOL_JAR = Path.of(Flags.daBundletool.getNonNull()).normalize();
 
-  private static final Path CRED_FILE =
-      Path.of(Flags.instance().daCredFile.getNonNull()).normalize();
+  private static final Path CRED_FILE = Path.of(Flags.daCredFile.getNonNull()).normalize();
 
   private static final CommandExecutor executor = new CommandExecutor();
 

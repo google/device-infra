@@ -23,7 +23,7 @@ public class AndroidEmulatorIds {
 
   /** Checks whether the given device ID belongs to an emulator. */
   public static boolean isAndroidEmulator(String deviceId) {
-    if (!Flags.instance().enableEmulatorDetection.getNonNull()) {
+    if (!Flags.enableEmulatorDetection.getNonNull()) {
       return false;
     }
     return deviceId.startsWith("emulator")

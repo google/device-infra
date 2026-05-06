@@ -122,7 +122,7 @@ public abstract class AdbInitializeTemplate {
    * "ADB_VENDOR_KEYS".
    */
   protected String getAdbKeyPath() {
-    String keyPathsFromUser = Flags.instance().adbKeyPathsFromUser.getNonNull();
+    String keyPathsFromUser = Flags.adbKeyPathsFromUser.getNonNull();
     if (!keyPathsFromUser.isEmpty() && !keyPathsFromUser.endsWith(":")) {
       keyPathsFromUser += ":";
     }
@@ -171,7 +171,7 @@ public abstract class AdbInitializeTemplate {
     if (!Strings.isNullOrEmpty(systemEnv)) {
       return systemEnv.equals("1");
     }
-    return Flags.instance().adbLibusb.getNonNull();
+    return Flags.adbLibusb.getNonNull();
   }
 
   /** Gets the command environment variables set in the adb command executor. */
@@ -194,21 +194,21 @@ public abstract class AdbInitializeTemplate {
 
   /** Gets the value of flag {@link Flags#adbPathFromUser}. */
   protected String getAdbPathFromUser() {
-    return Flags.instance().adbPathFromUser.getNonNull();
+    return Flags.adbPathFromUser.getNonNull();
   }
 
   /** Gets the value of flag {@link Flags#adbKeyPathsFromUser}. */
   protected String getAdbKeyPathsFromUser() {
-    return Flags.instance().adbKeyPathsFromUser.getNonNull();
+    return Flags.adbKeyPathsFromUser.getNonNull();
   }
 
   /** Gets the value of flag {@link Flags#adbForceKillServer}. */
   protected boolean getAdbForceKillServer() {
-    return Flags.instance().adbForceKillServer.getNonNull();
+    return Flags.adbForceKillServer.getNonNull();
   }
 
   /** Gets the value of flag {@link Flags#adbDontKillServer}. */
   protected boolean getAdbDontKillServer() {
-    return Flags.instance().adbDontKillServer.getNonNull();
+    return Flags.adbDontKillServer.getNonNull();
   }
 }

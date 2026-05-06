@@ -36,12 +36,11 @@ public enum LogProject {
   /** Gets the log name. */
   public String getLogName() {
     return String.format(
-        "/projects/%s/logs/%s",
-        Flags.instance().stackdriverGcpProjectName.getNonNull(), projectName);
+        "/projects/%s/logs/%s", Flags.stackdriverGcpProjectName.getNonNull(), projectName);
   }
 
   /** Gets the resource type. */
   public String getResourceType() {
-    return Flags.instance().stackdriverResourceType.getNonNull();
+    return Flags.stackdriverResourceType.getNonNull();
   }
 }

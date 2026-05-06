@@ -44,6 +44,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared:oss_stubs",
         "//src/java/com/google/devtools/mobileharness/fe/v6/shared/util/concurrent:oss_executor_module",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:flags_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@grpc-java//core",
         "@grpc-java//services:reflection",

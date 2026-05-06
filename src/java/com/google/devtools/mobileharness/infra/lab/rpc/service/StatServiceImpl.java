@@ -103,7 +103,7 @@ public class StatServiceImpl {
     deviceProto.setLastReadyTime(deviceStat.getLastReadyTime());
     deviceProto.setLastDieTime(deviceStat.getLastDieTime());
 
-    long detectDeviceIntervalMs = Flags.instance().detectDeviceIntervalSec.getNonNull() * 1000L;
+    long detectDeviceIntervalMs = Flags.detectDeviceIntervalSec.getNonNull() * 1000L;
     for (Entry<DeviceStatus, Long> statusCount : deviceStat.getStatusCounts().entrySet()) {
       deviceProto.addStatusDuration(
           DeviceStatusDuration.newBuilder()

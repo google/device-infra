@@ -32,7 +32,7 @@ class OlcServerGrpcChannelModule extends AbstractModule {
   @Singleton
   @ServerChannel
   Channel provideServerChannel(ListeningExecutorService threadPool) {
-    int serverPort = Flags.instance().olcServerPort.getNonNull();
+    int serverPort = Flags.olcServerPort.getNonNull();
     return ChannelFactory.createLocalChannel(serverPort, threadPool);
   }
 }

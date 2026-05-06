@@ -217,7 +217,7 @@ public class AndroidSystemStateUtil {
 
   private final AndroidProcessUtil androidProcessUtil;
 
-  private final Duration factoryResetWaitTime = Flags.instance().androidFactoryResetWaitTime.get();
+  private final Duration factoryResetWaitTime = Flags.androidFactoryResetWaitTime.get();
 
   public AndroidSystemStateUtil() {
     this(
@@ -299,7 +299,7 @@ public class AndroidSystemStateUtil {
    * @throws InterruptedException if the thread executing the commands is interrupted
    */
   public boolean becomeRoot(String serial) throws MobileHarnessException, InterruptedException {
-    if (!Flags.instance().enableRootDevice.get()) {
+    if (!Flags.enableRootDevice.get()) {
       logger.atInfo().log("Skip rooting device %s since rooting is disabled.", serial);
       return false;
     }
@@ -450,7 +450,7 @@ public class AndroidSystemStateUtil {
    */
   private boolean isOnline(String serial, boolean silent, boolean rateLimitLog)
       throws MobileHarnessException, InterruptedException {
-    if (!Flags.instance().enableAndroidDeviceReadyCheck.get()) {
+    if (!Flags.enableAndroidDeviceReadyCheck.get()) {
       logger.atInfo().log(
           "Ignore ready check for device %s when enable_android_device_ready_check is false.",
           serial);
@@ -667,8 +667,7 @@ public class AndroidSystemStateUtil {
    */
   public void waitForState(String serial, DeviceConnectionState state, Duration timeout)
       throws InterruptedException, MobileHarnessException {
-    if (Flags.instance().disableWaitForDevice.getNonNull()
-        && state.equals(DeviceConnectionState.DEVICE)) {
+    if (Flags.disableWaitForDevice.getNonNull() && state.equals(DeviceConnectionState.DEVICE)) {
       logger.atInfo().log("Skip 'wait-for-device' for device %s", serial);
       sleeper.sleep(Duration.ofSeconds(1));
       return;

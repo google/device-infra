@@ -132,7 +132,7 @@ public abstract class XtsJobCreator {
     // will make sure the static job is complete before starting the dynamic jobs, and skip
     // dynamic jobs if static job failed.
     ImmutableList<String> allDynamicDownloadJobNames =
-        Flags.instance().runDynamicDownloadMctsOnly.getNonNull()
+        Flags.runDynamicDownloadMctsOnly.getNonNull()
             ? ImmutableList.of(XtsConstants.DYNAMIC_MCTS_JOB_NAME)
             : ImmutableList.of(
                 XtsConstants.STATIC_XTS_JOB_NAME, XtsConstants.DYNAMIC_MCTS_JOB_NAME);

@@ -151,7 +151,7 @@ public class ServerPreparer {
   }
 
   public void startSendingHeartbeats() {
-    if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
+    if (Flags.atsConsoleOlcServerEmbeddedMode.getNonNull()) {
       return;
     }
     HeartbeatRequest request = HeartbeatRequest.newBuilder().setClientId(clientId).build();
@@ -196,7 +196,7 @@ public class ServerPreparer {
    *     the machine at any given time (if no error occurs when acquiring the lock)
    */
   public void prepareOlcServer() throws MobileHarnessException, InterruptedException {
-    if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
+    if (Flags.atsConsoleOlcServerEmbeddedMode.getNonNull()) {
       return;
     }
     synchronized (prepareServerLock) {
@@ -249,7 +249,7 @@ public class ServerPreparer {
         // Creates arguments.
         ImmutableList<String> serverNativeArguments =
             ImmutableList.of(
-                "-Xmx" + Flags.instance().atsConsoleOlcServerXmx.getNonNull(),
+                "-Xmx" + Flags.atsConsoleOlcServerXmx.getNonNull(),
                 "-XX:+HeapDumpOnOutOfMemoryError",
                 "-XX:+ExitOnOutOfMemoryError");
         logger
@@ -260,7 +260,7 @@ public class ServerPreparer {
                 deviceInfraServiceFlags.flags(), serverNativeArguments);
 
         // Creates the command to start the server.
-        String serverOutputPath = Flags.instance().atsConsoleOlcServerOutputPath.getNonNull();
+        String serverOutputPath = Flags.atsConsoleOlcServerOutputPath.getNonNull();
         ImmutableList.Builder<String> startOlcServerCommandBuilder = ImmutableList.builder();
         startOlcServerCommandBuilder.add(NOHUP_COMMAND);
         startOlcServerCommandBuilder.addAll(
@@ -313,7 +313,7 @@ public class ServerPreparer {
               .with(IMPORTANCE, IMPORTANT)
               .log(
                   "OLC server started, port=%s, pid=%s",
-                  Flags.instance().olcServerPort.getNonNull(), serverVersion.getProcessId());
+                  Flags.olcServerPort.getNonNull(), serverVersion.getProcessId());
           // Records the server information.
           serverHeapDumpFileDetector.setOlcServerInfo(
               serverVersion.getProcessId(), serverEnvironment.serverWorkingDir().toString());
@@ -377,8 +377,7 @@ public class ServerPreparer {
       Instant now = Instant.now();
 
       Duration duration = Duration.between(lastModifiedTime, now);
-      if (duration.compareTo(
-              Flags.instance().atsConsoleOlcServerStartingTimeout.getNonNull().plusSeconds(5L))
+      if (duration.compareTo(Flags.atsConsoleOlcServerStartingTimeout.getNonNull().plusSeconds(5L))
           > 0) {
         // Skip printing if the log file wasn't modified recently.
         return;
@@ -405,7 +404,7 @@ public class ServerPreparer {
    */
   public void killExistingServer(boolean forcibly)
       throws MobileHarnessException, InterruptedException {
-    if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
+    if (Flags.atsConsoleOlcServerEmbeddedMode.getNonNull()) {
       return;
     }
     logger
@@ -482,10 +481,7 @@ public class ServerPreparer {
       throws MobileHarnessException, InterruptedException {
     int count = 0;
     long maxAttempts =
-        Flags.instance()
-                .atsConsoleOlcServerStartingTimeout
-                .getNonNull()
-                .dividedBy(CONNECT_SERVER_INTERVAL)
+        Flags.atsConsoleOlcServerStartingTimeout.getNonNull().dividedBy(CONNECT_SERVER_INTERVAL)
             + 1L;
     while (true) {
       try {
@@ -513,7 +509,7 @@ public class ServerPreparer {
       throws MobileHarnessException {
     // Checks flag.
     if (firstPreparation) {
-      if (Flags.instance().atsConsoleAlwaysRestartOlcServer.getNonNull()) {
+      if (Flags.atsConsoleAlwaysRestartOlcServer.getNonNull()) {
         logger
             .atInfo()
             .with(IMPORTANCE, IMPORTANT)
@@ -525,8 +521,7 @@ public class ServerPreparer {
       String olcLabVersionString = getVersionResponse.getLabVersion();
       Version olcLabVersion =
           olcLabVersionString.isEmpty() ? new Version(0, 0, 0) : new Version(olcLabVersionString);
-      String minOlcLabVersionString =
-          Flags.instance().atsConsoleOlcServerMinLabVersion.getNonNull();
+      String minOlcLabVersionString = Flags.atsConsoleOlcServerMinLabVersion.getNonNull();
       Version minOlcLabVersion = new Version(minOlcLabVersionString);
       if (olcLabVersion.compareTo(minOlcLabVersion) < 0) {
         logger

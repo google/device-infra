@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.infra.controller.device.bootstrap;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -27,7 +26,6 @@ import org.junit.runners.JUnit4;
 public final class AllDetectorsAndDispatchersTest {
   @Test
   public void detectorCandidatesForLabServerOss_isNotEmpty() {
-    Flags.parseOss(new String[] {});
     assertThat(AllDetectorsAndDispatchers.detectorCandidatesForLabServerOss()).isNotEmpty();
   }
 }

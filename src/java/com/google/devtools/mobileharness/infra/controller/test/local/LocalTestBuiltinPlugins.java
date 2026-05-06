@@ -158,11 +158,11 @@ class LocalTestBuiltinPlugins {
   }
 
   private static boolean isAtsModeEnabled() {
-    return Flags.instance().enableAtsMode.getNonNull();
+    return Flags.enableAtsMode.getNonNull();
   }
 
   private static boolean isTestLogCollectorEnabled() {
-    return Flags.instance().enableTestLogCollector.getNonNull();
+    return Flags.enableTestLogCollector.getNonNull();
   }
 
   private static boolean isXtsDeviceCompatibilityCheckerEnabled(JobInfo jobInfo) {

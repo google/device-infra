@@ -330,7 +330,7 @@ public class RetryReportMerger {
         AbiUtil.createId(moduleFromPrevSession.getAbi(), moduleFromPrevSession.getName());
     boolean moduleFoundInRetry = modulesFromRetry.containsKey(moduleId);
     if (!moduleFromPrevSession.getIsNonTfModule()
-        && Flags.instance().useTfRetry.getNonNull()
+        && Flags.useTfRetry.getNonNull()
         && moduleFoundInRetry) {
       // If the module is a TF module, and the retry used TF retry, and the module was retried, use
       // the module from the retry result.
@@ -436,7 +436,7 @@ public class RetryReportMerger {
       notCheckedTestCasesFromRetry.remove(testCaseFromPrevSession.getName());
     }
 
-    if (Flags.instance().xtsRetryReportMergerParallelTestCaseMerge.getNonNull()) {
+    if (Flags.xtsRetryReportMergerParallelTestCaseMerge.getNonNull()) {
       moduleFromPrevSession.getTestCaseList().parallelStream()
           .map(
               testCaseFromPrevSession ->

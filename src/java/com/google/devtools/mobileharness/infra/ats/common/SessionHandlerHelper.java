@@ -64,7 +64,7 @@ public class SessionHandlerHelper {
 
   public static boolean useTfRetry(
       boolean isAtsServerRequest, String xtsType, @Nullable TestSuiteVersion testSuiteVersion) {
-    if (Flags.instance().useTfRetry.getNonNull()) {
+    if (Flags.useTfRetry.getNonNull()) {
       return true;
     }
     if (isAtsServerRequest) {

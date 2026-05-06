@@ -441,7 +441,7 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
 
   /** Goes through all labs to allocate devices for the given single-device test. */
   private boolean allocateSingleDeviceJob(JobScheduleUnit job, TestLocator test) {
-    if (Flags.instance().enableSimpleSchedulerShuffle.getNonNull()) {
+    if (Flags.enableSimpleSchedulerShuffle.getNonNull()) {
       List<DeviceScheduleUnit> allDevices = new ArrayList<>();
       labs.values().forEach(simpleLabInfo -> allDevices.addAll(simpleLabInfo.getDevices()));
       Collections.shuffle(allDevices);
@@ -465,7 +465,7 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
   /** Checks whether the device can meet the job requirement. If so, allocates it to the test. */
   private boolean checkAndAllocateSingleDevice(
       JobScheduleUnit job, TestLocator test, DeviceScheduleUnit device, boolean fireEvent) {
-    List<String> deviceList = Flags.instance().deviceListToDebugAllocation.getNonNull();
+    List<String> deviceList = Flags.deviceListToDebugAllocation.getNonNull();
     boolean debugAllocation = matchDeviceList(deviceList, device.locator().id());
     if (debugAllocation) {
       logger.atWarning().log(
@@ -500,7 +500,7 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
   private boolean allocateAdhocTestbedJob(JobScheduleUnit job, TestLocator test) {
     Set<String> types = job.subDeviceSpecs().getAllSubDeviceTypes();
     Collection<SimpleLabInfo> labInfos = labs.values();
-    if (Flags.instance().enableSimpleSchedulerShuffle.getNonNull()) {
+    if (Flags.enableSimpleSchedulerShuffle.getNonNull()) {
       List<SimpleLabInfo> labList = new ArrayList<>(labInfos);
       Collections.shuffle(labList);
       labInfos = labList;

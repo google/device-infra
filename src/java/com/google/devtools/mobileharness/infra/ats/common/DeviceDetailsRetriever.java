@@ -59,7 +59,7 @@ public class DeviceDetailsRetriever {
    */
   public ImmutableMap<String, DeviceDetails> getAllLocalAndroidDevicesWithNeededDetails(
       SessionRequestInfo sessionRequestInfo) throws MobileHarnessException, InterruptedException {
-    if (Flags.instance().detectAdbDevice.getNonNull()) {
+    if (Flags.detectAdbDevice.getNonNull()) {
       return androidAdbInternalUtilProvider
           .get()
           .getDeviceSerialsByState(DeviceState.DEVICE, /* timeout= */ null)

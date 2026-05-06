@@ -33,12 +33,12 @@ public class AndroidDesktopExecutorDetector implements Detector {
 
   @Override
   public boolean precondition() {
-    return Flags.instance().androidDesktopExecutorDevicesNum.getNonNull() > 0;
+    return Flags.androidDesktopExecutorDevicesNum.getNonNull() > 0;
   }
 
   @Override
   public List<DetectionResult> detectDevices() {
-    return IntStream.range(1, Flags.instance().androidDesktopExecutorDevicesNum.getNonNull() + 1)
+    return IntStream.range(1, Flags.androidDesktopExecutorDevicesNum.getNonNull() + 1)
         .mapToObj(i -> "al_device_" + i)
         .map(deviceId -> DetectionResult.of(deviceId, DetectionType.ANDROID_DESKTOP_EXECUTOR))
         .collect(toImmutableList());

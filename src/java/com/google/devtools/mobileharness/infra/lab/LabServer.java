@@ -204,9 +204,9 @@ public class LabServer {
       String hostName = netUtil.getLocalHostName();
       DeviceIdManager deviceIdManager = DeviceIdManager.getInstance();
       DeviceConfigManager deviceConfigManager = null;
-      if (Flags.instance().enableDeviceConfigManager.getNonNull()) {
-        if (!Flags.instance().apiConfigFile.getNonNull().isEmpty()
-            || !Flags.instance().labDeviceConfigFile.getNonNull().isEmpty()) {
+      if (Flags.enableDeviceConfigManager.getNonNull()) {
+        if (!Flags.apiConfigFile.getNonNull().isEmpty()
+            || !Flags.labDeviceConfigFile.getNonNull().isEmpty()) {
           deviceConfigManager =
               new LocalFileBasedDeviceConfigManager(
                   deviceManager, deviceIdManager, apiConfig, new ApiConfigFileProcessor());
@@ -238,11 +238,10 @@ public class LabServer {
       LabSyncStub labSyncStub = null;
       JobSyncStub jobSyncStub = null;
 
-      if (Flags.instance().enableMasterSyncer.getNonNull()) {
+      if (Flags.enableMasterSyncer.getNonNull()) {
         MasterGrpcStubHelper helper =
             new MasterGrpcStubHelper(
-                ChannelFactory.createChannel(
-                    Flags.instance().masterGrpcTarget.getNonNull(), mainThreadPool));
+                ChannelFactory.createChannel(Flags.masterGrpcTarget.getNonNull(), mainThreadPool));
         labSyncStub = new LabSyncGrpcStub(helper);
         jobSyncStub = new JobSyncGrpcStub(helper);
       }
@@ -258,8 +257,8 @@ public class LabServer {
             new LabSyncHelper(
                 labSyncStub,
                 rpcPort,
-                Flags.instance().socketPort.getNonNull(),
-                Flags.instance().grpcPort.getNonNull(),
+                Flags.socketPort.getNonNull(),
+                Flags.grpcPort.getNonNull(),
                 nonConfigurableHostProperties);
         masterSyncerForDevice = new MasterSyncerForDevice(deviceManager, labSyncHelper);
         globalInternalBus.register(masterSyncerForDevice);
@@ -332,7 +331,7 @@ public class LabServer {
 
       // gRPC services for local RPC only.
       List<BindableService> localGrpcServices = new ArrayList<>(grpcServices);
-      if (Flags.instance().enableCloudFileTransfer.getNonNull()) {
+      if (Flags.enableCloudFileTransfer.getNonNull()) {
         CloudFileTransferServiceImpl cloudFileTransferServiceImpl =
             new CloudFileTransferServiceImpl(
                 Path.of(DirUtil.getCloudReceivedDir()), Path.of(DirCommon.getPublicDirRoot()));
@@ -364,21 +363,20 @@ public class LabServer {
                   })
               .getInstance(com.google.devtools.mobileharness.shared.labinfo.LabInfoService.class));
 
-      if (Flags.instance().enableMessagingService.getNonNull()) {
+      if (Flags.enableMessagingService.getNonNull()) {
         localGrpcServices.add(messagingService);
       }
 
       // Starts gRPC server for local requests only.
       NettyServerBuilder localGrpcServerBuilder =
-          NettyServerBuilder.forPort(Flags.instance().grpcPort.getNonNull())
-              .executor(mainThreadPool);
+          NettyServerBuilder.forPort(Flags.grpcPort.getNonNull()).executor(mainThreadPool);
       for (BindableService service : localGrpcServices) {
         localGrpcServerBuilder.addService(service);
       }
       localGrpcServerBuilder.build().start();
 
       // NOTE: Only for debug/test purpose.
-      if (Flags.instance().debugRandomExit.getNonNull()) {
+      if (Flags.debugRandomExit.getNonNull()) {
         // Every 5 mins, randomly exit.
         Runnable exitTask =
             () -> {
@@ -501,18 +499,18 @@ public class LabServer {
 
     HostProperties.Builder hostProperties = HostProperties.newBuilder();
 
-    if (Flags.instance().addRequiredDimensionForPartnerSharedPool.getNonNull()) {
+    if (Flags.addRequiredDimensionForPartnerSharedPool.getNonNull()) {
       LabDimensionManager.getInstance()
           .getRequiredLocalDimensions()
           .add(Name.POOL, Value.POOL_PARTNER_SHARED);
     }
 
-    if (Flags.instance().addSupportedDimensionForOmniModeUsage.get() != null) {
+    if (Flags.addSupportedDimensionForOmniModeUsage.get() != null) {
       LabDimensionManager.getInstance()
           .getSupportedLocalDimensions()
           .add(
               Name.OMNI_MODE_USAGE,
-              Ascii.toLowerCase(Flags.instance().addSupportedDimensionForOmniModeUsage.get()));
+              Ascii.toLowerCase(Flags.addSupportedDimensionForOmniModeUsage.get()));
     }
 
     // Supported dimensions

@@ -106,7 +106,7 @@ public final class MobileHarnessLogFormatter {
 
   /** Returns the default log formatter. */
   public static Formatter getDefaultFormatter() {
-    return Flags.instance().simplifiedLogFormat.getNonNull() ? SIMPLIFIED_FORMATTER : FORMATTER;
+    return Flags.simplifiedLogFormat.getNonNull() ? SIMPLIFIED_FORMATTER : FORMATTER;
   }
 
   private static String printThrowable(@Nullable Throwable e) {

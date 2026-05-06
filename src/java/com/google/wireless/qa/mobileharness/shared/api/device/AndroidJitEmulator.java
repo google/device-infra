@@ -140,7 +140,7 @@ public class AndroidJitEmulator extends AndroidDevice {
 
   @Override
   public void preRunTest(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
-    if (Flags.instance().noopJitEmulator.getNonNull()) {
+    if (Flags.noopJitEmulator.getNonNull()) {
       logger.atInfo().log(
           "JIT emulator %s is no-op. Tradefed will be responsible for actually launching the"
               + " emulator.",
@@ -148,7 +148,7 @@ public class AndroidJitEmulator extends AndroidDevice {
       return;
     }
 
-    String serviceUrl = Flags.instance().cloudOrchestratorServiceUrl.getNonNull();
+    String serviceUrl = Flags.cloudOrchestratorServiceUrl.getNonNull();
     if (serviceUrl.isEmpty()) {
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_NETWORK_ERROR,
@@ -169,7 +169,7 @@ public class AndroidJitEmulator extends AndroidDevice {
   @GuardedBy("cloudOrchestratorLock")
   private void createCvdWithClient(String serviceUrl, TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
-    String zone = Flags.instance().cloudOrchestratorZone.getNonNull();
+    String zone = Flags.cloudOrchestratorZone.getNonNull();
     CloudOrchestratorClient client = cloudOrchestratorClientFactory.create(serviceUrl, "v1", zone);
     client.setBasicAuth("user", "");
 
@@ -261,7 +261,7 @@ public class AndroidJitEmulator extends AndroidDevice {
   @Override
   public PostTestDeviceOp postRunTest(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
-    if (Flags.instance().noopJitEmulator.getNonNull()) {
+    if (Flags.noopJitEmulator.getNonNull()) {
       logger.atInfo().log("JIT emulator %s is no-op", deviceId);
       return PostTestDeviceOp.NONE;
     }
@@ -280,7 +280,7 @@ public class AndroidJitEmulator extends AndroidDevice {
       }
     }
 
-    String serviceUrl = Flags.instance().cloudOrchestratorServiceUrl.getNonNull();
+    String serviceUrl = Flags.cloudOrchestratorServiceUrl.getNonNull();
     if (!serviceUrl.isEmpty()) {
       logger.atInfo().log("Waiting for Cloud Orchestrator lock...");
       cloudOrchestratorLock.lockInterruptibly();
@@ -300,7 +300,7 @@ public class AndroidJitEmulator extends AndroidDevice {
   @GuardedBy("cloudOrchestratorLock")
   private void deleteCvdWithClient(String serviceUrl)
       throws MobileHarnessException, InterruptedException {
-    String zone = Flags.instance().cloudOrchestratorZone.getNonNull();
+    String zone = Flags.cloudOrchestratorZone.getNonNull();
     CloudOrchestratorClient client = cloudOrchestratorClientFactory.create(serviceUrl, "v1", zone);
     client.setBasicAuth("user", "");
 

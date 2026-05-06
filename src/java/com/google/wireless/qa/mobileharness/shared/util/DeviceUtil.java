@@ -47,7 +47,7 @@ public final class DeviceUtil {
    * @since lab server 4.158.0
    */
   public static boolean inSharedLab() {
-    return !Flags.instance().shouldManageDevices.getNonNull();
+    return !Flags.shouldManageDevices.getNonNull();
   }
 
   /**
@@ -63,7 +63,7 @@ public final class DeviceUtil {
    * into FailedDevice when the device frequently fails initialization.
    */
   public static boolean isFailedDeviceCreationEnabled() {
-    return Flags.instance().createFailedDevice.getNonNull();
+    return Flags.createFailedDevice.getNonNull();
   }
 
   /**
@@ -111,9 +111,7 @@ public final class DeviceUtil {
 
   /** Returns whether the ate dual stack is enabled. */
   public static boolean isAteDualStackEnabled() {
-    return Flags.instance().enableAteDualStack.get()
-        && !inSharedLab()
-        && new SystemUtil().isOnLinux();
+    return Flags.enableAteDualStack.get() && !inSharedLab() && new SystemUtil().isOnLinux();
   }
 
   private DeviceUtil() {}

@@ -24,7 +24,7 @@ import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.ActionOptions;
 import com.google.devtools.deviceaction.common.schemas.ActionOptions.Options;
 import com.google.devtools.deviceaction.common.schemas.Command;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.flags.core.FlagsManager;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -153,7 +153,7 @@ public final class FlagParser {
   public static ActionOptions parse(String[] args) throws DeviceActionException {
     ArrayList<String> leftOvers = new ArrayList<>(Arrays.asList(args));
     ActionOptions options = parseOptions(leftOvers);
-    Flags.parse(leftOvers);
+    FlagsManager.parse(leftOvers);
     return options;
   }
 

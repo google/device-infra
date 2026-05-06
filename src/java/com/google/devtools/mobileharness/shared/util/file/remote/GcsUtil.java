@@ -79,10 +79,10 @@ public abstract class GcsUtil {
   protected static final class Holder {
     static final ListeningExecutorService copyFileToCloudThreadpool =
         ThreadPools.createStandardThreadPoolWithMaxSize(
-            "gcs-util-copy-file-to-cloud", Flags.instance().gcsUtilThreads.getNonNull());
+            "gcs-util-copy-file-to-cloud", Flags.gcsUtilThreads.getNonNull());
     static final ListeningExecutorService copyFileToLocalThreadpool =
         ThreadPools.createStandardThreadPoolWithMaxSize(
-            "gcs-util-copy-file-to-local", Flags.instance().gcsUtilThreads.getNonNull());
+            "gcs-util-copy-file-to-local", Flags.gcsUtilThreads.getNonNull());
 
     static {
       ShutdownHookManager.getInstance()

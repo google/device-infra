@@ -68,6 +68,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stu
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.constant.inject.Annotations.MainArgs;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.flags.core.FlagsManager;
 import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
@@ -137,7 +138,7 @@ public class AtsConsole {
         DeviceInfraServiceUtil.getDeviceInfraServiceFlags(systemProperties);
     FlagsString finalDeviceInfraServiceFlags =
         preprocessDeviceInfraServiceFlags(deviceInfraServiceFlags);
-    Flags.parse(finalDeviceInfraServiceFlags.flags());
+    FlagsManager.parse(finalDeviceInfraServiceFlags.flags());
 
     // Prints notice message.
     System.out.println(NoticeMessageUtil.getNoticeMessage());
@@ -169,7 +170,7 @@ public class AtsConsole {
               Instant serverStartTime = Instant.now();
               Module olcServerModule =
                   olcServerModuleFactory.create(
-                      Flags.instance().enableAtsMode.getNonNull(),
+                      Flags.enableAtsMode.getNonNull(),
                       serverStartTime,
                       /* enableCloudPubsubMonitoring= */ false,
                       /* enableDatabase= */ false,
@@ -301,19 +302,19 @@ public class AtsConsole {
     CommandCompleterHolder.getInstance().initialize(commandCompleter);
     commandCompleter.startListingTestPlans();
 
-    if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
+    if (Flags.atsConsoleOlcServerEmbeddedMode.getNonNull()) {
       // Runs embedded mode OLC server.
       olcServerRunner.runBasic();
     }
 
     // Prepares OLC server.
-    if (Flags.instance().enableAtsConsoleOlcServer.getNonNull()) {
+    if (Flags.enableAtsConsoleOlcServer.getNonNull()) {
       serverPreparer.prepareOlcServer();
       serverPreparer.startSendingHeartbeats();
     }
 
     // Prints OLC server streaming log.
-    if (Flags.instance().enableAtsConsoleOlcServerLog.getNonNull()) {
+    if (Flags.enableAtsConsoleOlcServerLog.getNonNull()) {
       serverLogPrinter.enable(true);
     }
 
@@ -399,8 +400,7 @@ public class AtsConsole {
       exitUtil.cancelUnfinishedSessions("Exit console", /* aggressive= */ false);
       ListenableFuture<?> noRunningSessionsFuture =
           exitUtil.waitUntilNoRunningSessions(/* interruptLineReader= */ false);
-      Duration waitSessionTimeout =
-          Flags.instance().atsConsoleShutdownWaitSessionTimeout.getNonNull();
+      Duration waitSessionTimeout = Flags.atsConsoleShutdownWaitSessionTimeout.getNonNull();
       try {
         noRunningSessionsFuture.get(waitSessionTimeout.toMillis(), MILLISECONDS);
       } catch (TimeoutException e) {
@@ -415,7 +415,7 @@ public class AtsConsole {
         // Does nothing.
       }
 
-      if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
+      if (Flags.atsConsoleOlcServerEmbeddedMode.getNonNull()) {
         olcServerRunner.onShutdown();
       }
     }
@@ -432,7 +432,7 @@ public class AtsConsole {
 
   private static Optional<OlcServerModuleFactory> createOlcServerModuleFactory()
       throws MobileHarnessException {
-    if (!Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
+    if (!Flags.atsConsoleOlcServerEmbeddedMode.getNonNull()) {
       return Optional.empty();
     }
 

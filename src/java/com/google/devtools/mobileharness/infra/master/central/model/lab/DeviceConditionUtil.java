@@ -197,11 +197,11 @@ public final class DeviceConditionUtil {
                         || deviceClassName.equals(ANDROID_LOCAL_EMULATOR_TYPE))
             .isPresent()) {
       return timestamp
-          .plus(Flags.instance().ephemeralRemovalThreshold.get())
+          .plus(Flags.ephemeralRemovalThreshold.get())
           .isBefore(InstantSource.system().instant());
     } else {
       return timestamp
-          .plus(Flags.instance().deviceRemovalThreshold.get())
+          .plus(Flags.deviceRemovalThreshold.get())
           .isBefore(InstantSource.system().instant());
     }
   }
@@ -294,7 +294,7 @@ public final class DeviceConditionUtil {
 
   /** Gets the removal threshold. */
   public static Duration getRemovalThreshold() {
-    return Flags.instance().deviceRemovalThreshold.getNonNull();
+    return Flags.deviceRemovalThreshold.getNonNull();
   }
 
   private static Optional<String> getDeviceDimension(DeviceDao device, String dimension) {

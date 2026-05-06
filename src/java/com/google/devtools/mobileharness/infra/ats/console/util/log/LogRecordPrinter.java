@@ -33,8 +33,7 @@ public class LogRecordPrinter {
   @Inject
   LogRecordPrinter(ConsoleUtil consoleUtil) {
     this.consoleUtil = consoleUtil;
-    this.minLogRecordImportance =
-        Flags.instance().atsConsoleOlcServerMinLogRecordImportance.getNonNull();
+    this.minLogRecordImportance = Flags.atsConsoleOlcServerMinLogRecordImportance.getNonNull();
   }
 
   public void printLogRecord(LogRecord logRecord) {

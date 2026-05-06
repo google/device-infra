@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.control
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.flags.core.FlagsManager;
 import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
 import com.google.devtools.mobileharness.shared.util.signal.Signals;
@@ -56,7 +57,7 @@ public class OlcServer {
     ImmutableMap<String, String> systemProperties = SystemPropertiesUtil.getSystemProperties();
 
     // Parses flags.
-    Flags.parse(args);
+    FlagsManager.parse(args);
 
     // Prepares dirs.
     DirPreparer.prepareDirRoots();
@@ -70,11 +71,11 @@ public class OlcServer {
     Injector injector =
         Guice.createInjector(
             new OlcServerModule(
-                Flags.instance().enableAtsMode.getNonNull(),
+                Flags.enableAtsMode.getNonNull(),
                 serverStartTime,
-                Flags.instance().enableCloudPubsubMonitoring.getNonNull(),
+                Flags.enableCloudPubsubMonitoring.getNonNull(),
                 enableDatabase,
-                Flags.instance().enableGrpcRelay.getNonNull()),
+                Flags.enableGrpcRelay.getNonNull()),
             new CommonModule(asList(args), System.getenv(), systemProperties));
     OlcServerRunner serverRunner = injector.getInstance(OlcServerRunner.class);
     LogManager<LogRecords> logManager = injector.getInstance(new Key<>() {});
@@ -97,7 +98,7 @@ public class OlcServer {
         .addShutdownHook(serverRunner::onShutdown, "olc-server-shutdown");
 
     // Monitors known signals.
-    if (Flags.instance().monitorSignals.getNonNull()) {
+    if (Flags.monitorSignals.getNonNull()) {
       Signals.monitorKnownSignals();
     }
 
@@ -113,7 +114,7 @@ public class OlcServer {
 
   /** Validates whether the database can be enabled. */
   private static boolean validateDatabase() {
-    String jdbcUrl = Flags.instance().olcDatabaseJdbcUrl.get();
+    String jdbcUrl = Flags.olcDatabaseJdbcUrl.get();
     if (Strings.isNullOrEmpty(jdbcUrl)) {
       return false;
     }
@@ -123,8 +124,7 @@ public class OlcServer {
       }
     }
 
-    String socketFactoryClassName =
-        Flags.instance().olcDatabaseJdbcProperty.getNonNull().get("socketFactory");
+    String socketFactoryClassName = Flags.olcDatabaseJdbcProperty.getNonNull().get("socketFactory");
     if (!Strings.isNullOrEmpty(socketFactoryClassName)) {
       if (!checkClassExist(socketFactoryClassName)) {
         return false;

@@ -33,9 +33,7 @@ public final class LabConditionUtil {
   public static boolean isExpired(LabServerCondition condition) {
     Instant timestamp = Instant.ofEpochMilli(condition.getTimestampMs());
     return !condition.getIsMissing()
-        && timestamp
-            .plus(Flags.instance().labExpirationThreshold.getNonNull())
-            .isBefore(Instant.now());
+        && timestamp.plus(Flags.labExpirationThreshold.getNonNull()).isBefore(Instant.now());
   }
 
   /**
@@ -52,8 +50,8 @@ public final class LabConditionUtil {
           && timestamp
               .plus(
                   isEphemeralLab
-                      ? Flags.instance().ephemeralRemovalThreshold.get()
-                      : Flags.instance().labRemovalThreshold.getNonNull())
+                      ? Flags.ephemeralRemovalThreshold.get()
+                      : Flags.labRemovalThreshold.getNonNull())
               .isBefore(Instant.now());
     }
     return false;
@@ -69,12 +67,12 @@ public final class LabConditionUtil {
 
   /** Gets the expiration threshold. */
   public static Duration getExpirationThreshold() {
-    return Flags.instance().labExpirationThreshold.getNonNull();
+    return Flags.labExpirationThreshold.getNonNull();
   }
 
   /** Gets the removal threshold. */
   public static Duration getRemovalThreshold() {
-    return Flags.instance().labRemovalThreshold.getNonNull();
+    return Flags.labRemovalThreshold.getNonNull();
   }
 
   private LabConditionUtil() {}

@@ -138,7 +138,7 @@ class RunCommandHandler {
                 sessionInfo
                     .getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME)
                     .orElseThrow());
-    boolean disableTfResultLog = Flags.instance().xtsDisableTfResultLog.getNonNull();
+    boolean disableTfResultLog = Flags.xtsDisableTfResultLog.getNonNull();
     jobInfoList.forEach(
         jobInfo -> {
           jobInfo.params().add("xts_log_root_path", xtsLogsDir.toString());

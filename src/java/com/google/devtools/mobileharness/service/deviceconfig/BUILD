@@ -58,7 +58,7 @@ java_library(
         ":annotations",
         ":device_config_module",
         "//src/java/com/google/devtools/mobileharness/service/deviceconfig/rpc/service/grpc:device_config_grpc_impl",
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:flags_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@grpc-java//core",
         "@grpc-java//services:reflection",

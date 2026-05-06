@@ -132,7 +132,7 @@ public final class JobInitializer {
    */
   @VisibleForTesting
   static JobConfigsBuilder loadJobConfigsJsonFile() {
-    String path = Flags.instance().jobConfigsJson.get();
+    String path = Flags.jobConfigsJson.get();
     if (!Strings.isNullOrEmpty(path)) {
       try {
         String jsonFilePath =

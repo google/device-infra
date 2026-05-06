@@ -92,7 +92,7 @@ public class StackdriverStub {
   }
 
   private Optional<String> getCredentialFromFlag() throws MobileHarnessException {
-    String credentialFilePath = Flags.instance().stackdriverCredentialFile.get();
+    String credentialFilePath = Flags.stackdriverCredentialFile.get();
     if (credentialFilePath != null) {
       if (!fileUtil.isFileExist(credentialFilePath)) {
         throw new MobileHarnessException(

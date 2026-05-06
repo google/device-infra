@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.shared.util.base.BinaryPrefix;
 import com.google.devtools.mobileharness.shared.util.base.DataSize;
 import com.google.devtools.mobileharness.shared.util.base.SizeUnit;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.flags.core.FlagsManager;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -76,9 +77,9 @@ public final class CacheManagerServer {
 
   public static void main(String[] args) {
     // Parses flags.
-    Flags.parse(args);
+    FlagsManager.parse(args);
 
-    String persistentCacheDir = Flags.instance().persistentCacheDir.get();
+    String persistentCacheDir = Flags.persistentCacheDir.get();
     if (isNullOrEmpty(persistentCacheDir)) {
       logger.atSevere().log("Flag --persistent_cache_dir must be set.");
       System.exit(1);
@@ -91,11 +92,11 @@ public final class CacheManagerServer {
 
     DataSize maxCacheSize =
         DataSize.of(
-            Flags.instance().maxPersistentCacheSizeInGigabytes.getNonNull(),
+            Flags.maxPersistentCacheSizeInGigabytes.getNonNull(),
             BinaryPrefix.GIBI,
             SizeUnit.BYTES);
-    double trimToRatio = Flags.instance().cacheEvictionTrimToRatio.getNonNull();
-    Duration checkInterval = Flags.instance().cacheEvictionCheckInterval.getNonNull();
+    double trimToRatio = Flags.cacheEvictionTrimToRatio.getNonNull();
+    Duration checkInterval = Flags.cacheEvictionCheckInterval.getNonNull();
     ListeningExecutorService evictorExecutor =
         MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(4));
     Injector injector =

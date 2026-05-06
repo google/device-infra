@@ -87,7 +87,7 @@ public class ServerJobCreator extends XtsJobCreator {
       driverParams.put("xts_root_dir", sessionRequestInfo.xtsRootDir());
     } else {
       Optional<String> findAndroidXtsZip =
-          Flags.instance().enablePersistentCache.getNonNull()
+          Flags.enablePersistentCache.getNonNull()
               ? urlForWorkerResolve(sessionRequestInfo)
               : Optional.empty();
       findAndroidXtsZip = findAndroidXtsZip.or(() -> sessionRequestInfo.androidXtsZip());
@@ -100,7 +100,7 @@ public class ServerJobCreator extends XtsJobCreator {
           PathUtil.join(
               sessionRequestInfo.remoteRunnerFilePathPrefix().get(),
               PathUtil.makeRelative(
-                  Flags.instance().atsStoragePath.getNonNull(), driverParams.get("subplan_xml"))));
+                  Flags.atsStoragePath.getNonNull(), driverParams.get("subplan_xml"))));
     }
     if (sessionRequestInfo.atsServerTestEnvironment().isPresent()) {
       generateTradefedTestConfigFile(sessionRequestInfo, driverParams, jobDeviceCount);
@@ -138,8 +138,7 @@ public class ServerJobCreator extends XtsJobCreator {
           "xts_test_plan_file",
           PathUtil.join(
               sessionRequestInfo.remoteRunnerFilePathPrefix().get(),
-              PathUtil.makeRelative(
-                  Flags.instance().atsStoragePath.getNonNull(), commandPath.toString())));
+              PathUtil.makeRelative(Flags.atsStoragePath.getNonNull(), commandPath.toString())));
     } else {
       driverParams.put("xts_test_plan_file", commandPath.toString());
     }
@@ -267,7 +266,7 @@ public class ServerJobCreator extends XtsJobCreator {
             path ->
                 PathUtil.join(
                     remoteRunnerFilePathPrefix,
-                    PathUtil.makeRelative(Flags.instance().atsStoragePath.getNonNull(), path)))
+                    PathUtil.makeRelative(Flags.atsStoragePath.getNonNull(), path)))
         .collect(toImmutableList());
   }
 

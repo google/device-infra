@@ -37,10 +37,10 @@ public final class CacheBuilder {
 
     @Nullable
     private static CacheBuilder createInstance() {
-      if (!Flags.instance().enablePersistentCache.getNonNull()) {
+      if (!Flags.enablePersistentCache.getNonNull()) {
         return null;
       }
-      String rootDir = Flags.instance().persistentCacheDir.get();
+      String rootDir = Flags.persistentCacheDir.get();
       if (rootDir == null || !isRootDirValid(rootDir)) {
         return null;
       }

@@ -292,7 +292,7 @@ public class JobRunner implements Runnable {
     this.fileUtil = fileUtil;
     this.clock = clock;
     this.sleeper = sleeper;
-    if (Flags.instance().disableDeviceQuerier.getNonNull()
+    if (Flags.disableDeviceQuerier.getNonNull()
         || jobInfo.params().getBool(JobInfo.PARAM_DISABLE_DEVICE_QUERIER, false)) {
       this.deviceQuerier = null;
       this.suitableDeviceChecker = null;
@@ -1159,7 +1159,7 @@ public class JobRunner implements Runnable {
       }
 
       // Removes the gen file dirs of the job if flag is enabled.
-      if (Flags.instance().removeJobGenFilesWhenFinished.getNonNull() && setting.hasGenFileDir()) {
+      if (Flags.removeJobGenFilesWhenFinished.getNonNull() && setting.hasGenFileDir()) {
         removePath(setting.getGenFileDir(), "gen");
       }
 
@@ -1542,7 +1542,7 @@ public class JobRunner implements Runnable {
     if (deviceAllocator.isLocal()) {
       multiplier = LOCAL_POLL_ALLOCATION_INTERVAL_MULTIPLIER;
     } else if (jobInfo.tests().getNewTestCount() > 0) {
-      if (Boolean.TRUE.equals(Flags.instance().realTimeJob.getNonNull())) {
+      if (Boolean.TRUE.equals(Flags.realTimeJob.getNonNull())) {
         if (countPollAllocation < NUM_USE_REAL_TIME_POLL_ALLOCATION_INTERVAL_MULTIPLIER) {
           // Uses the real-time polling allocation interval multiplier when the job starts and
           // switches to the medium one after several attempts.
@@ -1595,17 +1595,13 @@ public class JobRunner implements Runnable {
           // TODO: after the long-term solution is launched, always generate
           // diagnostic.
           if (Runtime.getRuntime().maxMemory()
-              <= Flags.instance()
-                  .lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnostic
-                  .getNonNull()) {
+              <= Flags.lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnostic.getNonNull()) {
             String message =
                 String.format(
                     "Current max memory is set as %d, less than %d. To avoid OOM when querying all"
                         + " devices, we stop the diagnose.",
                     Runtime.getRuntime().maxMemory(),
-                    Flags.instance()
-                        .lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnostic
-                        .getNonNull());
+                    Flags.lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnostic.getNonNull());
             jobInfo
                 .warnings()
                 .addAndLog(

@@ -1299,7 +1299,7 @@ public class SystemUtil {
 
   /** Gets the java command path on the running machine. */
   public String getJavaCommandPath() {
-    return Flags.instance().javaCommandPath.getNonNull();
+    return Flags.javaCommandPath.getNonNull();
   }
 
   /** Returns the disk type of the host. It only works on macOS. */

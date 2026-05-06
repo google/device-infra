@@ -64,7 +64,7 @@ public final class NonXtsRunStrategy implements TradefedRunStrategy {
   @Override
   public String getConcatenatedJarPath(Path workDir, TradefedTestDriverSpec spec)
       throws MobileHarnessException {
-    Path tradefedDir = Path.of(Flags.instance().tradefedBinaryDir.get());
+    Path tradefedDir = Path.of(Flags.tradefedBinaryDir.get());
     ImmutableList.Builder<String> jarPaths = ImmutableList.builder();
     if (localFileUtil.isDirExist(tradefedDir)) {
       localFileUtil
@@ -87,9 +87,8 @@ public final class NonXtsRunStrategy implements TradefedRunStrategy {
     Map<String, String> environmentToTradefedConsole = new HashMap<>();
     environmentToTradefedConsole.put("PATH", envPath);
     environmentToTradefedConsole.put("TF_WORK_DIR", workDir.toString());
-    if (!Flags.instance().tradefedHostConfig.getNonNull().isEmpty()) {
-      environmentToTradefedConsole.put(
-          "TF_GLOBAL_CONFIG", Flags.instance().tradefedHostConfig.getNonNull());
+    if (!Flags.tradefedHostConfig.getNonNull().isEmpty()) {
+      environmentToTradefedConsole.put("TF_GLOBAL_CONFIG", Flags.tradefedHostConfig.getNonNull());
     } else if (device.hasDimension(Dimension.Name.DEVICE_CLASS_NAME, "AndroidJitEmulator")) {
       environmentToTradefedConsole.put(
           "TF_GLOBAL_CONFIG", AndroidJitEmulatorUtil.getHostConfigPath());

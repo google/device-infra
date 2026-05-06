@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.fe.v6.service.host.HostServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.shared.OssStubsModule;
 import com.google.devtools.mobileharness.fe.v6.shared.util.concurrent.OssExecutorModule;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.flags.core.FlagsManager;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -92,7 +93,7 @@ public final class OssFeServer {
   }
 
   public static void main(String[] args) throws IOException, InterruptedException {
-    Flags.parse(args);
+    FlagsManager.parse(args);
     Injector injector =
         Guice.createInjector(
             new OssExecutorModule(),
@@ -105,7 +106,7 @@ public final class OssFeServer {
               protected void configure() {
                 bind(Integer.class)
                     .annotatedWith(ServerPort.class)
-                    .toInstance(Flags.instance().feGrpcPort.getNonNull());
+                    .toInstance(Flags.feGrpcPort.getNonNull());
                 bind(InstantSource.class).toInstance(InstantSource.system());
               }
             });

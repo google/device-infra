@@ -30,6 +30,6 @@ public abstract class FastbootInitializeTemplate {
   public abstract FastbootParam initializeFastboot();
 
   protected String getFastbootPathFromUser() {
-    return Flags.instance().fastbootPathFromUser.getNonNull();
+    return Flags.fastbootPathFromUser.getNonNull();
   }
 }

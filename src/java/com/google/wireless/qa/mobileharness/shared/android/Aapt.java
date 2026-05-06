@@ -140,7 +140,7 @@ public class Aapt {
     }
 
     private static String getAaptPathExternal() {
-      String result = Flags.instance().aaptPath.getNonNull();
+      String result = Flags.aaptPath.getNonNull();
       if (result.isEmpty()) {
         logger.atInfo().log("AAPT path --aapt not specified, use \"aapt\" as AAPT path");
         result = "aapt";

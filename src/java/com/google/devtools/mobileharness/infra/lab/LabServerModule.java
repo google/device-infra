@@ -105,7 +105,7 @@ public class LabServerModule extends AbstractModule {
     install(new FactoryModuleBuilder().build(ExecTestServiceImpl.ExecTestServiceImplFactory.class));
     bind(DeviceHelperFactory.class).to(LocalDeviceManager.class);
     bind(EventBus.class).annotatedWith(GlobalEventBus.class).toInstance(globalInternalBus);
-    if (Flags.instance().enableDeviceTestDecoupling.getNonNull()) {
+    if (Flags.enableDeviceTestDecoupling.getNonNull()) {
       install(new AllocatedDeviceProvisioningModule());
       install(new ThreadPoolLauncherProvisioningModule());
     } else {

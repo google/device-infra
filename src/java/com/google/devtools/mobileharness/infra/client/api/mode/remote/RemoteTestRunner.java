@@ -339,7 +339,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
               "Skip initializing file transfer client and sending files "
                   + "because the test has been skipped.");
     } else {
-      if (Flags.instance().enableClientFileTransfer.getNonNull()) {
+      if (Flags.enableClientFileTransfer.getNonNull()) {
         sendJobFiles(testInfo);
       }
     }
@@ -365,7 +365,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
       testEngineLocator = LongevityTestHelper.resumeTestEngineLocator(testInfo).orElse(null);
       testInfo.log().atInfo().alsoTo(logger).log("Skip kickOffTest because it is a resumed job");
     } else {
-      if (Flags.instance().enableClientFileTransfer.getNonNull()) {
+      if (Flags.enableClientFileTransfer.getNonNull()) {
         sendTestFiles(testInfo);
       }
 
@@ -409,12 +409,12 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
 
     try {
       if (testKickedOff) {
-        if (Flags.instance().enableClientFileTransfer.getNonNull()) {
+        if (Flags.enableClientFileTransfer.getNonNull()) {
           updateTestEngineFileTransferClient(testInfo);
         }
         getTestGenData(testInfo);
       }
-      if (Flags.instance().enableClientFileTransfer.getNonNull()) {
+      if (Flags.enableClientFileTransfer.getNonNull()) {
         setFileTransferProperties(testInfo);
       }
 
@@ -675,7 +675,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
 
   /** Returns whether the file should be resolved in the client. */
   private static boolean resolveInClient(String filePath, Params jobParams) {
-    if (!Flags.instance().enableClientFileTransfer.getNonNull()) {
+    if (!Flags.enableClientFileTransfer.getNonNull()) {
       return false;
     }
 
@@ -699,7 +699,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
   }
 
   private static boolean cachePersistentFileInLab(String filePath, Params jobParams) {
-    return Flags.instance().enablePersistentCache.getNonNull()
+    return Flags.enablePersistentCache.getNonNull()
         && jobParams
             .getList(JobInfo.PARAM_PERISTENT_CACHE_FILE_LIST, ImmutableList.of())
             .contains(filePath);
@@ -822,11 +822,10 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     @Nullable Instant consecutiveNonFatalRpcErrorStartingTime = null;
     ExecTestStub execTestStub = getTestEngineExecTestStub();
     Duration rpcCallInterval =
-        getGetTestStatusRpcCallInterval(
-            testInfo, Flags.instance().getTestStatusRpcCallInterval.getNonNull());
+        getGetTestStatusRpcCallInterval(testInfo, Flags.getTestStatusRpcCallInterval.getNonNull());
 
     Duration maxConsecutiveErrorDuration =
-        Flags.instance().maxConsecutiveGetTestStatusErrorDuration.getNonNull();
+        Flags.maxConsecutiveGetTestStatusErrorDuration.getNonNull();
     if (maxConsecutiveErrorDuration.compareTo(MIN_CONSECUTIVE_GET_TEST_STATUS_ERROR_DURATION) < 0) {
       maxConsecutiveErrorDuration = MIN_CONSECUTIVE_GET_TEST_STATUS_ERROR_DURATION;
     } else if (maxConsecutiveErrorDuration.compareTo(MAX_CONSECUTIVE_GET_TEST_STATUS_ERROR_DURATION)
@@ -836,7 +835,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
 
     int count = 0;
     while (!Thread.currentThread().isInterrupted()) {
-      if (Flags.instance().realTimeTest.getNonNull().equals(Boolean.TRUE)
+      if (Flags.realTimeTest.getNonNull().equals(Boolean.TRUE)
           && count < NUM_USE_REAL_TIME_RPC_CALL_INTERVAL) {
         sleeper.sleep(REAL_TIME_RPC_CALL_INTERVAL);
       } else {
@@ -1026,7 +1025,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
             ? ""
             : String.format(" for sub_test %s(%s)", testInfo.locator().getName(), testId);
 
-    if (Flags.instance().enableClientFileTransfer.getNonNull()) {
+    if (Flags.enableClientFileTransfer.getNonNull()) {
       // Downloads test generated files.
       downloadTestGeneratedFiles(resp, testInfo, subTestLogPostfix);
     }

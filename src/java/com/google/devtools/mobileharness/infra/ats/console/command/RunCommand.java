@@ -143,7 +143,7 @@ public final class RunCommand implements Callable<Integer> {
   @Override
   public Integer call() throws MobileHarnessException, InterruptedException {
     try {
-      checkState(Flags.instance().enableAtsConsoleOlcServer.getNonNull());
+      checkState(Flags.enableAtsConsoleOlcServer.getNonNull());
       if (options.showHelp || options.showHelpAll) {
         return showHelpMessage(
             commandHelper.getXtsType(), consoleInfo.getXtsRootDirectoryNonEmpty());
@@ -346,10 +346,10 @@ public final class RunCommand implements Callable<Integer> {
     if (options.retryType != null) {
       runCommand.setRetryType(Ascii.toUpperCase(options.retryType.name()));
     }
-    if (Flags.instance().enableXtsDynamicDownloader.getNonNull()) {
+    if (Flags.enableXtsDynamicDownloader.getNonNull()) {
       runCommand.setEnableXtsDynamicDownload(true);
     }
-    if (Flags.instance().enableMoblyResultstoreUpload.getNonNull()) {
+    if (Flags.enableMoblyResultstoreUpload.getNonNull()) {
       runCommand.setEnableMoblyResultstoreUpload(true);
     }
     if (options.deviceTypeOptionsGroup != null) {
@@ -379,7 +379,7 @@ public final class RunCommand implements Callable<Integer> {
     if (options.maxSdk != null) {
       runCommand.setMaxSdkLevel(options.maxSdk);
     }
-    if (Flags.instance().enableCtsVerifierResultReporter.getNonNull()) {
+    if (Flags.enableCtsVerifierResultReporter.getNonNull()) {
       runCommand.setEnableCtsVerifierResultReporter(true);
     }
     if (consoleInfo.isFromCommandFile()) {
@@ -393,7 +393,7 @@ public final class RunCommand implements Callable<Integer> {
             .setCommandLineArgs(String.join(" ", commandLineArgs))
             .addAllSeparatedCommandLineArgs(commandLineArgs));
 
-    if (!Flags.instance().enableAtsConsoleOlcServerLog.getNonNull()) {
+    if (!Flags.enableAtsConsoleOlcServerLog.getNonNull()) {
       serverLogPrinter.enable(true);
     }
     ListenableFuture<AtsSessionPluginOutput> atsRunSessionFuture =
@@ -460,7 +460,7 @@ public final class RunCommand implements Callable<Integer> {
 
     private void disableServerLogPrinterIfNecessary() {
       int runningCommandCount = RUNNING_COMMAND_COUNT.decrementAndGet();
-      if (!Flags.instance().enableAtsConsoleOlcServerLog.getNonNull() && runningCommandCount == 0) {
+      if (!Flags.enableAtsConsoleOlcServerLog.getNonNull() && runningCommandCount == 0) {
         try {
           serverLogPrinter.enable(false);
         } catch (MobileHarnessException | InterruptedException e) {

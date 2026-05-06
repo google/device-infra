@@ -136,7 +136,7 @@ public class AndroidCleanAppsDecorator extends BaseDecorator implements AndroidC
       // detail information.
       int deviceSdkVersion =
           androidSystemSettingUtil.getDeviceSdkVersion(getDevice().getDeviceId());
-      if (!Flags.instance().disableWifiUtilFunc.getNonNull()
+      if (!Flags.disableWifiUtilFunc.getNonNull()
           && deviceSdkVersion >= AndroidVersion.PI.getStartSdkVersion()) {
         packagesToKeep.add(wifiUtil.getWifiUtilApkPackageName());
       }

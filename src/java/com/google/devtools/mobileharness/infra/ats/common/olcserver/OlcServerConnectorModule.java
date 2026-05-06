@@ -50,7 +50,7 @@ public class OlcServerConnectorModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    if (!Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
+    if (!Flags.atsConsoleOlcServerEmbeddedMode.getNonNull()) {
       install(new OlcServerGrpcChannelModule());
     }
   }

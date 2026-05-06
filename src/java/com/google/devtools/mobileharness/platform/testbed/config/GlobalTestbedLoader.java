@@ -98,7 +98,7 @@ public class GlobalTestbedLoader implements TestbedLoader {
 
   private GlobalTestbedLoader() {
     // GlobalTestbedLoader is a singleton.
-    this(new LocalFileUtil(), Flags.instance().testbedConfigPaths.get());
+    this(new LocalFileUtil(), Flags.testbedConfigPaths.get());
   }
 
   @VisibleForTesting

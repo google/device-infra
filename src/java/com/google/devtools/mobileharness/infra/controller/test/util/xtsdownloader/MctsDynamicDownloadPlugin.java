@@ -561,8 +561,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     synchronized (lock) {
       // e.g.
       // <xts_res_dir_root>/mcts_dynamic_download/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip
-      String dynamicDownloadDir =
-          Flags.instance().xtsResDirRoot.getNonNull() + "/mcts_dynamic_download";
+      String dynamicDownloadDir = Flags.xtsResDirRoot.getNonNull() + "/mcts_dynamic_download";
       String filePath = PathUtil.join(dynamicDownloadDir, subDirName);
       URLConnection connection = null;
       try {

@@ -51,7 +51,7 @@ public class ConfigServiceCapability {
       return universe instanceof UniverseScope.SelfUniverse;
     }
 
-    if (!Flags.instance().feConnectToConfigServer.get()) {
+    if (!Flags.feConnectToConfigServer.get()) {
       return false;
     }
 
@@ -77,7 +77,7 @@ public class ConfigServiceCapability {
                   : "self"));
     }
 
-    if (!Flags.instance().feConnectToConfigServer.getNonNull()) {
+    if (!Flags.feConnectToConfigServer.getNonNull()) {
       throw new UnsupportedOperationException("Configuration service is currently disabled.");
     }
 

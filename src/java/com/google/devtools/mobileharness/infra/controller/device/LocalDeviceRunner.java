@@ -630,7 +630,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
               test.getTestRunner().getTestExecutionUnit().locator()));
     }
 
-    if (Flags.instance().enableCachingReservedDevice.getNonNull()) {
+    if (Flags.enableCachingReservedDevice.getNonNull()) {
       containerDeviceCache.cache(
           device.getDeviceControlId(),
           device.getClass().getSimpleName(),
@@ -815,7 +815,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
   boolean checkDevice() throws InterruptedException, MobileHarnessException {
     if (clock
         .instant()
-        .minus(Flags.instance().checkDeviceInterval.getNonNull())
+        .minus(Flags.checkDeviceInterval.getNonNull())
         .isBefore(lastCheckDeviceTime)) {
       return false;
     }
@@ -830,7 +830,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
       updateExtraDimensions();
       return device.checkDevice();
     } catch (MobileHarnessException | RuntimeException | Error e) {
-      if (Flags.instance().ignoreCheckDeviceFailure.getNonNull()) {
+      if (Flags.ignoreCheckDeviceFailure.getNonNull()) {
         logger.atWarning().withCause(e).log("Ignored failure during checking device");
         // We don't want to trigger an update with partial device state changes.
         return false;
@@ -939,14 +939,14 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
   }
 
   private static boolean disableDeviceReboot() {
-    return Flags.instance().disableDeviceReboot.getNonNull();
+    return Flags.disableDeviceReboot.getNonNull();
   }
 
   private static boolean forceDeviceRebootAfterTest() {
-    return Flags.instance().forceDeviceRebootAfterTest.getNonNull();
+    return Flags.forceDeviceRebootAfterTest.getNonNull();
   }
 
   private static boolean prepareDeviceAfterTest() {
-    return Flags.instance().prepareDeviceAfterTest.getNonNull();
+    return Flags.prepareDeviceAfterTest.getNonNull();
   }
 }

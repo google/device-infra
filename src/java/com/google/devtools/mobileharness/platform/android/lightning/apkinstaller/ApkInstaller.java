@@ -473,7 +473,7 @@ public class ApkInstaller {
       SharedLogUtil.logMsg(
           logger, log, "Successfully installed package %s on device %s", packageName, deviceId);
     } finally {
-      if (Flags.instance().cacheInstalledApks.get()) {
+      if (Flags.cacheInstalledApks.get()) {
         device.setProperty(
             String.format(DEVICE_PROP_INSTALLED_APK_KEY_TEMPLATE, userId) + packageName,
             success ? apkMd5 : null);
@@ -692,7 +692,7 @@ public class ApkInstaller {
         SharedLogUtil.logMsg(logger, log, "Skip uninstalling %s", packageName);
       }
     } finally {
-      if (Flags.instance().cacheInstalledApks.get()) {
+      if (Flags.cacheInstalledApks.get()) {
         SharedLogUtil.logMsg(
             logger, log, "Clear device property for cached installed apk: %s", packageName);
         device.setProperty(
@@ -728,7 +728,7 @@ public class ApkInstaller {
     String installedApkMd5 = null;
     String propertyName =
         String.format(DEVICE_PROP_INSTALLED_APK_KEY_TEMPLATE, userId) + packageName;
-    if (Flags.instance().cacheInstalledApks.get()) {
+    if (Flags.cacheInstalledApks.get()) {
       installedApkMd5 = device.getProperty(propertyName);
       SharedLogUtil.logMsg(
           logger,
@@ -762,7 +762,7 @@ public class ApkInstaller {
 
     // Skips installation if MD5s match.
     if (apkMd5.equals(installedApkMd5)) {
-      if (Flags.instance().cacheInstalledApks.get()
+      if (Flags.cacheInstalledApks.get()
           && Strings.isNullOrEmpty(device.getProperty(propertyName))) {
         device.setProperty(propertyName, apkMd5);
       }

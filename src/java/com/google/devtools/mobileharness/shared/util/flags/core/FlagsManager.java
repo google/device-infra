@@ -36,6 +36,7 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.time.Duration;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
@@ -68,6 +69,11 @@ public final class FlagsManager {
   private static volatile boolean flagsScanned;
   private static volatile ImmutableMap<String, FlagEntry> allFlags;
 
+  /** See {@link #parse(String[])}. */
+  public static void parse(List<String> args) {
+    parse(args.toArray(new String[0]));
+  }
+
   /**
    * Parses command line arguments.
    *
@@ -94,6 +100,8 @@ public final class FlagsManager {
     registerConverters(cmd);
 
     cmd.parseArgs(args);
+
+    Flags.checkConstraints();
   }
 
   public static void resetAllFlagsForTest() {
@@ -136,13 +144,15 @@ public final class FlagsManager {
     CommandLine cmd = new CommandLine(CommandSpec.create().addOption(option));
     registerConverters(cmd);
 
-    if (option.arity().max() == 0) {
-      // Arity 0 options (e.g., --nofoo) take no arguments. Passing a value is invalid.
+    if (!entry.metadata().isPositive()) {
+      // Negative options (e.g., --nofoo) take no arguments. Passing a value is invalid.
       checkArgument(
           valueString == null,
-          "Invalid boolean syntax for %s: %s",
+          "Invalid negative boolean syntax for %s: %s",
           option.longestName(),
           valueString);
+      cmd.parseArgs(option.longestName());
+    } else if (option.arity().max() == 0 && valueString == null) {
       cmd.parseArgs(option.longestName());
     } else {
       // Uses "--option=value" to ensure boolean flags are set correctly.
@@ -248,7 +258,8 @@ public final class FlagsManager {
         OptionSpec.builder("--" + flagName)
             .description(spec.help())
             .type(type.getRawType())
-            .setter(new FlagSetter(flag));
+            .setter(new FlagSetter(flag))
+            .hasInitialValue(false);
 
     // Handles negative boolean type.
     if (!isPositive) {

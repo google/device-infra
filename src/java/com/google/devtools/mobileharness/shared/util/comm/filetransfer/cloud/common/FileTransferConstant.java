@@ -28,40 +28,39 @@ public final class FileTransferConstant {
   private static final int KILO_BYTE = 1 << 10;
 
   public static Duration getCloudCacheTtl() {
-    return Flags.instance().fileTransferCloudCacheTtl.getNonNull();
+    return Flags.fileTransferCloudCacheTtl.getNonNull();
   }
 
   public static Duration getLocalCacheTtl() {
-    return Flags.instance().fileTransferLocalCacheTtl.getNonNull();
+    return Flags.fileTransferLocalCacheTtl.getNonNull();
   }
 
   public static String getBucket() {
-    return Flags.instance().fileTransferBucket.getNonNull();
+    return Flags.fileTransferBucket.getNonNull();
   }
 
   public static int getMaximumAttempts() {
-    return Flags.instance().cloudFileTransferMaximumAttempts.getNonNull();
+    return Flags.cloudFileTransferMaximumAttempts.getNonNull();
   }
 
   public static Duration getTimeout() {
-    return Flags.instance().cloudFileTransferTimeout.getNonNull();
+    return Flags.cloudFileTransferTimeout.getNonNull();
   }
 
   public static long uploadShardSize() {
-    return Long.valueOf(Flags.instance().cloudFileTransferUploadShardSize.getNonNull()) * MEGA_BYTE;
+    return Long.valueOf(Flags.cloudFileTransferUploadShardSize.getNonNull()) * MEGA_BYTE;
   }
 
   public static long downloadShardSize() {
-    return Long.valueOf(Flags.instance().cloudFileTransferDownloadShardSize.getNonNull())
-        * MEGA_BYTE;
+    return Long.valueOf(Flags.cloudFileTransferDownloadShardSize.getNonNull()) * MEGA_BYTE;
   }
 
   public static Duration getInitialTimeout() {
-    return Flags.instance().cloudFileTransferInitialTimeout.getNonNull();
+    return Flags.cloudFileTransferInitialTimeout.getNonNull();
   }
 
   public static long getSmallFileSize() {
-    return Flags.instance().cloudFileTransferSmallFileSizeKb.getNonNull() * KILO_BYTE;
+    return Flags.cloudFileTransferSmallFileSizeKb.getNonNull() * KILO_BYTE;
   }
 
   private FileTransferConstant() {}

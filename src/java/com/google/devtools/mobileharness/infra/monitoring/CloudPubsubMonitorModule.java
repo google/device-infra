@@ -73,8 +73,7 @@ public final class CloudPubsubMonitorModule extends AbstractModule {
   @CloudPubsubTopic
   String provideCloudPubsubTopic() {
     return String.format(
-        "projects/%s/topics/%s",
-        Flags.instance().cloudPubsubProjectId.get(), Flags.instance().cloudPubsubTopicId.get());
+        "projects/%s/topics/%s", Flags.cloudPubsubProjectId.get(), Flags.cloudPubsubTopicId.get());
   }
 
   @Provides
@@ -89,10 +88,10 @@ public final class CloudPubsubMonitorModule extends AbstractModule {
       throws IOException, InterruptedException, ExecutionException {
 
     GoogleCredentials credentials = null;
-    if (Flags.instance().cloudPubsubCredFile.get() != null) {
+    if (Flags.cloudPubsubCredFile.get() != null) {
       credentials =
           GoogleCredentials.fromStream(
-              Files.newInputStream(Path.of(Flags.instance().cloudPubsubCredFile.getNonNull())));
+              Files.newInputStream(Path.of(Flags.cloudPubsubCredFile.getNonNull())));
     }
     return PublisherGrpc.newFutureStub(channel)
         .withCallCredentials(MoreCallCredentials.from(credentials));

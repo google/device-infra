@@ -78,8 +78,7 @@ public final class AtsDeviceRecoveryPluginTest {
     plugin.onTestStarting(testStartingEvent);
 
     verify(androidUtil).waitUntilReady(eq(DEVICE_ID), durationCaptor.capture());
-    assertThat(durationCaptor.getValue())
-        .isAtMost(Flags.instance().atsDeviceRecoveryTimeout.getNonNull());
+    assertThat(durationCaptor.getValue()).isAtMost(Flags.atsDeviceRecoveryTimeout.getNonNull());
     verify(adb).runShell(DEVICE_ID, "locksettings get-disabled");
     verify(adb, never()).runShell(DEVICE_ID, "locksettings clear --old 0000");
   }
@@ -92,8 +91,7 @@ public final class AtsDeviceRecoveryPluginTest {
     plugin.onTestEnding(testEndingEvent);
 
     verify(androidUtil).waitUntilReady(eq(DEVICE_ID), durationCaptor.capture());
-    assertThat(durationCaptor.getValue())
-        .isAtMost(Flags.instance().atsDeviceRecoveryTimeout.getNonNull());
+    assertThat(durationCaptor.getValue()).isAtMost(Flags.atsDeviceRecoveryTimeout.getNonNull());
     verify(adb).runShell(DEVICE_ID, "locksettings get-disabled");
     verify(adb, never()).runShell(DEVICE_ID, "locksettings clear --old 0000");
   }
@@ -110,8 +108,7 @@ public final class AtsDeviceRecoveryPluginTest {
     plugin.onTestEnding(testEndingEvent);
 
     verify(androidUtil).waitUntilReady(eq(DEVICE_ID), durationCaptor.capture());
-    assertThat(durationCaptor.getValue())
-        .isAtMost(Flags.instance().atsDeviceRecoveryTimeout.getNonNull());
+    assertThat(durationCaptor.getValue()).isAtMost(Flags.atsDeviceRecoveryTimeout.getNonNull());
     verify(adb).runShell(DEVICE_ID, "locksettings clear --old 0000");
   }
 
@@ -128,8 +125,7 @@ public final class AtsDeviceRecoveryPluginTest {
     plugin.onTestEnding(testEndingEvent);
 
     verify(androidUtil).waitUntilReady(eq(DEVICE_ID), durationCaptor.capture());
-    assertThat(durationCaptor.getValue())
-        .isAtMost(Flags.instance().atsDeviceRecoveryTimeout.getNonNull());
+    assertThat(durationCaptor.getValue()).isAtMost(Flags.atsDeviceRecoveryTimeout.getNonNull());
     verify(adb).runShell(DEVICE_ID, "locksettings clear --old 0000");
     verify(adb).runShell(DEVICE_ID, "locksettings clear --old 1234");
   }
@@ -146,8 +142,7 @@ public final class AtsDeviceRecoveryPluginTest {
     plugin.onTestEnding(testEndingEvent);
 
     verify(androidUtil).waitUntilReady(eq(DEVICE_ID), durationCaptor.capture());
-    assertThat(durationCaptor.getValue())
-        .isAtMost(Flags.instance().atsDeviceRecoveryTimeout.getNonNull());
+    assertThat(durationCaptor.getValue()).isAtMost(Flags.atsDeviceRecoveryTimeout.getNonNull());
     verify(adb).runShell(DEVICE_ID, "locksettings clear --old 0000");
     verify(adb).runShell(DEVICE_ID, "locksettings clear --old 1234");
     verify(adb).runShell(DEVICE_ID, "locksettings clear --old 12345");
@@ -173,8 +168,7 @@ public final class AtsDeviceRecoveryPluginTest {
     plugin.onTestEnding(testEndingEvent);
 
     verify(androidUtil).waitUntilReady(eq(DEVICE_ID), durationCaptor.capture());
-    assertThat(durationCaptor.getValue())
-        .isAtMost(Flags.instance().atsDeviceRecoveryTimeout.getNonNull());
+    assertThat(durationCaptor.getValue()).isAtMost(Flags.atsDeviceRecoveryTimeout.getNonNull());
     verify(adb).runShell(DEVICE_ID, "locksettings get-disabled");
     verify(adb, never()).runShell(DEVICE_ID, "locksettings clear --old 0000");
   }
@@ -198,8 +192,7 @@ public final class AtsDeviceRecoveryPluginTest {
     verify(androidUtil).waitUntilReady(eq(deviceId2), durationCaptor.capture());
     List<Duration> capturedDurations = durationCaptor.getAllValues();
     assertThat(capturedDurations).hasSize(2);
-    assertThat(capturedDurations.get(0))
-        .isAtMost(Flags.instance().atsDeviceRecoveryTimeout.getNonNull());
+    assertThat(capturedDurations.get(0)).isAtMost(Flags.atsDeviceRecoveryTimeout.getNonNull());
     assertThat(capturedDurations.get(1)).isAtMost(capturedDurations.get(0));
   }
 }

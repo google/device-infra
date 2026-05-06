@@ -35,7 +35,7 @@ public class LogDumper {
   /** Gets log dirs of ATS console and OLC server. */
   public static ImmutableList<String> getLogDirs(LogDirsType type) {
     boolean allLogDirs =
-        type == LogDirsType.ALL || !Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull();
+        type == LogDirsType.ALL || !Flags.atsConsoleOlcServerEmbeddedMode.getNonNull();
     return allLogDirs
         ? ImmutableList.of(OlcServerDirs.getLogDir(), AtsConsoleDirs.getLogDir())
         : ImmutableList.of(AtsConsoleDirs.getLogDir());

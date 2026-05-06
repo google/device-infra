@@ -153,7 +153,7 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
     sessionManager.abortSessions(unfinishedSessionIdsFromClient);
 
     // In embedded mode the OLC server won't be actually killed.
-    if (Flags.instance().atsConsoleOlcServerEmbeddedMode.getNonNull()) {
+    if (Flags.atsConsoleOlcServerEmbeddedMode.getNonNull()) {
       return responseBuilder.setSuccess(Success.getDefaultInstance()).build();
     }
 

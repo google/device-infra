@@ -64,14 +64,13 @@ public final class OssStubsModule extends AbstractModule {
   @Override
   protected void configure() {
     ManagedChannel olcServerChannel =
-        ChannelFactory.createLocalChannel(
-            Flags.instance().olcServerPort.getNonNull(), directExecutor());
+        ChannelFactory.createLocalChannel(Flags.olcServerPort.getNonNull(), directExecutor());
     bind(MasterGrpcStubHelper.class).toInstance(new MasterGrpcStubHelper(olcServerChannel));
     bind(LabInfoStub.class).to(LabInfoGrpcStub.class).in(Singleton.class);
     bind(JobSyncStub.class).to(JobSyncGrpcStub.class).in(Singleton.class);
     bind(LabSyncStub.class).to(LabSyncGrpcStub.class).in(Singleton.class);
 
-    if (Flags.instance().feConnectToConfigServer.getNonNull()) {
+    if (Flags.feConnectToConfigServer.getNonNull()) {
 
       install(new DeviceConfigGrpcStubModule());
 

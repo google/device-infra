@@ -87,8 +87,7 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
     this.threadPool = threadPool;
     this.proxyDeviceManager = proxyDeviceManager;
     this.scheduler = scheduler;
-    this.enableProxyMode =
-        proxyDeviceManager != null && Flags.instance().enableProxyMode.getNonNull();
+    this.enableProxyMode = proxyDeviceManager != null && Flags.enableProxyMode.getNonNull();
   }
 
   @Override

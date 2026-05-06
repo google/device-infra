@@ -32,7 +32,7 @@ public class DeviceConfigModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    switch (Flags.instance().configServiceStorageType.getNonNull()) {
+    switch (Flags.configServiceStorageType.getNonNull()) {
       case LOCAL_FILE -> bind(StorageClient.class).to(LocalFileStorageClient.class);
       case JDBC_CONNECTOR -> bind(StorageClient.class).to(JdbcStorageClient.class);
     }
@@ -46,7 +46,7 @@ public class DeviceConfigModule extends AbstractModule {
     properties.put("password", "");
 
     DatabaseConnections databaseConnections = new DatabaseConnections();
-    String jdbcUrl = Flags.instance().configServiceJdbcUrl.getNonNull();
+    String jdbcUrl = Flags.configServiceJdbcUrl.getNonNull();
     databaseConnections.initialize(jdbcUrl, properties, /* statementCacheSize= */ 100);
     return databaseConnections;
   }
@@ -55,13 +55,13 @@ public class DeviceConfigModule extends AbstractModule {
   @Singleton
   @Annotations.ServerPort
   int provideServerPort() {
-    return Flags.instance().configServiceGrpcPort.getNonNull();
+    return Flags.configServiceGrpcPort.getNonNull();
   }
 
   @Provides
   @Singleton
   @Annotations.LocalStorageRootDir
   String provideLocalStorageRootDir() {
-    return Flags.instance().configServiceLocalStorageDir.getNonNull();
+    return Flags.configServiceLocalStorageDir.getNonNull();
   }
 }

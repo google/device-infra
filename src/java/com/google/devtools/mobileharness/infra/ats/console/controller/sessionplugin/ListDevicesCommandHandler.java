@@ -112,7 +112,7 @@ class ListDevicesCommandHandler {
     this.threadPool = threadPool;
     this.clock = clock;
 
-    listDeviceTimeout = Flags.instance().atsConsoleListDeviceTimeout.getNonNull();
+    listDeviceTimeout = Flags.atsConsoleListDeviceTimeout.getNonNull();
   }
 
   /**
@@ -144,7 +144,7 @@ class ListDevicesCommandHandler {
 
   private ImmutableList<DeviceDescriptor> listDevices()
       throws MobileHarnessException, InterruptedException {
-    if (!Flags.instance().detectAdbDevice.getNonNull()) {
+    if (!Flags.detectAdbDevice.getNonNull()) {
       // Can't use status from ADB to accelerate the process.
       DeviceQueryResult deviceQueryResult = queryDevice();
       return deviceQueryResult.getDeviceInfoList().stream()
@@ -161,7 +161,7 @@ class ListDevicesCommandHandler {
     ImmutableMap<String, DeviceDescriptor> deviceInfoFromAdb =
         queryDeviceInfoFromAdb(listDevicesQueryInstant);
 
-    Duration listDeviceTimeout = Flags.instance().atsConsoleListDeviceTimeout.getNonNull();
+    Duration listDeviceTimeout = Flags.atsConsoleListDeviceTimeout.getNonNull();
 
     Duration remainingQueryDuration =
         listDeviceTimeout.minus(Duration.between(listDevicesQueryInstant, clock.instant()));

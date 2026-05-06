@@ -53,10 +53,10 @@ public class DeviceAdminUtil {
     this(
         new CommandExecutor(),
         new SystemUtil(),
-        Flags.instance().deviceAdminCliPath.getNonNull(),
-        Flags.instance().deviceAdminKmsKey.getNonNull(),
-        Flags.instance().deviceAdminKmsKeyCred.getNonNull(),
-        Flags.instance().deviceAdminApkPath.getNonNull());
+        Flags.deviceAdminCliPath.getNonNull(),
+        Flags.deviceAdminKmsKey.getNonNull(),
+        Flags.deviceAdminKmsKeyCred.getNonNull(),
+        Flags.deviceAdminApkPath.getNonNull());
   }
 
   @VisibleForTesting

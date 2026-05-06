@@ -116,7 +116,7 @@ public class TestPlanParser {
                     : String.format("%s in %s", testPlanName, rootTestPlan));
         // TODO: remove this once the bug is fixed. The MTS and Csuite tests are
         // failing in ATS UI 2.0 due to the test plan parsing error.
-        if (Flags.instance().enableAtsMode.getNonNull()) {
+        if (Flags.enableAtsMode.getNonNull()) {
           logger.atWarning().log("%s", errorMessage);
           continue;
         }
