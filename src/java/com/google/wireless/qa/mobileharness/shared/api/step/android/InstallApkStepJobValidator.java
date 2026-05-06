@@ -38,7 +38,15 @@ public class InstallApkStepJobValidator implements JobValidator {
 
   private static final String APK_EXT_NAME = ".apk";
 
-  private final LocalFileUtil fileUtil = new LocalFileUtil();
+  private final LocalFileUtil fileUtil;
+
+  public InstallApkStepJobValidator(LocalFileUtil fileUtil) {
+    this.fileUtil = fileUtil;
+  }
+
+  public InstallApkStepJobValidator() {
+    this(new LocalFileUtil());
+  }
 
   @Override
   public List<String> validate(JobInfo job) throws InterruptedException {
