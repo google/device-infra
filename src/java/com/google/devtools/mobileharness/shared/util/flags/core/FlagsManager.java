@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.shared.util.flags.core;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.stream.Collectors.joining;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
@@ -38,7 +39,6 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
-import java.util.stream.Collectors;
 import picocli.CommandLine;
 import picocli.CommandLine.IParameterPreprocessor;
 import picocli.CommandLine.ITypeConverter;
@@ -68,6 +68,17 @@ public final class FlagsManager {
   private static volatile boolean flagsScanned;
   private static volatile ImmutableMap<String, FlagEntry> allFlags;
 
+  /**
+   * Parses command line arguments.
+   *
+   * <p>In the Google internal environment, this method requires all flags to be recognized (either
+   * by this manager or is a Google flag). Any unrecognized flag will result in an exception,
+   * behaving similarly to {@code com.google.common.flags.Flags#parse}.
+   *
+   * <p>In the open-source environment, unrecognized flags are allowed and ignored.
+   *
+   * @param args the command line arguments
+   */
   @SuppressWarnings("AvoidObjectArrays")
   public static void parse(String[] args) {
     ensureFlagsScanned();
@@ -98,6 +109,12 @@ public final class FlagsManager {
     flagsClass = flagsClassForTest;
     flagsScanned = false;
     allFlags = null;
+  }
+
+  static boolean hasFlag(String name) {
+    ensureFlagsScanned();
+
+    return allFlags.containsKey(name);
   }
 
   static FlagEntry getFlagByName(String name) {
@@ -358,7 +375,7 @@ public final class FlagsManager {
                         + KEY_VALUE_SEPARATOR
                         + entry.substring(separatorIndex + 1).trim();
                   })
-              .collect(Collectors.joining(ENTRY_SEPARATOR));
+              .collect(joining(ENTRY_SEPARATOR));
       args.push(normalizedText);
 
       return false;

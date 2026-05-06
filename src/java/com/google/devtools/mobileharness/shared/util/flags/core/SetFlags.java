@@ -24,7 +24,12 @@ import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
-/** JUnit rule for overriding flag values during tests and restoring them automatically. */
+/**
+ * JUnit rule for overriding flag values during tests and restoring them automatically.
+ *
+ * <p>This rule supports both flags managed by {@link FlagsManager} and Google flags managed by
+ * {@code com.google.common.flags.testing.SetFlags}.
+ */
 public class SetFlags implements TestRule {
 
   private final Map<Flag<?>, FlagBackup> backups = new HashMap<>();
@@ -36,9 +41,11 @@ public class SetFlags implements TestRule {
    */
   @CanIgnoreReturnValue
   public SetFlags set(String name, String value) {
+
     FlagsManager.FlagEntry entry = FlagsManager.getFlagByName(name);
     saveBackup(entry.flag());
     FlagsManager.setFromString(entry, value);
+
     return this;
   }
 
@@ -49,15 +56,18 @@ public class SetFlags implements TestRule {
    */
   @CanIgnoreReturnValue
   public SetFlags reset(String name) {
+
     FlagsManager.FlagEntry entry = FlagsManager.getFlagByName(name);
     saveBackup(entry.flag());
     entry.flag().resetForTest();
+
     return this;
   }
 
   @Override
   public Statement apply(Statement base, Description description) {
-    return new SetFlagsStatement(base);
+    Statement statement = new SetFlagsStatement(base);
+    return statement;
   }
 
   private void saveBackup(Flag<?> flag) {

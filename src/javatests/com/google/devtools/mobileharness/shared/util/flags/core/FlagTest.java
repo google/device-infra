@@ -26,8 +26,10 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.Description;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.junit.runners.model.Statement;
 
 @RunWith(JUnit4.class)
 public class FlagTest {
@@ -176,24 +178,13 @@ public class FlagTest {
   }
 
   @Test
-  public void testParseArgs_boolean_withSpace_false() {
-    String[] args = {"--boolean_flag", "false"};
+  public void testParseArgs_boolean_withEquals_empty() {
+    String[] args = {"--boolean_flag="};
 
     FlagsManager.parse(args);
 
-    // Flag is STILL set to true, "false" is ignored/positional.
-    assertThat(FlagsForTesting.booleanFlag.get()).isTrue();
-    assertThat(FlagsForTesting.booleanFlag.wasSetFromString()).isTrue();
-  }
-
-  @Test
-  public void testParseArgs_boolean_withSpace_emptyString() {
-    String[] args = {"--boolean_flag", ""};
-
-    FlagsManager.parse(args);
-
-    // Flag is STILL set to true, "" is ignored/positional.
-    assertThat(FlagsForTesting.booleanFlag.get()).isTrue();
+    // We cannot find a way to make Picocli throw an exception for this case like Google Flag does.
+    assertThat(FlagsForTesting.booleanFlag.get()).isFalse();
     assertThat(FlagsForTesting.booleanFlag.wasSetFromString()).isTrue();
   }
 
@@ -318,6 +309,17 @@ public class FlagTest {
     assertThat(FlagsForTesting.nullPositiveIntegerFlag.get()).isEqualTo(5);
   }
 
+  @Test
+  public void testParseArgs_nullPositiveInt_invalidValue_throwsException() {
+    String[] args = {"--null_positive_integer_flag=-5"};
+
+    Exception e = assertThrows(Exception.class, () -> FlagsManager.parse(args));
+
+    Throwable rootCause = Throwables.getRootCause(e);
+    assertThat(rootCause).isInstanceOf(IllegalArgumentException.class);
+    assertThat(rootCause).hasMessageThat().contains("must be greater than 0");
+  }
+
   // ===============================================================================================
   // Collection Flags (List and Set)
   // ===============================================================================================
@@ -342,7 +344,7 @@ public class FlagTest {
 
   @Test
   public void testParseArgs_listString_spaceSeparated() {
-    String[] args = {"--string_list_flag", "a", "b"};
+    String[] args = {"--string_list_flag", "a", "--boolean_flag"};
 
     FlagsManager.parse(args);
 
@@ -383,6 +385,15 @@ public class FlagTest {
     FlagsManager.parse(args);
 
     assertThat(FlagsForTesting.integerListFlag.get()).containsExactly(2);
+  }
+
+  @Test
+  public void testParseArgs_listInteger_combined() {
+    String[] args = {"--integer_list_flag=1,2", "--integer_list_flag=3,4"};
+
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.integerListFlag.get()).containsExactly(3, 4).inOrder();
   }
 
   @Test
@@ -428,6 +439,15 @@ public class FlagTest {
     FlagsManager.parse(args);
 
     assertThat(FlagsForTesting.integerSetFlag.get()).containsExactly(2, 1, 3).inOrder();
+  }
+
+  @Test
+  public void testParseArgs_setInteger_duplicates_ordering() {
+    String[] args = {"--integer_set_flag=2,1,2"};
+
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.integerSetFlag.get()).containsExactly(2, 1).inOrder();
   }
 
   // ===============================================================================================
@@ -499,6 +519,15 @@ public class FlagTest {
     assertThrows(Exception.class, () -> FlagsManager.parse(args));
   }
 
+  @Test
+  public void testParseArgs_mapString_whitespaceTrimming() {
+    String[] args = {"--string_string_map_flag= k1 = v1 , k2 = v2 "};
+
+    FlagsManager.parse(args);
+
+    assertThat(FlagsForTesting.stringStringMapFlag.get()).containsExactly("k1", "v1", "k2", "v2");
+  }
+
   // ===============================================================================================
   // Edge Cases & Error Handling
   // ===============================================================================================
@@ -514,7 +543,6 @@ public class FlagTest {
   public void testUnknownFlagIgnored() {
     String[] args = {"--integer_flag=20", "--unknown=abc"};
 
-    // Our library defaults to allowing unknown flags unlike Google Flag.
     FlagsManager.parse(args);
 
     assertThat(FlagsForTesting.integerFlag.get()).isEqualTo(20);
@@ -632,6 +660,26 @@ public class FlagTest {
     Throwable rootCause = Throwables.getRootCause(e);
     assertThat(rootCause).isInstanceOf(IllegalArgumentException.class);
     assertThat(rootCause).hasMessageThat().contains("must be greater than 0");
+  }
+
+  @Test
+  public void testSetFlagsRule_restoresAfterTest() throws Throwable {
+    FlagsForTesting.stringFlag.resetForTest();
+    assertThat(FlagsForTesting.stringFlag.get()).isEqualTo("default_bar");
+
+    SetFlags localRule = new SetFlags();
+    Statement base =
+        new Statement() {
+          @Override
+          public void evaluate() {
+            localRule.set("string_flag", "value_in_test");
+            assertThat(FlagsForTesting.stringFlag.get()).isEqualTo("value_in_test");
+          }
+        };
+
+    localRule.apply(base, Description.TEST_MECHANISM).evaluate();
+
+    assertThat(FlagsForTesting.stringFlag.get()).isEqualTo("default_bar");
   }
 
   // ===============================================================================================
