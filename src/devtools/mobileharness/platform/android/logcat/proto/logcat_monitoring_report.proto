@@ -62,4 +62,5 @@ message LogcatMonitoringReport {
 
   repeated CrashEvent crash_events = 1;
   repeated DeviceEvent device_events = 2;
+  optional string crash_dialog_package = 3;
 }

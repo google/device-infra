@@ -25,9 +25,12 @@ import com.google.common.collect.LinkedListMultimap;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashedProcess;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatParser.LogcatLine;
+import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -63,10 +66,23 @@ public class NativeCrashDetector implements LineProcessor {
   // Mapping the crashed process to the pid of the 'DEBUG' tag line where the crash was logged.
   private final LinkedHashMap<CrashedProcess, Integer> detectedCrashEvents = new LinkedHashMap<>();
 
+  private final TestInfo testInfo;
+  private final Device device;
   private final MonitoringConfig monitoringConfig;
+  private final ExecutorService executorService;
+  private final CrashDialogDetector crashDialogDetector;
 
-  public NativeCrashDetector(MonitoringConfig monitoringConfig) {
+  public NativeCrashDetector(
+      TestInfo testInfo,
+      Device device,
+      MonitoringConfig monitoringConfig,
+      CrashDialogDetector crashDialogDetector,
+      ExecutorService executorService) {
+    this.testInfo = testInfo;
+    this.device = device;
     this.monitoringConfig = monitoringConfig;
+    this.crashDialogDetector = crashDialogDetector;
+    this.executorService = executorService;
   }
 
   @Override
@@ -80,6 +96,9 @@ public class NativeCrashDetector implements LineProcessor {
       return;
     }
     detectedCrashEvents.put(crashedProcess.get(), line.pid());
+    executorService.execute(
+        () ->
+            crashDialogDetector.scan(testInfo, device, monitoringConfig.reportAsFailurePackages()));
   }
 
   private Optional<CrashedProcess> processDebugLines(List<String> lines) {

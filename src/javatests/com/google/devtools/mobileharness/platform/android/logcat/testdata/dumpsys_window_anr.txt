@@ -1,0 +1,3 @@
+WINDOW MANAGER WINDOWS (dumpsys window windows)
+  mCurrentFocus=Window{3b8f918 u0 Application Not Responding: com.example.app}
+  mFocusedApp=AppWindowToken{8f1e210 token=Token{98c758b ActivityRecord{6b3c2a0 u0 com.example.app/.MainActivity t10}}}

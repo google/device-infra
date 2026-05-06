@@ -31,6 +31,8 @@ import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.dropbox.DropboxExtractor;
 import com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag;
+import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
+import com.google.devtools.mobileharness.platform.android.logcat.CrashDialogDetector;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashedProcess;
@@ -53,6 +55,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -78,6 +81,8 @@ public class AndroidLogcatMonitoringDecoratorTest {
   @Mock private JobInfo jobInfo;
   @Mock CountDownTimer timer;
   @Mock DropboxExtractor dropboxExtractor;
+  @Mock AndroidFileUtil androidFileUtil;
+  @Mock CrashDialogDetector crashDialogDetector;
 
   private LocalFileUtil localFileUtil;
   private Path decoratorOutputDir;
@@ -112,7 +117,14 @@ public class AndroidLogcatMonitoringDecoratorTest {
 
     AndroidLogcatMonitoringDecorator decorator =
         new AndroidLogcatMonitoringDecorator(
-            decoratedDriver, testInfo, adb, logcatLineProxy, localFileUtil, dropboxExtractor);
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector);
 
     decorator.run(testInfo);
 
@@ -142,7 +154,14 @@ public class AndroidLogcatMonitoringDecoratorTest {
 
     AndroidLogcatMonitoringDecorator decorator =
         new AndroidLogcatMonitoringDecorator(
-            decoratedDriver, testInfo, adb, logcatLineProxy, localFileUtil, dropboxExtractor);
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector);
 
     decorator.run(testInfo);
 
@@ -196,7 +215,14 @@ public class AndroidLogcatMonitoringDecoratorTest {
 
     AndroidLogcatMonitoringDecorator decorator =
         new AndroidLogcatMonitoringDecorator(
-            decoratedDriver, testInfo, adb, logcatLineProxy, localFileUtil, dropboxExtractor);
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector);
 
     decorator.run(testInfo);
     verify(dropboxExtractor)
@@ -234,7 +260,14 @@ public class AndroidLogcatMonitoringDecoratorTest {
 
     AndroidLogcatMonitoringDecorator decorator =
         new AndroidLogcatMonitoringDecorator(
-            decoratedDriver, testInfo, adb, logcatLineProxy, localFileUtil, dropboxExtractor);
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector);
 
     decorator.run(testInfo);
 
@@ -249,6 +282,7 @@ public class AndroidLogcatMonitoringDecoratorTest {
         .isEqualTo(LogcatMonitoringReport.Category.FAILURE);
     assertThat(report.getDeviceEventsList()).hasSize(1);
     assertThat(report.getDeviceEvents(0).getEventName()).isEqualTo("DEVICE_EVENT");
+    assertThat(report.hasCrashDialogPackage()).isFalse();
   }
 
   @Test
@@ -272,7 +306,14 @@ public class AndroidLogcatMonitoringDecoratorTest {
 
     AndroidLogcatMonitoringDecorator decorator =
         new AndroidLogcatMonitoringDecorator(
-            decoratedDriver, testInfo, adb, logcatLineProxy, localFileUtil, dropboxExtractor);
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector);
 
     MobileHarnessException thrown =
         assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
@@ -298,7 +339,14 @@ public class AndroidLogcatMonitoringDecoratorTest {
 
     AndroidLogcatMonitoringDecorator decorator =
         new AndroidLogcatMonitoringDecorator(
-            decoratedDriver, testInfo, adb, logcatLineProxy, localFileUtil, dropboxExtractor);
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector);
 
     decorator.run(testInfo);
   }
@@ -325,12 +373,108 @@ public class AndroidLogcatMonitoringDecoratorTest {
 
     AndroidLogcatMonitoringDecorator decorator =
         new AndroidLogcatMonitoringDecorator(
-            decoratedDriver, testInfo, adb, logcatLineProxy, localFileUtil, dropboxExtractor);
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector);
 
     MobileHarnessException thrown =
         assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
     assertThat(thrown.getErrorId())
         .isEqualTo(
             AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_ORCHESTRATOR_CONNECTION_FAILURE);
+  }
+
+  @Test
+  public void run_crashDialogDetected_throwsExceptionWithSpecSetting() throws Exception {
+    AndroidLogcatMonitoringDecoratorSpec spec =
+        AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+            .addReportAsFailurePackages("com.test.app")
+            .addErrorOnCrashPackages("com.test.infra")
+            .setThrowExceptionOnCrashDialogDetection(true)
+            .build();
+
+    when(jobInfo.combinedSpec(any(AndroidLogcatMonitoringDecorator.class))).thenReturn(spec);
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getLogcatEventsFromProcessors())
+        .thenReturn(
+            ImmutableList.of(
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.infra", 1, ProcessCategory.ERROR, LogcatEvent.CrashType.ANR),
+                    "crash_log")));
+    when(crashDialogDetector.crashDialogPackageName()).thenReturn(Optional.of("com.test.infra"));
+    when(crashDialogDetector.crashDialogScreenshot())
+        .thenReturn(Optional.of("/data/local/tmp/screenshot.png"));
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector);
+
+    MobileHarnessException thrown =
+        assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
+    assertThat(thrown.getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_CRASH_DIALOG_DETECTED);
+    verify(androidFileUtil)
+        .pull("deviceId", "/data/local/tmp/screenshot.png", decoratorOutputDir.toString());
+
+    Path reportPath = decoratorOutputDir.resolve("logcat_monitoring_report.proto");
+    LogcatMonitoringReport report =
+        LogcatMonitoringReport.parseFrom(
+            Files.readAllBytes(reportPath), ProtoExtensionRegistry.getGeneratedRegistry());
+    assertThat(report.getCrashDialogPackage()).isEqualTo("com.test.infra");
+  }
+
+  @Test
+  public void run_crashDialogDetected_doesNotThrowsException() throws Exception {
+    AndroidLogcatMonitoringDecoratorSpec spec =
+        AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+            .addReportAsFailurePackages("com.test.app")
+            .addErrorOnCrashPackages("com.test.infra")
+            .build();
+
+    when(jobInfo.combinedSpec(any(AndroidLogcatMonitoringDecorator.class))).thenReturn(spec);
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getLogcatEventsFromProcessors())
+        .thenReturn(
+            ImmutableList.of(
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.infra", 1, ProcessCategory.ERROR, LogcatEvent.CrashType.ANR),
+                    "crash_log")));
+    when(crashDialogDetector.crashDialogPackageName()).thenReturn(Optional.of("com.test.infra"));
+    when(crashDialogDetector.crashDialogScreenshot())
+        .thenReturn(Optional.of("/data/local/tmp/screenshot.png"));
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector);
+
+    decorator.run(testInfo);
+    verify(androidFileUtil)
+        .pull("deviceId", "/data/local/tmp/screenshot.png", decoratorOutputDir.toString());
+    Path reportPath = decoratorOutputDir.resolve("logcat_monitoring_report.proto");
+    LogcatMonitoringReport report =
+        LogcatMonitoringReport.parseFrom(
+            Files.readAllBytes(reportPath), ProtoExtensionRegistry.getGeneratedRegistry());
+    assertThat(report.getCrashDialogPackage()).isEqualTo("com.test.infra");
   }
 }

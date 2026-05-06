@@ -25,9 +25,12 @@ import com.google.common.collect.LinkedListMultimap;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashedProcess;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatParser.LogcatLine;
+import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,10 +53,23 @@ public class AndroidRuntimeCrashDetector implements LineProcessor {
   private final ConcurrentHashMap<Integer, CrashedProcess> detectedCrashEvents =
       new ConcurrentHashMap<>();
 
+  private final TestInfo testInfo;
+  private final Device device;
   private final MonitoringConfig monitoringConfig;
+  private final ExecutorService executorService;
+  private final CrashDialogDetector crashDialogDetector;
 
-  public AndroidRuntimeCrashDetector(MonitoringConfig config) {
+  public AndroidRuntimeCrashDetector(
+      TestInfo testInfo,
+      Device device,
+      MonitoringConfig config,
+      CrashDialogDetector crashDialogDetector,
+      ExecutorService executorService) {
+    this.testInfo = testInfo;
+    this.device = device;
     this.monitoringConfig = config;
+    this.crashDialogDetector = crashDialogDetector;
+    this.executorService = executorService;
   }
 
   @Override
@@ -68,6 +84,9 @@ public class AndroidRuntimeCrashDetector implements LineProcessor {
       return;
     }
     detectedCrashEvents.put(line.pid(), crashedProcess.get());
+    executorService.execute(
+        () ->
+            crashDialogDetector.scan(testInfo, device, monitoringConfig.reportAsFailurePackages()));
   }
 
   private Optional<CrashedProcess> processArtLines(List<String> lines) {

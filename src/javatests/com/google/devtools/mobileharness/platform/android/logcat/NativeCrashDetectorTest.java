@@ -17,35 +17,52 @@
 package com.google.devtools.mobileharness.platform.android.logcat;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashType;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.ProcessCategory;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
+import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class NativeCrashDetectorTest {
+  @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
   private static final String TEST_DATA_PREFIX =
       "javatests/com/google/devtools/mobileharness/platform/android/logcat/testdata/";
   private static final String CRASH_LOG_FILE = "native_crash.txt";
 
+  private static final MonitoringConfig MONITORING_CONFIG =
+      new MonitoringConfig(
+          ImmutableList.of("com.example.app"), ImmutableList.of(), ImmutableList.of());
+
+  @Mock TestInfo testInfo;
+  @Mock Device device;
+  @Mock CrashDialogDetector crashDialogDetector;
   private NativeCrashDetector crashDetector;
 
   @Before
   public void setUp() {
-    MonitoringConfig config =
-        new MonitoringConfig(
-            ImmutableList.of("com.example.app"), ImmutableList.of(), ImmutableList.of());
-    crashDetector = new NativeCrashDetector(config);
+    crashDetector =
+        new NativeCrashDetector(
+            testInfo, device, MONITORING_CONFIG, crashDialogDetector, newDirectExecutorService());
   }
 
   @Test
@@ -67,15 +84,18 @@ public final class NativeCrashDetectorTest {
     assertThat(crashEvent.process().type()).isEqualTo(CrashType.NATIVE);
     assertThat(crashEvent.crashLogs())
         .contains("pid: 12345, tid: 12345, name: com.example.app  >>> com.example.app <<<");
+    verify(crashDialogDetector, atLeastOnce())
+        .scan(testInfo, device, MONITORING_CONFIG.reportAsFailurePackages());
   }
 
   @Test
-  public void process_noCrash_noEvents() throws Exception {
+  public void process_noCrash_noEvents() {
     crashDetector.process(
         LogcatParser.parse("10-13 12:54:02.123  1234  5678 I ActivityManager: Some message").get());
     crashDetector.process(
         LogcatParser.parse("10-13 12:54:03.123  4321  8765 E NotDebug: Some error").get());
 
     assertThat(crashDetector.getEvents()).isEmpty();
+    verifyNoInteractions(crashDialogDetector);
   }
 }

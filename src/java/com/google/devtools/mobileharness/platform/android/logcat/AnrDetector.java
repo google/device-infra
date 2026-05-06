@@ -24,10 +24,13 @@ import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.Cra
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashType;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashedProcess;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatParser.LogcatLine;
+import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
 import java.util.regex.Pattern;
 
 /**
@@ -60,10 +63,23 @@ public class AnrDetector implements LineProcessor {
   // Mapping the crashed process to the log lines of the ANR event.
   private final LinkedHashMap<CrashedProcess, List<String>> detectedAnrEvents =
       new LinkedHashMap<>();
+  private final TestInfo testInfo;
+  private final Device device;
   private final MonitoringConfig monitoringConfig;
+  private final ExecutorService executorService;
+  private final CrashDialogDetector crashDialogDetector;
 
-  public AnrDetector(MonitoringConfig monitoringConfig) {
+  public AnrDetector(
+      TestInfo testInfo,
+      Device device,
+      MonitoringConfig monitoringConfig,
+      CrashDialogDetector crashDialogDetector,
+      ExecutorService executorService) {
+    this.testInfo = testInfo;
+    this.device = device;
     this.monitoringConfig = monitoringConfig;
+    this.crashDialogDetector = crashDialogDetector;
+    this.executorService = executorService;
   }
 
   @Override
@@ -89,6 +105,10 @@ public class AnrDetector implements LineProcessor {
         return;
       }
       detectedAnrEvents.put(crashedProcess.get(), ImmutableList.copyOf(anrLines));
+      executorService.execute(
+          () ->
+              crashDialogDetector.scan(
+                  testInfo, device, monitoringConfig.reportAsFailurePackages()));
       anrLines.clear();
     }
   }

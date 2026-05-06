@@ -80,4 +80,11 @@ message AndroidLogcatMonitoringDecoratorSpec {
   repeated DeviceEventConfig device_event_config = 5 [
     (field_detail) = { help: "Device events to scan for in the logcat stream." }
   ];
+
+  // Setting to throw an infra error on crash dialog detection.
+  optional bool throw_exception_on_crash_dialog_detection = 6
+      [(field_detail) = {
+        help: "Throw an exception to indicate infra error on "
+              "crash dialog detection."
+      }];
 }

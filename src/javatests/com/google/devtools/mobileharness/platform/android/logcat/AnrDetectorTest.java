@@ -17,37 +17,53 @@
 package com.google.devtools.mobileharness.platform.android.logcat;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashType;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.ProcessCategory;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
+import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class AnrDetectorTest {
+  @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
   private static final String TEST_DATA_PREFIX =
       "javatests/com/google/devtools/mobileharness/platform/android/logcat/testdata/";
   private static final String ANR_LOG_FILE = "anr_crash.txt";
 
+  private static final MonitoringConfig MONITORING_CONFIG =
+      new MonitoringConfig(
+          ImmutableList.of("com.app.anr", "com.app.anr2"), ImmutableList.of(), ImmutableList.of());
+
+  @Mock TestInfo testInfo;
+  @Mock Device device;
+  @Mock CrashDialogDetector crashDialogDetector;
+
   private AnrDetector anrDetector;
 
   @Before
   public void setUp() {
-    MonitoringConfig config =
-        new MonitoringConfig(
-            ImmutableList.of("com.app.anr", "com.app.anr2"),
-            ImmutableList.of(),
-            ImmutableList.of());
-    anrDetector = new AnrDetector(config);
+    anrDetector =
+        new AnrDetector(
+            testInfo, device, MONITORING_CONFIG, crashDialogDetector, newDirectExecutorService());
   }
 
   @Test
@@ -75,10 +91,12 @@ public final class AnrDetectorTest {
     assertThat(crashEvent2.process().category()).isEqualTo(ProcessCategory.FAILURE);
     assertThat(crashEvent2.process().type()).isEqualTo(CrashType.ANR);
     assertThat(crashEvent2.crashLogs()).contains("Reason: Test ANR reason 2");
+    verify(crashDialogDetector, atLeastOnce())
+        .scan(testInfo, device, MONITORING_CONFIG.reportAsFailurePackages());
   }
 
   @Test
-  public void process_noCrash_noEvents() throws Exception {
+  public void process_noCrash_noEvents() {
     anrDetector.process(
         LogcatParser.parse("10-13 12:54:02.123  1234  5678 I NotActivityManager: Some message")
             .get());
@@ -87,5 +105,6 @@ public final class AnrDetectorTest {
             .get());
 
     assertThat(anrDetector.getEvents()).isEmpty();
+    verifyNoInteractions(crashDialogDetector);
   }
 }
