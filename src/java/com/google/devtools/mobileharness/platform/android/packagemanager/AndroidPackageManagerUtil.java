@@ -131,11 +131,6 @@ public class AndroidPackageManagerUtil {
   @VisibleForTesting
   static final Duration DEFAULT_INSTALL_TIMEOUT = Constants.DEFAULT_INSTALL_TIMEOUT;
 
-  /** By default, multi-user is supported from API 17. */
-  @VisibleForTesting
-  static final int DEFAULT_MULTI_USER_START_SDK_VERSION =
-      AndroidVersion.JELLY_BEAN.getStartSdkVersion() + 1;
-
   /** By default, Dex Metadata installation is supported from API 28. */
   @VisibleForTesting
   static final int DEFAULT_INSTALL_DEX_METADATA_START_SDK_VERSION =
@@ -145,9 +140,6 @@ public class AndroidPackageManagerUtil {
   @VisibleForTesting
   static final int DEFAULT_INSTALL_MULTI_PACKAGE_START_SDK_VERSION =
       AndroidVersion.PI.getEndSdkVersion() + 1;
-
-  static final int DEFAULT_INSTALL_MULTIPLE_START_SDK_VERSION =
-      AndroidVersion.LOLLIPOP.getStartSdkVersion();
 
   /** Partial output of "adb shell pm disable [app]" when the command succeeds. */
   static final String OUTPUT_DISABLE_APP_SUCCESS = "new state: disabled";
@@ -306,8 +298,6 @@ public class AndroidPackageManagerUtil {
    */
   public void clearPackage(UtilArgs utilArgs, String packageName)
       throws MobileHarnessException, InterruptedException {
-    isMultiUserSupported(utilArgs, DEFAULT_MULTI_USER_START_SDK_VERSION);
-
     String output = "";
     Exception exception = null;
     String serial = utilArgs.serial();
@@ -365,8 +355,6 @@ public class AndroidPackageManagerUtil {
    */
   public void disablePackage(UtilArgs utilArgs, String packageName)
       throws MobileHarnessException, InterruptedException {
-    isMultiUserSupported(utilArgs, DEFAULT_MULTI_USER_START_SDK_VERSION);
-
     String output = "";
     Exception exception = null;
     String serial = utilArgs.serial();
@@ -438,23 +426,15 @@ public class AndroidPackageManagerUtil {
     }
   }
 
-  /**
-   * Disable package verifier option. Only works with API level >= 17, no effect when API level <
-   * 17. Supports production build.
-   */
+  /** Disable package verifier option. */
   public void disablePackageVerifier(String serial, int sdkVersion)
       throws MobileHarnessException, InterruptedException {
     disablePackageVerifier(UtilArgs.builder().setSerial(serial).setSdkVersion(sdkVersion).build());
   }
 
-  /**
-   * Disable package verifier option. Only works with API level >= 17, no effect when API level <
-   * 17. Supports production build.
-   */
+  /** Disable package verifier option. */
   public void disablePackageVerifier(UtilArgs utilArgs)
       throws MobileHarnessException, InterruptedException {
-    isMultiUserSupported(utilArgs, DEFAULT_MULTI_USER_START_SDK_VERSION);
-
     int sdkVersion = utilArgs.sdkVersion().orElse(0);
     try {
       // We only try to take action when API is >=17.
@@ -514,8 +494,6 @@ public class AndroidPackageManagerUtil {
    */
   public int getApexVersionCode(UtilArgs utilArgs, String packageName)
       throws MobileHarnessException, InterruptedException {
-    isMultiUserSupported(utilArgs, DEFAULT_MULTI_USER_START_SDK_VERSION);
-
     String serial = utilArgs.serial();
     int sdkVersion = utilArgs.sdkVersion().orElse(0);
 
@@ -1032,10 +1010,6 @@ public class AndroidPackageManagerUtil {
       boolean isRemoteInstall,
       @Nullable Duration installTimeout)
       throws MobileHarnessException, InterruptedException {
-    isMultiUserSupported(utilArgs, AndroidVersion.LOLLIPOP.getEndSdkVersion());
-    if (artifactPaths.size() > 1) {
-      isMultiApkSupported(utilArgs);
-    }
 
     String serial = utilArgs.serial();
     int sdkVersion = utilArgs.sdkVersion().orElse(0);
@@ -1295,7 +1269,6 @@ public class AndroidPackageManagerUtil {
       @Nullable Duration waitForStagedSessionReady,
       @Nullable Duration installTimeout)
       throws MobileHarnessException, InterruptedException {
-    isMultiUserSupported(utilArgs, DEFAULT_MULTI_USER_START_SDK_VERSION);
     if (utilArgs.sdkVersion().isPresent()
         && utilArgs.sdkVersion().getAsInt() < DEFAULT_INSTALL_MULTI_PACKAGE_START_SDK_VERSION) {
       throw new MobileHarnessException(
@@ -1444,8 +1417,6 @@ public class AndroidPackageManagerUtil {
    */
   public Set<String> listPackages(UtilArgs utilArgs, ListPackagesArgs listPackagesArgs)
       throws MobileHarnessException, InterruptedException {
-    isMultiUserSupported(utilArgs, DEFAULT_MULTI_USER_START_SDK_VERSION);
-
     String serial = utilArgs.serial();
     String output = "";
     try {
@@ -1491,8 +1462,6 @@ public class AndroidPackageManagerUtil {
    */
   public SortedMap<Integer, String> listPackagesWithUid(UtilArgs utilArgs, PackageType type)
       throws MobileHarnessException, InterruptedException {
-    isMultiUserSupported(utilArgs, DEFAULT_MULTI_USER_START_SDK_VERSION);
-
     String serial = utilArgs.serial();
     String[] adbCommand = new String[] {ADB_SHELL_LIST_PACKAGES, type.getOption(), "-U"};
     if (utilArgs.userId().isPresent()) {
@@ -1784,8 +1753,6 @@ public class AndroidPackageManagerUtil {
       return;
     }
 
-    isMultiUserSupported(utilArgs, DEFAULT_MULTI_USER_START_SDK_VERSION);
-
     String output = "";
     Exception exception = null;
     String serial = utilArgs.serial();
@@ -1843,13 +1810,6 @@ public class AndroidPackageManagerUtil {
   private static void isDexMetadataSupported(UtilArgs utilArgs) throws MobileHarnessException {
     isDeviceSdkVersionIsAtLeast(
         utilArgs, DEFAULT_INSTALL_DEX_METADATA_START_SDK_VERSION, "Dex metadata installation");
-  }
-
-  private static void isMultiApkSupported(UtilArgs utilArgs) throws MobileHarnessException {
-    if (utilArgs.sdkVersion().isPresent()) {
-      isDeviceSdkVersionIsAtLeast(
-          utilArgs, DEFAULT_INSTALL_MULTIPLE_START_SDK_VERSION, "Multi-apk");
-    }
   }
 
   /** Check if the device sdk version is at least {@code minSdkVersion}. */
