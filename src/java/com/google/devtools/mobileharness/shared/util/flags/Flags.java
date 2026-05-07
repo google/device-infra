@@ -32,6 +32,10 @@ import java.util.Map;
  *
  * <p>Remember to sort all flags by @FlagSpec.name.
  *
+ * <p>To parse flags at program entry points, please use {@code
+ * com.google.devtools.mobileharness.shared.util.flags.core.FlagsManager.parse()} instead of {@code
+ * com.google.common.flags.Flags.parse()}.
+ *
  * <p>To set flags in unit tests, please use {@code
  * com.google.devtools.mobileharness.shared.util.flags.core.SetFlags}
  *
