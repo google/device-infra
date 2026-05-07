@@ -47,6 +47,7 @@ oci_image(
     name = "acceptor_image",
     base = "@distroless_static",
     entrypoint = ["/dualconduit/acceptor"],
+    tags = ["deviceinfra_need_gcloud_auth"],
     tars = [":acceptor_tar"],
 )
 
@@ -54,6 +55,7 @@ oci_load(
     name = "acceptor_load",
     image = ":acceptor_image",
     repo_tags = ["dualconduit/acceptor:latest"],
+    tags = ["deviceinfra_need_gcloud_auth"],
 )
 
 oci_push(

@@ -49,6 +49,7 @@ oci_image(
     name = "dialer_image",
     base = "@distroless_static",
     entrypoint = ["/dualconduit/dialer"],
+    tags = ["deviceinfra_need_gcloud_auth"],
     tars = [":dialer_tar"],
 )
 
@@ -56,6 +57,7 @@ oci_load(
     name = "dialer_load",
     image = ":dialer_image",
     repo_tags = ["dualconduit/dialer:latest"],
+    tags = ["deviceinfra_need_gcloud_auth"],
 )
 
 oci_push(

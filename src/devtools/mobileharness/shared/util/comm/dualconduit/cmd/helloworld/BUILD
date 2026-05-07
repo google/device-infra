@@ -46,6 +46,7 @@ oci_image(
     name = "helloworld_image",
     base = "@distroless_static",
     entrypoint = ["/dualconduit/helloworld"],
+    tags = ["deviceinfra_need_gcloud_auth"],
     tars = [":helloworld_tar"],
 )
 
@@ -53,6 +54,7 @@ oci_load(
     name = "helloworld_load",
     image = ":helloworld_image",
     repo_tags = ["dualconduit/helloworld:latest"],
+    tags = ["deviceinfra_need_gcloud_auth"],
 )
 
 oci_push(
