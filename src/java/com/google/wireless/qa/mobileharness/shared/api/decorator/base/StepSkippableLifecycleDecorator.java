@@ -127,17 +127,28 @@ public abstract class StepSkippableLifecycleDecorator extends AbstractLifecycleD
 
   /**
    * Saves state into JobInfo properties to be relayed (e.g. by session plugin) to a subsequent job.
+   *
+   * <p><b>Note:</b> The state is namespaced to the combination of job (via {@link JobInfo}),
+   * decorator, and device to avoid collisions.
+   *
+   * @param deviceId the device control ID or device UUID, as long as it is unique among devices
+   *     within a job
+   * @implNote The property key in {@link JobInfo} is formatted as: {@code
+   *     step_skippable_lifecycle_decorator_state::<device-id>::<decorator-class-name>::<key>}.
    */
-  protected final void setState(JobInfo jobInfo, String key, String value) {
-    StepSkippableLifecycleDecoratorUtil.setState(jobInfo, getNamespacedKey(key), value);
+  protected final void setState(JobInfo jobInfo, String deviceId, String key, String value) {
+    StepSkippableLifecycleDecoratorUtil.setState(
+        jobInfo, deviceId, getClass().getName(), key, value);
   }
 
-  /** Retrieves state that was saved by this decorator (e.g. from a prior job). */
-  protected final Optional<String> getState(JobInfo jobInfo, String key) {
-    return StepSkippableLifecycleDecoratorUtil.getState(jobInfo, getNamespacedKey(key));
-  }
-
-  private String getNamespacedKey(String key) {
-    return getClass().getSimpleName() + "_" + key;
+  /**
+   * Retrieves state that was saved by this decorator (e.g. from a prior job).
+   *
+   * @param deviceId the device control ID or device UUID, as long as it is unique among devices
+   *     within a job
+   */
+  protected final Optional<String> getState(JobInfo jobInfo, String deviceId, String key) {
+    return StepSkippableLifecycleDecoratorUtil.getState(
+        jobInfo, deviceId, getClass().getName(), key);
   }
 }

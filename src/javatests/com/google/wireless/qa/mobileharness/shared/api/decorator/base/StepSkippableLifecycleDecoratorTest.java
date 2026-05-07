@@ -150,13 +150,12 @@ public final class StepSkippableLifecycleDecoratorTest {
   @Test
   public void statePersistance_success() throws Exception {
     decorator = new TestStepSkippableLifecycleDecorator(decorated, testInfo);
-    decorator.setState(testInfo.jobInfo(), "key1", "value1");
+    decorator.setState(jobInfo, "device_id", "key1", "value1");
 
-    Optional<String> val = decorator.getState(testInfo.jobInfo(), "key1");
+    Optional<String> val = decorator.getState(jobInfo, "device_id", "key1");
     assertThat(val).hasValue("value1");
-    assertThat(
-            properties.get(
-                "step_skippable_lifecycle_decorator_state_TestStepSkippableLifecycleDecorator_key1"))
-        .isEqualTo("value1");
+    String expectedKey =
+        "step_skippable_lifecycle_decorator_state::device_id::com.google.wireless.qa.mobileharness.shared.api.decorator.base.StepSkippableLifecycleDecoratorTest$TestStepSkippableLifecycleDecorator::key1";
+    assertThat(properties.get(expectedKey)).isEqualTo("value1");
   }
 }

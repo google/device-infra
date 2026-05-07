@@ -32,7 +32,7 @@ public final class StepSkippableLifecycleDecoratorUtilTest {
   private JobInfo jobInfo;
 
   @Before
-  public void setUp() {
+  public void setUp() throws Exception {
     jobInfo =
         JobInfo.newBuilder()
             .setLocator(new JobLocator("job_id", "job_name"))
@@ -43,25 +43,60 @@ public final class StepSkippableLifecycleDecoratorUtilTest {
 
   @Test
   public void setState_getState_success() {
-    StepSkippableLifecycleDecoratorUtil.setState(jobInfo, "my_key", "my_value");
+    StepSkippableLifecycleDecoratorUtil.setState(
+        jobInfo, "device_id", "MyDecorator", "my_key", "my_value");
 
-    assertThat(StepSkippableLifecycleDecoratorUtil.getState(jobInfo, "my_key"))
+    assertThat(
+            StepSkippableLifecycleDecoratorUtil.getState(
+                jobInfo, "device_id", "MyDecorator", "my_key"))
         .hasValue("my_value");
 
     // Also verify the exact property name stored in JobInfo properties
-    assertThat(jobInfo.properties().get("step_skippable_lifecycle_decorator_state_my_key"))
-        .isEqualTo("my_value");
+    String expectedKey = "step_skippable_lifecycle_decorator_state::device_id::MyDecorator::my_key";
+    assertThat(jobInfo.properties().get(expectedKey)).isEqualTo("my_value");
   }
 
   @Test
   public void getState_notFound_returnsEmpty() {
-    assertThat(StepSkippableLifecycleDecoratorUtil.getState(jobInfo, "unknown_key")).isEmpty();
+    assertThat(
+            StepSkippableLifecycleDecoratorUtil.getState(
+                jobInfo, "device_id", "MyDecorator", "unknown_key"))
+        .isEmpty();
   }
 
   @Test
-  public void relayStates_success() {
-    StepSkippableLifecycleDecoratorUtil.setState(jobInfo, "key1", "val1");
-    StepSkippableLifecycleDecoratorUtil.setState(jobInfo, "key2", "val2");
+  public void setState_differentTestsDevicesDecorators_noCollision() throws Exception {
+    StepSkippableLifecycleDecoratorUtil.setState(
+        jobInfo, "device_id", "Decorator1", "key", "value1");
+    StepSkippableLifecycleDecoratorUtil.setState(
+        jobInfo, "device_id", "Decorator1", "key", "value2");
+    StepSkippableLifecycleDecoratorUtil.setState(
+        jobInfo, "device_id_2", "Decorator1", "key", "value3");
+    StepSkippableLifecycleDecoratorUtil.setState(
+        jobInfo, "device_id", "Decorator2", "key", "value4");
+
+    // Different tests on the same device will collide if they use the same key
+    assertThat(
+            StepSkippableLifecycleDecoratorUtil.getState(jobInfo, "device_id", "Decorator1", "key"))
+        .hasValue("value2");
+    assertThat(
+            StepSkippableLifecycleDecoratorUtil.getState(jobInfo, "device_id", "Decorator1", "key"))
+        .hasValue("value2");
+    assertThat(
+            StepSkippableLifecycleDecoratorUtil.getState(
+                jobInfo, "device_id_2", "Decorator1", "key"))
+        .hasValue("value3");
+    assertThat(
+            StepSkippableLifecycleDecoratorUtil.getState(jobInfo, "device_id", "Decorator2", "key"))
+        .hasValue("value4");
+  }
+
+  @Test
+  public void relayStates_success() throws Exception {
+    StepSkippableLifecycleDecoratorUtil.setState(
+        jobInfo, "device_id", "MyDecorator", "key1", "val1");
+    StepSkippableLifecycleDecoratorUtil.setState(
+        jobInfo, "device_id", "MyDecorator", "key2", "val2");
 
     // Add an unrelated property to ensure it's filtered out
     jobInfo.properties().add("some_other_key", "some_value");
@@ -75,8 +110,15 @@ public final class StepSkippableLifecycleDecoratorUtilTest {
 
     StepSkippableLifecycleDecoratorUtil.relayStates(jobInfo, jobInfo2);
 
-    assertThat(StepSkippableLifecycleDecoratorUtil.getState(jobInfo2, "key1")).hasValue("val1");
-    assertThat(StepSkippableLifecycleDecoratorUtil.getState(jobInfo2, "key2")).hasValue("val2");
+    // Relayed state should be retrievable if we use the same device id and key
+    assertThat(
+            StepSkippableLifecycleDecoratorUtil.getState(
+                jobInfo2, "device_id", "MyDecorator", "key1"))
+        .hasValue("val1");
+    assertThat(
+            StepSkippableLifecycleDecoratorUtil.getState(
+                jobInfo2, "device_id", "MyDecorator", "key2"))
+        .hasValue("val2");
     assertThat(jobInfo2.properties().get("some_other_key")).isNull();
   }
 }

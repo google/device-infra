@@ -25,28 +25,35 @@ import java.util.Optional;
  */
 public final class StepSkippableLifecycleDecoratorUtil {
 
-  private static final String STATE_PREFIX = "step_skippable_lifecycle_decorator_state_";
+  private static final String STATE_PREFIX = "step_skippable_lifecycle_decorator_state";
+  private static final String KEY_SEPARATOR = "::";
 
   private StepSkippableLifecycleDecoratorUtil() {}
 
   /**
    * Saves state into JobInfo properties to be relayed (e.g. by session plugin) to a subsequent job.
    */
-  public static void setState(JobInfo jobInfo, String key, String value) {
-    String namespacedKey = STATE_PREFIX + key;
+  public static void setState(
+      JobInfo jobInfo, String deviceId, String className, String key, String value) {
+    String namespacedKey = createNamespacedKey(deviceId, className, key);
     jobInfo.properties().add(namespacedKey, value);
   }
 
   /** Retrieves state that was saved previously (e.g. from a prior job). */
-  public static Optional<String> getState(JobInfo jobInfo, String key) {
-    String namespacedKey = STATE_PREFIX + key;
+  public static Optional<String> getState(
+      JobInfo jobInfo, String deviceId, String className, String key) {
+    String namespacedKey = createNamespacedKey(deviceId, className, key);
     return jobInfo.properties().getOptional(namespacedKey);
+  }
+
+  private static String createNamespacedKey(String deviceId, String className, String key) {
+    return String.join(KEY_SEPARATOR, STATE_PREFIX, deviceId, className, key);
   }
 
   /** Relays relevant states from {@code job1} to {@code job2}. */
   public static void relayStates(JobInfo job1, JobInfo job2) {
     job1.properties().getAll().entrySet().stream()
-        .filter(entry -> entry.getKey().startsWith(STATE_PREFIX))
+        .filter(entry -> entry.getKey().startsWith(STATE_PREFIX + KEY_SEPARATOR))
         .forEach(entry -> job2.properties().add(entry.getKey(), entry.getValue()));
   }
 }
