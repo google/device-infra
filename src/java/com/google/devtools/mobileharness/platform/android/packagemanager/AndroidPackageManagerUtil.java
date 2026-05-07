@@ -1011,53 +1011,26 @@ public class AndroidPackageManagerUtil {
       @Nullable Duration installTimeout)
       throws MobileHarnessException, InterruptedException {
 
+    disablePackageVerifier(utilArgs); // for b/27476500
+
     String serial = utilArgs.serial();
-    int sdkVersion = utilArgs.sdkVersion().orElse(0);
-    String[] installFiles = artifactPaths.toArray(new String[0]);
-    String[] installCommand =
-        isRemoteInstall
-            ? ADB_SHELL_INSTALL_PACKAGE.toArray(new String[0])
-            : installFiles.length > 1
-                ? new String[] {"install-multiple"}
-                : new String[] {"install"};
-    installCommand = ArrayUtil.join(installCommand, installCmdArgs.getInstallArgsArray(sdkVersion));
-
-    if (utilArgs.userId().isPresent()) {
-      installCommand = ArrayUtil.join(installCommand, "--user", utilArgs.userId().get());
-    }
-
-    // Installs on external storage. The command is applicable for API >=15. Unknown for API < 15.
-    // https://developer.android.com/studio/command-line/adb install [options] path section
-    String[] installOnExternalCommand = ArrayUtil.join(installCommand, "--install-location", "2");
-    installCommand = ArrayUtil.join(installCommand, installFiles);
-    installOnExternalCommand = ArrayUtil.join(installOnExternalCommand, installFiles);
-
-    LineCallback lineCallback =
-        LineCallback.stopWhen(
-            // The command can be hung with Android SDK 21+ release key devices. Cancels it once
-            // got the signal. See b/18564117.
-            line -> line.startsWith(OUTPUT_SUCCESS) || line.startsWith(OUTPUT_FAILURE));
-
-    disablePackageVerifier(serial, sdkVersion); // for b/27476500
-
     String output;
     String outputByExternal = null;
-    boolean installThrowsException = false;
+
     try {
-      var timeout = installTimeout == null ? DEFAULT_INSTALL_TIMEOUT : installTimeout;
       output =
-          isRemoteInstall
-              ? adb.runShell(serial, installCommand, timeout, lineCallback)
-              : adb.run(serial, installCommand, timeout, lineCallback);
+          installPackageNoRetry(
+              utilArgs, installCmdArgs, isRemoteInstall, artifactPaths, installTimeout);
+      logger.atInfo().log(
+          "Successfully installed package %s to device %s:%n%s on [Internal Storage]",
+          packageName, serial, cutInstallOutput(output));
+      return;
     } catch (MobileHarnessException e) {
-      installThrowsException = true;
       output = e.getMessage();
       logger.atWarning().log(
           "Failed to install package %s to device %s on [Internal Storage]:%n%s%n",
           packageName, serial, output);
-    }
 
-    if (installThrowsException) {
       if (output.contains(OUTPUT_KILLED)) {
         // Throws the exception when adb was killed, because:
         // For Google experience devices, the definition of output can be found in
@@ -1068,30 +1041,28 @@ public class AndroidPackageManagerUtil {
       }
 
       try {
-        var timeout = installTimeout == null ? DEFAULT_INSTALL_TIMEOUT : installTimeout;
-        // If install failed, tries using external storage space (i.e. sdcard) to install
-        outputByExternal =
-            isRemoteInstall
-                ? adb.runShell(serial, installOnExternalCommand, timeout, lineCallback)
-                : adb.run(serial, installOnExternalCommand, timeout, lineCallback);
-        if (outputByExternal.contains(OUTPUT_SUCCESS)) {
+        // If install failed and the installLocation is not explicitly set, try using external
+        // storage space (sdcard) to install.
+        if (installCmdArgs.installLocation().isEmpty()) {
+          outputByExternal =
+              installPackageNoRetry(
+                  utilArgs,
+                  installCmdArgs.toBuilder()
+                      .setInstallLocation(InstallCmdArgs.InstallLocation.EXTERNAL)
+                      .build(),
+                  isRemoteInstall,
+                  artifactPaths,
+                  installTimeout);
           logger.atInfo().log(
               "Successfully installed package %s to device %s:%n%s on [External Storage]",
               packageName, serial, cutInstallOutput(outputByExternal));
           return;
         }
       } catch (MobileHarnessException ee) {
+        outputByExternal = ee.getMessage();
         logger.atWarning().withCause(ee).log(
             "Failed to install package %s to device %s on [External Storage]:%n%s%n",
-            packageName, serial, outputByExternal);
-      }
-    } else {
-      // Install does not throw exception
-      if (output.contains(OUTPUT_SUCCESS)) {
-        logger.atInfo().log(
-            "Successfully installed package %s to device %s:%n%s on [Internal Storage]",
-            packageName, serial, cutInstallOutput(output));
-        return;
+            packageName, serial, cutInstallOutput(outputByExternal));
       }
     }
 
@@ -1168,23 +1139,76 @@ public class AndroidPackageManagerUtil {
 
     // Retries to install the apk again.
     try {
-      var timeout = installTimeout == null ? DEFAULT_INSTALL_TIMEOUT : installTimeout;
       output =
-          isRemoteInstall
-              ? adb.runShell(serial, installCommand, timeout, lineCallback)
-              : adb.run(serial, installCommand, timeout, lineCallback);
+          installPackageNoRetry(
+              utilArgs, installCmdArgs, isRemoteInstall, artifactPaths, installTimeout);
     } catch (MobileHarnessException e) {
       PackageManagerErrors.throwIfPostRetryUserError(output, packageName);
       throwInstallationError("Fail to install " + packageName + " twice: " + e.getMessage(), e);
     }
-    if (!output.contains(OUTPUT_SUCCESS)) {
-      throwInstallationError(
-          "Fail to install " + packageName + " twice: " + output, /* cause= */ null);
-    }
 
     logger.atWarning().log(
-        "Successfully installed package %s to device %s after uninstalling existing package",
-        packageName, serial);
+        "Successfully installed package %s to device %s after uninstalling existing package%n%s",
+        packageName, serial, cutInstallOutput(output));
+  }
+
+  /**
+   * Installs a package to the device without a retry.
+   *
+   * <p>Performs no classification of any errors based on the command output. See {@link
+   * PackageManagerErrors} for methods that can take the exception error message text and classify.
+   *
+   * @param utilArgs args with serial, sdkVersion and userId
+   * @param installCmdArgs adb install args
+   * @param isRemoteInstall whether the install is remote, only supports single apk
+   * @param artifactPaths paths to the package files to be installed
+   * @param installTimeout timeout for installation
+   * @return the output of the successful install command
+   * @throws MobileHarnessException if install command fails or the install output does not contain
+   *     the success signal
+   */
+  private String installPackageNoRetry(
+      UtilArgs utilArgs,
+      InstallCmdArgs installCmdArgs,
+      boolean isRemoteInstall,
+      Collection<String> artifactPaths,
+      @Nullable Duration installTimeout)
+      throws MobileHarnessException, InterruptedException {
+    String serial = utilArgs.serial();
+    int sdkVersion = utilArgs.sdkVersion().orElse(0);
+    ImmutableList.Builder<String> installCommand = ImmutableList.builder();
+
+    if (isRemoteInstall) {
+      installCommand.addAll(ADB_SHELL_INSTALL_PACKAGE);
+    } else if (artifactPaths.size() > 1) {
+      installCommand.add("install-multiple");
+    } else {
+      installCommand.add("install");
+    }
+    installCmdArgs.appendInstallArgs(installCommand, sdkVersion);
+    if (utilArgs.userId().isPresent()) {
+      installCommand.add("--user").add(utilArgs.userId().get());
+    }
+    installCommand.addAll(artifactPaths);
+
+    String[] installCommandArray = installCommand.build().toArray(new String[0]);
+    LineCallback lineCallback =
+        LineCallback.stopWhen(
+            // The command can hang with Android SDK 21+ release key devices. Cancel once it got the
+            // signal (b/18564117).
+            line -> line.startsWith(OUTPUT_SUCCESS) || line.startsWith(OUTPUT_FAILURE));
+    Duration timeout = installTimeout == null ? DEFAULT_INSTALL_TIMEOUT : installTimeout;
+
+    String output =
+        isRemoteInstall
+            ? adb.runShell(serial, installCommandArray, timeout, lineCallback)
+            : adb.run(serial, installCommandArray, timeout, lineCallback);
+    if (!output.contains(OUTPUT_SUCCESS)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_MISSING_SUCCESS_SIGNAL,
+          String.format("Install output does not have success signal: %s", output));
+    }
+    return output;
   }
 
   /**
@@ -1284,7 +1308,8 @@ public class AndroidPackageManagerUtil {
     }
 
     String[] installMultiPackagesCommand =
-        ArrayUtil.join(ADB_ARG_INSTALL_MULTI_PACKAGE, installCmdArgs.getInstallArgsArray());
+        ArrayUtil.join(
+            ADB_ARG_INSTALL_MULTI_PACKAGE, installCmdArgs.getInstallArgs().toArray(new String[0]));
     if (utilArgs.userId().isPresent()) {
       installMultiPackagesCommand =
           ArrayUtil.join(installMultiPackagesCommand, "--user", utilArgs.userId().get());
