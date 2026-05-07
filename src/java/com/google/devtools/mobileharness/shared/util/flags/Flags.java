@@ -1296,7 +1296,7 @@ public class Flags {
       help = "Always lease all devices immediately in proxy mode. Default is true.")
   public static final Flag<Boolean> proxyModeLeaseDevicesImmediately = Flag.value(true);
 
-  @FlagSpec(name = "public_dir", altName = "publicDir", help = "The public directory.")
+  @FlagSpec(name = "public_dir", help = "The public directory.")
   public static final Flag<String> publicDir = Flag.value(getPublicDirDefaultOss());
 
   private static String getPublicDirDefaultOss() {
@@ -1471,7 +1471,7 @@ public class Flags {
   public static final Flag<List<String>> testbedConfigPaths =
       Flag.stringList("/usr/local/google/mobileharness/testbeds");
 
-  @FlagSpec(name = "tmp_dir_root", altName = "tmpDirRoot", help = "The tmp Dir Root.")
+  @FlagSpec(name = "tmp_dir_root", help = "The tmp Dir Root.")
   public static final Flag<String> tmpDirRoot = Flag.value(getTmpDirRootDefaultOss());
 
   private static String getTmpDirRootDefaultOss() {

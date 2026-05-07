@@ -29,8 +29,4 @@ public @interface FlagSpec {
   String name();
 
   String help() default "";
-
-  /** Unsupported. */
-  @Deprecated
-  String altName() default "";
 }
