@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.gson.JsonSyntaxException;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.StepSkippableLifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -48,6 +49,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -56,7 +59,7 @@ import org.xmlpull.v1.XmlPullParserException;
  * com.android.compatibility.common.tradefed.targetprep.DynamicConfigPusher} from Android codebase.
  */
 @DecoratorAnnotation(help = "Decorator to push dynamic config files from config repository.")
-public class AndroidAtsDynamicConfigPusherDecorator extends BaseDecorator
+public class AndroidAtsDynamicConfigPusherDecorator extends StepSkippableLifecycleDecorator
     implements SpecConfigable<AndroidAtsDynamicConfigPusherDecoratorSpec> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -64,15 +67,15 @@ public class AndroidAtsDynamicConfigPusherDecorator extends BaseDecorator
   private static final String MANAGED_FILE_CONTENT_PROVIDER_APK_RES_PATH =
       "/com/google/devtools/mobileharness/platform/android/app/binary/contentprovider/ManagedFileContentProvider.apk";
 
+  private static final String STATE_KEY_DEVICE_FILE_PUSHED_PATH = "device_file_pushed_path";
+  private static final String STATE_KEY_CONTENT_PROVIDER = "content_provider";
+
   private final LocalFileUtil localFileUtil;
   private final AndroidFileUtil androidFileUtil;
   private final AndroidSystemSettingUtil androidSystemSettingUtil;
   private final ApkInstaller apkInstaller;
   private final ResUtil resUtil;
   private final MapSplitter xtsSuiteInfoSplitter = Splitter.on(",").withKeyValueSeparator("=");
-
-  private Map<String, String> xtsSuiteInfoMap;
-  private String deviceFilePushedPath;
 
   @Inject
   AndroidAtsDynamicConfigPusherDecorator(
@@ -82,7 +85,8 @@ public class AndroidAtsDynamicConfigPusherDecorator extends BaseDecorator
       AndroidFileUtil androidFileUtil,
       AndroidSystemSettingUtil androidSystemSettingUtil,
       ApkInstaller apkInstaller,
-      ResUtil resUtil) {
+      ResUtil resUtil)
+      throws MobileHarnessException {
     super(decorated, testInfo);
     this.localFileUtil = localFileUtil;
     this.androidFileUtil = androidFileUtil;
@@ -92,13 +96,19 @@ public class AndroidAtsDynamicConfigPusherDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void skippableSetUp(TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException {
     String deviceId = getDevice().getDeviceId();
     AndroidAtsDynamicConfigPusherDecoratorSpec spec =
         testInfo.jobInfo().combinedSpec(this, deviceId);
 
-    xtsSuiteInfoMap = xtsSuiteInfoSplitter.split(spec.getXtsSuiteInfo());
+    Map<String, String> xtsSuiteInfoMap = xtsSuiteInfoSplitter.split(spec.getXtsSuiteInfo());
     String suiteName = xtsSuiteInfoMap.get("suite_name");
+    if (suiteName == null) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_INVALID_PARAMETER,
+          "suite_name is missing from xtsSuiteInfo");
+    }
     String suiteVersion = xtsSuiteInfoMap.getOrDefault("suite_version", "");
     if (spec.getConfigFilename().isEmpty()) {
       spec = spec.toBuilder().setConfigFilename(Ascii.toLowerCase(suiteName)).build();
@@ -108,7 +118,7 @@ public class AndroidAtsDynamicConfigPusherDecorator extends BaseDecorator
     }
 
     File localConfigFile = getLocalConfigFile(spec);
-    String apfeConfig = fetchApfeConfig(spec);
+    String apfeConfig = fetchApfeConfig(spec, xtsSuiteInfoMap);
     File hostFile = mergeConfigFiles(spec, localConfigFile, apfeConfig);
     if (spec.getTarget().equals(TestTarget.DEVICE)) {
       String deviceDest =
@@ -119,7 +129,7 @@ public class AndroidAtsDynamicConfigPusherDecorator extends BaseDecorator
           androidSystemSettingUtil.getDeviceSdkVersion(deviceId),
           hostFile.getAbsolutePath(),
           deviceDest);
-      deviceFilePushedPath = deviceDest;
+      setState(testInfo.jobInfo(), deviceId, STATE_KEY_DEVICE_FILE_PUSHED_PATH, deviceDest);
       logger.atInfo().log("Pushed dynamic config file %s to device %s", deviceDest, deviceId);
     }
     String apkPath =
@@ -129,29 +139,35 @@ public class AndroidAtsDynamicConfigPusherDecorator extends BaseDecorator
     String contentProvider =
         apkInstaller.installApkIfNotExist(
             getDevice(), ApkInstallArgs.builder().setApkPath(apkPath).build(), getTest().log());
+    setState(testInfo.jobInfo(), deviceId, STATE_KEY_CONTENT_PROVIDER, contentProvider);
+  }
 
-    // TODO: Add host target support and config read support.
-    try {
-      getDecorated().run(testInfo);
-    } finally {
-      if (deviceFilePushedPath != null && spec.getCleanup()) {
-        try {
-          androidFileUtil.removeFiles(deviceId, deviceFilePushedPath);
-          logger.atInfo().log(
-              "Cleaned up dynamic config file %s on device %s", deviceFilePushedPath, deviceId);
-        } catch (MobileHarnessException | RuntimeException | Error e) {
-          logger.atWarning().withCause(e).log(
-              "Failed to clean up pushed file %s", deviceFilePushedPath);
-        } catch (InterruptedException e) {
-          logger.atWarning().withCause(e).log(
-              "Interrupted when cleaning up pushed file %s,", deviceFilePushedPath);
-          Thread.currentThread().interrupt();
-        }
+  @Override
+  protected void skippableTearDown(TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException {
+    String deviceId = getDevice().getDeviceId();
+    AndroidAtsDynamicConfigPusherDecoratorSpec spec =
+        testInfo.jobInfo().combinedSpec(this, deviceId);
+
+    Optional<String> deviceFilePushedPathOpt =
+        getState(testInfo.jobInfo(), deviceId, STATE_KEY_DEVICE_FILE_PUSHED_PATH);
+    Optional<String> contentProviderOpt =
+        getState(testInfo.jobInfo(), deviceId, STATE_KEY_CONTENT_PROVIDER);
+
+    if (deviceFilePushedPathOpt.isPresent() && spec.getCleanup()) {
+      String path = deviceFilePushedPathOpt.get();
+      try {
+        androidFileUtil.removeFiles(deviceId, path);
+        logger.atInfo().log("Cleaned up dynamic config file %s on device %s", path, deviceId);
+      } catch (MobileHarnessException | RuntimeException | Error e) {
+        logger.atWarning().withCause(e).log("Failed to clean up pushed file %s", path);
       }
-      if (!contentProvider.isEmpty() && spec.getCleanup()) {
-        apkInstaller.uninstallApk(
-            getDevice(), contentProvider, /* logFailures= */ true, /* log= */ null);
-      }
+    }
+    if (contentProviderOpt.isPresent()
+        && !contentProviderOpt.get().isEmpty()
+        && spec.getCleanup()) {
+      apkInstaller.uninstallApk(
+          getDevice(), contentProviderOpt.get(), /* logFailures= */ true, /* log= */ null);
     }
   }
 
@@ -181,10 +197,12 @@ public class AndroidAtsDynamicConfigPusherDecorator extends BaseDecorator
                     String.format("Config file %s not found.", lookupName)));
   }
 
-  private String fetchApfeConfig(AndroidAtsDynamicConfigPusherDecoratorSpec spec)
+  @Nullable
+  private String fetchApfeConfig(
+      AndroidAtsDynamicConfigPusherDecoratorSpec spec, Map<String, String> xtsSuiteInfoMap)
       throws MobileHarnessException {
     if (!spec.getHasServerSideConfig()) {
-      return "";
+      return null;
     }
 
     try {
