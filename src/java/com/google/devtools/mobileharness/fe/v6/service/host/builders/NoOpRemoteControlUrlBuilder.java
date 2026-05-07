@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.fe.v6.service.host.builder;
+package com.google.devtools.mobileharness.fe.v6.service.host.builders;
 
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDeviceConfig;

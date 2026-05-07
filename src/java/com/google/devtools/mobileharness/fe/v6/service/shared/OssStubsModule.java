@@ -27,8 +27,12 @@ import com.google.devtools.mobileharness.fe.v6.service.device.handlers.NoOpScree
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.OssTestbedConfigBuilderImpl;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.ScreenshotActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.TestbedConfigBuilder;
-import com.google.devtools.mobileharness.fe.v6.service.host.builder.NoOpRemoteControlUrlBuilder;
-import com.google.devtools.mobileharness.fe.v6.service.host.builder.RemoteControlUrlBuilder;
+import com.google.devtools.mobileharness.fe.v6.service.host.builders.NoOpPopularFlagsBuilder;
+import com.google.devtools.mobileharness.fe.v6.service.host.builders.NoOpRemoteControlUrlBuilder;
+import com.google.devtools.mobileharness.fe.v6.service.host.builders.PopularFlagsBuilder;
+import com.google.devtools.mobileharness.fe.v6.service.host.builders.RemoteControlUrlBuilder;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.NoOpPreflightLabServerReleaseActionHelper;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLabServerReleaseActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.OssHostAuxiliaryInfoProviderImpl;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
@@ -91,8 +95,12 @@ public final class OssStubsModule extends AbstractModule {
         .in(Singleton.class);
 
     bind(HostAuxiliaryInfoProvider.class).to(OssHostAuxiliaryInfoProviderImpl.class);
+    bind(PreflightLabServerReleaseActionHelper.class)
+        .to(NoOpPreflightLabServerReleaseActionHelper.class)
+        .in(Singleton.class);
+    bind(PopularFlagsBuilder.class).to(NoOpPopularFlagsBuilder.class).in(Singleton.class);
     bind(LogcatActionHelper.class).to(NoOpLogcatActionHelper.class).in(Singleton.class);
-    bind(RemoteControlUrlBuilder.class).to(NoOpRemoteControlUrlBuilder.class);
+    bind(RemoteControlUrlBuilder.class).to(NoOpRemoteControlUrlBuilder.class).in(Singleton.class);
     bind(ScreenshotActionHelper.class).to(NoOpScreenshotActionHelper.class).in(Singleton.class);
     bind(GroupMembershipProvider.class).to(NoOpGroupMembershipProvider.class).in(Singleton.class);
     bind(TestbedConfigBuilder.class).to(OssTestbedConfigBuilderImpl.class).in(Singleton.class);

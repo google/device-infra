@@ -21,11 +21,14 @@ package(
 )
 
 java_library(
-    name = "builder",
+    name = "builders",
     srcs = glob(["*.java"]),
     deps = [
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/host:host_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )

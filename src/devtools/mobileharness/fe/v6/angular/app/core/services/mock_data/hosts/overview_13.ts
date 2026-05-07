@@ -4,6 +4,7 @@ import {MockHostScenario} from '../models';
 import {
   createDefaultHostOverview,
   createDefaultUiStatus,
+  createDeviceActions,
   createHostActions,
 } from './ui_status_utils';
 
@@ -55,6 +56,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:missing',
     model: 'Pixel 6',
     version: '13',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: 'MISSING-DEV-2',
@@ -69,6 +71,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:missing',
     model: 'Pixel 6 Pro',
     version: '13',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: 'MISSING-DEV-3',
@@ -83,6 +86,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:missing',
     model: 'Pixel 7',
     version: '14',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
   {
     id: 'ACTIVE-DEV-4',
@@ -97,6 +101,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:active',
     model: 'Pixel 8',
     version: '14',
+    actions: createDeviceActions('ALL_PERMISSIONS'),
   },
 ];
 

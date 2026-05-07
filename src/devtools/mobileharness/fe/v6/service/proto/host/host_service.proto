@@ -76,10 +76,10 @@ service HostService {
   }
 
   // Retrieves release configurations for a host.
-  rpc GetReleaseConfigs(GetReleaseConfigsRequest)
-      returns (GetReleaseConfigsResponse) {
+  rpc PreflightLabServerRelease(PreflightLabServerReleaseRequest)
+      returns (PreflightLabServerReleaseResponse) {
     option (google.api.http) = {
-      get: "/v6/hosts/{host_name}/release-configs"
+      get: "/v6/hosts/{host_name}/preflightLabServerRelease"
     };
   }
 
@@ -229,17 +229,28 @@ message UpdatePassThroughFlagsRequest {
 // Response message for UpdatePassThroughFlags.
 message UpdatePassThroughFlagsResponse {}
 
-// Request message for GetReleaseConfigs.
-message GetReleaseConfigsRequest {
+// Request message for PreflightLabServerRelease.
+message PreflightLabServerReleaseRequest {
   string host_name = 1;
 
   // The universe of the host.
   string universe = 2;
 }
 
-// Response message for GetReleaseConfigs.
-message GetReleaseConfigsResponse {
-  repeated HostReleaseConfig configs = 1;
+// Response message for PreflightLabServerRelease.
+message PreflightLabServerReleaseResponse {
+  // No deploy permission.
+  message PermissionDenied {}
+
+  // All checks passed. Here are the available versions to deploy.
+  message ReleaseReady {
+    repeated DeployableVersion versions = 1;
+  }
+
+  oneof result {
+    PermissionDenied permission_denied = 1;
+    ReleaseReady ready = 2;
+  }
 }
 
 // Request message for DecommissionMissingDevices.

@@ -1,0 +1,19 @@
+.no-valid-versions-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+
+
+  p {
+    text-align: center;
+    color: #4b5563;
+    font-size: 0.875rem;
+    line-height: 1.625;
+    margin: 0;
+    max-width: 28rem;
+  }
+
+  .no-valid-versions-content-link {
+    cursor: pointer;
+  }
+}

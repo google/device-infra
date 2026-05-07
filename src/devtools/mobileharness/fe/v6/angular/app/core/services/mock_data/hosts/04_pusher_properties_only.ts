@@ -55,4 +55,7 @@ export const SCENARIO_HOST_PUSHER_PROPERTIES: MockHostScenario = {
   },
   defaultDeviceConfig: DEFAULT_DEVICE_CONFIG,
   actions: createHostActions(),
+  releaseResponse: {
+    permissionDenied: {},
+  },
 };
