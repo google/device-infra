@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.platform.android.packagemanager;
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import java.util.Optional;
 
 /**
  * Common args for adb app installation: install, install-multiple, install-multi-package. Only used
@@ -28,27 +27,6 @@ import java.util.Optional;
  */
 @AutoValue
 public abstract class InstallCmdArgs {
-
-  /** Install locations options. */
-  public enum InstallLocation {
-    /** Let the system decide. This is the default install location. */
-    AUTO("0"),
-    /** Install on internal storage. */
-    INTERNAL("1"),
-    /** Install on external storage. */
-    EXTERNAL("2");
-
-    private final String flagValue;
-
-    private InstallLocation(String value) {
-      this.flagValue = value;
-    }
-
-    private String getFlagValue() {
-      return flagValue;
-    }
-  }
-
   private static final String ARG_REPLACE_EXISTING_APP = "-r";
 
   private static final String ARG_ALLOW_TEST_PACKAGES = "-t";
@@ -64,8 +42,6 @@ public abstract class InstallCmdArgs {
   private static final String ARG_FORCE_QUERYABLE = "--force-queryable";
 
   private static final String ARG_BYPASS_LOW_TARGET_SDK_BLOCK = "--bypass-low-target-sdk-block";
-
-  private static final String ARG_INSTALL_LOCATION = "--install-location";
 
   /** Whether to replace existing application. Default to be false. */
   public abstract boolean replaceExistingApp();
@@ -97,32 +73,23 @@ public abstract class InstallCmdArgs {
    */
   public abstract boolean bypassLowTargetSdkBlock();
 
-  /** The install location. Default is to not specify, and let the system decide. */
-  public abstract Optional<InstallLocation> installLocation();
-
   /** The list of all extra args passing to adb cmd. Default to be empty. */
   public abstract ImmutableList<String> extraArgs();
 
   abstract Builder toBuilder();
 
   /** Gets the install args array. */
-  public ImmutableList<String> getInstallArgs() {
-    return getInstallArgs(Integer.MAX_VALUE);
-  }
-
-  /** Gets the install args array for the given sdk version. */
-  public ImmutableList<String> getInstallArgs(int sdkVersion) {
-    ImmutableList.Builder<String> args = ImmutableList.builder();
-    appendInstallArgs(args, sdkVersion);
-    return args.build();
+  public String[] getInstallArgsArray() {
+    return getInstallArgsArray(Integer.MAX_VALUE);
   }
 
   /**
-   * Appends the install args to the given list builder for the given sdk version.
+   * Gets the install args array for the given sdk version.
    *
    * @param sdkVersion the sdk version of the device, used to determine if the arg is supported.
    */
-  public void appendInstallArgs(ImmutableList.Builder<String> args, int sdkVersion) {
+  public String[] getInstallArgsArray(int sdkVersion) {
+    ImmutableList.Builder<String> args = ImmutableList.builder();
     if (replaceExistingApp()) {
       args.add(ARG_REPLACE_EXISTING_APP);
     }
@@ -147,10 +114,8 @@ public abstract class InstallCmdArgs {
     if (bypassLowTargetSdkBlock() && sdkVersion >= 34) {
       args.add(ARG_BYPASS_LOW_TARGET_SDK_BLOCK);
     }
-    if (installLocation().isPresent()) {
-      args.add(ARG_INSTALL_LOCATION).add(installLocation().get().getFlagValue());
-    }
     args.addAll(extraArgs());
+    return args.build().toArray(new String[0]);
   }
 
   /** Gets default InstallArgs builder instance. */
@@ -184,8 +149,6 @@ public abstract class InstallCmdArgs {
     public abstract Builder setForceQueryable(boolean value);
 
     public abstract Builder setBypassLowTargetSdkBlock(boolean value);
-
-    public abstract Builder setInstallLocation(InstallLocation value);
 
     public abstract ImmutableList.Builder<String> extraArgsBuilder();
 
