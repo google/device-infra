@@ -27,7 +27,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
@@ -131,7 +130,7 @@ public final class RunCommandHandlerTest {
 
     // Sets flags.
     File tmpDir = folder.newFolder("lab_server_tmp_dir");
-    flags.setAll(ImmutableMap.of("tmp_dir_root", tmpDir.getAbsolutePath()));
+    flags.set("tmp_dir_root", tmpDir.getAbsolutePath());
 
     Injector injector =
         Guice.createInjector(

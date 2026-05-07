@@ -72,7 +72,7 @@ public final class FileOperatorTest {
 
   @Before
   public void setUp() {
-    flags.setAll(ImmutableMap.of("cache_pushed_files", "false"));
+    flags.set("cache_pushed_files", "false");
     testLog = new FakeLogCollector();
     fileOperator =
         new FileOperator(checksumUtil, localFileUtil, androidFileUtil, systemSettingUtil);
@@ -224,7 +224,7 @@ public final class FileOperatorTest {
 
   @Test
   public void pushFileOrDirTimeout_md5NotEqual_success() throws Exception {
-    flags.setAll(ImmutableMap.of("cache_pushed_files", "true"));
+    flags.set("cache_pushed_files", "true");
     int sdkVersion = 28;
     String md5 = "1234567890";
     String srcPathOnHost = "file_path_and_name_on_host";
@@ -259,7 +259,7 @@ public final class FileOperatorTest {
 
   @Test
   public void pushFileOrDir_md5NotEqual_success() throws Exception {
-    flags.setAll(ImmutableMap.of("cache_pushed_files", "true"));
+    flags.set("cache_pushed_files", "true");
     int sdkVersion = 28;
     String md5 = "1234567890";
     String srcPathOnHost = "file_path_and_name_on_host";
@@ -294,7 +294,7 @@ public final class FileOperatorTest {
 
   @Test
   public void pushFileOrDir_removePropertyIfFailedToPush_rethrowException() throws Exception {
-    flags.setAll(ImmutableMap.of("cache_pushed_files", "true"));
+    flags.set("cache_pushed_files", "true");
     int sdkVersion = 28;
     String md5 = "1234567890";
     String srcPathOnHost = "file_path_and_name_on_host";
@@ -347,7 +347,7 @@ public final class FileOperatorTest {
 
   @Test
   public void pushFileOrDir_failedToGetDesFinalPathOnDevice_throwException() throws Exception {
-    flags.setAll(ImmutableMap.of("cache_pushed_files", "true"));
+    flags.set("cache_pushed_files", "true");
     int sdkVersion = 28;
     String srcPathOnHost = "file_path_and_name_on_host";
     String desPathOnDevice = "/sdcard/tmp/";
@@ -419,7 +419,7 @@ public final class FileOperatorTest {
 
   @Test
   public void pushFileOrDir_desPathUnderTmpDir_skipCache() throws Exception {
-    flags.setAll(ImmutableMap.of("cache_pushed_files", "true"));
+    flags.set("cache_pushed_files", "true");
     int sdkVersion = 28;
     String srcPathOnHost = "file_path_and_name_on_host";
     String desPathOnDevice = "/data/local/tmp/";
@@ -498,7 +498,7 @@ public final class FileOperatorTest {
 
   @Test
   public void removeFileOrDir_fileOrDirNotExist() throws Exception {
-    flags.setAll(ImmutableMap.of("cache_pushed_files", "true"));
+    flags.set("cache_pushed_files", "true");
     String fileOrDirPath = "/sdcard/test_dir/test_file";
     when(androidFileUtil.isFileOrDirExisted(DEVICE_ID, fileOrDirPath)).thenReturn(false);
 
@@ -509,7 +509,7 @@ public final class FileOperatorTest {
 
   @Test
   public void removeFileOrDir() throws Exception {
-    flags.setAll(ImmutableMap.of("cache_pushed_files", "true"));
+    flags.set("cache_pushed_files", "true");
     String fileOrDirPath = "/sdcard/test_dir1/test_dir2/test_file";
     when(androidFileUtil.isFileOrDirExisted(DEVICE_ID, fileOrDirPath)).thenReturn(true);
     when(device.info().properties()).thenReturn(properties);
@@ -539,7 +539,7 @@ public final class FileOperatorTest {
 
   @Test
   public void removeFileOrDir_hasSubFilesOrDirs() throws Exception {
-    flags.setAll(ImmutableMap.of("cache_pushed_files", "true"));
+    flags.set("cache_pushed_files", "true");
     String fileOrDirPath = "/sdcard/test_dir1/test_dir2";
     when(androidFileUtil.isFileOrDirExisted(DEVICE_ID, fileOrDirPath)).thenReturn(true);
     when(device.info().properties()).thenReturn(properties);
@@ -593,7 +593,7 @@ public final class FileOperatorTest {
   }
 
   private void pushFileOrDirMd5Equal(boolean fileExistedOnDevice) throws Exception {
-    flags.setAll(ImmutableMap.of("cache_pushed_files", "true"));
+    flags.set("cache_pushed_files", "true");
     int sdkVersion = 28;
     String md5 = "1234567890";
     String srcPathOnHost = "file_path_and_name_on_host";

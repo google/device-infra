@@ -184,7 +184,7 @@ public final class AtsServerSessionPluginTest {
   @Before
   public void setup() throws Exception {
     String publicDir = tmpFolder.newFolder("public_dir").getAbsolutePath();
-    flags.setAll(ImmutableMap.of("public_dir", publicDir));
+    flags.set("public_dir", publicDir);
     Instant baseTime = Instant.ofEpochMilli(1000);
     timing = new Timing(baseTime);
     timing.start(baseTime.plusMillis(1));

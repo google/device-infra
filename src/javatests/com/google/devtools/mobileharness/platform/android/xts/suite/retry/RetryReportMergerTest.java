@@ -21,7 +21,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
@@ -121,7 +120,7 @@ public final class RetryReportMergerTest {
 
   @Before
   public void setUp() {
-    flags.setAll(ImmutableMap.of("use_tf_retry", "false"));
+    flags.set("use_tf_retry", "false");
     Guice.createInjector(
             BoundFieldModule.of(this),
             new AbstractModule() {

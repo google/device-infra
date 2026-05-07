@@ -59,7 +59,7 @@ public final class NonXtsRunStrategyTest {
 
   @Before
   public void setUp() throws Exception {
-    flags.setAll(ImmutableMap.of("tradefed_binary_dir", TRADEFED_DIR));
+    flags.set("tradefed_binary_dir", TRADEFED_DIR);
     nonXtsRunStrategy = new NonXtsRunStrategy(localFileUtil);
   }
 
@@ -112,7 +112,7 @@ public final class NonXtsRunStrategyTest {
 
   @Test
   public void getEnvironment_withTfHostConfig() throws Exception {
-    flags.setAll(ImmutableMap.of("tradefed_host_config", "/path/to/host-config.xml"));
+    flags.set("tradefed_host_config", "/path/to/host-config.xml");
 
     ImmutableMap<String, String> env =
         nonXtsRunStrategy.getEnvironment(

@@ -168,7 +168,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Before
   public void setup() throws Exception {
     String publicDir = tmpFolder.newFolder("public_dir").getAbsolutePath();
-    flags.setAll(ImmutableMap.of("public_dir", publicDir));
+    flags.set("public_dir", publicDir);
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     when(sessionInfo.getSessionId()).thenReturn("session_id");
     properties.add(Job.IS_XTS_TF_JOB, "true");

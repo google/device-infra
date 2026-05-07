@@ -80,7 +80,7 @@ public final class AndroidJitEmulatorUtilTest {
 
   @Test
   public void getAllVirtualDeviceIds_defaultSettings_returnsLocalhostPorts() {
-    flags.setAll(ImmutableMap.of("android_jit_emulator_num", "2"));
+    flags.set("android_jit_emulator_num", "2");
 
     ImmutableList<String> deviceIds = AndroidJitEmulatorUtil.getAllVirtualDeviceIds();
     assertThat(deviceIds).containsExactly("127.0.0.1:6520", "127.0.0.1:6521").inOrder();

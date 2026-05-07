@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.infra.ats.common;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteVersion;
 import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import org.junit.Rule;
@@ -33,7 +32,7 @@ public final class SessionHandlerHelperTest {
 
   @Test
   public void useTfRetry_flagIsTrue_returnTrue() {
-    flags.setAll(ImmutableMap.of("use_tf_retry", "true"));
+    flags.set("use_tf_retry", "true");
 
     assertThat(
             SessionHandlerHelper.useTfRetry(
@@ -43,7 +42,7 @@ public final class SessionHandlerHelperTest {
 
   @Test
   public void useTfRetry_notAtsServerRequest_returnFalse() {
-    flags.setAll(ImmutableMap.of("use_tf_retry", "false"));
+    flags.set("use_tf_retry", "false");
 
     assertThat(
             SessionHandlerHelper.useTfRetry(
@@ -53,7 +52,7 @@ public final class SessionHandlerHelperTest {
 
   @Test
   public void useTfRetry_atsServerRequest_xtsTypeNotInMap_returnTrue() {
-    flags.setAll(ImmutableMap.of("use_tf_retry", "false"));
+    flags.set("use_tf_retry", "false");
 
     assertThat(
             SessionHandlerHelper.useTfRetry(
@@ -65,7 +64,7 @@ public final class SessionHandlerHelperTest {
 
   @Test
   public void useTfRetry_atsServerRequest_testSuiteVersionNull_returnFalse() {
-    flags.setAll(ImmutableMap.of("use_tf_retry", "false"));
+    flags.set("use_tf_retry", "false");
 
     assertThat(SessionHandlerHelper.useTfRetry(/* isAtsServerRequest= */ true, "cts", null))
         .isFalse();
@@ -73,7 +72,7 @@ public final class SessionHandlerHelperTest {
 
   @Test
   public void useTfRetry_atsServerRequest_cts_versionLessThanMin_returnTrue() {
-    flags.setAll(ImmutableMap.of("use_tf_retry", "false"));
+    flags.set("use_tf_retry", "false");
 
     assertThat(
             SessionHandlerHelper.useTfRetry(
@@ -83,7 +82,7 @@ public final class SessionHandlerHelperTest {
 
   @Test
   public void useTfRetry_atsServerRequest_cts_versionEqualToMin_returnFalse() {
-    flags.setAll(ImmutableMap.of("use_tf_retry", "false"));
+    flags.set("use_tf_retry", "false");
 
     assertThat(
             SessionHandlerHelper.useTfRetry(
@@ -93,7 +92,7 @@ public final class SessionHandlerHelperTest {
 
   @Test
   public void useTfRetry_atsServerRequest_cts_versionGreaterThanMin_returnFalse() {
-    flags.setAll(ImmutableMap.of("use_tf_retry", "false"));
+    flags.set("use_tf_retry", "false");
 
     assertThat(
             SessionHandlerHelper.useTfRetry(
@@ -103,7 +102,7 @@ public final class SessionHandlerHelperTest {
 
   @Test
   public void useTfRetry_atsServerRequest_ctsvhost_versionLessThanMin_returnTrue() {
-    flags.setAll(ImmutableMap.of("use_tf_retry", "false"));
+    flags.set("use_tf_retry", "false");
 
     assertThat(
             SessionHandlerHelper.useTfRetry(
@@ -113,7 +112,7 @@ public final class SessionHandlerHelperTest {
 
   @Test
   public void useTfRetry_atsServerRequest_ctsvhost_versionEqualToMin_returnFalse() {
-    flags.setAll(ImmutableMap.of("use_tf_retry", "false"));
+    flags.set("use_tf_retry", "false");
 
     assertThat(
             SessionHandlerHelper.useTfRetry(
@@ -123,7 +122,7 @@ public final class SessionHandlerHelperTest {
 
   @Test
   public void useTfRetry_atsServerRequest_gts_versionLessThanMin_returnTrue() {
-    flags.setAll(ImmutableMap.of("use_tf_retry", "false"));
+    flags.set("use_tf_retry", "false");
 
     assertThat(
             SessionHandlerHelper.useTfRetry(
@@ -133,7 +132,7 @@ public final class SessionHandlerHelperTest {
 
   @Test
   public void useTfRetry_atsServerRequest_gts_versionEqualToMin_returnFalse() {
-    flags.setAll(ImmutableMap.of("use_tf_retry", "false"));
+    flags.set("use_tf_retry", "false");
 
     assertThat(
             SessionHandlerHelper.useTfRetry(

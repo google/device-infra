@@ -130,7 +130,7 @@ public final class SessionResultHandlerUtilTest {
 
   @Test
   public void cleanUpLabGenFileDir_success() throws Exception {
-    flags.setAll(ImmutableMap.of("ats_storage_path", "/tmp/ats_storage_path"));
+    flags.set("ats_storage_path", "/tmp/ats_storage_path");
     Mockito.doReturn(true)
         .when(localFileUtil)
         .isDirExist(eq("/tmp/ats_storage_path/genfiles/test_id"));

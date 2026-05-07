@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.infra.ats.console.command.parser;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
@@ -63,7 +62,7 @@ public final class CommandLineParserTest {
 
   @Test
   public void parseCommandLine_embeddedMode_success() throws Exception {
-    setFlags.setAll(ImmutableMap.of("ats_console_olc_server_embedded_mode", "true"));
+    setFlags.set("ats_console_olc_server_embedded_mode", "true");
     commandLineParser = new CommandLineParser();
 
     String tfCommand1 = "cts -m module1 -t testCase1 --shard-count 1";

@@ -209,7 +209,7 @@ public class AdbDetectorTest {
 
   @Test
   public void detectDevices_failedDueToAdbAddressInUse_noRecoverIfNotMhManaged() throws Exception {
-    flags.setAll(ImmutableMap.of("should_manage_devices", "false"));
+    flags.set("should_manage_devices", "false");
 
     when(adbInternalUtil.getDeviceSerialsAsMap())
         .thenThrow(

@@ -20,7 +20,6 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.when;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfigUiStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostConfigUiStatus;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
@@ -50,7 +49,7 @@ public final class ConfigServiceCapabilityTest {
 
   @Before
   public void setUp() {
-    flags.setAll(ImmutableMap.of("fe_connect_to_config_server", "true"));
+    flags.set("fe_connect_to_config_server", "true");
   }
 
   @Test
@@ -66,7 +65,7 @@ public final class ConfigServiceCapabilityTest {
   @Test
   public void isConfigServiceAvailable_googleInternal_flagDisabled() {
     when(environment.isGoogleInternal()).thenReturn(true);
-    flags.setAll(ImmutableMap.of("fe_connect_to_config_server", "false"));
+    flags.set("fe_connect_to_config_server", "false");
 
     assertThat(new ConfigServiceCapability(environment, SELF_UNIVERSE).isConfigServiceAvailable())
         .isTrue();
@@ -131,7 +130,7 @@ public final class ConfigServiceCapabilityTest {
 
   @Test
   public void checkConfigServiceAvailability_disabledByFlag() {
-    flags.setAll(ImmutableMap.of("fe_connect_to_config_server", "false"));
+    flags.set("fe_connect_to_config_server", "false");
     ConfigServiceCapability capability = new ConfigServiceCapability(environment, SELF_UNIVERSE);
 
     UnsupportedOperationException exception =
