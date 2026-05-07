@@ -146,7 +146,7 @@ public class AndroidRoboTestTest {
   }
 
   @Test
-  public void run_skip() throws Exception {
+  public void run_fail() throws Exception {
     AndroidRoboTestSpec spec =
         AndroidRoboTestSpec.newBuilder()
             .setCrawlerApk("/path/to/crawler.apk")
@@ -159,11 +159,11 @@ public class AndroidRoboTestTest {
     AndroidRoboTest roboTest = createAndroidRoboTest(testInfo);
     when(clock.instant()).thenReturn(Instant.ofEpochMilli(2)).thenReturn(Instant.ofEpochMilli(3));
     when(commandExecutor.start(any())).thenReturn(commandProcess);
-    when(commandProcess.await(any())).thenReturn(FakeCommandResult.of("", "", 1));
+    when(commandProcess.await(any())).thenReturn(FakeCommandResult.of("", "", 2));
 
     roboTest.run(testInfo);
 
-    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.SKIP);
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.FAIL);
   }
 
   @Test

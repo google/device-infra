@@ -257,15 +257,16 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
                   new MobileHarnessException(
                       AndroidErrorId.ANDROID_ROBO_TEST_COMMAND_EXECUTION_ERROR,
                       "UTP robo test aborted."));
-      case SKIP ->
+      case ERROR -> readAndSetExceptionDetail(testInfo);
+      case FAIL ->
           testInfo
               .resultWithCause()
               .setNonPassing(
                   result,
                   new MobileHarnessException(
                       AndroidErrorId.ANDROID_ROBO_TEST_COMMAND_EXECUTION_ERROR,
-                      "UTP robo test inconclusive. Mark result as SKIP"));
-      case ERROR -> readAndSetExceptionDetail(testInfo);
+                      "UTP robo test failed. Unable to connect to robo platform or inconclusive "
+                          + "crawl result."));
       case PASS -> testInfo.resultWithCause().setPass();
       default ->
           testInfo
