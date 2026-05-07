@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.base.Strings;
 import com.google.devtools.mobileharness.shared.util.flags.core.Flag;
+import com.google.devtools.mobileharness.shared.util.flags.core.FlagConstraint;
 import com.google.devtools.mobileharness.shared.util.flags.core.FlagSpec;
 import com.google.devtools.mobileharness.shared.util.flags.core.ext.DurationFlag;
 import java.time.Duration;
@@ -1557,6 +1558,7 @@ public class Flags {
   @FlagSpec(name = "xts_tf_xmx", help = "-Xmx of TF of TradefedTest. Default is \"24g\".")
   public static final Flag<String> xtsTfXmx = Flag.value("24g");
 
+  @FlagConstraint
   public static void checkConstraints() {
     checkArgument(
         !Flags.resetDeviceInAndroidRealDeviceSetup.getNonNull()

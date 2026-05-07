@@ -21,6 +21,7 @@ java_library(
     name = "flag",
     srcs = [
         "Flag.java",
+        "FlagConstraint.java",
         "FlagSpec.java",
     ],
     visibility = [

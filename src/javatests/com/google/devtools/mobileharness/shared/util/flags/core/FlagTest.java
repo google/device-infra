@@ -864,4 +864,60 @@ public class FlagTest {
       FlagsManager.setFlagsClassForTest(FlagsForTesting.class);
     }
   }
+
+  @Test
+  public void testScanFlags_nonStaticConstraint_throwsException() {
+    FlagsManager.setFlagsClassForTest(InvalidFlagsForTesting.NonStaticConstraintFlag.class);
+
+    try {
+      IllegalStateException e =
+          assertThrows(IllegalStateException.class, () -> FlagsManager.parse(new String[0]));
+
+      assertThat(e).hasMessageThat().contains("must be static");
+    } finally {
+      FlagsManager.setFlagsClassForTest(FlagsForTesting.class);
+    }
+  }
+
+  @Test
+  public void testScanFlags_paramConstraint_throwsException() {
+    FlagsManager.setFlagsClassForTest(InvalidFlagsForTesting.ParamConstraintFlag.class);
+
+    try {
+      IllegalStateException e =
+          assertThrows(IllegalStateException.class, () -> FlagsManager.parse(new String[0]));
+
+      assertThat(e).hasMessageThat().contains("must have no parameters");
+    } finally {
+      FlagsManager.setFlagsClassForTest(FlagsForTesting.class);
+    }
+  }
+
+  @Test
+  public void testScanFlags_nonVoidConstraint_throwsException() {
+    FlagsManager.setFlagsClassForTest(InvalidFlagsForTesting.NonVoidConstraintFlag.class);
+
+    try {
+      IllegalStateException e =
+          assertThrows(IllegalStateException.class, () -> FlagsManager.parse(new String[0]));
+
+      assertThat(e).hasMessageThat().contains("must return void");
+    } finally {
+      FlagsManager.setFlagsClassForTest(FlagsForTesting.class);
+    }
+  }
+
+  @Test
+  public void testScanFlags_throwingConstraint_throwsException() {
+    FlagsManager.setFlagsClassForTest(InvalidFlagsForTesting.ThrowingConstraintFlag.class);
+
+    try {
+      IllegalArgumentException e =
+          assertThrows(IllegalArgumentException.class, () -> FlagsManager.parse(new String[0]));
+
+      assertThat(e).hasMessageThat().contains("custom_constraint_failed");
+    } finally {
+      FlagsManager.setFlagsClassForTest(FlagsForTesting.class);
+    }
+  }
 }

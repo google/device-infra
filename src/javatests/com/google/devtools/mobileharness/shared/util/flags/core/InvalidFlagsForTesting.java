@@ -122,5 +122,50 @@ public class InvalidFlagsForTesting {
     private InvalidNonnegativeIntegerDefaultValue() {}
   }
 
+  public static class NonStaticConstraintFlag {
+    @FlagSpec(name = "ns_flag", help = "help")
+    public static final Flag<String> flag = Flag.value("");
+
+    @FlagConstraint
+    public void checkConstraint() {}
+
+    private NonStaticConstraintFlag() {}
+  }
+
+  public static class ParamConstraintFlag {
+    @FlagSpec(name = "p_flag", help = "help")
+    public static final Flag<String> flag = Flag.value("");
+
+    @FlagConstraint
+    public static void checkConstraint(int param) {}
+
+    private ParamConstraintFlag() {}
+  }
+
+  public static class NonVoidConstraintFlag {
+    @FlagSpec(name = "nv_flag", help = "help")
+    public static final Flag<String> flag = Flag.value("");
+
+    @FlagConstraint
+    public static int checkConstraint() {
+      return 0;
+    }
+
+    private NonVoidConstraintFlag() {}
+  }
+
+  public static class ThrowingConstraintFlag {
+    @FlagSpec(name = "tr_flag", help = "help")
+    public static final Flag<String> flag = Flag.value("");
+
+    @SuppressWarnings("DoNotCallSuggester")
+    @FlagConstraint
+    public static void checkConstraint() {
+      throw new IllegalArgumentException("custom_constraint_failed");
+    }
+
+    private ThrowingConstraintFlag() {}
+  }
+
   private InvalidFlagsForTesting() {}
 }

@@ -22,6 +22,7 @@ import static java.util.stream.Collectors.joining;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -32,6 +33,8 @@ import com.google.devtools.mobileharness.shared.util.flags.core.converter.Durati
 import com.google.devtools.mobileharness.shared.util.reflection.TypeUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.time.Duration;
@@ -101,7 +104,7 @@ public final class FlagsManager {
 
     cmd.parseArgs(args);
 
-    Flags.checkConstraints();
+    executeFlagConstraints();
   }
 
   public static void resetAllFlagsForTest() {
@@ -390,6 +393,39 @@ public final class FlagsManager {
       args.push(normalizedText);
 
       return false;
+    }
+  }
+
+  private static void executeFlagConstraints() {
+    for (Method method : flagsClass.getDeclaredMethods()) {
+      if (method.isAnnotationPresent(FlagConstraint.class)) {
+        checkState(
+            Modifier.isStatic(method.getModifiers()),
+            "Method %s annotated with @FlagConstraint must be static",
+            method.getName());
+        checkState(
+            method.getParameterCount() == 0,
+            "Method %s annotated with @FlagConstraint must have no parameters",
+            method.getName());
+        checkState(
+            method.getReturnType().equals(void.class),
+            "Method %s annotated with @FlagConstraint must return void",
+            method.getName());
+
+        try {
+          method.setAccessible(true);
+          method.invoke(null);
+        } catch (InvocationTargetException e) {
+          Throwable cause = e.getCause();
+          Throwables.throwIfUnchecked(cause);
+          throw new IllegalStateException(
+              String.format("Failed to execute flag constraint method %s", method.getName()),
+              cause);
+        } catch (IllegalAccessException e) {
+          throw new IllegalStateException(
+              String.format("Failed to access flag constraint method %s", method.getName()), e);
+        }
+      }
     }
   }
 
