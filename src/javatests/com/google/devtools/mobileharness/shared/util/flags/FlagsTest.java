@@ -34,7 +34,7 @@ public class FlagsTest {
 
     List<String> flagNames = new ArrayList<>();
     for (Field field : fields) {
-      FlagSpec flagSpec = field.getAnnotation(FlagSpec.class);
+      var flagSpec = getFlagSpecOss(field);
       if (flagSpec != null) {
         flagNames.add(flagSpec.name());
       }
@@ -44,5 +44,9 @@ public class FlagsTest {
             "Flags in Flags.java should be sorted by @FlagSpec.name alphabetically.")
         .that(flagNames)
         .isInOrder();
+  }
+
+  private static FlagSpec getFlagSpecOss(Field field) {
+    return field.getAnnotation(FlagSpec.class);
   }
 }
