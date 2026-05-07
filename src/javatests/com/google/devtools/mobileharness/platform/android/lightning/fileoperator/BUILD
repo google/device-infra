@@ -16,6 +16,8 @@
 load("@rules_java//java:defs.bzl", "java_library")
 load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "fileoperator",
     testonly = 1,
@@ -28,10 +30,10 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/checksum",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
         "//src/java/com/google/wireless/qa/mobileharness/shared/log/testing",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:set_flags_oss",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",

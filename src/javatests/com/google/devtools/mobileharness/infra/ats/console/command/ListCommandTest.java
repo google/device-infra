@@ -32,8 +32,8 @@ import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.console.AtsConsole;
 import com.google.devtools.mobileharness.infra.ats.console.AtsConsoleModule;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
-import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
@@ -79,7 +79,7 @@ public class ListCommandTest {
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
-  @Rule public final SetFlagsOss flags = new SetFlagsOss();
+  @Rule public final SetFlags flags = new SetFlags();
 
   private final LocalFileUtil realLocalFileUtil = new LocalFileUtil();
 
@@ -129,7 +129,7 @@ public class ListCommandTest {
             xtsResourceDirPath,
             "xts_server_res_dir_root",
             xtsServerResourceDirPath);
-    flags.setAllFlags(flagMap);
+    flags.setAll(flagMap);
     ImmutableList<String> flagList =
         flagMap.entrySet().stream()
             .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))

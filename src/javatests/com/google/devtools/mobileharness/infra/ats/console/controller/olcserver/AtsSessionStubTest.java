@@ -42,8 +42,8 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
-import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
@@ -64,7 +64,7 @@ import org.junit.runners.JUnit4;
 public class AtsSessionStubTest {
 
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
-  @Rule public final SetFlagsOss flags = new SetFlagsOss();
+  @Rule public final SetFlags flags = new SetFlags();
 
   private final SystemUtil systemUtil = new SystemUtil();
 
@@ -103,7 +103,7 @@ public class AtsSessionStubTest {
             "false",
             "tmp_dir_root",
             tmpDirPath);
-    flags.setAllFlags(flagMap);
+    flags.setAll(flagMap);
     ImmutableList<String> flagList =
         flagMap.entrySet().stream()
             .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))

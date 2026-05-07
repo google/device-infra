@@ -48,7 +48,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryA
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -93,7 +93,7 @@ public final class ServerJobCreatorTest {
 
   @Rule public MockitoRule mockito = MockitoJUnit.rule();
   @Rule public TemporaryFolder folder = new TemporaryFolder();
-  @Rule public final SetFlagsOss flags = new SetFlagsOss();
+  @Rule public final SetFlags flags = new SetFlags();
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
 
   @Bind @Mock private SessionRequestHandlerUtil sessionRequestHandlerUtil;
@@ -113,7 +113,7 @@ public final class ServerJobCreatorTest {
   @Before
   public void setUp() throws Exception {
     publicDir = tmpFolder.newFolder("public_dir").getAbsolutePath();
-    flags.setAllFlags(
+    flags.setAll(
         ImmutableMap.of(
             "enable_ats_mode",
             "true",

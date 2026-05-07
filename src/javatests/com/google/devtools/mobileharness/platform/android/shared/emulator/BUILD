@@ -39,8 +39,8 @@ java_test(
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/emulator:android_jit_emulator_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:set_flags_oss",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
     ],

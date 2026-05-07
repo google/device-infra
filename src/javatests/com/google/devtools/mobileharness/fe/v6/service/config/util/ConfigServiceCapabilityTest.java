@@ -25,7 +25,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfig
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostConfigUiStatus;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
-import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -39,7 +39,7 @@ import org.mockito.junit.MockitoRule;
 public final class ConfigServiceCapabilityTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
-  @Rule public final SetFlagsOss flags = new SetFlagsOss();
+  @Rule public final SetFlags flags = new SetFlags();
 
   @Mock private Environment environment;
 
@@ -50,7 +50,7 @@ public final class ConfigServiceCapabilityTest {
 
   @Before
   public void setUp() {
-    flags.setAllFlags(ImmutableMap.of("fe_connect_to_config_server", "true"));
+    flags.setAll(ImmutableMap.of("fe_connect_to_config_server", "true"));
   }
 
   @Test
@@ -66,7 +66,7 @@ public final class ConfigServiceCapabilityTest {
   @Test
   public void isConfigServiceAvailable_googleInternal_flagDisabled() {
     when(environment.isGoogleInternal()).thenReturn(true);
-    flags.setAllFlags(ImmutableMap.of("fe_connect_to_config_server", "false"));
+    flags.setAll(ImmutableMap.of("fe_connect_to_config_server", "false"));
 
     assertThat(new ConfigServiceCapability(environment, SELF_UNIVERSE).isConfigServiceAvailable())
         .isTrue();
@@ -131,7 +131,7 @@ public final class ConfigServiceCapabilityTest {
 
   @Test
   public void checkConfigServiceAvailability_disabledByFlag() {
-    flags.setAllFlags(ImmutableMap.of("fe_connect_to_config_server", "false"));
+    flags.setAll(ImmutableMap.of("fe_connect_to_config_server", "false"));
     ConfigServiceCapability capability = new ConfigServiceCapability(environment, SELF_UNIVERSE);
 
     UnsupportedOperationException exception =

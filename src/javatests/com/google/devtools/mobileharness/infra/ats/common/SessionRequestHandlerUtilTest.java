@@ -56,7 +56,7 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -94,7 +94,7 @@ public final class SessionRequestHandlerUtilTest {
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
   @Rule public final TemporaryFolder folder = new TemporaryFolder();
-  @Rule public final SetFlagsOss flags = new SetFlagsOss();
+  @Rule public final SetFlags flags = new SetFlags();
 
   @Bind @Mock private LocalFileUtil localFileUtil;
   @Bind @Mock private ModuleConfigurationHelper moduleConfigurationHelper;
@@ -123,7 +123,7 @@ public final class SessionRequestHandlerUtilTest {
 
   @Before
   public void setUp() throws Exception {
-    flags.setAllFlags(ImmutableMap.of("enable_ats_mode", "true", "use_tf_retry", "false"));
+    flags.setAll(ImmutableMap.of("enable_ats_mode", "true", "use_tf_retry", "false"));
 
     sessionGenDir = folder.newFolder("session_gen_dir").toPath();
     sessionTempDir = folder.newFolder("session_temp_dir").toPath();
@@ -745,7 +745,7 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void getFilteredTradefedModules_testFilters_tfRetryWithModules() throws Exception {
-    flags.setAllFlags(ImmutableMap.of("enable_ats_mode", "true", "use_tf_retry", "true"));
+    flags.setAll(ImmutableMap.of("enable_ats_mode", "true", "use_tf_retry", "true"));
     Configuration config1 =
         defaultConfigurationBuilder()
             .setMetadata(

@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
-import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -33,7 +33,7 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public final class CommandLineParserTest {
 
-  @Rule public final SetFlagsOss setFlags = new SetFlagsOss();
+  @Rule public final SetFlags setFlags = new SetFlags();
 
   private CommandLineParser commandLineParser;
 
@@ -63,7 +63,7 @@ public final class CommandLineParserTest {
 
   @Test
   public void parseCommandLine_embeddedMode_success() throws Exception {
-    setFlags.setAllFlags(ImmutableMap.of("ats_console_olc_server_embedded_mode", "true"));
+    setFlags.setAll(ImmutableMap.of("ats_console_olc_server_embedded_mode", "true"));
     commandLineParser = new CommandLineParser();
 
     String tfCommand1 = "cts -m module1 -t testCase1 --shard-count 1";

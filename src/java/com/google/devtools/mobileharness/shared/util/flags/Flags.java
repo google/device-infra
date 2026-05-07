@@ -32,14 +32,14 @@ import java.util.Map;
  * <p>Remember to sort all flags by @FlagSpec.name.
  *
  * <p>To set flags in unit tests, please use {@code
- * com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss}
+ * com.google.devtools.mobileharness.shared.util.flags.core.SetFlags}
  *
  * <pre>{@code
- * @Rule public final SetFlagsOss flags = new SetFlagsOss();
+ * @Rule public final SetFlags flags = new SetFlags();
  *
  * @Test
  * public void test() {
- *   flags.setAllFlags(ImmutableMap.of("flag_name", "flag_value"));
+ *   flags.set("flag_name", "flag_value");
  *   ...
  * }
  * }</pre>

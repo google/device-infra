@@ -41,7 +41,7 @@ import com.google.devtools.mobileharness.platform.testbed.TestbedUtil;
 import com.google.devtools.mobileharness.platform.testbed.config.TestbedLoader;
 import com.google.devtools.mobileharness.shared.util.command.CommandFailureException;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
-import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidRealDevice;
@@ -59,7 +59,7 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public class AdbDetectorTest {
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
-  @Rule public final SetFlagsOss flags = new SetFlagsOss();
+  @Rule public final SetFlags flags = new SetFlags();
 
   private static final String DEVICE_0 = "DEVICE_0";
   private static final String DEVICE_1 = "DEVICE_1";
@@ -209,7 +209,7 @@ public class AdbDetectorTest {
 
   @Test
   public void detectDevices_failedDueToAdbAddressInUse_noRecoverIfNotMhManaged() throws Exception {
-    flags.setAllFlags(ImmutableMap.of("should_manage_devices", "false"));
+    flags.setAll(ImmutableMap.of("should_manage_devices", "false"));
 
     when(adbInternalUtil.getDeviceSerialsAsMap())
         .thenThrow(

@@ -85,7 +85,7 @@ import com.google.devtools.mobileharness.shared.util.comm.messaging.message.Test
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -151,7 +151,7 @@ public final class AtsServerSessionPluginTest {
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
-  @Rule public final SetFlagsOss flags = new SetFlagsOss();
+  @Rule public final SetFlags flags = new SetFlags();
 
   @Bind @Mock private DeviceQuerier deviceQuerier;
   @Bind @Mock private SessionInfo sessionInfo;
@@ -184,7 +184,7 @@ public final class AtsServerSessionPluginTest {
   @Before
   public void setup() throws Exception {
     String publicDir = tmpFolder.newFolder("public_dir").getAbsolutePath();
-    flags.setAllFlags(ImmutableMap.of("public_dir", publicDir));
+    flags.setAll(ImmutableMap.of("public_dir", publicDir));
     Instant baseTime = Instant.ofEpochMilli(1000);
     timing = new Timing(baseTime);
     timing.start(baseTime.plusMillis(1));

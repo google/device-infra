@@ -20,7 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -33,7 +33,7 @@ import org.mockito.junit.MockitoRule;
 public final class FeatureManagerTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
-  @Rule public final SetFlagsOss flags = new SetFlagsOss();
+  @Rule public final SetFlags flags = new SetFlags();
 
   @Mock private Environment mockEnvironment;
 
@@ -52,7 +52,7 @@ public final class FeatureManagerTest {
   @Test
   public void isConfigurationFeatureEnabled_scenario1_flagTrue_returnsTrue() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    flags.setAllFlags(ImmutableMap.of("fe_enable_configuration", "true"));
+    flags.setAll(ImmutableMap.of("fe_enable_configuration", "true"));
     FeatureManager featureManager = new FeatureManager(mockEnvironment, SELF_UNIVERSE);
     assertThat(featureManager.isConfigurationFeatureEnabled()).isTrue();
   }
@@ -60,7 +60,7 @@ public final class FeatureManagerTest {
   @Test
   public void isConfigurationFeatureEnabled_scenario1_flagFalse_returnsTrue() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    flags.setAllFlags(ImmutableMap.of("fe_enable_configuration", "false"));
+    flags.setAll(ImmutableMap.of("fe_enable_configuration", "false"));
     FeatureManager featureManager = new FeatureManager(mockEnvironment, SELF_UNIVERSE);
     assertThat(featureManager.isConfigurationFeatureEnabled()).isTrue();
   }
@@ -77,7 +77,7 @@ public final class FeatureManagerTest {
   @Test
   public void isConfigurationFeatureEnabled_scenario2_flagTrue_returnsFalse() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    flags.setAllFlags(ImmutableMap.of("fe_enable_configuration", "true"));
+    flags.setAll(ImmutableMap.of("fe_enable_configuration", "true"));
     FeatureManager featureManager = new FeatureManager(mockEnvironment, ROUTED_UNIVERSE);
     assertThat(featureManager.isConfigurationFeatureEnabled()).isFalse();
   }
@@ -94,7 +94,7 @@ public final class FeatureManagerTest {
   @Test
   public void isConfigurationFeatureEnabled_scenario3_flagTrue_returnsTrue() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(false);
-    flags.setAllFlags(ImmutableMap.of("fe_enable_configuration", "true"));
+    flags.setAll(ImmutableMap.of("fe_enable_configuration", "true"));
     FeatureManager featureManager = new FeatureManager(mockEnvironment, ROUTED_UNIVERSE);
     assertThat(featureManager.isConfigurationFeatureEnabled()).isTrue();
   }
@@ -102,7 +102,7 @@ public final class FeatureManagerTest {
   @Test
   public void isConfigurationFeatureEnabled_scenario3_flagFalse_returnsFalse() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(false);
-    flags.setAllFlags(ImmutableMap.of("fe_enable_configuration", "false"));
+    flags.setAll(ImmutableMap.of("fe_enable_configuration", "false"));
     FeatureManager featureManager = new FeatureManager(mockEnvironment, ROUTED_UNIVERSE);
     assertThat(featureManager.isConfigurationFeatureEnabled()).isFalse();
   }

@@ -53,9 +53,9 @@ import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceGrpc
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceGrpc.LabInfoServiceBlockingStub;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.junit.rule.CaptureLogs;
 import com.google.devtools.mobileharness.shared.util.junit.rule.PrintTestName;
-import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -95,7 +95,7 @@ public class LocalModeIntegrationTest {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  @Rule public final SetFlagsOss flags = new SetFlagsOss();
+  @Rule public final SetFlags flags = new SetFlags();
   @Rule public final CaptureLogs captureLogs = new CaptureLogs();
   @Rule public final PrintTestName printTestName = new PrintTestName();
 
@@ -110,7 +110,7 @@ public class LocalModeIntegrationTest {
 
   @Before
   public void setUp() throws InterruptedException {
-    flags.setAllFlags(
+    flags.setAll(
         ImmutableMap.of(
             "detect_adb_device",
             "false",

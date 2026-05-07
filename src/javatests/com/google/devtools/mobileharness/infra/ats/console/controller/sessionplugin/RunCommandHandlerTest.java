@@ -52,7 +52,7 @@ import com.google.devtools.mobileharness.platform.android.xts.constant.XtsProper
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
@@ -106,7 +106,7 @@ public final class RunCommandHandlerTest {
 
   @Rule public MockitoRule mockito = MockitoJUnit.rule();
   @Rule public TemporaryFolder folder = new TemporaryFolder();
-  @Rule public final SetFlagsOss flags = new SetFlagsOss();
+  @Rule public final SetFlags flags = new SetFlags();
 
   @Bind @Mock private DeviceQuerier deviceQuerier;
   @Bind @Mock private CompatibilityReportMerger compatibilityReportMerger;
@@ -131,7 +131,7 @@ public final class RunCommandHandlerTest {
 
     // Sets flags.
     File tmpDir = folder.newFolder("lab_server_tmp_dir");
-    flags.setAllFlags(ImmutableMap.of("tmp_dir_root", tmpDir.getAbsolutePath()));
+    flags.setAll(ImmutableMap.of("tmp_dir_root", tmpDir.getAbsolutePath()));
 
     Injector injector =
         Guice.createInjector(

@@ -25,11 +25,11 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/tradefed:non_xts_run_strategy",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:tradefed_test_spec_java_proto",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:set_flags_oss",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",

@@ -43,7 +43,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryA
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -74,7 +74,7 @@ public final class ConsoleJobCreatorTest {
 
   @Rule public MockitoRule mockito = MockitoJUnit.rule();
   @Rule public TemporaryFolder folder = new TemporaryFolder();
-  @Rule public final SetFlagsOss flags = new SetFlagsOss();
+  @Rule public final SetFlags flags = new SetFlags();
 
   @Bind @Mock private SessionRequestHandlerUtil sessionRequestHandlerUtil;
   @Bind @Mock private LocalFileUtil localFileUtil;
@@ -87,7 +87,7 @@ public final class ConsoleJobCreatorTest {
 
   @Before
   public void setUp() throws Exception {
-    flags.setAllFlags(ImmutableMap.of("enable_ats_mode", "true", "use_tf_retry", "false"));
+    flags.setAll(ImmutableMap.of("enable_ats_mode", "true", "use_tf_retry", "false"));
 
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     when(sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(any()))
@@ -554,7 +554,7 @@ public final class ConsoleJobCreatorTest {
 
   @Test
   public void createXtsTradefedTestJob_tfRetryWithModules() throws Exception {
-    flags.setAllFlags(ImmutableMap.of("enable_ats_mode", "true", "use_tf_retry", "true"));
+    flags.setAll(ImmutableMap.of("enable_ats_mode", "true", "use_tf_retry", "true"));
     SessionRequestInfo sessionRequestInfo =
         SessionRequestInfo.builder()
             .setTestPlan("retry")

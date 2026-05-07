@@ -26,7 +26,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.TradefedTestDriverSpec;
@@ -47,7 +47,7 @@ import org.mockito.junit.MockitoRule;
 public final class NonXtsRunStrategyTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
-  @Rule public final SetFlagsOss flags = new SetFlagsOss();
+  @Rule public final SetFlags flags = new SetFlags();
 
   @Mock private LocalFileUtil localFileUtil;
   @Mock private TestInfo testInfo;
@@ -59,7 +59,7 @@ public final class NonXtsRunStrategyTest {
 
   @Before
   public void setUp() throws Exception {
-    flags.setAllFlags(ImmutableMap.of("tradefed_binary_dir", TRADEFED_DIR));
+    flags.setAll(ImmutableMap.of("tradefed_binary_dir", TRADEFED_DIR));
     nonXtsRunStrategy = new NonXtsRunStrategy(localFileUtil);
   }
 
@@ -112,7 +112,7 @@ public final class NonXtsRunStrategyTest {
 
   @Test
   public void getEnvironment_withTfHostConfig() throws Exception {
-    flags.setAllFlags(ImmutableMap.of("tradefed_host_config", "/path/to/host-config.xml"));
+    flags.setAll(ImmutableMap.of("tradefed_host_config", "/path/to/host-config.xml"));
 
     ImmutableMap<String, String> env =
         nonXtsRunStrategy.getEnvironment(

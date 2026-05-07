@@ -22,7 +22,7 @@ import static org.junit.Assert.assertThrows;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -31,7 +31,7 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public final class AndroidJitEmulatorUtilTest {
 
-  @Rule public final SetFlagsOss flags = new SetFlagsOss();
+  @Rule public final SetFlags flags = new SetFlags();
 
   @Test
   public void getVirtualDeviceNameInTradefed_local() {
@@ -62,7 +62,7 @@ public final class AndroidJitEmulatorUtilTest {
 
   @Test
   public void getVirtualDeviceNameInTradefed_remote() {
-    flags.setAllFlags(
+    flags.setAll(
         ImmutableMap.of(
             "virtual_device_server_ip",
             "10.0.0.1",
@@ -80,7 +80,7 @@ public final class AndroidJitEmulatorUtilTest {
 
   @Test
   public void getAllVirtualDeviceIds_defaultSettings_returnsLocalhostPorts() {
-    flags.setAllFlags(ImmutableMap.of("android_jit_emulator_num", "2"));
+    flags.setAll(ImmutableMap.of("android_jit_emulator_num", "2"));
 
     ImmutableList<String> deviceIds = AndroidJitEmulatorUtil.getAllVirtualDeviceIds();
     assertThat(deviceIds).containsExactly("127.0.0.1:6520", "127.0.0.1:6521").inOrder();

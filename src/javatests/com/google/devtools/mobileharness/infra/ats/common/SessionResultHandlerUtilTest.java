@@ -38,7 +38,7 @@ import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConsta
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -65,7 +65,7 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public final class SessionResultHandlerUtilTest {
   @Rule public MockitoRule mockito = MockitoJUnit.rule();
-  @Rule public final SetFlagsOss flags = new SetFlagsOss();
+  @Rule public final SetFlags flags = new SetFlags();
 
   @Rule public TemporaryFolder folder = new TemporaryFolder();
 
@@ -130,7 +130,7 @@ public final class SessionResultHandlerUtilTest {
 
   @Test
   public void cleanUpLabGenFileDir_success() throws Exception {
-    flags.setAllFlags(ImmutableMap.of("ats_storage_path", "/tmp/ats_storage_path"));
+    flags.setAll(ImmutableMap.of("ats_storage_path", "/tmp/ats_storage_path"));
     Mockito.doReturn(true)
         .when(localFileUtil)
         .isDirExist(eq("/tmp/ats_storage_path/genfiles/test_id"));

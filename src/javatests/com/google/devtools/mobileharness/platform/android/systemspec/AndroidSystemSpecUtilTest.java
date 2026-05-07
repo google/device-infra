@@ -30,7 +30,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdb
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.UsbDeviceLocator;
-import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.wireless.qa.mobileharness.shared.proto.AndroidDeviceSpec.Abi;
 import java.util.HashMap;
 import java.util.Map;
@@ -48,7 +48,7 @@ import org.mockito.junit.MockitoRule;
 public class AndroidSystemSpecUtilTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
-  @Rule public final SetFlagsOss flags = new SetFlagsOss();
+  @Rule public final SetFlags flags = new SetFlags();
 
   @Mock private Adb adb;
   @Mock private AndroidAdbInternalUtil adbInternalUtil;

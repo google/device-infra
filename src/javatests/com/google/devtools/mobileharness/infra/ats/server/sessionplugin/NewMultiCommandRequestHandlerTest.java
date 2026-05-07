@@ -75,7 +75,7 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -138,7 +138,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
-  @Rule public final SetFlagsOss flags = new SetFlagsOss();
+  @Rule public final SetFlags flags = new SetFlags();
 
   @Bind @Mock private DeviceQuerier deviceQuerier;
   @Bind @Mock private SessionRequestHandlerUtil sessionRequestHandlerUtil;
@@ -168,7 +168,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Before
   public void setup() throws Exception {
     String publicDir = tmpFolder.newFolder("public_dir").getAbsolutePath();
-    flags.setAllFlags(ImmutableMap.of("public_dir", publicDir));
+    flags.setAll(ImmutableMap.of("public_dir", publicDir));
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     when(sessionInfo.getSessionId()).thenReturn("session_id");
     properties.add(Job.IS_XTS_TF_JOB, "true");

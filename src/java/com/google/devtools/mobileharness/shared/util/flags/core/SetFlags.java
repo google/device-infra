@@ -50,6 +50,17 @@ public class SetFlags implements TestRule {
   }
 
   /**
+   * Overrides the values of multiple flags by their names.
+   *
+   * @throws IllegalStateException if any flag name is unknown
+   */
+  @CanIgnoreReturnValue
+  public SetFlags setAll(Map<String, String> flags) {
+    flags.forEach(this::set);
+    return this;
+  }
+
+  /**
    * Resets the value of a flag to its default value by its name.
    *
    * @throws IllegalStateException if the flag name is unknown

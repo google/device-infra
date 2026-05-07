@@ -31,9 +31,9 @@ import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.ClientApiModule;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.junit.rule.CaptureLogs;
 import com.google.devtools.mobileharness.shared.util.junit.rule.PrintTestName;
-import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -54,7 +54,7 @@ public class ClientApiLatencyTest {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  @Rule public final SetFlagsOss flags = new SetFlagsOss();
+  @Rule public final SetFlags flags = new SetFlags();
   @Rule public final CaptureLogs captureLogs = new CaptureLogs();
   @Rule public final PrintTestName printTestName = new PrintTestName();
 
@@ -68,7 +68,7 @@ public class ClientApiLatencyTest {
 
   @Before
   public void setUp() {
-    flags.setAllFlags(
+    flags.setAll(
         ImmutableMap.of(
             "detect_adb_device",
             "false",

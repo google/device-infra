@@ -58,9 +58,9 @@ import com.google.devtools.mobileharness.shared.context.InvocationContext.Contex
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationInfo;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.junit.rule.CaptureLogs;
 import com.google.devtools.mobileharness.shared.util.junit.rule.PrintTestName;
-import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -93,7 +93,7 @@ public class ClientApiTest {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  @Rule public final SetFlagsOss flags = new SetFlagsOss();
+  @Rule public final SetFlags flags = new SetFlags();
   @Rule public final CaptureLogs captureLogs = new CaptureLogs();
   @Rule public final PrintTestName printTestName = new PrintTestName();
 
@@ -111,7 +111,7 @@ public class ClientApiTest {
 
   @Before
   public void setUp() {
-    flags.setAllFlags(
+    flags.setAll(
         ImmutableMap.of(
             "detect_adb_device",
             "false",

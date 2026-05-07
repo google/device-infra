@@ -29,7 +29,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryR
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlanHelper;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.junit.rule.SetFlagsOss;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -110,7 +110,7 @@ public final class RetryReportMergerTest {
   private static final Path RESULTS_DIR_PATH = Path.of("/path/to/xts-root/android-cts/results");
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
-  @Rule public final SetFlagsOss flags = new SetFlagsOss();
+  @Rule public final SetFlags flags = new SetFlags();
 
   @Bind @Mock private PreviousResultLoader previousResultLoader;
   @Bind @Mock private RetryGenerator retryGenerator;
@@ -121,7 +121,7 @@ public final class RetryReportMergerTest {
 
   @Before
   public void setUp() {
-    flags.setAllFlags(ImmutableMap.of("use_tf_retry", "false"));
+    flags.setAll(ImmutableMap.of("use_tf_retry", "false"));
     Guice.createInjector(
             BoundFieldModule.of(this),
             new AbstractModule() {
