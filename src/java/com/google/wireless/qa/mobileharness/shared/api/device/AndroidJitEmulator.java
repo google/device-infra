@@ -217,11 +217,7 @@ public class AndroidJitEmulator extends AndroidDevice {
                 hostId, new File(hostImagePath), new File(deviceImagePath));
         cvd =
             client.createCvdWithLocalImageAndWait(
-                hostId,
-                cvdId,
-                result.imageDirId(),
-                result.hostPkgChecksum(),
-                result.deviceImgChecksum());
+                hostId, cvdId, result.hostImageDirId(), result.deviceImageDirId());
       } catch (IOException e) {
         throw new MobileHarnessException(
             BasicErrorId.LOCAL_FILE_OR_DIR_NOT_FOUND, "Failed to prepare local images", e);

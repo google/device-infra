@@ -571,7 +571,7 @@ public class CloudOrchestratorClientTest {
     var request = server.takeRequest();
     assertThat(request.getMethod()).isEqualTo("PUT");
     assertThat(request.getPath()).isEqualTo("/v1/zones/local/hosts/host-1/cvd_imgs_dirs/dir-1");
-    assertThat(request.getBody().readUtf8()).contains("\"UserArtifactChecksum\":\"checksum-1\"");
+    assertThat(request.getBody().readUtf8()).contains("\"user_artifact_checksum\":\"checksum-1\"");
   }
 
   @Test
@@ -620,18 +620,15 @@ public class CloudOrchestratorClientTest {
             .setBody("{\"cvds\": [{\"webrtc_device_id\": \"cvd-1\"}]}")
             .addHeader("Content-Type", "application/json"));
 
-    var cvd =
-        client.createCvdWithLocalImageAndWait(
-            "host-1", "cvd-1", "dir-1", "checksum-1", "checksum-2");
+    var cvd = client.createCvdWithLocalImageAndWait("host-1", "cvd-1", "dir-host", "dir-device");
 
     assertThat(cvd.webrtcDeviceId).isEqualTo("cvd-1");
     var req = server.takeRequest();
     assertThat(req.getMethod()).isEqualTo("POST");
     assertThat(req.getPath()).isEqualTo("/v1/zones/local/hosts/host-1/cvds");
     String body = req.getBody().readUtf8();
-    assertThat(body)
-        .contains("\"host_package\":\"@image_dirs/dir-1/checksum-1_extracted/host_tools\"");
-    assertThat(body).contains("\"default_build\":\"@image_dirs/dir-1/checksum-2_extracted\"");
+    assertThat(body).contains("\"host_package\":\"@image_dirs/dir-host\"");
+    assertThat(body).contains("\"default_build\":\"@image_dirs/dir-device\"");
   }
 
   @Test

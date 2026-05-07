@@ -24,8 +24,6 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudOrchestratorMessages.Operation;
 import java.io.File;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 
 /** Preparer for local images and uploading them to Cloud Orchestrator. */
@@ -41,16 +39,13 @@ public class CloudOrchestratorLocalImagePreparer {
   /** Result of image preparation containing directory ID and checksums. */
   @AutoValue
   public abstract static class ImagePreparationResult {
-    public abstract String imageDirId();
+    public abstract String hostImageDirId();
 
-    public abstract String hostPkgChecksum();
+    public abstract String deviceImageDirId();
 
-    public abstract String deviceImgChecksum();
-
-    public static ImagePreparationResult create(
-        String imageDirId, String hostPkgChecksum, String deviceImgChecksum) {
+    public static ImagePreparationResult create(String hostImageDirId, String deviceImageDirId) {
       return new AutoValue_CloudOrchestratorLocalImagePreparer_ImagePreparationResult(
-          imageDirId, hostPkgChecksum, deviceImgChecksum);
+          hostImageDirId, deviceImageDirId);
     }
   }
 
@@ -69,23 +64,21 @@ public class CloudOrchestratorLocalImagePreparer {
   public ImagePreparationResult prepareImagesAndWait(
       String hostId, File hostImage, File deviceImage)
       throws MobileHarnessException, IOException, InterruptedException {
-    Map<File, String> fileToChecksumMap = new HashMap<>();
-
     String hostImageChecksum = calculateChecksum(hostImage);
-    fileToChecksumMap.put(hostImage, hostImageChecksum);
     uploadFileIfNeeded(hostId, hostImage, hostImageChecksum);
 
     String deviceImageChecksum = calculateChecksum(deviceImage);
-    fileToChecksumMap.put(deviceImage, deviceImageChecksum);
     uploadFileIfNeeded(hostId, deviceImage, deviceImageChecksum);
 
     // Extract artifacts on the server
     extractArtifactIfNeeded(hostId, hostImageChecksum, hostImage.getName());
     extractArtifactIfNeeded(hostId, deviceImageChecksum, deviceImage.getName());
 
-    // Create image directory and add artifacts to it
-    String imageDirId = createImageDirectoryWithArtifacts(hostId, fileToChecksumMap.values());
-    return ImagePreparationResult.create(imageDirId, hostImageChecksum, deviceImageChecksum);
+    // Create image directories and add artifacts to them
+    String hostImageDirId = createImageDirectoryWithArtifact(hostId, hostImageChecksum);
+    String deviceImageDirId = createImageDirectoryWithArtifact(hostId, deviceImageChecksum);
+
+    return ImagePreparationResult.create(hostImageDirId, deviceImageDirId);
   }
 
   private String calculateChecksum(File file) throws IOException {
@@ -119,18 +112,17 @@ public class CloudOrchestratorLocalImagePreparer {
     }
   }
 
-  private String createImageDirectoryWithArtifacts(String hostId, Collection<String> checksums)
+  private String createImageDirectoryWithArtifact(String hostId, String checksum)
       throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("Creating image directory on server...");
     Operation op = client.createImageDirectory(hostId);
     Map<?, ?> res = client.waitOperation(hostId, op.name, Map.class);
     String imageDirId = (String) res.get("id");
 
-    for (String checksum : checksums) {
-      logger.atInfo().log("Adding artifact %s to image directory %s...", checksum, imageDirId);
-      Operation updateOp = client.updateImageDirectory(hostId, imageDirId, checksum);
-      client.waitOperation(hostId, updateOp.name, Map.class);
-    }
+    logger.atInfo().log("Adding artifact %s to image directory %s...", checksum, imageDirId);
+    Operation updateOp = client.updateImageDirectory(hostId, imageDirId, checksum);
+    client.waitOperation(hostId, updateOp.name, Map.class);
+
     return imageDirId;
   }
 }

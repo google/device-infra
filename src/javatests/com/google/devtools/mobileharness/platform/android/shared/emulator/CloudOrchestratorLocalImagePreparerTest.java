@@ -87,23 +87,31 @@ public class CloudOrchestratorLocalImagePreparerTest {
         .thenReturn(new HashMap<>());
 
     // Mock createImageDirectory
-    Operation createDirOp = new Operation();
-    createDirOp.name = "op-create-dir";
-    when(mockClient.createImageDirectory(hostId)).thenReturn(createDirOp);
+    Operation createDirOp1 = new Operation();
+    createDirOp1.name = "op-create-dir-1";
+    Operation createDirOp2 = new Operation();
+    createDirOp2.name = "op-create-dir-2";
+    when(mockClient.createImageDirectory(hostId)).thenReturn(createDirOp1, createDirOp2);
 
     // Mock waitOperation for create dir
-    Map<String, String> createDirRes = new HashMap<>();
-    createDirRes.put("id", "dir-123");
-    when(mockClient.waitOperation(eq(hostId), eq("op-create-dir"), eq(Map.class)))
-        .thenReturn(createDirRes);
+    Map<String, String> createDirRes1 = new HashMap<>();
+    createDirRes1.put("id", "dir-host");
+    Map<String, String> createDirRes2 = new HashMap<>();
+    createDirRes2.put("id", "dir-device");
+    when(mockClient.waitOperation(eq(hostId), eq("op-create-dir-1"), eq(Map.class)))
+        .thenReturn(createDirRes1);
+    when(mockClient.waitOperation(eq(hostId), eq("op-create-dir-2"), eq(Map.class)))
+        .thenReturn(createDirRes2);
 
     // Mock updateImageDirectory
     Operation updateOp1 = new Operation();
     updateOp1.name = "op-update-1";
     Operation updateOp2 = new Operation();
     updateOp2.name = "op-update-2";
-    when(mockClient.updateImageDirectory(eq(hostId), eq("dir-123"), anyString()))
-        .thenReturn(updateOp1, updateOp2);
+    when(mockClient.updateImageDirectory(eq(hostId), eq("dir-host"), anyString()))
+        .thenReturn(updateOp1);
+    when(mockClient.updateImageDirectory(eq(hostId), eq("dir-device"), anyString()))
+        .thenReturn(updateOp2);
 
     // Mock waitOperation for update
     when(mockClient.waitOperation(eq(hostId), eq("op-update-1"), eq(Map.class)))
@@ -114,14 +122,16 @@ public class CloudOrchestratorLocalImagePreparerTest {
     CloudOrchestratorLocalImagePreparer.ImagePreparationResult result =
         manager.prepareImagesAndWait(hostId, tempHostImage, tempDeviceImage);
 
-    assertThat(result.imageDirId()).isEqualTo("dir-123");
+    assertThat(result.hostImageDirId()).isEqualTo("dir-host");
+    assertThat(result.deviceImageDirId()).isEqualTo("dir-device");
 
     // Verify upload was called
     verify(mockClient, times(2)).uploadArtifact(eq(hostId), anyString(), any(File.class));
     // Verify extract was called
     verify(mockClient, times(2)).extractArtifact(eq(hostId), anyString());
     // Verify update dir was called
-    verify(mockClient, times(2)).updateImageDirectory(eq(hostId), eq("dir-123"), anyString());
+    verify(mockClient).updateImageDirectory(eq(hostId), eq("dir-host"), anyString());
+    verify(mockClient).updateImageDirectory(eq(hostId), eq("dir-device"), anyString());
   }
 
   @Test
@@ -138,23 +148,34 @@ public class CloudOrchestratorLocalImagePreparerTest {
     when(mockClient.waitOperation(eq(hostId), anyString(), eq(Map.class)))
         .thenReturn(new HashMap<>());
 
-    Operation createDirOp = new Operation();
-    createDirOp.name = "op-create-dir";
-    when(mockClient.createImageDirectory(hostId)).thenReturn(createDirOp);
-    Map<String, String> createDirRes = new HashMap<>();
-    createDirRes.put("id", "dir-123");
-    when(mockClient.waitOperation(eq(hostId), eq("op-create-dir"), eq(Map.class)))
-        .thenReturn(createDirRes);
+    Operation createDirOp1 = new Operation();
+    createDirOp1.name = "op-create-dir-1";
+    Operation createDirOp2 = new Operation();
+    createDirOp2.name = "op-create-dir-2";
+    when(mockClient.createImageDirectory(hostId)).thenReturn(createDirOp1, createDirOp2);
+    Map<String, String> createDirRes1 = new HashMap<>();
+    createDirRes1.put("id", "dir-host");
+    Map<String, String> createDirRes2 = new HashMap<>();
+    createDirRes2.put("id", "dir-device");
+    when(mockClient.waitOperation(eq(hostId), eq("op-create-dir-1"), eq(Map.class)))
+        .thenReturn(createDirRes1);
+    when(mockClient.waitOperation(eq(hostId), eq("op-create-dir-2"), eq(Map.class)))
+        .thenReturn(createDirRes2);
 
-    Operation updateOp = new Operation();
-    updateOp.name = "op-update";
-    when(mockClient.updateImageDirectory(eq(hostId), eq("dir-123"), anyString()))
-        .thenReturn(updateOp);
+    Operation updateOp1 = new Operation();
+    updateOp1.name = "op-update-1";
+    when(mockClient.updateImageDirectory(eq(hostId), eq("dir-host"), anyString()))
+        .thenReturn(updateOp1);
+    Operation updateOp2 = new Operation();
+    updateOp2.name = "op-update-2";
+    when(mockClient.updateImageDirectory(eq(hostId), eq("dir-device"), anyString()))
+        .thenReturn(updateOp2);
 
     CloudOrchestratorLocalImagePreparer.ImagePreparationResult result =
         manager.prepareImagesAndWait(hostId, tempHostImage, tempDeviceImage);
 
-    assertThat(result.imageDirId()).isEqualTo("dir-123");
+    assertThat(result.hostImageDirId()).isEqualTo("dir-host");
+    assertThat(result.deviceImageDirId()).isEqualTo("dir-device");
 
     // Verify upload was NOT called
     verify(mockClient, never()).uploadArtifact(eq(hostId), anyString(), any(File.class));
@@ -172,26 +193,39 @@ public class CloudOrchestratorLocalImagePreparerTest {
         new MobileHarnessException(BasicErrorId.LOCAL_NETWORK_ERROR, "Failed", httpEx);
     when(mockClient.extractArtifact(eq(hostId), anyString())).thenThrow(mhEx);
 
-    Operation createDirOp = new Operation();
-    createDirOp.name = "op-create-dir";
-    when(mockClient.createImageDirectory(hostId)).thenReturn(createDirOp);
+    Operation createDirOp1 = new Operation();
+    createDirOp1.name = "op-create-dir-1";
+    Operation createDirOp2 = new Operation();
+    createDirOp2.name = "op-create-dir-2";
+    when(mockClient.createImageDirectory(hostId)).thenReturn(createDirOp1, createDirOp2);
 
-    Map<String, String> createDirRes = new HashMap<>();
-    createDirRes.put("id", "dir-123");
-    when(mockClient.waitOperation(eq(hostId), eq("op-create-dir"), eq(Map.class)))
-        .thenReturn(createDirRes);
+    Map<String, String> createDirRes1 = new HashMap<>();
+    createDirRes1.put("id", "dir-host");
+    Map<String, String> createDirRes2 = new HashMap<>();
+    createDirRes2.put("id", "dir-device");
+    when(mockClient.waitOperation(eq(hostId), eq("op-create-dir-1"), eq(Map.class)))
+        .thenReturn(createDirRes1);
+    when(mockClient.waitOperation(eq(hostId), eq("op-create-dir-2"), eq(Map.class)))
+        .thenReturn(createDirRes2);
 
-    Operation updateOp = new Operation();
-    updateOp.name = "op-update";
-    when(mockClient.updateImageDirectory(eq(hostId), eq("dir-123"), anyString()))
-        .thenReturn(updateOp);
+    Operation updateOp1 = new Operation();
+    updateOp1.name = "op-update-1";
+    when(mockClient.updateImageDirectory(eq(hostId), eq("dir-host"), anyString()))
+        .thenReturn(updateOp1);
+    Operation updateOp2 = new Operation();
+    updateOp2.name = "op-update-2";
+    when(mockClient.updateImageDirectory(eq(hostId), eq("dir-device"), anyString()))
+        .thenReturn(updateOp2);
 
-    when(mockClient.waitOperation(eq(hostId), eq("op-update"), eq(Map.class)))
+    when(mockClient.waitOperation(eq(hostId), eq("op-update-1"), eq(Map.class)))
+        .thenReturn(new HashMap<>());
+    when(mockClient.waitOperation(eq(hostId), eq("op-update-2"), eq(Map.class)))
         .thenReturn(new HashMap<>());
 
     CloudOrchestratorLocalImagePreparer.ImagePreparationResult result =
         manager.prepareImagesAndWait(hostId, tempHostImage, tempDeviceImage);
 
-    assertThat(result.imageDirId()).isEqualTo("dir-123");
+    assertThat(result.hostImageDirId()).isEqualTo("dir-host");
+    assertThat(result.deviceImageDirId()).isEqualTo("dir-device");
   }
 }

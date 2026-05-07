@@ -218,7 +218,7 @@ public class CloudOrchestratorClient {
   public Operation updateImageDirectory(String hostId, String dirId, String checksum)
       throws MobileHarnessException {
     Map<String, String> req = new HashMap<>();
-    req.put("UserArtifactChecksum", checksum);
+    req.put("user_artifact_checksum", checksum);
     return put("/hosts/" + hostId + "/cvd_imgs_dirs/" + dirId, req, Operation.class);
   }
 
@@ -438,17 +438,11 @@ public class CloudOrchestratorClient {
    * @throws InterruptedException if the thread is interrupted
    */
   public Cvd createCvdWithLocalImageAndWait(
-      String hostId,
-      String cvdId,
-      String imageDirId,
-      String hostPkgChecksum,
-      String deviceImgChecksum)
+      String hostId, String cvdId, String hostImageDirId, String deviceImageDirId)
       throws MobileHarnessException, InterruptedException {
     Map<String, Object> envConfig = new HashMap<>();
     Map<String, Object> common = new HashMap<>();
-    common.put(
-        "host_package",
-        "@image_dirs/" + imageDirId + "/" + hostPkgChecksum + "_extracted/host_tools");
+    common.put("host_package", "@image_dirs/" + hostImageDirId);
     envConfig.put("common", common);
 
     Map<String, Object> instance = new HashMap<>();
@@ -461,7 +455,7 @@ public class CloudOrchestratorClient {
     vm.put("cpus", 4);
     instance.put("vm", vm);
     Map<String, Object> disk = new HashMap<>();
-    disk.put("default_build", "@image_dirs/" + imageDirId + "/" + deviceImgChecksum + "_extracted");
+    disk.put("default_build", "@image_dirs/" + deviceImageDirId);
     instance.put("disk", disk);
     Map<String, Object> streaming = new HashMap<>();
     streaming.put("device_id", cvdId);
