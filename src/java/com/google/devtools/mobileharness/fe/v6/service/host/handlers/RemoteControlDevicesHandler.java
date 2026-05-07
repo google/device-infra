@@ -26,7 +26,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
-import com.google.devtools.mobileharness.fe.v6.service.host.builder.RemoteControlUrlBuilder;
+import com.google.devtools.mobileharness.fe.v6.service.host.builders.RemoteControlUrlBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDeviceConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesResponse;

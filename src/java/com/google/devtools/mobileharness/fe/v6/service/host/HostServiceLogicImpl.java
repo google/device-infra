@@ -25,6 +25,8 @@ import com.google.devtools.mobileharness.fe.v6.service.host.handlers.Decommissio
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostDeviceSummariesHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostHeaderInfoHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostOverviewHandler;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetPopularFlagsHandler;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLabServerReleaseHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.RemoteControlDevicesHandler;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityResponse;
@@ -40,10 +42,10 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostHeaderI
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetPopularFlagsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetPopularFlagsResponse;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetReleaseConfigsRequest;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetReleaseConfigsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ReleaseLabServerRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ReleaseLabServerResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesRequest;
@@ -72,6 +74,8 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   private final RemoteControlDevicesHandler remoteControlDevicesHandler;
   private final GetHostHeaderInfoHandler getHostHeaderInfoHandler;
   private final DecommissionMissingDevicesHandler decommissionMissingDevicesHandler;
+  private final PreflightLabServerReleaseHandler preflightLabServerReleaseHandler;
+  private final GetPopularFlagsHandler getPopularFlagsHandler;
   private final UniverseFactory universeFactory;
 
   @Inject
@@ -82,6 +86,8 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
       RemoteControlDevicesHandler remoteControlDevicesHandler,
       GetHostHeaderInfoHandler getHostHeaderInfoHandler,
       DecommissionMissingDevicesHandler decommissionMissingDevicesHandler,
+      PreflightLabServerReleaseHandler preflightLabServerReleaseHandler,
+      GetPopularFlagsHandler getPopularFlagsHandler,
       UniverseFactory universeFactory) {
     this.getHostOverviewHandler = getHostOverviewHandler;
     this.getHostDeviceSummariesHandler = getHostDeviceSummariesHandler;
@@ -89,6 +95,8 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
     this.remoteControlDevicesHandler = remoteControlDevicesHandler;
     this.getHostHeaderInfoHandler = getHostHeaderInfoHandler;
     this.decommissionMissingDevicesHandler = decommissionMissingDevicesHandler;
+    this.preflightLabServerReleaseHandler = preflightLabServerReleaseHandler;
+    this.getPopularFlagsHandler = getPopularFlagsHandler;
     this.universeFactory = universeFactory;
   }
 
@@ -138,11 +146,13 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
 
   @Override
   public ListenableFuture<GetPopularFlagsResponse> getPopularFlags(GetPopularFlagsRequest request) {
-    // TODO: Use the universe parameter.
-    @SuppressWarnings("unused")
-    String universe = request.getUniverse();
-    // TODO: Implement this method.
-    return immediateFuture(GetPopularFlagsResponse.getDefaultInstance());
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return getPopularFlagsHandler.getPopularFlags(request, universe);
   }
 
   @Override
@@ -156,13 +166,15 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   }
 
   @Override
-  public ListenableFuture<GetReleaseConfigsResponse> getReleaseConfigs(
-      GetReleaseConfigsRequest request) {
-    // TODO: Use the universe parameter.
-    @SuppressWarnings("unused")
-    String universe = request.getUniverse();
-    // TODO: Implement this method.
-    return immediateFuture(GetReleaseConfigsResponse.getDefaultInstance());
+  public ListenableFuture<PreflightLabServerReleaseResponse> preflightLabServerRelease(
+      PreflightLabServerReleaseRequest request, Optional<String> username) {
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return preflightLabServerReleaseHandler.preflightLabServerRelease(request, universe, username);
   }
 
   @Override

@@ -8,10 +8,11 @@ import {TestBed} from '@angular/core/testing';
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
   DecommissionHostResponse,
+  DeployableVersion,
   GetHostDebugInfoResponse,
   HostHeaderInfo,
-  HostReleaseConfig,
   PopularFlag,
+  PreflightLabServerReleaseResponse,
   ReleaseLabServerRequest,
   ReleaseLabServerResponse,
   RestartLabServerResponse,
@@ -154,17 +155,19 @@ describe('HttpHostService', () => {
   });
 
   it('should retrieve release configs', () => {
-    const mockConfigs: HostReleaseConfig[] = [
-      {name: 'config1'} as HostReleaseConfig,
-    ];
-    service.getReleaseConfigs('test-host').subscribe((configs) => {
-      expect(configs).toEqual(mockConfigs);
+    const mockResponse: PreflightLabServerReleaseResponse = {
+      ready: {
+        versions: [{name: 'config1'} as DeployableVersion],
+      },
+    };
+    service.preflightLabServerRelease('test-host').subscribe((response) => {
+      expect(response).toEqual(mockResponse);
     });
     const req = httpMock.expectOne(
-      'http://testdomain.com/v6/hosts/test-host/release-configs',
+      `http://testdomain.com/v6/hosts/test-host/preflightLabServerRelease`,
     );
     expect(req.request.method).toBe('GET');
-    req.flush(mockConfigs);
+    req.flush(mockResponse);
   });
 
   it('should decommission host', () => {

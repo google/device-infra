@@ -5,8 +5,8 @@ import {
   DecommissionHostResponse,
   GetHostDebugInfoResponse,
   HostHeaderInfo,
-  HostReleaseConfig,
   PopularFlag,
+  PreflightLabServerReleaseResponse,
   ReleaseLabServerRequest,
   ReleaseLabServerResponse,
   RestartLabServerResponse,
@@ -25,7 +25,10 @@ import {
   RemoteControlDevicesResponse,
 } from '../../models/host_overview';
 import {MOCK_HOST_SCENARIOS} from '../mock_data';
-import {createHostActions} from '../mock_data/hosts/ui_status_utils';
+import {
+  createDefaultReleaseResponse,
+  createHostActions,
+} from '../mock_data/hosts/ui_status_utils';
 import {HostService} from './host_service';
 
 /**
@@ -113,19 +116,39 @@ export class FakeHostService extends HostService {
   override getPopularFlags(hostName: string): Observable<PopularFlag[]> {
     return of([
       {
-        name: 'No Mute Android',
-        description: 'Disables muting of Android devices',
-        cmd: '--nomute_android',
+        name: 'Standard Satellite',
+        cmd: '--nomute_android --noandroid_device_daemon',
+        description: 'Default configuration for Android Satellite Labs',
+      },
+      {
+        name: 'Linux Support',
+        cmd: '--enable_linux_device',
+        description: 'Enables detection of Linux devices',
+      },
+      {
+        name: 'Debug Mode',
+        cmd: '--debug_mode=true --verbose',
+        description: 'Enables verbose logging for debugging',
+      },
+      {
+        name: 'Flashstation Cache',
+        cmd: '--flashstation_cache_dir=/tmp/fs_cache',
+        description: 'Custom cache directory for Flashstation',
       },
       {
         name: 'No Binary Log',
-        description: 'Disables binary logging to save space',
         cmd: '--nobinarylog',
+        description: 'Disables binary logging to save space',
       },
       {
-        name: 'Enable Linux Device',
-        description: 'Enables support for Linux devices',
-        cmd: '--enable_linux_device',
+        name: 'Custom Flag',
+        cmd: `--my_message=":text: field_a: 'test' field_b: 123"`,
+        description: 'Custom flag for testing',
+      },
+      {
+        name: 'Custom Flag 2',
+        cmd: `--flagD="some value"`,
+        description: 'Custom flag for testing 2',
       },
     ]);
   }
@@ -148,31 +171,13 @@ export class FakeHostService extends HostService {
     }
   }
 
-  override getReleaseConfigs(
+  override preflightLabServerRelease(
     hostName: string,
-  ): Observable<HostReleaseConfig[]> {
-    return of([
-      {
-        name: 'MH_SATELLITE_LAB',
-        version: '4.349.0',
-        port: {protocol: 'grpc', portNumber: 9994},
-        syncCMD: [
-          'sudo systemctl stop mobileharness-lab',
-          'sudo /usr/bin/mh_lab_installer --version 4.349.0',
-        ],
-        asyncCMD: ['sudo systemctl start mobileharness-lab'],
-      },
-      {
-        name: 'MH_SATELLITE_LAB',
-        version: '4.348.0',
-        port: {protocol: 'grpc', portNumber: 9994},
-        syncCMD: [
-          'sudo systemctl stop mobileharness-lab',
-          'sudo /usr/bin/mh_lab_installer --version 4.348.0',
-        ],
-        asyncCMD: ['sudo systemctl start mobileharness-lab'],
-      },
-    ]);
+  ): Observable<PreflightLabServerReleaseResponse> {
+    const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    const preflightLabServerReleaseResponse =
+      scenario?.releaseResponse || createDefaultReleaseResponse();
+    return of(preflightLabServerReleaseResponse);
   }
 
   override decommissionMissingDevices(

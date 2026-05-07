@@ -28,6 +28,8 @@ java_library(
     testonly = 1,
     srcs = glob(["*.java"]),
     deps = [
+        "//devtools/deviceinfra/service/release/proto:release_store_service_java_stubby",
+        "//java/com/google/net/rpc3",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
@@ -37,7 +39,7 @@ java_library(
         "//src/devtools/mobileharness/fe/v6/service/proto/host:host_service_java_proto",
         "//src/devtools/mobileharness/infra/master/rpc/proto:lab_sync_service_java_proto",
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/builder",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/builders",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/handlers",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared",

@@ -38,6 +38,7 @@ import {Footer} from '../footer/footer';
 export class Dialog implements OnInit {
   @Input() width = '48rem';
   @Input() height = '';
+  @Input() maxHeight = '';
 
   @Input() title = '';
   @Input() subtitle = '';

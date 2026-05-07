@@ -31,7 +31,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
-import com.google.devtools.mobileharness.fe.v6.service.host.builder.RemoteControlUrlBuilder;
+import com.google.devtools.mobileharness.fe.v6.service.host.builders.RemoteControlUrlBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DeviceProxyType;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDeviceConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesRequest;
