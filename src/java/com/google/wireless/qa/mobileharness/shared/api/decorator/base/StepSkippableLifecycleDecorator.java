@@ -131,8 +131,9 @@ public abstract class StepSkippableLifecycleDecorator extends AbstractLifecycleD
    * <p><b>Note:</b> The state is namespaced to the combination of job (via {@link JobInfo}),
    * decorator, and device to avoid collisions.
    *
-   * @param deviceId the device control ID or device UUID, as long as it is unique among devices
-   *     within a job
+   * @param deviceId The device identifier. Any identifier that is unique among devices within a job
+   *     is acceptable (e.g., device UUID or Control ID). It is the caller's responsibility to
+   *     ensure that the same ID type is used for both {@link #setState} and {@link #getState}.
    * @implNote The property key in {@link JobInfo} is formatted as: {@code
    *     step_skippable_lifecycle_decorator_state::<device-id>::<decorator-class-name>::<key>}.
    */
@@ -144,8 +145,9 @@ public abstract class StepSkippableLifecycleDecorator extends AbstractLifecycleD
   /**
    * Retrieves state that was saved by this decorator (e.g. from a prior job).
    *
-   * @param deviceId the device control ID or device UUID, as long as it is unique among devices
-   *     within a job
+   * @param deviceId The device identifier. Any identifier that is unique among devices within a job
+   *     is acceptable (e.g., device UUID or Control ID). It is the caller's responsibility to
+   *     ensure that the same ID type is used for both {@link #setState} and {@link #getState}.
    */
   protected final Optional<String> getState(JobInfo jobInfo, String deviceId, String key) {
     return StepSkippableLifecycleDecoratorUtil.getState(
