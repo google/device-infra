@@ -26,11 +26,10 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.AllocationDiagnostician;
-import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.DeviceFilter;
+import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.DiagnosticDeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.Report;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUtil;
-import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
@@ -48,7 +47,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 /** For diagnostic the reasons about why a job can not allocate devices. */
@@ -62,30 +60,16 @@ public class SingleDeviceDiagnostician implements AllocationDiagnostician {
    */
   private static final int MAX_QUERY_DEVICE_COUNT = 20;
 
-  private static final ImmutableList<FieldDescriptor> DEFAULT_DEVICE_INFO_FIELDS_TO_QUERY =
-      ImmutableList.of(
-              DeviceQuery.DeviceInfo.ID_FIELD_NUMBER,
-              DeviceQuery.DeviceInfo.STATUS_FIELD_NUMBER,
-              DeviceQuery.DeviceInfo.OWNER_FIELD_NUMBER,
-              DeviceQuery.DeviceInfo.EXECUTOR_FIELD_NUMBER,
-              DeviceQuery.DeviceInfo.TYPE_FIELD_NUMBER,
-              DeviceQuery.DeviceInfo.DRIVER_FIELD_NUMBER,
-              DeviceQuery.DeviceInfo.DIMENSION_FIELD_NUMBER)
-          .stream()
-          .map(fieldNumber -> DeviceQuery.DeviceInfo.getDescriptor().findFieldByNumber(fieldNumber))
-          .collect(toImmutableList());
-
   /** The job to diagnostic with. */
   private final JobInfo job;
-
-  /** Filters to pre-filter the device candidates of the current job. */
-  private final DeviceFilter filter;
 
   /** For retrieving the device information for diagnostic. */
   private final DeviceQuerier querier;
 
   /** Assessor for providing detail assessment of the support of a group of devices for a job. */
   private final SingleDeviceAssessor assessor;
+
+  private final DiagnosticDeviceQuerier diagnosticQuerier;
 
   /** The report of the previous diagnostic. */
   @Nullable private volatile SingleDeviceReport lastReport;
@@ -94,16 +78,15 @@ public class SingleDeviceDiagnostician implements AllocationDiagnostician {
 
   /** Creates a diagnostician for checking the reason why a job can not allocate devices. */
   public SingleDeviceDiagnostician(JobInfo job, DeviceQuerier querier) {
-    this(job, new DeviceFilter(), querier, new SingleDeviceAssessor());
+    this(job, querier, new SingleDeviceAssessor());
   }
 
   @VisibleForTesting
-  SingleDeviceDiagnostician(
-      JobInfo job, DeviceFilter filter, DeviceQuerier querier, SingleDeviceAssessor assessor) {
+  SingleDeviceDiagnostician(JobInfo job, DeviceQuerier querier, SingleDeviceAssessor assessor) {
     this.job = job;
-    this.filter = filter;
     this.querier = querier;
     this.assessor = assessor;
+    this.diagnosticQuerier = new DiagnosticDeviceQuerier(querier);
   }
 
   /** Gets the last report if the last invocation of {@link #diagnoseJob()}. */
@@ -173,15 +156,7 @@ public class SingleDeviceDiagnostician implements AllocationDiagnostician {
   private List<DeviceInfo> queryDevices() throws MobileHarnessException, InterruptedException {
     DeviceQueryFilter candidateFilter = getDeviceQueryFilter();
     List<DeviceInfo> candidates =
-        querier
-            .queryDevice(
-                candidateFilter,
-                getDeviceInfoFieldsToQuery(),
-                getDimensionNamesToQuery(),
-                ImmutableList.of(getJobDriver()),
-                getJobDecorators())
-            .getDeviceInfoList()
-            .stream()
+        diagnosticQuerier.queryDevice(job, candidateFilter).getDeviceInfoList().stream()
             .map(this::convertDeviceInfo)
             .collect(Collectors.toList());
     candidates =
@@ -305,37 +280,6 @@ public class SingleDeviceDiagnostician implements AllocationDiagnostician {
       }
     }
     return deviceInfo;
-  }
-
-  private ImmutableList<String> getDimensionNamesToQuery() {
-    return Stream.concat(
-            job.dimensions().getAll().keySet().stream(),
-            Stream.of(
-                Ascii.toLowerCase(Dimension.Name.HOST_IP.name()),
-                Ascii.toLowerCase(Dimension.Name.HOST_NAME.name())))
-        .distinct()
-        .collect(toImmutableList());
-  }
-
-  private String getJobDriver() {
-    return job.type().getDriver();
-  }
-
-  private ImmutableList<String> getJobDecorators() {
-    return ImmutableList.copyOf(job.type().getDecoratorList());
-  }
-
-  private ImmutableList<FieldDescriptor> getDeviceInfoFieldsToQuery() {
-    ImmutableList.Builder<FieldDescriptor> deviceInfoFields = ImmutableList.builder();
-    deviceInfoFields.addAll(DEFAULT_DEVICE_INFO_FIELDS_TO_QUERY);
-
-    if (!job.type().getDecoratorList().isEmpty()) {
-      deviceInfoFields.add(
-          DeviceQuery.DeviceInfo.getDescriptor()
-              .findFieldByNumber(DeviceQuery.DeviceInfo.DECORATOR_FIELD_NUMBER));
-    }
-
-    return deviceInfoFields.build();
   }
 
   private static boolean isUsingMaster(JobInfo job) {
