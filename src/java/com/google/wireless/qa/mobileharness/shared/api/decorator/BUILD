@@ -334,6 +334,28 @@ java_library(
 )
 
 java_library(
+    name = "android_install_mainline_modules_decorator",
+    srcs = ["AndroidInstallMainlineModulesDecorator.java"],
+    deps = [
+        ":base_decorator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/bundletool",
+        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemstate",
+        "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:android_package_manager_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:info",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_install_mainline_modules_decorator_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "android_lab_test_support_settings_decorator",
     srcs = ["AndroidLabTestSupportSettingsDecorator.java"],
     deps = [

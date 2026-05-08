@@ -134,6 +134,17 @@ java_library(
 )
 
 java_library(
+    name = "android_install_mainline_modules_decorator_job_validator",
+    srcs = ["AndroidInstallMainlineModulesDecoratorJobValidator.java"],
+    deps = [
+        ":job_validator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_install_mainline_modules_decorator_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+    ],
+)
+
+java_library(
     name = "android_lab_test_support_settings_decorator_job_validator",
     srcs = ["AndroidLabTestSupportSettingsDecoratorJobValidator.java"],
     deps = [
