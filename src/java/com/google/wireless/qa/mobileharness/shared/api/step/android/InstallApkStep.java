@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.event.util.AppInstallEventUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
+import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkSet;
 import com.google.devtools.mobileharness.platform.android.lightning.systemsetting.SystemSettingManager;
 import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
@@ -45,7 +46,6 @@ import com.google.devtools.mobileharness.shared.util.file.checksum.ChecksumUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.Inject;
-import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.ApkInfo;
@@ -55,6 +55,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.Google3File;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.InstallApkStepSpec;
 import java.io.File;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -72,9 +73,6 @@ public class InstallApkStep implements InstallApkStepConstants {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final String APP_OP_MANAGE_EXTERNAL_STORAGE = "MANAGE_EXTERNAL_STORAGE";
-
-  /** {@code Aapt} for AAPT operations. */
-  private final Aapt aapt;
 
   /** {@code LocalFileUtil} for reading apk size. */
   private final LocalFileUtil localFileUtil;
@@ -96,7 +94,6 @@ public class InstallApkStep implements InstallApkStepConstants {
 
   @Inject
   InstallApkStep(
-      Aapt aapt,
       LocalFileUtil localFileUtil,
       TestMessageUtil testMessageUtil,
       ApkInstaller apkInstaller,
@@ -105,7 +102,6 @@ public class InstallApkStep implements InstallApkStepConstants {
       AndroidSystemSettingUtil systemSettingUtil,
       SystemStateManager systemStateManager,
       ChecksumUtil checksumUtil) {
-    this.aapt = aapt;
     this.localFileUtil = localFileUtil;
     this.testMessageUtil = testMessageUtil;
     this.apkInstaller = apkInstaller;
@@ -157,7 +153,7 @@ public class InstallApkStep implements InstallApkStepConstants {
 
     String deviceId = device.getDeviceId();
     JobInfo jobInfo = testInfo.jobInfo();
-    InstallCoordinator coordinator = new InstallCoordinator(testInfo, aapt);
+    InstallCoordinator coordinator = new InstallCoordinator(testInfo, apkInstaller);
 
     // Makes sure the first apk in 'build_apk' will still be the first element inserted.
     coordinator.addApks(jobBuildApks);
@@ -227,7 +223,7 @@ public class InstallApkStep implements InstallApkStepConstants {
     }
 
     for (PackageToInstall pkg : coordinator.getAllPackages()) {
-      installApk(
+      installPackage(
           device,
           deviceSdkVersion,
           pkg,
@@ -248,7 +244,7 @@ public class InstallApkStep implements InstallApkStepConstants {
         .collect(toImmutableList());
   }
 
-  private void installApk(
+  private void installPackage(
       Device device,
       int deviceSdkVersion,
       PackageToInstall pkg,
@@ -276,31 +272,11 @@ public class InstallApkStep implements InstallApkStepConstants {
               .log("Failed to broadcast message for starting installing app");
         }
       }
-      boolean isGms = pkg.packageName.equals(PackageConstants.PACKAGE_NAME_GMS);
-
-      // Installs APKs.
-      ApkInstallArgs.Builder installArgsBuilder =
-          ApkInstallArgs.builder()
-              .addAllApkPaths(pkg.apkPaths)
-              .addAllDexMetadataPaths(pkg.dexMetadataPaths)
-              .setSkipDowngrade(isGms && spec.getSkipGmsDowngrade())
-              .setClearAppData(isGms && spec.getClearGmsAppData())
-              .setGrantPermissions(spec.getGrantPermissionsOnInstall())
-              .setBypassLowTargetSdkBlock(spec.getBypassLowTargetSdkBlock());
-      if (isGms && shouldSkipGmsCompatibilityCheck(testInfo, pkg.apkPaths.get(0))) {
-        installArgsBuilder.setSkipGmsCompatCheck(true);
-      }
-      if (PackageConstants.ANDROIDX_SERVICES_APK_PACKAGE_NAMES.contains(pkg.packageName)) {
-        installArgsBuilder.setForceQueryable(true);
-      }
-      installTimeout.ifPresent(installArgsBuilder::setInstallTimeout);
-      sleepAfterInstall.ifPresent(installArgsBuilder::setSleepAfterInstall);
-      apkInstaller.installApkIfNotExist(device, installArgsBuilder.build(), testInfo.log());
-      // If currently not on system user 0, ensure apks are installed on system user too.
-      // b/142827104
-      if (androidUserUtil.getCurrentUser(deviceId, deviceSdkVersion) != 0) {
-        apkInstaller.installApkIfNotExist(
-            device, installArgsBuilder.setUserId("0").build(), testInfo.log());
+      if (pkg.isApkSet()) {
+        installApkSet(device, pkg, testInfo, spec, installTimeout, sleepAfterInstall);
+      } else {
+        installApk(
+            device, deviceSdkVersion, pkg, testInfo, spec, installTimeout, sleepAfterInstall);
       }
       testInfo
           .log()
@@ -334,6 +310,66 @@ public class InstallApkStep implements InstallApkStepConstants {
         }
       }
     }
+  }
+
+  private void installApk(
+      Device device,
+      int deviceSdkVersion,
+      PackageToInstall pkg,
+      TestInfo testInfo,
+      InstallApkStepSpec spec,
+      Optional<Duration> installTimeout,
+      Optional<Duration> sleepAfterInstall)
+      throws MobileHarnessException, InterruptedException {
+    boolean isGms = pkg.packageName.equals(PackageConstants.PACKAGE_NAME_GMS);
+    ApkInstallArgs.Builder installArgsBuilder =
+        ApkInstallArgs.builder()
+            .addAllApkPaths(pkg.apkPaths)
+            .addAllDexMetadataPaths(pkg.dexMetadataPaths)
+            .setSkipDowngrade(isGms && spec.getSkipGmsDowngrade())
+            .setClearAppData(isGms && spec.getClearGmsAppData())
+            .setGrantPermissions(spec.getGrantPermissionsOnInstall())
+            .setBypassLowTargetSdkBlock(spec.getBypassLowTargetSdkBlock());
+    if (isGms && shouldSkipGmsCompatibilityCheck(testInfo, pkg.apkPaths.get(0))) {
+      installArgsBuilder.setSkipGmsCompatCheck(true);
+    }
+    if (PackageConstants.ANDROIDX_SERVICES_APK_PACKAGE_NAMES.contains(pkg.packageName)) {
+      installArgsBuilder.setForceQueryable(true);
+    }
+    installTimeout.ifPresent(installArgsBuilder::setInstallTimeout);
+    sleepAfterInstall.ifPresent(installArgsBuilder::setSleepAfterInstall);
+    apkInstaller.installApkIfNotExist(device, installArgsBuilder.build(), testInfo.log());
+    // If currently not on system user 0, ensure apks are installed on system user too.
+    // b/142827104
+    if (androidUserUtil.getCurrentUser(device.getDeviceId(), deviceSdkVersion) != 0) {
+      apkInstaller.installApkIfNotExist(
+          device, installArgsBuilder.setUserId("0").build(), testInfo.log());
+    }
+  }
+
+  private void installApkSet(
+      Device device,
+      PackageToInstall pkg,
+      TestInfo testInfo,
+      InstallApkStepSpec spec,
+      Optional<Duration> installTimeout,
+      Optional<Duration> sleepAfterInstall)
+      throws MobileHarnessException, InterruptedException {
+    if (pkg.packageName.equals(PackageConstants.PACKAGE_NAME_GMS)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_INSTALL_APK_STEP_GMS_PACKAGING_NOT_SUPPORTED,
+          "Gmscore is not supported as APK Set archive. Please install using split APKs.");
+    }
+    ApkSet.Builder apkSetBuilder =
+        ApkSet.builder()
+            .setApks(Path.of(pkg.apkPaths.get(0)))
+            .setAllowDowngrade(true)
+            .setAllowTestOnly(true)
+            .setGrantRuntimePermissions(spec.getGrantPermissionsOnInstall())
+            .setAllowUninstallAndRetry(true);
+    installTimeout.ifPresent(apkSetBuilder::setCommandTimeout);
+    sleepAfterInstall.ifPresent(apkSetBuilder::setSleepAfterInstall);
+    apkInstaller.install(device, apkSetBuilder.build(), testInfo.log());
   }
 
   /**
@@ -519,6 +555,12 @@ public class InstallApkStep implements InstallApkStepConstants {
     boolean isSplitApk() {
       return apkPaths.size() > 1;
     }
+
+    boolean isApkSet() {
+      return apkPaths.size() == 1
+          && dexMetadataPaths.isEmpty()
+          && apkPaths.get(0).endsWith(".apks");
+    }
   }
 
   /**
@@ -533,11 +575,11 @@ public class InstallApkStep implements InstallApkStepConstants {
     private final Set<String> seenApkPaths = new HashSet<>();
     private final Map<String, String> seenDexMetadataKeys = new HashMap<>();
     private final TestInfo testInfo;
-    private final Aapt aapt;
+    private final ApkInstaller apkInstaller;
 
-    InstallCoordinator(TestInfo testInfo, Aapt aapt) {
+    InstallCoordinator(TestInfo testInfo, ApkInstaller apkInstaller) {
       this.testInfo = testInfo;
-      this.aapt = aapt;
+      this.apkInstaller = apkInstaller;
     }
 
     void addApks(Collection<String> apkPaths) throws MobileHarnessException, InterruptedException {
@@ -555,7 +597,7 @@ public class InstallApkStep implements InstallApkStepConstants {
         return;
       }
 
-      String packageName = aapt.getApkPackageName(apkPath);
+      String packageName = apkInstaller.getPackageName(apkPath);
 
       PackageToInstall pkg = packageNameToPackage.get(packageName);
       if (pkg == null) {
