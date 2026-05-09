@@ -40,6 +40,13 @@ message JobConfig {
   optional mobileharness.shared.Timeout timeout = 8;
   optional mobileharness.api.model.Retry retry = 16;
   optional mobileharness.api.model.Repeat repeat = 17;
+  // If both `type` and `sub_device_spec` are provided, they must be consistent
+  // for the first device. The first item in `sub_device_spec` corresponds to
+  // the device specified in `type`.
+  //
+  // If both `dimension` and `sub_device_spec` provide dimensions for the same
+  // key, the one in `dimension` will override the one in `sub_device_spec` to
+  // match production behavior. Top-level `dimension`s apply to all devices.
   repeated mobileharness.client.JobConfig.SubDeviceSpec sub_device_spec = 18;
   repeated string shared_dimension_names = 19;
 
