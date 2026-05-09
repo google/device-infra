@@ -20,7 +20,6 @@ package(
     default_visibility = [
         "//:deviceinfra_all_pkg",
         "//:omnilab_fusion",
-        "//java/com/google/devtools/omnilab/device/lifecycle/android:__subpackages__",
     ],
 )
 
