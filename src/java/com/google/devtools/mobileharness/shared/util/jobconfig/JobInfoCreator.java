@@ -34,6 +34,8 @@ import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
+import com.google.devtools.mobileharness.api.model.proto.Job.Repeat;
+import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.api.proto.Device.DeviceSpec;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
@@ -62,6 +64,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecWalk
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.DeviceList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.Driver;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.FileConfigList.FileConfig;
@@ -173,10 +176,8 @@ public final class JobInfoCreator {
             .setRemoteFileDir(sessionGenDir)
             .setTmpFileDir(PathUtil.join(jobDir, "tmp"))
             .setRunFileDir(PathUtil.join(jobDir, "run"))
-            .setGenFileDir(PathUtil.join(jobDir, "gen"))
-            .setTimeout(
-                SharedPoolJobUtil.maybeExtendStartTimeout(jobConfig.getTimeout(), jobConfig))
-            .setRepeat(jobConfig.getRepeat());
+            .setGenFileDir(PathUtil.join(jobDir, "gen"));
+
     if (originalSubmitTimestamp != null) {
       if (ORIGINAL_SUBMIT_TIMESTAMP_ALLOWLIST_USERS.contains(actualUser)) {
         jobSettingBuilder.setOriginalSubmitTime(toJavaInstant(originalSubmitTimestamp));
@@ -185,26 +186,53 @@ public final class JobInfoCreator {
             "Cannot set original submit time for user not in allowlist: %s", actualUser);
       }
     }
-    if (jobConfig.hasRetry()) {
-      jobSettingBuilder.setRetry(jobConfig.getRetry());
-    } else {
-      jobSettingBuilder.setRetry(JobSetting.getDefaultRetryInstance());
-    }
-    logger.atInfo().log(
-        "Input gateway JobConfig.hasRetry=%b, repeate runs time = %d",
-        jobConfig.hasRetry(), jobConfig.getRepeat().getRepeatRuns());
-
-    if (jobConfig.hasPriority()) {
-      jobSettingBuilder.setPriority(jobConfig.getPriority());
-    }
-
-    JobSetting jobSetting = jobSettingBuilder.build();
-    logger.atInfo().log("Output jobSetting retry=%s", jobSetting.getRetry());
 
     JobInfo jobInfo;
     if (mhJobConfig != null
         && !mhJobConfig.equals(
             com.google.wireless.qa.mobileharness.shared.proto.JobConfig.getDefaultInstance())) {
+      long jobTimeoutMs = mhJobConfig.getJobTimeoutSec() * 1000L;
+      long testTimeoutMs = mhJobConfig.getTestTimeoutSec() * 1000L;
+      long startTimeoutMs = mhJobConfig.getStartTimeoutSec() * 1000L;
+
+      Timeout.Builder timeoutBuilder = Timeout.newBuilder();
+      if (jobTimeoutMs > 0) {
+        timeoutBuilder.setJobTimeoutMs(jobTimeoutMs);
+      }
+      if (testTimeoutMs > 0) {
+        timeoutBuilder.setTestTimeoutMs(testTimeoutMs);
+      }
+      if (startTimeoutMs > 0) {
+        timeoutBuilder.setStartTimeoutMs(startTimeoutMs);
+      }
+      Timeout timeout = timeoutBuilder.build();
+      timeout = SharedPoolJobUtil.maybeExtendStartTimeout(timeout, mhJobConfig);
+      jobSettingBuilder.setTimeout(timeout);
+
+      if (mhJobConfig.hasRepeatRuns()) {
+        jobSettingBuilder.setRepeat(
+            Repeat.newBuilder().setRepeatRuns(mhJobConfig.getRepeatRuns()).build());
+      }
+
+      jobSettingBuilder.setRetry(
+          Retry.newBuilder()
+              .setTestAttempts(
+                  mhJobConfig.hasTestAttempts() && mhJobConfig.getTestAttempts() > 0
+                      ? mhJobConfig.getTestAttempts()
+                      : JobSetting.getDefaultRetryInstance().getTestAttempts())
+              .setRetryLevel(
+                  mhJobConfig.hasRetryLevel()
+                      ? mhJobConfig.getRetryLevel()
+                      : JobSetting.getDefaultRetryInstance().getRetryLevel())
+              .build());
+
+      if (mhJobConfig.hasPriority()) {
+        jobSettingBuilder.setPriority(mhJobConfig.getPriority());
+      }
+
+      JobSetting jobSetting = jobSettingBuilder.build();
+      logger.atInfo().log("Output jobSetting retry=%s", jobSetting.getRetry());
+
       jobInfo =
           createJobInfo(
               jobId,
@@ -212,7 +240,7 @@ public final class JobInfoCreator {
               nonstandardFlags,
               jobSetting,
               JobUser.newBuilder()
-                  .setRunAs(jobConfig.getUser())
+                  .setRunAs(mhJobConfig.getRunAs())
                   .setActualUser(actualUser)
                   .setJobAccessAccount(jobAccessAccount)
                   .build(),
@@ -220,12 +248,27 @@ public final class JobInfoCreator {
               genDirPath,
               false,
               timing);
-      for (StrPair param : jobConfig.getParamList()) {
-        if (!jobInfo.params().has(param.getName())) {
-          jobInfo.params().add(param.getName(), param.getValue());
-        }
-      }
     } else {
+      logger.atInfo().log(
+          "Input gateway JobConfig.hasRetry=%b, repeat runs time = %d",
+          jobConfig.hasRetry(), jobConfig.getRepeat().getRepeatRuns());
+      Timeout timeout =
+          SharedPoolJobUtil.maybeExtendStartTimeout(jobConfig.getTimeout(), jobConfig);
+      jobSettingBuilder.setTimeout(timeout);
+      jobSettingBuilder.setRepeat(jobConfig.getRepeat());
+      if (jobConfig.hasRetry()) {
+        jobSettingBuilder.setRetry(jobConfig.getRetry());
+      } else {
+        jobSettingBuilder.setRetry(JobSetting.getDefaultRetryInstance());
+      }
+
+      if (jobConfig.hasPriority()) {
+        jobSettingBuilder.setPriority(jobConfig.getPriority());
+      }
+
+      JobSetting jobSetting = jobSettingBuilder.build();
+      logger.atInfo().log("Output jobSetting retry=%s", jobSetting.getRetry());
+
       jobInfo =
           createJobInfo(
               jobId,
@@ -746,6 +789,7 @@ public final class JobInfoCreator {
                 fileConfig.getPath(0),
                 genDirPath,
                 mhJobConfig.getTargetLocations().getContentMap());
+        logger.atInfo().log("Device spec from file: %s", deviceSpecFromFile);
         if (!deviceSpecFromFile.equals(DeviceSpec.getDefaultInstance())) {
           DeviceList.Builder deviceListBuilder = DeviceList.newBuilder();
           for (SubDeviceSpec subDeviceSpec : mhJobConfig.getDevice().getSubDeviceSpecList()) {
