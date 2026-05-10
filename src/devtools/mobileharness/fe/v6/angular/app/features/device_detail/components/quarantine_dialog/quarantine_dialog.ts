@@ -19,7 +19,7 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatInputModule} from '@angular/material/input';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatTabsModule} from '@angular/material/tabs';
-import {dateUtils} from 'app/shared/utils/date_utils';
+import {dateUtils} from 'src/devtools/mobileharness/fe/v6/angular/app/shared/utils/date_utils';
 import {finalize} from 'rxjs/operators';
 import {
   QuarantineDeviceRequest,

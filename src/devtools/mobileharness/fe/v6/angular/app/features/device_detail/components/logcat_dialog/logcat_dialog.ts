@@ -13,13 +13,13 @@ import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatIconModule} from '@angular/material/icon';
 import {MatInputModule} from '@angular/material/input';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
-import {dateUtils} from 'app/shared/utils/date_utils';
+import {dateUtils} from 'src/devtools/mobileharness/fe/v6/angular/app/shared/utils/date_utils';
 import {
   createSafeObjectURL,
   openInNewTab,
   revokeObjectURL,
   setSafeHref,
-} from 'app/shared/utils/safe_dom';
+} from 'src/devtools/mobileharness/fe/v6/angular/app/shared/utils/safe_dom';
 import {LogcatDialogData} from '../../../../core/models/device_action';
 import {Dialog} from '../../../../shared/components/config_common/dialog/dialog';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';

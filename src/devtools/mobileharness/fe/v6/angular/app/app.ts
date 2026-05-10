@@ -42,10 +42,10 @@ import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {
   APP_DATA,
   type AppData,
-} from 'app/core/models/app_data';
-import {UrlService} from 'app/core/services/url_service';
-import {navigateWithPreservedParams} from 'app/core/utils/url_utils';
-import {LoadingService} from 'app/shared/services/loading_service';
+} from 'src/devtools/mobileharness/fe/v6/angular/app/core/models/app_data';
+import {UrlService} from 'src/devtools/mobileharness/fe/v6/angular/app/core/services/url_service';
+import {navigateWithPreservedParams} from 'src/devtools/mobileharness/fe/v6/angular/app/core/utils/url_utils';
+import {LoadingService} from 'src/devtools/mobileharness/fe/v6/angular/app/shared/services/loading_service';
 import {ReplaySubject} from 'rxjs';
 import {filter, takeUntil} from 'rxjs/operators';
 

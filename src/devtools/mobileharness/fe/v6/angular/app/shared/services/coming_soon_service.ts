@@ -4,7 +4,7 @@ import {
   ACTION_BAR_CONFIG_TOKEN,
   ActionBarAction,
   ActionContext,
-} from 'app/core/constants/action_bar_config';
+} from 'src/devtools/mobileharness/fe/v6/angular/app/core/constants/action_bar_config';
 import {ComingSoonDialog} from '../components/coming_soon_dialog/coming_soon_dialog';
 
 /**

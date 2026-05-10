@@ -17,7 +17,7 @@ import {MatInputModule} from '@angular/material/input';
 import {MatSelectModule} from '@angular/material/select';
 import {MatTableModule} from '@angular/material/table';
 
-import {SelectOption} from 'app/core/models/host_config_models';
+import {SelectOption} from 'src/devtools/mobileharness/fe/v6/angular/app/core/models/host_config_models';
 import {SafeHtmlPipe} from '../../../pipes/safe_html_pipe';
 
 /**

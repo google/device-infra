@@ -16,11 +16,11 @@ import {ActivatedRoute} from '@angular/router';
 import {Observable} from 'rxjs';
 import {finalize} from 'rxjs/operators';
 
-import {ActionBarAction} from 'app/core/constants/action_bar_config';
+import {ActionBarAction} from 'src/devtools/mobileharness/fe/v6/angular/app/core/constants/action_bar_config';
 import {
   APP_DATA,
   getLegacyFeUrl,
-} from 'app/core/models/app_data';
+} from 'src/devtools/mobileharness/fe/v6/angular/app/core/models/app_data';
 import {ActionButtonState} from '../../../../core/models/action_common';
 import {
   DeviceActions,

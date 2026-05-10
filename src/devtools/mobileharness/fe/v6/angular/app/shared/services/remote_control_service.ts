@@ -6,11 +6,11 @@ import {
   DeviceTarget,
   EligibilityStatus,
   RemoteControlDevicesRequest,
-} from 'app/core/models/host_overview';
-import {HOST_SERVICE} from 'app/core/services/host/host_service';
-import {ConfirmDialog} from 'app/shared/components/confirm_dialog/confirm_dialog';
-import {SnackBarService} from 'app/shared/services/snackbar_service';
-import {openInNewTab} from 'app/shared/utils/safe_dom';
+} from 'src/devtools/mobileharness/fe/v6/angular/app/core/models/host_overview';
+import {HOST_SERVICE} from 'src/devtools/mobileharness/fe/v6/angular/app/core/services/host/host_service';
+import {ConfirmDialog} from 'src/devtools/mobileharness/fe/v6/angular/app/shared/components/confirm_dialog/confirm_dialog';
+import {SnackBarService} from 'src/devtools/mobileharness/fe/v6/angular/app/shared/services/snackbar_service';
+import {openInNewTab} from 'src/devtools/mobileharness/fe/v6/angular/app/shared/utils/safe_dom';
 import {RemoteControlDialog} from '../components/remote_control/dialog/remote_control_dialog';
 import {AccessDeniedContent} from '../components/remote_control/feedback/access_denied_content';
 import {ConnectionErrorContent} from '../components/remote_control/feedback/connection_error_content';

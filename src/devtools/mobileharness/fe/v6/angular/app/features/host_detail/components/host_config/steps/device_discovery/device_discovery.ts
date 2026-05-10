@@ -10,11 +10,11 @@ import {
   SimpleChanges,
 } from '@angular/core';
 
-import {MANEKI_DEVICE_TYPE_OPTIONS} from 'app/core/constants/host_config_constants';
+import {MANEKI_DEVICE_TYPE_OPTIONS} from 'src/devtools/mobileharness/fe/v6/angular/app/core/constants/host_config_constants';
 import type {
   DeviceDiscoverySettings,
   ManekiSpec,
-} from 'app/core/models/host_config_models';
+} from 'src/devtools/mobileharness/fe/v6/angular/app/core/models/host_config_models';
 import {EntryChip} from '../../../../../../shared/components/config_common/entry_chip/entry_chip';
 import {
   MetadataColumn,

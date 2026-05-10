@@ -2,7 +2,7 @@ import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
 
-import {MetadataList} from 'app/shared/components/config_common/metadata_list/metadata_list';
+import {MetadataList} from 'src/devtools/mobileharness/fe/v6/angular/app/shared/components/config_common/metadata_list/metadata_list';
 
 describe('MetadataList Component', () => {
   let component: MetadataList<Record<string, string>>;

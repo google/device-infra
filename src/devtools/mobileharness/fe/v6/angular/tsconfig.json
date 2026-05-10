@@ -6,6 +6,9 @@
     "paths": {
       "app/*": [
         "app/*"
+      ],
+      "src/*": [
+        "../../../../../src/*"
       ]
     },
     "outDir": "./dist/out-tsc",

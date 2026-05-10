@@ -1,4 +1,4 @@
-import {DeviceProxyType} from 'app/core/models/host_overview';
+import {DeviceProxyType} from 'src/devtools/mobileharness/fe/v6/angular/app/core/models/host_overview';
 
 /**
  * Safely maps any value (string, number, or undefined) to a DeviceProxyType.

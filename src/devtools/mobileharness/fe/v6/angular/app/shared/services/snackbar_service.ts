@@ -4,7 +4,7 @@ import {MatSnackBar, MatSnackBarRef} from '@angular/material/snack-bar';
 import {
   SnackBar,
   SnackBarData,
-} from 'app/shared/components/snackbar/snackbar';
+} from 'src/devtools/mobileharness/fe/v6/angular/app/shared/components/snackbar/snackbar';
 
 const SNACKBAR_DURATION_MS_DEFAULT = 4000; // unit is milliseconds
 

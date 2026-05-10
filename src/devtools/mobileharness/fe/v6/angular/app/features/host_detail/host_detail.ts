@@ -14,7 +14,7 @@ import {Title} from '@angular/platform-browser';
 import {ActivatedRoute, RouterModule} from '@angular/router';
 import {combineLatest, Observable, of, ReplaySubject} from 'rxjs';
 import {catchError, map, switchMap, takeUntil, tap} from 'rxjs/operators';
-import {LoadingService} from 'app/shared/services/loading_service';
+import {LoadingService} from 'src/devtools/mobileharness/fe/v6/angular/app/shared/services/loading_service';
 
 import {HostOverviewPageData} from '../../core/models/host_overview';
 import {HOST_SERVICE} from '../../core/services/host/host_service';

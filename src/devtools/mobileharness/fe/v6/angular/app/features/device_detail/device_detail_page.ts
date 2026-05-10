@@ -14,11 +14,11 @@ import {MatMenuModule} from '@angular/material/menu';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {Title} from '@angular/platform-browser';
 import {ActivatedRoute, RouterModule} from '@angular/router';
-import {LoadingService} from 'app/shared/services/loading_service';
+import {LoadingService} from 'src/devtools/mobileharness/fe/v6/angular/app/shared/services/loading_service';
 import {combineLatest, Observable, of, ReplaySubject} from 'rxjs';
 import {catchError, map, switchMap, takeUntil, tap} from 'rxjs/operators';
 
-import {dateUtils} from 'app/shared/utils/date_utils';
+import {dateUtils} from 'src/devtools/mobileharness/fe/v6/angular/app/shared/utils/date_utils';
 import {APP_DATA, getLegacyFeUrl} from '../../core/models/app_data';
 import {DeviceOverviewPageData} from '../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../core/services/device/device_service';

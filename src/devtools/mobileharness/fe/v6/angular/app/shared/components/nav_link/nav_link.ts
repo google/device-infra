@@ -4,7 +4,7 @@ import {Router} from '@angular/router';
 import {ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
 
-import {UrlService} from 'app/core/services/url_service';
+import {UrlService} from 'src/devtools/mobileharness/fe/v6/angular/app/core/services/url_service';
 /**
  * Configuration for NavLink component.
  * Enforces that deviceId is required for 'device' type and forbidden for 'host' type.
