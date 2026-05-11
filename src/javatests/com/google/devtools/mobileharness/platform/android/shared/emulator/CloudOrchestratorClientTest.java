@@ -233,6 +233,44 @@ public class CloudOrchestratorClientTest {
   }
 
   @Test
+  public void createHostAndWait_hostReadinessRetriesThenSucceeds() throws Exception {
+    server.enqueue(new MockResponse().setBody("{\"name\": \"op-123\", \"done\": true}"));
+    server.enqueue(new MockResponse().setBody("{\"name\": \"host-1\"}"));
+    // Readiness check fails a few times
+    server.enqueue(new MockResponse().setResponseCode(503));
+    server.enqueue(new MockResponse().setResponseCode(502));
+    server.enqueue(new MockResponse().setBody("{}")); // Finally ready
+
+    HostInstance host = client.createHostAndWait(new CreateHostRequest(new HostInstance("host-1")));
+
+    assertThat(host.name).isEqualTo("host-1");
+    assertThat(server.takeRequest().getPath()).isEqualTo("/v1/zones/local/hosts");
+    assertThat(server.takeRequest().getPath()).isEqualTo("/v1/zones/local/operations/op-123/:wait");
+    // Verify 3 attempts for readiness check
+    assertThat(server.takeRequest().getPath()).isEqualTo("/v1/zones/local/hosts/host-1/");
+    assertThat(server.takeRequest().getPath()).isEqualTo("/v1/zones/local/hosts/host-1/");
+    assertThat(server.takeRequest().getPath()).isEqualTo("/v1/zones/local/hosts/host-1/");
+  }
+
+  @Test
+  public void createHostAndWait_hostReadinessExhaustsRetriesThrows() throws Exception {
+    server.enqueue(new MockResponse().setBody("{\"name\": \"op-123\", \"done\": true}"));
+    server.enqueue(new MockResponse().setBody("{\"name\": \"host-1\"}"));
+    // Readiness check fails consistently
+    for (int i = 0; i < 7; i++) {
+      server.enqueue(new MockResponse().setResponseCode(503));
+    }
+
+    MobileHarnessException e =
+        assertThrows(
+            MobileHarnessException.class,
+            () -> client.createHostAndWait(new CreateHostRequest(new HostInstance("host-1"))));
+
+    assertThat(e.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_CLOUD_ORCHESTRATOR_OPERATION_ERROR);
+    assertThat(server.getRequestCount()).isEqualTo(9); // 1 create + 1 wait + 7 retries
+  }
+
+  @Test
   public void createHostAndWait_errorWhenHostNameNull() throws Exception {
     server.enqueue(new MockResponse().setBody("{\"name\": \"op-123\", \"done\": true}"));
     server.enqueue(new MockResponse().setBody("{}")); // HostInstance with null name

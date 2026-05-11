@@ -49,6 +49,7 @@ java_library(
     name = "adb_websocket_bridge",
     srcs = ["AdbWebSocketBridge.java"],
     visibility = [
+        "//javatests/com/google/wireless/qa/mobileharness/shared/api/device:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/shared/emulator:__subpackages__",
     ],

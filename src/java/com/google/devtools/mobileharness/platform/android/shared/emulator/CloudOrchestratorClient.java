@@ -35,6 +35,7 @@ import com.google.api.client.http.json.JsonHttpContent;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
@@ -74,7 +75,6 @@ public class CloudOrchestratorClient {
 
   private static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(30);
   private static final Duration WAIT_OPERATION_MAX_TIMEOUT = Duration.ofMinutes(10);
-  private static final Duration HOST_READINESS_MAX_TIMEOUT = Duration.ofMinutes(2);
   private static final int WAIT_OPERATION_MAX_RETRIES = 20;
   private static final Duration WAIT_OPERATION_RETRY_DELAY = Duration.ofSeconds(30);
 
@@ -142,12 +142,16 @@ public class CloudOrchestratorClient {
 
   private void checkHostReadiness(String hostId) throws MobileHarnessException {
     String hostPath = "/hosts/" + hostId + "/";
-    get(hostPath, null, HOST_READINESS_MAX_TIMEOUT);
+    Duration httpTimeout = Duration.ofSeconds(10);
+    // 7 attempts with exponential backoff (starting at 3s) results in ~3 mins of total sleep
+    // time, ensuring we wait enough time for the host to be ready.
+    RetryStrategy retryStrategy = RetryStrategy.exponentialBackoff(requestRetryDelay, 2, 7);
+    get(hostPath, null, httpTimeout, retryStrategy);
   }
 
   /** Lists all hosts currently known to the service. */
   public List<HostInstance> listHosts() throws MobileHarnessException {
-    ListHostsResponse res = get("/hosts", ListHostsResponse.class, DEFAULT_REQUEST_TIMEOUT);
+    ListHostsResponse res = get("/hosts", ListHostsResponse.class);
     return res.items;
   }
 
@@ -183,8 +187,7 @@ public class CloudOrchestratorClient {
 
   /** Lists all CVDs available on a specific host. */
   public List<Cvd> listCvds(String hostId) throws MobileHarnessException {
-    ListCvdsResponse res =
-        get("/hosts/" + hostId + "/cvds", ListCvdsResponse.class, DEFAULT_REQUEST_TIMEOUT);
+    ListCvdsResponse res = get("/hosts/" + hostId + "/cvds", ListCvdsResponse.class);
     return res.cvds;
   }
 
@@ -304,7 +307,7 @@ public class CloudOrchestratorClient {
   public boolean artifactExists(String hostId, String checksum) throws MobileHarnessException {
     String path = "/hosts/" + hostId + "/v1/userartifacts/" + checksum;
     try {
-      get(path, Map.class, DEFAULT_REQUEST_TIMEOUT);
+      get(path, Map.class);
       return true;
     } catch (MobileHarnessException e) {
       if (hasHttpStatusCode(e, 404)) {
@@ -430,9 +433,8 @@ public class CloudOrchestratorClient {
    *
    * @param hostId the ID of the host
    * @param cvdId the ID to assign to the CVD
-   * @param imageDirId the ID of the image directory containing the artifacts
-   * @param hostPkgChecksum the checksum of the host package
-   * @param deviceImgChecksum the checksum of the device image
+   * @param hostImageDirId the ID of the image directory containing the host package
+   * @param deviceImageDirId the ID of the image directory containing the device image
    * @return the created CVD
    * @throws MobileHarnessException if the API call fails
    * @throws InterruptedException if the thread is interrupted
@@ -489,16 +491,28 @@ public class CloudOrchestratorClient {
   }
 
   @CanIgnoreReturnValue
-  private <T> T get(String path, Class<T> responseClass, Duration timeout)
+  private <T> T get(String path, @Nullable Class<T> responseClass) throws MobileHarnessException {
+    return get(
+        path,
+        responseClass,
+        DEFAULT_REQUEST_TIMEOUT,
+        RetryStrategy.exponentialBackoff(requestRetryDelay, 2, 3));
+  }
+
+  @CanIgnoreReturnValue
+  private <T> T get(
+      String path, @Nullable Class<T> responseClass, Duration timeout, RetryStrategy retryStrategy)
       throws MobileHarnessException {
+    Stopwatch stopwatch = Stopwatch.createStarted();
     try {
       return RetryingCallable.newBuilder(
-              () -> executeRequest("GET", path, null, responseClass, null, timeout),
-              RetryStrategy.exponentialBackoff(requestRetryDelay, 2, 3))
+              () -> executeRequest("GET", path, null, responseClass, null, timeout), retryStrategy)
           .setPredicate(this::isRetriable)
+          .setThrowStrategy(RetryingCallable.ThrowStrategy.THROW_LAST)
           .build()
           .call();
     } catch (RetryException e) {
+      long elapsedMs = stopwatch.elapsed().toMillis();
       Throwable cause = e.getCause();
       if (cause instanceof HttpResponseException httpResponseException) {
         throw handleHttpException(
@@ -506,8 +520,7 @@ public class CloudOrchestratorClient {
       }
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_NETWORK_ERROR,
-          String.format(
-              "GET request to %s failed or timed out after %d ms", path, timeout.toMillis()),
+          String.format("GET request to %s failed or timed out after %d ms", path, elapsedMs),
           e);
     }
   }
