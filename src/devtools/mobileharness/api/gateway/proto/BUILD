@@ -18,7 +18,14 @@ load("@protobuf//bazel:proto_library.bzl", "proto_library")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = ["//:deviceinfra_all_pkg"],
+    default_visibility = [":default_visibility"],
+)
+
+package_group(
+    name = "default_visibility",
+    includes = [
+        "//:deviceinfra_all_pkg",
+    ],
 )
 
 proto_library(
@@ -36,5 +43,9 @@ proto_library(
 
 java_proto_library(
     name = "setting_java_proto",
+    visibility = [
+        ":default_visibility",
+        "//javatests/wireless/android/engprod/fleetpurser:__pkg__",
+    ],
     deps = [":setting_proto"],
 )
