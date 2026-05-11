@@ -20,20 +20,27 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.AllocationDiagnostician;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.DeviceFilter;
+import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.DiagnosticDeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.Report;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier.LabQueryResult;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobScheduleUnit;
+import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceInfo;
+import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
+import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /** An {@link AllocationDiagnostician} for multiple device jobs. */
 public final class MultiDeviceDiagnostician implements AllocationDiagnostician {
 
   private final LabAssessor assessor;
-  private final DeviceQuerier deviceQuerier;
   private final JobScheduleUnit job;
+  private final DiagnosticDeviceQuerier diagnosticQuerier;
 
   private volatile LabReport lastReport;
 
@@ -44,8 +51,8 @@ public final class MultiDeviceDiagnostician implements AllocationDiagnostician {
   @VisibleForTesting
   MultiDeviceDiagnostician(LabAssessor assessor, DeviceQuerier deviceQuerier, JobScheduleUnit job) {
     this.assessor = assessor;
-    this.deviceQuerier = deviceQuerier;
     this.job = job;
+    this.diagnosticQuerier = new DiagnosticDeviceQuerier(deviceQuerier);
   }
 
   /**
@@ -66,7 +73,15 @@ public final class MultiDeviceDiagnostician implements AllocationDiagnostician {
   public LabReport diagnoseJob(boolean noPerfectCandidate)
       throws MobileHarnessException, InterruptedException {
     DeviceQueryFilter filter = DeviceFilter.getFilter(job);
-    List<LabQueryResult> labResults = deviceQuerier.queryDevicesByLab(filter);
+
+    DeviceQueryResult queryResult = diagnosticQuerier.queryDevice(job, filter);
+
+    Map<String, List<DeviceInfo>> labToDevices = new HashMap<>();
+    for (DeviceQuery.DeviceInfo deviceProto : queryResult.getDeviceInfoList()) {
+      DeviceInfo deviceInfo = new DeviceInfo(deviceProto);
+      String hostname = deviceInfo.locator().getLabLocator().getHostName();
+      labToDevices.computeIfAbsent(hostname, k -> new ArrayList<>()).add(deviceInfo);
+    }
 
     LabReport report;
     boolean isFirstRound;
@@ -77,10 +92,16 @@ public final class MultiDeviceDiagnostician implements AllocationDiagnostician {
       report = new LabReport(job);
       isFirstRound = true;
     }
-    for (LabQueryResult labResult : labResults) {
-      if (labResult.devices().size() < job.subDeviceSpecs().getSubDeviceCount()) {
+
+    for (Map.Entry<String, List<DeviceInfo>> entry : labToDevices.entrySet()) {
+      String hostname = entry.getKey();
+      List<DeviceInfo> devices = entry.getValue();
+
+      if (devices.size() < job.subDeviceSpecs().getSubDeviceCount()) {
         continue;
       }
+
+      LabQueryResult labResult = LabQueryResult.create(hostname, devices);
       report.addLabAssessment(assessor.assess(job, labResult), isFirstRound);
     }
 
