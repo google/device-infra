@@ -16,9 +16,14 @@
 
 package com.google.devtools.mobileharness.platform.android.lightning.apkinstaller;
 
+import java.time.Duration;
+
 /** A package that can be installed on a device. */
-public sealed interface Installable permits ApkSet {
+public sealed interface Installable permits Apk, ApkSet {
 
   /** Whether to uninstall and retry installation if the 1st attempt fails. */
   boolean allowUninstallAndRetry();
+
+  /** Sleep after install. */
+  Duration sleepAfterInstall();
 }
