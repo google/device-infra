@@ -2,7 +2,7 @@ import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {By} from '@angular/platform-browser';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
-import {APP_DATA} from 'app/core/models/app_data';
+import {APP_DATA} from '@deviceinfra/app/core/models/app_data';
 import {ActionBarAction} from '../../../../core/constants/action_bar_config';
 import {
   HostOverview,

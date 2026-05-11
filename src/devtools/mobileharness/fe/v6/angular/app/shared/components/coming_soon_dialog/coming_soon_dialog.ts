@@ -7,7 +7,7 @@ import {
   MatDialogRef,
 } from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
-import {openInNewTab} from 'app/shared/utils/safe_dom';
+import {openInNewTab} from '@deviceinfra/app/shared/utils/safe_dom';
 
 /**
  * Data passed to the ComingSoonDialog.

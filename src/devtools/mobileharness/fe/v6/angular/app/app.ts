@@ -42,10 +42,10 @@ import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {
   APP_DATA,
   type AppData,
-} from 'app/core/models/app_data';
-import {UrlService} from 'app/core/services/url_service';
-import {navigateWithPreservedParams} from 'app/core/utils/url_utils';
-import {LoadingService} from 'app/shared/services/loading_service';
+} from '@deviceinfra/app/core/models/app_data';
+import {UrlService} from '@deviceinfra/app/core/services/url_service';
+import {navigateWithPreservedParams} from '@deviceinfra/app/core/utils/url_utils';
+import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
 import {ReplaySubject} from 'rxjs';
 import {filter, takeUntil} from 'rxjs/operators';
 

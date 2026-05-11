@@ -11,11 +11,11 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
 import {MatTooltipModule} from '@angular/material/tooltip';
 
-import {ActionBarAction} from 'app/core/constants/action_bar_config';
+import {ActionBarAction} from '@deviceinfra/app/core/constants/action_bar_config';
 import {
   APP_DATA,
   getLegacyFeUrl,
-} from 'app/core/models/app_data';
+} from '@deviceinfra/app/core/models/app_data';
 import {ActionButtonState} from '../../../../core/models/action_common';
 import {HostActions} from '../../../../core/models/host_action';
 import type {HostOverviewPageData} from '../../../../core/models/host_overview';

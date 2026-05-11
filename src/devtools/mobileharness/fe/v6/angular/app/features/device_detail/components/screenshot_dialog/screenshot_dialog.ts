@@ -10,13 +10,13 @@ import {MatButtonModule} from '@angular/material/button';
 import {MAT_DIALOG_DATA, MatDialogModule} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
-import {dateUtils} from 'app/shared/utils/date_utils';
+import {dateUtils} from '@deviceinfra/app/shared/utils/date_utils';
 import {
   createSafeObjectURL,
   openInNewTab,
   revokeObjectURL,
   setSafeHref,
-} from 'app/shared/utils/safe_dom';
+} from '@deviceinfra/app/shared/utils/safe_dom';
 import {ScreenshotDialogData} from '../../../../core/models/device_action';
 import {Dialog} from '../../../../shared/components/config_common/dialog/dialog';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';

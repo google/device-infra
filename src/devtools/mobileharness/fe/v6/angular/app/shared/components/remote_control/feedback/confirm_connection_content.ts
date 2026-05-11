@@ -2,7 +2,7 @@ import {CommonModule} from '@angular/common';
 import {ChangeDetectionStrategy, Component, Input, signal} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
-import {type RemoteControlDevicesRequest} from 'app/core/models/host_overview';
+import {type RemoteControlDevicesRequest} from '@deviceinfra/app/core/models/host_overview';
 import {PROXY_TYPE_LABELS} from '../remote_control.types';
 
 interface GroupedConfig {
