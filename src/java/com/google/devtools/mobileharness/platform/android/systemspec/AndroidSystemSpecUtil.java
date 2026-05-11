@@ -155,12 +155,6 @@ public class AndroidSystemSpecUtil {
   @VisibleForTesting
   static final String ADB_SHELL_QUERY_SIM_INFO = "content query --uri content://telephony/siminfo";
 
-  /** ADB shell command to query modem secure boot status. */
-  @VisibleForTesting
-  static final String ADB_SHELL_SECURE_BOOT_STATUS =
-      "am instrument -w -e request 'at+googsecurebootstatus' -e response wait"
-          + " com.google.mdstest/com.google.mdstest.instrument.ModemATCommandInstrumentation";
-
   /** ADB shell command to get subscription info. */
   @VisibleForTesting static final String ADB_SHELL_GET_SUBSCRIPTION_INFO = "dumpsys isub";
 
