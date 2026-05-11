@@ -4,8 +4,8 @@
   "compilerOptions": {
     "baseUrl": "./",
     "paths": {
-      "app/*": [
-        "app/*"
+      "@deviceinfra/*": [
+        "./*"
       ]
     },
     "outDir": "./dist/out-tsc",

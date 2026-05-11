@@ -41,11 +41,11 @@ import {
   DeviceProxyType,
   RemoteControlDevicesRequest,
   SubDeviceEligibilityResult,
-} from 'app/core/models/host_overview';
-import {ConfirmDialog} from 'app/shared/components/confirm_dialog/confirm_dialog';
-import {ToggleSwitch} from 'app/shared/components/toggle_switch/toggle_switch';
-import {SnackBarService} from 'app/shared/services/snackbar_service';
-import {toDeviceProxyType} from 'app/shared/utils/enum_utils';
+} from '@deviceinfra/app/core/models/host_overview';
+import {ConfirmDialog} from '@deviceinfra/app/shared/components/confirm_dialog/confirm_dialog';
+import {ToggleSwitch} from '@deviceinfra/app/shared/components/toggle_switch/toggle_switch';
+import {SnackBarService} from '@deviceinfra/app/shared/services/snackbar_service';
+import {toDeviceProxyType} from '@deviceinfra/app/shared/utils/enum_utils';
 import {ConfirmConnectionContent} from '../feedback/confirm_connection_content';
 import {
   DeviceListItem,

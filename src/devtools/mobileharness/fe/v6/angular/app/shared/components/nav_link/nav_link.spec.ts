@@ -1,7 +1,7 @@
 import {DOCUMENT} from '@angular/common';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {provideRouter, Router} from '@angular/router';
-import {UrlService} from 'app/core/services/url_service';
+import {UrlService} from '@deviceinfra/app/core/services/url_service';
 import {NEVER, Observable, of} from 'rxjs';
 import {NavLink} from './nav_link';
 

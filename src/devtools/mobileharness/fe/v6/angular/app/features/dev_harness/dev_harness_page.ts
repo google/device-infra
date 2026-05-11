@@ -1,7 +1,7 @@
 import {CommonModule} from '@angular/common';
 import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {RouterLink} from '@angular/router';
-import {LoadingService} from 'app/shared/services/loading_service';
+import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
 import {
   MOCK_DEVICE_SCENARIOS,
   MOCK_HOST_SCENARIOS,
