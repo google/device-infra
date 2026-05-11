@@ -233,6 +233,24 @@ public class DeviceIdGenerator {
     }
   }
 
+  /**
+   * Generates the Starfish device id from device control id, adds the lab host name as the prefix
+   * of the uuid.
+   *
+   * @param deviceControlId the device control id from detector.
+   */
+  public DeviceId getStarfishDeviceId(String deviceControlId) {
+    try {
+      String safeId = deviceControlId.replace('/', '-');
+      return DeviceId.of(
+          deviceControlId,
+          String.format("%s:%s", getLocalHostName(), safeId),
+          /* isUuidVolatile= */ false);
+    } catch (MobileHarnessException e) {
+      throw new AssertionError("Failed to generate StarfishDevice uuid.", e);
+    }
+  }
+
   private String getLocalHostName() throws MobileHarnessException {
     try {
       return netUtil.getLocalHostName();
