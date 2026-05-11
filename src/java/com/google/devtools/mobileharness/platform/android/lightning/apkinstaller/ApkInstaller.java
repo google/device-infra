@@ -269,6 +269,36 @@ public class ApkInstaller {
   }
 
   /**
+   * Gets the package name of an APK or APK Set.
+   *
+   * <p>File type is determined by the file extension. Only .apk and .apks extensions are supported.
+   *
+   * @param filePath the path to the APK or APK Set file
+   * @return the package name of the package
+   * @throws MobileHarnessException if the package name cannot be extracted
+   */
+  public String getPackageName(String filePath)
+      throws MobileHarnessException, InterruptedException {
+    if (filePath.endsWith(".apks")) {
+      return bundletool.getPackageNameFromApks(Path.of(filePath));
+    }
+    // For backwards compatibility, we assume the file is an APK for any other extension.
+    return aapt.getApkPackageName(filePath);
+  }
+
+  private String getPackageName(Installable installable)
+      throws MobileHarnessException, InterruptedException {
+    if (installable instanceof ApkSet apkSet) {
+      return bundletool.getPackageNameFromApks(apkSet.apks());
+    } else if (installable instanceof Apk apk) {
+      return aapt.getApkPackageName(apk.apks().get(0).toString());
+    }
+    throw new MobileHarnessException(
+        AndroidErrorId.ANDROID_APK_INSTALLER_UNKNOWN_INSTALLABLE_ERROR,
+        "Unsupported Installable type: " + installable.getClass().getSimpleName());
+  }
+
+  /**
    * Installs a list of packages in the given order.
    *
    * @param device the device to install the packages to
@@ -835,18 +865,6 @@ public class ApkInstaller {
           "Failed to get current user ID with exception %s", e.getMessage());
     }
     return "0";
-  }
-
-  private String getPackageName(Installable installable)
-      throws MobileHarnessException, InterruptedException {
-    if (installable instanceof ApkSet apkSet) {
-      return bundletool.getPackageNameFromApks(apkSet.apks());
-    } else if (installable instanceof Apk apk) {
-      return aapt.getApkPackageName(apk.apks().get(0).toString());
-    }
-    throw new MobileHarnessException(
-        AndroidErrorId.ANDROID_APK_INSTALLER_UNKNOWN_INSTALLABLE_ERROR,
-        "Unsupported Installable type: " + installable.getClass().getSimpleName());
   }
 
   private void doInstall(
