@@ -12,7 +12,7 @@ GOOGLE3_DCON_EXCLUDES = [
     "src/devtools/mobileharness/shared/util/comm/dualconduit/tests/integration_test.go",
 ]
 
-def dcon_build_file_replace(before_target, after_target):
+def dcon_build_file_replace(before_target, after_target, export_only = False):
     """
     Replace package targets (such as in dependencies) with a given prefix with a new prefix.
 
@@ -21,10 +21,14 @@ def dcon_build_file_replace(before_target, after_target):
               "//java/com/google/common/", "//third_party/absl"
       after_target: a prefix path to replace <before> with, examples:
               "@maven//:com_google_guava_guava", "//@com.google.absl"
+      export_only: whether the transformation is only for export (non-reversible).
     Returns:
-      A transform that fixes instances of <before> with <after> in java_package
+      A transform that fixes instances of before_target with after_target in java_package
       rules inside protos. This transform is not guaranteed to be reversible.
   """
+    kwargs = {}
+    if export_only:
+        kwargs["reversal"] = []
     return core.transform(
         transformations = [
             core.replace(
@@ -34,6 +38,7 @@ def dcon_build_file_replace(before_target, after_target):
             ),
         ],
         ignore_noop = True,
+        **kwargs
     )
 
 dcon_blaze_to_bazel_transforms = [
@@ -54,8 +59,8 @@ dcon_blaze_to_bazel_transforms = [
     dcon_build_file_replace("//third_party/golang/oauth2/google", "@org_golang_x_oauth2//google"),
     dcon_build_file_replace("//third_party/envoy/src/api/envoy/", "@com_github_envoyproxy_go_control_plane_envoy//"),
     dcon_build_file_replace("//third_party/golang/envoyproxy/go_control_plane/pkg", "@com_github_envoyproxy_go_control_plane//pkg"),
-    dcon_build_file_replace(":pkg_go_proto", ":go_default_library"),
-    dcon_build_file_replace(":pkg_go_grpc", ":go_default_library"),
+    dcon_build_file_replace(":pkg_go_proto", ":go_default_library", export_only = True),
+    dcon_build_file_replace(":pkg_go_grpc", ":go_default_library", export_only = True),
     dcon_build_file_replace("@protobuf//:any_proto_go_proto", "@org_golang_google_protobuf//types/known/anypb"),
     dcon_build_file_replace("@protobuf//:duration_proto_go_proto", "@org_golang_google_protobuf//types/known/durationpb"),
     dcon_build_file_replace("//base/go:runfiles", "@rules_go//go/runfiles"),
