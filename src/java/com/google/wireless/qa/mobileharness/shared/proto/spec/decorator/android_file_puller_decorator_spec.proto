@@ -68,4 +68,8 @@ message AndroidFilePullerDecoratorSpec {
       help: "Whether to preserve the absolute path of the files on device."
     }
   ];
+
+  map<string, string> property = 7 [(field_detail) = {
+    help: "Only pull files if the device properties match the specified values. If a property does not match, file pulling is skipped but the test still runs. Map of property key to expected value."
+  }];
 }

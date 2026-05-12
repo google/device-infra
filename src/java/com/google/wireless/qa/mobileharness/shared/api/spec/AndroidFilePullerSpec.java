@@ -53,6 +53,16 @@ public interface AndroidFilePullerSpec {
               AndroidFilePullerDecoratorSpec.SKIP_PULLING_NON_EXIST_FILES_FIELD_NUMBER)
           .getName();
 
+  @ParamAnnotation(
+      required = false,
+      help =
+          "Properties to check on the device before pulling files. If any property does not match,"
+              + " file pulling is skipped but the test still runs.")
+  String PARAM_PROPERTY =
+      AndroidFilePullerDecoratorSpec.getDescriptor()
+          .findFieldByNumber(AndroidFilePullerDecoratorSpec.PROPERTY_FIELD_NUMBER)
+          .getName();
+
   /** Delimiter for separating multiple paths. */
   String PATH_DELIMITER = ",";
 }

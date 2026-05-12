@@ -16,13 +16,17 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
@@ -32,8 +36,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidFilePullerDecoratorSpec;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 /**
  * Driver decorator for pulling generated files on device to PUBLIC_TMP directory of the test after
@@ -49,15 +52,20 @@ public class AndroidFilePullerDecorator extends BaseDecorator
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final AndroidFileUtil androidFileUtil;
-
   private final LocalFileUtil localFileUtil;
+  private final AndroidAdbUtil androidAdbUtil;
 
   /**
    * Constructor. Do NOT modify the parameter list. This constructor is required by the lab server
    * framework.
    */
   public AndroidFilePullerDecorator(Driver decoratedDriver, TestInfo testInfo) {
-    this(decoratedDriver, testInfo, new AndroidFileUtil(), new LocalFileUtil());
+    this(
+        decoratedDriver,
+        testInfo,
+        new AndroidFileUtil(),
+        new LocalFileUtil(),
+        new AndroidAdbUtil());
   }
 
   /** Constructor for testing only. */
@@ -66,10 +74,12 @@ public class AndroidFilePullerDecorator extends BaseDecorator
       Driver decoratedDriver,
       TestInfo testInfo,
       AndroidFileUtil androidFileUtil,
-      LocalFileUtil localFileUtil) {
+      LocalFileUtil localFileUtil,
+      AndroidAdbUtil androidAdbUtil) {
     super(decoratedDriver, testInfo);
     this.androidFileUtil = androidFileUtil;
     this.localFileUtil = localFileUtil;
+    this.androidAdbUtil = androidAdbUtil;
   }
 
   @Override
@@ -78,11 +88,16 @@ public class AndroidFilePullerDecorator extends BaseDecorator
     JobInfo jobInfo = testInfo.jobInfo();
     AndroidFilePullerDecoratorSpec spec = jobInfo.combinedSpec(this, deviceId);
 
-    List<String> fileOrDirPathsOnDevice =
+    if (!matchProperties(deviceId, spec.getPropertyMap(), testInfo)) {
+      getDecorated().run(testInfo);
+      return;
+    }
+
+    ImmutableList<String> fileOrDirPathsOnDevice =
         Splitter.onPattern(PATH_DELIMITER)
             .splitToStream(spec.getFilePathOnDevice())
             .map(String::trim)
-            .collect(Collectors.toList());
+            .collect(toImmutableList());
 
     // If the parameter is not set, or not equals to false, cleans up existing files under given
     // device path.
@@ -163,5 +178,60 @@ public class AndroidFilePullerDecorator extends BaseDecorator
         }
       }
     }
+  }
+
+  /**
+   * Checks if the device properties match the expected values specified in the property map.
+   *
+   * <p>This method fetches properties from the device one by one for each entry in the map. If any
+   * property does not match, it returns false. If an exception occurs while fetching properties, it
+   * logs a warning, adds a warning to the test info, and returns false.
+   *
+   * @param deviceId the ID of the device to check
+   * @param propertyMap a map of property keys to expected values
+   * @param testInfo the test info for logging and reporting warnings
+   * @return {@code true} if all properties match or if the map is empty; {@code false} otherwise
+   * @throws InterruptedException if the thread is interrupted during ADB calls
+   */
+  private boolean matchProperties(
+      String deviceId, Map<String, String> propertyMap, TestInfo testInfo)
+      throws InterruptedException {
+    if (propertyMap.isEmpty()) {
+      return true;
+    }
+    for (Map.Entry<String, String> entry : propertyMap.entrySet()) {
+      String key = entry.getKey();
+      String expectedValue = entry.getValue();
+      try {
+        String actualValue = androidAdbUtil.getProperty(deviceId, ImmutableList.of(key));
+        if (!expectedValue.equals(actualValue)) {
+          testInfo
+              .log()
+              .atInfo()
+              .alsoTo(logger)
+              .log(
+                  "Property match failed for %s: expected %s, but got %s. Skipping file pull.",
+                  key, expectedValue, actualValue);
+          return false;
+        }
+      } catch (MobileHarnessException e) {
+        testInfo
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .withCause(e)
+            .log("Failed to get property %s from device. Skipping file pull.", key);
+        testInfo
+            .warnings()
+            .addAndLog(
+                new MobileHarnessException(
+                    AndroidErrorId.ANDROID_ADB_UTIL_GET_DEVICE_PROPERTY_ERROR,
+                    "Failed to check property " + key,
+                    e),
+                logger);
+        return false;
+      }
+    }
+    return true;
   }
 }
