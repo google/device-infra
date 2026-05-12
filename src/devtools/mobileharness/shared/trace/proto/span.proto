@@ -79,6 +79,7 @@ message Type {
     SEND_FILE = 104;
     DOWNLOAD_FILE = 105;
     RUN_DECORATOR = 106;
+    UPLOAD_FILE = 107;
 
     EXEC_COMMAND = 201;
   }
