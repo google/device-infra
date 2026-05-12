@@ -1054,6 +1054,9 @@ public class Flags {
               + " Default is true.")
   public static final Flag<Boolean> labServerCheckJobsFromMaster = Flag.value(true);
 
+  @FlagSpec(name = "lab_type", help = "The type of the lab server (e.g., Satellite, Core, SLaaS).")
+  public static final Flag<String> labType = Flag.value("Satellite");
+
   @SuppressWarnings("unused")
   @FlagSpec(
       name = "local_tenant_device_config_path",
