@@ -50,6 +50,8 @@ public class Result {
 
   static final String PARAM_ALLOW_OVERRIDE_FAIL_TO_ERROR = "allow_override_fail_to_error";
 
+  static final String PARAM_ALLOW_OVERRIDE_TIMEOUT_TO_PASS = "allow_override_timeout_to_pass";
+
   /** Job param to print stack trace when setting the result as PASS. True by default. */
   static final String PARAM_PRINT_STACK_TRACE_FOR_PASS_TEST = "print_stack_trace_for_pass_test";
 
@@ -112,7 +114,8 @@ public class Result {
       if (this.result == TestResult.PASS) {
         return this;
       }
-      if (this.result.equals(TestResult.TIMEOUT)) {
+      if (this.result.equals(TestResult.TIMEOUT)
+          && !params.isTrue(PARAM_ALLOW_OVERRIDE_TIMEOUT_TO_PASS)) {
         // Timeout test may require rebooting the device: b/33743212.
         logger.atWarning().withStackTrace(StackSize.MEDIUM).log(
             "Prevent overriding %s result to PASS", this);
