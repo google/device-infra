@@ -2,6 +2,7 @@ import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   Input,
   OnInit,
@@ -106,35 +107,40 @@ export class DeviceSettings implements OnInit {
     return this.configInternal;
   }
 
-  uiStatusInternal: DeviceConfigUiStatus = DEFAULT_DEVICE_CONFIG_UI_STATUS;
+  uiStatusInternal = signal<DeviceConfigUiStatus>(
+    DEFAULT_DEVICE_CONFIG_UI_STATUS,
+  );
 
   @Input()
   set uiStatus(value: Partial<DeviceConfigUiStatus> | undefined) {
-    this.uiStatusInternal = normalizeDeviceConfigUiStatus(value);
+    this.uiStatusInternal.set(normalizeDeviceConfigUiStatus(value));
   }
 
+  private readonly computedUiStatus = computed<DeviceConfigUiStatus>(() => {
+    const hasPerm = this.hasPermission() ?? false;
+    const internal = this.uiStatusInternal();
+    return {
+      permissions: {
+        visible: internal.permissions.visible,
+        editability: {editable: hasPerm},
+      },
+      wifi: {
+        visible: internal.wifi.visible,
+        editability: {editable: hasPerm},
+      },
+      dimensions: {
+        visible: internal.dimensions.visible,
+        editability: {editable: hasPerm},
+      },
+      settings: {
+        visible: internal.settings.visible,
+        editability: {editable: hasPerm},
+      },
+    };
+  });
+
   get uiStatus(): DeviceConfigUiStatus {
-    if (!this.hasPermission()) {
-      return {
-        permissions: {
-          visible: this.uiStatusInternal.permissions.visible,
-          editability: {editable: false},
-        },
-        wifi: {
-          visible: this.uiStatusInternal.wifi.visible,
-          editability: {editable: false},
-        },
-        dimensions: {
-          visible: this.uiStatusInternal.dimensions.visible,
-          editability: {editable: false},
-        },
-        settings: {
-          visible: this.uiStatusInternal.settings.visible,
-          editability: {editable: false},
-        },
-      };
-    }
-    return this.uiStatusInternal;
+    return this.computedUiStatus();
   }
 
   private readonly allNavItems = [
@@ -164,13 +170,13 @@ export class DeviceSettings implements OnInit {
     return this.allNavItems.filter((nav) => {
       switch (nav.id) {
         case ConfigSection.PERMISSIONS:
-          return this.uiStatusInternal.permissions.visible;
+          return this.uiStatus.permissions.visible;
         case ConfigSection.WIFI:
-          return this.uiStatusInternal.wifi.visible;
+          return this.uiStatus.wifi.visible;
         case ConfigSection.DIMENSIONS:
-          return this.uiStatusInternal.dimensions.visible;
+          return this.uiStatus.dimensions.visible;
         case ConfigSection.STABILITY:
-          return this.uiStatusInternal.settings.visible;
+          return this.uiStatus.settings.visible;
         default:
           return true;
       }
@@ -319,7 +325,7 @@ export class DeviceSettings implements OnInit {
     });
   }
 
-  success() {
+  success(isSelfLockout = false) {
     const dialogData = {
       title: 'Configuration Saved',
       content: 'Your configuration has been saved successfully. ',
@@ -327,10 +333,16 @@ export class DeviceSettings implements OnInit {
       primaryButtonLabel: 'OK',
     };
 
-    this.dialog.open(ConfirmDialog, {
+    const successDialogRef = this.dialog.open(ConfirmDialog, {
       data: dialogData,
       disableClose: true,
     });
+
+    if (isSelfLockout) {
+      successDialogRef.afterClosed().subscribe(() => {
+        this.dialogRef.close(true);
+      });
+    }
   }
 
   error(errorCode?: string) {
@@ -385,7 +397,7 @@ export class DeviceSettings implements OnInit {
           this.newConfig,
         ) as DeviceConfig;
 
-        this.success();
+        this.success(selfLockout);
       });
   }
 

@@ -255,8 +255,8 @@ export class HostSettings implements OnInit {
   }
 
   get permissionsUiStatus() {
-    const status =
-      this.config.uiStatus.deviceConfig.subSections?.permissions || {
+    const status = this.config.uiStatus.deviceConfig.subSections
+      ?.permissions || {
       visible: true,
       editability: {editable: true},
     };
@@ -273,8 +273,7 @@ export class HostSettings implements OnInit {
   }
 
   get wifiUiStatus() {
-    const status =
-      this.config.uiStatus.deviceConfig.subSections?.wifi || {
+    const status = this.config.uiStatus.deviceConfig.subSections?.wifi || {
       visible: true,
       editability: {editable: true},
     };
@@ -291,8 +290,7 @@ export class HostSettings implements OnInit {
   }
 
   get settingsUiStatus() {
-    const status =
-      this.config.uiStatus.deviceConfig.subSections?.settings || {
+    const status = this.config.uiStatus.deviceConfig.subSections?.settings || {
       visible: true,
       editability: {editable: true},
     };
@@ -332,8 +330,6 @@ export class HostSettings implements OnInit {
     return {sectionStatus};
   }
 
-  // Default device config for the host.
-  // This is used to display the device config in the UI.
   deviceConfig: DeviceConfig = {
     permissions: {
       owners: [],
@@ -541,6 +537,16 @@ export class HostSettings implements OnInit {
     ) as HostConfig;
   }
 
+  onHostPermissionsChange(hostAdmins: string[]) {
+    if (!this.hostConfig.permissions) {
+      this.hostConfig.permissions = {hostAdmins: []};
+    }
+    this.hostConfig.permissions.hostAdmins = hostAdmins;
+    if (this.deviceConfig?.permissions) {
+      this.deviceConfig.permissions.owners = [...hostAdmins];
+    }
+  }
+
   isCategoryDirty(category: string) {
     if (category === 'host-permissions') {
       return (
@@ -632,7 +638,6 @@ export class HostSettings implements OnInit {
     });
     selfLockoutDialog.afterClosed().subscribe((result) => {
       if (result === 'secondary') {
-        this.activeSection.set('permissions');
         return;
       }
       if (result === 'primary') {
@@ -641,7 +646,7 @@ export class HostSettings implements OnInit {
     });
   }
 
-  success() {
+  success(isSelfLockout = false) {
     const dialogData = {
       title: 'Configuration Saved',
       content: 'Your configuration has been saved successfully. ',
@@ -649,10 +654,16 @@ export class HostSettings implements OnInit {
       primaryButtonLabel: 'OK',
     };
 
-    this.dialog.open(ConfirmDialog, {
+    const successDialogRef = this.dialog.open(ConfirmDialog, {
       data: dialogData,
       disableClose: true,
     });
+
+    if (isSelfLockout) {
+      successDialogRef.afterClosed().subscribe(() => {
+        this.dialogRef.close(true);
+      });
+    }
   }
 
   error(errorCode?: string) {
@@ -698,6 +709,14 @@ export class HostSettings implements OnInit {
       'stability': ConfigSection.STABILITY,
     };
 
+    if (
+      this.hostConfig.permissions?.hostAdmins &&
+      this.deviceConfig?.permissions
+    ) {
+      this.deviceConfig.permissions.owners = [
+        ...this.hostConfig.permissions.hostAdmins,
+      ];
+    }
     this.hostConfig.deviceConfig = this.deviceConfig;
     const request: UpdateHostConfigRequest = {
       hostName: this.hostName,
@@ -730,7 +749,7 @@ export class HostSettings implements OnInit {
           this.deviceConfig,
         ) as DeviceConfig;
 
-        this.success();
+        this.success(selfLockout);
       });
   }
 
