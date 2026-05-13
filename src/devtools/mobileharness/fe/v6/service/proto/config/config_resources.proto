@@ -63,14 +63,11 @@ message DeviceConfig {
   // Dimensions configuration for a device.
   message Dimensions {
     // Dimensions supported by the device.
-    repeated devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
-        supported = 1;
+    repeated common.DeviceDimension supported = 1;
     // Dimensions required for certain operations.
-    repeated devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
-        required = 2;
+    repeated common.DeviceDimension required = 2;
   }
-  devtools.mobileharness.fe.v6.service.proto.common.PermissionInfo permissions =
-      1;
+  common.PermissionInfo permissions = 1;
   WifiConfig wifi = 2;
   Dimensions dimensions = 3;
   StabilitySettings settings = 4;
