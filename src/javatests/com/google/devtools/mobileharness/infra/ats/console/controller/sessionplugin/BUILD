@@ -39,6 +39,7 @@ java_library(
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
+        "//src/devtools/mobileharness/platform/android/xts/proto:test_message_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:xts_device_cache",
@@ -79,6 +80,8 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/client/api/event:job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:lab_test_events",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/allocation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
@@ -91,6 +94,7 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
+        "@protobuf//:protobuf_java",
     ],
 )
 

@@ -66,7 +66,12 @@ message AtsSessionCancellation {
   string reason = 1;
 
   // Optional. Whether to cancel the session aggressively.
+  //
+  // Ignored if signal is set.
   bool aggressive = 2;
+
+  // Optional. The signal number to forward to TF.
+  optional int32 signal = 3;
 }
 
 enum DeviceType {

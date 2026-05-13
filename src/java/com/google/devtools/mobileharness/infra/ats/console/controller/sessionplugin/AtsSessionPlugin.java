@@ -697,13 +697,20 @@ public class AtsSessionPlugin {
       this.sessionCancellation = sessionCancellation;
     }
 
+    int killTradefedSignal;
+    if (sessionCancellation.hasSignal()) {
+      killTradefedSignal = sessionCancellation.getSignal();
+    } else {
+      killTradefedSignal =
+          sessionCancellation.getAggressive()
+              ? KillSignal.SIGTERM.value()
+              : KillSignal.SIGTSTP.value();
+    }
+
     // Creates test message.
     XtsTradefedRunCancellation cancellationTestMessage =
         XtsTradefedRunCancellation.newBuilder()
-            .setKillTradefedSignal(
-                sessionCancellation.getAggressive()
-                    ? KillSignal.SIGTERM.value()
-                    : KillSignal.SIGTSTP.value())
+            .setKillTradefedSignal(killTradefedSignal)
             .setCancelReason(sessionCancellation.getReason())
             .build();
 

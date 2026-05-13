@@ -22,32 +22,43 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.XtsDeviceCache;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginNotification;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionNotificationEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
+import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.protobuf.Any;
+import com.google.protobuf.TextFormat;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
+import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartingEvent;
+import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import javax.inject.Inject;
@@ -158,5 +169,206 @@ public final class AtsSessionPluginTest {
                     + "cause: \"FAIL[cause=MobileHarnessException: The Mobly test run had some"
                     + " failures. Please see Mobly test results."
                     + " [MH|CUSTOMER_ISSUE|MOBLY_TEST_FAILURE|81022] [MobileHarnessException]"));
+  }
+
+  @Test
+  public void onSessionNotification_cancellationWithSignal_forwardDirectSignal() throws Exception {
+    TestInfo testInfo = mock(TestInfo.class);
+    TestLocator locator = mock(TestLocator.class);
+    when(testInfo.locator()).thenReturn(locator);
+    when(locator.getId()).thenReturn("test_id");
+    JobInfo jobInfo = mock(JobInfo.class);
+    Properties properties = new Properties(new Timing());
+    when(jobInfo.properties()).thenReturn(properties);
+    when(testInfo.jobInfo()).thenReturn(jobInfo);
+
+    LocalTestStartingEvent startingEvent = mock(LocalTestStartingEvent.class);
+    Allocation allocation = mock(Allocation.class);
+    when(startingEvent.getTest()).thenReturn(testInfo);
+    when(startingEvent.getAllocation()).thenReturn(allocation);
+    when(allocation.getAllDeviceLocators()).thenReturn(ImmutableList.of());
+    when(startingEvent.getLocalDevices()).thenReturn(ImmutableMap.of());
+
+    atsSessionPlugin.onTestStarting(startingEvent);
+
+    AtsSessionPluginNotification notification =
+        AtsSessionPluginNotification.newBuilder()
+            .setSessionCancellation(
+                AtsSessionCancellation.newBuilder()
+                    .setReason("Manually stopped.")
+                    .setSignal(3) // SIGQUIT
+                    .build())
+            .build();
+
+    SessionNotificationEvent notificationEvent =
+        new SessionNotificationEvent(
+            sessionInfo,
+            SessionNotification.newBuilder().setNotification(Any.pack(notification)).build(),
+            TextFormat.printer());
+
+    atsSessionPlugin.onSessionNotification(notificationEvent);
+
+    verify(testMessageUtil)
+        .sendProtoMessageToTest(
+            testInfo,
+            XtsTradefedRunCancellation.newBuilder()
+                .setKillTradefedSignal(3)
+                .setCancelReason("Manually stopped.")
+                .build());
+  }
+
+  @Test
+  public void onSessionNotification_cancellationAggressive_sendsSigterm() throws Exception {
+    TestInfo testInfo = mock(TestInfo.class);
+    TestLocator locator = mock(TestLocator.class);
+    when(testInfo.locator()).thenReturn(locator);
+    when(locator.getId()).thenReturn("test_id");
+    JobInfo jobInfo = mock(JobInfo.class);
+    Properties properties = new Properties(new Timing());
+    when(jobInfo.properties()).thenReturn(properties);
+    when(testInfo.jobInfo()).thenReturn(jobInfo);
+
+    LocalTestStartingEvent startingEvent = mock(LocalTestStartingEvent.class);
+    Allocation allocation = mock(Allocation.class);
+    when(startingEvent.getTest()).thenReturn(testInfo);
+    when(startingEvent.getAllocation()).thenReturn(allocation);
+    when(allocation.getAllDeviceLocators()).thenReturn(ImmutableList.of());
+    when(startingEvent.getLocalDevices()).thenReturn(ImmutableMap.of());
+
+    atsSessionPlugin.onTestStarting(startingEvent);
+
+    AtsSessionPluginNotification notification =
+        AtsSessionPluginNotification.newBuilder()
+            .setSessionCancellation(
+                AtsSessionCancellation.newBuilder()
+                    .setReason("Aggressive stop.")
+                    .setAggressive(true)
+                    .build())
+            .build();
+
+    SessionNotificationEvent notificationEvent =
+        new SessionNotificationEvent(
+            sessionInfo,
+            SessionNotification.newBuilder().setNotification(Any.pack(notification)).build(),
+            TextFormat.printer());
+
+    atsSessionPlugin.onSessionNotification(notificationEvent);
+
+    verify(testMessageUtil)
+        .sendProtoMessageToTest(
+            testInfo,
+            XtsTradefedRunCancellation.newBuilder()
+                .setKillTradefedSignal(15) // SIGTERM
+                .setCancelReason("Aggressive stop.")
+                .build());
+  }
+
+  @Test
+  public void onSessionNotification_cancellationWithoutSignal_fallbackToAggressive()
+      throws Exception {
+    TestInfo testInfo = mock(TestInfo.class);
+    TestLocator locator = mock(TestLocator.class);
+    when(testInfo.locator()).thenReturn(locator);
+    when(locator.getId()).thenReturn("test_id");
+    JobInfo jobInfo = mock(JobInfo.class);
+    Properties properties = new Properties(new Timing());
+    when(jobInfo.properties()).thenReturn(properties);
+    when(testInfo.jobInfo()).thenReturn(jobInfo);
+
+    LocalTestStartingEvent startingEvent = mock(LocalTestStartingEvent.class);
+    Allocation allocation = mock(Allocation.class);
+    when(startingEvent.getTest()).thenReturn(testInfo);
+    when(startingEvent.getAllocation()).thenReturn(allocation);
+    when(allocation.getAllDeviceLocators()).thenReturn(ImmutableList.of());
+    when(startingEvent.getLocalDevices()).thenReturn(ImmutableMap.of());
+
+    atsSessionPlugin.onTestStarting(startingEvent);
+
+    AtsSessionPluginNotification notification =
+        AtsSessionPluginNotification.newBuilder()
+            .setSessionCancellation(
+                AtsSessionCancellation.newBuilder()
+                    .setReason("Standard stopped.")
+                    .setAggressive(false)
+                    .build())
+            .build();
+
+    SessionNotificationEvent notificationEvent =
+        new SessionNotificationEvent(
+            sessionInfo,
+            SessionNotification.newBuilder().setNotification(Any.pack(notification)).build(),
+            TextFormat.printer());
+
+    atsSessionPlugin.onSessionNotification(notificationEvent);
+
+    verify(testMessageUtil)
+        .sendProtoMessageToTest(
+            testInfo,
+            XtsTradefedRunCancellation.newBuilder()
+                .setKillTradefedSignal(20) // SIGTSTP
+                .setCancelReason("Standard stopped.")
+                .build());
+  }
+
+  @Test
+  public void onSessionNotification_multipleCancellations_sendMultipleMessages() throws Exception {
+    TestInfo testInfo = mock(TestInfo.class);
+    TestLocator locator = mock(TestLocator.class);
+    when(testInfo.locator()).thenReturn(locator);
+    when(locator.getId()).thenReturn("test_id");
+    JobInfo jobInfo = mock(JobInfo.class);
+    Properties properties = new Properties(new Timing());
+    when(jobInfo.properties()).thenReturn(properties);
+    when(testInfo.jobInfo()).thenReturn(jobInfo);
+
+    LocalTestStartingEvent startingEvent = mock(LocalTestStartingEvent.class);
+    Allocation allocation = mock(Allocation.class);
+    when(startingEvent.getTest()).thenReturn(testInfo);
+    when(startingEvent.getAllocation()).thenReturn(allocation);
+    when(allocation.getAllDeviceLocators()).thenReturn(ImmutableList.of());
+    when(startingEvent.getLocalDevices()).thenReturn(ImmutableMap.of());
+
+    atsSessionPlugin.onTestStarting(startingEvent);
+
+    // First cancellation
+    AtsSessionPluginNotification notification1 =
+        AtsSessionPluginNotification.newBuilder()
+            .setSessionCancellation(
+                AtsSessionCancellation.newBuilder().setReason("Reason 1").setSignal(3).build())
+            .build();
+    SessionNotificationEvent event1 =
+        new SessionNotificationEvent(
+            sessionInfo,
+            SessionNotification.newBuilder().setNotification(Any.pack(notification1)).build(),
+            TextFormat.printer());
+    atsSessionPlugin.onSessionNotification(event1);
+
+    // Second cancellation
+    AtsSessionPluginNotification notification2 =
+        AtsSessionPluginNotification.newBuilder()
+            .setSessionCancellation(
+                AtsSessionCancellation.newBuilder().setReason("Reason 2").setSignal(9).build())
+            .build();
+    SessionNotificationEvent event2 =
+        new SessionNotificationEvent(
+            sessionInfo,
+            SessionNotification.newBuilder().setNotification(Any.pack(notification2)).build(),
+            TextFormat.printer());
+    atsSessionPlugin.onSessionNotification(event2);
+
+    verify(testMessageUtil)
+        .sendProtoMessageToTest(
+            testInfo,
+            XtsTradefedRunCancellation.newBuilder()
+                .setKillTradefedSignal(3)
+                .setCancelReason("Reason 1")
+                .build());
+    verify(testMessageUtil)
+        .sendProtoMessageToTest(
+            testInfo,
+            XtsTradefedRunCancellation.newBuilder()
+                .setKillTradefedSignal(9)
+                .setCancelReason("Reason 2")
+                .build());
   }
 }
