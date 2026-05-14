@@ -56,7 +56,7 @@ export function createDefaultHostOverview(hostName: string): HostOverview {
     hostName,
     ip: '192.168.1.1',
     os: 'gLinux',
-    canUpgrade: false,
+    canUpgrade: true,
     labTypeDisplayNames: ['Satellite Lab'],
     labServer: {
       connectivity: {
