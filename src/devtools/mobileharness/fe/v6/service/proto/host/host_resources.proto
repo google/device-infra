@@ -112,13 +112,6 @@ message PopularFlag {
   string cmd = 3;
 }
 
-// A preset configuration for pass-through flags.
-message FlagPreset {
-  string label = 1;
-  string value = 2;
-  string description = 3;
-}
-
 message ChangeRecord {
   int64 cl = 1;
   string author = 2;

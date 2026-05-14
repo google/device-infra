@@ -10,6 +10,7 @@ import {
   DecommissionHostResponse,
   DeployableVersion,
   GetHostDebugInfoResponse,
+  GetPopularFlagsResponse,
   HostHeaderInfo,
   PopularFlag,
   PreflightLabServerReleaseResponse,
@@ -134,14 +135,15 @@ describe('HttpHostService', () => {
 
   it('should retrieve popular flags', () => {
     const mockPopularFlags: PopularFlag[] = [{name: 'flag1'} as PopularFlag];
-    service.getPopularFlags('test-host').subscribe((flags) => {
-      expect(flags).toEqual(mockPopularFlags);
+    const mockResponse: GetPopularFlagsResponse = {flags: mockPopularFlags};
+    service.getPopularFlags('test-host').subscribe((response) => {
+      expect(response).toEqual(mockResponse);
     });
     const req = httpMock.expectOne(
       'http://testdomain.com/v6/hosts/test-host/popular-flags',
     );
     expect(req.request.method).toBe('GET');
-    req.flush(mockPopularFlags);
+    req.flush(mockResponse);
   });
 
   it('should update pass-through flags', () => {

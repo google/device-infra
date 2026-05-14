@@ -4,14 +4,15 @@ import {Observable, of, throwError} from 'rxjs';
 import {
   DecommissionHostResponse,
   GetHostDebugInfoResponse,
+  GetPopularFlagsResponse,
   HostHeaderInfo,
-  PopularFlag,
   PreflightLabServerReleaseResponse,
   ReleaseLabServerRequest,
   ReleaseLabServerResponse,
   RestartLabServerResponse,
   StartLabServerResponse,
   StopLabServerResponse,
+  UpdatePassThroughFlagsResponse,
 } from '../../models/host_action';
 import {
   CheckRemoteControlEligibilityResponse,
@@ -113,34 +114,58 @@ export class FakeHostService extends HostService {
     });
   }
 
-  override getPopularFlags(hostName: string): Observable<PopularFlag[]> {
-    return of([
-      {
-        name: 'No Mute Android',
-        description: 'Disables muting of Android devices',
-        cmd: '--nomute_android',
-      },
-      {
-        name: 'No Binary Log',
-        description: 'Disables binary logging to save space',
-        cmd: '--nobinarylog',
-      },
-      {
-        name: 'Enable Linux Device',
-        description: 'Enables support for Linux devices',
-        cmd: '--enable_linux_device',
-      },
-    ]);
+  override getPopularFlags(
+    hostName: string,
+  ): Observable<GetPopularFlagsResponse> {
+    return of({
+      flags: [
+        {
+          name: 'Standard Satellite',
+          cmd: '--nomute_android --noandroid_device_daemon',
+          description: 'Default configuration for Android Satellite Labs',
+        },
+        {
+          name: 'Linux Support',
+          cmd: '--enable_linux_device',
+          description: 'Enables detection of Linux devices',
+        },
+        {
+          name: 'Debug Mode',
+          cmd: '--debug_mode=true --verbose',
+          description: 'Enables verbose logging for debugging',
+        },
+        {
+          name: 'Flashstation Cache',
+          cmd: '--flashstation_cache_dir=/tmp/fs_cache',
+          description: 'Custom cache directory for Flashstation',
+        },
+        {
+          name: 'No Binary Log',
+          cmd: '--nobinarylog',
+          description: 'Disables binary logging to save space',
+        },
+        {
+          name: 'Custom Flag',
+          cmd: `--my_message=":text: field_a: 'test' field_b: 123"`,
+          description: 'Custom flag for testing',
+        },
+        {
+          name: 'Custom Flag 2',
+          cmd: `--flagD="some value"`,
+          description: 'Custom flag for testing 2',
+        },
+      ],
+    });
   }
 
   override updatePassThroughFlags(
     hostName: string,
     flags: string,
-  ): Observable<void> {
+  ): Observable<UpdatePassThroughFlagsResponse> {
     const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
     if (scenario && scenario.overview) {
       scenario.overview.labServer.passThroughFlags = flags;
-      return of(undefined);
+      return of({});
     } else {
       return throwError(
         () =>

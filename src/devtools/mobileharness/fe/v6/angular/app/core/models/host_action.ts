@@ -55,12 +55,10 @@ export declare interface PopularFlag {
 }
 
 /**
- * A preset configuration for pass-through flags.
+ * Response for GetPopularFlags API.
  */
-export declare interface FlagPreset {
-  readonly label: string;
-  readonly value: string;
-  readonly description: string;
+export declare interface GetPopularFlagsResponse {
+  readonly flags: PopularFlag[];
 }
 
 /**
@@ -172,6 +170,11 @@ export declare interface CommandRecord {
  * Response for DecommissionHost API.
  */
 export declare interface DecommissionHostResponse {}
+
+/**
+ * Response for UpdatePassThroughFlags API.
+ */
+export declare interface UpdatePassThroughFlagsResponse {}
 
 /**
  * Response for those rollout action
