@@ -29,7 +29,6 @@ public enum DumpSysType {
   ACTIVITY("activity"), // Activity information
   ALL("all"), // Use it to get a diagnostic output for all system services as command "adb shell
   // dumpsys".
-  APPOPS("appops"), // Appops information
   BATTERY("battery"), // Battery information
   BATTERYSTATS("batterystats"), // Batterystats information
   CAMERA("media.camera"), // Camera information
