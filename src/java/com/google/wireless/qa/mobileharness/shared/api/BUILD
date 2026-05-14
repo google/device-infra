@@ -110,6 +110,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_file_puller_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_file_pusher_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_hd_video_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_install_mainline_modules_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_lab_test_support_settings_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_logcat_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_logcat_monitoring_decorator",
