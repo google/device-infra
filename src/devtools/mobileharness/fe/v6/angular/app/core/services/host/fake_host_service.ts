@@ -5,8 +5,8 @@ import {
   DecommissionHostResponse,
   GetHostDebugInfoResponse,
   HostHeaderInfo,
-  HostReleaseConfig,
   PopularFlag,
+  PreflightLabServerReleaseResponse,
   ReleaseLabServerRequest,
   ReleaseLabServerResponse,
   RestartLabServerResponse,
@@ -25,7 +25,10 @@ import {
   RemoteControlDevicesResponse,
 } from '../../models/host_overview';
 import {MOCK_HOST_SCENARIOS} from '../mock_data';
-import {createHostActions} from '../mock_data/hosts/ui_status_utils';
+import {
+  createDefaultReleaseResponse,
+  createHostActions,
+} from '../mock_data/hosts/ui_status_utils';
 import {HostService} from './host_service';
 
 /**
@@ -148,31 +151,13 @@ export class FakeHostService extends HostService {
     }
   }
 
-  override getReleaseConfigs(
+  override preflightLabServerRelease(
     hostName: string,
-  ): Observable<HostReleaseConfig[]> {
-    return of([
-      {
-        name: 'MH_SATELLITE_LAB',
-        version: '4.349.0',
-        port: {protocol: 'grpc', portNumber: 9994},
-        syncCMD: [
-          'sudo systemctl stop mobileharness-lab',
-          'sudo /usr/bin/mh_lab_installer --version 4.349.0',
-        ],
-        asyncCMD: ['sudo systemctl start mobileharness-lab'],
-      },
-      {
-        name: 'MH_SATELLITE_LAB',
-        version: '4.348.0',
-        port: {protocol: 'grpc', portNumber: 9994},
-        syncCMD: [
-          'sudo systemctl stop mobileharness-lab',
-          'sudo /usr/bin/mh_lab_installer --version 4.348.0',
-        ],
-        asyncCMD: ['sudo systemctl start mobileharness-lab'],
-      },
-    ]);
+  ): Observable<PreflightLabServerReleaseResponse> {
+    const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    const preflightLabServerReleaseResponse =
+      scenario?.releaseResponse || createDefaultReleaseResponse();
+    return of(preflightLabServerReleaseResponse);
   }
 
   override decommissionMissingDevices(

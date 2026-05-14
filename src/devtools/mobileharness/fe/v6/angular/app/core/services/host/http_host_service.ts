@@ -9,8 +9,8 @@ import {
   DecommissionHostResponse,
   GetHostDebugInfoResponse,
   HostHeaderInfo,
-  HostReleaseConfig,
   PopularFlag,
+  PreflightLabServerReleaseResponse,
   ReleaseLabServerRequest,
   ReleaseLabServerResponse,
   RestartLabServerResponse,
@@ -85,11 +85,11 @@ export class HttpHostService extends HostService {
     );
   }
 
-  override getReleaseConfigs(
+  override preflightLabServerRelease(
     hostName: string,
-  ): Observable<HostReleaseConfig[]> {
-    return this.http.get<HostReleaseConfig[]>(
-      `${this.apiUrl}/${hostName}/release-configs`,
+  ): Observable<PreflightLabServerReleaseResponse> {
+    return this.http.get<PreflightLabServerReleaseResponse>(
+      `${this.apiUrl}/${hostName}/preflightLabServerRelease`,
     );
   }
 

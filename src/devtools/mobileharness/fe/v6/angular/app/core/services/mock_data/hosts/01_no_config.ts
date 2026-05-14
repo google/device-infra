@@ -18,4 +18,7 @@ export const SCENARIO_HOST_NO_CONFIG: MockHostScenario = {
   },
   defaultDeviceConfig: null,
   actions: createHostActions(),
+  releaseResponse: {
+    permissionDenied: {},
+  },
 };
