@@ -91,10 +91,10 @@ control plane.
 
 ### gRPC
 
-For gRPC services, the `ServiceLocator` will contain an `xds_address`. You can
+For gRPC servers, the `ServiceLocator` will contain an `xds_address`. You can
 use this address with the `xds:///` resolver in your gRPC client.
 
-Example target: `xds:///my-service.dcon` (obtained from `xds_address`)
+Example target: `xds:///my-server.dcon` (obtained from `xds_address`)
 
 ### HTTP and TCP
 
