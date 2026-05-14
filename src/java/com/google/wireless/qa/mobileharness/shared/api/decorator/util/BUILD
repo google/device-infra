@@ -27,3 +27,15 @@ java_library(
     srcs = ["StepSkippableLifecycleDecoratorUtil.java"],
     deps = ["//src/java/com/google/wireless/qa/mobileharness/shared/model/job"],
 )
+
+java_library(
+    name = "report_log_collector_util",
+    srcs = ["ReportLogCollectorUtil.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_code_gson_gson",
+    ],
+)
