@@ -29,7 +29,11 @@ import com.google.devtools.mobileharness.platform.android.lightning.systemsettin
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidSettings;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.DumpSysType;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
+import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
+import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil.AppOpsMode;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -90,6 +94,8 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
 
   private final AndroidPackageManagerUtil androidPackageManagerUtil;
 
+  private final AndroidSystemSettingUtil androidSystemSettingUtil;
+
   private final AndroidAdbUtil adbUtil;
 
   private AndroidSwitchLanguageDecoratorSpec spec;
@@ -109,6 +115,7 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
         new ApkInstaller(),
         new AndroidInstrumentationUtil(),
         new AndroidPackageManagerUtil(),
+        new AndroidSystemSettingUtil(),
         new AndroidAdbUtil(),
         Sleeper.defaultSleeper());
   }
@@ -122,6 +129,7 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
       ApkInstaller apkInstaller,
       AndroidInstrumentationUtil instrumentationUtil,
       AndroidPackageManagerUtil androidPackageManagerUtil,
+      AndroidSystemSettingUtil androidSystemSettingUtil,
       AndroidAdbUtil adbUtil,
       Sleeper sleeper) {
     super(decoratedDriver, testInfo);
@@ -130,6 +138,7 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
     this.apkInstaller = apkInstaller;
     this.instrumentationUtil = instrumentationUtil;
     this.androidPackageManagerUtil = androidPackageManagerUtil;
+    this.androidSystemSettingUtil = androidSystemSettingUtil;
     this.adbUtil = adbUtil;
     this.sleeper = sleeper;
   }
@@ -215,10 +224,21 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
       // In API >= 17, an explicitly permission grant to change config is needed via pm
       // since this permission is for system/dev only.
       try {
+        var utilArgs = UtilArgs.builder().setSerial(deviceId).setSdkVersion(sdkVersion).build();
         androidPackageManagerUtil.grantPermission(
-            UtilArgs.builder().setSerial(deviceId).setSdkVersion(sdkVersion).build(),
-            packageName,
-            SWITCH_LANGUAGE_PKG_EXTRA_PERMISSION);
+            utilArgs, packageName, SWITCH_LANGUAGE_PKG_EXTRA_PERMISSION);
+        var unused =
+            adbUtil.settings(
+                utilArgs,
+                AndroidSettings.Spec.create(
+                    AndroidSettings.Command.PUT,
+                    AndroidSettings.NameSpace.GLOBAL,
+                    "hidden_api_blacklist_exemptions \"*\""));
+        if (sdkVersion >= 23) {
+          androidSystemSettingUtil.setAppOpsPermission(
+              deviceId, packageName, "WRITE_SETTINGS", AppOpsMode.ALLOW);
+          sleeper.sleep(Duration.ofSeconds(1));
+        }
         break;
       } catch (MobileHarnessException e) {
         // "pm grant" may failed to find the package even it has already installed on device.
@@ -289,6 +309,25 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
     try {
       adbUtil.waitForSignalInLog(deviceId, LOG_SIGNAL, timeout);
     } catch (MobileHarnessException e) {
+      var dumpsysAppsopsOutput =
+          adbUtil.dumpSys(
+              deviceId,
+              DumpSysType.APPOPS,
+              "--package",
+              AndroidPackages.MH_SWITCH_LANGUAGE.getPackageName());
+      var dumpsysPackageOutput =
+          adbUtil.dumpSys(
+              deviceId, DumpSysType.PACKAGE, AndroidPackages.MH_SWITCH_LANGUAGE.getPackageName());
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("dumpsys appsops output: %s", dumpsysAppsopsOutput);
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("dumpsys package output: %s", dumpsysPackageOutput);
       String errorMessage =
           String.format("%s.\n The instrument output is: %s.", e.getMessage(), instrumentOutput);
       throw new MobileHarnessException(
