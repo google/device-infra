@@ -151,7 +151,8 @@ public class LabRpcProtoConverter {
       if (labResolveFiles.contains(path)) {
         return path;
       }
-      return localFileUtil.escapeFilePath(path.replace("::", "/"));
+      String result = path;
+      return localFileUtil.escapeFilePath(result.replace("::", "/"));
     }
   }
 
