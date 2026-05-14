@@ -53,6 +53,11 @@ proto_library(
     deps = ["@protobuf//:timestamp_proto"],
 )
 
+py_proto_library(
+    name = "job_py_pb2",
+    deps = [":job_proto"],
+)
+
 java_proto_library(
     name = "job_java_proto",
     deps = [":job_proto"],
