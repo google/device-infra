@@ -92,24 +92,25 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
   private readonly ngZone = inject(NgZone);
 
   /** Form group for the dialog configuration. */
+  // use string key to avoid those key got uglified.
   readonly form = this.fb.group({
-    deviceConfigs: this.fb.array([]), // FormArray of {deviceId, runAs}
-    globalRunAs: [''], // Control for the global selector
-    durationMinutes: [180, [Validators.required, Validators.min(10)]],
-    durationH: [3, [Validators.min(0)]],
-    durationM: [0, [Validators.min(0), Validators.max(59)]],
+    'deviceConfigs': this.fb.array([]), // FormArray of {deviceId, runAs}
+    'globalRunAs': [''], // Control for the global selector
+    'durationMinutes': [180, [Validators.required, Validators.min(10)]],
+    'durationH': [3, [Validators.min(0)]],
+    'durationM': [0, [Validators.min(0), Validators.max(59)]],
 
     // Flash Settings
-    enableFlash: [false],
-    flashSubDeviceId: ['', this.requiredIfFlashEnabled(true)],
-    flashBranch: ['', this.requiredIfFlashEnabled()],
-    flashBuildId: ['', this.requiredIfFlashEnabled()],
-    flashTarget: ['', this.requiredIfFlashEnabled()],
+    'enableFlash': [false],
+    'flashSubDeviceId': ['', this.requiredIfFlashEnabled(true)],
+    'flashBranch': ['', this.requiredIfFlashEnabled()],
+    'flashBuildId': ['', this.requiredIfFlashEnabled()],
+    'flashTarget': ['', this.requiredIfFlashEnabled()],
 
     // Advanced Settings
-    proxyType: [DeviceProxyType.NONE],
-    videoResolution: ['default'],
-    limitVideoSize: [false],
+    'proxyType': [DeviceProxyType.NONE],
+    'videoResolution': ['default'],
+    'limitVideoSize': [false],
   });
 
   // State for UI toggles
@@ -183,8 +184,8 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
 
   // Reactively track duration minutes from the form
   readonly durationMinutes = toSignal(
-    this.form.controls['durationMinutes'].valueChanges,
-    {initialValue: this.form.controls['durationMinutes'].value},
+    this.form.get('durationMinutes')!.valueChanges,
+    {initialValue: this.form.get('durationMinutes')!.value},
   );
 
   // Computed signal for End Time

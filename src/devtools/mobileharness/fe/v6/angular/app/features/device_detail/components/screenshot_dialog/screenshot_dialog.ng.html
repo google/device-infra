@@ -24,8 +24,12 @@
       <mat-icon>open_in_new</mat-icon>
       View in new tab
     </button>
+    <!-- TODO: show this button when the download proxy in BE is ready.
+     Because let the browser to fetch that download URL directly will be blocked by CORS,
+     we need to use an intermediate server(the BE) (i.e. download proxy) to fetch the image for us. -->
     <button
       class="dialog-button dialog-button-secondary"
+      style="display: none;"
       (click)="downloadImage()"
       [disabled]="isDownloading()"
     >

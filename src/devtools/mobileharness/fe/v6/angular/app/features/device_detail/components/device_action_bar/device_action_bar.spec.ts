@@ -15,8 +15,8 @@ import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confir
 import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
 import {RemoteControlService} from '../../../../shared/services/remote_control_service';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
+import * as safeDom from '../../../../shared/utils/safe_dom';
 import {FlashDialog} from '../flash_dialog/flash_dialog';
-import {LogcatDialog} from '../logcat_dialog/logcat_dialog';
 import {QuarantineDialog} from '../quarantine_dialog/quarantine_dialog';
 import {ScreenshotDialog} from '../screenshot_dialog/screenshot_dialog';
 import {DeviceActionBar} from './device_action_bar';
@@ -284,54 +284,11 @@ describe('DeviceActionBar', () => {
     });
   });
 
-  it('should call getLogcat and open dialog on success', async () => {
-    spyOn(deviceService, 'getLogcat').and.returnValue(
-      of({
-        logUrl: 'http://example.com/logcat.log',
-        capturedAt: new Date().toISOString(),
-      }),
-    );
-    const fetchResponse = Promise.resolve({
-      text: () => Promise.resolve('some log content'),
-    } as Response);
-    spyOn(window, 'fetch').and.returnValue(fetchResponse);
-
-    const logcatButton = fixture.nativeElement.querySelector(
-      '[data-testid="logcat-button-2xl"]',
-    );
-    logcatButton.click();
-    fixture.detectChanges();
-
-    expect(deviceService.getLogcat).toHaveBeenCalledWith('test-device');
-    expect(snackBarService.showInProgress).toHaveBeenCalledWith(
-      'Getting logcat...',
-    );
-
-    await fixture.whenStable(); // Wait for the initial part of the action
-    await fetchResponse; // Ensure the fetch mock is resolved
-    await fixture.whenStable(); // Wait for the .then() block to execute
-    fixture.detectChanges();
-
-    // Add a small delay to allow the final promise resolution to complete
-    await new Promise((resolve) => {
-      setTimeout(resolve, 0);
-    });
-    fixture.detectChanges();
-
-    expect(snackBarService.showSuccess).toHaveBeenCalledWith(
-      'Logcat retrieved successfully.',
-    );
-    expect(dialog.open).toHaveBeenCalledWith(LogcatDialog, {
-      data: {
-        deviceId: 'test-device',
-        logContent: 'some log content',
-        capturedAt: jasmine.any(String),
-        logUrl: 'http://example.com/logcat.log',
-      },
-    });
-  });
-
   it('should open QuarantineDialog when quarantine button is clicked', () => {
+    const mockDialogRef = jasmine.createSpyObj('MatDialogRef', ['afterClosed']);
+    mockDialogRef.afterClosed.and.returnValue(of(true));
+    dialog.open.and.returnValue(mockDialogRef);
+
     const quarantineButton = fixture.nativeElement.querySelector(
       '[data-testid="quarantine-button-2xl"]',
     );
@@ -389,7 +346,26 @@ describe('DeviceActionBar', () => {
       'Unquarantining device...',
     );
     expect(snackBarService.showSuccess).toHaveBeenCalledWith(
-      'Device unquarantined successfully.',
+      'Device unquarantined successfully.\nIt may take a few minutes to take effect at the UI side.',
     );
+  });
+
+  it('should open QuarantineDialog on changeQuarantine', () => {
+    const mockDialogRef = jasmine.createSpyObj('MatDialogRef', ['afterClosed']);
+    mockDialogRef.afterClosed.and.returnValue(of(true));
+    dialog.open.and.returnValue(mockDialogRef);
+
+    component.changeQuarantine();
+
+    expect(dialog.open).toHaveBeenCalledWith(QuarantineDialog, {
+      data: {
+        deviceId: 'test-device',
+        isUpdate: true,
+        currentExpiry: '',
+        title: jasmine.any(String),
+        description: jasmine.any(String),
+        confirmText: 'Update',
+      },
+    });
   });
 });

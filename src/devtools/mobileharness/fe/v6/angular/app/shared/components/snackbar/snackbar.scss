@@ -24,8 +24,8 @@
   }
 
   span {
-    // Allow message to wrap
-    white-space: normal;
+    // Allow message to wrap and respect newlines
+    white-space: pre-line;
     word-break: break-word;
   }
 
@@ -41,6 +41,9 @@
     color: white;
     // Vertically center the button
     align-self: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     .mat-icon,
     .material-icons {

@@ -24,7 +24,6 @@ import {
 import {ActionButtonState} from '../../../../core/models/action_common';
 import {
   DeviceActions,
-  LogcatDialogData,
   QuarantineDialogData,
   ScreenshotDialogData,
 } from '../../../../core/models/device_action';
@@ -36,12 +35,12 @@ import {RemoteControlDeviceInfo} from '../../../../shared/components/remote_cont
 import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
 import {RemoteControlService} from '../../../../shared/services/remote_control_service';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
+import {openInNewTab} from '../../../../shared/utils/safe_dom';
 import {DeviceConfig} from '../device_config/device_config';
 import {DeviceEmpty} from '../device_config/device_empty/device_empty';
 import {DeviceSettings} from '../device_config/device_settings/device_settings';
 import {DeviceWizard} from '../device_config/device_wizard/device_wizard';
 import {FlashDialog} from '../flash_dialog/flash_dialog';
-import {LogcatDialog} from '../logcat_dialog/logcat_dialog';
 import {QuarantineDialog} from '../quarantine_dialog/quarantine_dialog';
 import {ScreenshotDialog} from '../screenshot_dialog/screenshot_dialog';
 
@@ -292,8 +291,18 @@ export class DeviceActionBar {
       'Getting logcat...',
       this.deviceService.getLogcat(deviceId),
       (response) => {
-        this.snackBar.showSuccess('Logcat retrieved successfully.');
-        fetch(response.logUrl)
+        this.snackBar.showSuccess(
+          'Logcat retrieved successfully. And opened in a new browser tab.',
+        );
+        openInNewTab(response.logUrl);
+        // TODO: fetch the log content from the BE download proxy when it's ready.
+        // Because let the browser to fetch that download URL directly will be blocked by CORS,
+        // we need to use an intermediate server(the BE) (i.e. download proxy) to fetch the log for us.
+        // For now, since we cannot get the log file content, we won't show the logcat dialog.
+        // Instead we will open this log file URL in a new browser tab and let the user view/download it
+        // manually.
+        /*
+        fetch(response.logUrl) // result to be CORS error.
           .then((res) => res.text())
           .then((logContent) => {
             this.dialog.open(LogcatDialog, {
@@ -309,6 +318,7 @@ export class DeviceActionBar {
             this.snackBar.showError('Failed to fetch log content.');
             console.error('Failed to fetch log content:', err);
           });
+          */
       },
       'Failed to get logcat.',
     );
@@ -338,7 +348,9 @@ export class DeviceActionBar {
             'Unquarantining device...',
             this.deviceService.unquarantineDevice(deviceId),
             () => {
-              this.snackBar.showSuccess('Device unquarantined successfully.');
+              this.snackBar.showSuccess(
+                'Device unquarantined successfully.\nIt may take a few minutes to take effect at the UI side.',
+              );
               // TODO: refresh device header info or page data.
             },
             'Failed to unquarantine device.',

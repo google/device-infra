@@ -26,7 +26,9 @@
             <dd class="lab-type-wrapper">
               @if (host.labTypeDisplayNames.length > 0) {
                 @for (labType of host.labTypeDisplayNames; track labType) {
-                  <div class="lab-type-chip overflow-ellipsis" title="{{ labType }}">
+                  <div class="lab-type-chip overflow-ellipsis"
+                       [class.lab-type-chip-fusion]="labType === 'Fusion Lab'"
+                       title="{{ labType }}">
                     {{ labType }}
                   </div>
                 }

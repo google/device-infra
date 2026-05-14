@@ -55,6 +55,7 @@ export class ScreenshotDialog implements OnInit {
   async downloadImage() {
     this.isDownloading.set(true);
     try {
+      // will result to CORS error.
       const response = await fetch(this.data.screenshotUrl);
       const blob = await response.blob();
       const url = createSafeObjectURL(blob);

@@ -71,6 +71,12 @@
     font-weight: 500;
     line-height: 1;
     white-space: nowrap;
+
+    &.lab-type-chip-fusion {
+      background-color: #e6f4ea; // Material Soft Green
+      color: #137333;           // Deep Emerald Font
+      border: 1px solid #ceead6;
+    }
   }
 }
 
@@ -121,7 +127,61 @@
   ));
 }
 
+.missing-daemon-callout {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: #fce8e6; // Soft red
+  border: 1px solid #fad2cf;
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
 
+  mat-icon {
+    color: #d93025; // Error red
+    font-size: 24px;
+    height: 24px;
+    width: 24px;
+  }
+
+  .callout-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .callout-title {
+      font-weight: 500;
+      color: #202124;
+      margin: 0;
+    }
+
+    .callout-text {
+      color: #5f6368;
+      margin: 0;
+      font-size: 0.875rem;
+
+      a {
+        color: #1a73e8;
+        text-decoration: none;
+        font-weight: 500;
+
+        &:hover {
+          text-decoration: underline;
+        }
+
+        .inline-icon {
+          font-size: 14px;
+          height: 14px;
+          width: 14px;
+          vertical-align: middle;
+          margin-left: 2px;
+          color: inherit !important;
+          fill: currentColor !important;
+        }
+      }
+    }
+  }
+}
 
 .edit-flags-button {
   width: 1rem;

@@ -19,10 +19,12 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatInputModule} from '@angular/material/input';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatTabsModule} from '@angular/material/tabs';
+import {SnackBarService} from '@deviceinfra/app/shared/services/snackbar_service';
 import {dateUtils} from '@deviceinfra/app/shared/utils/date_utils';
 import {finalize} from 'rxjs/operators';
 import {
   QuarantineDeviceRequest,
+  QuarantineDeviceResponse,
   QuarantineDialogData,
 } from '../../../../core/models/device_action';
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
@@ -54,6 +56,7 @@ import {Dialog} from '../../../../shared/components/config_common/dialog/dialog'
 export class QuarantineDialog implements OnInit {
   private readonly deviceService = inject(DEVICE_SERVICE);
   private readonly dialogRef = inject(MatDialogRef<QuarantineDialog>);
+  private readonly snackBar = inject(SnackBarService);
   readonly dialogData: QuarantineDialogData = inject(MAT_DIALOG_DATA);
 
   formattedCurrentExpiry = '';
@@ -200,11 +203,20 @@ export class QuarantineDialog implements OnInit {
         }),
       )
       .subscribe({
-        next: () => {
+        next: (response: QuarantineDeviceResponse) => {
+          const formattedExpiry = dateUtils.format(response.quarantineExpiry);
+          const message = this.dialogData.isUpdate
+            ? `Quarantine duration updated successfully until ${formattedExpiry}\nIt may take a few minutes to take effect at the UI side.`
+            : `Device quarantined successfully until ${formattedExpiry}\nIt may take a few minutes to take effect at the UI side.`;
+          this.snackBar.showSuccess(message);
           this.dialogRef.close(true);
         },
         error: (err) => {
-          // TODO: Show error in snackbar or dialog
+          const errMsg =
+            err && typeof err === 'object' && 'message' in err
+              ? String(err.message)
+              : String(err);
+          this.snackBar.showError(`Failed to quarantine device: ${errMsg}`);
           console.error('Failed to quarantine device:', err);
         },
       });
