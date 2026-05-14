@@ -274,6 +274,13 @@ public class TradefedTest extends BaseDriver
     }
   }
 
+  @VisibleForTesting
+  void setCommandProcess(CommandProcess tfProcess) {
+    synchronized (tfProcessLock) {
+      this.tfProcess = tfProcess;
+    }
+  }
+
   private void checkDeviceErrorFromRuntimeInfo(TestInfo testInfo) {
     try {
       Path runtimeInfoFilePath =
@@ -412,7 +419,8 @@ public class TradefedTest extends BaseDriver
   }
 
   @Subscribe
-  private void onTestMessage(TestMessageEvent event) throws ParseException, InterruptedException {
+  @VisibleForTesting
+  void onTestMessage(TestMessageEvent event) throws ParseException, InterruptedException {
     XtsTradefedRunCancellation.Builder xtsTradefedRunCancellation =
         XtsTradefedRunCancellation.newBuilder();
     if (event.decodeProtoTestMessage(
