@@ -21,6 +21,8 @@ package mobileharness.shared.util.comm.dualconduit;
 import "src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dual_conduit.proto";
 
 option go_package = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconsvcpb;dconsvcpb";
+option java_package = "com.google.devtools.mobileharness.shared.util.comm.dualconduit.proto";
+option java_outer_classname = "DualConduitServiceProto";
 
 service DualConduitService {
   // Establishes a conduit.
