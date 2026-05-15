@@ -31,22 +31,14 @@ import org.junit.runners.JUnit4;
 public final class HostTypesTest {
 
   @Test
-  public void determineLabTypeDisplayNames_noData_returnsUnknown() {
+  public void determineLabTypeDisplayNames_noData_returnsEmpty() {
     assertThat(HostTypes.determineLabTypeDisplayNames(Optional.empty(), Optional.empty()))
-        .containsExactly("Unknown");
+        .isEmpty();
   }
 
   @Test
   public void determineLabTypeDisplayNames_fusion() {
     assertThat(HostTypes.determineLabTypeDisplayNames(Optional.empty(), Optional.of("FUSION_LAB")))
-        .containsExactly("Fusion Lab");
-  }
-
-  @Test
-  public void determineLabTypeDisplayNames_fusion_fromProp() {
-    assertThat(
-            HostTypes.determineLabTypeDisplayNames(
-                Optional.of(createLabInfoWithProperty("lab_type", "fusion")), Optional.empty()))
         .containsExactly("Fusion Lab");
   }
 
@@ -82,7 +74,10 @@ public final class HostTypesTest {
 
   @Test
   public void determineLabTypeDisplayNames_ate() {
-    assertThat(HostTypes.determineLabTypeDisplayNames(Optional.empty(), Optional.of("MH_ATE_LAB")))
+    assertThat(
+            HostTypes.determineLabTypeDisplayNames(
+                Optional.of(createLabInfoWithProperty("lab_type", "satellite")),
+                Optional.of("MH_ATE_LAB")))
         .containsExactly("Satellite Lab", "ATE Lab")
         .inOrder();
   }
@@ -91,8 +86,45 @@ public final class HostTypesTest {
   public void determineLabTypeDisplayNames_field() {
     assertThat(
             HostTypes.determineLabTypeDisplayNames(
-                Optional.empty(), Optional.of("RIEMANN_FIELD_LAB")))
+                Optional.of(createLabInfoWithProperty("lab_type", "satellite")),
+                Optional.of("RIEMANN_FIELD_LAB")))
         .containsExactly("Satellite Lab", "Riemann Field Lab")
+        .inOrder();
+  }
+
+  @Test
+  public void determineLabTypeDisplayNames_slaasAndFusion() {
+    LabInfo labInfo =
+        LabInfo.newBuilder()
+            .setLabServerFeature(
+                LabServerFeature.newBuilder()
+                    .setHostProperties(
+                        HostProperties.newBuilder()
+                            .addHostProperty(
+                                HostProperty.newBuilder().setKey("lab_type").setValue("slaas"))
+                            .addHostProperty(
+                                HostProperty.newBuilder().setKey("dm_type").setValue("fusion"))))
+            .build();
+    assertThat(HostTypes.determineLabTypeDisplayNames(Optional.of(labInfo), Optional.empty()))
+        .containsExactly("Satellite Lab (SLaaS)", "Fusion Lab")
+        .inOrder();
+  }
+
+  @Test
+  public void determineLabTypeDisplayNames_coreAndFusion() {
+    LabInfo labInfo =
+        LabInfo.newBuilder()
+            .setLabServerFeature(
+                LabServerFeature.newBuilder()
+                    .setHostProperties(
+                        HostProperties.newBuilder()
+                            .addHostProperty(
+                                HostProperty.newBuilder().setKey("lab_type").setValue("core"))
+                            .addHostProperty(
+                                HostProperty.newBuilder().setKey("dm_type").setValue("fusion"))))
+            .build();
+    assertThat(HostTypes.determineLabTypeDisplayNames(Optional.of(labInfo), Optional.empty()))
+        .containsExactly("Core Lab", "Fusion Lab")
         .inOrder();
   }
 

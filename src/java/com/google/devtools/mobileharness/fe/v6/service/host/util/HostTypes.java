@@ -20,11 +20,12 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.UiLabType;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 /** Utility class for Host types. */
 public final class HostTypes {
@@ -37,6 +38,31 @@ public final class HostTypes {
   private static final String LAB_TYPE_FIELD = "Riemann Field Lab";
   private static final String LAB_TYPE_UNKNOWN = "Unknown";
 
+  private static final ImmutableMap<String, UiLabType> ENUM_NAME_TO_UI_LAB_TYPE =
+      ImmutableMap.of(
+          "FUSION_LAB", UiLabType.FUSION,
+          "SHARED_LAB", UiLabType.CORE,
+          "MH_SATELLITE_LAB", UiLabType.SATELLITE,
+          "MH_ATE_LAB", UiLabType.ATE,
+          "RIEMANN_FIELD_LAB", UiLabType.RIEMANN_FIELD);
+
+  private static final ImmutableMap<String, UiLabType> PROP_TO_UI_LAB_TYPE =
+      ImmutableMap.of(
+          "core", UiLabType.CORE,
+          "slaas", UiLabType.SLAAS,
+          "satellite", UiLabType.SATELLITE);
+
+  private static final ImmutableMap<UiLabType, String> UI_LAB_TYPE_TO_DISPLAY_NAME =
+      new ImmutableMap.Builder<UiLabType, String>()
+          .put(UiLabType.CORE, LAB_TYPE_CORE)
+          .put(UiLabType.FUSION, LAB_TYPE_FUSION)
+          .put(UiLabType.SATELLITE, LAB_TYPE_SATELLITE)
+          .put(UiLabType.SLAAS, LAB_TYPE_SLAAS)
+          .put(UiLabType.ATE, LAB_TYPE_ATE)
+          .put(UiLabType.RIEMANN_FIELD, LAB_TYPE_FIELD)
+          .put(UiLabType.UNKNOWN, LAB_TYPE_UNKNOWN)
+          .buildOrThrow();
+
   public static boolean isCoreOrFusion(List<String> labTypes) {
     return labTypes.contains(LAB_TYPE_CORE) || labTypes.contains(LAB_TYPE_FUSION);
   }
@@ -45,70 +71,57 @@ public final class HostTypes {
     return isCoreOrFusion(determineLabTypeDisplayNames(labInfoOpt, labTypeOpt));
   }
 
-  public static ImmutableList<String> determineLabTypeDisplayNames(
-      Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
-
-    Optional<String> baseCategoryOpt = determineBaseCategory(labInfoOpt, labTypeOpt);
-    ImmutableList<String> additionalTags = getAdditionalTags(labTypeOpt);
-
-    if (baseCategoryOpt.isEmpty() && additionalTags.isEmpty()) {
-      return ImmutableList.of(LAB_TYPE_UNKNOWN);
-    }
-
-    return Stream.concat(baseCategoryOpt.stream(), additionalTags.stream())
-        .distinct()
-        .collect(toImmutableList());
+  public static boolean isCoreOrFusionUiLabTypes(List<UiLabType> labTypes) {
+    return labTypes.contains(UiLabType.CORE) || labTypes.contains(UiLabType.FUSION);
   }
 
-  private static Optional<String> determineBaseCategory(
+  // TODO: Better function signature to distinguish between the two sources of lab types.
+  public static ImmutableList<UiLabType> determineUiLabTypes(
       Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
 
-    Optional<String> labTypePropOpt =
-        labInfoOpt.flatMap(
-            labInfo ->
-                labInfo.getLabServerFeature().getHostProperties().getHostPropertyList().stream()
-                    .filter(hp -> hp.getKey().equals("lab_type"))
-                    .map(HostProperty::getValue)
-                    .findFirst());
-    String labTypeProp = labTypePropOpt.map(Ascii::toLowerCase).orElse("");
+    ImmutableList.Builder<UiLabType> builder = ImmutableList.builder();
 
     String typeEnumName = labTypeOpt.orElse("LAB_TYPE_UNSPECIFIED");
 
-    // Determine Base Category with strict priority
-    if (typeEnumName.equals("FUSION_LAB") || labTypeProp.equals("fusion")) {
-      return Optional.of(LAB_TYPE_FUSION);
-    }
-    if (typeEnumName.equals("SHARED_LAB") || labTypeProp.equals("core")) {
-      return Optional.of(LAB_TYPE_CORE);
-    }
-    if (labTypeProp.equals("slaas")) {
-      return Optional.of(LAB_TYPE_SLAAS);
-    }
-    if (typeEnumName.equals("MH_SATELLITE_LAB")
-        || typeEnumName.equals("MH_ATE_LAB")
-        || typeEnumName.equals("RIEMANN_FIELD_LAB")
-        || labTypeProp.equals("satellite")) {
-      return Optional.of(LAB_TYPE_SATELLITE);
+    String labTypeProp = getHostProperty(labInfoOpt, "lab_type");
+    String dmTypeProp = getHostProperty(labInfoOpt, "dm_type");
+
+    // Source 1: lab_type in host properties (Checked first to preserve order)
+    Optional.ofNullable(PROP_TO_UI_LAB_TYPE.get(labTypeProp)).ifPresent(builder::add);
+
+    // Source 2: Release Server Host Info
+    Optional.ofNullable(ENUM_NAME_TO_UI_LAB_TYPE.get(typeEnumName)).ifPresent(builder::add);
+
+    // Source 3: dm_type in host properties (only for fusion)
+    if (dmTypeProp.equals("fusion")) {
+      builder.add(UiLabType.FUSION);
     }
 
-    return Optional.empty();
+    return builder.build().stream().distinct().collect(toImmutableList());
   }
 
-  private static ImmutableList<String> getAdditionalTags(Optional<String> labTypeOpt) {
-    if (labTypeOpt.isEmpty()) {
-      return ImmutableList.of();
-    }
+  /**
+   * @deprecated Use {@link #determineUiLabTypes(Optional, Optional)} instead. This is retained for
+   *     backward compatibility with older frontends that expect pre-formatted strings.
+   */
+  @Deprecated
+  public static ImmutableList<String> determineLabTypeDisplayNames(
+      Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
+    return determineUiLabTypes(labInfoOpt, labTypeOpt).stream()
+        .map(type -> UI_LAB_TYPE_TO_DISPLAY_NAME.getOrDefault(type, LAB_TYPE_UNKNOWN))
+        .collect(toImmutableList());
+  }
 
-    ImmutableList.Builder<String> additionalTagsBuilder = ImmutableList.builder();
-    String typeEnumName = labTypeOpt.get();
-
-    if (typeEnumName.equals("MH_ATE_LAB")) {
-      additionalTagsBuilder.add(LAB_TYPE_ATE);
-    }
-    if (typeEnumName.equals("RIEMANN_FIELD_LAB")) {
-      additionalTagsBuilder.add(LAB_TYPE_FIELD);
-    }
-    return additionalTagsBuilder.build();
+  private static String getHostProperty(Optional<LabInfo> labInfoOpt, String key) {
+    return labInfoOpt
+        .flatMap(
+            labInfo ->
+                labInfo.getLabServerFeature().getHostProperties().getHostPropertyList().stream()
+                    .filter(hp -> hp.getKey().equals(key))
+                    .map(HostProperty::getValue)
+                    .findFirst())
+        .map(Ascii::toLowerCase)
+        .orElse("");
   }
 
   private HostTypes() {}

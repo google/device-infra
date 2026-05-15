@@ -13,7 +13,8 @@ const overview: HostOverview = {
   ip: '10.0.1.50',
   os: 'gLinux',
   canUpgrade: false,
-  labTypeDisplayNames: ['Core Lab'],
+
+  uiLabTypes: ['CORE'],
   labServer: {
     connectivity: {
       state: 'RUNNING',

@@ -46,6 +46,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOvervie
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverview;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.UiLabType;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
@@ -113,7 +114,8 @@ public final class GetHostOverviewHandlerTest {
         getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE);
 
     HostOverview overview = Futures.getDone(result).getOverviewContent();
-    assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Unknown");
+    assertThat(overview.getLabTypeDisplayNamesList()).isEmpty();
+    assertThat(overview.getUiLabTypesList()).isEmpty();
     assertThat(overview.getHostName()).isEqualTo(HOST_NAME);
 
     // Verify default states when release info is missing
@@ -157,6 +159,7 @@ public final class GetHostOverviewHandlerTest {
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Fusion Lab");
+    assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.FUSION);
     assertThat(overview.getLabServer().getActions().getRelease().getEnabled()).isFalse();
     assertThat(overview.getShowPassThroughFlags()).isFalse();
   }
@@ -173,6 +176,7 @@ public final class GetHostOverviewHandlerTest {
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Core Lab");
+    assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.CORE);
   }
 
   @Test
@@ -183,6 +187,7 @@ public final class GetHostOverviewHandlerTest {
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Core Lab");
+    assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.CORE);
     assertThat(overview.getShowPassThroughFlags()).isFalse();
   }
 
@@ -194,6 +199,7 @@ public final class GetHostOverviewHandlerTest {
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Satellite Lab (SLaaS)");
+    assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.SLAAS);
   }
 
   @Test
@@ -204,6 +210,7 @@ public final class GetHostOverviewHandlerTest {
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Satellite Lab");
+    assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.SATELLITE);
     assertThat(overview.getShowPassThroughFlags()).isTrue();
   }
 
@@ -255,6 +262,7 @@ public final class GetHostOverviewHandlerTest {
 
   @Test
   public void getHostOverview_labType_ate() throws Exception {
+    mockLabInfoWithProperty("lab_type", "satellite");
     when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(HOST_NAME), any(UniverseScope.class)))
         .thenReturn(
             immediateFuture(
@@ -267,10 +275,14 @@ public final class GetHostOverviewHandlerTest {
     assertThat(overview.getLabTypeDisplayNamesList())
         .containsExactly("Satellite Lab", "ATE Lab")
         .inOrder();
+    assertThat(overview.getUiLabTypesList())
+        .containsExactly(UiLabType.SATELLITE, UiLabType.ATE)
+        .inOrder();
   }
 
   @Test
   public void getHostOverview_labType_field() throws Exception {
+    mockLabInfoWithProperty("lab_type", "satellite");
     when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(HOST_NAME), any(UniverseScope.class)))
         .thenReturn(
             immediateFuture(
@@ -284,6 +296,9 @@ public final class GetHostOverviewHandlerTest {
             .getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList())
         .containsExactly("Satellite Lab", "Riemann Field Lab")
+        .inOrder();
+    assertThat(overview.getUiLabTypesList())
+        .containsExactly(UiLabType.SATELLITE, UiLabType.RIEMANN_FIELD)
         .inOrder();
   }
 

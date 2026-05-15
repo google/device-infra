@@ -26,13 +26,24 @@ option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.hos
 option java_multiple_files = true;
 option java_outer_classname = "HostResourcesProto";
 
+enum UiLabType {
+  UI_LAB_TYPE_UNSPECIFIED = 0;
+  CORE = 1;
+  FUSION = 2;
+  SATELLITE = 3;
+  SLAAS = 4;
+  ATE = 5;
+  RIEMANN_FIELD = 6;
+  UNKNOWN = 7;
+}
+
 // Represents the comprehensive data required to render the Host Detail Page's
 // overview section.
 message HostOverview {
   string host_name = 1;
   string ip = 2;
   // The display names for the lab type, e.g., ["Satellite Lab", "ATE Lab"].
-  repeated string lab_type_display_names = 3;
+  repeated string lab_type_display_names = 3 [deprecated = true];
   // Lab server process information.
   LabServerInfo lab_server = 4;
   // Daemon server process information.
@@ -47,6 +58,8 @@ message HostOverview {
   bool can_upgrade = 9;
   // Whether to show the pass-through flags in the host overview.
   bool show_pass_through_flags = 10;
+  // The semantic types of the lab.
+  repeated UiLabType ui_lab_types = 11;
 }
 
 // Represents a link to a diagnostic tool or log.

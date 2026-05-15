@@ -22,7 +22,8 @@ function createHostOverview(
     ip: '192.168.1.1',
     os: 'gLinux',
     canUpgrade: false,
-    labTypeDisplayNames: ['Satellite Lab'],
+
+    uiLabTypes: ['SATELLITE'],
     showPassThroughFlags: true,
     labServer: {
       connectivity: {

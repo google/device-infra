@@ -24,10 +24,10 @@
           @if (isGoogle1p()) {
             <dt title="LabType">Lab Type</dt>
             <dd class="lab-type-wrapper">
-              @if (host.labTypeDisplayNames.length > 0) {
-                @for (labType of host.labTypeDisplayNames; track labType) {
+              @if (displayLabTypes().length > 0) {
+                @for (labType of displayLabTypes(); track labType) {
                   <div class="lab-type-chip overflow-ellipsis"
-                       [class.lab-type-chip-fusion]="labType === 'Fusion Lab'"
+                       [class.lab-type-chip-fusion]="labType === 'Fusion' || labType === 'Fusion Lab'"
                        title="{{ labType }}">
                     {{ labType }}
                   </div>

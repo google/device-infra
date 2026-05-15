@@ -26,6 +26,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_java_proto",
         "@maven//:com_google_guava_guava",
     ],
 )

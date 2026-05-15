@@ -308,7 +308,8 @@ export function createDefaultHostOverview(hostName: string): HostOverview {
     ip: '192.168.1.1',
     os: 'gLinux',
     canUpgrade: true,
-    labTypeDisplayNames: ['Satellite Lab'],
+
+    uiLabTypes: ['SATELLITE'],
     labServer: {
       connectivity: {
         state: 'RUNNING',

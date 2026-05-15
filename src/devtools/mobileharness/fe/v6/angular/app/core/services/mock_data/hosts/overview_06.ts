@@ -13,7 +13,7 @@ const overview: HostOverview = {
   ip: '192.168.5.105',
   os: 'gLinux',
   canUpgrade: false,
-  labTypeDisplayNames: ['Satellite Lab', 'M&M', 'Shared Lab'],
+  uiLabTypes: ['SATELLITE'],
   labServer: {
     connectivity: {
       state: 'RUNNING',

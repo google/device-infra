@@ -47,6 +47,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverview;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.UiLabType;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
@@ -194,11 +195,13 @@ public final class GetHostOverviewHandler {
     builder.setCanUpgrade(true);
 
     Optional<String> labTypeOpt = hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType);
+    ImmutableList<UiLabType> uiLabTypes = HostTypes.determineUiLabTypes(labInfoOpt, labTypeOpt);
     ImmutableList<String> labTypes = HostTypes.determineLabTypeDisplayNames(labInfoOpt, labTypeOpt);
-    boolean isCoreOrFusion = HostTypes.isCoreOrFusion(labTypes);
+    boolean isCoreOrFusion = HostTypes.isCoreOrFusionUiLabTypes(uiLabTypes);
 
     return builder
-        .addAllLabTypeDisplayNames(labTypes)
+        .addAllLabTypeDisplayNames(labTypes) // Legacy field for backward compatibility
+        .addAllUiLabTypes(uiLabTypes)
         .setShowPassThroughFlags(!isCoreOrFusion)
         .setLabServer(
             buildLabServerInfo(labInfoOpt, hostReleaseInfoOpt, passThroughFlagsOpt, universe))

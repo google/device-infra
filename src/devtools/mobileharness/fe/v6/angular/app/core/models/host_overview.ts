@@ -213,6 +213,18 @@ export interface DeviceTarget {
 }
 
 /**
+ * Semantic state of the lab type.
+ * Frontend uses this to determine display name and logic.
+ */
+export type UiLabType =
+  | 'CORE'
+  | 'FUSION'
+  | 'SATELLITE'
+  | 'SLAAS'
+  | 'ATE'
+  | 'RIEMANN_FIELD';
+
+/**
  * Represents the comprehensive data required to render the Host Detail Page's
  * overview section. This is the top-level interface for host overview data.
  * Corresponds to HostOverview in host_resources.proto.
@@ -225,8 +237,9 @@ export declare interface HostOverview {
   /**
    * The user-friendly lab type name, derived by the backend,
    * e.g., "Core Lab", "Satellite Lab (SLaaS)".
+   * @deprecated Use uiLabTypes instead.
    */
-  readonly labTypeDisplayNames: string[];
+  readonly labTypeDisplayNames?: string[];
   /** Lab server information. */
   readonly labServer: LabServerInfo;
   /** Daemon server information. */
@@ -241,6 +254,10 @@ export declare interface HostOverview {
   readonly canUpgrade?: boolean;
   /** Whether to show the pass-through flags in the host overview. */
   readonly showPassThroughFlags: boolean;
+  /**
+   * The semantic types of the lab.
+   */
+  readonly uiLabTypes?: UiLabType[];
 }
 
 /**
