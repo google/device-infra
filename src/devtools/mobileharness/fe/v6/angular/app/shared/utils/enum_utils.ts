@@ -13,8 +13,20 @@ export function toDeviceProxyType(value: unknown): DeviceProxyType {
     .replace('DEVICE_PROXY_TYPE_', '')
     .replace(/^UNSPECIFIED$/, 'NONE');
 
-  const enumVal = (DeviceProxyType as Record<string, unknown>)[lookupKey];
-  return typeof enumVal === 'number'
-    ? (enumVal as unknown as DeviceProxyType)
-    : DeviceProxyType.NONE;
+  switch (lookupKey) {
+    case 'NONE':
+      return DeviceProxyType.NONE;
+    case 'ADB_AND_VIDEO':
+      return DeviceProxyType.ADB_AND_VIDEO;
+    case 'ADB_ONLY':
+      return DeviceProxyType.ADB_ONLY;
+    case 'USB_IP':
+      return DeviceProxyType.USB_IP;
+    case 'SSH':
+      return DeviceProxyType.SSH;
+    case 'VIDEO':
+      return DeviceProxyType.VIDEO;
+    default:
+      return DeviceProxyType.NONE;
+  }
 }

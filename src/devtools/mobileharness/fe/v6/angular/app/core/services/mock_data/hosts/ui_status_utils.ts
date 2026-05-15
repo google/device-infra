@@ -46,7 +46,8 @@ export function createPartStatus(
   reason?: string,
 ): PartStatus {
   if (!visible) {
-    return {visible: false};
+    // Simulate Proto 3 omission of default false values.
+    return {} as unknown as PartStatus;
   }
   return {
     visible: true,

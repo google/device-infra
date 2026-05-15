@@ -67,7 +67,6 @@ export class Dimensions implements OnInit, OnChanges {
       cell: 'name',
       type: 'input',
       inputType: 'text',
-      defaultValue: () => `new_dimension_${Date.now()}`,
       placeholder: 'e.g., pool',
     },
     {

@@ -79,7 +79,7 @@ export declare interface HostConfig {
  * Describes the editability of a visible part.
  */
 export declare interface Editability {
-  editable: boolean;
+  editable?: boolean;
   // Message explaining why editable is false.
   reason?: string;
 }
@@ -89,7 +89,7 @@ export declare interface Editability {
  */
 export declare interface PartStatus {
   // True if the part should be visible in the UI.
-  visible: boolean;
+  visible?: boolean;
   // Details about editability, only relevant and expected if visible is true.
   editability?: Editability;
 }

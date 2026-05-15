@@ -69,7 +69,22 @@ public final class FeatureReadinessTest {
   }
 
   @Test
-  public void isLabServerStartReady_returnsTrue() {
-    assertThat(featureReadiness.isLabServerStartReady()).isTrue();
+  public void isLabServerStartReady_returnsFalse() {
+    assertThat(featureReadiness.isLabServerStartReady()).isFalse();
+  }
+
+  @Test
+  public void isLabServerRestartReady_returnsFalse() {
+    assertThat(featureReadiness.isLabServerRestartReady()).isFalse();
+  }
+
+  @Test
+  public void isLabServerStopReady_returnsFalse() {
+    assertThat(featureReadiness.isLabServerStopReady()).isFalse();
+  }
+
+  @Test
+  public void isLabServerUpdatePassThroughFlagsReady_returnsFalse() {
+    assertThat(featureReadiness.isLabServerUpdatePassThroughFlagsReady()).isFalse();
   }
 }

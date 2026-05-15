@@ -47,8 +47,8 @@ declare interface EditabilityOverride {
  */
 export interface MetadataUiStatus {
   sectionStatus: {
-    visible: boolean;
-    editability?: {editable: boolean; reason?: string};
+    visible?: boolean;
+    editability?: {editable?: boolean; reason?: string};
   };
   itemEditabilityOverrides?: EditabilityOverride;
 }

@@ -51,15 +51,15 @@ public class FeatureReadiness {
   }
 
   public boolean isLabServerStartReady() {
-    return true;
+    return false;
   }
 
   public boolean isLabServerRestartReady() {
-    return true;
+    return false;
   }
 
   public boolean isLabServerStopReady() {
-    return true;
+    return false;
   }
 
   public boolean isLabServerReleaseReady() {
@@ -71,6 +71,6 @@ public class FeatureReadiness {
   }
 
   public boolean isLabServerUpdatePassThroughFlagsReady() {
-    return true;
+    return false;
   }
 }

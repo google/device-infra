@@ -45,6 +45,7 @@ public class HostConfigButtonBuilder {
     return ActionButtonState.newBuilder()
         .setVisible(true)
         .setEnabled(true)
+        .setIsReady(true)
         .setTooltip("Configure the host configuration")
         .build();
   }

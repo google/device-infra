@@ -1,8 +1,19 @@
 import {CommonModule} from '@angular/common';
-import {ChangeDetectionStrategy, Component, EventEmitter, Input, OnInit, Output} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  EventEmitter,
+  Input,
+  OnInit,
+  Output,
+} from '@angular/core';
 
 import type {HostProperty} from '../../../../../../core/models/host_config_models';
-import {MetadataColumn, MetadataList, type MetadataUiStatus} from '../../../../../../shared/components/config_common/metadata_list/metadata_list';
+import {
+  MetadataColumn,
+  MetadataList,
+  type MetadataUiStatus,
+} from '../../../../../../shared/components/config_common/metadata_list/metadata_list';
 
 /**
  * Component for displaying the host properties of a host in the host
@@ -17,7 +28,7 @@ import {MetadataColumn, MetadataList, type MetadataUiStatus} from '../../../../.
   imports: [CommonModule, MetadataList],
 })
 export class HostProperties implements OnInit {
-  @Input() workflow: 'wizard'|'settings' = 'settings';
+  @Input() workflow: 'wizard' | 'settings' = 'settings';
   @Input()
   uiStatus: MetadataUiStatus = {
     sectionStatus: {visible: true, editability: {editable: true}},
@@ -33,7 +44,6 @@ export class HostProperties implements OnInit {
       cell: 'key',
       type: 'input',
       inputType: 'text',
-      defaultValue: () => `new_property_${Date.now()}`,
       placeholder: 'e.g., host_group',
     },
     {

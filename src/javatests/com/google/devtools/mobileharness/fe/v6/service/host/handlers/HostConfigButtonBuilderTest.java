@@ -57,6 +57,7 @@ public final class HostConfigButtonBuilderTest {
 
     assertThat(result.getVisible()).isTrue();
     assertThat(result.getEnabled()).isTrue();
+    assertThat(result.getIsReady()).isTrue();
     assertThat(result.getTooltip()).isEqualTo("Configure the host configuration");
   }
 

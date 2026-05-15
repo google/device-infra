@@ -128,7 +128,7 @@ export class HostSettings implements OnInit {
           visibility: () =>
             this.config.uiStatus.deviceConfig.sectionStatus.visible &&
             this.config.uiStatus.deviceConfig.subSections.permissions
-              ?.visible !== false,
+              ?.visible === true,
         },
         {
           id: 'wifi',
@@ -136,8 +136,8 @@ export class HostSettings implements OnInit {
           label: 'Wi-Fi',
           visibility: () =>
             this.config.uiStatus.deviceConfig.sectionStatus.visible &&
-            this.config.uiStatus.deviceConfig.subSections.wifi?.visible !==
-              false,
+            this.config.uiStatus.deviceConfig.subSections.wifi?.visible ===
+              true,
         },
         {
           id: 'dimensions',
@@ -146,7 +146,7 @@ export class HostSettings implements OnInit {
           visibility: () =>
             this.config.uiStatus.deviceConfig.sectionStatus.visible &&
             this.config.uiStatus.deviceConfig.subSections.dimensions
-              ?.visible !== false,
+              ?.visible === true,
         },
         {
           id: 'stability',
@@ -154,8 +154,8 @@ export class HostSettings implements OnInit {
           label: 'Stability & Reboot',
           visibility: () =>
             this.config.uiStatus.deviceConfig.sectionStatus.visible &&
-            this.config.uiStatus.deviceConfig.subSections.settings?.visible !==
-              false,
+            this.config.uiStatus.deviceConfig.subSections.settings?.visible ===
+              true,
         },
       ],
       visibility: () =>

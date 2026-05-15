@@ -24,7 +24,7 @@ import {
 import {MatButtonModule} from '@angular/material/button';
 import {MatButtonToggleModule} from '@angular/material/button-toggle';
 import {MatCheckboxModule} from '@angular/material/checkbox';
-import {MatChipOption, MatChipsModule} from '@angular/material/chips';
+import {MatChipsModule} from '@angular/material/chips';
 import {
   MAT_DIALOG_DATA,
   MatDialog,
@@ -476,19 +476,8 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
     }
   }
 
-  setDuration(minutes: number | undefined | null) {
-    // If user unchecks the chip (value is null/undefined), default to 10 minutes
-    this.form.patchValue({durationMinutes: minutes || 10});
-  }
-
-  toggleChip(chip: MatChipOption, event: MouseEvent) {
-    const target = event.target as HTMLElement;
-    // If the click target is the button (which handles selection itself), do nothing.
-    if (target.closest('.mdc-evolution-chip__action')) {
-      return;
-    }
-    // Otherwise (e.g. click on padding), manually toggle.
-    chip.toggleSelected(true);
+  updateDuration(minutes: number) {
+    this.form.get('durationMinutes')?.setValue(minutes || 10);
   }
 
   getSettingsSummary(): string {
