@@ -10,11 +10,10 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-
 	"syscall"
 
-	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/dialer"
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/flagutil"
+	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/dialer"
 	dconsvcpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconsvcpb"
 	dcontransport "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/transport"
 	rsockettransport "github.com/rsocket/rsocket-go/core/transport"
@@ -76,14 +75,14 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to parse -L flag %q: %v", fc, err)
 		}
-		req.ClientHostname = cfg.Hostname
-		if req.ClientHostname == "" {
+		req.InstanceId = cfg.Hostname
+		if req.InstanceId == "" {
 			hostname, err := os.Hostname()
 			if err != nil {
 				log.Printf("Failed to get hostname: %v", err)
-				// Proceed with an empty ClientHostname if os.Hostname fails.
+				// Proceed with an empty InstanceId if os.Hostname fails.
 			} else {
-				req.ClientHostname = hostname
+				req.InstanceId = hostname
 			}
 		}
 

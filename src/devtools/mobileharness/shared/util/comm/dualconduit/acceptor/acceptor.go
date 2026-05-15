@@ -53,12 +53,12 @@ func (s *Service) RegisterService(ctx context.Context, req *dconpb.EstablishCond
 		protocolStr = "http"
 	}
 
-	return s.meshServer.RegisterService(ctx, req.ServiceName, req.ClientHostname, physicalAddress, protocolStr)
+	return s.meshServer.RegisterService(ctx, req.ServerName, req.InstanceId, physicalAddress, protocolStr)
 }
 
 // DeregisterService deregisters service discovery with mesh server.
 func (s *Service) DeregisterService(ctx context.Context, req *dconpb.EstablishConduitRequest) error {
-	return s.meshServer.DeregisterService(ctx, req.ServiceName, req.ClientHostname)
+	return s.meshServer.DeregisterService(ctx, req.ServerName, req.InstanceId)
 }
 
 // Run starts the Acceptor service, listening for incoming RSocket connections.

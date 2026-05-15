@@ -34,12 +34,12 @@ message EstablishConduitRequest {
   }
   ConduitType type = 1;
   bool auto_reconnect = 2;
-  // Service name to identify the service.
-  string service_name = 3;
-  // The hostname of the client initiating the conduit.
-  string client_hostname = 4;
-  // Note: This protocol is only needed for reverse conduits.
-  // The protocol of the backend service (e.g., grpc, tcp).
+  // Server name to identify the server.
+  string server_name = 3;
+  // The instance ID of the dialer client.
+  // This is used to 1) Identify the dialer client and 2) provide hostname in
+  // reverse conduit proxy.
+  string instance_id = 4;
   Protocol protocol = 5;
   // The destination endpoint of the backend service.
   string destination_endpoint = 6;
