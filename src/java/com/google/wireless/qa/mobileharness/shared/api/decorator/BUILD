@@ -153,6 +153,30 @@ java_library(
 )
 
 java_library(
+    name = "android_bugreport_decorator",
+    srcs = ["AndroidBugreportDecorator.java"],
+    deps = [
+        ":base_decorator",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache",
+        "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemstate",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_bugreport_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "android_clean_apps_decorator",
     srcs = ["AndroidCleanAppsDecorator.java"],
     deps = [

@@ -107,6 +107,7 @@ java_library(
     runtime_deps = [
         ":partner_test_client",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_account_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_bugreport_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_file_puller_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_file_pusher_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_hd_video_decorator",
@@ -184,6 +185,7 @@ java_library(
     runtime_deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_adb_shell_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_ats_dynamic_config_pusher_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_bugreport_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_clean_apps_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_device_features_check_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_device_settings_decorator",
