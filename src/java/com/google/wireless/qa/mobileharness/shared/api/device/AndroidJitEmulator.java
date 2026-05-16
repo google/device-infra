@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudO
 import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudOrchestratorMessages.Cvd;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudOrchestratorMessages.DockerInstance;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudOrchestratorMessages.HostInstance;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -92,9 +93,14 @@ public class AndroidJitEmulator extends AndroidDevice {
   @Nullable
   private String cvdGroup;
 
+  @GuardedBy("cloudOrchestratorLock")
+  @Nullable
+  private String cvdName;
+
   @Nullable private AdbWebSocketBridge adbWebSocketBridge;
 
   private final AdbWebSocketBridgeFactory adbWebSocketBridgeFactory;
+  private final LocalFileUtil localFileUtil;
 
   public AndroidJitEmulator(String deviceId) {
     this(
@@ -119,6 +125,7 @@ public class AndroidJitEmulator extends AndroidDevice {
     super(deviceId, apiConfig, validatorFactory);
     this.deviceId = deviceId;
     this.androidAdbUtil = androidAdbUtil;
+    this.localFileUtil = new LocalFileUtil();
     this.cloudOrchestratorClientFactory = cloudOrchestratorClientFactory;
     this.adbWebSocketBridgeFactory = adbWebSocketBridgeFactory;
     this.sleeper = sleeper;
@@ -171,7 +178,8 @@ public class AndroidJitEmulator extends AndroidDevice {
     } catch (MobileHarnessException | InterruptedException | RuntimeException e) {
       logger.atWarning().log("Failed to set up JIT emulator. Cleaning up...");
       stopWebSocketBridgeAndDisconnectAdb();
-      deleteCvd(serviceUrl);
+      fetchLogsWithClient(serviceUrl, testInfo);
+      deleteCvdWithClient(serviceUrl);
       throw e;
     } finally {
       cloudOrchestratorLock.unlock();
@@ -202,6 +210,10 @@ public class AndroidJitEmulator extends AndroidDevice {
     } else {
       hostId = hosts.get(0).name;
     }
+
+    this.cvdHostId = hostId;
+    this.cvdGroup = cvdId;
+    this.cvdName = cvdId;
 
     String branch = testInfo.jobInfo().params().get(PARAM_BRANCH, "aosp-android-latest-release");
     String target =
@@ -246,8 +258,8 @@ public class AndroidJitEmulator extends AndroidDevice {
     }
 
     logger.atInfo().log("Created CVD: %s, ADB Serial: %s", cvd.name, cvd.adbSerial);
-    this.cvdHostId = hostId;
     this.cvdGroup = cvd.group;
+    this.cvdName = cvd.name;
 
     int localPort = AndroidJitEmulatorUtil.getPortFromDeviceId(deviceId);
     if (localPort > 0) {
@@ -281,8 +293,55 @@ public class AndroidJitEmulator extends AndroidDevice {
     }
 
     stopWebSocketBridgeAndDisconnectAdb();
-    deleteCvd(Flags.cloudOrchestratorServiceUrl.getNonNull());
+
+    String serviceUrl = Flags.cloudOrchestratorServiceUrl.getNonNull();
+    if (serviceUrl.isEmpty()) {
+      logger.atWarning().log(
+          "cloud_orchestrator_service_url flag is NOT set, skipping log fetch and CVD deletion.");
+      return PostTestDeviceOp.NONE;
+    }
+
+    logger.atInfo().log("Waiting for Cloud Orchestrator lock for cleanup...");
+    try {
+      cloudOrchestratorLock.lockInterruptibly();
+      try {
+        logger.atInfo().log("Acquired Cloud Orchestrator lock for cleanup.");
+        fetchLogsWithClient(serviceUrl, testInfo);
+        deleteCvdWithClient(serviceUrl);
+      } finally {
+        cloudOrchestratorLock.unlock();
+      }
+    } catch (InterruptedException e) {
+      logger.atWarning().withCause(e).log("Interrupted during cleanup lock");
+      Thread.currentThread().interrupt();
+    }
     return PostTestDeviceOp.NONE;
+  }
+
+  @GuardedBy("cloudOrchestratorLock")
+  private void fetchLogsWithClient(String serviceUrl, TestInfo testInfo) {
+    if (cvdHostId == null || cvdGroup == null || cvdName == null) {
+      logger.atWarning().log("Skipping log fetch as cvdHostId, cvdGroup, or cvdName is null");
+      return;
+    }
+    String zone = Flags.cloudOrchestratorZone.getNonNull();
+    CloudOrchestratorClient client = cloudOrchestratorClientFactory.create(serviceUrl, "v1", zone);
+    client.setBasicAuth("user", "");
+
+    File targetDir;
+    try {
+      targetDir = new File(testInfo.getGenFileDir(), deviceId + "/cvd_logs");
+      localFileUtil.prepareDir(targetDir.getAbsolutePath());
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log("Failed to prepare gen file dir, skipping log fetch");
+      return;
+    }
+
+    try {
+      client.fetchAllLogs(cvdHostId, cvdGroup, cvdName, targetDir);
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log("Failed to fetch all logs");
+    }
   }
 
   private void stopWebSocketBridgeAndDisconnectAdb() {
@@ -305,42 +364,11 @@ public class AndroidJitEmulator extends AndroidDevice {
     }
   }
 
-  private void deleteCvd(String serviceUrl) {
-    if (serviceUrl.isEmpty()) {
-      logger.atWarning().log(
-          "cloud_orchestrator_service_url flag is NOT set, skipping CVD deletion.");
-      return;
-    }
-    logger.atInfo().log("Waiting for Cloud Orchestrator lock for cleanup...");
-    try {
-      cloudOrchestratorLock.lockInterruptibly();
-      try {
-        logger.atInfo().log("Acquired Cloud Orchestrator lock for cleanup.");
-        deleteCvdWithClient(serviceUrl);
-      } finally {
-        cloudOrchestratorLock.unlock();
-      }
-    } catch (InterruptedException e) {
-      logger.atWarning().withCause(e).log("Interrupted during CVD deletion lock");
-      Thread.currentThread().interrupt();
-    } catch (MobileHarnessException e) {
-      logger.atWarning().withCause(e).log("Failed to delete CVD during cleanup");
-    }
-  }
-
   @GuardedBy("cloudOrchestratorLock")
-  private void deleteCvdWithClient(String serviceUrl)
-      throws MobileHarnessException, InterruptedException {
+  private void deleteCvdWithClient(String serviceUrl) throws InterruptedException {
     String zone = Flags.cloudOrchestratorZone.getNonNull();
     CloudOrchestratorClient client = cloudOrchestratorClientFactory.create(serviceUrl, "v1", zone);
     client.setBasicAuth("user", "");
-
-    List<HostInstance> hosts = client.listHosts();
-    if (hosts == null || hosts.isEmpty()) {
-      logger.atWarning().log("No hosts found, skipping CVD deletion.");
-      return;
-    }
-    String hostId = hosts.get(0).name;
 
     if (cvdHostId != null && cvdGroup != null) {
       try {
@@ -355,6 +383,12 @@ public class AndroidJitEmulator extends AndroidDevice {
 
     // Fallback: list and delete if we don't have the specific CVD info.
     try {
+      List<HostInstance> hosts = client.listHosts();
+      if (hosts == null || hosts.isEmpty()) {
+        logger.atWarning().log("No hosts found, skipping CVD deletion.");
+        return;
+      }
+      String hostId = hosts.get(0).name;
       List<Cvd> cvds = client.listCvds(hostId);
       if (cvds != null) {
         for (Cvd cvd : cvds) {

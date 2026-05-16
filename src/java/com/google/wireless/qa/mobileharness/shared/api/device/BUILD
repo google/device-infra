@@ -152,6 +152,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/emulator:adb_websocket_bridge",
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/emulator:android_jit_emulator_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/emulator:cloud_orchestrator_client",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",

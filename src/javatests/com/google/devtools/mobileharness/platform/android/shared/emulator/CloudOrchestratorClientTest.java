@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.platform.android.shared.emulator;
 
 import static com.google.common.truth.Truth.assertThat;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertThrows;
 
 import com.google.api.client.http.HttpHeaders;
@@ -683,5 +684,80 @@ public class CloudOrchestratorClientTest {
     assertThat(request.getMethod()).isEqualTo("PUT");
     assertThat(request.getPath())
         .isEqualTo("/v1/zones/local/hosts/host-1/v1/userartifacts/checksum-1");
+  }
+
+  @Test
+  public void downloadFile_success() throws Exception {
+    String fileContent = "file content";
+    server.enqueue(new MockResponse().setBody(fileContent));
+
+    File targetFile = File.createTempFile("downloaded_test", ".txt");
+    targetFile.deleteOnExit();
+
+    client.downloadFile("/download/path", targetFile);
+
+    assertThat(Files.asCharSource(targetFile, UTF_8).read()).isEqualTo(fileContent);
+    var request = server.takeRequest();
+    assertThat(request.getMethod()).isEqualTo("GET");
+    assertThat(request.getPath()).isEqualTo("/v1/zones/local/download/path");
+  }
+
+  @Test
+  public void fetchAllLogs_success() throws Exception {
+    String htmlContent =
+        "<!doctype html><pre><a href=\"log1.txt\">log1.txt</a><a"
+            + " href=\"log2.txt\">log2.txt</a></pre>";
+    server.enqueue(new MockResponse().setBody(htmlContent));
+    server.enqueue(new MockResponse().setBody("content1"));
+    server.enqueue(new MockResponse().setBody("content2"));
+
+    File targetDir = java.nio.file.Files.createTempDirectory("cvd_logs").toFile();
+    targetDir.deleteOnExit();
+
+    client.fetchAllLogs("host-1", "group-1", "name-1", targetDir);
+
+    File log1 = new File(targetDir, "log1.txt");
+    File log2 = new File(targetDir, "log2.txt");
+
+    assertThat(Files.asCharSource(log1, UTF_8).read()).isEqualTo("content1");
+    assertThat(Files.asCharSource(log2, UTF_8).read()).isEqualTo("content2");
+
+    assertThat(server.takeRequest().getPath())
+        .isEqualTo("/v1/zones/local/hosts/host-1/cvds/group-1/name-1/logs/");
+    assertThat(server.takeRequest().getPath())
+        .isEqualTo("/v1/zones/local/hosts/host-1/cvds/group-1/name-1/logs/log1.txt");
+    assertThat(server.takeRequest().getPath())
+        .isEqualTo("/v1/zones/local/hosts/host-1/cvds/group-1/name-1/logs/log2.txt");
+  }
+
+  @Test
+  public void downloadFile_fileNotFound_throwsException() throws Exception {
+    server.enqueue(new MockResponse().setResponseCode(404).setBody("Not Found"));
+
+    File targetFile = File.createTempFile("downloaded_test", ".txt");
+    targetFile.deleteOnExit();
+
+    MobileHarnessException e =
+        assertThrows(
+            MobileHarnessException.class, () -> client.downloadFile("/download/path", targetFile));
+
+    assertThat(e).hasCauseThat().isInstanceOf(HttpResponseException.class);
+    assertThat(((HttpResponseException) e.getCause()).getStatusCode()).isEqualTo(404);
+  }
+
+  @Test
+  public void fetchAllLogs_listingFails_throwsException() throws Exception {
+    server.enqueue(new MockResponse().setResponseCode(500).setBody("Internal Error"));
+
+    File targetDir = java.nio.file.Files.createTempDirectory("cvd_logs").toFile();
+    targetDir.deleteOnExit();
+
+    MobileHarnessException e =
+        assertThrows(
+            MobileHarnessException.class,
+            () -> client.fetchAllLogs("host-1", "group-1", "name-1", targetDir));
+
+    assertThat(e).hasCauseThat().isInstanceOf(HttpResponseException.class);
+    assertThat(((HttpResponseException) e.getCause()).getStatusCode()).isEqualTo(500);
   }
 }

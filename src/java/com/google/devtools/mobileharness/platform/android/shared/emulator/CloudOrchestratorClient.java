@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.platform.android.shared.emulator;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.base.Strings.nullToEmpty;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -37,6 +38,7 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
+import com.google.common.flogger.FluentLogger;
 import com.google.common.io.Files;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
@@ -56,22 +58,29 @@ import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudO
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryException;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryStrategy;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryingCallable;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.gson.stream.MalformedJsonException;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 /** Java client for Cloud Orchestrator API. */
 public class CloudOrchestratorClient {
 
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
   private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
   private static final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
+  private static final Pattern LOG_LINK_PATTERN =
+      Pattern.compile("<a[^>]*href=\"([^\"]+)\"[^>]*>", Pattern.CASE_INSENSITIVE);
 
   private static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(30);
   private static final Duration WAIT_OPERATION_MAX_TIMEOUT = Duration.ofMinutes(10);
@@ -600,6 +609,139 @@ public class CloudOrchestratorClient {
     }
   }
 
+  /**
+   * Downloads a file from the given path to the target file.
+   *
+   * @param path the path relative to the root endpoint
+   * @param targetFile the file to save the content to
+   * @throws MobileHarnessException if the download fails
+   */
+  public void downloadFile(String path, File targetFile) throws MobileHarnessException {
+    int maxRetries = 3;
+    LocalFileUtil localFileUtil = new LocalFileUtil();
+    localFileUtil.prepareParentDir(targetFile.getAbsolutePath());
+    try {
+      RetryingCallable.newBuilder(
+              () -> {
+                GenericUrl url = new GenericUrl(rootEndpoint + path);
+                HttpRequest request = requestFactory.buildRequest("GET", url, null);
+                prepareRequest(request);
+                HttpResponse response = request.execute();
+                try (FileOutputStream out = new FileOutputStream(targetFile)) {
+                  response.download(out);
+                } finally {
+                  response.disconnect();
+                }
+                return null;
+              },
+              RetryStrategy.exponentialBackoff(requestRetryDelay, 2, maxRetries))
+          .setPredicate(this::isRetriable)
+          .build()
+          .call();
+    } catch (RetryException e) {
+      Throwable cause = e.getCause();
+      if (cause instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+        throw new MobileHarnessException(
+            BasicErrorId.LOCAL_NETWORK_ERROR,
+            String.format("Interrupted while downloading file from %s", path),
+            cause);
+      }
+      if (cause instanceof HttpResponseException httpResponseException) {
+        throw handleHttpException(
+            String.format("Failed to download file from %s", path), httpResponseException);
+      }
+      throw new MobileHarnessException(
+          BasicErrorId.LOCAL_NETWORK_ERROR,
+          String.format("Failed to download file from %s", path),
+          e);
+    }
+  }
+
+  /**
+   * Fetches all logs from the logs directory and saves them to the target directory.
+   *
+   * @param hostId the ID of the host
+   * @param cvdGroup the group of the CVD
+   * @param cvdName the name of the CVD
+   * @param targetDir the directory to save the logs to
+   * @throws MobileHarnessException if the operation fails
+   */
+  public void fetchAllLogs(String hostId, String cvdGroup, String cvdName, File targetDir)
+      throws MobileHarnessException {
+    String logsPath = "/hosts/" + hostId + "/cvds/" + cvdGroup + "/" + cvdName + "/logs/";
+    int maxRetries = 3;
+    String htmlContent;
+    try {
+      htmlContent =
+          RetryingCallable.newBuilder(
+                  () -> {
+                    GenericUrl url = new GenericUrl(rootEndpoint + logsPath);
+                    HttpRequest request = requestFactory.buildRequest("GET", url, null);
+                    prepareRequest(request);
+                    HttpResponse response = request.execute();
+                    try {
+                      return response.parseAsString();
+                    } finally {
+                      response.disconnect();
+                    }
+                  },
+                  RetryStrategy.exponentialBackoff(requestRetryDelay, 2, maxRetries))
+              .setPredicate(this::isRetriable)
+              .build()
+              .call();
+    } catch (RetryException e) {
+      Throwable cause = e.getCause();
+      if (cause instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+        throw new MobileHarnessException(
+            BasicErrorId.LOCAL_NETWORK_ERROR,
+            String.format("Interrupted while fetching logs directory listing from %s", logsPath),
+            cause);
+      }
+      if (cause instanceof HttpResponseException httpResponseException) {
+        throw handleHttpException(
+            String.format("Failed to fetch logs directory listing from %s", logsPath),
+            httpResponseException);
+      }
+      throw new MobileHarnessException(
+          BasicErrorId.LOCAL_NETWORK_ERROR,
+          String.format("Failed to fetch logs directory listing from %s", logsPath),
+          e);
+    }
+
+    if (isNullOrEmpty(htmlContent)) {
+      return;
+    }
+
+    // Parse HTML to find links
+    Matcher matcher = LOG_LINK_PATTERN.matcher(htmlContent);
+
+    while (matcher.find()) {
+      String filename = matcher.group(1);
+      if (filename.endsWith("/") || filename.equals("..")) {
+        continue;
+      }
+      File targetFile = new File(targetDir, new File(filename).getName());
+      try {
+        logger.atInfo().log(
+            "Downloading log file %s to %s", filename, targetFile.getAbsolutePath());
+        downloadFile(logsPath + filename, targetFile);
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log("Failed to download log file %s", filename);
+      }
+    }
+  }
+
+  private void prepareRequest(HttpRequest request) {
+    if (sessionCookie != null) {
+      request.getHeaders().set("Cookie", sessionCookie);
+    }
+    if (basicAuth != null) {
+      request.getHeaders().set("Authorization", "Basic " + basicAuth);
+    }
+  }
+
   private <T> T executeRequest(
       String method,
       String path,
@@ -634,12 +776,7 @@ public class CloudOrchestratorClient {
     if (buildApiCreds != null) {
       request.getHeaders().set("X-Cutf-Host-Orchestrator-BuildAPI-Creds", buildApiCreds);
     }
-    if (sessionCookie != null) {
-      request.getHeaders().set("Cookie", sessionCookie);
-    }
-    if (basicAuth != null) {
-      request.getHeaders().set("Authorization", "Basic " + basicAuth);
-    }
+    prepareRequest(request);
     if (timeout != null) {
       request.setConnectTimeout((int) timeout.toMillis());
       request.setReadTimeout((int) timeout.toMillis());
