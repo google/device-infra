@@ -66,7 +66,7 @@ public interface HostServiceLogic {
       UpdatePassThroughFlagsRequest request);
 
   ListenableFuture<PreflightLabServerReleaseResponse> preflightLabServerRelease(
-      PreflightLabServerReleaseRequest request);
+      PreflightLabServerReleaseRequest request, Optional<String> username);
 
   ListenableFuture<DecommissionMissingDevicesResponse> decommissionMissingDevices(
       DecommissionMissingDevicesRequest request);

@@ -26,9 +26,12 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.fe.v6.service.host.builder.RemoteControlUrlBuilder;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLabServerReleaseActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostHeaderInfoRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.SubDeviceInfoListFactory;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.remotecontrol.RemoteControlEligibilityChecker;
@@ -68,6 +71,7 @@ public final class HostServiceLogicImplTest {
   @Bind @Mock private InstantSource instantSource;
   @Bind @Mock private FeatureManagerFactory featureManagerFactory;
   @Bind @Mock private LabSyncStub labSyncStub;
+  @Bind @Mock private PreflightLabServerReleaseActionHelper preflightLabServerReleaseActionHelper;
   @Mock private FeatureManager featureManager;
 
   private HostServiceLogicImpl hostServiceLogicImpl;
@@ -107,6 +111,37 @@ public final class HostServiceLogicImplTest {
     ExecutionException e =
         assertThrows(
             ExecutionException.class, () -> hostServiceLogicImpl.getHostHeaderInfo(request).get());
+    assertThat(e).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void preflightLabServerRelease_success() throws Exception {
+    PreflightLabServerReleaseRequest request =
+        PreflightLabServerReleaseRequest.newBuilder().setUniverse("universe").build();
+    PreflightLabServerReleaseResponse response =
+        PreflightLabServerReleaseResponse.getDefaultInstance();
+
+    when(preflightLabServerReleaseActionHelper.preflightLabServerRelease(any(), any(), any()))
+        .thenReturn(immediateFuture(response));
+
+    PreflightLabServerReleaseResponse actualResponse =
+        hostServiceLogicImpl.preflightLabServerRelease(request, Optional.of("user")).get();
+
+    assertThat(actualResponse).isEqualTo(response);
+  }
+
+  @Test
+  public void preflightLabServerRelease_invalidUniverse_fails() throws Exception {
+    PreflightLabServerReleaseRequest request =
+        PreflightLabServerReleaseRequest.newBuilder().setUniverse("invalid").build();
+
+    when(universeFactory.create("invalid")).thenThrow(new IllegalArgumentException("invalid"));
+
+    ExecutionException e =
+        assertThrows(
+            ExecutionException.class,
+            () ->
+                hostServiceLogicImpl.preflightLabServerRelease(request, Optional.of("user")).get());
     assertThat(e).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
   }
 }

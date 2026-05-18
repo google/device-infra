@@ -146,7 +146,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
     GrpcServiceUtil.invokeAsync(
         request,
         responseObserver,
-        logic::preflightLabServerRelease,
+        req -> logic.preflightLabServerRelease(req, Optional.empty()),
         executor,
         HostServiceGrpc.getServiceDescriptor(),
         HostServiceGrpc.getPreflightLabServerReleaseMethod());

@@ -120,4 +120,9 @@ public final class FeatureReadinessTest {
     when(environment.isGoogleInternal()).thenReturn(false);
     assertThat(featureReadiness.isDeviceConfigurationReady()).isTrue();
   }
+
+  @Test
+  public void isLabServerReleaseReady_returnsTrue() {
+    assertThat(featureReadiness.isLabServerReleaseReady()).isTrue();
+  }
 }
