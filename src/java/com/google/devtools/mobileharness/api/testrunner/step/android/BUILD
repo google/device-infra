@@ -23,7 +23,6 @@ java_library(
         "DeviceInitializationStep.java",
     ],
     visibility = [
-        "//:omnilab_fusion",
     ],
     exports = [":initialization_args"],
     deps = [
