@@ -59,6 +59,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -611,9 +612,23 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
           spec.getDisableCalling() ? "true" : "false");
     }
 
-    // disable_package_in_test
-    for (String packageName : spec.getDisablePackageInTestList()) {
+    Set<String> disableWithReenable = new LinkedHashSet<>(spec.getDisablePackageInTestList());
+    Set<String> disableWithoutReenable =
+        new LinkedHashSet<>(spec.getDisablePackageInTestWithoutReenablementList());
+
+    // Packages to disable is the union of both lists, preserving order.
+    Set<String> allToDisable = new LinkedHashSet<>(disableWithReenable);
+    allToDisable.addAll(disableWithoutReenable);
+
+    // Packages to re-enable are those in the first list but NOT in the second list.
+    Set<String> toReenable = new LinkedHashSet<>(disableWithReenable);
+    toReenable.removeAll(disableWithoutReenable);
+
+    for (String packageName : allToDisable) {
       commandsAfterSettings.add("pm", "disable-user", packageName);
+    }
+
+    for (String packageName : toReenable) {
       commandsOnTestEnd.add("pm", "enable", packageName);
     }
 

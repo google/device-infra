@@ -27,7 +27,7 @@ option java_multiple_files = true;
 // If a field is not set explicitly, it will be ignored, but not set to the
 // default value.
 //
-// next tag: 82
+// next tag: 83
 
 message AndroidDeviceSettingsDecoratorSpec {
   extend DecoratorSpec {
@@ -102,12 +102,22 @@ message AndroidDeviceSettingsDecoratorSpec {
 
   repeated string enable_package = 27
       [(field_detail) = { help: "Package to enable." }];
+
   repeated string disable_package_in_test = 28 [(field_detail) = {
     help: "Package to disable in the test. After the test the decorator will "
           "try to re-enable the package to avoid device crash after reboot. "
           "If you disable a built-in app, other apps may misbehave and will "
           "likely cause your phone to go into a boot loop/soft brick."
   }];
+
+  repeated string disable_package_in_test_without_reenablement = 82 [
+    (field_detail) = {
+      help: "Package to disable in the test without re-enabling them after the "
+            "test. This field has higher priority than disable_package_in_test:"
+            " if a package is set in both fields, it will be disabled without "
+            "re-enablement."
+    }
+  ];
 
   optional int64 gtalk_wifi_max_heartbeat_ping_interval_sec = 29
       [(field_detail) = {
