@@ -23,6 +23,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInf
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import org.junit.Before;
 import org.junit.Rule;
@@ -40,12 +41,14 @@ public final class ConfigurationButtonBuilderTest {
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Mock private FeatureManagerFactory featureManagerFactory;
   @Mock private FeatureManager featureManager;
+  @Mock private FeatureReadiness featureReadiness;
 
   private ConfigurationButtonBuilder configurationButtonBuilder;
 
   @Before
   public void setUp() {
-    configurationButtonBuilder = new ConfigurationButtonBuilder(featureManagerFactory);
+    configurationButtonBuilder =
+        new ConfigurationButtonBuilder(featureManagerFactory, featureReadiness);
     when(featureManagerFactory.create(SELF_UNIVERSE)).thenReturn(featureManager);
   }
 
@@ -63,12 +66,27 @@ public final class ConfigurationButtonBuilderTest {
   @Test
   public void build_configurationEnabled_visibleEnabledWithTooltip() {
     when(featureManager.isConfigurationFeatureEnabled()).thenReturn(true);
+    when(featureReadiness.isDeviceConfigurationReady()).thenReturn(true);
 
     ActionButtonState state =
         configurationButtonBuilder.build(DeviceInfo.getDefaultInstance(), SELF_UNIVERSE);
 
     assertThat(state.getVisible()).isTrue();
     assertThat(state.getEnabled()).isTrue();
+    assertThat(state.getIsReady()).isTrue();
     assertThat(state.getTooltip()).isEqualTo("Configure the device");
+  }
+
+  @Test
+  public void build_configurationEnabledButNotReady_visibleEnabledNotReady() {
+    when(featureManager.isConfigurationFeatureEnabled()).thenReturn(true);
+    when(featureReadiness.isDeviceConfigurationReady()).thenReturn(false);
+
+    ActionButtonState state =
+        configurationButtonBuilder.build(DeviceInfo.getDefaultInstance(), SELF_UNIVERSE);
+
+    assertThat(state.getVisible()).isTrue();
+    assertThat(state.getEnabled()).isTrue();
+    assertThat(state.getIsReady()).isFalse();
   }
 }

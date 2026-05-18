@@ -138,7 +138,7 @@ public class FeatureManager {
   }
 
   /**
-   * Checks if the configuration feature is enabled.
+   * Checks if the configuration feature(for both devices and hosts) is enabled.
    *
    * <p>In Google internal builds, configuration is always enabled for {@link
    * UniverseScope.SelfUniverse} and disabled for routed universes. In OSS builds, availability is
@@ -150,6 +150,6 @@ public class FeatureManager {
       return universe instanceof UniverseScope.SelfUniverse;
     }
     // OSS/ATS: availability depends on the flag.
-    return Flags.feEnableConfiguration.getNonNull();
+    return Flags.feConnectToConfigServer.getNonNull();
   }
 }

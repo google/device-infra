@@ -51,7 +51,7 @@ public final class FeatureManagerTest {
   @Test
   public void isConfigurationFeatureEnabled_scenario1_flagTrue_returnsTrue() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    flags.set("fe_enable_configuration", "true");
+    flags.set("fe_connect_to_config_server", "true");
     FeatureManager featureManager = new FeatureManager(mockEnvironment, SELF_UNIVERSE);
     assertThat(featureManager.isConfigurationFeatureEnabled()).isTrue();
   }
@@ -59,7 +59,7 @@ public final class FeatureManagerTest {
   @Test
   public void isConfigurationFeatureEnabled_scenario1_flagFalse_returnsTrue() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    flags.set("fe_enable_configuration", "false");
+    flags.set("fe_connect_to_config_server", "false");
     FeatureManager featureManager = new FeatureManager(mockEnvironment, SELF_UNIVERSE);
     assertThat(featureManager.isConfigurationFeatureEnabled()).isTrue();
   }
@@ -76,7 +76,7 @@ public final class FeatureManagerTest {
   @Test
   public void isConfigurationFeatureEnabled_scenario2_flagTrue_returnsFalse() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(true);
-    flags.set("fe_enable_configuration", "true");
+    flags.set("fe_connect_to_config_server", "true");
     FeatureManager featureManager = new FeatureManager(mockEnvironment, ROUTED_UNIVERSE);
     assertThat(featureManager.isConfigurationFeatureEnabled()).isFalse();
   }
@@ -93,7 +93,7 @@ public final class FeatureManagerTest {
   @Test
   public void isConfigurationFeatureEnabled_scenario3_flagTrue_returnsTrue() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(false);
-    flags.set("fe_enable_configuration", "true");
+    flags.set("fe_connect_to_config_server", "true");
     FeatureManager featureManager = new FeatureManager(mockEnvironment, ROUTED_UNIVERSE);
     assertThat(featureManager.isConfigurationFeatureEnabled()).isTrue();
   }
@@ -101,7 +101,7 @@ public final class FeatureManagerTest {
   @Test
   public void isConfigurationFeatureEnabled_scenario3_flagFalse_returnsFalse() {
     when(mockEnvironment.isGoogleInternal()).thenReturn(false);
-    flags.set("fe_enable_configuration", "false");
+    flags.set("fe_connect_to_config_server", "false");
     FeatureManager featureManager = new FeatureManager(mockEnvironment, ROUTED_UNIVERSE);
     assertThat(featureManager.isConfigurationFeatureEnabled()).isFalse();
   }

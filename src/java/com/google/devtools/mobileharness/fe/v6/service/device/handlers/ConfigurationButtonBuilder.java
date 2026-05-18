@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -28,10 +29,13 @@ import javax.inject.Singleton;
 class ConfigurationButtonBuilder {
 
   private final FeatureManagerFactory featureManagerFactory;
+  private final FeatureReadiness featureReadiness;
 
   @Inject
-  ConfigurationButtonBuilder(FeatureManagerFactory featureManagerFactory) {
+  ConfigurationButtonBuilder(
+      FeatureManagerFactory featureManagerFactory, FeatureReadiness featureReadiness) {
     this.featureManagerFactory = featureManagerFactory;
+    this.featureReadiness = featureReadiness;
   }
 
   public ActionButtonState build(DeviceInfo deviceInfo, UniverseScope universe) {
@@ -41,7 +45,7 @@ class ConfigurationButtonBuilder {
 
     return ActionButtonState.newBuilder()
         .setVisible(true)
-        .setIsReady(true)
+        .setIsReady(featureReadiness.isDeviceConfigurationReady())
         .setEnabled(true)
         .setTooltip("Configure the device")
         .build();

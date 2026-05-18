@@ -906,13 +906,10 @@ public class Flags {
 
   @FlagSpec(
       name = "fe_connect_to_config_server",
-      help = "Whether to connect to the config server in the FE server.")
+      help =
+          "Whether to connect to the config server in the FE server. When true, both host and"
+              + " device config will be enabled.")
   public static final Flag<Boolean> feConnectToConfigServer = Flag.value(false);
-
-  @FlagSpec(
-      name = "fe_enable_configuration",
-      help = "Enables the device configuration feature in the Mobile Harness FE UI.")
-  public static final Flag<Boolean> feEnableConfiguration = Flag.value(false);
 
   @FlagSpec(name = "fe_grpc_port", help = "gRPC port to listen on for FE servers.")
   public static final Flag<Integer> feGrpcPort = Flag.value(8080);

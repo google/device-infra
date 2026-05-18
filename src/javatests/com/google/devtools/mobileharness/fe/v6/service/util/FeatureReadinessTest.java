@@ -17,20 +17,29 @@
 package com.google.devtools.mobileharness.fe.v6.service.util;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.mockito.Mockito.when;
 
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class FeatureReadinessTest {
 
   private FeatureReadiness featureReadiness;
 
+  @Rule public final MockitoRule mocks = MockitoJUnit.rule();
+
+  @Mock private Environment environment;
+
   @Before
   public void setUp() {
-    featureReadiness = new FeatureReadiness();
+    featureReadiness = new FeatureReadiness(environment);
   }
 
   @Test
@@ -86,5 +95,29 @@ public final class FeatureReadinessTest {
   @Test
   public void isLabServerUpdatePassThroughFlagsReady_returnsFalse() {
     assertThat(featureReadiness.isLabServerUpdatePassThroughFlagsReady()).isFalse();
+  }
+
+  @Test
+  public void isHostConfigurationReady_internal_returnsFalse() {
+    when(environment.isGoogleInternal()).thenReturn(true);
+    assertThat(featureReadiness.isHostConfigurationReady()).isFalse();
+  }
+
+  @Test
+  public void isHostConfigurationReady_oss_returnsTrue() {
+    when(environment.isGoogleInternal()).thenReturn(false);
+    assertThat(featureReadiness.isHostConfigurationReady()).isTrue();
+  }
+
+  @Test
+  public void isDeviceConfigurationReady_internal_returnsFalse() {
+    when(environment.isGoogleInternal()).thenReturn(true);
+    assertThat(featureReadiness.isDeviceConfigurationReady()).isFalse();
+  }
+
+  @Test
+  public void isDeviceConfigurationReady_oss_returnsTrue() {
+    when(environment.isGoogleInternal()).thenReturn(false);
+    assertThat(featureReadiness.isDeviceConfigurationReady()).isTrue();
   }
 }

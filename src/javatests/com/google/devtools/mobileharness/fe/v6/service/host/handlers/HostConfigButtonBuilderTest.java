@@ -21,6 +21,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.Optional;
 import org.junit.Before;
@@ -39,19 +40,22 @@ public final class HostConfigButtonBuilderTest {
 
   @Mock private FeatureManagerFactory mockFeatureManagerFactory;
   @Mock private FeatureManager mockFeatureManager;
+  @Mock private FeatureReadiness mockFeatureReadiness;
 
   private HostConfigButtonBuilder hostConfigButtonBuilder;
   private static final UniverseScope UNIVERSE = new UniverseScope.SelfUniverse();
 
   @Before
   public void setUp() {
-    hostConfigButtonBuilder = new HostConfigButtonBuilder(mockFeatureManagerFactory);
+    hostConfigButtonBuilder =
+        new HostConfigButtonBuilder(mockFeatureManagerFactory, mockFeatureReadiness);
     when(mockFeatureManagerFactory.create(UNIVERSE)).thenReturn(mockFeatureManager);
   }
 
   @Test
   public void build_returnsExpectedState() {
     when(mockFeatureManager.isConfigurationFeatureEnabled()).thenReturn(true);
+    when(mockFeatureReadiness.isHostConfigurationReady()).thenReturn(true);
 
     var result = hostConfigButtonBuilder.build(UNIVERSE, Optional.empty(), Optional.empty());
 
@@ -59,6 +63,18 @@ public final class HostConfigButtonBuilderTest {
     assertThat(result.getEnabled()).isTrue();
     assertThat(result.getIsReady()).isTrue();
     assertThat(result.getTooltip()).isEqualTo("Configure the host configuration");
+  }
+
+  @Test
+  public void build_notReady_returnsNotReady() {
+    when(mockFeatureManager.isConfigurationFeatureEnabled()).thenReturn(true);
+    when(mockFeatureReadiness.isHostConfigurationReady()).thenReturn(false);
+
+    var result = hostConfigButtonBuilder.build(UNIVERSE, Optional.empty(), Optional.empty());
+
+    assertThat(result.getVisible()).isTrue();
+    assertThat(result.getEnabled()).isTrue();
+    assertThat(result.getIsReady()).isFalse();
   }
 
   @Test

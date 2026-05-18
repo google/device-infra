@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -29,10 +30,13 @@ import javax.inject.Singleton;
 public class HostConfigButtonBuilder {
 
   private final FeatureManagerFactory featureManagerFactory;
+  private final FeatureReadiness featureReadiness;
 
   @Inject
-  HostConfigButtonBuilder(FeatureManagerFactory featureManagerFactory) {
+  HostConfigButtonBuilder(
+      FeatureManagerFactory featureManagerFactory, FeatureReadiness featureReadiness) {
     this.featureManagerFactory = featureManagerFactory;
+    this.featureReadiness = featureReadiness;
   }
 
   public ActionButtonState build(
@@ -44,8 +48,8 @@ public class HostConfigButtonBuilder {
 
     return ActionButtonState.newBuilder()
         .setVisible(true)
+        .setIsReady(featureReadiness.isHostConfigurationReady())
         .setEnabled(true)
-        .setIsReady(true)
         .setTooltip("Configure the host configuration")
         .build();
   }
