@@ -53,13 +53,13 @@ public final class FeatureReadinessTest {
   }
 
   @Test
-  public void isDeviceQuarantineReady_returnsFalse() {
-    assertThat(featureReadiness.isDeviceQuarantineReady()).isFalse();
+  public void isDeviceQuarantineReady_returnsTrue() {
+    assertThat(featureReadiness.isDeviceQuarantineReady()).isTrue();
   }
 
   @Test
-  public void isDeviceScreenshotReady_returnsFalse() {
-    assertThat(featureReadiness.isDeviceScreenshotReady()).isFalse();
+  public void isDeviceScreenshotReady_returnsTrue() {
+    assertThat(featureReadiness.isDeviceScreenshotReady()).isTrue();
   }
 
   @Test

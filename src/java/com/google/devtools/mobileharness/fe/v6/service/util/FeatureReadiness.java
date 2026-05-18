@@ -40,11 +40,11 @@ public class FeatureReadiness {
   }
 
   public boolean isDeviceQuarantineReady() {
-    return false;
+    return true;
   }
 
   public boolean isDeviceScreenshotReady() {
-    return false;
+    return true;
   }
 
   public boolean isDeviceRemoteControlReady() {
