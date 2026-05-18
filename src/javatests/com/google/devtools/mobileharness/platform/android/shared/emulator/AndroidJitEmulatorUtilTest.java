@@ -79,11 +79,54 @@ public final class AndroidJitEmulatorUtilTest {
   }
 
   @Test
+  public void getVirtualDeviceNameInTradefed_bothLocalAndRemote() {
+    flags.setAll(
+        ImmutableMap.of(
+            "virtual_device_server_ip",
+            "10.0.0.1",
+            "virtual_device_server_username",
+            "mobileharness"));
+    // Local device name mapping should still work correctly even if remote flags are set.
+    assertThat(
+            AndroidJitEmulatorUtil.getVirtualDeviceNameInTradefed("0.0.0.0:local-virtual-device-0"))
+        .isEqualTo("local-virtual-device-0");
+    // Remote device name mapping should also work correctly.
+    assertThat(
+            AndroidJitEmulatorUtil.getVirtualDeviceNameInTradefed(
+                "gce-device-10.0.0.1-0-mobileharness"))
+        .isEqualTo("gce-device-10.0.0.1-0-mobileharness");
+  }
+
+  @Test
   public void getAllVirtualDeviceIds_defaultSettings_returnsLocalhostPorts() {
     flags.set("android_jit_emulator_num", "2");
 
     ImmutableList<String> deviceIds = AndroidJitEmulatorUtil.getAllVirtualDeviceIds();
     assertThat(deviceIds).containsExactly("127.0.0.1:6520", "127.0.0.1:6521").inOrder();
+  }
+
+  @Test
+  public void getAllVirtualDeviceIds_bothLocalAndRemote() {
+    flags.setAll(
+        ImmutableMap.of(
+            "android_jit_emulator_num",
+            "2",
+            "remote_android_jit_emulator_num",
+            "1",
+            "noop_jit_emulator",
+            "true",
+            "virtual_device_server_ip",
+            "10.0.0.1",
+            "virtual_device_server_username",
+            "mobileharness"));
+
+    ImmutableList<String> deviceIds = AndroidJitEmulatorUtil.getAllVirtualDeviceIds();
+    assertThat(deviceIds)
+        .containsExactly(
+            "0.0.0.0:local-virtual-device-0",
+            "0.0.0.0:local-virtual-device-1",
+            "gce-device-10.0.0.1-0-mobileharness")
+        .inOrder();
   }
 
   @Test

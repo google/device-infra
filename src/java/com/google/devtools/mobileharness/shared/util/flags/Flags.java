@@ -183,8 +183,8 @@ public class Flags {
   @FlagSpec(
       name = "android_jit_emulator_num",
       help =
-          "The maximum number of android Just-in-time emulators that could be run on the server"
-              + " simultaneously.")
+          "The maximum number of android Just-in-time emulators that could be run on the local"
+              + " server simultaneously.")
   public static final Flag<Integer> androidJitEmulatorNum = Flag.value(0);
 
   @FlagSpec(name = "api_config", help = "Path of the text format protobuf API config file.")
@@ -1317,6 +1317,13 @@ public class Flags {
       name = "real_time_test",
       help = "If this flag is true, all tests will run as real-time tests.")
   public static final Flag<Boolean> realTimeTest = Flag.value(false);
+
+  @FlagSpec(
+      name = "remote_android_jit_emulator_num",
+      help =
+          "The number of remote Android JIT emulators. This is reserved for virtual devices on"
+              + " remote server, different from android_jit_emulator_num")
+  public static final Flag<Integer> remoteAndroidJitEmulatorNum = Flag.value(0);
 
   @FlagSpec(
       name = "remove_job_gen_files_when_finished",

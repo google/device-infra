@@ -40,16 +40,15 @@ public final class AndroidJitEmulatorUtil {
   public static final String TF_GLOBAL_CONFIG_PATH = "/mtt/scripts/host-config.xml";
 
   public static String getVirtualDeviceNameInTradefed(String deviceId) {
+    Matcher matcher = LOCAL_NOOP_EMULATOR_ID_PATTERN.matcher(deviceId);
+    if (matcher.find()) {
+      return String.format("local-virtual-device-%s", matcher.group(2));
+    }
     if (!Flags.virtualDeviceServerIp.getNonNull().isEmpty()
         && !Flags.virtualDeviceServerUsername.getNonNull().isEmpty()) {
       return deviceId;
     }
-    Matcher matcher = LOCAL_NOOP_EMULATOR_ID_PATTERN.matcher(deviceId);
-    if (matcher.find()) {
-      return String.format("local-virtual-device-%s", matcher.group(2));
-    } else {
-      return "";
-    }
+    return "";
   }
 
   /**
@@ -90,13 +89,28 @@ public final class AndroidJitEmulatorUtil {
    * @return the list of virtual device IDs
    */
   public static ImmutableList<String> getAllVirtualDeviceIds() {
-    int emulatorNumber = Flags.androidJitEmulatorNum.getNonNull();
+    int localEmulatorNumber = Flags.androidJitEmulatorNum.getNonNull();
+    int remoteEmulatorNumber = Flags.remoteAndroidJitEmulatorNum.getNonNull();
     List<String> emulatorIds = new ArrayList<>();
 
-    if (Flags.noopJitEmulator.getNonNull()) {
+    // Generate local emulators
+    if (localEmulatorNumber > 0) {
+      if (Flags.noopJitEmulator.getNonNull()) {
+        for (int i = 0; i < localEmulatorNumber; i++) {
+          emulatorIds.add(String.format("0.0.0.0:local-virtual-device-%d", i));
+        }
+      } else {
+        for (int i = 0; i < localEmulatorNumber; i++) {
+          emulatorIds.add(String.format("127.0.0.1:%d", EMULATOR_BASE_PORT + i));
+        }
+      }
+    }
+
+    // Generate remote emulators
+    if (remoteEmulatorNumber > 0) {
       if (!Flags.virtualDeviceServerIp.getNonNull().isEmpty()
           && !Flags.virtualDeviceServerUsername.getNonNull().isEmpty()) {
-        for (int i = 0; i < emulatorNumber; i++) {
+        for (int i = 0; i < remoteEmulatorNumber; i++) {
           emulatorIds.add(
               String.format(
                   "gce-device-%s-%d-%s",
@@ -104,16 +118,9 @@ public final class AndroidJitEmulatorUtil {
                   i,
                   Flags.virtualDeviceServerUsername.getNonNull()));
         }
-      } else {
-        for (int i = 0; i < emulatorNumber; i++) {
-          emulatorIds.add(String.format("0.0.0.0:local-virtual-device-%d", i));
-        }
-      }
-    } else {
-      for (int i = 0; i < emulatorNumber; i++) {
-        emulatorIds.add(String.format("127.0.0.1:%d", EMULATOR_BASE_PORT + i));
       }
     }
+
     return ImmutableList.copyOf(emulatorIds);
   }
 
