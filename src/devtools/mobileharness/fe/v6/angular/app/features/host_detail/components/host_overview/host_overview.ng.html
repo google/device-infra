@@ -21,7 +21,7 @@
           <dt title="OS">OS</dt>
           <dd title="{{ host.os }}" class="overflow-ellipsis">{{ host.os || 'N/A' }}</dd>
 
-          @if (isGoogle1p()) {
+          @if (isGoogle1p) {
             <dt title="LabType">Lab Type</dt>
             <dd class="lab-type-wrapper">
               @if (displayLabTypes().length > 0) {
@@ -117,7 +117,7 @@
           <mat-icon matTooltip="{{ connectivitySemantic.tooltip }}" class="cursor-help">help_outline</mat-icon>
         </dd>
 
-        @if (isGoogle1p()) {
+        @if (isGoogle1p) {
           @if (host.labServer.activity; as activity) {
             @let activitySemantic = getLabActivitySemantic(activity);
             <dt>Activity</dt>
@@ -155,34 +155,36 @@
           }
         </dd>
 
-        <!-- we use the button state of release action to determine whether to show the pass through flags -->
-        @if (host.labServer.actions?.release; as updateFlags) {
-          @if (host.showPassThroughFlags) {
-            <dt>Pass Through Flags
-              <mat-icon
-                class="cursor-help"
-                matTooltip="Flags passed directly to the lab server instance on startup for custom configuration."
-                >help_outline</mat-icon
-              >
-            </dt>
-            <dd class="grid-tight-dd">
-              @if (passThroughFlags()) {
-                <div class="monospace-block">{{ passThroughFlags() }}</div>
-              } @else {
-                <span class="text-gray-500">None</span>
-              }
+        @if (isGoogle1p) {
+          <!-- we use the button state of release action to determine whether to show the pass through flags -->
+          @if (host.labServer.actions?.release; as updateFlags) {
+            @if (host.showPassThroughFlags) {
+              <dt>Pass Through Flags
+                <mat-icon
+                  class="cursor-help"
+                  matTooltip="Flags passed directly to the lab server instance on startup for custom configuration."
+                  >help_outline</mat-icon
+                >
+              </dt>
+              <dd class="grid-tight-dd">
+                @if (passThroughFlags()) {
+                  <div class="monospace-block">{{ passThroughFlags() }}</div>
+                } @else {
+                  <span class="text-gray-500">None</span>
+                }
 
-              @if (updateFlags.visible) {
-                <button
-                  mat-icon-button
-                  (click)="updateFlags.isReady ? openFlagsDialog() : showComingSoonPopup('Pass Through Flags')"
-                  [disabled]="!updateFlags.enabled"
-                  [matTooltip]="updateFlags.tooltip || 'Edit Pass Through Flags'"
-                  class="edit-flags-button">
-                  <mat-icon>edit</mat-icon>
-                </button>
-              }
-            </dd>
+                @if (updateFlags.visible) {
+                  <button
+                    mat-icon-button
+                    (click)="updateFlags.isReady ? openFlagsDialog() : showComingSoonPopup('Pass Through Flags')"
+                    [disabled]="!updateFlags.enabled"
+                    [matTooltip]="updateFlags.tooltip || 'Edit Pass Through Flags'"
+                    class="edit-flags-button">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                }
+              </dd>
+            }
           }
         }
       </dl>

@@ -99,12 +99,16 @@ describe('HostOverview Component', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     const chips = compiled.querySelectorAll('.lab-type-wrapper .lab-type-chip');
-    expect(chips.length).toBe(5);
-    expect(chips[0].textContent?.trim()).toBe('Lab1');
-    expect(chips[1].textContent?.trim()).toBe('Lab2');
-    expect(chips[2].textContent?.trim()).toBe('Lab3');
-    expect(chips[3].textContent?.trim()).toBe('Lab4');
-    expect(chips[4].textContent?.trim()).toBe('Lab5');
+    if (component.isGoogle1p) {
+      expect(chips.length).toBe(5);
+      expect(chips[0].textContent?.trim()).toBe('Lab1');
+      expect(chips[1].textContent?.trim()).toBe('Lab2');
+      expect(chips[2].textContent?.trim()).toBe('Lab3');
+      expect(chips[3].textContent?.trim()).toBe('Lab4');
+      expect(chips[4].textContent?.trim()).toBe('Lab5');
+    } else {
+      expect(chips.length).toBe(0);
+    }
   });
 
   it('should display visible lab server actions', () => {

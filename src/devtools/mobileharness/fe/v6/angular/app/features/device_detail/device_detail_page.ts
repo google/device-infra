@@ -22,6 +22,7 @@ import {dateUtils} from '@deviceinfra/app/shared/utils/date_utils';
 import {APP_DATA, getLegacyFeUrl} from '../../core/models/app_data';
 import {DeviceOverviewPageData} from '../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../core/services/device/device_service';
+import {EnvUniverseService} from '../../core/services/env_universe_service';
 import {NavLink} from '../../shared/components/nav_link/nav_link';
 import {ClipboardService} from '../../shared/services/clipboard_service';
 import {SnackBarService} from '../../shared/services/snackbar_service';
@@ -73,29 +74,26 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
   private readonly appData = inject(APP_DATA);
   private readonly clipboardService = inject(ClipboardService);
   private readonly loadingService = inject(LoadingService);
+  private readonly envUniverseService = inject(EnvUniverseService);
 
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
 
   activeTab = signal<'overview' | 'test-history' | 'health' | 'record'>(
     'overview',
   );
-  isGoogle1p = signal<boolean>(false);
+  readonly isGoogle1p = this.envUniverseService.isGoogle1P();
 
   ngOnInit() {
     combineLatest([
       this.route.paramMap.pipe(map((params) => params.get('id'))),
       this.route.queryParamMap.pipe(
-        map((params) => ({
-          isEmbedded: params.get('is_embedded_mode') === 'true',
-          universe: params.get('universe'),
-        })),
+        map((params) => params.get('is_embedded_mode') === 'true'),
       ),
     ])
       .pipe(takeUntil(this.destroyed))
-      .subscribe(([id, {isEmbedded, universe}]) => {
+      .subscribe(([id, isEmbedded]) => {
         const isStandalone = !isEmbedded;
         this.hasBackground = isStandalone;
-        this.isGoogle1p.set(!universe || universe === 'google_1p');
         this.cdr.markForCheck();
         // for embedded mode, we don't need to set the title.
         if (isStandalone && id) {

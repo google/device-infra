@@ -29,7 +29,7 @@ import {MatProgressBarModule} from '@angular/material/progress-bar';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatTableDataSource, MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
-import {ActivatedRoute} from '@angular/router';
+
 import {map, tap} from 'rxjs/operators';
 import {NavLink} from '../../../../shared/components/nav_link/nav_link';
 
@@ -51,7 +51,7 @@ import {
   UiLabType,
   type HostOverview,
 } from '../../../../core/models/host_overview';
-import {Environment} from '../../../../core/services/environment';
+import {EnvUniverseService} from '../../../../core/services/env_universe_service';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
 import {InfoCard} from '../../../../shared/components/info_card/info_card';
@@ -172,25 +172,18 @@ export class HostOverviewPage implements OnChanges {
   private readonly remoteControlService = inject(RemoteControlService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly snackBar = inject(SnackBarService);
-  private readonly environment = inject(Environment);
+  private readonly envUniverseService = inject(EnvUniverseService);
   private readonly comingSoonService = inject(ComingSoonService);
   private readonly appData = inject(APP_DATA);
-  private readonly route = inject(ActivatedRoute);
 
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
 
   readonly objectUtils = objectUtils;
   readonly dateUtils = dateUtils;
-  readonly isGoogleInternal = this.environment.isGoogleInternal();
-  readonly isGoogle1p = toSignal(
-    this.route.queryParamMap.pipe(
-      map((params) => {
-        const universe = params.get('universe');
-        return !universe || universe === 'google_1p';
-      }),
-    ),
-    {initialValue: true},
-  );
+
+  readonly isGoogleInternal = this.envUniverseService.isGoogleInternal();
+  readonly isGoogle1p = this.envUniverseService.isGoogle1P();
+
   readonly ActionBarAction = ActionBarAction;
 
   @Input({required: true}) host!: HostOverview;
@@ -384,7 +377,7 @@ export class HostOverviewPage implements OnChanges {
       },
     ];
 
-    if (this.isGoogle1p()) {
+    if (this.isGoogle1p) {
       baseItems.push({
         id: 'daemon-server',
         label: 'Daemon Server',

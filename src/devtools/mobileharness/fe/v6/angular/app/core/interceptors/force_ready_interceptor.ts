@@ -55,6 +55,7 @@ export const forceReadyInterceptor: HttpInterceptorFn = (req, next) => {
       handler: modifyDeviceOverview,
       forcedButtons: buttons,
     });
+    // we still have device action buttons in the host detail page.
     rules.push({
       matcher: (r) =>
         r.method === 'GET' && /\/v6\/hosts\/[^\/]+\/devices$/.test(r.url),
