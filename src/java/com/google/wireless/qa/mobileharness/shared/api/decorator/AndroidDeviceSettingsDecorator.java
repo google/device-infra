@@ -935,6 +935,31 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
           "hidden_api_denylist_exemptions", spec.getEnableHiddenApi() ? "\\*" : "null");
     }
 
+    // verifier_verify_adb_installs
+    if (spec.hasVerifierVerifyAdbInstalls()) {
+      settings.global.add(
+          "verifier_verify_adb_installs", toInt(spec.getVerifierVerifyAdbInstalls()));
+    }
+
+    // hide_error_dialogs
+    if (spec.hasHideErrorDialogs()) {
+      settings.global.add("hide_error_dialogs", toInt(spec.getHideErrorDialogs()));
+    }
+
+    // google_play_store_system_component_update
+    if (spec.hasGooglePlayStoreSystemComponentUpdate()) {
+      settings.global.add(
+          "google_play_store_system_component_update",
+          toInt(spec.getGooglePlayStoreSystemComponentUpdate()));
+    }
+
+    // google_play_store_system_component_update_last_user_id
+    if (spec.hasGooglePlayStoreSystemComponentUpdateLastUserId()) {
+      settings.global.add(
+          "google_play_store_system_component_update_last_user_id",
+          spec.getGooglePlayStoreSystemComponentUpdateLastUserId());
+    }
+
     if (spec.hasEnableFuse()) {
       props.put(
           "persist.sys.fflag.override.settings_fuse", spec.getEnableFuse() ? "true" : "false");

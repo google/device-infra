@@ -27,7 +27,7 @@ option java_multiple_files = true;
 // If a field is not set explicitly, it will be ignored, but not set to the
 // default value.
 //
-// next tag: 83
+// next tag: 87
 
 message AndroidDeviceSettingsDecoratorSpec {
   extend DecoratorSpec {
@@ -405,6 +405,29 @@ message AndroidDeviceSettingsDecoratorSpec {
     help: "Turn 'screen always on' on or off. If set to true, then "
           "screen_timeout_sec must be unset."
   }];
+
+  optional bool verifier_verify_adb_installs = 83 [(field_detail) = {
+    help: "Whether to verify ADB installs. Corresponds to "
+          "'verifier_verify_adb_installs' global setting."
+  }];
+
+  optional bool hide_error_dialogs = 84 [(field_detail) = {
+    help: "Disable crash error dialogs to avoid affecting following tests. "
+          "Corresponds to 'hide_error_dialogs' global setting."
+  }];
+
+  optional bool google_play_store_system_component_update = 85 [(field_detail) = {
+    help: "Disable system component update (GMS Core and Mainline). Corresponds"
+          " to 'google_play_store_system_component_update' global setting."
+  }];
+
+  optional int32 google_play_store_system_component_update_last_user_id = 86 [
+    (field_detail) = {
+      help: "Set the last user ID for system component update. Corresponds to "
+            "'google_play_store_system_component_update_last_user_id' global "
+            "setting."
+    }
+  ];
 
   // Deprecated fields. DO NOT reuse them.
   reserved 1, 11, 15;
