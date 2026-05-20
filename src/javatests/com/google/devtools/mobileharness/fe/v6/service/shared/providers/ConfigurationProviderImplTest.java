@@ -38,7 +38,6 @@ import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigService
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.DeviceConfigStub;
-import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -84,11 +83,12 @@ public final class ConfigurationProviderImplTest {
     when(deviceConfigStub.getDeviceConfigsAsync(any(), eq(false)))
         .thenReturn(immediateFuture(response));
 
-    Optional<DeviceConfig> result =
+    ConfigResult<DeviceConfig> result =
         configurationProvider.getDeviceConfig("device_id", UNIVERSE).get();
 
-    assertThat(result).isPresent();
-    assertThat(result.get()).isEqualTo(deviceConfig);
+    assertThat(result.isAvailable()).isTrue();
+    assertThat(result.config()).isPresent();
+    assertThat(result.config().get()).isEqualTo(deviceConfig);
   }
 
   @Test
@@ -99,10 +99,25 @@ public final class ConfigurationProviderImplTest {
     when(deviceConfigStub.getLabConfigAsync(any(), eq(false)))
         .thenReturn(immediateFuture(response));
 
-    Optional<LabConfig> result = configurationProvider.getLabConfig("host_name", UNIVERSE).get();
+    ConfigResult<LabConfig> result =
+        configurationProvider.getLabConfig("host_name", UNIVERSE).get();
 
-    assertThat(result).isPresent();
-    assertThat(result.get()).isEqualTo(labConfig);
+    assertThat(result.isAvailable()).isTrue();
+    assertThat(result.config()).isPresent();
+    assertThat(result.config().get()).isEqualTo(labConfig);
+  }
+
+  @Test
+  public void getLabConfig_noConfigOnServer_returnsEmptyConfig() throws Exception {
+    GetLabConfigResponse response = GetLabConfigResponse.getDefaultInstance();
+    when(deviceConfigStub.getLabConfigAsync(any(), eq(false)))
+        .thenReturn(immediateFuture(response));
+
+    ConfigResult<LabConfig> result =
+        configurationProvider.getLabConfig("host_name", UNIVERSE).get();
+
+    assertThat(result.isAvailable()).isTrue();
+    assertThat(result.config()).isEmpty();
   }
 
   @Test
@@ -131,22 +146,23 @@ public final class ConfigurationProviderImplTest {
   }
 
   @Test
-  public void getDeviceConfig_configServiceUnavailable_returnsEmpty() throws Exception {
+  public void getDeviceConfig_configServiceUnavailable_returnsUnavailable() throws Exception {
     when(configServiceCapability.isConfigServiceAvailable()).thenReturn(false);
 
-    Optional<DeviceConfig> result =
+    ConfigResult<DeviceConfig> result =
         configurationProvider.getDeviceConfig("device_id", UNIVERSE).get();
 
-    assertThat(result).isEmpty();
+    assertThat(result.isAvailable()).isFalse();
   }
 
   @Test
-  public void getLabConfig_configServiceUnavailable_returnsEmpty() throws Exception {
+  public void getLabConfig_configServiceUnavailable_returnsUnavailable() throws Exception {
     when(configServiceCapability.isConfigServiceAvailable()).thenReturn(false);
 
-    Optional<LabConfig> result = configurationProvider.getLabConfig("host_name", UNIVERSE).get();
+    ConfigResult<LabConfig> result =
+        configurationProvider.getLabConfig("host_name", UNIVERSE).get();
 
-    assertThat(result).isEmpty();
+    assertThat(result.isAvailable()).isFalse();
   }
 
   @Test

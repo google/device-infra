@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.DeviceData;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.ManagementMode;
 import com.google.devtools.mobileharness.fe.v6.service.shared.SubDeviceInfoListFactory;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseFactory;
@@ -140,7 +141,7 @@ public final class DeviceServiceLogicImplTest {
         .thenReturn(immediateFuture(labInfoResponse));
 
     when(configurationProvider.getDeviceConfig(anyString(), any(UniverseScope.class)))
-        .thenReturn(immediateFuture(Optional.empty()));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.empty())));
     when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(
             any(), any(), any(), any(UniverseScope.class)))
         .thenReturn(DeviceHeaderInfo.getDefaultInstance());

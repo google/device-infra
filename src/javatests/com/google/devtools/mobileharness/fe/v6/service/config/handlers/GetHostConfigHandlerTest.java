@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfig
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostConfigUiStatus;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.inject.Guice;
@@ -76,7 +77,7 @@ public final class GetHostConfigHandlerTest {
   @Test
   public void getHostConfig_empty() throws Exception {
     when(configurationProvider.getLabConfig(any(), any(UniverseScope.class)))
-        .thenReturn(immediateFuture(Optional.empty()));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.empty())));
 
     GetHostConfigRequest request = GetHostConfigRequest.newBuilder().setHostName("host").build();
     assertThat(getHostConfigHandler.getHostConfig(request, SELF_UNIVERSE).get())
@@ -101,7 +102,7 @@ public final class GetHostConfigHandlerTest {
   public void getHostConfig_success() throws Exception {
     LabConfig labConfig = LabConfig.newBuilder().setHostName("host").build();
     when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
-        .thenReturn(immediateFuture(Optional.of(labConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(labConfig))));
 
     GetHostConfigRequest request =
         GetHostConfigRequest.newBuilder().setHostName("host").setUniverse("universe").build();

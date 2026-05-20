@@ -164,7 +164,8 @@ public final class UpdateDeviceConfigHandler {
       UpdateDeviceConfigRequest request, UniverseScope universe, BasicDeviceConfig incoming) {
     return Futures.transformAsync(
         configurationProvider.getDeviceConfig(request.getId(), universe),
-        existingConfigOpt -> {
+        deviceConfigResult -> {
+          Optional<DeviceConfig> existingConfigOpt = deviceConfigResult.config();
           DeviceConfig.Builder configToUpdate =
               existingConfigOpt.isPresent()
                   ? existingConfigOpt.get().toBuilder()

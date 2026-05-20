@@ -61,7 +61,8 @@ public final class CheckHostWritePermissionHandler {
 
     return Futures.transformAsync(
         configurationProvider.getLabConfig(hostName, universe),
-        (Optional<LabConfig> labConfig) -> {
+        labConfigResult -> {
+          Optional<LabConfig> labConfig = labConfigResult.config();
           if (labConfig.isEmpty()) {
             return immediateFuture(
                 CheckHostWritePermissionResponse.newBuilder().setHasPermission(false).build());

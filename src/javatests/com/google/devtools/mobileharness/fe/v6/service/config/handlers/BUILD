@@ -44,6 +44,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_service_capability",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/auth",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:config_result",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",

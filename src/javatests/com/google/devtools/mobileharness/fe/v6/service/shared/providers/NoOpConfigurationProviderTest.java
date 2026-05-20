@@ -40,15 +40,17 @@ public class NoOpConfigurationProviderTest {
   }
 
   @Test
-  public void getDeviceConfig_returnEmpty() throws Exception {
-    assertThat(provider.getDeviceConfig("device_id", new UniverseScope.SelfUniverse()).get())
-        .isEmpty();
+  public void getDeviceConfig_returnUnavailable() throws Exception {
+    ConfigResult<DeviceConfig> result =
+        provider.getDeviceConfig("device_id", new UniverseScope.SelfUniverse()).get();
+    assertThat(result.isAvailable()).isFalse();
   }
 
   @Test
-  public void getLabConfig_returnEmpty() throws Exception {
-    assertThat(provider.getLabConfig("host_name", new UniverseScope.SelfUniverse()).get())
-        .isEmpty();
+  public void getLabConfig_returnUnavailable() throws Exception {
+    ConfigResult<LabConfig> result =
+        provider.getLabConfig("host_name", new UniverseScope.SelfUniverse()).get();
+    assertThat(result.isAvailable()).isFalse();
   }
 
   @Test

@@ -20,13 +20,13 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
-import java.util.Optional;
 
 /** Interface for fetching and updating device and lab configurations. */
 public interface ConfigurationProvider {
-  ListenableFuture<Optional<DeviceConfig>> getDeviceConfig(String deviceId, UniverseScope universe);
+  ListenableFuture<ConfigResult<DeviceConfig>> getDeviceConfig(
+      String deviceId, UniverseScope universe);
 
-  ListenableFuture<Optional<LabConfig>> getLabConfig(String hostName, UniverseScope universe);
+  ListenableFuture<ConfigResult<LabConfig>> getLabConfig(String hostName, UniverseScope universe);
 
   ListenableFuture<Void> updateDeviceConfig(
       String deviceId, DeviceConfig deviceConfig, UniverseScope universe);

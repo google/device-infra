@@ -60,10 +60,10 @@ public class ConfigurationProviderImpl implements ConfigurationProvider {
   }
 
   @Override
-  public ListenableFuture<Optional<DeviceConfig>> getDeviceConfig(
+  public ListenableFuture<ConfigResult<DeviceConfig>> getDeviceConfig(
       String deviceId, UniverseScope universe) {
     if (!configServiceCapabilityFactory.create(universe).isConfigServiceAvailable()) {
-      return immediateFuture(Optional.empty());
+      return immediateFuture(ConfigResult.unavailable());
     }
 
     GetDeviceConfigsRequest request =
@@ -72,21 +72,22 @@ public class ConfigurationProviderImpl implements ConfigurationProvider {
             .build();
     return Futures.transform(
         deviceConfigStub.getDeviceConfigsAsync(request, false),
-        response -> response.getDeviceConfigList().stream().findFirst(),
+        response -> ConfigResult.available(response.getDeviceConfigList().stream().findFirst()),
         executor);
   }
 
   @Override
-  public ListenableFuture<Optional<LabConfig>> getLabConfig(
+  public ListenableFuture<ConfigResult<LabConfig>> getLabConfig(
       String hostName, UniverseScope universe) {
     if (!configServiceCapabilityFactory.create(universe).isConfigServiceAvailable()) {
-      return immediateFuture(Optional.empty());
+      return immediateFuture(ConfigResult.unavailable());
     }
     GetLabConfigRequest request = GetLabConfigRequest.newBuilder().setLabHost(hostName).build();
     return Futures.transform(
         deviceConfigStub.getLabConfigAsync(request, false),
         response ->
-            response.hasLabConfig() ? Optional.of(response.getLabConfig()) : Optional.empty(),
+            ConfigResult.available(
+                response.hasLabConfig() ? Optional.of(response.getLabConfig()) : Optional.empty()),
         executor);
   }
 

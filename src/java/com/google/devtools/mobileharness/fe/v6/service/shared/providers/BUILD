@@ -21,9 +21,18 @@ package(
 )
 
 java_library(
+    name = "config_result",
+    srcs = ["ConfigResult.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+    ],
+)
+
+java_library(
     name = "configuration_provider",
     srcs = ["ConfigurationProvider.java"],
     deps = [
+        ":config_result",
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
@@ -35,6 +44,7 @@ java_library(
     name = "configuration_provider_impl",
     srcs = ["ConfigurationProviderImpl.java"],
     deps = [
+        ":config_result",
         ":configuration_provider",
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_config_service_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
@@ -75,6 +85,7 @@ java_library(
     name = "no_op_configuration_provider",
     srcs = ["NoOpConfigurationProvider.java"],
     deps = [
+        ":config_result",
         ":configuration_provider",
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",

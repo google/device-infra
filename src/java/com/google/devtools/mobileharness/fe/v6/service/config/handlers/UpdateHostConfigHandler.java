@@ -141,7 +141,8 @@ public final class UpdateHostConfigHandler {
       UpdateHostConfigRequest request, UniverseScope universe) {
     return Futures.transformAsync(
         configurationProvider.getLabConfig(request.getHostName(), universe),
-        existingConfigOpt -> {
+        labConfigResult -> {
+          Optional<LabConfig> existingConfigOpt = labConfigResult.config();
           LabConfig.Builder builder =
               existingConfigOpt.isPresent()
                   ? existingConfigOpt.get().toBuilder()

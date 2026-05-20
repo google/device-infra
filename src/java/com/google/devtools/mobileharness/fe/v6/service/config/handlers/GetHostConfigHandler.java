@@ -67,11 +67,11 @@ public final class GetHostConfigHandler {
 
     return Futures.transform(
         configurationProvider.getLabConfig(request.getHostName(), universe),
-        labConfigOpt -> {
-          if (labConfigOpt.isEmpty()) {
+        labConfigResult -> {
+          if (!labConfigResult.isAvailable() || labConfigResult.config().isEmpty()) {
             return GetHostConfigResponse.getDefaultInstance();
           }
-          LabConfig labConfig = labConfigOpt.get();
+          LabConfig labConfig = labConfigResult.config().get();
           HostConfig hostConfig = ConfigConverter.toFeHostConfig(labConfig);
           HostConfigUiStatus uiStatus = configServiceCapability.calculateHostUiStatus();
 

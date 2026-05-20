@@ -22,6 +22,7 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListenableFuture;
@@ -42,6 +43,7 @@ import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigService
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.DeviceData;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.ManagementMode;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
@@ -112,10 +114,20 @@ public final class DeviceDataLoaderTest {
         .thenReturn(configServiceCapability);
     when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any(UniverseScope.class)))
         .thenReturn(immediateFuture(DEFAULT_LAB_INFO_RESPONSE));
-    when(configurationProvider.getDeviceConfig(anyString(), any(UniverseScope.class)))
-        .thenReturn(immediateFuture(Optional.empty()));
-    when(configurationProvider.getLabConfig(anyString(), any(UniverseScope.class)))
-        .thenReturn(immediateFuture(Optional.of(LabConfig.getDefaultInstance())));
+
+    // Default stubs for working service (UNIVERSE)
+    when(configurationProvider.getDeviceConfig(anyString(), eq(UNIVERSE)))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.empty())));
+    when(configurationProvider.getLabConfig(anyString(), eq(UNIVERSE)))
+        .thenReturn(
+            immediateFuture(ConfigResult.available(Optional.of(LabConfig.getDefaultInstance()))));
+
+    // Default stubs for unsupported service (UNSUPPORTED_UNIVERSE)
+    when(configurationProvider.getDeviceConfig(anyString(), eq(UNSUPPORTED_UNIVERSE)))
+        .thenReturn(immediateFuture(ConfigResult.unavailable()));
+    when(configurationProvider.getLabConfig(anyString(), eq(UNSUPPORTED_UNIVERSE)))
+        .thenReturn(immediateFuture(ConfigResult.unavailable()));
+
     when(environment.isGoogleInternal()).thenReturn(true);
     when(configServiceCapability.isConfigServiceAvailable()).thenReturn(true);
   }
@@ -124,7 +136,7 @@ public final class DeviceDataLoaderTest {
   public void loadDeviceData_perDevice_success() throws Exception {
     DeviceConfig individualConfig = DeviceConfig.newBuilder().setUuid(DEVICE_ID).build();
     when(configurationProvider.getDeviceConfig(DEVICE_ID, UNIVERSE))
-        .thenReturn(immediateFuture(Optional.of(individualConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(individualConfig))));
 
     DeviceData deviceData = deviceDataLoader.loadDeviceData(DEVICE_ID, UNIVERSE).get();
 
@@ -134,14 +146,26 @@ public final class DeviceDataLoaderTest {
   }
 
   @Test
-  public void loadDeviceData_notSupported_labConfigMissing() throws Exception {
+  public void loadDeviceData_notSupported_labConfigUnavailable() throws Exception {
     when(configurationProvider.getLabConfig(HOST_NAME, UNIVERSE))
-        .thenReturn(immediateFuture(Optional.empty()));
+        .thenReturn(immediateFuture(ConfigResult.unavailable()));
 
     DeviceData deviceData = deviceDataLoader.loadDeviceData(DEVICE_ID, UNIVERSE).get();
 
     assertThat(deviceData.managementMode()).isEqualTo(ManagementMode.NOT_SUPPORTED);
     assertThat(deviceData.isConfigSupported()).isFalse();
+  }
+
+  @Test
+  public void loadDeviceData_labConfigMissingButServiceAvailable_resolvesToPerDevice()
+      throws Exception {
+    when(configurationProvider.getLabConfig(HOST_NAME, UNIVERSE))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.empty())));
+
+    DeviceData deviceData = deviceDataLoader.loadDeviceData(DEVICE_ID, UNIVERSE).get();
+
+    assertThat(deviceData.managementMode()).isEqualTo(ManagementMode.PER_DEVICE);
+    assertThat(deviceData.isConfigSupported()).isTrue();
   }
 
   @Test
@@ -155,7 +179,7 @@ public final class DeviceDataLoaderTest {
             .setDefaultDeviceConfig(BasicDeviceConfig.newBuilder().addOwner("host_owner"))
             .build();
     when(configurationProvider.getLabConfig(HOST_NAME, UNIVERSE))
-        .thenReturn(immediateFuture(Optional.of(labConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(labConfig))));
 
     DeviceData deviceData = deviceDataLoader.loadDeviceData(DEVICE_ID, UNIVERSE).get();
 

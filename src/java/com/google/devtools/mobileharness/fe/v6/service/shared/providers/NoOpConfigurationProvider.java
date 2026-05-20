@@ -23,21 +23,20 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
-import java.util.Optional;
 
 /** No-op implementation of {@link ConfigurationProvider}. */
 public class NoOpConfigurationProvider implements ConfigurationProvider {
 
   @Override
-  public ListenableFuture<Optional<DeviceConfig>> getDeviceConfig(
+  public ListenableFuture<ConfigResult<DeviceConfig>> getDeviceConfig(
       String deviceId, UniverseScope universe) {
-    return immediateFuture(Optional.empty());
+    return immediateFuture(ConfigResult.unavailable());
   }
 
   @Override
-  public ListenableFuture<Optional<LabConfig>> getLabConfig(
+  public ListenableFuture<ConfigResult<LabConfig>> getLabConfig(
       String hostName, UniverseScope universe) {
-    return immediateFuture(Optional.empty());
+    return immediateFuture(ConfigResult.unavailable());
   }
 
   @Override

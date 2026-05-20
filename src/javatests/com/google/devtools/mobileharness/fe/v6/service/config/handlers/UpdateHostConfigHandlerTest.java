@@ -53,6 +53,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostCo
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateOptions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.WifiConfig;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
@@ -97,7 +98,7 @@ public final class UpdateHostConfigHandlerTest {
         .thenReturn(configServiceCapability);
     when(environment.isAts()).thenReturn(false);
     when(configurationProvider.getLabConfig(anyString(), any(UniverseScope.class)))
-        .thenReturn(immediateFuture(Optional.empty()));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.empty())));
     when(configurationProvider.updateLabConfig(
             anyString(), any(LabConfig.class), any(UniverseScope.class)))
         .thenReturn(immediateVoidFuture());
@@ -155,7 +156,7 @@ public final class UpdateHostConfigHandlerTest {
                     .build())
             .build();
     when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
-        .thenReturn(immediateFuture(Optional.of(existingConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
     when(configurationProvider.updateLabConfig(eq(hostName), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
@@ -212,7 +213,7 @@ public final class UpdateHostConfigHandlerTest {
                     .build())
             .build();
     when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
-        .thenReturn(immediateFuture(Optional.of(existingConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
 
     updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
 
@@ -282,7 +283,9 @@ public final class UpdateHostConfigHandlerTest {
 
     when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
         .thenReturn(
-            immediateFuture(Optional.of(LabConfig.newBuilder().setHostName(hostName).build())));
+            immediateFuture(
+                ConfigResult.available(
+                    Optional.of(LabConfig.newBuilder().setHostName(hostName).build()))));
     when(configurationProvider.updateLabConfig(eq(hostName), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
@@ -332,7 +335,7 @@ public final class UpdateHostConfigHandlerTest {
             .setDefaultDeviceConfig(BasicDeviceConfig.newBuilder().addOwner("old_owner").build())
             .build();
     when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
-        .thenReturn(immediateFuture(Optional.of(existingConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
     when(configurationProvider.updateLabConfig(eq(hostName), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
@@ -495,7 +498,7 @@ public final class UpdateHostConfigHandlerTest {
             .setDefaultDeviceConfig(BasicDeviceConfig.newBuilder().addOwner("old_owner").build())
             .build();
     when(configurationProvider.getLabConfig(eq(hostName), any(UniverseScope.class)))
-        .thenReturn(immediateFuture(Optional.of(existingLabConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingLabConfig))));
 
     DeviceConfig feDeviceConfig =
         DeviceConfig.newBuilder()
@@ -531,7 +534,7 @@ public final class UpdateHostConfigHandlerTest {
     String hostName = "host";
     LabConfig existingLabConfig = LabConfig.getDefaultInstance();
     when(configurationProvider.getLabConfig(eq(hostName), any(UniverseScope.class)))
-        .thenReturn(immediateFuture(Optional.of(existingLabConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingLabConfig))));
 
     DeviceDiscoverySettings discovery =
         DeviceDiscoverySettings.newBuilder()
@@ -758,7 +761,7 @@ public final class UpdateHostConfigHandlerTest {
                     .build())
             .build();
     when(configurationProvider.getLabConfig(eq(hostName), any(UniverseScope.class)))
-        .thenReturn(immediateFuture(Optional.of(existingLabConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingLabConfig))));
 
     UpdateHostConfigRequest request =
         UpdateHostConfigRequest.newBuilder()
@@ -796,7 +799,7 @@ public final class UpdateHostConfigHandlerTest {
                     .build())
             .build();
     when(configurationProvider.getLabConfig(eq(hostName), any(UniverseScope.class)))
-        .thenReturn(immediateFuture(Optional.of(existingLabConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingLabConfig))));
 
     UpdateHostConfigRequest request =
         UpdateHostConfigRequest.newBuilder()

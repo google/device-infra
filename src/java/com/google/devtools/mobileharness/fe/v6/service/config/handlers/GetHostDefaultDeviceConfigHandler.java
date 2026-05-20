@@ -63,11 +63,11 @@ public final class GetHostDefaultDeviceConfigHandler {
 
     return Futures.transform(
         configurationProvider.getLabConfig(request.getHostName(), universe),
-        labConfigOpt -> {
-          if (labConfigOpt.isEmpty()) {
+        labConfigResult -> {
+          if (!labConfigResult.isAvailable() || labConfigResult.config().isEmpty()) {
             return GetHostDefaultDeviceConfigResponse.getDefaultInstance();
           }
-          LabConfig labConfig = labConfigOpt.get();
+          LabConfig labConfig = labConfigResult.config().get();
           DeviceConfig.Builder builder = DeviceConfig.newBuilder();
           if (labConfig.hasDefaultDeviceConfig()) {
             builder.mergeFrom(ConfigConverter.toFeDeviceConfig(labConfig.getDefaultDeviceConfig()));

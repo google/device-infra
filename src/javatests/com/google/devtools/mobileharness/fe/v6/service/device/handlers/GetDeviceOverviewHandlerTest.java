@@ -65,6 +65,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HostInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.SubDeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.shared.SubDeviceInfoListFactory;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
@@ -171,10 +172,11 @@ public final class GetDeviceOverviewHandlerTest {
     when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any(UniverseScope.class)))
         .thenReturn(immediateFuture(DEFAULT_LAB_INFO_RESPONSE));
     when(configurationProvider.getDeviceConfig(anyString(), any(UniverseScope.class)))
-        .thenReturn(immediateFuture(Optional.empty()));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.empty())));
     // By default, assume Config Service is available but returns nothing
     when(configurationProvider.getLabConfig(anyString(), any(UniverseScope.class)))
-        .thenReturn(immediateFuture(Optional.of(LabConfig.getDefaultInstance())));
+        .thenReturn(
+            immediateFuture(ConfigResult.available(Optional.of(LabConfig.getDefaultInstance()))));
     when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(
             any(), any(), any(), any(UniverseScope.class)))
         .thenReturn(
@@ -331,7 +333,7 @@ public final class GetDeviceOverviewHandlerTest {
                             .addRequiredDimension(DIMENSION_CONFIG_REQUIRED)))
             .build();
     when(configurationProvider.getDeviceConfig(anyString(), any(UniverseScope.class)))
-        .thenReturn(immediateFuture(Optional.of(deviceConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(deviceConfig))));
 
     ListenableFuture<DeviceOverviewPageData> responseFuture =
         getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE);
@@ -396,10 +398,12 @@ public final class GetDeviceOverviewHandlerTest {
                             .addRequiredDimension(DIMENSION_CONFIG_REQUIRED)))
             .build();
     when(configurationProvider.getLabConfig(anyString(), any(UniverseScope.class)))
-        .thenReturn(immediateFuture(Optional.of(labConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(labConfig))));
     // DeviceConfig should be ignored even if present
     when(configurationProvider.getDeviceConfig(anyString(), any(UniverseScope.class)))
-        .thenReturn(immediateFuture(Optional.of(DeviceConfig.getDefaultInstance())));
+        .thenReturn(
+            immediateFuture(
+                ConfigResult.available(Optional.of(DeviceConfig.getDefaultInstance()))));
 
     ListenableFuture<DeviceOverviewPageData> responseFuture =
         getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE);
@@ -451,6 +455,10 @@ public final class GetDeviceOverviewHandlerTest {
   @Test
   public void getDeviceOverview_unsupportedUniverse_gracefulFallback() throws Exception {
     when(configServiceCapability.isConfigServiceAvailable()).thenReturn(false);
+    when(configurationProvider.getLabConfig(anyString(), any(UniverseScope.class)))
+        .thenReturn(immediateFuture(ConfigResult.unavailable()));
+    when(configurationProvider.getDeviceConfig(anyString(), any(UniverseScope.class)))
+        .thenReturn(immediateFuture(ConfigResult.unavailable()));
 
     DeviceOverviewPageData response =
         getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE).get();

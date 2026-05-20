@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHeaderInfoRequest;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
@@ -74,18 +75,18 @@ public final class GetDeviceHeaderInfoHandler {
 
     // 2. Start ConfigProvider fetches early
     logger.atInfo().log("Fetching DeviceConfig for %s", key);
-    ListenableFuture<Optional<DeviceConfig>> deviceConfigFuture =
+    ListenableFuture<ConfigResult<DeviceConfig>> deviceConfigFuture =
         configurationProvider.getDeviceConfig(deviceId, universe);
 
     // 3. Fetch LabConfig, depends on DeviceInfo
-    ListenableFuture<Optional<LabConfig>> labConfigFuture =
+    ListenableFuture<ConfigResult<LabConfig>> labConfigFuture =
         Futures.transformAsync(
             deviceInfoFuture,
             deviceInfo -> {
               String hostName = deviceInfo.getDeviceLocator().getLabLocator().getHostName();
               logger.atInfo().log("Fetching LabConfig for host %s for key %s", hostName, key);
               return hostName.isEmpty()
-                  ? immediateFuture(Optional.empty())
+                  ? immediateFuture(ConfigResult.available(Optional.empty()))
                   : configurationProvider.getLabConfig(hostName, universe);
             },
             executor);
@@ -96,13 +97,14 @@ public final class GetDeviceHeaderInfoHandler {
             () -> {
               logger.atInfo().log("All base futures succeeded for %s", key);
               DeviceInfo deviceInfo = Futures.getDone(deviceInfoFuture);
-              Optional<LabConfig> labConfigOpt = Futures.getDone(labConfigFuture);
+              ConfigResult<LabConfig> labConfigResult = Futures.getDone(labConfigFuture);
+              Optional<LabConfig> labConfigOpt = labConfigResult.config();
 
-              final ListenableFuture<Optional<DeviceConfig>> finalDeviceConfigFuture;
+              final ListenableFuture<ConfigResult<DeviceConfig>> finalDeviceConfigFuture;
               if (isHostConfigUsed(labConfigOpt)) {
                 logger.atInfo().log("Using host config for %s", key);
                 deviceConfigFuture.cancel(false);
-                finalDeviceConfigFuture = immediateFuture(Optional.empty());
+                finalDeviceConfigFuture = immediateFuture(ConfigResult.available(Optional.empty()));
               } else {
                 logger.atInfo().log("Using device config for %s", key);
                 finalDeviceConfigFuture = deviceConfigFuture;
@@ -110,10 +112,10 @@ public final class GetDeviceHeaderInfoHandler {
 
               return Futures.transform(
                   finalDeviceConfigFuture,
-                  deviceConfigOpt -> {
+                  deviceConfigResult -> {
                     logger.atInfo().log("Building DeviceHeaderInfo for %s", key);
                     return deviceHeaderInfoBuilder.buildDeviceHeaderInfo(
-                        deviceInfo, deviceConfigOpt, labConfigOpt, universe);
+                        deviceInfo, deviceConfigResult.config(), labConfigOpt, universe);
                   },
                   executor);
             },

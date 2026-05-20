@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigService
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfigUiStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigResponse;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
@@ -90,9 +91,9 @@ public final class GetDeviceConfigHandlerTest {
                                                         DeviceInfo.getDefaultInstance())))))
                     .build()));
     when(configurationProvider.getLabConfig(anyString(), any(UniverseScope.class)))
-        .thenReturn(immediateFuture(Optional.empty()));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.empty())));
     when(configurationProvider.getDeviceConfig(anyString(), any(UniverseScope.class)))
-        .thenReturn(immediateFuture(Optional.empty()));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.empty())));
   }
 
   @Test

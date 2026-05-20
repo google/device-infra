@@ -48,6 +48,7 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.DeviceData;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.ManagementMode;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
@@ -146,7 +147,7 @@ public final class UpdateDeviceConfigHandlerTest {
                     Optional.empty(),
                     Optional.of(existingConfig))));
     when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
-        .thenReturn(immediateFuture(Optional.of(existingConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
     when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
@@ -218,7 +219,7 @@ public final class UpdateDeviceConfigHandlerTest {
                     Optional.empty(),
                     Optional.of(existingConfig))));
     when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
-        .thenReturn(immediateFuture(Optional.of(existingConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
     when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
@@ -336,7 +337,7 @@ public final class UpdateDeviceConfigHandlerTest {
                     Optional.empty(),
                     Optional.of(existingConfig))));
     when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
-        .thenReturn(immediateFuture(Optional.of(existingConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
     when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
@@ -379,7 +380,7 @@ public final class UpdateDeviceConfigHandlerTest {
                     Optional.empty(),
                     Optional.of(existingConfig))));
     when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
-        .thenReturn(immediateFuture(Optional.of(existingConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
     when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
@@ -427,7 +428,7 @@ public final class UpdateDeviceConfigHandlerTest {
                     Optional.empty(),
                     Optional.of(existingConfig))));
     when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
-        .thenReturn(immediateFuture(Optional.of(existingConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
     when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
@@ -479,7 +480,7 @@ public final class UpdateDeviceConfigHandlerTest {
                     Optional.empty(),
                     Optional.of(existingConfig))));
     when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
-        .thenReturn(immediateFuture(Optional.of(existingConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
     when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
@@ -519,7 +520,7 @@ public final class UpdateDeviceConfigHandlerTest {
                     Optional.empty(),
                     Optional.of(existingConfig))));
     when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
-        .thenReturn(immediateFuture(Optional.of(existingConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
     when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
@@ -563,7 +564,7 @@ public final class UpdateDeviceConfigHandlerTest {
                     Optional.empty(),
                     Optional.of(existingConfig))));
     when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
-        .thenReturn(immediateFuture(Optional.of(existingConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
     when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 

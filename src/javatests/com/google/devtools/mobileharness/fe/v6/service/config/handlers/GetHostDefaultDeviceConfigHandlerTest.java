@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigService
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigResponse;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.inject.Guice;
@@ -74,7 +75,7 @@ public final class GetHostDefaultDeviceConfigHandlerTest {
   @Test
   public void getHostDefaultDeviceConfig_empty() throws Exception {
     when(configurationProvider.getLabConfig(anyString(), any(UniverseScope.class)))
-        .thenReturn(immediateFuture(Optional.empty()));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.empty())));
 
     GetHostDefaultDeviceConfigRequest request =
         GetHostDefaultDeviceConfigRequest.newBuilder().setHostName("host").build();
@@ -113,7 +114,7 @@ public final class GetHostDefaultDeviceConfigHandlerTest {
             .setDefaultDeviceConfig(BasicDeviceConfig.newBuilder().addOwner("owner").build())
             .build();
     when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
-        .thenReturn(immediateFuture(Optional.of(labConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(labConfig))));
 
     GetHostDefaultDeviceConfigRequest request =
         GetHostDefaultDeviceConfigRequest.newBuilder()
@@ -132,7 +133,7 @@ public final class GetHostDefaultDeviceConfigHandlerTest {
   public void getHostDefaultDeviceConfig_success_noDefault() throws Exception {
     LabConfig labConfig = LabConfig.newBuilder().setHostName("host").build();
     when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
-        .thenReturn(immediateFuture(Optional.of(labConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(labConfig))));
 
     GetHostDefaultDeviceConfigRequest request =
         GetHostDefaultDeviceConfigRequest.newBuilder()

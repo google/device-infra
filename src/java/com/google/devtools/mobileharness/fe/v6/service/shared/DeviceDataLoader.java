@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.api.query.proto.FilterProto;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
@@ -114,7 +115,7 @@ public class DeviceDataLoader {
 
     // Parallel fetch start: DeviceInfo (Required) and Individual Config (Speculative)
     ListenableFuture<DeviceInfo> deviceInfoFuture = getDeviceInfoAsync(deviceId, universe);
-    ListenableFuture<Optional<DeviceConfig>> individualConfigFuture =
+    ListenableFuture<ConfigResult<DeviceConfig>> individualConfigFuture =
         getSafeDeviceConfigAsync(deviceId, universe);
 
     // Sequential chain for LabConfig (depends on host_name)
@@ -122,18 +123,18 @@ public class DeviceDataLoader {
         deviceInfoFuture,
         deviceInfo -> {
           String hostName = deviceInfo.getDeviceLocator().getLabLocator().getHostName();
-          ListenableFuture<Optional<LabConfig>> labConfigFuture =
+          ListenableFuture<ConfigResult<LabConfig>> labConfigFuture =
               getSafeLabConfigAsync(hostName, universe);
 
           return Futures.whenAllSucceed(labConfigFuture, individualConfigFuture)
               .call(
                   () -> {
-                    Optional<LabConfig> labConfigOpt = Futures.getDone(labConfigFuture);
-                    Optional<DeviceConfig> individualConfigOpt =
+                    ConfigResult<LabConfig> labConfigResult = Futures.getDone(labConfigFuture);
+                    ConfigResult<DeviceConfig> individualConfigResult =
                         Futures.getDone(individualConfigFuture);
 
                     return resolveDeviceData(
-                        deviceId, universe, deviceInfo, labConfigOpt, individualConfigOpt);
+                        deviceId, universe, deviceInfo, labConfigResult, individualConfigResult);
                   },
                   executor);
         },
@@ -144,13 +145,12 @@ public class DeviceDataLoader {
       String deviceId,
       UniverseScope universe,
       DeviceInfo deviceInfo,
-      Optional<LabConfig> labConfigOpt,
-      Optional<DeviceConfig> individualConfigOpt) {
+      ConfigResult<LabConfig> labConfigResult,
+      ConfigResult<DeviceConfig> individualConfigResult) {
 
-    // If config service is not supported for the universe, or we couldn't even get a LabConfig,
-    // we assume Config Service is not supported/accessible.
+    // If config service is not supported for the universe, or the result is unavailable
     if (!configServiceCapabilityFactory.create(universe).isConfigServiceAvailable()
-        || labConfigOpt.isEmpty()) {
+        || !labConfigResult.isAvailable()) {
       return DeviceData.create(
           deviceInfo,
           DeviceConfig.getDefaultInstance(),
@@ -159,51 +159,55 @@ public class DeviceDataLoader {
           Optional.empty());
     }
 
-    LabConfig labConfig = labConfigOpt.get();
-    if (isHostManaged(labConfig)) {
-      DeviceConfig effectiveConfig =
-          DeviceConfig.newBuilder()
-              .setUuid(deviceId)
-              .setBasicConfig(labConfig.getDefaultDeviceConfig())
-              .build();
-      return DeviceData.create(
-          deviceInfo,
-          effectiveConfig,
-          ManagementMode.HOST_MANAGED,
-          Optional.of(labConfig),
-          Optional.empty());
+    Optional<LabConfig> labConfigOpt = labConfigResult.config();
+    if (labConfigOpt.isPresent()) {
+      LabConfig labConfig = labConfigOpt.get();
+      if (isHostManaged(labConfig)) {
+        DeviceConfig effectiveConfig =
+            DeviceConfig.newBuilder()
+                .setUuid(deviceId)
+                .setBasicConfig(labConfig.getDefaultDeviceConfig())
+                .build();
+        return DeviceData.create(
+            deviceInfo,
+            effectiveConfig,
+            ManagementMode.HOST_MANAGED,
+            labConfigOpt,
+            Optional.empty());
+      }
     }
 
     // Individual management mode
-    DeviceConfig effectiveConfig = individualConfigOpt.orElse(DeviceConfig.getDefaultInstance());
+    DeviceConfig effectiveConfig =
+        individualConfigResult.config().orElse(DeviceConfig.getDefaultInstance());
     return DeviceData.create(
         deviceInfo,
         effectiveConfig,
         ManagementMode.PER_DEVICE,
-        Optional.of(labConfig),
-        individualConfigOpt);
+        labConfigOpt,
+        individualConfigResult.config());
   }
 
-  private ListenableFuture<Optional<DeviceConfig>> getSafeDeviceConfigAsync(
+  private ListenableFuture<ConfigResult<DeviceConfig>> getSafeDeviceConfigAsync(
       String deviceId, UniverseScope universe) {
     return Futures.catching(
         configurationProvider.getDeviceConfig(deviceId, universe),
         Throwable.class,
         t -> {
           logger.atWarning().withCause(t).log("Failed to fetch DeviceConfig for %s", deviceId);
-          return Optional.empty();
+          return ConfigResult.unavailable();
         },
         executor);
   }
 
-  private ListenableFuture<Optional<LabConfig>> getSafeLabConfigAsync(
+  private ListenableFuture<ConfigResult<LabConfig>> getSafeLabConfigAsync(
       String hostName, UniverseScope universe) {
     return Futures.catching(
         configurationProvider.getLabConfig(hostName, universe),
         Throwable.class,
         t -> {
           logger.atWarning().withCause(t).log("Failed to fetch LabConfig for %s", hostName);
-          return Optional.empty();
+          return ConfigResult.unavailable();
         },
         executor);
   }

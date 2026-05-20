@@ -24,7 +24,10 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
@@ -33,6 +36,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.DeviceView;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHeaderInfoRequest;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
@@ -97,9 +101,9 @@ public final class GetDeviceHeaderInfoHandlerTest {
     when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any(UniverseScope.class)))
         .thenReturn(immediateFuture(DEFAULT_LAB_INFO_RESPONSE));
     when(configurationProvider.getDeviceConfig(anyString(), any(UniverseScope.class)))
-        .thenReturn(immediateFuture(Optional.empty()));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.empty())));
     when(configurationProvider.getLabConfig(anyString(), any(UniverseScope.class)))
-        .thenReturn(immediateFuture(Optional.empty()));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.empty())));
     when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(
             any(), any(), any(), any(UniverseScope.class)))
         .thenReturn(DeviceHeaderInfo.newBuilder().setId(DEVICE_ID).build());
@@ -107,6 +111,27 @@ public final class GetDeviceHeaderInfoHandlerTest {
 
   @Test
   public void getDeviceHeaderInfo_success() throws Exception {
+    GetDeviceHeaderInfoRequest request =
+        GetDeviceHeaderInfoRequest.newBuilder().setId(DEVICE_ID).setUniverse(UNIVERSE).build();
+
+    DeviceHeaderInfo response =
+        getDeviceHeaderInfoHandler.getDeviceHeaderInfo(request, SELF_UNIVERSE).get();
+
+    assertThat(response).isEqualTo(DeviceHeaderInfo.newBuilder().setId(DEVICE_ID).build());
+  }
+
+  @Test
+  public void getDeviceHeaderInfo_hostManaged_success() throws Exception {
+    LabConfig labConfig =
+        LabConfig.newBuilder()
+            .setHostProperties(
+                HostProperties.newBuilder()
+                    .addHostProperty(
+                        HostProperty.newBuilder().setKey("device_config_mode").setValue("host")))
+            .build();
+    when(configurationProvider.getLabConfig(HOST_NAME, SELF_UNIVERSE))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(labConfig))));
+
     GetDeviceHeaderInfoRequest request =
         GetDeviceHeaderInfoRequest.newBuilder().setId(DEVICE_ID).setUniverse(UNIVERSE).build();
 

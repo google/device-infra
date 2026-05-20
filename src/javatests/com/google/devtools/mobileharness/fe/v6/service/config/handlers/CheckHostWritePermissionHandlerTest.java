@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDevic
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.inject.Guice;
@@ -73,7 +74,7 @@ public final class CheckHostWritePermissionHandlerTest {
   @Test
   public void checkHostWritePermission_noLabConfig_returnsFalse() throws Exception {
     when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
-        .thenReturn(immediateFuture(Optional.empty()));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.empty())));
 
     CheckHostWritePermissionResponse response =
         handler.checkHostWritePermission("host", SELF_UNIVERSE, Optional.of("user")).get();
@@ -89,7 +90,7 @@ public final class CheckHostWritePermissionHandlerTest {
                 BasicDeviceConfig.newBuilder().addOwner("admin1").addOwner("admin2").build())
             .build();
     when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
-        .thenReturn(immediateFuture(Optional.of(labConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(labConfig))));
 
     CheckHostWritePermissionResponse response =
         handler.checkHostWritePermission("host", SELF_UNIVERSE, Optional.of("admin1")).get();
@@ -101,7 +102,7 @@ public final class CheckHostWritePermissionHandlerTest {
   public void checkHostWritePermission_noAdmins_returnsTrue() throws Exception {
     LabConfig labConfig = LabConfig.getDefaultInstance();
     when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
-        .thenReturn(immediateFuture(Optional.of(labConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(labConfig))));
 
     CheckHostWritePermissionResponse response =
         handler.checkHostWritePermission("host", SELF_UNIVERSE, Optional.of("user")).get();
@@ -119,7 +120,7 @@ public final class CheckHostWritePermissionHandlerTest {
                     .build())
             .build();
     when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
-        .thenReturn(immediateFuture(Optional.of(labConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(labConfig))));
 
     CheckHostWritePermissionResponse response =
         handler.checkHostWritePermission("host", SELF_UNIVERSE, Optional.of("user")).get();
@@ -138,7 +139,7 @@ public final class CheckHostWritePermissionHandlerTest {
                     .build())
             .build();
     when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
-        .thenReturn(immediateFuture(Optional.of(labConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(labConfig))));
     when(groupMembershipProvider.isMemberOfAny(eq("user"), any()))
         .thenReturn(immediateFuture(false));
 
@@ -155,7 +156,7 @@ public final class CheckHostWritePermissionHandlerTest {
             .setDefaultDeviceConfig(BasicDeviceConfig.newBuilder().addOwner("group1").build())
             .build();
     when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
-        .thenReturn(immediateFuture(Optional.of(labConfig)));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(labConfig))));
     when(groupMembershipProvider.isMemberOfAny(eq("user"), any()))
         .thenReturn(immediateFuture(true));
 
