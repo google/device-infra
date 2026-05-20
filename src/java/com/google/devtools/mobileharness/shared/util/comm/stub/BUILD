@@ -71,6 +71,7 @@ java_library(
     ],
     deps = [
         ":grpc_address_util",
+        "//java/com/google/devtools/mobileharness/shared/constant/environment:server_spec",
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
         "@grpc-java//core",
         "@grpc-java//stub",
