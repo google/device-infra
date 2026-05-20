@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.fe.v6.server;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.fe.v6.server.Annotations.ServerPort;
+import com.google.devtools.mobileharness.fe.v6.service.admin.AdminServiceGrpcImpl;
+import com.google.devtools.mobileharness.fe.v6.service.admin.AdminServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.config.ConfigServiceGrpcImpl;
 import com.google.devtools.mobileharness.fe.v6.service.config.ConfigServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.device.DeviceServiceGrpcImpl;
@@ -47,6 +49,7 @@ public final class OssFeServer {
   private final DeviceServiceGrpcImpl deviceService;
   private final HostServiceGrpcImpl hostService;
   private final ConfigServiceGrpcImpl configService;
+  private final AdminServiceGrpcImpl adminService;
   private volatile Server grpcServer;
 
   @Inject
@@ -54,10 +57,12 @@ public final class OssFeServer {
       DeviceServiceGrpcImpl deviceService,
       HostServiceGrpcImpl hostService,
       ConfigServiceGrpcImpl configService,
+      AdminServiceGrpcImpl adminService,
       @ServerPort int port) {
     this.deviceService = deviceService;
     this.hostService = hostService;
     this.configService = configService;
+    this.adminService = adminService;
     this.port = port;
   }
 
@@ -68,6 +73,7 @@ public final class OssFeServer {
             .addService(deviceService)
             .addService(hostService)
             .addService(configService)
+            .addService(adminService)
             .addService(ProtoReflectionService.newInstance())
             .build();
     grpcServer.start();
@@ -100,6 +106,7 @@ public final class OssFeServer {
             new DeviceServiceModule(),
             new HostServiceModule(),
             new ConfigServiceModule(),
+            new AdminServiceModule(),
             new OssStubsModule(),
             new AbstractModule() {
               @Override

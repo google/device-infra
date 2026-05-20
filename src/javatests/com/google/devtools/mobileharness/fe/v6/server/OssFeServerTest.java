@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.server;
 
 import com.google.devtools.mobileharness.fe.v6.server.Annotations.ServerPort;
+import com.google.devtools.mobileharness.fe.v6.service.admin.AdminServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.config.ConfigServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.device.DeviceServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.host.HostServiceModule;
@@ -41,6 +42,7 @@ public final class OssFeServerTest {
             new DeviceServiceModule(),
             new HostServiceModule(),
             new ConfigServiceModule(),
+            new AdminServiceModule(),
             new OssStubsModule(),
             new AbstractModule() {
               @Override

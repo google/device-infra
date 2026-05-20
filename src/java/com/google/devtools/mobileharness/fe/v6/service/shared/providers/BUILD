@@ -97,3 +97,22 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:lab_info",
     ],
 )
+
+java_library(
+    name = "wifi_credentials_store",
+    srcs = ["WifiCredentialsStore.java"],
+    deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/admin:admin_resources_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "no_op_wifi_credentials_store",
+    srcs = ["NoOpWifiCredentialsStore.java"],
+    deps = [
+        ":wifi_credentials_store",
+        "//src/devtools/mobileharness/fe/v6/service/proto/admin:admin_resources_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)

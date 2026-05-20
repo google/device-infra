@@ -1,0 +1,62 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package devtools.mobileharness.fe.v6.service.proto.admin;
+
+import "src/devtools/mobileharness/fe/v6/service/proto/admin/admin_resources.proto";
+
+option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.admin";
+option java_multiple_files = true;
+option java_outer_classname = "AdminServiceProto";
+
+// Admin service for managing FE v6 server configuration.
+// Access should be restricted to MobileHarness team admins.
+// This service is internal-only and does not need an OSS implementation.
+service AdminService {
+  // Sets the Wi-Fi credentials.
+  // Writes the provided credentials to encrypted storage.
+  // This replaces all existing credentials.
+  rpc SetWifiCredentials(SetWifiCredentialsRequest)
+      returns (SetWifiCredentialsResponse);
+
+  // Lists the currently stored Wi-Fi credentials.
+  // Returns the credentials read from encrypted storage.
+  rpc ListWifiCredentials(ListWifiCredentialsRequest)
+      returns (ListWifiCredentialsResponse);
+}
+
+// Request to set (replace) all Wi-Fi credentials.
+message SetWifiCredentialsRequest {
+  // The Wi-Fi credentials to store. Replaces all existing entries.
+  repeated WifiCredentialEntry wifi_credentials = 1;
+}
+
+// Response for SetWifiCredentials.
+message SetWifiCredentialsResponse {
+  // Number of credentials successfully stored.
+  int32 credentials_count = 1;
+}
+
+// Request to list all Wi-Fi credentials.
+message ListWifiCredentialsRequest {}
+
+// Response for ListWifiCredentials.
+message ListWifiCredentialsResponse {
+  // The currently stored Wi-Fi credentials.
+  repeated WifiCredentialEntry wifi_credentials = 1;
+}

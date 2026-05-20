@@ -1,0 +1,41 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package devtools.mobileharness.fe.v6.service.proto.admin;
+
+option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.admin";
+option java_multiple_files = true;
+option java_outer_classname = "AdminResourcesProto";
+
+// A single Wi-Fi credential entry.
+// When stored, the file is transparently encrypted at rest, so no
+// application-layer encryption (Keystore wrap/unwrap) is needed.
+message WifiCredentialEntry {
+  // The network name (SSID).
+  string ssid = 1;
+  // The password (PSK) for the network.
+  string psk = 2;
+}
+
+// Container for Wi-Fi credentials stored on CNS.
+// This proto is written as a binary proto file to encrypted storage,
+// providing encryption at rest without application-layer key management.
+message WifiCredentialStore {
+  // The list of Wi-Fi credentials.
+  repeated WifiCredentialEntry entries = 1;
+}
