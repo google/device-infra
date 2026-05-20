@@ -40,6 +40,7 @@ proto_library(
     srcs = ["admin_service.proto"],
     deps = [
         ":admin_resources_proto",
+        "@googleapis//google/api:annotations_proto",
     ],
 )
 

@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package devtools.mobileharness.fe.v6.service.proto.admin;
 
+import "google/api/annotations.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/admin/admin_resources.proto";
 
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.admin";
@@ -32,12 +33,21 @@ service AdminService {
   // Writes the provided credentials to encrypted storage.
   // This replaces all existing credentials.
   rpc SetWifiCredentials(SetWifiCredentialsRequest)
-      returns (SetWifiCredentialsResponse);
+      returns (SetWifiCredentialsResponse) {
+    option (google.api.http) = {
+      post: "/v6/admin/wifi/credentials"
+      body: "*"
+    };
+  }
 
   // Lists the currently stored Wi-Fi credentials.
   // Returns the credentials read from encrypted storage.
   rpc ListWifiCredentials(ListWifiCredentialsRequest)
-      returns (ListWifiCredentialsResponse);
+      returns (ListWifiCredentialsResponse) {
+    option (google.api.http) = {
+      get: "/v6/admin/wifi/credentials"
+    };
+  }
 }
 
 // Request to set (replace) all Wi-Fi credentials.
