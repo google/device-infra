@@ -109,6 +109,7 @@ java_library(
         ":partner_test_client",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_account_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_bugreport_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_disable_auto_updates_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_file_puller_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_file_pusher_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_hd_video_decorator",
