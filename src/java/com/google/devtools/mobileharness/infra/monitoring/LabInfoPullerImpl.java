@@ -47,7 +47,7 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
   // TODO: This is a temp solution. Reserved dimension keys should be supported at device config
   // service.
   private static final ImmutableSet<String> RESERVED_DIMENSION_NAMES =
-      ImmutableSet.of("decorator", "device_type", "driver", "owner", "status");
+      ImmutableSet.of("decorator", "device_type", "driver", "executor", "owner", "status");
 
   private final LabInfoProvider labInfoProvider;
 
@@ -106,6 +106,7 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
         addAttribute(deviceEntry, "decorator", deviceInfo.getDeviceFeature().getDecoratorList());
         addAttribute(deviceEntry, "device_type", deviceInfo.getDeviceFeature().getTypeList());
         addAttribute(deviceEntry, "driver", deviceInfo.getDeviceFeature().getDriverList());
+        addAttribute(deviceEntry, "executor", deviceInfo.getDeviceFeature().getExecutorList());
         addAttribute(deviceEntry, "owner", deviceInfo.getDeviceFeature().getOwnerList());
         addAttribute(deviceEntry, "status", Optional.of(deviceInfo.getDeviceStatus().toString()));
         addAttribute(

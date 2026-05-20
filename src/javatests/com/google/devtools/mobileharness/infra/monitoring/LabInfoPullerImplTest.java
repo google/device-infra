@@ -73,6 +73,7 @@ public final class LabInfoPullerImplTest {
   private static final String DEVICE_TYPE_1 = "fake_device_type_1";
   private static final String DEVICE_DRIVER_1 = "fake_device_driver_1";
   private static final String DEVICE_DECORATOR_1 = "fake_device_decorator_1";
+  private static final String DEVICE_EXECUTOR_1 = "fake_device_executor_1";
   private static final String DEVICE_MODEL_1 = "fake_device_model_1";
   private static final String DEVICE_SDK_VERSION_1 = "fake_device_sdk_version_1";
   private static final String DEVICE_HARDWARE_1 = "fake_device_hardware_1";
@@ -88,6 +89,7 @@ public final class LabInfoPullerImplTest {
   private static final String DEVICE_TYPE_2 = "fake_device_type_2";
   private static final String DEVICE_DRIVER_2 = "fake_device_driver_2";
   private static final String DEVICE_DECORATOR_2 = "fake_device_decorator_2";
+  private static final String DEVICE_EXECUTOR_2 = "fake_device_executor_2";
   private static final String DEVICE_MODEL_2 = "fake_device_model_2";
   private static final String DEVICE_SOFTWARE_VERSION_2 = "fake_device_software_version_2";
 
@@ -136,6 +138,7 @@ public final class LabInfoPullerImplTest {
                   .addType(DEVICE_TYPE_1)
                   .addDriver(DEVICE_DRIVER_1)
                   .addDecorator(DEVICE_DECORATOR_1)
+                  .addExecutor(DEVICE_EXECUTOR_1)
                   .setCompositeDimension(
                       DeviceCompositeDimension.newBuilder()
                           .addSupportedDimension(
@@ -192,6 +195,7 @@ public final class LabInfoPullerImplTest {
                   .addType(DEVICE_TYPE_2)
                   .addDriver(DEVICE_DRIVER_2)
                   .addDecorator(DEVICE_DECORATOR_2)
+                  .addExecutor(DEVICE_EXECUTOR_2)
                   .setCompositeDimension(
                       DeviceCompositeDimension.newBuilder()
                           .addSupportedDimension(
@@ -273,6 +277,8 @@ public final class LabInfoPullerImplTest {
                     Attribute.newBuilder().setName("decorator").setValue(DEVICE_DECORATOR_1))
                 .addAttribute(Attribute.newBuilder().setName("device_type").setValue(DEVICE_TYPE_1))
                 .addAttribute(Attribute.newBuilder().setName("driver").setValue(DEVICE_DRIVER_1))
+                .addAttribute(
+                    Attribute.newBuilder().setName("executor").setValue(DEVICE_EXECUTOR_1))
                 .addAttribute(Attribute.newBuilder().setName("owner").setValue(DEVICE_OWNER_1))
                 .addAttribute(Attribute.newBuilder().setName("status").setValue("BUSY"))
                 .addAttribute(
@@ -303,6 +309,8 @@ public final class LabInfoPullerImplTest {
                     Attribute.newBuilder().setName("decorator").setValue(DEVICE_DECORATOR_2))
                 .addAttribute(Attribute.newBuilder().setName("device_type").setValue(DEVICE_TYPE_2))
                 .addAttribute(Attribute.newBuilder().setName("driver").setValue(DEVICE_DRIVER_2))
+                .addAttribute(
+                    Attribute.newBuilder().setName("executor").setValue(DEVICE_EXECUTOR_2))
                 .addAttribute(Attribute.newBuilder().setName("owner").setValue(DEVICE_OWNER_2))
                 .addAttribute(Attribute.newBuilder().setName("status").setValue("IDLE"))
                 .addAttribute(
