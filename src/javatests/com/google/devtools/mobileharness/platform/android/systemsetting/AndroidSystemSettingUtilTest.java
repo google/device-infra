@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidSvc
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DumpSysType;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.IntentArgs;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
+import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil.AppOpsMode;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import java.time.Clock;
@@ -736,6 +737,15 @@ public class AndroidSystemSettingUtilTest {
 
     assertThat(settingUtil.setDmVerityChecking(DEVICE_ID, true))
         .isEqualTo(PostSetDmVerityDeviceOp.REBOOT);
+  }
+
+  @Test
+  public void setAppOpsPermission_success() throws Exception {
+    settingUtil.setAppOpsPermission(
+        DEVICE_ID, "com.sample.package", "WRITE_SETTINGS", AppOpsMode.ALLOW);
+    verify(adb)
+        .runShell(
+            DEVICE_ID, "appops set com.sample.package WRITE_SETTINGS allow", Duration.ofSeconds(3));
   }
 
   @Test
