@@ -46,15 +46,19 @@ public class AndroidEmulatorVideoDecoratorJobValidator
       return errorsBuilder.build();
     }
     for (AndroidEmulatorVideoDecoratorSpec spec : specs) {
-      if (spec.getFps() < 0) {
+      if (spec.hasFps() && spec.getFps() < 0) {
         errorsBuilder.add("Invalid fps value. Negative value supplied: " + spec.getFps());
       }
-      if (spec.getBitRate() < 0) {
-        errorsBuilder.add("Invalid bit_rate value. Negative value supplied: " + spec.getBitRate());
-      }
-      if (spec.getTimeLimitSecs() < 0) {
+      if (spec.hasBitRate() && (spec.getBitRate() < 100000 || spec.getBitRate() > 2500000)) {
         errorsBuilder.add(
-            "Invalid time_limit_secs value. Negative value supplied: " + spec.getTimeLimitSecs());
+            "Invalid bit_rate value. Should be between 100000 and 2500000. Supplied: "
+                + spec.getBitRate());
+      }
+      if (spec.hasTimeLimitSecs()
+          && (spec.getTimeLimitSecs() < 0 || spec.getTimeLimitSecs() > 900 /* 15 minutes */)) {
+        errorsBuilder.add(
+            "Invalid time_limit_secs value. Should be between 0 and 900 (15 minutes). Supplied: "
+                + spec.getTimeLimitSecs());
       }
     }
     return errorsBuilder.build();

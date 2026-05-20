@@ -36,7 +36,7 @@ public class AndroidEmulatorVideoDecoratorJobValidatorTest {
   private static final AndroidEmulatorVideoDecoratorSpec VALID_SPEC =
       AndroidEmulatorVideoDecoratorSpec.newBuilder()
           .setFps(5)
-          .setBitRate(50000)
+          .setBitRate(500000)
           .setTimeLimitSecs(900)
           .build();
   private AndroidEmulatorVideoDecoratorJobValidator validator;
@@ -81,7 +81,7 @@ public class AndroidEmulatorVideoDecoratorJobValidatorTest {
 
   @Test
   public void validate_invalidBitRate_hasError() throws Exception {
-    var spec = VALID_SPEC.toBuilder().setBitRate(-1).build();
+    var spec = VALID_SPEC.toBuilder().setBitRate(10000).build();
     setProtoSpec(spec);
 
     assertThat(validator.validate(jobInfo)).isNotEmpty();
