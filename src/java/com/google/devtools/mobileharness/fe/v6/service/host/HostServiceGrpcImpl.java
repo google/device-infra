@@ -133,7 +133,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
     GrpcServiceUtil.invokeAsync(
         request,
         responseObserver,
-        logic::updatePassThroughFlags,
+        req -> logic.updatePassThroughFlags(req),
         executor,
         HostServiceGrpc.getServiceDescriptor(),
         HostServiceGrpc.getUpdatePassThroughFlagsMethod());

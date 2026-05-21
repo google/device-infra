@@ -27,11 +27,14 @@ import static org.mockito.Mockito.when;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.fe.v6.service.host.builder.RemoteControlUrlBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLabServerReleaseActionHelper;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.UpdatePassThroughFlagsActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostHeaderInfoRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.SubDeviceInfoListFactory;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.remotecontrol.RemoteControlEligibilityChecker;
@@ -72,6 +75,7 @@ public final class HostServiceLogicImplTest {
   @Bind @Mock private FeatureManagerFactory featureManagerFactory;
   @Bind @Mock private LabSyncStub labSyncStub;
   @Bind @Mock private PreflightLabServerReleaseActionHelper preflightLabServerReleaseActionHelper;
+  @Bind @Mock private UpdatePassThroughFlagsActionHelper updatePassThroughFlagsActionHelper;
   @Mock private FeatureManager featureManager;
 
   private HostServiceLogicImpl hostServiceLogicImpl;
@@ -142,6 +146,35 @@ public final class HostServiceLogicImplTest {
             ExecutionException.class,
             () ->
                 hostServiceLogicImpl.preflightLabServerRelease(request, Optional.of("user")).get());
+    assertThat(e).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void updatePassThroughFlags_success() throws Exception {
+    UpdatePassThroughFlagsRequest request =
+        UpdatePassThroughFlagsRequest.newBuilder().setUniverse("universe").build();
+    UpdatePassThroughFlagsResponse response = UpdatePassThroughFlagsResponse.getDefaultInstance();
+
+    when(updatePassThroughFlagsActionHelper.updatePassThroughFlags(any(), any()))
+        .thenReturn(immediateFuture(response));
+
+    UpdatePassThroughFlagsResponse actualResponse =
+        hostServiceLogicImpl.updatePassThroughFlags(request).get();
+
+    assertThat(actualResponse).isEqualTo(response);
+  }
+
+  @Test
+  public void updatePassThroughFlags_invalidUniverse_fails() throws Exception {
+    UpdatePassThroughFlagsRequest request =
+        UpdatePassThroughFlagsRequest.newBuilder().setUniverse("invalid").build();
+
+    when(universeFactory.create("invalid")).thenThrow(new IllegalArgumentException("invalid"));
+
+    ExecutionException e =
+        assertThrows(
+            ExecutionException.class,
+            () -> hostServiceLogicImpl.updatePassThroughFlags(request).get());
     assertThat(e).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
   }
 }

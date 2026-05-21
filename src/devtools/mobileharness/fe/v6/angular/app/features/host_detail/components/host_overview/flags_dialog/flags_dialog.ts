@@ -21,7 +21,11 @@ import {MatInputModule} from '@angular/material/input';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {take} from 'rxjs/operators';
 
-import {PopularFlag} from '../../../../../core/models/host_action';
+import {SnackBarService} from '@deviceinfra/app/shared/services/snackbar_service';
+import {
+  PopularFlag,
+  UpdatePassThroughFlagsResponse,
+} from '../../../../../core/models/host_action';
 import {HOST_SERVICE} from '../../../../../core/services/host/host_service';
 import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
 
@@ -58,6 +62,7 @@ export class FlagsDialog implements OnInit {
   readonly data = inject<FlagsDialogData>(MAT_DIALOG_DATA);
   private readonly dialogRef = inject(MatDialogRef<FlagsDialog>);
   private readonly hostService = inject(HOST_SERVICE);
+  private readonly snackBarService = inject(SnackBarService);
 
   readonly isListMode = signal(true);
   readonly currentFlagsArray = signal<string[]>([]);
@@ -65,7 +70,6 @@ export class FlagsDialog implements OnInit {
   readonly presets = signal<PopularFlag[]>([]);
   readonly isLoadingPresets = signal(false);
   readonly isSaving = signal(false);
-  readonly errorMessage = signal('');
   readonly addInput = signal('');
   readonly filterText = signal('');
   readonly rawTextFlags = signal('');
@@ -196,13 +200,23 @@ export class FlagsDialog implements OnInit {
   }
 
   appendPreset(preset: PopularFlag) {
+    const newFlags = this.splitFlags(preset.cmd);
     if (this.isListMode()) {
-      const newFlags = this.splitFlags(preset.cmd);
-      this.currentFlagsArray.update((flags) => [...flags, ...newFlags]);
+      this.currentFlagsArray.update((flags) => {
+        const currentSet = new Set(flags);
+        const flagsToAppend = newFlags.filter((f) => !currentSet.has(f));
+        return [...flags, ...flagsToAppend];
+      });
     } else {
       this.rawTextFlags.update((text) => {
+        const currentFlags = this.splitFlags(text);
+        const currentSet = new Set(currentFlags);
+        const flagsToAppend = newFlags.filter((f) => !currentSet.has(f));
+        if (flagsToAppend.length === 0) return text;
         const trimmed = text.trim();
-        return trimmed ? `${trimmed} ${preset.cmd}` : preset.cmd;
+        return trimmed
+          ? `${trimmed} ${flagsToAppend.join(' ')}`
+          : flagsToAppend.join(' ');
       });
     }
   }
@@ -228,19 +242,27 @@ export class FlagsDialog implements OnInit {
     }
 
     this.isSaving.set(true);
-    this.errorMessage.set('');
 
     this.hostService
       .updatePassThroughFlags(this.data.hostName, finalString)
       .pipe(take(1))
       .subscribe({
-        next: () => {
-          this.isSaving.set(false);
-          this.dialogRef.close(finalString);
+        next: (response: UpdatePassThroughFlagsResponse) => {
+          if (response.success) {
+            this.isSaving.set(false);
+            this.dialogRef.close(finalString);
+          } else {
+            this.isSaving.set(false);
+            const msg =
+              response.error?.message ||
+              response.error?.code ||
+              'Failed to save flags';
+            this.snackBarService.showError(msg);
+          }
         },
-        error: (err: Error) => {
+        error: () => {
           this.isSaving.set(false);
-          this.errorMessage.set(err.message || 'Failed to save flags');
+          this.snackBarService.showError('Failed to save flags');
         },
       });
   }

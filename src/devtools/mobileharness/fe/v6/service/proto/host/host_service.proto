@@ -227,7 +227,24 @@ message UpdatePassThroughFlagsRequest {
 }
 
 // Response message for UpdatePassThroughFlags.
-message UpdatePassThroughFlagsResponse {}
+message UpdatePassThroughFlagsResponse {
+  bool success = 1;
+  Error error = 2;
+
+  message Error {
+    Code code = 1;
+    string message = 2;
+
+    enum Code {
+      CODE_UNSPECIFIED = 0;
+      PERMISSION_DENIED = 1;
+      INVALID_FLAGS = 2;
+      HOST_NOT_FOUND = 3;
+      WARPGATE_ERROR = 4;
+      UNKNOWN = 5;
+    }
+  }
+}
 
 // Request message for PreflightLabServerRelease.
 message PreflightLabServerReleaseRequest {

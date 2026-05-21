@@ -165,7 +165,7 @@ export class FakeHostService extends HostService {
     const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
     if (scenario && scenario.overview) {
       scenario.overview.labServer.passThroughFlags = flags;
-      return of({});
+      return of({success: true});
     } else {
       return throwError(
         () =>

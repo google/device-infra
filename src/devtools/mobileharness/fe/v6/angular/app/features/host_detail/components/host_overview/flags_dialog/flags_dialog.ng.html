@@ -162,9 +162,6 @@
 
   <ng-template #actionsTemplate>
     <div class="footer-actions">
-      @if (errorMessage()) {
-        <span class="error-text">{{ errorMessage() }}</span>
-      }
       <button class="secondary-button" (click)="discardChanges()" [disabled]="!isDirty() || isSaving()">Discard Changes</button>
       <button class="primary-button" (click)="save()" [disabled]="!isDirty() || isSaving()">
         @if (isSaving()) {

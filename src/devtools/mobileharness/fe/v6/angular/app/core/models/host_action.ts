@@ -179,7 +179,19 @@ export declare interface DecommissionHostResponse {}
 /**
  * Response for UpdatePassThroughFlags API.
  */
-export declare interface UpdatePassThroughFlagsResponse {}
+export declare interface UpdatePassThroughFlagsResponse {
+  readonly success: boolean;
+  readonly error?: {
+    readonly code:
+      | 'CODE_UNSPECIFIED'
+      | 'PERMISSION_DENIED'
+      | 'INVALID_FLAGS'
+      | 'HOST_NOT_FOUND'
+      | 'WARPGATE_ERROR'
+      | 'UNKNOWN';
+    readonly message?: string;
+  };
+}
 
 /**
  * Response for those rollout action
