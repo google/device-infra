@@ -232,7 +232,9 @@ public class DeviceConditionUtilTest {
     deviceDao =
         DeviceDao.create(deviceLocator, DeviceProfile.getDefaultInstance(), deviceCondition);
 
-    assertThat(DeviceConditionUtil.shouldRemoveMissingDevice(deviceDao, ImmutableSet.of()))
+    assertThat(
+            DeviceConditionUtil.shouldRemoveMissingDevice(
+                deviceDao, ImmutableSet.of(), ImmutableSet.of()))
         .isTrue();
   }
 
@@ -254,7 +256,9 @@ public class DeviceConditionUtilTest {
                 .build(),
             deviceCondition);
 
-    assertThat(DeviceConditionUtil.shouldRemoveMissingDevice(deviceDao, ImmutableSet.of()))
+    assertThat(
+            DeviceConditionUtil.shouldRemoveMissingDevice(
+                deviceDao, ImmutableSet.of(), ImmutableSet.of()))
         .isTrue();
   }
 
@@ -283,7 +287,9 @@ public class DeviceConditionUtilTest {
                 .build(),
             deviceCondition);
 
-    assertThat(DeviceConditionUtil.shouldRemoveMissingDevice(deviceDao, ImmutableSet.of()))
+    assertThat(
+            DeviceConditionUtil.shouldRemoveMissingDevice(
+                deviceDao, ImmutableSet.of(), ImmutableSet.of()))
         .isTrue();
   }
 
@@ -305,7 +311,9 @@ public class DeviceConditionUtilTest {
                 .build(),
             deviceCondition);
 
-    assertThat(DeviceConditionUtil.shouldRemoveMissingDevice(deviceDao, ImmutableSet.of()))
+    assertThat(
+            DeviceConditionUtil.shouldRemoveMissingDevice(
+                deviceDao, ImmutableSet.of(), ImmutableSet.of()))
         .isTrue();
   }
 
@@ -324,7 +332,9 @@ public class DeviceConditionUtilTest {
 
     deviceDao =
         DeviceDao.create(deviceLocator, DeviceProfile.getDefaultInstance(), deviceCondition);
-    assertThat(DeviceConditionUtil.shouldRemoveMissingDevice(deviceDao, ImmutableSet.of("id")))
+    assertThat(
+            DeviceConditionUtil.shouldRemoveMissingDevice(
+                deviceDao, ImmutableSet.of("id"), ImmutableSet.of()))
         .isTrue();
   }
 
@@ -343,7 +353,9 @@ public class DeviceConditionUtilTest {
     deviceDao =
         DeviceDao.create(deviceLocator, DeviceProfile.getDefaultInstance(), deviceCondition);
 
-    assertThat(DeviceConditionUtil.shouldRemoveMissingDevice(deviceDao, ImmutableSet.of()))
+    assertThat(
+            DeviceConditionUtil.shouldRemoveMissingDevice(
+                deviceDao, ImmutableSet.of(), ImmutableSet.of()))
         .isFalse();
 
     deviceCondition =
@@ -358,8 +370,65 @@ public class DeviceConditionUtilTest {
     deviceDao =
         DeviceDao.create(deviceLocator, DeviceProfile.getDefaultInstance(), deviceCondition);
 
-    assertThat(DeviceConditionUtil.shouldRemoveMissingDevice(deviceDao, ImmutableSet.of()))
+    assertThat(
+            DeviceConditionUtil.shouldRemoveMissingDevice(
+                deviceDao, ImmutableSet.of(), ImmutableSet.of()))
         .isFalse();
+  }
+
+  @Test
+  public void shouldRemove_missingDeviceIdMatchesAliveDeviceSocId() {
+    // The MISSING device's ID ("id") matches the soc_id of an alive device (possibly on any lab).
+    // This simulates a ghost SoC chip ID entry from ROM recovery mode (b/504622331).
+    DeviceCondition deviceCondition =
+        DeviceCondition.newBuilder()
+            .setStatusFromLab(DeviceStatus.MISSING)
+            .setSyncTimeMsFromMaster(Instant.now().toEpochMilli())
+            .setSyncTimeMsFromLab(Instant.now().toEpochMilli())
+            .build();
+    deviceDao =
+        DeviceDao.create(deviceLocator, DeviceProfile.getDefaultInstance(), deviceCondition);
+
+    // Should be removed: the MISSING device's ID matches a soc_id of an alive device.
+    assertThat(
+            DeviceConditionUtil.shouldRemoveMissingDevice(
+                deviceDao, ImmutableSet.of(), ImmutableSet.of("id")))
+        .isTrue();
+
+    // Should not be removed: the soc_id set doesn't contain the device's ID.
+    assertThat(
+            DeviceConditionUtil.shouldRemoveMissingDevice(
+                deviceDao, ImmutableSet.of(), ImmutableSet.of("other_soc_id")))
+        .isFalse();
+  }
+
+  @Test
+  public void getSocId_returnsValue() {
+    deviceDao =
+        DeviceDao.create(
+            deviceLocator,
+            DeviceProfile.newBuilder()
+                .setFeature(
+                    DeviceFeature.newBuilder()
+                        .setCompositeDimension(
+                            DeviceCompositeDimension.newBuilder()
+                                .addSupportedDimension(
+                                    DeviceDimension.newBuilder()
+                                        .setName("soc_id")
+                                        .setValue("abc123"))))
+                .build(),
+            DeviceCondition.getDefaultInstance());
+    assertThat(DeviceConditionUtil.getSocId(deviceDao)).hasValue("abc123");
+  }
+
+  @Test
+  public void getSocId_returnsEmpty() {
+    deviceDao =
+        DeviceDao.create(
+            deviceLocator,
+            DeviceProfile.getDefaultInstance(),
+            DeviceCondition.getDefaultInstance());
+    assertThat(DeviceConditionUtil.getSocId(deviceDao)).isEmpty();
   }
 
   @Test

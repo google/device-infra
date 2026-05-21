@@ -175,14 +175,16 @@ public final class DeviceConditionUtil {
 
   /**
    * Checks whether the device is MISSING and its timestamp is older than {@link
-   * #missingDeviceRemovalThreshold} or the device appears in other labs. If so, we will totally
-   * remove it from the Master Central DB.
+   * #missingDeviceRemovalThreshold} or the device appears in other labs, or the device's ID matches
+   * the soc_id of any alive device (i.e., the device is a ghost SoC chip ID entry from ROM recovery
+   * mode, see b/504622331). If so, we will totally remove it from the Master Central DB.
    */
   public static boolean shouldRemoveMissingDevice(
-      DeviceDao deviceDao, Set<String> aliveDevicesInOtherLabs) {
+      DeviceDao deviceDao, Set<String> aliveDevicesInOtherLabs, Set<String> aliveDeviceSocIds) {
     return deviceDao.condition().getStatusFromLab().equals(DeviceStatus.MISSING)
         && (exceedRemovalThreshold(deviceDao)
-            || aliveDevicesInOtherLabs.contains(deviceDao.locator().id()));
+            || aliveDevicesInOtherLabs.contains(deviceDao.locator().id())
+            || aliveDeviceSocIds.contains(deviceDao.locator().id()));
   }
 
   private static boolean exceedRemovalThreshold(DeviceDao deviceDao) {
@@ -295,6 +297,11 @@ public final class DeviceConditionUtil {
   /** Gets the removal threshold. */
   public static Duration getRemovalThreshold() {
     return Flags.deviceRemovalThreshold.getNonNull();
+  }
+
+  /** Returns the soc_id dimension of a device, if present. */
+  public static Optional<String> getSocId(DeviceDao device) {
+    return getDeviceDimension(device, Name.SOC_ID.lowerCaseName());
   }
 
   private static Optional<String> getDeviceDimension(DeviceDao device, String dimension) {
