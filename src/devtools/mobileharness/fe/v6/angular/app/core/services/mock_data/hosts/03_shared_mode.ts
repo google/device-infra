@@ -1,6 +1,7 @@
 /** @fileoverview Mock host scenario in SHARED device config mode. */
 
 import {DeviceConfig} from '../../../models/device_config_models';
+import {PreflightLabServerReleaseResponse} from '../../../models/host_action';
 import {HostConfig} from '../../../models/host_config_models';
 import {MockHostScenario} from '../models';
 import {
@@ -33,6 +34,25 @@ const HOST_CONFIG: HostConfig = {
   },
 };
 
+const PREFLIGHT_RESPONSE: PreflightLabServerReleaseResponse = {
+  ready: {
+    versions: [
+      {
+        name: '[RELEASE] 4.358.0 mobileharness_lab_server',
+        version: '4.358.0',
+        status: 'LATEST_AND_CURRENT',
+        buildTime: new Date(Date.now() - 3600000 * 24).toISOString(),
+      },
+      {
+        name: '[RELEASE] 4.357.0 mobileharness_lab_server',
+        version: '4.357.0',
+        status: '',
+        buildTime: new Date(Date.now() - 3600000 * 48).toISOString(),
+      },
+    ],
+  },
+};
+
 export const SCENARIO_HOST_SHARED_MODE: MockHostScenario = {
   hostName: 'host-shared-mode.example.com',
   scenarioName: '3. Shared Mode',
@@ -44,4 +64,5 @@ export const SCENARIO_HOST_SHARED_MODE: MockHostScenario = {
   },
   defaultDeviceConfig: null, // No default in SHARED mode
   actions: createHostActions('RUNNING', true),
+  releaseResponse: PREFLIGHT_RESPONSE,
 };

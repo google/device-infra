@@ -165,10 +165,17 @@ message ReleaseDetails {
   repeated CommandRecord async_commands = 4;
 }
 
+enum VersionStatus {
+  VERSION_STATUS_UNSPECIFIED = 0;
+  LATEST = 1;
+  CURRENT = 2;
+  LATEST_AND_CURRENT = 3;
+}
+
 message DeployableVersion {
-  string name = 1;        // Release name
-  string version = 2;     // Version string (e.g. "v4.358.0")
-  string status = 3;      // "Latest", "Current", or empty
+  string name = 1;     // Release name
+  string version = 2;  // Version string (e.g. "v4.358.0")
+  VersionStatus status = 3;
   string build_time = 4;  // Build timestamp
   repeated ReleasePort ports = 5;
   ReleaseDetails release_details = 6;

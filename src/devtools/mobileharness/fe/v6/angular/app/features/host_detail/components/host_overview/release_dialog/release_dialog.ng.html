@@ -3,221 +3,187 @@
   subtitle="Host: {{ data.hostName }}"
   type="host"
   width="72rem"
-  height="750px"
   maxHeight="90vh"
   footerType="normal">
   <mat-dialog-content class="dialog-content">
     @if (currentStep() === 1) {
-      <!-- Step 1: Version Selection -->
-      <div class="step-1-container">
-        <div class="info-alert">
-          <mat-icon>
-            info_outline
-          </mat-icon>
-          <span>
-            Select a release candidate to proceed.
-          </span>
+      <div class="info-alert">
+        <mat-icon>
+          info_outline
+        </mat-icon>
+        <span>
+          Select a release candidate to proceed.
+        </span>
+      </div>
+      <div class="content-splitter">
+        <div class="versions-panel">
+          @for(version of formattedAvailableVersions(); track version.version) {
+            <div class="version-card"
+                [class.selected]="selectedVersion()?.version === version.version"
+                (click)="selectVersion(version)">
+              <div class="version-info">
+                <div class="version-header">
+                  <span class="version-number">{{version.version}}</span>
+                  @if(version.status === 'CURRENT' || version.status === 'LATEST_AND_CURRENT') {
+                    <span class="status-pill current-version">
+                      <mat-icon>check</mat-icon>Current Version
+                    </span>
+                  }
+                  @if(version.status === 'LATEST' || version.status === 'LATEST_AND_CURRENT') {
+                    <span class="status-pill latest-stable">Latest Stable</span>
+                  }
+                </div>
+                <div class="version-name-card">
+                  {{version.name || 'Available release candidate package binary.'}}
+                </div>
+              </div>
+              <div class="version-actions">
+                <button mat-icon-button title="View Details" (click)="viewDetails(version); $event.stopPropagation();">
+                  <mat-icon>info</mat-icon>
+                </button>
+              </div>
+            </div>
+          }
         </div>
-        <div class="content-splitter">
-          <div class="versions-panel">
-            <table mat-table [dataSource]="availableVersions" class="versions-table">
-              <!-- Version Column -->
-              <ng-container matColumnDef="version">
-                <th mat-header-cell *matHeaderCellDef>
-                  Version
-                </th>
-                <td mat-cell *matCellDef="let element">
-                  <div class="version-label">
-                    {{ element.version }}
-                  </div>
-                  <div class="version-name">
-                    {{ element.name }}
-                  </div>
-                </td>
-              </ng-container>
-              <!-- Build Date Column -->
-              <ng-container matColumnDef="buildTime">
-                <th mat-header-cell *matHeaderCellDef>
-                  Build Date
-                </th>
-                <td mat-cell *matCellDef="let element">
-                  {{ element.buildTime | date:'shortDate' }}
-                </td>
-              </ng-container>
-              <!-- Status Column -->
-              <ng-container matColumnDef="status">
-                <th mat-header-cell *matHeaderCellDef>
-                  Status
-                </th>
-                <td mat-cell *matCellDef="let element">
-                  @if (element.status?.toLowerCase() === 'latest') {
-                    <span class="status-badge latest">
-                      Latest
-                    </span>
-                  }
-                  @if (element.status?.toLowerCase() === 'current') {
-                    <span class="status-badge current">
-                      Current
-                    </span>
-                  }
-                </td>
-              </ng-container>
-              <!-- Actions Column -->
-              <ng-container matColumnDef="actions">
-                <th mat-header-cell *matHeaderCellDef></th>
-                <td mat-cell *matCellDef="let element" class="row-actions">
-                  <button mat-icon-button title="View Details" (click)="viewDetails(element); $event.stopPropagation();">
-                    <mat-icon style="opacity: 1;">
-                      info
-                    </mat-icon>
-                  </button>
-                </td>
-              </ng-container>
-              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="version-row" [class.selected]="selectedVersion()?.version === row.version" (click)="selectVersion(row)">
-              </tr>
-            </table>
+        <!-- Manifest Side Panel -->
+        <div class="manifest-panel" [class.open]="showDetails()">
+          <div class="manifest-header">
+            <span>
+              Build Manifest
+            </span>
+            <button mat-icon-button (click)="showDetails.set(false)" title="Close Panel">
+              <mat-icon>close</mat-icon>
+            </button>
           </div>
-          <!-- Manifest Side Panel -->
-          <div class="manifest-panel" [class.open]="showDetails()">
-            <div class="manifest-header">
-              <span>
-                Build Manifest
-              </span>
-              <button mat-icon-button (click)="showDetails.set(false)" title="Close Panel">
-                <mat-icon>close</mat-icon>
-              </button>
-            </div>
-            <div class="manifest-tabs">
-              <button class="tab-btn" [class.active]="currentTab() === 'metadata'" (click)="switchTab('metadata')">
-                Metadata
-              </button>
-              <button class="tab-btn" [class.active]="currentTab() === 'files'" (click)="switchTab('files')">
-                Files
-              </button>
-              <button class="tab-btn" [class.active]="currentTab() === 'commands'" (click)="switchTab('commands')">
-                Commands
-              </button>
-            </div>
-            <div class="manifest-content">
-              @if (currentTab() === 'metadata') {
-                <div class="metadata-content">
-                  <div class="detail-item">
-                    <mat-icon>tag</mat-icon>
-                    <div>
-                      <div class="label">Version</div>
-                      <div class="value">
-                        {{ selectedVersion()?.version || 'N/A' }}
-                      </div>
+          <div class="manifest-tabs">
+            <button class="tab-btn" [class.active]="currentTab() === 'metadata'" (click)="switchTab('metadata')">
+              Metadata
+            </button>
+            <button class="tab-btn" [class.active]="currentTab() === 'files'" (click)="switchTab('files')">
+              Files
+            </button>
+            <button class="tab-btn" [class.active]="currentTab() === 'commands'" (click)="switchTab('commands')">
+              Commands
+            </button>
+          </div>
+          <div class="manifest-content">
+            @if (currentTab() === 'metadata') {
+              <div class="metadata-content">
+                <div class="detail-item">
+                  <mat-icon>tag</mat-icon>
+                  <div>
+                    <div class="label">Version</div>
+                    <div class="value">
+                      {{ selectedVersion()?.version || 'N/A' }}
                     </div>
                   </div>
-                  <div class="detail-item">
-                    <mat-icon>label</mat-icon>
-                    <div>
-                      <div class="label">Release Name</div>
-                      <div class="value">
-                        {{ selectedVersion()?.name || 'N/A' }}
-                      </div>
+                </div>
+                <div class="detail-item">
+                  <mat-icon>label</mat-icon>
+                  <div>
+                    <div class="label">Release Name</div>
+                    <div class="value">
+                      {{ selectedVersion()?.name || 'N/A' }}
                     </div>
                   </div>
-                  <div class="detail-item">
-                    <mat-icon>schedule</mat-icon>
-                    <div>
-                      <div class="label">Build Time</div>
-                      <div class="value">
-                        {{ selectedVersion()?.buildTime | date:'medium' }}
-                      </div>
+                </div>
+                <div class="detail-item">
+                  <mat-icon>schedule</mat-icon>
+                  <div>
+                    <div class="label">Status</div>
+                    <div class="value">
+                      {{ statusDisplayMap[selectedVersion()?.status || ''] || selectedVersion()?.status || 'N/A' }}
                     </div>
                   </div>
-                  <div class="detail-item">
-                    <mat-icon>settings_ethernet</mat-icon>
-                    <div>
-                      <div class="label">Ports</div>
-                      <div class="value">
-                        @for (p of selectedVersion()?.ports; track p.portNumber; let last = $last) {
-                          {{ p.protocol }}:{{ p.portNumber }}{{ last ? '' : ', ' }}
-                        }
-                        @empty { N/A }
-                      </div>
+                </div>
+                <div class="detail-item">
+                  <mat-icon>settings_ethernet</mat-icon>
+                  <div>
+                    <div class="label">Ports</div>
+                    <div class="value">
+                      @for (p of selectedVersion()?.ports; track p.portNumber; let last = $last) {
+                        {{ p.protocol }}:{{ p.portNumber }}{{ last ? '' : ', ' }}
+                      }
+                      @empty { N/A }
                     </div>
                   </div>
-                  @defer (on idle) {
-                    @for (group of selectedVersion()?.releaseDetails?.changeLogs; track group.name) {
-                      <div class="changelist-section">
-                        <div class="section-title">{{ group.name }}</div>
-                        <ul>
-                          @for (c of group.items; track c) {
-                            @if (c.change) {
-                              <li>
-                                <span class="cl-number">cl/{{ c.change.cl }}</span>: {{ c.change.text }}
-                                @if (c.change.bugs && c.change.bugs.length > 0) {
-                                  <span class="bug-number">
-                                    (b/{{ c.change.bugs.join(', ') }})
-                                  </span>
-                                }
-                              </li>
-                            }
-                            @if (c.bug) {
-                              <li>
-                                <span class="cl-number">b/{{ c.bug.bug }}</span>: {{ c.bug.text }}
-                              </li>
-                            }
+                </div>
+                @defer (on idle) {
+                  @for (group of selectedVersion()?.releaseDetails?.changeLogs; track group.name) {
+                    <div class="changelist-section">
+                      <div class="section-title">{{ group.name }}</div>
+                      <ul>
+                        @for (c of group.items; track c) {
+                          @if (c.change) {
+                            <li>
+                              <span class="cl-number">cl/{{ c.change.cl }}</span>: {{ c.change.text }}
+                              @if (c.change.bugs && c.change.bugs.length > 0) {
+                                <span class="bug-number">
+                                  (b/{{ c.change.bugs.join(', ') }})
+                                </span>
+                              }
+                            </li>
                           }
-                        </ul>
-                      </div>
-                    }
-                  } @placeholder {
-                    <div class="empty-text">
-                      Loading change logs...
-                    </div>
-                  }
-                </div>
-              }
-              @if (currentTab() === 'files') {
-                <div class="files-content">
-                  @defer (on idle) {
-                    @for (file of selectedVersion()?.releaseDetails?.files; track file.name) {
-                      <div class="file-item">
-                        <div class="file-key">{{ file.name }}</div>
-                        @if (file.path) {
-                          <div class="file-value">{{ file.path }}</div>
-                        } @else {
-                          <div class="file-value not-set">Not set</div>
+                          @if (c.bug) {
+                            <li>
+                              <span class="cl-number">b/{{ c.bug.bug }}</span>: {{ c.bug.text }}
+                            </li>
+                          }
                         }
-                      </div>
-                    } @empty {
-                      <div class="empty-text"> No Files </div>
-                    }
-                  } @placeholder {
-                    <div class="empty-text">
-                      Loading files...
+                      </ul>
                     </div>
                   }
-                </div>
-              }
-              @if (currentTab() === 'commands') {
-                <div class="commands-content">
-                  @if (hasCommands()) {
-                    @if (hasSyncCommands()) {
-                      <div class="section-title">Sync Commands</div>
-                      @for (cmd of selectedVersion()?.releaseDetails?.syncCommands; track cmd.name) {
-                        <span class="command-name">{{ cmd.name }}</span>
-                        <code class="command-block">{{ cmd.command }}</code>
+                } @placeholder {
+                  <div class="empty-text">
+                    Loading change logs...
+                  </div>
+                }
+              </div>
+            }
+            @if (currentTab() === 'files') {
+              <div class="files-content">
+                @defer (on idle) {
+                  @for (file of selectedVersion()?.releaseDetails?.files; track file.name) {
+                    <div class="file-item">
+                      <div class="file-key">{{ file.name }}</div>
+                      @if (file.path) {
+                        <div class="file-value">{{ file.path }}</div>
+                      } @else {
+                        <div class="file-value not-set">Not set</div>
                       }
-                    }
-                    @if (hasAsyncCommands()) {
-                      <div class="section-title">Async Commands</div>
-                      @for (cmd of selectedVersion()?.releaseDetails?.asyncCommands; track cmd.name) {
-                        <span class="command-name">{{ cmd.name }}</span>
-                        <code class="command-block async">{{ cmd.command }}</code>
-                      }
-                    }
-                  } @else {
-                    <div class="empty-text"> No Commands </div>
+                    </div>
+                  } @empty {
+                    <div class="empty-text"> No Files </div>
                   }
-                </div>
-              }
-            </div>
+                } @placeholder {
+                  <div class="empty-text">
+                    Loading files...
+                  </div>
+                }
+              </div>
+            }
+            @if (currentTab() === 'commands') {
+              <div class="commands-content">
+                @if (hasCommands()) {
+                  @if (hasSyncCommands()) {
+                    <div class="section-title">Sync Commands</div>
+                    @for (cmd of selectedVersion()?.releaseDetails?.syncCommands; track cmd.name) {
+                      <span class="command-name">{{ cmd.name }}</span>
+                      <code class="command-block">{{ cmd.command }}</code>
+                    }
+                  }
+                  @if (hasAsyncCommands()) {
+                    <div class="section-title">Async Commands</div>
+                    @for (cmd of selectedVersion()?.releaseDetails?.asyncCommands; track cmd.name) {
+                      <span class="command-name">{{ cmd.name }}</span>
+                      <code class="command-block async">{{ cmd.command }}</code>
+                    }
+                  }
+                } @else {
+                  <div class="empty-text"> No Commands </div>
+                }
+              </div>
+            }
           </div>
         </div>
       </div>
@@ -225,28 +191,39 @@
       <!-- Step 2: Deployment Confirmation -->
       <div class="step-2-container">
         <header class="step-2-header">
-          <div class="header-icon"><mat-icon>rocket_launch</mat-icon></div>
+          <div class="header-icon" [attr.data-delta-type]="versionDeltaInfo().type">
+            <mat-icon>rocket_launch</mat-icon>
+          </div>
           <div>
             <h3>Ready to Deploy</h3>
             <p>Please review your deployment configuration before proceeding.</p>
           </div>
         </header>
-        <div class="version-summary-card">
+        <div class="version-summary-card" [attr.data-delta-type]="versionDeltaInfo().type">
           <div class="left-section">
-            <div class="icon-bg"><mat-icon>label</mat-icon></div>
+            <div class="icon-bg">
+              <mat-icon>{{versionDeltaInfo().icon}}</mat-icon>
+            </div>
             <div class="version-details">
-              <div class="label">Selected Version</div>
+              <div class="label">Selected Release Target</div>
               <div class="value">
                 <span class="version-str">{{ selectedVersion()?.version }}</span>
-                @if (selectedVersion()?.status?.toLowerCase() === 'latest') {
+                @if (selectedVersion()?.status === 'LATEST_AND_CURRENT') {
+                  <span class="status-badge current">Current</span>
                   <span class="status-badge latest">Latest</span>
+                } @else if (selectedVersion()?.status === 'LATEST') {
+                  <span class="status-badge latest">Latest</span>
+                } @else if (selectedVersion()?.status === 'CURRENT') {
+                  <span class="status-badge current">Current</span>
                 }
               </div>
             </div>
           </div>
           <div class="right-section">
-            <div class="label">Build Date</div>
-            <div class="value">{{ selectedVersion()?.buildTime | date:'mediumDate' }}</div>
+            <span class="delta-pill">
+              <mat-icon>{{versionDeltaInfo().icon}}</mat-icon>
+              {{versionDeltaInfo().label}}
+            </span>
           </div>
         </div>
         <div class="flags-section">

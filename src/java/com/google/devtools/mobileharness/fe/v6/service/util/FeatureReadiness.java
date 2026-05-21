@@ -72,7 +72,7 @@ public class FeatureReadiness {
   }
 
   public boolean isLabServerReleaseReady() {
-    return true;
+    return false;
   }
 
   public boolean isLabServerDeployReady() {

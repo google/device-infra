@@ -84,7 +84,12 @@ export declare interface ReleaseReady {
 /**
  * Represents the status of a Lab Server release.
  */
-export type ReleaseStatus = 'Latest' | 'Current' | 'Deprecated' | '';
+export type ReleaseStatus =
+  | 'LATEST'
+  | 'CURRENT'
+  | 'LATEST_AND_CURRENT'
+  | 'VERSION_STATUS_UNSPECIFIED'
+  | '';
 
 /**
  * Configuration for a specific Lab Server release.

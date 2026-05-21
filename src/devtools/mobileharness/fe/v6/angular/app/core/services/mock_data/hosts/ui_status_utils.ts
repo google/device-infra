@@ -91,7 +91,7 @@ export function createDefaultReleaseResponse(): PreflightLabServerReleaseRespons
         {
           name: 'mobileharness_lab_server',
           version: 'v4.349.0',
-          status: 'Latest',
+          status: 'LATEST',
           buildTime: '2024-03-15 21:30:00',
           ports: [{protocol: 'grpc', portNumber: 9994}],
           releaseDetails: {
@@ -271,7 +271,7 @@ export function createDefaultReleaseResponse(): PreflightLabServerReleaseRespons
         {
           name: 'release_configs',
           version: 'v4.357.0',
-          status: 'Current',
+          status: 'CURRENT',
           buildTime: '2025-03-13 12:00:00',
           ports: [
             {

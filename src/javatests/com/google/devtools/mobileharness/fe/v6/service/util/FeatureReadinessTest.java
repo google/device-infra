@@ -122,7 +122,7 @@ public final class FeatureReadinessTest {
   }
 
   @Test
-  public void isLabServerReleaseReady_returnsTrue() {
-    assertThat(featureReadiness.isLabServerReleaseReady()).isTrue();
+  public void isLabServerReleaseReady_returnsFalse() {
+    assertThat(featureReadiness.isLabServerReleaseReady()).isFalse();
   }
 }
