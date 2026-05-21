@@ -1234,6 +1234,18 @@ public class SystemUtil {
     return System.getenv(key);
   }
 
+  /** Gets the local hostname from system environment. */
+  @Nullable
+  public String getEnvLocalHostname() {
+    return getEnv("LOCAL_HOSTNAME");
+  }
+
+  /** Gets the parent hostname from system environment. */
+  @Nullable
+  public String getEnvParentHostname() {
+    return getEnv("PARENT_HOSTNAME");
+  }
+
   /**
    * When the current process is running as root, convert the given command to force it run as the
    * login user instead of root.
