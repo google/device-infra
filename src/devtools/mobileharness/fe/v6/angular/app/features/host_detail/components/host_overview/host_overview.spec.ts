@@ -14,7 +14,7 @@ describe('HostOverview Component', () => {
   const mockHost: HostOverview = {
     hostName: 'host-a-1.prod.example.com',
     ip: '192.168.1.101',
-    labTypeDisplayNames: ['Core Lab'],
+    uiLabTypes: ['CORE'],
     labServer: {
       connectivity: {
         state: 'RUNNING',
@@ -93,19 +93,16 @@ describe('HostOverview Component', () => {
   it('should display all lab types', () => {
     component.host = {
       ...mockHost,
-      labTypeDisplayNames: ['Lab1', 'Lab2', 'Lab3', 'Lab4', 'Lab5'],
+      uiLabTypes: ['SATELLITE', 'SLAAS'],
     };
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
     const chips = compiled.querySelectorAll('.lab-type-wrapper .lab-type-chip');
     if (component.isGoogle1p) {
-      expect(chips.length).toBe(5);
-      expect(chips[0].textContent?.trim()).toBe('Lab1');
-      expect(chips[1].textContent?.trim()).toBe('Lab2');
-      expect(chips[2].textContent?.trim()).toBe('Lab3');
-      expect(chips[3].textContent?.trim()).toBe('Lab4');
-      expect(chips[4].textContent?.trim()).toBe('Lab5');
+      expect(chips.length).toBe(2);
+      expect(chips[0].textContent?.trim()).toBe('Satellite');
+      expect(chips[1].textContent?.trim()).toBe('SLaaS');
     } else {
       expect(chips.length).toBe(0);
     }

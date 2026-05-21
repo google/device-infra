@@ -190,33 +190,17 @@ export class HostOverviewPage implements OnChanges {
   @Input() actions?: HostActions;
 
   readonly isAteHost = computed(() => {
-    if (this.host.uiLabTypes && this.host.uiLabTypes.length > 0) {
-      return this.host.uiLabTypes.includes('ATE');
-    }
-    return (
-      this.host.labTypeDisplayNames?.some((name) => name.includes('ATE Lab')) ??
-      false
-    );
+    return this.host.uiLabTypes?.includes('ATE') ?? false;
   });
 
   readonly displayLabTypes = computed(() => {
-    if (this.host.uiLabTypes && this.host.uiLabTypes.length > 0) {
-      return this.host.uiLabTypes.map((type) =>
-        this.mapUiLabTypeToString(type),
-      );
-    }
-    return this.host.labTypeDisplayNames ?? [];
+    return this.host.uiLabTypes?.map((type) =>
+      this.mapUiLabTypeToString(type),
+    ) ?? [];
   });
 
   readonly isSatelliteLab = computed(() => {
-    if (this.host.uiLabTypes && this.host.uiLabTypes.length > 0) {
-      return this.host.uiLabTypes.includes('SATELLITE');
-    }
-    return (
-      this.host.labTypeDisplayNames?.includes('Satellite') ||
-      this.host.labTypeDisplayNames?.includes('Satellite Lab') ||
-      false
-    );
+    return this.host.uiLabTypes?.includes('SATELLITE') ?? false;
   });
 
   private mapUiLabTypeToString(type: UiLabType): string {
@@ -228,7 +212,7 @@ export class HostOverviewPage implements OnChanges {
       case 'SATELLITE':
         return 'Satellite';
       case 'SLAAS':
-        return 'Satellite (SLaaS)';
+        return 'SLaaS';
       case 'ATE':
         return 'ATE';
       case 'RIEMANN_FIELD':

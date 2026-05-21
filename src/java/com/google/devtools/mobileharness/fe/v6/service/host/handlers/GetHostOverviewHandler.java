@@ -196,11 +196,9 @@ public final class GetHostOverviewHandler {
 
     Optional<String> labTypeOpt = hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType);
     ImmutableList<UiLabType> uiLabTypes = HostTypes.determineUiLabTypes(labInfoOpt, labTypeOpt);
-    ImmutableList<String> labTypes = HostTypes.determineLabTypeDisplayNames(labInfoOpt, labTypeOpt);
     boolean isCoreOrFusion = HostTypes.isCoreOrFusionUiLabTypes(uiLabTypes);
 
     return builder
-        .addAllLabTypeDisplayNames(labTypes) // Legacy field for backward compatibility
         .addAllUiLabTypes(uiLabTypes)
         .setShowPassThroughFlags(!isCoreOrFusion)
         .setLabServer(
@@ -238,9 +236,9 @@ public final class GetHostOverviewHandler {
     }
 
     boolean isCoreLab =
-        HostTypes.determineLabTypeDisplayNames(
+        HostTypes.determineUiLabTypes(
                 labInfoOpt, hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType))
-            .contains(HostTypes.LAB_TYPE_CORE);
+            .contains(UiLabType.CORE);
 
     LabServerInfo.Activity activity =
         LabActivities.create(labReleaseOpt, connectivityStatus, isCoreLab);

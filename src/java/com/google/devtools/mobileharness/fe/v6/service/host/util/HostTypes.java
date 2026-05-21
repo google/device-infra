@@ -30,14 +30,6 @@ import java.util.Optional;
 /** Utility class for Host types. */
 public final class HostTypes {
 
-  public static final String LAB_TYPE_CORE = "Core Lab";
-  public static final String LAB_TYPE_FUSION = "Fusion Lab";
-  public static final String LAB_TYPE_SATELLITE = "Satellite Lab";
-  private static final String LAB_TYPE_SLAAS = "Satellite Lab (SLaaS)";
-  private static final String LAB_TYPE_ATE = "ATE Lab";
-  private static final String LAB_TYPE_FIELD = "Riemann Field Lab";
-  private static final String LAB_TYPE_UNKNOWN = "Unknown";
-
   private static final ImmutableMap<String, UiLabType> ENUM_NAME_TO_UI_LAB_TYPE =
       ImmutableMap.of(
           "FUSION_LAB", UiLabType.FUSION,
@@ -52,23 +44,8 @@ public final class HostTypes {
           "slaas", UiLabType.SLAAS,
           "satellite", UiLabType.SATELLITE);
 
-  private static final ImmutableMap<UiLabType, String> UI_LAB_TYPE_TO_DISPLAY_NAME =
-      new ImmutableMap.Builder<UiLabType, String>()
-          .put(UiLabType.CORE, LAB_TYPE_CORE)
-          .put(UiLabType.FUSION, LAB_TYPE_FUSION)
-          .put(UiLabType.SATELLITE, LAB_TYPE_SATELLITE)
-          .put(UiLabType.SLAAS, LAB_TYPE_SLAAS)
-          .put(UiLabType.ATE, LAB_TYPE_ATE)
-          .put(UiLabType.RIEMANN_FIELD, LAB_TYPE_FIELD)
-          .put(UiLabType.UNKNOWN, LAB_TYPE_UNKNOWN)
-          .buildOrThrow();
-
-  public static boolean isCoreOrFusion(List<String> labTypes) {
-    return labTypes.contains(LAB_TYPE_CORE) || labTypes.contains(LAB_TYPE_FUSION);
-  }
-
   public static boolean isCoreOrFusion(Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
-    return isCoreOrFusion(determineLabTypeDisplayNames(labInfoOpt, labTypeOpt));
+    return isCoreOrFusionUiLabTypes(determineUiLabTypes(labInfoOpt, labTypeOpt));
   }
 
   public static boolean isCoreOrFusionUiLabTypes(List<UiLabType> labTypes) {
@@ -87,7 +64,12 @@ public final class HostTypes {
     String dmTypeProp = getHostProperty(labInfoOpt, "dm_type");
 
     // Source 1: lab_type in host properties (Checked first to preserve order)
-    Optional.ofNullable(PROP_TO_UI_LAB_TYPE.get(labTypeProp)).ifPresent(builder::add);
+    if (labTypeProp.equals("slaas")) {
+      builder.add(UiLabType.SATELLITE);
+      builder.add(UiLabType.SLAAS);
+    } else {
+      Optional.ofNullable(PROP_TO_UI_LAB_TYPE.get(labTypeProp)).ifPresent(builder::add);
+    }
 
     // Source 2: Release Server Host Info
     Optional.ofNullable(ENUM_NAME_TO_UI_LAB_TYPE.get(typeEnumName)).ifPresent(builder::add);
@@ -98,18 +80,6 @@ public final class HostTypes {
     }
 
     return builder.build().stream().distinct().collect(toImmutableList());
-  }
-
-  /**
-   * @deprecated Use {@link #determineUiLabTypes(Optional, Optional)} instead. This is retained for
-   *     backward compatibility with older frontends that expect pre-formatted strings.
-   */
-  @Deprecated
-  public static ImmutableList<String> determineLabTypeDisplayNames(
-      Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
-    return determineUiLabTypes(labInfoOpt, labTypeOpt).stream()
-        .map(type -> UI_LAB_TYPE_TO_DISPLAY_NAME.getOrDefault(type, LAB_TYPE_UNKNOWN))
-        .collect(toImmutableList());
   }
 
   private static String getHostProperty(Optional<LabInfo> labInfoOpt, String key) {

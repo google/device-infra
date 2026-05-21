@@ -234,12 +234,7 @@ export declare interface HostOverview {
   readonly hostName: string;
   /** The IP address of the host. */
   readonly ip: string;
-  /**
-   * The user-friendly lab type name, derived by the backend,
-   * e.g., "Core Lab", "Satellite Lab (SLaaS)".
-   * @deprecated Use uiLabTypes instead.
-   */
-  readonly labTypeDisplayNames?: string[];
+
   /** Lab server information. */
   readonly labServer: LabServerInfo;
   /** Daemon server information. */
