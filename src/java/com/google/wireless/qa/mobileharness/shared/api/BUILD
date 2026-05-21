@@ -92,6 +92,7 @@ java_library(
 java_library(
     name = "xts_test_client",
     runtime_deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/lister:tradefed_test_lister",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_adb_shell_decorator_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_clean_apps_decorator_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_device_settings_decorator_job_validator",

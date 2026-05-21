@@ -84,3 +84,13 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
     ],
 )
+
+java_library(
+    name = "tradefed_test_lister",
+    srcs = ["TradefedTestLister.java"],
+    deps = [
+        ":lister",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+    ],
+)
