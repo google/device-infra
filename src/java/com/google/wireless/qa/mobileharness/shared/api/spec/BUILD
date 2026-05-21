@@ -202,3 +202,11 @@ java_library(
     srcs = ["TradefedTestSpec.java"],
     deps = ["//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:basic_annotation"],
 )
+
+java_library(
+    name = "android_dump_sys_spec",
+    srcs = ["AndroidDumpSysSpec.java"],
+    deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+    ],
+)
