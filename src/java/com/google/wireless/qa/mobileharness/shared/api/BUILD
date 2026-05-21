@@ -118,6 +118,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_logcat_monitoring_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_network_activity_logging_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_orientation_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_screenshot_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_start_apps_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_switch_language_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:composite_device_decorator",
@@ -135,6 +136,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_native_bin_env_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_network_activity_logging_env_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_orientation_decorator_env_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_screenshot_decorator_env_validator",
     ],
 )
 
@@ -199,6 +201,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_min_sdk_version_check_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_network_activity_logging_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_orientation_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_screenshot_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_shipping_api_level_check_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_show_instruction_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_start_apps_decorator",

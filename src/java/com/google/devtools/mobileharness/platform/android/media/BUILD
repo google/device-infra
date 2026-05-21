@@ -25,6 +25,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/media:__pkg__",
+        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
     ],
     deps = [
         ":commands",

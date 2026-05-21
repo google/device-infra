@@ -121,3 +121,15 @@ java_library(
         "@maven//:com_google_code_findbugs_jsr305",
     ],
 )
+
+java_library(
+    name = "android_screenshot_decorator_env_validator",
+    srcs = ["AndroidScreenshotDecoratorEnvValidator.java"],
+    deps = [
+        ":android_device_version_env_validator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_device",
+        "@maven//:com_google_guava_guava",
+    ],
+)
