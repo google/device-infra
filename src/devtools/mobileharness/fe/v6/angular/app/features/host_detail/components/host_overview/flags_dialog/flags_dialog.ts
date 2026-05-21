@@ -26,6 +26,7 @@ import {
   PopularFlag,
   UpdatePassThroughFlagsResponse,
 } from '../../../../../core/models/host_action';
+import {WritePermissionResult} from '../../../../../core/models/action_common';
 import {HOST_SERVICE} from '../../../../../core/services/host/host_service';
 import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
 
@@ -73,6 +74,7 @@ export class FlagsDialog implements OnInit {
   readonly addInput = signal('');
   readonly filterText = signal('');
   readonly rawTextFlags = signal('');
+  readonly hasPermission = signal(true);
 
   readonly isDirty = computed(() => {
     const currentFlags = this.isListMode()
@@ -265,6 +267,10 @@ export class FlagsDialog implements OnInit {
           this.snackBarService.showError('Failed to save flags');
         },
       });
+  }
+
+  handlePermissionChange(result: WritePermissionResult) {
+    this.hasPermission.set(result.hasPermission);
   }
 
   close() {
