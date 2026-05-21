@@ -67,6 +67,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:cros_decorator_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:mobly_test_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:report_log_collector_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",

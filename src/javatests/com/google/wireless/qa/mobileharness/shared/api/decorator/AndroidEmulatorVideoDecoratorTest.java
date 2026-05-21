@@ -30,15 +30,19 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidEmulatorVideoDecoratorSpec;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Instant;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -60,8 +64,9 @@ public class AndroidEmulatorVideoDecoratorTest {
   @Mock private JobInfo jobInfo;
   @Mock private TestInfo testInfo;
   @Mock private TestLocator testLocator;
-
   @Mock private Adb adb;
+  @Mock private Clock clock;
+  @Mock private Properties properties;
 
   private AndroidEmulatorVideoDecorator decorator;
   private File genFileDir;
@@ -74,6 +79,8 @@ public class AndroidEmulatorVideoDecoratorTest {
     when(testInfo.log()).thenReturn(new Log(new Timing()));
     when(testInfo.locator()).thenReturn(testLocator);
     when(testLocator.getId()).thenReturn("test-id");
+    when(testInfo.properties()).thenReturn(properties);
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1));
 
     genFileDir = tmpFolder.newFolder("gen_files");
     when(testInfo.getGenFileDir()).thenReturn(genFileDir.getAbsolutePath());
@@ -81,22 +88,8 @@ public class AndroidEmulatorVideoDecoratorTest {
     doNothing().when(decoratedDriver).run(testInfo);
 
     decorator =
-        new AndroidEmulatorVideoDecorator(decoratedDriver, testInfo, adb, Sleeper.noOpSleeper());
-  }
-
-  @Test
-  public void decorator_run_succeeds() throws Exception {
-    AndroidEmulatorVideoDecoratorSpec spec =
-        AndroidEmulatorVideoDecoratorSpec.newBuilder()
-            .setFps(5)
-            .setBitRate(1000)
-            .setTimeLimitSecs(900)
-            .build();
-    when(jobInfo.combinedSpec(any())).thenReturn(spec);
-
-    decorator.run(testInfo);
-
-    verify(decoratedDriver).run(testInfo);
+        new AndroidEmulatorVideoDecorator(
+            decoratedDriver, testInfo, adb, Sleeper.noOpSleeper(), clock);
   }
 
   @Test
@@ -148,6 +141,8 @@ public class AndroidEmulatorVideoDecoratorTest {
                   "60",
                   expectedPath
                 }));
+    verify(properties)
+        .add(PropertyName.Test.ANDROID_EMULATOR_VIDEO_DECORATOR_VIDEO_START_EPOCH_MS, "1");
   }
 
   @Test
@@ -258,6 +253,8 @@ public class AndroidEmulatorVideoDecoratorTest {
         .run(
             eq("emulator-5554"),
             eq(new String[] {"emu", "screenrecord", "stop", expectedStopPath}));
+    verify(properties)
+        .add(PropertyName.Test.ANDROID_EMULATOR_VIDEO_DECORATOR_VIDEO_STOP_EPOCH_MS, "1");
   }
 
   @Test

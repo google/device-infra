@@ -172,6 +172,12 @@ public interface PropertyName {
      */
     ALLOCATION_TIME_SEC,
 
+    /** The epoch time when the video recording of the AndroidEmulatorVideoDecorator starts. */
+    ANDROID_EMULATOR_VIDEO_DECORATOR_VIDEO_START_EPOCH_MS,
+
+    /** The epoch time when the video recording of the AndroidEmulatorVideoDecorator stops. */
+    ANDROID_EMULATOR_VIDEO_DECORATOR_VIDEO_STOP_EPOCH_MS,
+
     /** The epoch time when the video recording of the AndroidHdVideoDecorator starts. */
     ANDROID_HD_VIDEO_DECORATOR_VIDEO_START_EPOCH_MS,
 

@@ -27,10 +27,12 @@ import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidEmulatorVideoDecoratorSpec;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -48,6 +50,7 @@ public class AndroidEmulatorVideoDecorator extends AsyncTimerDecorator
 
   private final Adb adb;
   private final Sleeper sleeper;
+  private final Clock clock;
   private final AtomicInteger videoCount = new AtomicInteger(0);
 
   private final AtomicBoolean running = new AtomicBoolean(false);
@@ -57,10 +60,12 @@ public class AndroidEmulatorVideoDecorator extends AsyncTimerDecorator
   private AndroidEmulatorVideoDecoratorSpec emulatorVideoDecoratorSpec;
 
   @Inject
-  AndroidEmulatorVideoDecorator(Driver decorated, TestInfo testInfo, Adb adb, Sleeper sleeper) {
+  AndroidEmulatorVideoDecorator(
+      Driver decorated, TestInfo testInfo, Adb adb, Sleeper sleeper, Clock clock) {
     super(decorated, testInfo);
     this.adb = adb;
     this.sleeper = sleeper;
+    this.clock = clock;
   }
 
   @Override
@@ -113,6 +118,13 @@ public class AndroidEmulatorVideoDecorator extends AsyncTimerDecorator
             videoOutputPath.toString());
 
     var output = adb.run(device.getDeviceId(), args.toArray(String[]::new));
+    if (videoCount.get() == 1) {
+      testInfo
+          .properties()
+          .add(
+              Test.ANDROID_EMULATOR_VIDEO_DECORATOR_VIDEO_START_EPOCH_MS,
+              Long.toString(clock.instant().toEpochMilli()));
+    }
     running.set(true);
     generatedFiles.add(videoOutputPath);
     testInfo
@@ -136,6 +148,11 @@ public class AndroidEmulatorVideoDecorator extends AsyncTimerDecorator
   @Override
   void onEnd(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     stopVideoRecording(testInfo);
+    testInfo
+        .properties()
+        .add(
+            Test.ANDROID_EMULATOR_VIDEO_DECORATOR_VIDEO_STOP_EPOCH_MS,
+            Long.toString(clock.instant().toEpochMilli()));
     // Sleep for 2 seconds to let the emulator complete writing the video file.
     sleeper.sleep(Duration.ofSeconds(2));
     testInfo
