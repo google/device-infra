@@ -49,6 +49,7 @@ py_proto_library(
     name = "health_service_py_proto",
     visibility = [
         "//third_party/py/multitest_transport:__subpackages__",
+        "//wireless/android/pixel/testing/labs/monitoring:__subpackages__",
     ],
     deps = [":health_proto"],
 )
@@ -59,6 +60,7 @@ py_grpc_library(
     tags = ["deviceinfra_disable_in_kokoro"],
     visibility = [
         "//third_party/py/multitest_transport:__subpackages__",
+        "//wireless/android/pixel/testing/labs/monitoring:__subpackages__",
     ],
     deps = [":health_service_py_proto"],
 )

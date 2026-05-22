@@ -23,6 +23,7 @@ package(
     default_visibility = [
         "//:deviceinfra_all_pkg",
         "//:omnilab_fusion",
+        "//wireless/android/pixel/testing/labs/monitoring:__subpackages__",
         "//wireless/android/pixel/testtools/djar:__subpackages__",
     ],
 )
