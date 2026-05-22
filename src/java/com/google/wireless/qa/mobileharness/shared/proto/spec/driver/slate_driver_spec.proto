@@ -37,7 +37,7 @@ message SlateDriverSpec {
   optional Google3File slate_config = 2
       [(file_detail) = { help: "The custom config.yaml file." }];
 
-  optional string target = 3 [(field_detail) = {
+  repeated string target = 3 [(field_detail) = {
     is_required: true
     help: "The target task to run in SLATE."
   }];

@@ -28,7 +28,6 @@ import static java.util.function.Predicate.not;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Splitter;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -81,6 +80,8 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
+import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.util.Timestamps;
@@ -512,9 +513,37 @@ final class NewMultiCommandRequestHandler {
             .build();
 
     String commandLine = commandInfo.getCommandLine();
-    List<String> tokens = Splitter.on(' ').omitEmptyStrings().splitToList(commandLine);
-    int targetIndex = tokens.indexOf("--target");
-    if (targetIndex == -1 || targetIndex + 1 >= tokens.size()) {
+    ImmutableList<String> tokens;
+    try {
+      tokens = ShellUtils.tokenize(commandLine);
+    } catch (TokenizationException e) {
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.ATS_SERVER_INVALID_REQUEST_ERROR,
+          String.format("Failed to parse command line: %s", commandLine),
+          e);
+    }
+    ImmutableList<String> targets = ImmutableList.of();
+    for (int i = 0; i < tokens.size(); i++) {
+      String token = tokens.get(i);
+      // Keep the last target to align with the behavior of the slate binary.
+      if (token.startsWith("--target=") || token.startsWith("-t=")) {
+        String value = token.substring(token.indexOf('=') + 1);
+        targets = ImmutableList.of(value);
+        continue;
+      }
+      if (token.equals("--target") || token.equals("-t")) {
+        ImmutableList.Builder<String> builder = ImmutableList.builder();
+        for (int j = i + 1; j < tokens.size(); j++) {
+          String nextToken = tokens.get(j);
+          if (nextToken.startsWith("-")) {
+            break;
+          }
+          builder.add(nextToken);
+        }
+        targets = builder.build();
+      }
+    }
+    if (targets.isEmpty()) {
       throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.ATS_SERVER_INVALID_REQUEST_ERROR,
           String.format(
@@ -522,8 +551,8 @@ final class NewMultiCommandRequestHandler {
           null);
     }
 
-    String target = tokens.get(targetIndex + 1);
-    params.put("target", target);
+    String targetParam = String.join(",", targets);
+    params.put("target", targetParam);
 
     Duration jobTimeout = toJavaDuration(request.getTestEnvironment().getInvocationTimeout());
     if (jobTimeout.isZero()) {
@@ -535,7 +564,7 @@ final class NewMultiCommandRequestHandler {
           "timeout_mins", String.valueOf(testTimeout.minus(SLATE_DEFAULT_BUFFER_TIME).toMinutes()));
     }
     Duration startTimeout = toJavaDuration(request.getQueueTimeout());
-    String name = String.format("slate-job-%s", target);
+    String name = "slate-job";
     Path jobGenDir = sessionRequestHandlerUtil.createJobGenDir(name);
     Path jobTmpDir = sessionRequestHandlerUtil.createJobTmpDir(name);
     JobConfig jobConfig =
@@ -545,7 +574,7 @@ final class NewMultiCommandRequestHandler {
             .setTestTimeoutSec(saturatedCast(testTimeout.toSeconds()))
             .setStartTimeoutSec(startTimeout.toSeconds())
             .setTestAttempts(1)
-            .setTests(StringList.newBuilder().addContent(String.format("slate-test-%s", target)))
+            .setTests(StringList.newBuilder().addContent("slate-test"))
             .setDevice(deviceList)
             .setDriver(Driver.newBuilder().setName("SlateDriver"))
             .setParams(StringMap.newBuilder().putAllContent(params))

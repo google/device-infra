@@ -36,6 +36,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
+import java.util.List;
 import java.util.logging.Level;
 import javax.inject.Inject;
 
@@ -89,15 +90,20 @@ public class SlateDriver extends BaseDriver implements SpecConfigable<SlateDrive
     }
 
     String deviceSerial = getDevice().getDeviceId();
-    String target = spec.getTarget();
+    List<String> targets = spec.getTargetList();
+    if (targets.isEmpty()) {
+      throw new MobileHarnessException(
+          BasicErrorId.JOB_PARAM_VALUE_NOT_FOUND,
+          "No targets specified in SlateDriverSpec. Please provide 'target' parameter.");
+    }
 
     testInfo
         .log()
         .atInfo()
         .alsoTo(logger)
         .log(
-            "Preparing to run SLATE binary: %s on device %s with target %s",
-            binaryPath, deviceSerial, target);
+            "Preparing to run SLATE binary: %s on device %s with targets %s",
+            binaryPath, deviceSerial, targets);
 
     // 4. Prepare Output Directory
     String genFileDir = testInfo.getGenFileDir();
@@ -119,7 +125,7 @@ public class SlateDriver extends BaseDriver implements SpecConfigable<SlateDrive
       testInfo.log().atInfo().alsoTo(logger).log("SlateDriver: Writing logs to %s", logFile);
 
       ImmutableList.Builder<String> args = ImmutableList.builder();
-      args.add("--target", target).add("--device", deviceSerial);
+      args.add("--target").addAll(targets).add("--device", deviceSerial);
       if (configPath != null) {
         args.add("--config", configPath);
       }

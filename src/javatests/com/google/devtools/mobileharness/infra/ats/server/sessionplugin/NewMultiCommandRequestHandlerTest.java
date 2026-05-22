@@ -40,7 +40,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
@@ -125,11 +127,10 @@ public final class NewMultiCommandRequestHandlerTest {
   private static final String DEVICE_ID_2 = "device_id_2";
   private static final Path TRADEFED_INVOCATION_LOG_DIR = Path.of("/tradefed_invocation_log_dir");
   private static final ResultTypeWithCause PASS_RESULT =
-      ResultTypeWithCause.create(
-          com.google.devtools.mobileharness.api.model.proto.Test.TestResult.PASS, null);
+      ResultTypeWithCause.create(TestResult.PASS, null);
   private static final ResultTypeWithCause ERROR_RESULT =
       ResultTypeWithCause.create(
-          com.google.devtools.mobileharness.api.model.proto.Test.TestResult.ERROR,
+          TestResult.ERROR,
           new MobileHarnessException(BasicErrorId.JOB_TIMEOUT, "test failed with exception"));
 
   private CommandInfo commandInfo = CommandInfo.getDefaultInstance();
@@ -157,8 +158,8 @@ public final class NewMultiCommandRequestHandlerTest {
   @Mock private Files files;
   @Mock private TestInfo testInfo;
   @Mock private TestInfos testInfos;
-  @Mock private com.google.devtools.mobileharness.api.model.job.out.Result newJobResult;
-  @Mock private com.google.devtools.mobileharness.api.model.job.out.Result newTestResult;
+  @Mock private Result newJobResult;
+  @Mock private Result newTestResult;
   private final Properties properties = new Properties(new Timing());
 
   @Captor private ArgumentCaptor<SessionRequestInfo> sessionRequestInfoCaptor;
@@ -1479,7 +1480,7 @@ public final class NewMultiCommandRequestHandlerTest {
     when(newJobResult.get())
         .thenReturn(
             ResultTypeWithCause.create(
-                com.google.devtools.mobileharness.api.model.proto.Test.TestResult.ERROR,
+                TestResult.ERROR,
                 new MobileHarnessException(BasicErrorId.JOB_TIMEOUT, "job failed with exception")));
     when(jobInfo.resultWithCause()).thenReturn(newJobResult);
 
@@ -2189,5 +2190,180 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(testResource.getUrl())
         .startsWith("file://" + outputPath + "/" + testResource.getName());
     return handleResultProcessingResult;
+  }
+
+  @Test
+  public void createSlateJobs_success() throws Exception {
+    when(sessionRequestHandlerUtil.createJobGenDir(anyString())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(anyString())).thenReturn(Path.of("/tmp/tmp"));
+
+    CommandInfo slateCommandInfo =
+        CommandInfo.newBuilder()
+            .setName("command")
+            .setCommandLine("slate --target team.module.task_id1")
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue(DEVICE_ID_1)
+                    .build())
+            .build();
+
+    NewMultiCommandRequest slateRequest =
+        NewMultiCommandRequest.newBuilder()
+            .setUserId("user_id")
+            .addCommands(slateCommandInfo)
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///path/to/slate_binary")
+                    .setName("slate_binary")
+                    .build())
+            .build();
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createSlateJobs(slateRequest, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).hasSize(1);
+    JobInfo slateJob = createJobsResult.jobInfos().get(0);
+    assertThat(slateJob.params().get("target")).isEqualTo("team.module.task_id1");
+  }
+
+  @Test
+  public void createSlateJobs_multipleTargets() throws Exception {
+    when(sessionRequestHandlerUtil.createJobGenDir(anyString())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(anyString())).thenReturn(Path.of("/tmp/tmp"));
+
+    CommandInfo slateCommandInfo =
+        CommandInfo.newBuilder()
+            .setName("command")
+            .setCommandLine("slate --target target1 target2 target3")
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue(DEVICE_ID_1)
+                    .build())
+            .build();
+
+    NewMultiCommandRequest slateRequest =
+        NewMultiCommandRequest.newBuilder()
+            .setUserId("user_id")
+            .addCommands(slateCommandInfo)
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///path/to/slate_binary")
+                    .setName("slate_binary")
+                    .build())
+            .build();
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createSlateJobs(slateRequest, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).hasSize(1);
+    JobInfo slateJob = createJobsResult.jobInfos().get(0);
+    assertThat(slateJob.params().get("target")).isEqualTo("target1,target2,target3");
+  }
+
+  @Test
+  public void createSlateJobs_multipleTargets_shortFlag() throws Exception {
+    when(sessionRequestHandlerUtil.createJobGenDir(anyString())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(anyString())).thenReturn(Path.of("/tmp/tmp"));
+
+    CommandInfo slateCommandInfo =
+        CommandInfo.newBuilder()
+            .setName("command")
+            .setCommandLine("slate -t target1 target2")
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue(DEVICE_ID_1)
+                    .build())
+            .build();
+
+    NewMultiCommandRequest slateRequest =
+        NewMultiCommandRequest.newBuilder()
+            .setUserId("user_id")
+            .addCommands(slateCommandInfo)
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///path/to/slate_binary")
+                    .setName("slate_binary")
+                    .build())
+            .build();
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createSlateJobs(slateRequest, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).hasSize(1);
+    JobInfo slateJob = createJobsResult.jobInfos().get(0);
+    assertThat(slateJob.params().get("target")).isEqualTo("target1,target2");
+  }
+
+  @Test
+  public void createSlateJobs_targetEquals() throws Exception {
+    when(sessionRequestHandlerUtil.createJobGenDir(anyString())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(anyString())).thenReturn(Path.of("/tmp/tmp"));
+
+    CommandInfo slateCommandInfo =
+        CommandInfo.newBuilder()
+            .setName("command")
+            .setCommandLine("slate --target=targetEquals1")
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue(DEVICE_ID_1)
+                    .build())
+            .build();
+
+    NewMultiCommandRequest slateRequest =
+        NewMultiCommandRequest.newBuilder()
+            .setUserId("user_id")
+            .addCommands(slateCommandInfo)
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///path/to/slate_binary")
+                    .setName("slate_binary")
+                    .build())
+            .build();
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createSlateJobs(slateRequest, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).hasSize(1);
+    JobInfo slateJob = createJobsResult.jobInfos().get(0);
+    assertThat(slateJob.params().get("target")).isEqualTo("targetEquals1");
+  }
+
+  @Test
+  public void createSlateJobs_targetEqualsShort() throws Exception {
+    when(sessionRequestHandlerUtil.createJobGenDir(anyString())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(anyString())).thenReturn(Path.of("/tmp/tmp"));
+
+    CommandInfo slateCommandInfo =
+        CommandInfo.newBuilder()
+            .setName("command")
+            .setCommandLine("slate -t=targetEqualsShort1")
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue(DEVICE_ID_1)
+                    .build())
+            .build();
+
+    NewMultiCommandRequest slateRequest =
+        NewMultiCommandRequest.newBuilder()
+            .setUserId("user_id")
+            .addCommands(slateCommandInfo)
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///path/to/slate_binary")
+                    .setName("slate_binary")
+                    .build())
+            .build();
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createSlateJobs(slateRequest, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).hasSize(1);
+    JobInfo slateJob = createJobsResult.jobInfos().get(0);
+    assertThat(slateJob.params().get("target")).isEqualTo("targetEqualsShort1");
   }
 }
