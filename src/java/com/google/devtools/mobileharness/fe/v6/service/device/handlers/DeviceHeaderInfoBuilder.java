@@ -16,15 +16,17 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 
+import com.google.common.base.Ascii;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
+import com.google.devtools.mobileharness.api.model.proto.Device.TempDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceActions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HostInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineInfo;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
-import java.util.Locale;
+import com.google.protobuf.util.Timestamps;
 import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -62,23 +64,32 @@ public class DeviceHeaderInfoBuilder {
       Optional<DeviceConfig> unusedDeviceConfigOpt,
       Optional<LabConfig> unusedLabConfigOpt,
       UniverseScope universe) {
+    Optional<TempDimension> quarantineDim =
+        deviceInfo.getDeviceCondition().getTempDimensionList().stream()
+            .filter(
+                dim ->
+                    dim.getDimension().getName().equals("quarantined")
+                        && Ascii.toLowerCase(dim.getDimension().getValue()).equals("true"))
+            .findFirst();
+
+    QuarantineInfo.Builder quarantineInfoBuilder = QuarantineInfo.newBuilder();
+    if (quarantineDim.isPresent()) {
+      quarantineInfoBuilder.setIsQuarantined(true);
+      long expireMs = quarantineDim.get().getExpireTimestampMs();
+      if (expireMs > 0) {
+        quarantineInfoBuilder.setExpiry(Timestamps.fromMillis(expireMs));
+      }
+    } else {
+      quarantineInfoBuilder.setIsQuarantined(false);
+    }
+
     return DeviceHeaderInfo.newBuilder()
         .setId(deviceInfo.getDeviceLocator().getId())
         .setHost(
             HostInfo.newBuilder()
                 .setName(deviceInfo.getDeviceLocator().getLabLocator().getHostName())
                 .setIp(deviceInfo.getDeviceLocator().getLabLocator().getIp()))
-        .setQuarantine(
-            QuarantineInfo.newBuilder()
-                .setIsQuarantined(
-                    deviceInfo.getDeviceCondition().getTempDimensionList().stream()
-                        .anyMatch(
-                            dim ->
-                                dim.getDimension().getName().equals("quarantined")
-                                    && dim.getDimension()
-                                        .getValue()
-                                        .toLowerCase(Locale.ROOT)
-                                        .equals("true"))))
+        .setQuarantine(quarantineInfoBuilder.build())
         // TODO: Fill device actions.
         .setActions(
             DeviceActions.newBuilder()
