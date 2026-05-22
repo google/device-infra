@@ -50,6 +50,20 @@ java_library(
 )
 
 java_library(
+    name = "device_management_filter",
+    srcs = ["DeviceManagementFilter.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "device",
     srcs = [
         "LocalDeviceDispatch.java",
