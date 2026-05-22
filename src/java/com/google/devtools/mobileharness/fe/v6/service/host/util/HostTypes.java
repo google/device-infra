@@ -33,7 +33,7 @@ public final class HostTypes {
   public static final String LAB_TYPE_CORE = "Core Lab";
   public static final String LAB_TYPE_FUSION = "Fusion Lab";
   public static final String LAB_TYPE_SATELLITE = "Satellite Lab";
-  private static final String LAB_TYPE_SLAAS = "Satellite Lab (SLaaS)";
+  private static final String LAB_TYPE_SLAAS = "SLaaS";
   private static final String LAB_TYPE_ATE = "ATE Lab";
   private static final String LAB_TYPE_FIELD = "Riemann Field Lab";
   private static final String LAB_TYPE_UNKNOWN = "Unknown";
@@ -87,7 +87,12 @@ public final class HostTypes {
     String dmTypeProp = getHostProperty(labInfoOpt, "dm_type");
 
     // Source 1: lab_type in host properties (Checked first to preserve order)
-    Optional.ofNullable(PROP_TO_UI_LAB_TYPE.get(labTypeProp)).ifPresent(builder::add);
+    if (labTypeProp.equals("slaas")) {
+      builder.add(UiLabType.SATELLITE);
+      builder.add(UiLabType.SLAAS);
+    } else {
+      Optional.ofNullable(PROP_TO_UI_LAB_TYPE.get(labTypeProp)).ifPresent(builder::add);
+    }
 
     // Source 2: Release Server Host Info
     Optional.ofNullable(ENUM_NAME_TO_UI_LAB_TYPE.get(typeEnumName)).ifPresent(builder::add);

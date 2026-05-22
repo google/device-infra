@@ -198,8 +198,12 @@ public final class GetHostOverviewHandlerTest {
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
-    assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Satellite Lab (SLaaS)");
-    assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.SLAAS);
+    assertThat(overview.getLabTypeDisplayNamesList())
+        .containsExactly("Satellite Lab", "SLaaS")
+        .inOrder();
+    assertThat(overview.getUiLabTypesList())
+        .containsExactly(UiLabType.SATELLITE, UiLabType.SLAAS)
+        .inOrder();
   }
 
   @Test

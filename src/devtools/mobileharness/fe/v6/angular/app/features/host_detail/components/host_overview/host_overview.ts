@@ -228,7 +228,7 @@ export class HostOverviewPage implements OnChanges {
       case 'SATELLITE':
         return 'Satellite';
       case 'SLAAS':
-        return 'Satellite (SLaaS)';
+        return 'SLaaS';
       case 'ATE':
         return 'ATE';
       case 'RIEMANN_FIELD':

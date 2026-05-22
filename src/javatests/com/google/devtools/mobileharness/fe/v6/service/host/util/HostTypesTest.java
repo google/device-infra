@@ -61,7 +61,8 @@ public final class HostTypesTest {
     assertThat(
             HostTypes.determineLabTypeDisplayNames(
                 Optional.of(createLabInfoWithProperty("lab_type", "slaas")), Optional.empty()))
-        .containsExactly("Satellite Lab (SLaaS)");
+        .containsExactly("Satellite Lab", "SLaaS")
+        .inOrder();
   }
 
   @Test
@@ -106,7 +107,7 @@ public final class HostTypesTest {
                                 HostProperty.newBuilder().setKey("dm_type").setValue("fusion"))))
             .build();
     assertThat(HostTypes.determineLabTypeDisplayNames(Optional.of(labInfo), Optional.empty()))
-        .containsExactly("Satellite Lab (SLaaS)", "Fusion Lab")
+        .containsExactly("Satellite Lab", "SLaaS", "Fusion Lab")
         .inOrder();
   }
 

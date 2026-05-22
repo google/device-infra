@@ -111,6 +111,24 @@ describe('HostOverview Component', () => {
     }
   });
 
+  it('should display all lab types from uiLabTypes', () => {
+    component.host = {
+      ...mockHost,
+      uiLabTypes: ['SATELLITE', 'SLAAS'],
+    };
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const chips = compiled.querySelectorAll('.lab-type-wrapper .lab-type-chip');
+    if (component.isGoogle1p) {
+      expect(chips.length).toBe(2);
+      expect(chips[0].textContent?.trim()).toBe('Satellite');
+      expect(chips[1].textContent?.trim()).toBe('SLaaS');
+    } else {
+      expect(chips.length).toBe(0);
+    }
+  });
+
   it('should display visible lab server actions', () => {
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
