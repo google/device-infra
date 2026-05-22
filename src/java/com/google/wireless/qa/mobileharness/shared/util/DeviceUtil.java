@@ -45,7 +45,10 @@ public final class DeviceUtil {
    *
    * @return true if the lab server is in Shared Lab, false if the lab server is in Satellite Lab
    * @since lab server 4.158.0
+   * @deprecated All labs using OmniLab Lab Server manage devices. Flags.labType can be used to
+   *     determine the lab's business type, but should not be used for conditional logic.
    */
+  @Deprecated
   public static boolean inSharedLab() {
     return !Flags.shouldManageDevices.getNonNull();
   }
