@@ -234,7 +234,7 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
                 AndroidSettings.Spec.create(
                     AndroidSettings.Command.PUT,
                     AndroidSettings.NameSpace.GLOBAL,
-                    "hidden_api_blacklist_exemptions \"*\""));
+                    "hidden_api_blacklist_exemptions \"\\*\""));
         if (sdkVersion >= 23) {
           androidSystemSettingUtil.setAppOpsPermission(
               deviceId, packageName, "WRITE_SETTINGS", AppOpsMode.ALLOW);
