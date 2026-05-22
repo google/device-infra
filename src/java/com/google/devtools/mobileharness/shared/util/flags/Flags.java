@@ -1534,6 +1534,13 @@ public class Flags {
   public static final Flag<Boolean> useAlts = Flag.value(false);
 
   @FlagSpec(
+      name = "use_dcon_xds_address",
+      help =
+          "Whether to use xDS addresses exposed by Dual Conduit for gRPC communication with Lab"
+              + " Servers and Test Engines. Default is false.")
+  public static final Flag<Boolean> useDconXdsAddress = Flag.value(false);
+
+  @FlagSpec(
       name = "use_emulator_name_in_uuid",
       help =
           "Whether to use the emulator name in the device UUID. This is to make Omnilab device"

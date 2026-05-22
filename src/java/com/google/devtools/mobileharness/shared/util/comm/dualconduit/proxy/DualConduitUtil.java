@@ -16,8 +16,21 @@
 
 package com.google.devtools.mobileharness.shared.util.comm.dualconduit.proxy;
 
+import com.google.common.annotations.VisibleForTesting;
+import java.util.Objects;
+
 /** Utility class for DualConduit. */
 public class DualConduitUtil {
+
+  @SuppressWarnings("NonFinalStaticField")
+  @VisibleForTesting
+  static boolean isXdsBootstrapped =
+      Objects.equals(System.getenv("GRPC_XDS_BOOTSTRAP"), "/etc/grpc/bootstrap.json");
+
+  /** Returns whether gRPC xDS is configured with the expected bootstrap file. */
+  public static boolean isXdsBootstrapped() {
+    return isXdsBootstrapped;
+  }
 
   /**
    * Returns the xDS address of a server for DualConduit.

@@ -115,6 +115,8 @@ java_library(
         "//src/devtools/mobileharness/shared/util/comm/relay/proto:destination_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:lab_server_locator",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/dualconduit/proxy:server_type",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/dualconduit/proxy:util",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
     ],
 )

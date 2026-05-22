@@ -412,8 +412,10 @@ public class PrepareTestServiceImpl {
     if (!Strings.isNullOrEmpty(dconDialerAddress)) {
       String xdsAddress =
           DualConduitUtil.getDualConduitXdsAddress(ServerType.LAB_SERVER, getInstanceId());
-      builder.setDualConduitLocator(
-          TestEngineLocator.DualConduitLocator.newBuilder().setXdsAddress(xdsAddress).build());
+      builder
+          .setDualConduitLocator(
+              TestEngineLocator.DualConduitLocator.newBuilder().setXdsAddress(xdsAddress).build())
+          .setEnableDualConduit(true);
     }
     GrpcLocator.Builder grpcLocator =
         GrpcLocator.newBuilder()

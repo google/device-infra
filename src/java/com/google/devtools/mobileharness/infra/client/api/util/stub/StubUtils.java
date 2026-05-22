@@ -22,6 +22,8 @@ import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Lab;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.LabServerLocator;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine;
+import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proxy.DualConduitUtil;
+import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proxy.ServerType;
 import com.google.devtools.mobileharness.shared.util.comm.relay.proto.DestinationProto.TestEngineLocator;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 
@@ -33,6 +35,10 @@ public final class StubUtils {
   }
 
   public static String getLabServerGrpcTarget(LabServerLocator labServerLocator) {
+    if (Flags.useDconXdsAddress.getNonNull() && DualConduitUtil.isXdsBootstrapped()) {
+      return DualConduitUtil.getDualConduitXdsAddress(
+          ServerType.LAB_SERVER, labServerLocator.hostName());
+    }
     if (Flags.connectToLabServerUsingIp.getNonNull()) {
       if (Flags.connectToLabServerUsingMasterDetectedIp.getNonNull()
           && labServerLocator.masterDetectedIp().isPresent()) {
@@ -66,6 +72,11 @@ public final class StubUtils {
 
   private static String getTestEngineGrpcTarget(
       String masterDetectedIp, TestEngine.TestEngineLocator testEngineLocator) {
+    if (Flags.useDconXdsAddress.getNonNull()
+        && DualConduitUtil.isXdsBootstrapped()
+        && testEngineLocator.getEnableDualConduit()) {
+      return testEngineLocator.getDualConduitLocator().getXdsAddress();
+    }
     if (Flags.connectToLabServerUsingIp.getNonNull()
         && Flags.connectToLabServerUsingMasterDetectedIp.getNonNull()) {
       return getGrpcTargetByIp(masterDetectedIp, testEngineLocator.getGrpcLocator().getGrpcPort());
@@ -75,6 +86,11 @@ public final class StubUtils {
   }
 
   private static String getTestEngineGrpcTarget(TestEngine.TestEngineLocator testEngineLocator) {
+    if (Flags.useDconXdsAddress.getNonNull()
+        && DualConduitUtil.isXdsBootstrapped()
+        && testEngineLocator.getEnableDualConduit()) {
+      return testEngineLocator.getDualConduitLocator().getXdsAddress();
+    }
     if (Flags.connectToLabServerUsingIp.getNonNull()) {
       return getGrpcTargetByIp(
           testEngineLocator.getGrpcLocator().getHostIp(),

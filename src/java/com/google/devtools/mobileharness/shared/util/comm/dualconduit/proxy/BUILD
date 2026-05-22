@@ -47,5 +47,6 @@ java_library(
     srcs = ["DualConduitUtil.java"],
     deps = [
         ":server_type",
+        "@maven//:com_google_guava_guava",
     ],
 )
