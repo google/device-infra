@@ -31,6 +31,9 @@ message TestEngineLocator {
   GrpcLocator grpc_locator = 5;
   bool enable_grpc = 6;
 
+  DualConduitLocator dual_conduit_locator = 7;
+  bool enable_dual_conduit = 8;
+
   message StubbyLocator {
     // Optional. A test engine may report no or more than one IPs. If so, client
     // should use the IP of the lab server (which is detected by MH master)
@@ -62,6 +65,13 @@ message TestEngineLocator {
     //
     // Since lab 4.270.0.
     string host_ip = 4;
+  }
+
+  message DualConduitLocator {
+    // Required.
+    //
+    // An xDS address like xds:///myserver.hostname.dcon.
+    string xds_address = 1;
   }
 }
 

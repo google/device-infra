@@ -23,6 +23,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
@@ -84,6 +85,8 @@ import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.LocalLabInfoProvider;
 import com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
+import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proxy.ReverseProxiedServer;
+import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proxy.ServerType;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.service.CloudFileTransferServiceGrpcImpl;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.service.CloudFileTransferServiceImpl;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.TaggedFileHandler;
@@ -115,6 +118,8 @@ import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 import io.grpc.BindableService;
+import io.grpc.ManagedChannel;
+import io.grpc.Server;
 import io.grpc.netty.NettyServerBuilder;
 import io.grpc.protobuf.services.ProtoReflectionService;
 import java.io.IOException;
@@ -373,7 +378,26 @@ public class LabServer {
       for (BindableService service : localGrpcServices) {
         localGrpcServerBuilder.addService(service);
       }
-      localGrpcServerBuilder.build().start();
+      Server localGrpcServer = localGrpcServerBuilder.build();
+      String dconDialerAddress = Flags.dconDialerAddress.get();
+      if (!Strings.isNullOrEmpty(dconDialerAddress)) {
+        ManagedChannel channel = ChannelFactory.createChannel(dconDialerAddress, mainThreadPool);
+        String instanceId = getInstanceId();
+        String dconHostname = getDconHostname();
+        new ReverseProxiedServer(
+                localGrpcServer,
+                channel,
+                ServerType.LAB_SERVER.toLowerCaseName(),
+                instanceId,
+                dconHostname)
+            .startWithTeardown(
+                () -> {
+                  logger.atInfo().log("Closing DualConduit channel for LabServer");
+                  ChannelFactory.shutdown(channel, Duration.ofSeconds(5));
+                });
+      } else {
+        localGrpcServer.start();
+      }
 
       // NOTE: Only for debug/test purpose.
       if (Flags.debugRandomExit.getNonNull()) {
@@ -611,6 +635,26 @@ public class LabServer {
             });
 
     return hostProperties.build();
+  }
+
+  private String getInstanceId() throws MobileHarnessException {
+    String instanceId = systemUtil.getEnvParentHostname();
+    if (!Strings.isNullOrEmpty(instanceId)) {
+      return instanceId;
+    }
+    return netUtil.getLocalHostName();
+  }
+
+  private String getDconHostname() throws MobileHarnessException {
+    String dconHostname = Flags.dconHostname.get();
+    if (!Strings.isNullOrEmpty(dconHostname)) {
+      return dconHostname;
+    }
+    String envLocalHostname = systemUtil.getEnvLocalHostname();
+    if (!Strings.isNullOrEmpty(envLocalHostname)) {
+      return envLocalHostname;
+    }
+    return netUtil.getLocalHostName();
   }
 
   /** Test services created by lab server. */

@@ -25,6 +25,7 @@ import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toPro
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.EventBus;
@@ -82,8 +83,11 @@ import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveResult;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveSource;
+import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proxy.DualConduitUtil;
+import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proxy.ServerType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
@@ -404,6 +408,13 @@ public class PrepareTestServiceImpl {
       labHostIp.ifPresent(stubbyLocator::setIp);
       builder.setEnableStubby(true).setStubbyLocator(stubbyLocator);
     }
+    String dconDialerAddress = Flags.dconDialerAddress.get();
+    if (!Strings.isNullOrEmpty(dconDialerAddress)) {
+      String xdsAddress =
+          DualConduitUtil.getDualConduitXdsAddress(ServerType.LAB_SERVER, getInstanceId());
+      builder.setDualConduitLocator(
+          TestEngineLocator.DualConduitLocator.newBuilder().setXdsAddress(xdsAddress).build());
+    }
     GrpcLocator.Builder grpcLocator =
         GrpcLocator.newBuilder()
             .setGrpcTarget(String.format("dns:///%s:%s", labHostName, labGrpcPort))
@@ -502,5 +513,13 @@ public class PrepareTestServiceImpl {
         .map(ErrorModelConverter::toExceptionDetail)
         .ifPresent(response::setResolveFileExceptionDetail);
     return response.build();
+  }
+
+  private String getInstanceId() throws MobileHarnessException {
+    String instanceId = systemUtil.getEnvParentHostname();
+    if (!Strings.isNullOrEmpty(instanceId)) {
+      return instanceId;
+    }
+    return netUtil.getLocalHostName();
   }
 }

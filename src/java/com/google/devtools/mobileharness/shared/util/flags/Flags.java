@@ -477,6 +477,23 @@ public class Flags {
   @FlagSpec(name = "da_gen_file_dir", help = "Path to device action gen file dir.")
   public static final Flag<String> daGenFileDir = Flag.nullString();
 
+  @FlagSpec(name = "dcon_dialer_address", help = "The address of the DualConduit dialer server.")
+  public static final Flag<String> dconDialerAddress = Flag.nullString();
+
+  @FlagSpec(
+      name = "dcon_hostname",
+      help =
+          "The hostname or IP address of this backend server, used by the local DualConduit proxy"
+              + " to connect and forward traffic to it.")
+  public static final Flag<String> dconHostname = Flag.nullString();
+
+  @FlagSpec(
+      name = "dcon_instance_id",
+      help =
+          "The unique identifier of this backend server, used by external clients to target it"
+              + " when connecting through the DualConduit proxy.")
+  public static final Flag<String> dconInstanceId = Flag.nullString();
+
   @FlagSpec(
       name = "debug_random_exit",
       help = "Randomly exit and rely on prod scheduling for restart, only for debug/test purpose.")

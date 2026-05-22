@@ -16,9 +16,12 @@
 
 package com.google.devtools.mobileharness.shared.util.comm.stub;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+
 import io.grpc.ManagedChannel;
 import io.grpc.netty.NegotiationType;
 import io.grpc.netty.NettyChannelBuilder;
+import java.time.Duration;
 import java.util.concurrent.Executor;
 
 /** Factory for creating {@link ManagedChannel} to the server. */
@@ -44,6 +47,21 @@ public class ChannelFactory {
         .executor(executor)
         .maxInboundMessageSize(32 * 1024 * 1024) // 32 MB
         .build();
+  }
+
+  /**
+   * Shuts down the managed channel and awaits its termination.
+   *
+   * @param channel the channel to shut down
+   * @param timeout the time to wait for termination
+   */
+  public static void shutdown(ManagedChannel channel, Duration timeout) {
+    channel.shutdown();
+    try {
+      var unused = channel.awaitTermination(timeout.toSeconds(), SECONDS);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
   }
 
   private ChannelFactory() {}
