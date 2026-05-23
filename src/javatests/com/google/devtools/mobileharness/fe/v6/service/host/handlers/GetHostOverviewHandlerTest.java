@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
+import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostLatestVersionProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostReleaseInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DiagnosticLink;
@@ -83,6 +84,7 @@ public final class GetHostOverviewHandlerTest {
   @Bind @Mock private Environment environment;
   @Bind @Mock private FeatureManagerFactory featureManagerFactory;
   @Bind @Mock private FeatureReadiness featureReadiness;
+  @Bind @Mock private HostLatestVersionProvider hostLatestVersionProvider;
   @Mock private FeatureManager mockFeatureManager;
 
   @Bind private ListeningExecutorService executorService = newDirectExecutorService();
@@ -92,6 +94,9 @@ public final class GetHostOverviewHandlerTest {
   @Before
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+
+    when(hostLatestVersionProvider.getLatestVersion(any(), any()))
+        .thenReturn(immediateFuture(Optional.empty()));
 
     when(featureManagerFactory.create(any())).thenReturn(mockFeatureManager);
     when(mockFeatureManager.isLabServerReleaseFeatureEnabled()).thenReturn(true);
@@ -495,41 +500,69 @@ public final class GetHostOverviewHandlerTest {
   }
 
   @Test
-  public void getHostOverview_labServerVersion_propPreferredOverRelease() throws Exception {
-    mockLabInfoWithProperty("host_version", "4.358.0-prop");
+  public void getHostOverview_upgradeAvailable_canUpgradeIsTrue() throws Exception {
+    mockLabInfoWithProperty("host_version", "4.357.0");
+    mockLatestVersionResponse("4.358.0");
 
-    HostReleaseInfo.ComponentInfo compInfo =
-        HostReleaseInfo.ComponentInfo.builder().setVersion("4.357.0-release").build();
-    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(HOST_NAME), any(UniverseScope.class)))
-        .thenReturn(
-            immediateFuture(
-                Optional.of(
-                    HostReleaseInfo.builder()
-                        .setLabServerReleaseInfo(Optional.of(compInfo))
-                        .build())));
+    when(featureReadiness.isLabServerReleaseReady()).thenReturn(true);
+    when(mockFeatureManager.isLabServerStartFeatureEnabled()).thenReturn(true);
+    when(featureReadiness.isLabServerStartReady()).thenReturn(true);
 
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
-    assertThat(overview.getLabServer().getVersion()).isEqualTo("4.358.0-prop");
+
+    assertThat(overview.getCanUpgrade()).isTrue();
   }
 
   @Test
-  public void getHostOverview_labServerVersion_fallbackToRelease() throws Exception {
-    HostReleaseInfo.ComponentInfo compInfo =
-        HostReleaseInfo.ComponentInfo.builder().setVersion("4.357.0-release").build();
-    when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(HOST_NAME), any(UniverseScope.class)))
-        .thenReturn(
-            immediateFuture(
-                Optional.of(
-                    HostReleaseInfo.builder()
-                        .setLabServerReleaseInfo(Optional.of(compInfo))
-                        .build())));
+  public void getHostOverview_sameVersion_canUpgradeIsFalse() throws Exception {
+    mockLabInfoWithProperty("host_version", "4.358.0");
+    mockLatestVersionResponse("4.358.0");
 
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
-    assertThat(overview.getLabServer().getVersion()).isEqualTo("4.357.0-release");
+
+    assertThat(overview.getCanUpgrade()).isFalse();
+  }
+
+  @Test
+  public void getHostOverview_downgradeVersion_canUpgradeIsFalse() throws Exception {
+    mockLabInfoWithProperty("host_version", "4.359.0");
+    mockLatestVersionResponse("4.358.0");
+
+    HostOverview overview =
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
+            .getOverviewContent();
+
+    assertThat(overview.getCanUpgrade()).isFalse();
+  }
+
+  @Test
+  public void getHostOverview_invalidVersionFormat_canUpgradeIsFalse() throws Exception {
+    mockLabInfoWithProperty("host_version", "invalid_format");
+    mockLatestVersionResponse("4.358.0");
+
+    HostOverview overview =
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
+            .getOverviewContent();
+
+    assertThat(overview.getCanUpgrade()).isFalse();
+  }
+
+  @Test
+  public void getHostOverview_upgradeAvailableButReleaseDisabled_canUpgradeIsFalse()
+      throws Exception {
+    mockLabInfoWithProperty("host_version", "4.357.0");
+    mockLatestVersionResponse("4.358.0");
+    when(mockFeatureManager.isLabServerReleaseFeatureEnabled()).thenReturn(false);
+
+    HostOverview overview =
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
+            .getOverviewContent();
+
+    assertThat(overview.getCanUpgrade()).isFalse();
   }
 
   private void mockLabInfoWithProperty(String key, String value) {
@@ -571,5 +604,10 @@ public final class GetHostOverviewHandlerTest {
             .build();
     when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(response));
+  }
+
+  private void mockLatestVersionResponse(String latestVersionStr) {
+    when(hostLatestVersionProvider.getLatestVersion(any(), any()))
+        .thenReturn(immediateFuture(Optional.of(latestVersionStr)));
   }
 }

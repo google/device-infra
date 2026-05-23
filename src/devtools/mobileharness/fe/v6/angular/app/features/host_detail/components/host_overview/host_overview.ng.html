@@ -52,7 +52,7 @@
             [disabled]="!actions.release.enabled || isOpeningReleaseDialog()"
             [matTooltip]="actions.release.tooltip"
           >
-              @if (isOpeningReleaseDialog()) {
+              @if (isOpeningRelease()) {
                 <mat-progress-spinner mode="indeterminate" diameter="18" class="operation-spinner"></mat-progress-spinner>
               } @else {
                 <mat-icon>upgrade</mat-icon>
@@ -141,6 +141,7 @@
             <button
               class="upgrade-version-button"
               [matTooltip]="host.labServer.actions?.release?.tooltip || ''"
+              [disabled]="!host.labServer.actions?.release?.enabled || isOpeningReleaseDialog()"
               (click)="onUpgrade()"
             >
               <mat-icon>upgrade</mat-icon>
@@ -148,8 +149,12 @@
             <button
               class="m3-chip-suggestion"
               [matTooltip]="host.labServer.actions?.release?.tooltip || ''"
+              [disabled]="!host.labServer.actions?.release?.enabled || isOpeningReleaseDialog()"
               (click)="onUpgrade()"
             >
+              @if (isOpeningUpgrade()) {
+                <mat-progress-spinner mode="indeterminate" diameter="16" class="operation-spinner mr-1"></mat-progress-spinner>
+              }
               Update available
             </button>
           }

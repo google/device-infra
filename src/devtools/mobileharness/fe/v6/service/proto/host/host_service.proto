@@ -362,6 +362,10 @@ message ReleaseLabServerRequest {
 
   // The universe of the host.
   string universe = 4;
+
+  string release_name =
+      5;  // Raw logical release key (e.g., "mobileharness_lab_server") used to
+          // select the correct Legislator rollout.
 }
 
 // Request message for StartLabServer.

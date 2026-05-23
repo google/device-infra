@@ -2,6 +2,7 @@
  * @fileoverview Data models for the Host Configuration feature.
  */
 
+import {WritePermissionResult} from './action_common';
 import {
   DeviceConfig,
   ConfigSection as DeviceConfigSection,
@@ -207,10 +208,8 @@ export declare interface UpdateHostConfigResult {
 /**
  * Result of checking host write permission.
  */
-export declare interface CheckHostWritePermissionResult {
-  hasPermission: boolean;
-  userName?: string;
-}
+export declare interface CheckHostWritePermissionResult
+  extends WritePermissionResult {}
 
 /**
  * The response object for fetching host default device configuration.

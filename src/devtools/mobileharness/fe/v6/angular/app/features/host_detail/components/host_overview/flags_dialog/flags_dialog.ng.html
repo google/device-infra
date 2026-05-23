@@ -1,11 +1,14 @@
 <app-dialog
   title="Pass-through Flags"
+  (onPermissionChange)="handlePermissionChange($event)"
   subtitle="Editing startup arguments for <strong>{{ data.hostName }}</strong>"
   type="host"
+  [param]="{deviceId: '', hostName: data.hostName}"
+  grantedMessage="Current user has permission to update pass-through flags."
+  deniedMessage="Current user does not have permission to update pass-through flags."
   width="64rem"
   height="80vh"
-  maxHeight="80vh"
-  footerType="normal">
+  maxHeight="80vh">
   <div header-prefix class="header-icon-wrapper">
     <mat-icon>tune</mat-icon>
   </div>
@@ -162,8 +165,8 @@
 
   <ng-template #actionsTemplate>
     <div class="footer-actions">
-      <button class="secondary-button" (click)="discardChanges()" [disabled]="!isDirty() || isSaving()">Discard Changes</button>
-      <button class="primary-button" (click)="save()" [disabled]="!isDirty() || isSaving()">
+      <button class="secondary-button" (click)="discardChanges()" [disabled]="!hasPermission() || !isDirty() || isSaving()">Discard Changes</button>
+      <button class="primary-button" (click)="save()" [disabled]="!hasPermission() || !isDirty() || isSaving()">
         @if (isSaving()) {
           <mat-progress-spinner mode="indeterminate" diameter="16" class="button-spinner"></mat-progress-spinner>
           Saving...

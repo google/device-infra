@@ -30,6 +30,7 @@ import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatTableDataSource, MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
 
+import {Observable} from 'rxjs';
 import {map, tap} from 'rxjs/operators';
 import {NavLink} from '../../../../shared/components/nav_link/nav_link';
 
@@ -73,7 +74,7 @@ import {objectUtils} from '../../../../shared/utils/object_utils';
 import {ActionNoPermissionContent} from './action_no_permission_content/action_no_permission_content';
 import {DecommissionContent} from './decommission_content/decommission_content';
 import {FlagsDialog} from './flags_dialog/flags_dialog';
-import {NoValidVersionsContent} from './no_valid_versions_content/no_valid_versions_content';
+import {NoValidVersionsContent} from './release_dialog/no_valid_versions_content/no_valid_versions_content';
 import {ReleaseDialog} from './release_dialog/release_dialog';
 
 const HEALTH_SEMANTIC_MAP: Record<
@@ -259,7 +260,15 @@ export class HostOverviewPage implements OnChanges {
   deviceFilterValue = '';
   isDeviceLoading = signal(false);
   expandedElement = signal<DeviceSummary | null>(null);
-  isOpeningReleaseDialog = signal(false);
+  readonly isOpeningRelease = signal(false);
+  readonly isOpeningUpgrade = signal(false);
+  readonly isOpeningRedeploy = signal(false);
+  readonly isOpeningReleaseDialog = computed(
+    () =>
+      this.isOpeningRelease() ||
+      this.isOpeningUpgrade() ||
+      this.isOpeningRedeploy(),
+  );
 
   // --- Dimensions Overlay State ---
   activeOverlay = signal<{
@@ -428,7 +437,7 @@ export class HostOverviewPage implements OnChanges {
   }
 
   onUpgrade() {
-    this.showComingSoonPopup('Release');
+    this.onRelease({preSelectLatest: true});
   }
 
   getLabActivitySemantic(activity: LabServerActivity) {
@@ -477,32 +486,43 @@ export class HostOverviewPage implements OnChanges {
       customIcon: 'rocket_launch',
       primaryButtonLabel: 'Release Now',
       secondaryButtonLabel: 'Later',
+      onConfirm: () => this.preflightAndOpenRelease({preSelectCurrent: true}),
     };
 
-    const restartDialogRef = this.dialog.open(ConfirmDialog, {
+    this.dialog.open(ConfirmDialog, {
       data: dialogData,
       panelClass: 'confirm-dialog-panel',
       disableClose: true,
     });
-
-    restartDialogRef
-      .afterClosed()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((result) => {
-        if (result === 'primary') {
-          this.onRestart();
-        }
-      });
   }
 
-  onRelease() {
-    this.isOpeningReleaseDialog.set(true);
-    this.hostService
-      .preflightLabServerRelease(this.host.hostName)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
+  onRelease(
+    options: {preSelectLatest?: boolean; preSelectCurrent?: boolean} = {},
+  ) {
+    this.preflightAndOpenRelease(options).subscribe({
+      error: () => {},
+    });
+  }
+
+  preflightAndOpenRelease(
+    options: {preSelectLatest?: boolean; preSelectCurrent?: boolean} = {},
+  ): Observable<void> {
+    const preSelectLatest = options.preSelectLatest ?? false;
+    const preSelectCurrent = options.preSelectCurrent ?? false;
+    if (preSelectLatest) {
+      this.isOpeningUpgrade.set(true);
+    } else if (preSelectCurrent) {
+      this.isOpeningRedeploy.set(true);
+    } else {
+      this.isOpeningRelease.set(true);
+    }
+    return this.hostService.preflightLabServerRelease(this.host.hostName).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      tap({
         next: (response) => {
-          this.isOpeningReleaseDialog.set(false);
+          this.isOpeningRelease.set(false);
+          this.isOpeningUpgrade.set(false);
+          this.isOpeningRedeploy.set(false);
           if (response.permissionDenied) {
             const dialogData = {
               title: 'No Access',
@@ -549,6 +569,8 @@ export class HostOverviewPage implements OnChanges {
               hostName: this.host.hostName,
               releaseConfigs: versions,
               passThroughFlags: this.passThroughFlags,
+              preSelectLatest,
+              preSelectCurrent,
             },
             autoFocus: false,
           });
@@ -563,12 +585,16 @@ export class HostOverviewPage implements OnChanges {
             });
         },
         error: (err) => {
-          this.isOpeningReleaseDialog.set(false);
+          this.isOpeningRelease.set(false);
+          this.isOpeningUpgrade.set(false);
+          this.isOpeningRedeploy.set(false);
           this.snackBar.showError(
             `Failed to load release info: ${err.message}`,
           );
         },
-      });
+      }),
+      map(() => {}),
+    );
   }
 
   onDeploy() {
