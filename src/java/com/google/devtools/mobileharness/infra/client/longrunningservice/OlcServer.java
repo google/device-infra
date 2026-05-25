@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.constan
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
+import com.google.devtools.mobileharness.infra.controller.device.proto.DeviceFilterSetting;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.flags.core.FlagsManager;
 import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
@@ -103,7 +104,7 @@ public class OlcServer {
     }
 
     // Runs the server in standalone mode.
-    serverRunner.runBasic();
+    serverRunner.runBasic(DeviceFilterSetting.getDefaultInstance());
     serverRunner.runStandaloneMode();
     serverRunner.awaitTermination();
 

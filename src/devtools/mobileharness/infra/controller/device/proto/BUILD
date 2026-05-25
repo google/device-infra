@@ -28,6 +28,8 @@ proto_library(
 java_proto_library(
     name = "device_management_filter_java_proto",
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
     ],
     deps = [":device_management_filter_proto"],

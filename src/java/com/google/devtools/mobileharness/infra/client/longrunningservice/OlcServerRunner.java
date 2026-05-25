@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.controller.device.proto.DeviceFilterSetting;
 
 /** Runner for running main logic of OLC server. */
 public interface OlcServerRunner {
@@ -32,7 +33,7 @@ public interface OlcServerRunner {
    *   <li>Starts session manager.
    * </ul>
    */
-  void runBasic() throws MobileHarnessException;
+  void runBasic(DeviceFilterSetting initialDeviceFilterSetting) throws MobileHarnessException;
 
   /**
    * Runs logic for standalone mode, in which the server is not embedded in another component.

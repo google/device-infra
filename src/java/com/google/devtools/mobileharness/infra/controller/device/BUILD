@@ -54,6 +54,7 @@ java_library(
     srcs = ["DeviceManagementFilter.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
     ],
     deps = [

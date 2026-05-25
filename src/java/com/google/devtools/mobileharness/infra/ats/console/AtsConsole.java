@@ -65,6 +65,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.OlcServ
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
+import com.google.devtools.mobileharness.infra.controller.device.proto.DeviceFilterSetting;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.constant.inject.Annotations.MainArgs;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -304,7 +305,7 @@ public class AtsConsole {
 
     if (Flags.atsConsoleOlcServerEmbeddedMode.getNonNull()) {
       // Runs embedded mode OLC server.
-      olcServerRunner.runBasic();
+      olcServerRunner.runBasic(DeviceFilterSetting.getDefaultInstance());
     }
 
     // Prepares OLC server.

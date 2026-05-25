@@ -47,6 +47,7 @@ java_library(
         ":olc_server_module",
         ":olc_server_runner",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:log_java_proto",
+        "//src/devtools/mobileharness/infra/controller/device/proto:device_management_filter_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:dirs",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:log_manager",
@@ -133,7 +134,10 @@ java_library(
     name = "olc_server_runner",
     srcs = ["OlcServerRunner.java"],
     visibility = ["//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__"],
-    deps = ["//src/java/com/google/devtools/mobileharness/api/model/error"],
+    deps = [
+        "//src/devtools/mobileharness/infra/controller/device/proto:device_management_filter_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+    ],
 )
 
 java_library(
@@ -143,6 +147,7 @@ java_library(
         ":annotations",
         ":olc_server_runner",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:log_java_proto",
+        "//src/devtools/mobileharness/infra/controller/device/proto:device_management_filter_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/api",
         "//src/java/com/google/devtools/mobileharness/infra/client/api:annotations",
@@ -151,6 +156,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:log_manager",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:session_manager",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/service:control_service",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_management_filter",
         "//src/java/com/google/devtools/mobileharness/infra/monitoring:monitor_pipeline_launcher",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/relay/service:server_utils",

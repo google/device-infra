@@ -39,6 +39,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.control
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.SessionManager;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.ControlService;
+import com.google.devtools.mobileharness.infra.controller.device.DeviceManagementFilter;
+import com.google.devtools.mobileharness.infra.controller.device.proto.DeviceFilterSetting;
 import com.google.devtools.mobileharness.infra.monitoring.MonitorPipelineLauncher;
 import com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat;
 import com.google.devtools.mobileharness.shared.util.comm.relay.service.ServerUtils;
@@ -129,7 +131,7 @@ class OlcServerRunnerImpl implements OlcServerRunner {
   }
 
   @Override
-  public void runBasic() {
+  public void runBasic(DeviceFilterSetting initialDeviceFilterSetting) {
     // Logs version.
     logger.atInfo().log(
         "OLC version: lab-%s%s",
@@ -142,6 +144,9 @@ class OlcServerRunnerImpl implements OlcServerRunner {
 
     // Initializes ClientApi.
     clientApi.initializeSingleton();
+
+    // Sets the initial device filter setting.
+    DeviceManagementFilter.getInstance().setFilterSetting(initialDeviceFilterSetting);
 
     // Starts exec mode.
     logger.atInfo().log("Starting %s exec mode", execMode.getClass().getSimpleName());
