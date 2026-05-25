@@ -87,11 +87,14 @@ public final class JobConfigGsonHolder {
    *
    * @throws IllegalStateException if element is not a valid string
    */
-  private static String getAsString(JsonElement element) {
-    if (!element.isJsonPrimitive()) {
-      throw new IllegalStateException("Expect a string, but get: " + element);
+  private static String getAsString(JsonElement element, boolean allowNonPrimitive) {
+    if (element.isJsonPrimitive()) {
+      return element.getAsString();
     }
-    return element.getAsString();
+    if (allowNonPrimitive) {
+      return element.toString();
+    }
+    throw new IllegalStateException("Expect a string, but get: " + element);
   }
 
   /**
@@ -116,7 +119,7 @@ public final class JobConfigGsonHolder {
       JobConfig.StringList.Builder stringList = JobConfig.StringList.newBuilder();
       try {
         for (JsonElement item : jsonElement.getAsJsonArray()) {
-          stringList.addContent(getAsString(item));
+          stringList.addContent(getAsString(item, false));
         }
       } catch (IllegalStateException e) {
         throw new JsonParseException(
@@ -164,7 +167,8 @@ public final class JobConfigGsonHolder {
       JobConfig.StringMap.Builder stringMap = JobConfig.StringMap.newBuilder();
       try {
         for (Map.Entry<String, JsonElement> entry : jsonElement.getAsJsonObject().entrySet()) {
-          stringMap.putContent(entry.getKey(), getAsString(entry.getValue()));
+          boolean allowNonPrimitive = entry.getKey().equals("testpro_effort_ids_by_product");
+          stringMap.putContent(entry.getKey(), getAsString(entry.getValue(), allowNonPrimitive));
         }
       } catch (IllegalStateException e) {
         throw new JsonParseException(
