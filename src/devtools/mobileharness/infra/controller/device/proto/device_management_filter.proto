@@ -1,0 +1,59 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.infra.controller.device;
+
+option java_package = "com.google.devtools.mobileharness.infra.controller.device.proto";
+option java_outer_classname = "DeviceManagementFilterProto";
+option java_multiple_files = true;
+
+// Represents matching all devices (the universal set).
+message Universal {}
+
+// Represents matching a specific set of devices.
+message ExplicitFilter {
+  // Control IDs of the devices.
+  repeated string control_ids = 1;
+}
+
+// Device list filter.
+message DeviceListFilter {
+  oneof filter_type {
+    // Represents matching all devices.
+    Universal universal = 1;
+
+    // Represents matching specific devices.
+    ExplicitFilter explicit_filter = 2;
+  }
+}
+
+// Device filtering configuration.
+//
+// A device is allowed only if it is matched by the allowlist AND NOT matched by
+// the blocklist.
+message DeviceFilterSetting {
+  // The device allowlist.
+  //
+  // Optional. If not set, defaults to UNIVERSAL (allow all).
+  DeviceListFilter allowlist_filter = 1;
+
+  // The device blocklist.
+  //
+  // Optional. If not set, defaults to EXPLICIT with empty (block none).
+  DeviceListFilter blocklist_filter = 2;
+}

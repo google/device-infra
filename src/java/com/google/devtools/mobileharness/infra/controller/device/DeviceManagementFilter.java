@@ -21,6 +21,9 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.infra.controller.device.proto.DeviceFilterSetting;
+import com.google.devtools.mobileharness.infra.controller.device.proto.DeviceListFilter;
+import com.google.devtools.mobileharness.infra.controller.device.proto.DeviceListFilter.FilterTypeCase;
 import java.util.Set;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
@@ -72,28 +75,18 @@ public class DeviceManagementFilter {
   @VisibleForTesting
   DeviceManagementFilter() {}
 
-  /**
-   * Sets the device control IDs in the allowlist.
-   *
-   * @param allowlist the allowlist of device control IDs, or {@code null} for the universal set
-   *     (allow all)
-   */
-  public void setAllowlist(@Nullable Set<String> allowlist) {
+  public void setFilterSetting(DeviceFilterSetting setting) {
     synchronized (lock) {
-      this.allowlist = allowlist == null ? null : ImmutableSet.copyOf(allowlist);
-      logState();
-    }
-  }
+      this.allowlist =
+          parseProtoFilter(
+              setting.hasAllowlistFilter() ? setting.getAllowlistFilter() : null,
+              /* defaultToUniversal= */ true);
 
-  /**
-   * Sets the device control IDs in the blocklist.
-   *
-   * @param blocklist the blocklist of device control IDs, or {@code null} for the universal set
-   *     (block all)
-   */
-  public void setBlocklist(@Nullable Set<String> blocklist) {
-    synchronized (lock) {
-      this.blocklist = blocklist == null ? null : ImmutableSet.copyOf(blocklist);
+      this.blocklist =
+          parseProtoFilter(
+              setting.hasBlocklistFilter() ? setting.getBlocklistFilter() : null,
+              /* defaultToUniversal= */ false);
+
       logState();
     }
   }
@@ -115,6 +108,19 @@ public class DeviceManagementFilter {
         "DeviceManagementFilter updated. Allowlist: %s, Blocklist: %s",
         allowlist == null ? "null (allow all)" : allowlist,
         blocklist == null ? "null (block all)" : blocklist);
+  }
+
+  @Nullable
+  private ImmutableSet<String> parseProtoFilter(
+      @Nullable DeviceListFilter protoFilter, boolean defaultToUniversal) {
+    if (protoFilter == null
+        || protoFilter.getFilterTypeCase() == FilterTypeCase.FILTERTYPE_NOT_SET) {
+      return defaultToUniversal ? null : ImmutableSet.of();
+    }
+    if (protoFilter.getFilterTypeCase() == FilterTypeCase.UNIVERSAL) {
+      return null;
+    }
+    return ImmutableSet.copyOf(protoFilter.getExplicitFilter().getControlIdsList());
   }
 
   private boolean matchesList(@Nullable Set<String> list, String controlId) {

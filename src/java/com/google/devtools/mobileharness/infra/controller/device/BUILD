@@ -57,6 +57,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
     ],
     deps = [
+        "//src/devtools/mobileharness/infra/controller/device/proto:device_management_filter_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
