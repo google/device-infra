@@ -43,6 +43,7 @@ proto_library(
         ":android_min_sdk_version_check_decorator_spec_proto",
         ":android_network_activity_logging_decorator_spec_proto",
         ":android_robo_test_spec_proto",
+        ":android_runtime_stats_decorator_spec_proto",
         ":android_show_instruction_decorator_spec_proto",
         ":android_switch_language_decorator_spec_proto",
         ":android_switch_user_decorator_spec_proto",
@@ -440,6 +441,19 @@ cc_proto_library(
 java_proto_library(
     name = "android_robo_test_spec_java_proto",
     deps = [":android_robo_test_spec_proto"],
+)
+
+proto_library(
+    name = "android_runtime_stats_decorator_spec_proto",
+    srcs = ["decorator/android_runtime_stats_decorator_spec.proto"],
+    deps = [
+        ":base_spec_proto",
+    ],
+)
+
+java_proto_library(
+    name = "android_runtime_stats_decorator_spec_java_proto",
+    deps = [":android_runtime_stats_decorator_spec_proto"],
 )
 
 proto_library(
