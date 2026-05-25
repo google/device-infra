@@ -52,6 +52,7 @@ java_library(
     deps = [
         ":annotations",
         ":lab_server_constants_module",
+        "//java/com/google/devtools/build/runtime:builddata",
         "//src/devtools/deviceinfra/host/daemon/proto:health_java_grpc",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/shared/trace/proto:span_java_proto",
