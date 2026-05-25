@@ -653,6 +653,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     try {
       response = prepareTestStub.createTest(createTestRequest, impersonationUser);
     } catch (RpcExceptionWithErrorId e) {
+      testInfo.properties().add(PropertyName.Test.UNSTARTED_TEST, "true");
       throw createExceptionWithoutStackTrace(
           InfraErrorId.CLIENT_REMOTE_MODE_TEST_CREATE_ERROR,
           "Failed to create test in Lab Server",
