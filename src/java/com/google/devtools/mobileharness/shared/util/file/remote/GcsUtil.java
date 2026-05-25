@@ -450,11 +450,15 @@ public abstract class GcsUtil {
       }
       localFileUtil.moveFileOrDir(shards.get(0), localFile);
       logger.atInfo().log("Moved the merged gcs file %s to %s", gcsFile, localFile);
-    } catch (InterruptedException e) {
-      future.cancel(true);
-      throw e;
     } catch (Throwable e) {
+      future.cancel(true);
+      for (ListenableFuture<?> res : results) {
+        res.cancel(true);
+      }
       tryRemoveFile(localFile);
+      if (e instanceof InterruptedException interruptedException) {
+        throw interruptedException;
+      }
       throw new MobileHarnessException(
           BasicErrorId.GCS_DOWNLOAD_FILE_ERROR,
           String.format(
