@@ -27,6 +27,7 @@ type config struct {
 	SAKeyFile      string
 	Debug          bool
 	Hostname       string
+	ForwardAddress string
 }
 
 func main() {
@@ -39,6 +40,7 @@ func main() {
 	flag.BoolVar(&cfg.Debug, "debug", false, "Enable debug logging and reflection")
 	flag.IntVar(&port, "port", 50051, "Port to listen on for Dialer gRPC service")
 	flag.StringVar(&cfg.Hostname, "hostname", "", "Hostname override for pre-flight check")
+	flag.StringVar(&cfg.ForwardAddress, "forward_address", "", "Forward address (e.g., 127.0.0.1 or 0.0.0.0) to listen on for forward conduits")
 	var forwardConduits flagutil.MultiString
 	flag.Var(&forwardConduits, "L", "Establish forward conduit (format: entry_port:destination_endpoint), can be specified multiple times")
 
@@ -65,7 +67,7 @@ func main() {
 	}
 
 	// 1. Perform pre-flight check
-	dialerSvc := dialer.New(context.Background(), cfg.Hostname, newTransporter)
+	dialerSvc := dialer.New(context.Background(), cfg.Hostname, cfg.ForwardAddress, newTransporter)
 	if err := dialerSvc.CheckConnection(context.Background()); err != nil {
 		log.Fatalf("Pre-flight check failed: %v", err)
 	}

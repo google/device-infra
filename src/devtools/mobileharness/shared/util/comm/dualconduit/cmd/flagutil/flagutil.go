@@ -39,6 +39,7 @@ func ParseForwardConduitFlag(flagValue string) (*dconpb.EstablishConduitRequest,
 
 	return &dconpb.EstablishConduitRequest{
 		Type:                dconpb.EstablishConduitRequest_CONDUIT_TYPE_FORWARD,
+		AutoReconnect:       true,
 		EntryPort:           int32(entryPort),
 		DestinationEndpoint: destinationEndpoint,
 	}, nil

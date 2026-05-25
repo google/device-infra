@@ -47,12 +47,13 @@ type Service struct {
 }
 
 // New creates a new Service with a initialized conduit.Manager.
-func New(ctx context.Context, hostname string, newTransporter func() (rsockettransport.ClientTransporter, error)) *Service {
+func New(ctx context.Context, hostname string, forwardAddress string, newTransporter func() (rsockettransport.ClientTransporter, error)) *Service {
 	return &Service{
 		ServiceCtx:     ctx,
 		Manager:        conduit.NewManager(),
 		NewTransporter: newTransporter,
 		Hostname:       hostname,
+		ForwardAddress: forwardAddress,
 	}
 }
 

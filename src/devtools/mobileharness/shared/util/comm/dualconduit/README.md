@@ -43,6 +43,8 @@ The Dialer connects to the Acceptor and can establish conduits.
     *   Port `50051` is the port for the Dialer gRPC service.
     *   `--acceptor_target` points to the Acceptor container (`acceptor`) on
         port `7878`.
+    *   `--forward_address` (optional) specifies the IP address to listen on for
+        forward conduits (e.g., `127.0.0.1` (default) or `0.0.0.0`).
 
 ### Establishing a Conduit
 
@@ -55,11 +57,15 @@ You can specify conduits to be established immediately when starting the dialer
 using the `-L` flag.
 
 ```bash
-docker run -d --name dialer --network dualconduit-net dualconduit/dialer:latest --acceptor_target=acceptor:7878 -L entry_port:destination_endpoint
+docker run -d --name dialer --network dualconduit-net dualconduit/dialer:latest --acceptor_target=acceptor:7878 --forward_address=0.0.0.0 -L entry_port:destination_endpoint
 ```
 
 *   `entry_port`: The port on the Acceptor side that will be forwarded.
 *   `destination_endpoint`: The target endpoint reachable from the Dialer side.
+
+> [!TIP] When running in a shared Docker network, specify
+> `--forward_address=0.0.0.0` so that other containers in the network can
+> communicate with the forwarded `entry_port` on the Dialer.
 
 Example: `bash -L 8080:localhost:80` This will forward traffic arriving at port
 `8080` on the Acceptor side to `localhost:80` on the Dialer side.
