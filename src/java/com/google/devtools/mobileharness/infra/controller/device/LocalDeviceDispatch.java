@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.controller.device;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
+import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.stream.Collectors.joining;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -96,12 +97,15 @@ public class LocalDeviceDispatch {
 
   private final ExternalDeviceManager externalDeviceManager;
 
+  private final DeviceManagementFilter deviceManagementFilter;
+
   public LocalDeviceDispatch(
       List<Class<? extends Dispatcher>> dispatcherClasses,
       LocalDeviceManager deviceManager,
       ExecutorService threadPool,
       EventBus globalInternalBus,
-      ExternalDeviceManager externalDeviceManager) {
+      ExternalDeviceManager externalDeviceManager,
+      DeviceManagementFilter deviceManagementFilter) {
     this.dispatcherClasses = ImmutableList.copyOf(dispatcherClasses);
     this.deviceManager = deviceManager;
     this.labStat = StatManager.getInstance().getOrCreateLabStat(LabLocator.LOCALHOST.ip());
@@ -111,6 +115,7 @@ public class LocalDeviceDispatch {
     this.dispatchers = new ArrayList<>();
     this.dispatcherToDevice = new HashMap<>();
     this.externalDeviceManager = externalDeviceManager;
+    this.deviceManagementFilter = deviceManagementFilter;
   }
 
   @VisibleForTesting
@@ -120,7 +125,8 @@ public class LocalDeviceDispatch {
       LocalDeviceManager deviceManager,
       ExecutorService threadPool,
       EventBus globalInternalBus,
-      ExternalDeviceManager externalDeviceManager) {
+      ExternalDeviceManager externalDeviceManager,
+      DeviceManagementFilter deviceManagementFilter) {
     this.dispatcherClasses = ImmutableList.of();
     this.deviceManager = deviceManager;
     this.labStat = StatManager.getInstance().getOrCreateLabStat(LabLocator.LOCALHOST.ip());
@@ -130,6 +136,7 @@ public class LocalDeviceDispatch {
     this.dispatchers = dispatchers;
     this.dispatcherToDevice = dispatcherToDevice;
     this.externalDeviceManager = externalDeviceManager;
+    this.deviceManagementFilter = deviceManagementFilter;
   }
 
   @SuppressWarnings("FloggerLogWithCause")
@@ -275,12 +282,20 @@ public class LocalDeviceDispatch {
         continue;
       }
 
+      DispatchResult dispatchResult = mergedResults.get(newId);
+      if (!deviceManagementFilter.isAllowed(dispatchResult.deviceId().controlId())) {
+        logger.atInfo().atMostEvery(1, HOURS).log(
+            "Skipped creating device runner for device ID %s because it is denied by"
+                + " DeviceManagementFilter",
+            dispatchResult.deviceId().controlId());
+        continue;
+      }
+
       isChanged = true;
       logger.atInfo().with(IMPORTANCE, IMPORTANT).log("New device %s", newId);
       LocalDeviceRunner runner;
       try {
         DeviceStat deviceStat = labStat.getOrCreateDeviceStat(newId);
-        DispatchResult dispatchResult = mergedResults.get(newId);
         runner =
             new LocalDeviceRunner(
                 dispatchResult.deviceId(),

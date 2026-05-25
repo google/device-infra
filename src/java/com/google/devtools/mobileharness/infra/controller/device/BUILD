@@ -74,6 +74,7 @@ java_library(
         ":device_helper_factory",
         ":device_id_manager",
         ":device_info_manager",
+        ":device_management_filter",
         ":device_state_checker",
         ":device_status_info",
         ":device_status_provider",
