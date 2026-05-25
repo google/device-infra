@@ -622,6 +622,11 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
   }
 
   @Override
+  public ImmutableList<String> getExtraJvmFlags(Path workDir) {
+    return ImmutableList.of("-Djdk.xml.totalEntitySizeLimit=0");
+  }
+
+  @Override
   public Predicate<Path> getCurrentSessionResultFilter() {
     return path ->
         !previousResultDirNames.contains(path.getFileName().toString())
