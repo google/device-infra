@@ -29,4 +29,14 @@ message AndroidRuntimeStatsDecoratorSpec {
   extend DecoratorSpec {
     optional AndroidRuntimeStatsDecoratorSpec ext = 1021;
   }
+
+  optional bool cpu_info = 1 [
+    default = false,
+    (field_detail) = { help: "Whether to collect CPU info." }
+  ];
+
+  optional bool memory_info = 2 [
+    default = false,
+    (field_detail) = { help: "Whether to collect memory info." }
+  ];
 }

@@ -566,7 +566,9 @@ java_library(
     srcs = ["AndroidRuntimeStatsDecorator.java"],
     deps = [
         ":base_decorator",
+        "//src/devtools/mobileharness/platform/android/runtimestats:runtime_stats_report_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemspec",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
