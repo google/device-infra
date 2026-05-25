@@ -2508,11 +2508,15 @@ public abstract class AndroidRealDeviceDelegate {
     }
 
     boolean headlessUserEnabled = isHeadlessSystemUser(serial, sdkVersion);
+    boolean isAndroidDesktopDevice = isAndroidDesktopDevice(serial);
 
-    if (headlessUserEnabled) {
+    if (headlessUserEnabled && !isAndroidDesktopDevice) {
       logger.atInfo().log(
           "Ignore attempt to clear multi-user on device %s since headless system is enabled.",
           serial);
+      return;
+    } else if (isAndroidDesktopDevice) {
+      setUpAndroidDesktopUser(serial, sdkVersion);
       return;
     }
 
@@ -2560,6 +2564,35 @@ public abstract class AndroidRealDeviceDelegate {
               userId, serial, MoreThrowables.shortDebugString(e));
         }
       }
+    }
+  }
+
+  @VisibleForTesting
+  boolean isAndroidDesktopDevice(String serial)
+      throws MobileHarnessException, InterruptedException {
+    return Ascii.equalsIgnoreCase(
+        "android-desktop", androidAdbUtil.getProperty(serial, AndroidProperty.PRODUCT_BOARD));
+  }
+
+  @VisibleForTesting
+  void setUpAndroidDesktopUser(String serial, int sdkVersion)
+      throws MobileHarnessException, InterruptedException {
+    Optional<Integer> firstNonZeroUser =
+        androidUserUtil.listUsers(serial, sdkVersion).stream()
+            .filter(user -> user != AndroidRealDeviceConstants.DEFAULT_SYSTEM_USER)
+            .min(Integer::compareTo);
+
+    if (firstNonZeroUser.isPresent()) {
+      int userId = firstNonZeroUser.get();
+      int currentUser = androidUserUtil.getCurrentUser(serial, sdkVersion);
+      if (currentUser != userId) {
+        logger.atInfo().log(
+            "Switch user on Android desktop device %s from %s to %s", serial, currentUser, userId);
+        androidUserUtil.switchUser(serial, sdkVersion, userId);
+        androidUserUtil.waitForUserReady(serial, sdkVersion, userId);
+      }
+    } else {
+      logger.atInfo().log("Android desktop device %s has no non-zero user found.", serial);
     }
   }
 
