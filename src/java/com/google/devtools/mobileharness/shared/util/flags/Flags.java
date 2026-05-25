@@ -499,6 +499,13 @@ public class Flags {
       help = "Randomly exit and rely on prod scheduling for restart, only for debug/test purpose.")
   public static final Flag<Boolean> debugRandomExit = Flag.value(false);
 
+  @FlagSpec(
+      name = "deprecate_master_service_grpc_api_key",
+      help =
+          "Whether to deprecate the master service gRPC API key. When true, throws if neither"
+              + " service account nor ADC is present.")
+  public static final Flag<Boolean> deprecateMasterServiceGrpcApiKey = Flag.value(false);
+
   @FlagSpec(name = "detect_adb_device", help = "Whether to enable ADB detector. Default is true.")
   public static final Flag<Boolean> detectAdbDevice = Flag.value(true);
 

@@ -72,8 +72,10 @@ java_library(
     deps = [
         ":grpc_address_util",
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@grpc-java//core",
         "@grpc-java//stub",
+        "@maven//:com_google_auth_google_auth_library_oauth2_http",
         "@maven//:com_google_guava_guava",
     ],
 )
