@@ -473,7 +473,7 @@ public class AndroidSystemSpecUtil {
   }
 
   /**
-   * Gets the max CPU frequency in Hertz, or 0 if the information is not available.
+   * Gets the max CPU frequency in Kilohertz (kHz), or 0 if the information is not available.
    *
    * @param serial the serial number of the device
    */
