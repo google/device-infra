@@ -39,6 +39,7 @@ import java.time.Duration;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -183,6 +184,9 @@ public class AndroidFilePusherDecorator extends BaseDecorator implements Android
         } else if (AndroidErrorId.ANDROID_FILE_OPERATOR_ILLEGAL_ARGUMENT.equals(exErrorId)) {
           testInfo.resultWithCause().setNonPassing(TestResult.FAIL, e);
           errorId = AndroidErrorId.ANDROID_FILE_PUSHER_DECORATOR_ILLEGAL_ARGUMENT;
+        } else if (isPushFailedWithTimeout(e)) {
+          testInfo.resultWithCause().setNonPassing(TestResult.FAIL, e);
+          errorId = AndroidErrorId.ANDROID_FILE_PUSHER_DECORATOR_PUSH_FILE_TIMEOUT;
         } else {
           if (message.contains("Read-only file system")) {
             errorId = AndroidErrorId.ANDROID_FILE_PUSHER_DECORATOR_READ_ONLY_FILE_FROM_USER;
@@ -200,6 +204,19 @@ public class AndroidFilePusherDecorator extends BaseDecorator implements Android
 
     // Runs the "real" tests.
     getDecorated().run(testInfo);
+  }
+
+  private boolean isPushFailedWithTimeout(MobileHarnessException e) {
+    Throwable cause = e;
+    while (cause instanceof MobileHarnessException) {
+      if (Objects.equals(
+          ((MobileHarnessException) cause).getErrorId(),
+          AndroidErrorId.ANDROID_FILE_UTIL_PUSH_FILE_TIMEOUT)) {
+        return true;
+      }
+      cause = cause.getCause();
+    }
+    return false;
   }
 
   private boolean isDeviceOnline(String deviceId)

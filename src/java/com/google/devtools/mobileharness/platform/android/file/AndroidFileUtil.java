@@ -48,6 +48,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -1188,6 +1189,14 @@ public class AndroidFileUtil {
       return adb.runWithRetry(
           serial, new String[] {ADB_ARG_PUSH, srcFilePath, desFilePath}, timeout);
     } catch (MobileHarnessException e) {
+      if (Objects.equals(e.getErrorId(), AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_TIMEOUT)) {
+        throw new MobileHarnessException(
+            AndroidErrorId.ANDROID_FILE_UTIL_PUSH_FILE_TIMEOUT,
+            String.format(
+                "Timeout to push file %s to device %s:%s%n%s",
+                srcFilePath, serial, desFilePath, e.getMessage()),
+            e);
+      }
       if (!((sdkVersion == 30 || sdkVersion == 31)
           && e.getMessage().contains("remote fchown failed"))) {
         throw new MobileHarnessException(
@@ -1209,6 +1218,14 @@ public class AndroidFileUtil {
       renameFiles(serial, tempDesFilePath, desFilePath);
       return pushOutput;
     } catch (MobileHarnessException e) {
+      if (Objects.equals(e.getErrorId(), AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_TIMEOUT)) {
+        throw new MobileHarnessException(
+            AndroidErrorId.ANDROID_FILE_UTIL_PUSH_FILE_TIMEOUT,
+            String.format(
+                "Timeout to push file %s with /sdcard/Android/data/ workaround to device %s:%s%n%s",
+                srcFilePath, serial, desFilePath, e.getMessage()),
+            e);
+      }
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_FILE_UTIL_PUSH_FILE_ADB_ERROR,
           String.format(
