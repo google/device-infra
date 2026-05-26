@@ -20,6 +20,7 @@ import static com.google.common.base.Ascii.toUpperCase;
 import static com.google.common.collect.Comparators.max;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -44,6 +45,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.ListDevicesCommand;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
+import com.google.devtools.mobileharness.infra.controller.device.DeviceManagementFilter;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
@@ -95,6 +97,7 @@ class ListDevicesCommandHandler {
   private final AndroidSystemSettingUtil androidSystemSettingUtil;
   private final ListeningExecutorService threadPool;
   private final Clock clock;
+  private final DeviceManagementFilter deviceManagementFilter;
   private final Duration listDeviceTimeout;
 
   @Inject
@@ -104,13 +107,15 @@ class ListDevicesCommandHandler {
       AndroidAdbInternalUtil androidAdbInternalUtil,
       AndroidSystemSettingUtil androidSystemSettingUtil,
       ListeningExecutorService threadPool,
-      Clock clock) {
+      Clock clock,
+      DeviceManagementFilter deviceManagementFilter) {
     this.deviceQuerier = deviceQuerier;
     this.androidAdbUtil = androidAdbUtil;
     this.androidAdbInternalUtil = androidAdbInternalUtil;
     this.androidSystemSettingUtil = androidSystemSettingUtil;
     this.threadPool = threadPool;
     this.clock = clock;
+    this.deviceManagementFilter = deviceManagementFilter;
 
     listDeviceTimeout = Flags.atsConsoleListDeviceTimeout.getNonNull();
   }
@@ -193,9 +198,9 @@ class ListDevicesCommandHandler {
   /** Queries device info from ADB to be the backup info for devices. */
   private ImmutableMap<String, DeviceDescriptor> queryDeviceInfoFromAdb(Instant queryInstant)
       throws InterruptedException {
-    Map<String, DeviceState> deviceState;
+    Map<String, DeviceState> rawDeviceState;
     try {
-      deviceState = androidAdbInternalUtil.getDeviceSerialsAsMap(listDeviceTimeout);
+      rawDeviceState = androidAdbInternalUtil.getDeviceSerialsAsMap(listDeviceTimeout);
     } catch (MobileHarnessException e) {
       logger.atWarning().withCause(e).log(
           "Failed to query device state from ADB within %s. Going to use status from DeviceManager"
@@ -203,6 +208,11 @@ class ListDevicesCommandHandler {
           listDeviceTimeout);
       return ImmutableMap.of();
     }
+
+    ImmutableMap<String, DeviceState> deviceState =
+        rawDeviceState.entrySet().stream()
+            .filter(entry -> deviceManagementFilter.isAllowed(entry.getKey()))
+            .collect(toImmutableMap(Entry::getKey, Entry::getValue));
 
     HashMap<String, DeviceDescriptor> basicDeviceDescriptorMap = new HashMap<>();
     ImmutableMap.Builder<String, ListenableFuture<DeviceProperties>> propertiesFutureMapBuilder =

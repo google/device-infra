@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.sessionpl
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.ConsoleJobCreator;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
+import com.google.devtools.mobileharness.infra.controller.device.DeviceManagementFilter;
 import com.google.inject.AbstractModule;
 
 /** Guice module for {@code AtsSessionPlugin}. */
@@ -28,5 +29,6 @@ public final class AtsSessionPluginModule extends AbstractModule {
   protected void configure() {
     install(new CompatibilityReportModule());
     bind(XtsJobCreator.class).to(ConsoleJobCreator.class);
+    bind(DeviceManagementFilter.class).toInstance(DeviceManagementFilter.getInstance());
   }
 }

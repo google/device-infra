@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.ListDevicesCommand;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
+import com.google.devtools.mobileharness.infra.controller.device.DeviceManagementFilter;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
@@ -65,6 +66,7 @@ public class ListDevicesCommandHandlerTest {
   @Bind @Mock private AndroidAdbInternalUtil androidAdbInternalUtil;
   @Bind @Mock private AndroidSystemSettingUtil androidSystemSettingUtil;
   @Bind @Mock Clock clock;
+  @Bind @Mock private DeviceManagementFilter deviceManagementFilter;
 
   @Inject private ListDevicesCommandHandler listDevicesCommandHandler;
 
@@ -76,6 +78,7 @@ public class ListDevicesCommandHandlerTest {
                 .with(BoundFieldModule.of(this)))
         .injectMembers(this);
     listDevicesCommandHandler = spy(listDevicesCommandHandler);
+    when(deviceManagementFilter.isAllowed(any())).thenReturn(true);
   }
 
   @Test
@@ -136,6 +139,26 @@ public class ListDevicesCommandHandlerTest {
                         .setOutputMessage(
                             "Serial  State         Allocation  Product  Variant  Build  Battery\n"
                                 + "abc     UNAUTHORIZED  n/a         n/a      n/a      n/a    n/a"))
+                .build());
+  }
+
+  @Test
+  public void handleWithBlockedDevice() throws Exception {
+    when(deviceQuerier.queryDevice(any())).thenReturn(DeviceQueryResult.getDefaultInstance());
+    when(androidAdbInternalUtil.getDeviceSerialsAsMap(any()))
+        .thenReturn(ImmutableMap.of("abc", DeviceState.DEVICE));
+    when(androidAdbUtil.getProperty(eq("abc"), any(AndroidProperty.class))).thenReturn("n/a");
+    Instant now = Instant.now();
+    when(clock.instant()).thenReturn(now);
+    when(deviceManagementFilter.isAllowed(eq("abc"))).thenReturn(false);
+
+    assertThat(listDevicesCommandHandler.handle(ListDevicesCommand.getDefaultInstance()))
+        .isEqualTo(
+            AtsSessionPluginOutput.newBuilder()
+                .setSuccess(
+                    Success.newBuilder()
+                        .setOutputMessage(
+                            "Serial  State  Allocation  Product  Variant  Build  Battery"))
                 .build());
   }
 

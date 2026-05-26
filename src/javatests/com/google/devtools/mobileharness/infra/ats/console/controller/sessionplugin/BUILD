@@ -64,6 +64,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:session_properties",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_event",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_management_filter",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",

@@ -128,6 +128,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:server_job_creator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:xts_job_creator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_module",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_management_filter",
         "@maven//:com_google_inject_guice",
     ],
 )

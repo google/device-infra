@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.controller.device.DeviceManagementFilter;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
@@ -42,15 +43,18 @@ public class DeviceDetailsRetriever {
   private final Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider;
   private final Provider<AndroidAdbUtil> androidAdbUtilProvider;
   private final Provider<AndroidSystemSettingUtil> androidSystemSettingUtilProvider;
+  private final DeviceManagementFilter deviceManagementFilter;
 
   @Inject
   DeviceDetailsRetriever(
       Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider,
       Provider<AndroidAdbUtil> androidAdbUtilProvider,
-      Provider<AndroidSystemSettingUtil> androidSystemSettingUtilProvider) {
+      Provider<AndroidSystemSettingUtil> androidSystemSettingUtilProvider,
+      DeviceManagementFilter deviceManagementFilter) {
     this.androidAdbInternalUtilProvider = androidAdbInternalUtilProvider;
     this.androidAdbUtilProvider = androidAdbUtilProvider;
     this.androidSystemSettingUtilProvider = androidSystemSettingUtilProvider;
+    this.deviceManagementFilter = deviceManagementFilter;
   }
 
   /**
@@ -64,6 +68,7 @@ public class DeviceDetailsRetriever {
           .get()
           .getDeviceSerialsByState(DeviceState.DEVICE, /* timeout= */ null)
           .stream()
+          .filter(deviceManagementFilter::isAllowed)
           .map(
               deviceId -> {
                 DeviceDetails.Builder deviceDetails = DeviceDetails.builder().setId(deviceId);
