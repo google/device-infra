@@ -26,6 +26,7 @@ import {HostConfig} from '../host_config/host_config';
 import {HostEmpty} from '../host_config/host_empty/host_empty';
 import {HostSettings} from '../host_config/host_settings/host_settings';
 import {HostWizard} from '../host_config/host_wizard/host_wizard';
+import {HostDecommissionDialog} from '../host_decommission_dialog/host_decommission_dialog';
 
 /**
  * Component for the action bar in the host detail page header.
@@ -139,9 +140,11 @@ export class HostActionBar {
   };
 
   readonly onDecommission = () => {
-    this.snackBar.showInfo(
-      `Decommission action triggered for ${this.hostName}`,
-    );
+    this.dialog.open(HostDecommissionDialog, {
+      data: {hostName: this.hostName},
+      autoFocus: false,
+      disableClose: true,
+    });
   };
 
   showComingSoonPopup(key: string) {

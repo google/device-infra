@@ -1,5 +1,6 @@
 import {Injectable} from '@angular/core';
 import {Observable, of, throwError} from 'rxjs';
+import {delay} from 'rxjs/operators';
 import {
   CheckDeviceWritePermissionResult,
   ConfigSection,
@@ -56,7 +57,7 @@ export class FakeConfigService extends ConfigService {
     if (!scenario) {
       return throwError(
         () => new Error(`Device with ID '${deviceId}' not found in mock data.`),
-      );
+      ).pipe(delay(1000));
     }
 
     // Simulate host-managed scenario
@@ -83,7 +84,7 @@ export class FakeConfigService extends ConfigService {
       isHostManaged,
       hostName,
       uiStatus,
-    });
+    }).pipe(delay(1000));
   }
 
   override checkDeviceWritePermission(
@@ -94,13 +95,15 @@ export class FakeConfigService extends ConfigService {
 
     if (!scenario || !scenario.config) {
       // If no config exists, permission is granted to create one.
-      return of({hasPermission: true, userName: CURRENT_USER});
+      return of({hasPermission: true, userName: CURRENT_USER}).pipe(
+        delay(1000),
+      );
     }
 
     const hasPermission = (scenario.config.permissions?.owners || []).includes(
       CURRENT_USER,
     );
-    return of({hasPermission, userName: CURRENT_USER});
+    return of({hasPermission, userName: CURRENT_USER}).pipe(delay(1000));
   }
 
   override updateDeviceConfig(
@@ -110,10 +113,10 @@ export class FakeConfigService extends ConfigService {
       (s) => s.id === request.id,
     );
     if (scenarioIndex === -1) {
-      return of({
+      return of<UpdateDeviceConfigResult>({
         success: false,
         error: {code: 'UNKNOWN', message: 'Device not found'},
-      });
+      }).pipe(delay(1000));
     }
 
     let currentConfig = this.mockDeviceScenarios[scenarioIndex].config;
@@ -126,7 +129,7 @@ export class FakeConfigService extends ConfigService {
 
     if (request.section === ConfigSection.ALL) {
       this.mockDeviceScenarios[scenarioIndex].config = deepCopy(request.config);
-      return of({success: true});
+      return of({success: true}).pipe(delay(1000));
     }
 
     switch (request.section) {
@@ -135,7 +138,10 @@ export class FakeConfigService extends ConfigService {
           !(request.config.permissions?.owners || []).includes(CURRENT_USER) &&
           !request.options?.overrideSelfLockout
         ) {
-          return of({success: false, error: {code: 'SELF_LOCKOUT_DETECTED'}});
+          return of<UpdateDeviceConfigResult>({
+            success: false,
+            error: {code: 'SELF_LOCKOUT_DETECTED'},
+          }).pipe(delay(1000));
         }
         currentConfig.permissions = deepCopy(request.config.permissions);
         break;
@@ -149,14 +155,17 @@ export class FakeConfigService extends ConfigService {
         currentConfig.settings = deepCopy(request.config.settings);
         break;
       default:
-        return of({
+        return of<UpdateDeviceConfigResult>({
           success: false,
-          error: {code: 'VALIDATION_ERROR', message: 'Unknown config section'},
-        });
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Unknown config section',
+          },
+        }).pipe(delay(1000));
     }
 
     this.mockDeviceScenarios[scenarioIndex].config = currentConfig;
-    return of({success: true});
+    return of({success: true}).pipe(delay(1000));
   }
 
   override getRecommendedWifi(): Observable<RecommendedWifi[]> {
@@ -174,7 +183,7 @@ export class FakeConfigService extends ConfigService {
       {ssid: 'Nest-Devices', psk: 'nest_devices_iot_secret'},
       {ssid: 'Auto-Testing-Network', psk: 'automation_bot_pass'},
       {ssid: 'Voice-Isolation-Lab', psk: 'audio_lab_key_456'},
-    ]);
+    ]).pipe(delay(1000));
   }
 
   // ===== Host Config Methods =====
@@ -185,7 +194,9 @@ export class FakeConfigService extends ConfigService {
     const scenario = this.mockHostScenarios.find(
       (s) => s.hostName === hostName,
     );
-    return of(scenario ? deepCopy(scenario.defaultDeviceConfig) : null);
+    return of(scenario ? deepCopy(scenario.defaultDeviceConfig) : null).pipe(
+      delay(1000),
+    );
   }
 
   override getHostConfig(hostName: string): Observable<GetHostConfigResult> {
@@ -195,13 +206,13 @@ export class FakeConfigService extends ConfigService {
     if (!scenario) {
       return throwError(
         () => new Error(`Host with name '${hostName}' not found in mock data.`),
-      );
+      ).pipe(delay(1000));
     }
     const result = deepCopy(scenario.hostConfigResult);
     if (result.hostConfig) {
       result.hostConfig = normalizeHostConfig(result.hostConfig);
     }
-    return of(result);
+    return of(result).pipe(delay(1000));
   }
 
   override checkHostWritePermission(
@@ -213,10 +224,10 @@ export class FakeConfigService extends ConfigService {
     );
 
     if (scenario && hostName.includes('host-basic-editable')) {
-      return of({hasPermission: false});
+      return of({hasPermission: false}).pipe(delay(1000));
     }
     // For fake service, always grant permission to the current user.
-    return of({hasPermission: true, userName: CURRENT_USER});
+    return of({hasPermission: true, userName: CURRENT_USER}).pipe(delay(1000));
   }
 
   override updateHostConfig(
@@ -226,10 +237,10 @@ export class FakeConfigService extends ConfigService {
       (s) => s.hostName === request.hostName,
     );
     if (scenarioIndex === -1) {
-      return of({
+      return of<UpdateHostConfigResult>({
         success: false,
         error: {code: 'UNKNOWN', message: 'Host not found'},
-      });
+      }).pipe(delay(1000));
     }
 
     const currentScenario = this.mockHostScenarios[scenarioIndex];
@@ -251,7 +262,10 @@ export class FakeConfigService extends ConfigService {
             !request.config.permissions.hostAdmins.includes(CURRENT_USER) &&
             !request.options?.overrideSelfLockout
           ) {
-            return of({success: false, error: {code: 'SELF_LOCKOUT_DETECTED'}});
+            return of<UpdateHostConfigResult>({
+              success: false,
+              error: {code: 'SELF_LOCKOUT_DETECTED'},
+            }).pipe(delay(1000));
           }
           updatedConfig.permissions = deepCopy(request.config.permissions);
           break;
@@ -273,18 +287,18 @@ export class FakeConfigService extends ConfigService {
           );
           break;
         default:
-          return of({
+          return of<UpdateHostConfigResult>({
             success: false,
             error: {
               code: 'VALIDATION_ERROR',
               message: 'Unknown host config section',
             },
-          });
+          }).pipe(delay(1000));
       }
     }
 
     this.mockHostScenarios[scenarioIndex].hostConfigResult.hostConfig =
       updatedConfig;
-    return of({success: true});
+    return of({success: true}).pipe(delay(1000));
   }
 }
