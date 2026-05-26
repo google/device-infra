@@ -43,7 +43,7 @@ import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.RunTroublesh
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-/** Handler for troubleshoot script operations (run and list). */
+/** Handler for troubleshoot script operations (run a script, list available scripts). */
 @Singleton
 public class TroubleshootScriptHandler {
 
@@ -117,18 +117,20 @@ public class TroubleshootScriptHandler {
             ScriptMetadata metadata = TroubleshootScriptRegistry.getMetadata(script);
 
             // Each script has its own precondition check and disabled reason.
-            record Precondition(boolean canRun, String disabledReason) {}
-            Precondition precondition =
-                switch (script) {
-                  case RESET_USB_HUB ->
-                      new Precondition(
-                          canRunResetUsbHub(labInfoResponse),
-                          "Disabled: some devices are BUSY (tests in progress).");
-                  default -> new Precondition(false, "This script is not available.");
-                };
+            boolean canRun;
+            String disabledReason;
+            switch (script) {
+              case RESET_USB_HUB -> {
+                canRun = canRunResetUsbHub(labInfoResponse);
+                disabledReason = "Disabled: some devices are BUSY (tests in progress).";
+              }
+              default -> {
+                canRun = false;
+                disabledReason = "This script is not available.";
+              }
+            }
 
-            String constraintTooltip =
-                precondition.canRun() ? metadata.description() : precondition.disabledReason();
+            String constraintTooltip = canRun ? metadata.description() : disabledReason;
 
             com.google.devtools.mobileharness.fe.v6.service.proto.host.RunTroubleshootScriptRequest
                     .TroubleshootScript
@@ -141,7 +143,7 @@ public class TroubleshootScriptHandler {
                     .setScript(feScript)
                     .setDisplayName(metadata.displayName())
                     .setDescription(metadata.description())
-                    .setEnabled(precondition.canRun())
+                    .setEnabled(canRun)
                     .setConstraintTooltip(constraintTooltip)
                     .build());
           }
