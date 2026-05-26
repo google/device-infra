@@ -1,0 +1,130 @@
+<app-dialog
+  title="Advanced Operations"
+  subtitle="Run troubleshooting scripts on <strong>{{ data.hostName }}</strong>"
+  type="host"
+  width="64rem"
+  height="80vh"
+  maxHeight="90vh"
+  footerType="normal">
+  <div header-prefix class="header-icon-wrapper">
+    <mat-icon>build_circle</mat-icon>
+  </div>
+
+  <mat-dialog-content class="dialog-content advanced-ops-dialog-wrapper" style="padding: 0;">
+    @if (isLoading()) {
+      <div class="dialog-loading-state">
+        <mat-progress-spinner mode="indeterminate" diameter="48"></mat-progress-spinner>
+        <p>Loading available advanced operations...</p>
+      </div>
+    } @else {
+      <div class="advanced-ops-dialog-body">
+        <!-- Sidebar Column: Available Operations -->
+        <div class="advanced-ops-sidebar">
+          <div class="sidebar-header">
+            <h3>Available Operations</h3>
+            <p>Dynamic troubleshooting utilities provided by the backend.</p>
+          </div>
+          <div class="operations-list">
+            @for (action of actions(); track action.script) {
+              <button
+                class="operation-item-btn"
+                [class.active]="selectedAction()?.script === action.script"
+                [class.constraint-disabled]="!action.enabled"
+                (click)="selectAction(action)"
+                [disabled]="isExecuting()"
+                [title]="action.enabled ? action.description : action.constraintTooltip">
+                <mat-icon>{{ action.script === 'RESET_USB_HUB' ? 'usb' : 'dns' }}</mat-icon>
+                <div class="btn-label">
+                  <span class="name">{{ action.displayName }}</span>
+                  <span class="desc">{{ action.description }}</span>
+                </div>
+              </button>
+            }
+            @if (actions().length === 0) {
+              <div class="sidebar-empty-state">
+                <mat-icon>info</mat-icon>
+                <p>No operations available for this host.</p>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Console Log Viewport Column -->
+        <div class="advanced-ops-console-col">
+          @if (selectedAction(); as action) {
+            <div class="console-header">
+              <div class="header-title">
+                <mat-icon>terminal</mat-icon>
+                <h3>Console for {{ action.displayName }}</h3>
+              </div>
+              <p class="header-subtitle">{{ action.description }}</p>
+
+              <!-- Run Button Bar inside the console panel -->
+              <div class="action-trigger-wrapper">
+                <button
+                  class="run-operation-btn"
+                  [class.disabled]="!action.enabled"
+                  (click)="executeScript(action)"
+                  [disabled]="isExecuting() || !action.enabled">
+                  <mat-icon>play_arrow</mat-icon>
+                  <span>Run Operation</span>
+                </button>
+                @if (!action.enabled) {
+                  <div class="constraint-warning-banner">
+                    <mat-icon>warning</mat-icon>
+                    <span>{{ action.constraintTooltip }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          } @else {
+            <div class="console-header">
+              <div class="header-title">
+                <mat-icon>terminal</mat-icon>
+                <h3>Execution Console</h3>
+              </div>
+              <p class="header-subtitle">Select an operation on the left to begin.</p>
+            </div>
+          }
+
+          <div class="console-terminal-wrapper">
+            @if (logs().length === 0 && !isExecuting()) {
+              <div class="console-empty-state">
+                <div class="icon-circle">
+                  <mat-icon>play_circle_outline</mat-icon>
+                </div>
+                <p class="empty-title">No active execution</p>
+                <p class="empty-subtitle">Select an operation, review details, and click Run Operation to execute.</p>
+              </div>
+            } @else {
+              <div class="console-terminal custom-scrollbar">
+                @for (log of logs(); track $index) {
+                  <div class="console-line" [class.log-meta]="log.startsWith('[Lab Console]')" [class.log-error]="log.includes('ERROR') || log.includes('stderr')">
+                    {{ log }}
+                  </div>
+                }
+                @if (isExecuting()) {
+                  <div class="console-spinner-line">
+                    <mat-progress-spinner mode="indeterminate" diameter="16" class="console-spinner"></mat-progress-spinner>
+                    <span>Executing troubleshooting operation on host...</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </mat-dialog-content>
+
+  <ng-template #actionsTemplate>
+    <div class="footer-actions">
+      @if (errorMessage()) {
+        <span class="error-text">{{ errorMessage() }}</span>
+      } @else if (executionSuccess()) {
+        <span class="success-text">Operation completed successfully!</span>
+      }
+      <button class="secondary-button" (click)="close()" [disabled]="isExecuting()">Close</button>
+    </div>
+  </ng-template>
+</app-dialog>

@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.fe.v6.service.host.handlers.RemoteContr
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.RestartLabServerHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.StartLabServerHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.StopLabServerHandler;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.TroubleshootScriptHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.UpdatePassThroughFlagsHandler;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityResponse;
@@ -88,6 +89,7 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   private final RestartLabServerHandler restartLabServerHandler;
   private final StopLabServerHandler stopLabServerHandler;
   private final UpdatePassThroughFlagsHandler updatePassThroughFlagsHandler;
+  private final TroubleshootScriptHandler troubleshootScriptHandler;
   private final UniverseFactory universeFactory;
 
   @Inject
@@ -104,6 +106,7 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
       RestartLabServerHandler restartLabServerHandler,
       StopLabServerHandler stopLabServerHandler,
       UpdatePassThroughFlagsHandler updatePassThroughFlagsHandler,
+      TroubleshootScriptHandler troubleshootScriptHandler,
       UniverseFactory universeFactory) {
     this.getHostOverviewHandler = getHostOverviewHandler;
     this.getHostDeviceSummariesHandler = getHostDeviceSummariesHandler;
@@ -117,6 +120,7 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
     this.restartLabServerHandler = restartLabServerHandler;
     this.stopLabServerHandler = stopLabServerHandler;
     this.updatePassThroughFlagsHandler = updatePassThroughFlagsHandler;
+    this.troubleshootScriptHandler = troubleshootScriptHandler;
     this.universeFactory = universeFactory;
   }
 
@@ -294,12 +298,25 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   @Override
   public ListenableFuture<RunTroubleshootScriptResponse> runTroubleshootScript(
       RunTroubleshootScriptRequest request) {
-    return immediateFuture(RunTroubleshootScriptResponse.getDefaultInstance());
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return troubleshootScriptHandler.runTroubleshootScript(request, universe);
   }
 
   @Override
   public ListenableFuture<ListTroubleshootScriptsResponse> listTroubleshootScripts(
       ListTroubleshootScriptsRequest request) {
-    return immediateFuture(ListTroubleshootScriptsResponse.getDefaultInstance());
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+
+    return troubleshootScriptHandler.listTroubleshootScripts(request, universe);
   }
 }

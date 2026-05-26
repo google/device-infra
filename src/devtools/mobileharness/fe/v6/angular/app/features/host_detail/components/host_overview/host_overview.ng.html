@@ -64,6 +64,16 @@
             (comingSoonClick)="showComingSoonPopup(actionId)"
           ></app-action-button>
         }
+         @if (actions.advancedOperations?.visible) {
+           <button
+             (click)="actions.advancedOperations.isReady ? openAdvancedOpsDialog() : showAdvancedOpsComingSoon()"
+             [disabled]="!actions.advancedOperations.enabled"
+             [matTooltip]="actions.advancedOperations.tooltip"
+           >
+               <mat-icon>build_circle</mat-icon>
+               <span class="operation-text">Advanced Operations</span>
+           </button>
+         }
       }
 
 
