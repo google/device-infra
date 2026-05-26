@@ -46,6 +46,8 @@
   <app-info-card #overviewSection id="lab-server" title="Lab Server" [collapsible]="false">
     <div operations class="operation-button">
       @if (host.labServer.actions; as actions) {
+<<<<<<< conflict 1 of 1
++++++++ zpqkwtup 3cbf3178 "PUBLIC: FE: Implement RunTroubleshootScript backend logic and generic action builder" (rebased revision)
         <app-action-button
           [action]="actions.release"
           label="Release"
@@ -83,6 +85,60 @@
           (actionClick)="onStop()"
           (comingSoonClick)="showComingSoonPopup('Stop')"
         ></app-action-button>
+         @if (actions.release.visible) {
+           <button
+             (click)="actions.release.isReady ? onRelease() : showComingSoonPopup('Release')"
+             [disabled]="!actions.release.enabled || isOpeningReleaseDialog()"
+             [matTooltip]="actions.release.tooltip"
+           >
+               @if (isOpeningRelease()) {
+                 <mat-progress-spinner mode="indeterminate" diameter="18" class="operation-spinner"></mat-progress-spinner>
+               } @else {
+                 <mat-icon>upgrade</mat-icon>
+               }
+               <span class="operation-text">Release</span>
+           </button>
+         }
+         @if (actions.restart.visible) {
+           <button
+             (click)="actions.restart.isReady ? onRestart() : showComingSoonPopup('Restart')"
+             [disabled]="!actions.restart.enabled"
+             [matTooltip]="actions.restart.tooltip"
+           >
+               <mat-icon>restart_alt</mat-icon>
+               <span class="operation-text">Restart</span>
+           </button>
+         }
+         @if (actions.start.visible) {
+           <button
+             (click)="actions.start.isReady ? onStart() : showComingSoonPopup('Start')"
+             [disabled]="!actions.start.enabled"
+             [matTooltip]="actions.start.tooltip"
+           >
+               <mat-icon>play_arrow</mat-icon>
+               <span class="operation-text">Start</span>
+           </button>
+         }
+         @if (actions.stop.visible) {
+           <button
+             (click)="actions.stop.isReady ? onStop() : showComingSoonPopup('Stop')"
+             [disabled]="!actions.stop.enabled"
+             [matTooltip]="actions.stop.tooltip"
+           >
+               <mat-icon>stop_circle</mat-icon>
+               <span class="operation-text">Stop</span>
+           </button>
+         }
+         @if (actions.advancedOperations?.visible) {
+           <button
+             (click)="openAdvancedOpsDialog()"
+             [disabled]="!actions.advancedOperations.enabled"
+             [matTooltip]="actions.advancedOperations.tooltip"
+           >
+               <mat-icon>build_circle</mat-icon>
+               <span class="operation-text">Advanced Operations</span>
+           </button>
+         }
       }
 
       @for (link of getDiagnosticLinks('LAB_SERVER'); track link.label) {

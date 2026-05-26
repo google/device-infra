@@ -43,6 +43,8 @@ public final class LabServerActionsBuilderTest {
   @Mock private LabServerStartButtonBuilder mockStartButtonBuilder;
   @Mock private LabServerRestartButtonBuilder mockRestartButtonBuilder;
   @Mock private LabServerStopButtonBuilder mockStopButtonBuilder;
+  private final LabServerAdvancedOperationsButtonBuilder advancedOperationsButtonBuilder =
+      new LabServerAdvancedOperationsButtonBuilder();
 
   private LabServerActionsBuilder labServerActionsBuilder;
   private static final UniverseScope UNIVERSE = new UniverseScope.SelfUniverse();
@@ -60,7 +62,8 @@ public final class LabServerActionsBuilderTest {
             mockReleaseButtonBuilder,
             mockStartButtonBuilder,
             mockRestartButtonBuilder,
-            mockStopButtonBuilder);
+            mockStopButtonBuilder,
+            advancedOperationsButtonBuilder);
   }
 
   @Test
