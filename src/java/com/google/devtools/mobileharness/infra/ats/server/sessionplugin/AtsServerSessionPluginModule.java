@@ -19,9 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.ServerJobCreator;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
-import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
-import com.google.inject.Provides;
 
 /** Guice module for {@code AtsServerSessionPlugin}. */
 public final class AtsServerSessionPluginModule extends AbstractModule {
@@ -29,15 +27,6 @@ public final class AtsServerSessionPluginModule extends AbstractModule {
   @Override
   protected void configure() {
     install(new CompatibilityReportModule());
-  }
-
-  @Provides
-  XtsJobCreator provideXtsJobCreator(ServerJobCreator serverJobCreator) {
-    return serverJobCreator;
-  }
-
-  @Provides
-  Sleeper provideSleeper() {
-    return Sleeper.defaultSleeper();
+    bind(XtsJobCreator.class).to(ServerJobCreator.class);
   }
 }

@@ -98,6 +98,7 @@ message SessionPluginConfigs {
 // 8. LocalSessionStub.
 // 9. DeviceReserver.
 // 10. LabInfoService.
+// 11. Sleeper.
 message SessionPluginConfig {
   // Required.
   SessionPluginLoadingConfig loading_config = 1;

@@ -47,6 +47,7 @@ import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.Subscriber;
 import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Module;
 import com.google.inject.Provides;
@@ -263,6 +264,7 @@ public class SessionPluginLoader {
       bind(DeviceQuerier.class).toInstance(deviceQuerier);
       bind(Instant.class).annotatedWith(ServerStartTime.class).toInstance(serverStartTime);
       bind(Clock.class).toInstance(Clock.systemUTC());
+      bind(Sleeper.class).toInstance(Sleeper.defaultSleeper());
       bind(Path.class)
           .annotatedWith(SessionGenDir.class)
           .toInstance(sessionEnvironment.sessionGenDir());

@@ -192,6 +192,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/event:event_bus_backend",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/reflection:reflection_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
