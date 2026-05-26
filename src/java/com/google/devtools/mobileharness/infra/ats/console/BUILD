@@ -70,6 +70,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/preprocessor:command_preprocessor",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/constant:dirs",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:server_log_printer",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:device_filter_parser",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:exit_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:interruptible_line_reader",

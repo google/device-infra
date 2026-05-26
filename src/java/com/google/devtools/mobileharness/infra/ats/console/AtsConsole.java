@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.console;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
@@ -52,6 +53,8 @@ import com.google.devtools.mobileharness.infra.ats.console.command.preprocessor.
 import com.google.devtools.mobileharness.infra.ats.console.command.preprocessor.CommandPreprocessor.PreprocessingResult;
 import com.google.devtools.mobileharness.infra.ats.console.constant.AtsConsoleDirs;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.ServerLogPrinter;
+import com.google.devtools.mobileharness.infra.ats.console.util.command.DeviceFilterParser;
+import com.google.devtools.mobileharness.infra.ats.console.util.command.DeviceFilterParser.DeviceFilterInfo;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.ExitUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.InterruptibleLineReader;
@@ -303,9 +306,18 @@ public class AtsConsole {
     CommandCompleterHolder.getInstance().initialize(commandCompleter);
     commandCompleter.startListingTestPlans();
 
+    // Parses device allowlist/blocklist from main args.
+    DeviceFilterInfo deviceFilterInfo = DeviceFilterParser.parse(mainArgs);
+    DeviceFilterSetting deviceFilterSetting = deviceFilterInfo.deviceFilterSetting();
+    checkArgument(
+        Flags.atsConsoleOlcServerEmbeddedMode.getNonNull()
+            || (!deviceFilterSetting.hasAllowlistFilter()
+                && !deviceFilterSetting.hasBlocklistFilter()),
+        "Device allowlist/blocklist is only supported in xTS Console embedded mode.");
+
     if (Flags.atsConsoleOlcServerEmbeddedMode.getNonNull()) {
       // Runs embedded mode OLC server.
-      olcServerRunner.runBasic(DeviceFilterSetting.getDefaultInstance());
+      olcServerRunner.runBasic(deviceFilterSetting);
     }
 
     // Prepares OLC server.
@@ -320,7 +332,7 @@ public class AtsConsole {
     }
 
     // Starts to read input from console.
-    ImmutableList<String> args = mainArgs;
+    ImmutableList<String> args = deviceFilterInfo.remainingArgs();
     while (true) {
       // Reads a command.
       ImmutableList<String> tokens;

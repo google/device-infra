@@ -17,7 +17,9 @@
 package com.google.devtools.mobileharness.infra.ats.console;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.startsWith;
@@ -174,5 +176,28 @@ public final class AtsConsoleTest {
             (AttributedString)
                 argThat(
                     argument -> argument.toString().contains("Detected no local Android devices")));
+  }
+
+  @Test
+  public void run_nonEmbeddedModeWithFilter_throwsException() throws Exception {
+    flags.set("ats_console_olc_server_embedded_mode", "false");
+    Injector injector =
+        Guice.createInjector(
+            new AtsConsoleModule(
+                "fake_console_id",
+                deviceInfraServiceFlags,
+                lineReader,
+                consoleOutPrintStream,
+                consoleErrPrintStream),
+            new CommonModule(
+                ImmutableList.of("--xts_device_allowlist=id1", "run", "cts"),
+                System.getenv(),
+                systemProperties));
+    injector.injectMembers(this);
+    atsConsole.injector = injector;
+
+    IllegalArgumentException exception =
+        assertThrows(IllegalArgumentException.class, () -> atsConsole.run());
+    assertThat(exception).hasMessageThat().contains("only supported in xTS Console embedded mode");
   }
 }
