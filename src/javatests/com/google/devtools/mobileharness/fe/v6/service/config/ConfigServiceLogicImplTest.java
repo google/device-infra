@@ -28,6 +28,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceCon
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.WifiCredentialsStore;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.inject.Guice;
@@ -54,6 +56,8 @@ public final class ConfigServiceLogicImplTest {
   @Bind @Mock private UniverseFactory universeFactory;
   @Bind @Mock private GroupMembershipProvider groupMembershipProvider;
   @Bind @Mock private ConfigurationProvider configurationProvider;
+  @Bind @Mock private LabInfoProvider labInfoProvider;
+  @Bind @Mock private WifiCredentialsStore wifiCredentialsStore;
 
   private ConfigServiceLogicImpl configServiceLogicImpl;
 

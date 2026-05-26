@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.shared.providers;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -34,6 +35,7 @@ import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigService
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.DeviceConfigStub;
+import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
 
@@ -73,6 +75,24 @@ public class ConfigurationProviderImpl implements ConfigurationProvider {
     return Futures.transform(
         deviceConfigStub.getDeviceConfigsAsync(request, false),
         response -> ConfigResult.available(response.getDeviceConfigList().stream().findFirst()),
+        executor);
+  }
+
+  @Override
+  public ListenableFuture<List<DeviceConfig>> getDeviceConfigs(
+      List<String> deviceIds, UniverseScope universe) {
+    if (!configServiceCapabilityFactory.create(universe).isConfigServiceAvailable()) {
+      return immediateFuture(ImmutableList.of());
+    }
+
+    GetDeviceConfigsRequest.Builder requestBuilder = GetDeviceConfigsRequest.newBuilder();
+    for (String deviceId : deviceIds) {
+      requestBuilder.addDeviceLocator(DeviceLocator.newBuilder().setDeviceUuid(deviceId));
+    }
+
+    return Futures.transform(
+        deviceConfigStub.getDeviceConfigsAsync(requestBuilder.build(), false),
+        response -> response.getDeviceConfigList(),
         executor);
   }
 

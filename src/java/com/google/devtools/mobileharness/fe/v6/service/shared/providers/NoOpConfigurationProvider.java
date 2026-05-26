@@ -19,10 +19,12 @@ package com.google.devtools.mobileharness.fe.v6.service.shared.providers;
 import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
+import java.util.List;
 
 /** No-op implementation of {@link ConfigurationProvider}. */
 public class NoOpConfigurationProvider implements ConfigurationProvider {
@@ -31,6 +33,12 @@ public class NoOpConfigurationProvider implements ConfigurationProvider {
   public ListenableFuture<ConfigResult<DeviceConfig>> getDeviceConfig(
       String deviceId, UniverseScope universe) {
     return immediateFuture(ConfigResult.unavailable());
+  }
+
+  @Override
+  public ListenableFuture<List<DeviceConfig>> getDeviceConfigs(
+      List<String> deviceIds, UniverseScope universe) {
+    return immediateFuture(ImmutableList.of());
   }
 
   @Override
