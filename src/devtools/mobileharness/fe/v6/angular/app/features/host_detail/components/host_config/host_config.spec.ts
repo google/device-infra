@@ -9,13 +9,19 @@ import {provideRouter} from '@angular/router';
 import {of} from 'rxjs';
 
 import {CONFIG_SERVICE} from '../../../../core/services/config/config_service';
+import {HostConfigStateService} from '../../../../core/services/config/host_config_state_service';
 
-import {HostConfig as HostConfigModel} from '../../../../core/models/host_config_models';
+import {
+  GetHostConfigResult,
+  HostConfig as HostConfigModel,
+} from '../../../../core/models/host_config_models';
 import {normalizeHostConfig} from '../../../../core/utils/host_config_utils';
 import {HostConfig} from './host_config';
 
 describe('HostConfig Component', () => {
   let mockGetHostConfig: jasmine.Spy;
+  let stateService: HostConfigStateService;
+  let setUiStatusSpy: jasmine.Spy;
 
   beforeEach(async () => {
     mockGetHostConfig = jasmine
@@ -41,6 +47,10 @@ describe('HostConfig Component', () => {
         },
       ],
     }).compileComponents();
+
+    stateService = TestBed.inject(HostConfigStateService);
+    stateService.clear();
+    setUiStatusSpy = spyOn(stateService, 'setUiStatus').and.callThrough();
   });
 
   it('should be created', () => {
@@ -101,6 +111,46 @@ describe('HostConfig Component', () => {
 
     comp.configResult$.subscribe((result) => {
       expect(result.hostConfig!.deviceConfigMode).toBe('PER_DEVICE');
+      expect(setUiStatusSpy).toHaveBeenCalledWith('test-host', result.uiStatus);
+      expect(stateService.getUiStatus('test-host')).toBe(result.uiStatus);
     });
+  });
+
+  it('should handle null result from getHostConfig', () => {
+    mockGetHostConfig.and.returnValue(of(null));
+
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostConfig, {
+        data: {hostName: 'test-host'},
+      }),
+    );
+    const comp = (
+      dialogOpener.componentInstance as MatTestDialogOpener<HostConfig>
+    ).dialogRef.componentInstance;
+
+    expect(() => {
+      comp.configResult$.subscribe();
+    }).not.toThrow();
+    expect(setUiStatusSpy).not.toHaveBeenCalled();
+  });
+
+  it('should handle result without uiStatus from getHostConfig', () => {
+    mockGetHostConfig.and.returnValue(
+      of({hostConfig: {}} as unknown as GetHostConfigResult),
+    );
+
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostConfig, {
+        data: {hostName: 'test-host'},
+      }),
+    );
+    const comp = (
+      dialogOpener.componentInstance as MatTestDialogOpener<HostConfig>
+    ).dialogRef.componentInstance;
+
+    expect(() => {
+      comp.configResult$.subscribe();
+    }).not.toThrow();
+    expect(setUiStatusSpy).not.toHaveBeenCalled();
   });
 });

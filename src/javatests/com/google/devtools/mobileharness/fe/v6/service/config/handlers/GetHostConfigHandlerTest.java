@@ -80,8 +80,26 @@ public final class GetHostConfigHandlerTest {
         .thenReturn(immediateFuture(ConfigResult.available(Optional.empty())));
 
     GetHostConfigRequest request = GetHostConfigRequest.newBuilder().setHostName("host").build();
+    GetHostConfigResponse expectedResponse =
+        GetHostConfigResponse.newBuilder()
+            .setUiStatus(HostConfigUiStatus.getDefaultInstance())
+            .build();
     assertThat(getHostConfigHandler.getHostConfig(request, SELF_UNIVERSE).get())
-        .isEqualTo(GetHostConfigResponse.getDefaultInstance());
+        .isEqualTo(expectedResponse);
+  }
+
+  @Test
+  public void getHostConfig_unavailable() throws Exception {
+    when(configurationProvider.getLabConfig(any(), any(UniverseScope.class)))
+        .thenReturn(immediateFuture(ConfigResult.unavailable()));
+
+    GetHostConfigRequest request = GetHostConfigRequest.newBuilder().setHostName("host").build();
+    GetHostConfigResponse expectedResponse =
+        GetHostConfigResponse.newBuilder()
+            .setUiStatus(HostConfigUiStatus.getDefaultInstance())
+            .build();
+    assertThat(getHostConfigHandler.getHostConfig(request, SELF_UNIVERSE).get())
+        .isEqualTo(expectedResponse);
   }
 
   @Test

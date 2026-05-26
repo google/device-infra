@@ -28,7 +28,6 @@ import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigService
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfigResponse;
-import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostConfigUiStatus;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
@@ -68,17 +67,14 @@ public final class GetHostConfigHandler {
     return Futures.transform(
         configurationProvider.getLabConfig(request.getHostName(), universe),
         labConfigResult -> {
-          if (!labConfigResult.isAvailable() || labConfigResult.config().isEmpty()) {
-            return GetHostConfigResponse.getDefaultInstance();
-          }
-          LabConfig labConfig = labConfigResult.config().get();
-          HostConfig hostConfig = ConfigConverter.toFeHostConfig(labConfig);
           HostConfigUiStatus uiStatus = configServiceCapability.calculateHostUiStatus();
-
-          return GetHostConfigResponse.newBuilder()
-              .setHostConfig(hostConfig)
-              .setUiStatus(uiStatus)
-              .build();
+          GetHostConfigResponse.Builder responseBuilder =
+              GetHostConfigResponse.newBuilder().setUiStatus(uiStatus);
+          if (labConfigResult.config().isPresent()) {
+            LabConfig labConfig = labConfigResult.config().get();
+            responseBuilder.setHostConfig(ConfigConverter.toFeHostConfig(labConfig));
+          }
+          return responseBuilder.build();
         },
         executor);
   }

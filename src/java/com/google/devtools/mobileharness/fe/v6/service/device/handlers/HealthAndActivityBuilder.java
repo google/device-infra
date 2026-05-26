@@ -173,7 +173,7 @@ public final class HealthAndActivityBuilder {
               "OmniLab cannot determine the device type, which is essential for test"
                   + " allocation.\n");
           actionBuilder.append(
-              "Check the device's connection and ensure it's not recognized by the system.\n");
+              "Check the device's connection and ensure it is recognized by the system.\n");
         }
 
         if (hasAbnormalTypes) {
