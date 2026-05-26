@@ -81,8 +81,10 @@ message RunTroubleshootScriptRequest {
   // injection.
   enum TroubleshootScript {
     UNKNOWN = 0;
+    RESET_USB_HUB = 1;
   }
   optional TroubleshootScript script = 1;
+  map<string, string> arguments = 2;
 }
 
 message RunTroubleshootScriptResponse {
