@@ -33,9 +33,7 @@ java_library(
 java_library(
     name = "test_runner_thread_pool",
     srcs = ["TestRunnerThreadPool.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
-    ],
+    visibility = ["//visibility:private"],
     deps = ["@maven//:javax_inject_jsr330_api"],
 )
 
@@ -43,7 +41,6 @@ java_library(
     name = "local_device_test_runner_launcher_provider",
     srcs = ["LocalDeviceTestRunnerLauncherProvider.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
     deps = [
         ":launcher_provider",
@@ -67,7 +64,6 @@ java_library(
     name = "thread_pool_test_runner_launcher_provider",
     srcs = ["ThreadPoolTestRunnerLauncherProvider.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
     deps = [
         ":launcher_provider",
@@ -88,7 +84,6 @@ java_library(
     srcs = ["LocalDeviceTestRunnerLauncher.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
