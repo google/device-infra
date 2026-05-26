@@ -35,17 +35,20 @@ public class LabServerActionsBuilder {
   private final LabServerStartButtonBuilder labServerStartButtonBuilder;
   private final LabServerRestartButtonBuilder labServerRestartButtonBuilder;
   private final LabServerStopButtonBuilder labServerStopButtonBuilder;
+  private final LabServerAdvancedOperationsButtonBuilder labServerAdvancedOperationsButtonBuilder;
 
   @Inject
   LabServerActionsBuilder(
       LabServerReleaseButtonBuilder labServerReleaseButtonBuilder,
       LabServerStartButtonBuilder labServerStartButtonBuilder,
       LabServerRestartButtonBuilder labServerRestartButtonBuilder,
-      LabServerStopButtonBuilder labServerStopButtonBuilder) {
+      LabServerStopButtonBuilder labServerStopButtonBuilder,
+      LabServerAdvancedOperationsButtonBuilder labServerAdvancedOperationsButtonBuilder) {
     this.labServerReleaseButtonBuilder = labServerReleaseButtonBuilder;
     this.labServerStartButtonBuilder = labServerStartButtonBuilder;
     this.labServerRestartButtonBuilder = labServerRestartButtonBuilder;
     this.labServerStopButtonBuilder = labServerStopButtonBuilder;
+    this.labServerAdvancedOperationsButtonBuilder = labServerAdvancedOperationsButtonBuilder;
   }
 
   /** Builds {@link LabServerActions} based on universe and status. */
@@ -66,8 +69,14 @@ public class LabServerActionsBuilder {
     ActionButtonState stop =
         labServerStopButtonBuilder.build(
             universe, labInfoOpt, labTypeOpt, activity, connectivityStatus, daemonStatus);
+    ActionButtonState advancedOperations =
+        labServerAdvancedOperationsButtonBuilder.build(labInfoOpt, labTypeOpt);
 
-    boolean anyActionVisible = start.getVisible() || restart.getVisible() || stop.getVisible();
+    boolean anyActionVisible =
+        start.getVisible()
+            || restart.getVisible()
+            || stop.getVisible()
+            || advancedOperations.getVisible();
 
     ActionButtonState release =
         labServerReleaseButtonBuilder.build(
@@ -78,6 +87,7 @@ public class LabServerActionsBuilder {
         .setStart(start)
         .setRestart(restart)
         .setStop(stop)
+        .setAdvancedOperations(advancedOperations)
         .build();
   }
 }
