@@ -57,3 +57,16 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
     ],
 )
+
+java_library(
+    name = "device_filter_parser",
+    srcs = ["DeviceFilterParser.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/util/command:__subpackages__",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/infra/controller/device/proto:device_management_filter_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)

@@ -31,6 +31,7 @@ java_proto_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/util/command:__subpackages__",
     ],
     deps = [":device_management_filter_proto"],
 )
