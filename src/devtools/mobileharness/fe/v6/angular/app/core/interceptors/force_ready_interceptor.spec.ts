@@ -50,6 +50,7 @@ describe('forceReadyInterceptor', () => {
       .withArgs('force_host_ready')
       .and.returnValue('debug,decommission');
     urlParamsGetSpy.withArgs('force_device_ready').and.returnValue(null);
+    urlParamsGetSpy.withArgs('force_all_ready').and.returnValue(null);
 
     const mockResponse = {
       actions: {
@@ -77,6 +78,7 @@ describe('forceReadyInterceptor', () => {
     const urlParamsGetSpy = spyOn(URLSearchParams.prototype, 'get');
     urlParamsGetSpy.withArgs('force_host_ready').and.returnValue('start');
     urlParamsGetSpy.withArgs('force_device_ready').and.returnValue(null);
+    urlParamsGetSpy.withArgs('force_all_ready').and.returnValue(null);
 
     const mockResponse = {
       overviewContent: {
@@ -114,6 +116,7 @@ describe('forceReadyInterceptor', () => {
     urlParamsGetSpy
       .withArgs('force_device_ready')
       .and.returnValue('screenshot');
+    urlParamsGetSpy.withArgs('force_all_ready').and.returnValue(null);
 
     const mockResponse = {
       actions: {
@@ -141,6 +144,7 @@ describe('forceReadyInterceptor', () => {
     urlParamsGetSpy
       .withArgs('force_device_ready')
       .and.returnValue('screenshot');
+    urlParamsGetSpy.withArgs('force_all_ready').and.returnValue(null);
 
     const mockResponse = {
       deviceSummaries: [
@@ -163,6 +167,58 @@ describe('forceReadyInterceptor', () => {
       });
 
     const req = httpMock.expectOne('/v6/hosts/my-host/devices');
+    req.flush(mockResponse);
+  });
+
+  it('should force all buttons to be ready for host when force_all_ready is true', () => {
+    const urlParamsGetSpy = spyOn(URLSearchParams.prototype, 'get');
+    urlParamsGetSpy.withArgs('force_host_ready').and.returnValue(null);
+    urlParamsGetSpy.withArgs('force_device_ready').and.returnValue(null);
+    urlParamsGetSpy.withArgs('force_all_ready').and.returnValue('true');
+
+    const mockResponse = {
+      actions: {
+        debug: {isReady: false, visible: true},
+        decommission: {isReady: false, visible: true},
+      },
+    };
+
+    httpClient
+      .get<{
+        actions: Record<string, {isReady: boolean}>;
+      }>('/v6/hosts/my-host/header-info')
+      .subscribe((response) => {
+        expect(response.actions['debug'].isReady).toBeTrue();
+        expect(response.actions['decommission'].isReady).toBeTrue();
+      });
+
+    const req = httpMock.expectOne('/v6/hosts/my-host/header-info');
+    req.flush(mockResponse);
+  });
+
+  it('should force all buttons to be ready for device when force_all_ready is true', () => {
+    const urlParamsGetSpy = spyOn(URLSearchParams.prototype, 'get');
+    urlParamsGetSpy.withArgs('force_host_ready').and.returnValue(null);
+    urlParamsGetSpy.withArgs('force_device_ready').and.returnValue(null);
+    urlParamsGetSpy.withArgs('force_all_ready').and.returnValue('true');
+
+    const mockResponse = {
+      actions: {
+        screenshot: {isReady: false},
+        logcat: {isReady: false},
+      },
+    };
+
+    httpClient
+      .get<{
+        actions: Record<string, {isReady: boolean}>;
+      }>('/v6/devices/my-device/header-info')
+      .subscribe((response) => {
+        expect(response.actions['screenshot'].isReady).toBeTrue();
+        expect(response.actions['logcat'].isReady).toBeTrue();
+      });
+
+    const req = httpMock.expectOne('/v6/devices/my-device/header-info');
     req.flush(mockResponse);
   });
 });

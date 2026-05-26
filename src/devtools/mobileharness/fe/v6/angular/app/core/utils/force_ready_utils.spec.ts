@@ -37,6 +37,17 @@ describe('forceReadyUtils', () => {
       const result = updateActions(actions, forcedButtons);
       expect(result).not.toBe(actions);
     });
+
+    it('should set isReady to true for all buttons if forcedButtons contains "*"', () => {
+      const actions = {
+        debug: {isReady: false},
+        decommission: {isReady: false},
+      };
+      const forcedButtons = ['*'];
+      const result = updateActions(actions, forcedButtons);
+      expect(result.debug.isReady).toBeTrue();
+      expect(result.decommission.isReady).toBeTrue();
+    });
   });
 
   describe('modifyHostHeaderInfo', () => {

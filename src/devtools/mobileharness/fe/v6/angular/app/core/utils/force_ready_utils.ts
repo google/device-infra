@@ -4,7 +4,11 @@ import {ActionButtonState} from '../models/action_common';
 import {DeviceHeaderInfo} from '../models/device_action';
 import {DeviceOverviewPageData} from '../models/device_overview';
 import {HostHeaderInfo} from '../models/host_action';
-import {DeviceSummary, GetHostDeviceSummariesResponse, HostOverviewPageData} from '../models/host_overview';
+import {
+  DeviceSummary,
+  GetHostDeviceSummariesResponse,
+  HostOverviewPageData,
+} from '../models/host_overview';
 
 /**
  * Union type of all bodies that can be patched by the force ready feature.
@@ -28,7 +32,10 @@ export interface PatchRule {
 /**
  * Modifies HostHeaderInfo to force specified buttons to be ready.
  */
-export function modifyHostHeaderInfo(body: unknown, forcedButtons: string[]): HostHeaderInfo {
+export function modifyHostHeaderInfo(
+  body: unknown,
+  forcedButtons: string[],
+): HostHeaderInfo {
   const b = body as HostHeaderInfo;
   if (b.actions) {
     return {
@@ -42,7 +49,10 @@ export function modifyHostHeaderInfo(body: unknown, forcedButtons: string[]): Ho
 /**
  * Modifies HostOverviewPageData to force specified buttons to be ready.
  */
-export function modifyHostOverview(body: unknown, forcedButtons: string[]): HostOverviewPageData {
+export function modifyHostOverview(
+  body: unknown,
+  forcedButtons: string[],
+): HostOverviewPageData {
   const b = body as HostOverviewPageData;
   const newBody = {...b};
   let modified = false;
@@ -75,7 +85,10 @@ export function modifyHostOverview(body: unknown, forcedButtons: string[]): Host
 /**
  * Modifies DeviceHeaderInfo to force specified buttons to be ready.
  */
-export function modifyDeviceHeaderInfo(body: unknown, forcedButtons: string[]): DeviceHeaderInfo {
+export function modifyDeviceHeaderInfo(
+  body: unknown,
+  forcedButtons: string[],
+): DeviceHeaderInfo {
   const b = body as DeviceHeaderInfo;
   if (b.actions) {
     return {
@@ -89,7 +102,10 @@ export function modifyDeviceHeaderInfo(body: unknown, forcedButtons: string[]): 
 /**
  * Modifies DeviceOverviewPageData to force specified buttons to be ready.
  */
-export function modifyDeviceOverview(body: unknown, forcedButtons: string[]): DeviceOverviewPageData {
+export function modifyDeviceOverview(
+  body: unknown,
+  forcedButtons: string[],
+): DeviceOverviewPageData {
   const b = body as DeviceOverviewPageData;
   if (b.headerInfo?.actions) {
     return {
@@ -106,7 +122,10 @@ export function modifyDeviceOverview(body: unknown, forcedButtons: string[]): De
 /**
  * Modifies GetHostDeviceSummariesResponse to force specified buttons to be ready.
  */
-export function modifyHostDevices(body: unknown, forcedButtons: string[]): GetHostDeviceSummariesResponse {
+export function modifyHostDevices(
+  body: unknown,
+  forcedButtons: string[],
+): GetHostDeviceSummariesResponse {
   const b = body as GetHostDeviceSummariesResponse;
   if (b.deviceSummaries && Array.isArray(b.deviceSummaries)) {
     return {
@@ -131,14 +150,25 @@ export function modifyHostDevices(body: unknown, forcedButtons: string[]): GetHo
 export function updateActions<T>(actions: T, forcedButtons: string[]): T {
   const updatedActions = {...actions};
   let modified = false;
-  const actionMap = updatedActions as unknown as Record<string, ActionButtonState>;
-  for (const btn of forcedButtons) {
-    if (actionMap[btn]) {
-      actionMap[btn] = {...actionMap[btn], isReady: true};
-      modified = true;
+  const actionMap = updatedActions as unknown as Record<
+    string,
+    ActionButtonState
+  >;
+
+  if (forcedButtons.includes('*')) {
+    for (const key of Object.keys(actionMap)) {
+      if (actionMap[key] && !actionMap[key].isReady) {
+        actionMap[key] = {...actionMap[key], isReady: true};
+        modified = true;
+      }
+    }
+  } else {
+    for (const btn of forcedButtons) {
+      if (actionMap[btn]) {
+        actionMap[btn] = {...actionMap[btn], isReady: true};
+        modified = true;
+      }
     }
   }
   return modified ? (actionMap as unknown as T) : actions;
 }
-
-
