@@ -93,4 +93,60 @@ describe('ReleaseDialog', () => {
     const delta = component.versionDeltaInfo();
     expect(delta.type).toEqual('upgrade');
   });
+
+  it('should select a version and update selectedVersion signal', () => {
+    const version: DeployableVersion = {
+      version: '1.0.0',
+      name: 'v1',
+      status: 'LATEST',
+      buildTime: '2026-05-14',
+    };
+    component.selectVersion(version);
+    expect(component.selectedVersion()).toEqual(version);
+  });
+
+  it('should pre-select latest version and proceed to step 2 when preSelectLatest is true', () => {
+    const versions: DeployableVersion[] = [
+      {
+        version: '1.0.0',
+        name: 'v1',
+        status: 'CURRENT',
+        buildTime: '2026-05-14',
+      },
+      {version: '2.0.0', name: 'v2', status: 'LATEST', buildTime: '2026-05-14'},
+    ];
+
+    const testDialogData: ReleaseDialogData = {
+      hostName: 'test-host',
+      passThroughFlags: signal(''),
+      releaseConfigs: versions,
+      preSelectLatest: true,
+    };
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [ReleaseDialog, NoopAnimationsModule],
+      providers: [
+        {provide: MAT_DIALOG_DATA, useValue: testDialogData},
+        {
+          provide: SnackBarService,
+          useValue: jasmine.createSpyObj('SnackBarService', [
+            'showSuccess',
+            'showError',
+          ]),
+        },
+        {
+          provide: MatDialog,
+          useValue: jasmine.createSpyObj('MatDialog', ['open']),
+        },
+      ],
+    }).compileComponents();
+
+    const localFixture = TestBed.createComponent(ReleaseDialog);
+    const localComponent = localFixture.componentInstance;
+    localFixture.detectChanges();
+
+    expect(localComponent.selectedVersion()?.version).toEqual('2.0.0');
+    expect(localComponent.currentStep()).toEqual(2);
+  });
 });

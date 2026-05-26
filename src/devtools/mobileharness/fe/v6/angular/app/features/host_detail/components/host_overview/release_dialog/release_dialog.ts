@@ -38,6 +38,7 @@ export interface ReleaseDialogData {
   hostName: string;
   releaseConfigs?: DeployableVersion[];
   passThroughFlags: WritableSignal<string>;
+  preSelectLatest?: boolean;
 }
 
 /**
@@ -161,6 +162,15 @@ export class ReleaseDialog implements OnInit {
   ngOnInit() {
     this.tempFlags.set(this.data.passThroughFlags());
     this.processVersions(this.data.releaseConfigs || []);
+    if (this.data.preSelectLatest) {
+      const latest = this.availableVersions().find(
+        (v) => v.status === 'LATEST' || v.status === 'LATEST_AND_CURRENT',
+      );
+      if (latest) {
+        this.selectVersion(latest);
+        this.currentStep.set(2);
+      }
+    }
   }
 
   processVersions(versions: DeployableVersion[]) {

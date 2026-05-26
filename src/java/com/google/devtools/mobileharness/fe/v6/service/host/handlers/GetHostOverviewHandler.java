@@ -24,6 +24,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.LabFilter;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition;
@@ -34,10 +35,12 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.LabViewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
+import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostLatestVersionProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostReleaseInfo;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.DaemonStatuses;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.HostConnectivityStatuses;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.HostTypes;
+import com.google.devtools.mobileharness.fe.v6.service.host.util.HostVersionUtil;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.LabActivities;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DiagnosticLink;
@@ -52,6 +55,7 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoP
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
+import com.google.devtools.mobileharness.shared.version.Version;
 import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -67,6 +71,7 @@ public final class GetHostOverviewHandler {
   private final ListeningExecutorService executor;
   private final HostHeaderInfoBuilder hostHeaderInfoBuilder;
   private final LabServerActionsBuilder labServerActionsBuilder;
+  private final HostLatestVersionProvider hostLatestVersionProvider;
 
   @Inject
   GetHostOverviewHandler(
@@ -74,12 +79,14 @@ public final class GetHostOverviewHandler {
       HostAuxiliaryInfoProvider hostAuxiliaryInfoProvider,
       ListeningExecutorService executor,
       HostHeaderInfoBuilder hostHeaderInfoBuilder,
-      LabServerActionsBuilder labServerActionsBuilder) {
+      LabServerActionsBuilder labServerActionsBuilder,
+      HostLatestVersionProvider hostLatestVersionProvider) {
     this.labInfoProvider = labInfoProvider;
     this.hostAuxiliaryInfoProvider = hostAuxiliaryInfoProvider;
     this.executor = executor;
     this.hostHeaderInfoBuilder = hostHeaderInfoBuilder;
     this.labServerActionsBuilder = labServerActionsBuilder;
+    this.hostLatestVersionProvider = hostLatestVersionProvider;
   }
 
   public ListenableFuture<HostOverviewPageData> getHostOverview(
@@ -104,28 +111,50 @@ public final class GetHostOverviewHandler {
                     hostName, hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType), universe),
             executor);
 
+    ListenableFuture<Optional<String>> latestVersionFuture =
+        hostLatestVersionProvider.getLatestVersion(hostName, universe);
+
     return Futures.whenAllSucceed(
-            labInfoFuture, hostReleaseInfoFuture, passThroughFlagsFuture, logLinksFuture)
+            labInfoFuture,
+            hostReleaseInfoFuture,
+            passThroughFlagsFuture,
+            logLinksFuture,
+            latestVersionFuture)
         .call(
             () -> {
               GetLabInfoResponse labInfoResponse = Futures.getDone(labInfoFuture);
               Optional<HostReleaseInfo> hostReleaseInfoOpt = Futures.getDone(hostReleaseInfoFuture);
               Optional<String> passThroughFlagsOpt = Futures.getDone(passThroughFlagsFuture);
               List<DiagnosticLink> diagnosticLinks = Futures.getDone(logLinksFuture);
+              Optional<String> latestVersionOpt = Futures.getDone(latestVersionFuture);
 
               Optional<LabInfo> labInfoOpt =
                   labInfoResponse.getLabQueryResult().getLabView().getLabDataList().stream()
                       .map(LabData::getLabInfo)
                       .findFirst();
 
+              Optional<String> currentVersionOpt =
+                  HostVersionUtil.resolveCurrentVersion(labInfoOpt, hostReleaseInfoOpt);
+
+              LabServerInfo labServerInfo =
+                  buildLabServerInfo(
+                      labInfoOpt,
+                      hostReleaseInfoOpt,
+                      passThroughFlagsOpt,
+                      currentVersionOpt,
+                      universe);
+
+              boolean canUpgrade =
+                  calculateCanUpgrade(currentVersionOpt, latestVersionOpt, labServerInfo);
+
               HostOverview overview =
                   buildHostOverview(
                       hostName,
                       labInfoOpt,
                       hostReleaseInfoOpt,
-                      passThroughFlagsOpt,
                       diagnosticLinks,
-                      universe);
+                      labServerInfo,
+                      canUpgrade);
 
               Optional<String> labTypeOpt = hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType);
 
@@ -171,9 +200,9 @@ public final class GetHostOverviewHandler {
       String hostName,
       Optional<LabInfo> labInfoOpt,
       Optional<HostReleaseInfo> hostReleaseInfoOpt,
-      Optional<String> passThroughFlagsOpt,
       List<DiagnosticLink> diagnosticLinks,
-      UniverseScope universe) {
+      LabServerInfo labServerInfo,
+      boolean canUpgrade) {
     HostOverview.Builder builder = HostOverview.newBuilder().setHostName(hostName);
 
     ImmutableMap<String, String> properties =
@@ -191,8 +220,7 @@ public final class GetHostOverviewHandler {
 
     builder.setOs(properties.getOrDefault("host_os", "Unknown"));
 
-    // TODO: Implement actual logic for can_upgrade.
-    builder.setCanUpgrade(true);
+    builder.setCanUpgrade(canUpgrade);
 
     Optional<String> labTypeOpt = hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType);
     ImmutableList<UiLabType> uiLabTypes = HostTypes.determineUiLabTypes(labInfoOpt, labTypeOpt);
@@ -203,39 +231,48 @@ public final class GetHostOverviewHandler {
         .addAllLabTypeDisplayNames(labTypes) // Legacy field for backward compatibility
         .addAllUiLabTypes(uiLabTypes)
         .setShowPassThroughFlags(!isCoreOrFusion)
-        .setLabServer(
-            buildLabServerInfo(labInfoOpt, hostReleaseInfoOpt, passThroughFlagsOpt, universe))
+        .setLabServer(labServerInfo)
         .setDaemonServer(buildDaemonServerInfo(hostReleaseInfoOpt))
         .addAllDiagnosticLinks(diagnosticLinks)
         .build();
+  }
+
+  private boolean calculateCanUpgrade(
+      Optional<String> currentVersionOpt,
+      Optional<String> latestVersionOpt,
+      LabServerInfo labServerInfo) {
+    if (currentVersionOpt.isEmpty() || latestVersionOpt.isEmpty()) {
+      return false;
+    }
+    try {
+      Version currentVersion =
+          new Version(HostVersionUtil.normalizeVersion(currentVersionOpt.get()));
+      Version latestVersion = new Version(HostVersionUtil.normalizeVersion(latestVersionOpt.get()));
+      return latestVersion.compareTo(currentVersion) > 0
+          && labServerInfo.getActions().getRelease().getVisible();
+    } catch (IllegalArgumentException | MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to parse versions for comparison: current=%s, latest=%s",
+          currentVersionOpt.get(), latestVersionOpt.get());
+      return false;
+    }
   }
 
   private LabServerInfo buildLabServerInfo(
       Optional<LabInfo> labInfoOpt,
       Optional<HostReleaseInfo> hostReleaseInfoOpt,
       Optional<String> passThroughFlagsOpt,
+      Optional<String> currentVersionOpt,
       UniverseScope universe) {
     LabServerInfo.Builder builder = LabServerInfo.newBuilder();
 
     HostConnectivityStatus connectivityStatus = HostConnectivityStatuses.create(labInfoOpt);
     builder.setConnectivity(connectivityStatus);
 
+    currentVersionOpt.ifPresent(builder::setVersion);
+
     Optional<HostReleaseInfo.ComponentInfo> labReleaseOpt =
         hostReleaseInfoOpt.flatMap(HostReleaseInfo::labServerReleaseInfo);
-
-    Optional<String> propertyVersionOpt =
-        labInfoOpt.flatMap(
-            labInfo ->
-                labInfo.getLabServerFeature().getHostProperties().getHostPropertyList().stream()
-                    .filter(p -> p.getKey().equals("host_version"))
-                    .map(HostProperty::getValue)
-                    .findFirst());
-
-    if (propertyVersionOpt.isPresent()) {
-      builder.setVersion(propertyVersionOpt.get());
-    } else if (labReleaseOpt.isPresent()) {
-      labReleaseOpt.get().version().ifPresent(builder::setVersion);
-    }
 
     boolean isCoreLab =
         HostTypes.determineLabTypeDisplayNames(

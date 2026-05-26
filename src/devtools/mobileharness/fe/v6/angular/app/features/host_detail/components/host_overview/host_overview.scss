@@ -1,21 +1,25 @@
 @use '@angular/material' as mat;
-@use  '../../../../shared/styles/overview.scss' as overview;
+@use '../../../../shared/styles/overview.scss' as overview;
 
 :host {
   font-family: overview.$labconsole-font;
 
-  @include mat.table-overrides((
-    row-item-label-text-font: overview.$labconsole-font,
-  ));
+  @include mat.table-overrides(
+    (
+      row-item-label-text-font: overview.$labconsole-font,
+    )
+  );
 
-  @include mat.checkbox-overrides((
-    touch-target-size: 36px,
-    state-layer-size: 36px,
-    selected-icon-color: #1967d2,
-    selected-checkmark-color: #fff,
-    selected-hover-icon-color: #1967d2,
-    selected-focus-icon-color: #1967d2,
-  ));
+  @include mat.checkbox-overrides(
+    (
+      touch-target-size: 36px,
+      state-layer-size: 36px,
+      selected-icon-color: #1967d2,
+      selected-checkmark-color: #fff,
+      selected-hover-icon-color: #1967d2,
+      selected-focus-icon-color: #1967d2,
+    )
+  );
 }
 
 .grid-tight {
@@ -74,7 +78,7 @@
 
     &.lab-type-chip-fusion {
       background-color: #e6f4ea; // Material Soft Green
-      color: #137333;           // Deep Emerald Font
+      color: #137333; // Deep Emerald Font
       border: 1px solid #ceead6;
     }
   }
@@ -121,10 +125,12 @@
 }
 
 .device-loading-bar {
-  @include mat.progress-bar-overrides((
-    active-indicator-color: #1967d2,
-    track-color: #e8f0fe,
-  ));
+  @include mat.progress-bar-overrides(
+    (
+      active-indicator-color: #1967d2,
+      track-color: #e8f0fe,
+    )
+  );
 }
 
 .missing-daemon-callout {
@@ -216,8 +222,6 @@
   padding: 0 0.25rem;
 }
 
-
-
 // Styles for Pass Through Flags inline editing
 .flags-edit-container {
   width: 100%;
@@ -290,7 +294,7 @@
 
     &:hover:not(:disabled) {
       background-color: #d2e3fc;
-      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, .05);
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     }
 
     .button-spinner {
@@ -426,10 +430,10 @@
     background-color: rgb(243, 244, 246);
   }
 
-  .sticky-start-header, .sticky-end-header {
+  .sticky-start-header,
+  .sticky-end-header {
     background-color: #f3f4f6;
   }
-
 
   // .sticky-start {
   //   box-shadow: inset -1px 0 #e5e7eb;
@@ -471,8 +475,6 @@
     display: flex;
     align-items: center;
   }
-
-
 
   .type-count {
     font-size: 0.75rem;
@@ -690,6 +692,12 @@
     color: #1a73e8;
   }
 
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+    pointer-events: none;
+  }
+
   mat-icon {
     font-size: 1.125rem;
     height: 1.125rem;
@@ -698,7 +706,9 @@
 }
 
 .m3-chip-suggestion {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   background-color: #e8f0fe;
   color: #1967d2;
   padding: 2px 10px;
@@ -714,5 +724,11 @@
   &:hover {
     background-color: #d2e3fc;
     border-color: #1967d2;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+    pointer-events: none;
   }
 }

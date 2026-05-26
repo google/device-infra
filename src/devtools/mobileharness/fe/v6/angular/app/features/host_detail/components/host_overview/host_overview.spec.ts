@@ -1,14 +1,18 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {MatDialog, MatDialogRef} from '@angular/material/dialog';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
+import {of, Subject, throwError} from 'rxjs';
 
 import {APP_DATA} from '../../../../core/models/app_data';
+import {PreflightLabServerReleaseResponse} from '../../../../core/models/host_action';
 import {HostOverview} from '../../../../core/models/host_overview';
 import {FakeHostService} from '../../../../core/services/host/fake_host_service';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {RemoteControlService} from '../../../../shared/services/remote_control_service';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {HostOverviewPage} from './host_overview';
+import {ReleaseDialog} from './release_dialog/release_dialog';
 
 describe('HostOverview Component', () => {
   const mockHost: HostOverview = {
@@ -57,7 +61,11 @@ describe('HostOverview Component', () => {
 
   let fixture: ComponentFixture<HostOverviewPage>;
   let component: HostOverviewPage;
+  let dialogSpy: jasmine.SpyObj<MatDialog>;
+
   beforeEach(async () => {
+    dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
+
     await TestBed.configureTestingModule({
       imports: [
         HostOverviewPage,
@@ -78,7 +86,13 @@ describe('HostOverview Component', () => {
           useValue: jasmine.createSpyObj('SnackBarService', ['showError']),
         },
       ],
-    }).compileComponents();
+    })
+      .overrideComponent(HostOverviewPage, {
+        set: {
+          providers: [{provide: MatDialog, useValue: dialogSpy}],
+        },
+      })
+      .compileComponents();
 
     fixture = TestBed.createComponent(HostOverviewPage);
     component = fixture.componentInstance;
@@ -151,5 +165,107 @@ describe('HostOverview Component', () => {
       b.textContent?.trim().toLowerCase().includes('stop'),
     ) as HTMLButtonElement;
     expect(stopButton.disabled).toBeTrue();
+  });
+
+  describe('Release & Upgrade Actions', () => {
+    let snackBarSpy: jasmine.SpyObj<SnackBarService>;
+    let fakeHostService: FakeHostService;
+
+    beforeEach(() => {
+      // Re-use global dialogSpy, but configure return value for this suite
+      dialogSpy.open.and.returnValue({
+        afterClosed: () => of('close'),
+      } as unknown as MatDialogRef<unknown, unknown>);
+      snackBarSpy = TestBed.inject(
+        SnackBarService,
+      ) as jasmine.SpyObj<SnackBarService>;
+      fakeHostService = TestBed.inject(HOST_SERVICE) as FakeHostService;
+    });
+
+    it('should handle onUpgrade click, show upgrade spinner, and open ReleaseDialog with preSelectLatest=true', () => {
+      const subject = new Subject<PreflightLabServerReleaseResponse>();
+      spyOn(fakeHostService, 'preflightLabServerRelease').and.returnValue(
+        subject,
+      );
+
+      component.onUpgrade();
+
+      expect(component.isOpeningUpgrade()).toBeTrue();
+      expect(component.isOpeningRelease()).toBeFalse();
+
+      // Emit versions to trigger dialog open
+      const mockVersions = [
+        {
+          version: '2.0.0',
+          name: 'v2',
+          status: 'LATEST' as const,
+          buildTime: '2026-05-14',
+        },
+      ];
+      subject.next({ready: {versions: mockVersions}});
+      subject.complete();
+
+      expect(component.isOpeningUpgrade()).toBeFalse();
+      expect(component.isOpeningRelease()).toBeFalse();
+      expect(dialogSpy.open).toHaveBeenCalledWith(ReleaseDialog, {
+        data: {
+          hostName: component.host.hostName,
+          releaseConfigs: mockVersions,
+          passThroughFlags: component.passThroughFlags,
+          preSelectLatest: true,
+        },
+        autoFocus: false,
+      });
+    });
+
+    it('should handle onRelease click, show release spinner, and open ReleaseDialog with preSelectLatest=false', () => {
+      const subject = new Subject<PreflightLabServerReleaseResponse>();
+      spyOn(fakeHostService, 'preflightLabServerRelease').and.returnValue(
+        subject,
+      );
+
+      component.onRelease(false);
+
+      expect(component.isOpeningRelease()).toBeTrue();
+      expect(component.isOpeningUpgrade()).toBeFalse();
+
+      // Emit versions to trigger dialog open
+      const mockVersions = [
+        {
+          version: '2.0.0',
+          name: 'v2',
+          status: 'LATEST' as const,
+          buildTime: '2026-05-14',
+        },
+      ];
+      subject.next({ready: {versions: mockVersions}});
+      subject.complete();
+
+      expect(component.isOpeningRelease()).toBeFalse();
+      expect(component.isOpeningUpgrade()).toBeFalse();
+      expect(dialogSpy.open).toHaveBeenCalledWith(ReleaseDialog, {
+        data: {
+          hostName: component.host.hostName,
+          releaseConfigs: mockVersions,
+          passThroughFlags: component.passThroughFlags,
+          preSelectLatest: false,
+        },
+        autoFocus: false,
+      });
+    });
+
+    it('should reset loading states and trigger alert on preflight spec error', () => {
+      spyOn(fakeHostService, 'preflightLabServerRelease').and.returnValue(
+        throwError(() => new Error('Failed speculation')),
+      );
+
+      component.onRelease(true); // under upgrade loading context
+
+      expect(component.isOpeningUpgrade()).toBeFalse();
+      expect(component.isOpeningRelease()).toBeFalse();
+      expect(snackBarSpy.showError).toHaveBeenCalledWith(
+        'Failed to load release info: Failed speculation',
+      );
+    });
   });
 });

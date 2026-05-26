@@ -259,7 +259,11 @@ export class HostOverviewPage implements OnChanges {
   deviceFilterValue = '';
   isDeviceLoading = signal(false);
   expandedElement = signal<DeviceSummary | null>(null);
-  isOpeningReleaseDialog = signal(false);
+  readonly isOpeningRelease = signal(false);
+  readonly isOpeningUpgrade = signal(false);
+  readonly isOpeningReleaseDialog = computed(
+    () => this.isOpeningRelease() || this.isOpeningUpgrade(),
+  );
 
   // --- Dimensions Overlay State ---
   activeOverlay = signal<{
@@ -428,7 +432,7 @@ export class HostOverviewPage implements OnChanges {
   }
 
   onUpgrade() {
-    this.showComingSoonPopup('Release');
+    this.onRelease(true);
   }
 
   getLabActivitySemantic(activity: LabServerActivity) {
@@ -495,14 +499,19 @@ export class HostOverviewPage implements OnChanges {
       });
   }
 
-  onRelease() {
-    this.isOpeningReleaseDialog.set(true);
+  onRelease(preSelectLatest = false) {
+    if (preSelectLatest) {
+      this.isOpeningUpgrade.set(true);
+    } else {
+      this.isOpeningRelease.set(true);
+    }
     this.hostService
       .preflightLabServerRelease(this.host.hostName)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (response) => {
-          this.isOpeningReleaseDialog.set(false);
+          this.isOpeningRelease.set(false);
+          this.isOpeningUpgrade.set(false);
           if (response.permissionDenied) {
             const dialogData = {
               title: 'No Access',
@@ -549,6 +558,7 @@ export class HostOverviewPage implements OnChanges {
               hostName: this.host.hostName,
               releaseConfigs: versions,
               passThroughFlags: this.passThroughFlags,
+              preSelectLatest,
             },
             autoFocus: false,
           });
@@ -563,7 +573,8 @@ export class HostOverviewPage implements OnChanges {
             });
         },
         error: (err) => {
-          this.isOpeningReleaseDialog.set(false);
+          this.isOpeningRelease.set(false);
+          this.isOpeningUpgrade.set(false);
           this.snackBar.showError(
             `Failed to load release info: ${err.message}`,
           );

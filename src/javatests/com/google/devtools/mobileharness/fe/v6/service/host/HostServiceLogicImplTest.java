@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.fe.v6.service.host.builder.RemoteContro
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLabServerReleaseActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.UpdatePassThroughFlagsActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
+import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostLatestVersionProvider;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostHeaderInfoRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseRequest;
@@ -66,6 +67,7 @@ public final class HostServiceLogicImplTest {
 
   @Bind @Mock private LabInfoProvider labInfoProvider;
   @Bind @Mock private HostAuxiliaryInfoProvider hostAuxiliaryInfoProvider;
+  @Bind @Mock private HostLatestVersionProvider hostLatestVersionProvider;
   @Bind @Mock private SubDeviceInfoListFactory subDeviceInfoListFactory;
   @Bind @Mock private RemoteControlEligibilityChecker remoteControlEligibilityChecker;
   @Bind @Mock private RemoteControlUrlBuilder remoteControlUrlBuilder;

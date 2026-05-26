@@ -34,6 +34,8 @@ import com.google.devtools.mobileharness.fe.v6.service.host.handlers.NoOpUpdateP
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLabServerReleaseActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.UpdatePassThroughFlagsActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
+import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostLatestVersionProvider;
+import com.google.devtools.mobileharness.fe.v6.service.host.provider.NoOpHostLatestVersionProviderImpl;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.OssHostAuxiliaryInfoProviderImpl;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
@@ -97,6 +99,9 @@ public final class OssStubsModule extends AbstractModule {
         .in(Singleton.class);
 
     bind(HostAuxiliaryInfoProvider.class).to(OssHostAuxiliaryInfoProviderImpl.class);
+    bind(HostLatestVersionProvider.class)
+        .to(NoOpHostLatestVersionProviderImpl.class)
+        .in(Singleton.class);
     bind(PreflightLabServerReleaseActionHelper.class)
         .to(NoOpPreflightLabServerReleaseActionHelper.class)
         .in(Singleton.class);
