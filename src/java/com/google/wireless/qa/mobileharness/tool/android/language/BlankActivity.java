@@ -14,18 +14,9 @@
  * limitations under the License.
  */
 
-package android.app;
+package com.google.wireless.qa.mobileharness.tool.android.language;
 
-import android.content.res.Configuration;
-import android.os.RemoteException;
+import android.app.Activity;
 
-/** Fake class for "extract" internal IActivityManager out from SDK. */
-public interface IActivityManager {
-
-  public abstract Configuration getConfiguration() throws RemoteException;
-
-  public abstract void updateConfiguration(Configuration configuration) throws RemoteException;
-
-  public abstract void updatePersistentConfiguration(Configuration configuration)
-      throws RemoteException;
-}
+/** Blank Activity needed to setup an app. */
+public class BlankActivity extends Activity {}

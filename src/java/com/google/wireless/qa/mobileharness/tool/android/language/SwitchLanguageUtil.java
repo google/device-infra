@@ -17,16 +17,18 @@
 package com.google.wireless.qa.mobileharness.tool.android.language;
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.ActivityManagerNative;
 import android.app.IActivityManager;
 import android.app.Instrumentation;
-import android.app.backup.BackupManager;
+import android.content.Context;
 import android.content.res.Configuration;
+import android.os.Build.VERSION;
+import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
 import android.os.RemoteException;
 import android.util.Log;
 import com.google.common.base.Strings;
-import java.lang.reflect.Field;
 import java.util.Locale;
 
 /**
@@ -62,45 +64,24 @@ public class SwitchLanguageUtil extends Instrumentation {
     final Bundle result = new Bundle();
 
     // Parses parameters.
-    int sdkVersion = 17;
-    String sdkVersionStr = Strings.nullToEmpty(arguments.getString("sdk_version"));
     String language = Strings.nullToEmpty(arguments.getString("language"));
     String country = Strings.nullToEmpty(arguments.getString("country"));
     Locale locale = new Locale.Builder().setLanguage(language).setRegion(country).build();
 
     // Switches language and country.
     Log.i(LOG_TAG, "Change locale to [" + locale.getDisplayName() + "]");
-    IActivityManager am = ActivityManagerNative.getDefault();
+    IActivityManager am = getActivityManager();
     try {
-      if (!Strings.isNullOrEmpty(sdkVersionStr)) {
-        sdkVersion = Integer.parseInt(sdkVersionStr);
-      }
-
       Configuration config = am.getConfiguration();
+      config.setLocale(locale);
 
-      if (sdkVersion < 17) {
-        config.locale = locale;
-        try {
-          Field userUpdateField = config.getClass().getDeclaredField("userSetLocale");
-          userUpdateField.setAccessible(true);
-          userUpdateField.setBoolean(config, true);
-        } catch (IllegalAccessException | NoSuchFieldException e) {
-          fail("Failed to set userSetLocale field: " + e);
-        }
-      } else {
-        config.setLocale(locale);
-      }
-
-      if (sdkVersion >= 24) {
+      if (VERSION.SDK_INT >= VERSION_CODES.N /* API Level 24 */) {
         // For Android N device, updateConfiguration was deperacated, check bug 28448266 for detail
         // information
         am.updatePersistentConfiguration(config);
       } else {
         am.updateConfiguration(config);
       }
-
-      Log.i(LOG_TAG, "Trigger setting change notify");
-      BackupManager.dataChanged("com.android.providers.settings");
 
       // Prints this log to check execution result, so do not change it.
       Log.i(LOG_TAG, "Successfully switch language");
@@ -112,6 +93,20 @@ public class SwitchLanguageUtil extends Instrumentation {
     } catch (Exception e) {
       fail(e.toString());
     }
+  }
+
+  private IActivityManager getActivityManager() {
+    if (VERSION.SDK_INT >= VERSION_CODES.O /* API Level 26 */) {
+      ActivityManager am =
+          (ActivityManager) getContext().getSystemService(Context.ACTIVITY_SERVICE);
+      try {
+        var getService = am.getClass().getMethod("getService");
+        return (IActivityManager) getService.invoke(am);
+      } catch (Exception e) {
+        Log.e(LOG_TAG, "Could not invoke ActivityManager.getService() method", e);
+      }
+    }
+    return ActivityManagerNative.getDefault();
   }
 
   /** Fails an instrumentation request. */

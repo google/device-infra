@@ -16,9 +16,10 @@
 
 package android.app;
 
-/** Fake class for "extract" internal ActivityManagerNative out from SDK. */
+/** Compile time only shim, because Android framework class is annotated with @hide. */
 public abstract class ActivityManagerNative implements IActivityManager {
+  @SuppressWarnings("DoNotCallSuggester")
   public static IActivityManager getDefault() {
-    return null;
+    throw new AssertionError("Should never really be called.");
   }
 }

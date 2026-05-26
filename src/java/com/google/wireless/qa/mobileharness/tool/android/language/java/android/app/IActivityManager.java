@@ -14,5 +14,17 @@
  * limitations under the License.
  */
 
-@com.google.errorprone.annotations.SuppressPackageLocation
 package android.app;
+
+import android.content.res.Configuration;
+import android.os.RemoteException;
+
+/** Compile time only shim, because Android framework interface is annotated with @hide. */
+public interface IActivityManager {
+
+  Configuration getConfiguration() throws RemoteException;
+
+  void updateConfiguration(Configuration configuration) throws RemoteException;
+
+  void updatePersistentConfiguration(Configuration configuration) throws RemoteException;
+}

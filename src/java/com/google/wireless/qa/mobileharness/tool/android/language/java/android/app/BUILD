@@ -13,27 +13,20 @@
 # limitations under the License.
 #
 
-# Description:
-#   MobileHarness Android device switch language app for switching language and country of the device.
-
-load("@rules_android//android:rules.bzl", "android_binary")
+load("@rules_android//android:rules.bzl", "android_library")
 
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/tool/android/language:__pkg__",
     ],
 )
 
-android_binary(
-    name = "switchlanguage",
+android_library(
+    name = "app",
     srcs = [
-        "BlankActivity.java",
-        "SwitchLanguageUtil.java",
+        "ActivityManagerNative.java",
+        "IActivityManager.java",
     ],
-    manifest = "AndroidManifest.xml",
-    deps = [
-        "//src/java/com/google/wireless/qa/mobileharness/tool/android/language/java/android/app",
-        "@maven//:com_google_guava_guava",
-    ],
+    neverlink = 1,
 )
