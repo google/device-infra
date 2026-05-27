@@ -4,6 +4,8 @@
  * and the Device Configuration UI components.
  */
 
+import {WritePermissionResult} from './action_common';
+
 
 /**
  * Represents a single dimension name-value pair.
@@ -151,12 +153,8 @@ export declare interface GetDeviceConfigResult {
 /**
  * The result object returned when checking device write permissions.
  */
-export declare interface CheckDeviceWritePermissionResult {
-  /** True if the current user has permission to edit the device config. */
-  hasPermission: boolean;
-  /** The username of the user for whom the permission was checked. */
-  userName?: string;
-}
+export declare interface CheckDeviceWritePermissionResult
+  extends WritePermissionResult {}
 
 /**
  * The result object returned after attempting to update a device's

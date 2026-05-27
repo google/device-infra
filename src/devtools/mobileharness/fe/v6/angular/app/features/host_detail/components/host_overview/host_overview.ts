@@ -30,6 +30,7 @@ import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatTableDataSource, MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
 
+import {Observable} from 'rxjs';
 import {map, tap} from 'rxjs/operators';
 import {NavLink} from '../../../../shared/components/nav_link/nav_link';
 
@@ -261,8 +262,12 @@ export class HostOverviewPage implements OnChanges {
   expandedElement = signal<DeviceSummary | null>(null);
   readonly isOpeningRelease = signal(false);
   readonly isOpeningUpgrade = signal(false);
+  readonly isOpeningRedeploy = signal(false);
   readonly isOpeningReleaseDialog = computed(
-    () => this.isOpeningRelease() || this.isOpeningUpgrade(),
+    () =>
+      this.isOpeningRelease() ||
+      this.isOpeningUpgrade() ||
+      this.isOpeningRedeploy(),
   );
 
   // --- Dimensions Overlay State ---
@@ -432,7 +437,7 @@ export class HostOverviewPage implements OnChanges {
   }
 
   onUpgrade() {
-    this.onRelease(true);
+    this.onRelease({preSelectLatest: true});
   }
 
   getLabActivitySemantic(activity: LabServerActivity) {
@@ -481,37 +486,43 @@ export class HostOverviewPage implements OnChanges {
       customIcon: 'rocket_launch',
       primaryButtonLabel: 'Release Now',
       secondaryButtonLabel: 'Later',
+      onConfirm: () => this.preflightAndOpenRelease({preSelectCurrent: true}),
     };
 
-    const restartDialogRef = this.dialog.open(ConfirmDialog, {
+    this.dialog.open(ConfirmDialog, {
       data: dialogData,
       panelClass: 'confirm-dialog-panel',
       disableClose: true,
     });
-
-    restartDialogRef
-      .afterClosed()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((result) => {
-        if (result === 'primary') {
-          this.onRestart();
-        }
-      });
   }
 
-  onRelease(preSelectLatest = false) {
+  onRelease(
+    options: {preSelectLatest?: boolean; preSelectCurrent?: boolean} = {},
+  ) {
+    this.preflightAndOpenRelease(options).subscribe({
+      error: () => {},
+    });
+  }
+
+  preflightAndOpenRelease(
+    options: {preSelectLatest?: boolean; preSelectCurrent?: boolean} = {},
+  ): Observable<void> {
+    const preSelectLatest = options.preSelectLatest ?? false;
+    const preSelectCurrent = options.preSelectCurrent ?? false;
     if (preSelectLatest) {
       this.isOpeningUpgrade.set(true);
+    } else if (preSelectCurrent) {
+      this.isOpeningRedeploy.set(true);
     } else {
       this.isOpeningRelease.set(true);
     }
-    this.hostService
-      .preflightLabServerRelease(this.host.hostName)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
+    return this.hostService.preflightLabServerRelease(this.host.hostName).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      tap({
         next: (response) => {
           this.isOpeningRelease.set(false);
           this.isOpeningUpgrade.set(false);
+          this.isOpeningRedeploy.set(false);
           if (response.permissionDenied) {
             const dialogData = {
               title: 'No Access',
@@ -559,6 +570,7 @@ export class HostOverviewPage implements OnChanges {
               releaseConfigs: versions,
               passThroughFlags: this.passThroughFlags,
               preSelectLatest,
+              preSelectCurrent,
             },
             autoFocus: false,
           });
@@ -575,11 +587,14 @@ export class HostOverviewPage implements OnChanges {
         error: (err) => {
           this.isOpeningRelease.set(false);
           this.isOpeningUpgrade.set(false);
+          this.isOpeningRedeploy.set(false);
           this.snackBar.showError(
             `Failed to load release info: ${err.message}`,
           );
         },
-      });
+      }),
+      map(() => {}),
+    );
   }
 
   onDeploy() {

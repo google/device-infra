@@ -3,7 +3,6 @@
   flex-direction: column;
   gap: 1.25rem;
 
-
   p {
     text-align: center;
     color: #4b5563;
@@ -16,4 +15,8 @@
   .permission-page-link {
     cursor: pointer;
   }
+}
+
+.no-wrap-hostname {
+  white-space: nowrap;
 }

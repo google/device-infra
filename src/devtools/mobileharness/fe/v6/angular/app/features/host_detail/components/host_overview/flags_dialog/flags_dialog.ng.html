@@ -1,11 +1,14 @@
 <app-dialog
   title="Pass-through Flags"
+  (onPermissionChange)="handlePermissionChange($event)"
   subtitle="Editing startup arguments for <strong>{{ data.hostName }}</strong>"
   type="host"
+  [param]="{deviceId: '', hostName: data.hostName}"
+  grantedMessage="Current user has permission to update pass-through flags."
+  deniedMessage="Current user does not have permission to update pass-through flags."
   width="64rem"
   height="80vh"
-  maxHeight="80vh"
-  footerType="normal">
+  maxHeight="80vh">
   <div header-prefix class="header-icon-wrapper">
     <mat-icon>tune</mat-icon>
   </div>
@@ -47,13 +50,14 @@
                   <input matInput
                          [(ngModel)]="addInput"
                          (keydown.enter)="addFlag()"
+                         [readonly]="!hasPermission()"
                          placeholder="Type flag, e.g. --debug_mode=true"
                          class="flag-input"
                          aria-label="Type pass-through flag">
                 </mat-form-field>
                 <button mat-stroked-button
                         (click)="addFlag()"
-                        [disabled]="!addInput().trim()"
+                        [disabled]="!hasPermission() || !addInput().trim()"
                         class="add-btn"
                         title="Add Flag">
                   <mat-icon>add</mat-icon>
@@ -63,7 +67,7 @@
               <!-- Current Flags List -->
               <div class="list-header">
                 <span class="title">Current Flags</span>
-                <button (click)="clearAll()" class="clear-btn">
+                <button (click)="clearAll()" class="clear-btn" [disabled]="!hasPermission()">
                   <mat-icon>delete_sweep</mat-icon> Clear All
                 </button>
               </div>
@@ -90,7 +94,7 @@
                             </div>
                           }
                         </div>
-                        <button (click)="removeFlag($index)" class="delete-btn" title="Remove flag">
+                        <button (click)="removeFlag($index)" class="delete-btn" title="Remove flag" [disabled]="!hasPermission()">
                           <mat-icon>delete_outline</mat-icon>
                         </button>
                       </li>
@@ -104,6 +108,7 @@
             <div class="textarea-container">
               <textarea [ngModel]="rawTextFlags()"
                         (ngModelChange)="updateFlagsFromText($event)"
+                        [readonly]="!hasPermission()"
                         class="flags-textarea custom-scrollbar"
                         placeholder="Enter flags separated by spaces, e.g.\n--nomute_android --noandroid_device_daemon"></textarea>
             </div>
@@ -140,9 +145,9 @@
                 <div class="card-header">
                   <span class="preset-name">{{ preset.name }}</span>
                   <button (click)="appendPreset(preset)"
-                          [disabled]="preset.isAdded"
+                          [disabled]="!hasPermission() || preset.isAdded"
                           class="append-btn"
-                          [title]="preset.isAdded ? 'Already added' : 'Add to flags'">
+                          [title]="!hasPermission() ? 'No permission' : (preset.isAdded ? 'Already added' : 'Add to flags')">
                     @if (preset.isAdded) {
                       <mat-icon>check</mat-icon>
                     } @else {
@@ -162,8 +167,8 @@
 
   <ng-template #actionsTemplate>
     <div class="footer-actions">
-      <button class="secondary-button" (click)="discardChanges()" [disabled]="!isDirty() || isSaving()">Discard Changes</button>
-      <button class="primary-button" (click)="save()" [disabled]="!isDirty() || isSaving()">
+      <button class="secondary-button" (click)="discardChanges()" [disabled]="!hasPermission() || !isDirty() || isSaving()">Discard Changes</button>
+      <button class="primary-button" (click)="save()" [disabled]="!hasPermission() || !isDirty() || isSaving()">
         @if (isSaving()) {
           <mat-progress-spinner mode="indeterminate" diameter="16" class="button-spinner"></mat-progress-spinner>
           Saving...

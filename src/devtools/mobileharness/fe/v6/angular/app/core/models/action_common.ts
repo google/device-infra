@@ -7,3 +7,11 @@ export declare interface ActionButtonState {
   tooltip: string;
   isReady: boolean;
 }
+
+/**
+ * Represents the result of checking write permission.
+ */
+export declare interface WritePermissionResult {
+  hasPermission: boolean;
+  userName?: string;
+}

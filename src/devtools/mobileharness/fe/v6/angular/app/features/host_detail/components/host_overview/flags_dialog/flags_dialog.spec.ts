@@ -11,6 +11,7 @@ import {
   PopularFlag,
   UpdatePassThroughFlagsResponse,
 } from '../../../../../core/models/host_action';
+import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {
   HOST_SERVICE,
   HostService,
@@ -38,6 +39,16 @@ describe('FlagsDialog', () => {
       'showSuccess',
       'showError',
     ]);
+    const configService = jasmine.createSpyObj('CONFIG_SERVICE', [
+      'checkDeviceWritePermission',
+      'checkHostWritePermission',
+    ]);
+    configService.checkDeviceWritePermission.and.returnValue(
+      of({hasPermission: true}),
+    );
+    configService.checkHostWritePermission.and.returnValue(
+      of({hasPermission: true}),
+    );
 
     hostService.getPopularFlags.and.returnValue(of({flags: []}));
 
@@ -47,6 +58,7 @@ describe('FlagsDialog', () => {
         {provide: MAT_DIALOG_DATA, useValue: dialogData},
         {provide: HOST_SERVICE, useValue: hostService},
         {provide: SnackBarService, useValue: snackBarService},
+        {provide: CONFIG_SERVICE, useValue: configService},
       ],
     }).compileComponents();
 
@@ -119,5 +131,41 @@ describe('FlagsDialog', () => {
 
     expect(component.isSaving()).toBeFalse();
     expect(snackBarService.showError).toHaveBeenCalledWith('Error message');
+  });
+
+  it('should update hasPermission when permission changes', () => {
+    component.handlePermissionChange({hasPermission: false});
+    expect(component.hasPermission()).toBeFalse();
+  });
+
+  it('should not add flag when hasPermission is false', () => {
+    component.handlePermissionChange({hasPermission: false});
+    component.addInput.set('--new-flag');
+    component.addFlag();
+    expect(component.currentFlagsArray()).not.toContain('--new-flag');
+  });
+
+  it('should not remove flag when hasPermission is false', () => {
+    component.handlePermissionChange({hasPermission: false});
+    // Initial flags are '--flag1 --flag2'
+    component.removeFlag(0);
+    expect(component.currentFlagsArray()).toContain('--flag1');
+  });
+
+  it('should not clear flags when hasPermission is false', () => {
+    component.handlePermissionChange({hasPermission: false});
+    component.clearAll();
+    expect(component.currentFlagsArray().length).toBeGreaterThan(0);
+  });
+
+  it('should not append preset flags when hasPermission is false', () => {
+    component.handlePermissionChange({hasPermission: false});
+    const preset: PopularFlag = {
+      name: 'Preset1',
+      cmd: '--flag3',
+      description: 'Desc',
+    };
+    component.appendPreset(preset);
+    expect(component.currentFlagsArray()).not.toContain('--flag3');
   });
 });

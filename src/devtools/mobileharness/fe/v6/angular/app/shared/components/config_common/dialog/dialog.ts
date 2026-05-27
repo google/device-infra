@@ -13,7 +13,7 @@ import {MatButtonModule} from '@angular/material/button';
 import {MatDialogModule} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 
-import {CheckDeviceWritePermissionResult} from '../../../../core/models/device_config_models';
+import {WritePermissionResult} from '../../../../core/models/action_common';
 import {SafeHtmlPipe} from '../../../pipes/safe_html_pipe';
 import {Footer} from '../footer/footer';
 
@@ -53,10 +53,11 @@ export class Dialog implements OnInit {
 
   @Input() footerType: 'normal' | 'permission-check' | 'none' =
     'permission-check';
+  @Input() grantedMessage?: string;
+  @Input() deniedMessage?: string;
 
   @Output()
-  readonly onPermissionChange =
-    new EventEmitter<CheckDeviceWritePermissionResult>();
+  readonly onPermissionChange = new EventEmitter<WritePermissionResult>();
 
   @ContentChild('actionsTemplate') actionsTemplate!: TemplateRef<{}>;
 

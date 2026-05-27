@@ -22,6 +22,7 @@ import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {take} from 'rxjs/operators';
 
 import {SnackBarService} from '@deviceinfra/app/shared/services/snackbar_service';
+import {WritePermissionResult} from '../../../../../core/models/action_common';
 import {
   PopularFlag,
   UpdatePassThroughFlagsResponse,
@@ -73,6 +74,7 @@ export class FlagsDialog implements OnInit {
   readonly addInput = signal('');
   readonly filterText = signal('');
   readonly rawTextFlags = signal('');
+  readonly hasPermission = signal(true);
 
   readonly isDirty = computed(() => {
     const currentFlags = this.isListMode()
@@ -185,6 +187,7 @@ export class FlagsDialog implements OnInit {
   }
 
   addFlag() {
+    if (!this.hasPermission()) return;
     const val = this.addInput().trim();
     if (val) {
       const newFlags = this.splitFlags(val);
@@ -194,12 +197,14 @@ export class FlagsDialog implements OnInit {
   }
 
   removeFlag(index: number) {
+    if (!this.hasPermission()) return;
     this.currentFlagsArray.update((flags) =>
       flags.filter((_, i) => i !== index),
     );
   }
 
   appendPreset(preset: PopularFlag) {
+    if (!this.hasPermission()) return;
     const newFlags = this.splitFlags(preset.cmd);
     if (this.isListMode()) {
       this.currentFlagsArray.update((flags) => {
@@ -222,15 +227,18 @@ export class FlagsDialog implements OnInit {
   }
 
   clearAll() {
+    if (!this.hasPermission()) return;
     this.currentFlagsArray.set([]);
   }
 
   discardChanges() {
+    if (!this.hasPermission()) return;
     this.rawTextFlags.set(this.initialFlagsArray().join(' '));
     this.currentFlagsArray.set([...this.initialFlagsArray()]);
   }
 
   save() {
+    if (!this.hasPermission()) return;
     const finalString = this.isListMode()
       ? this.currentFlagsArray().join(' ').trim()
       : this.rawTextFlags().trim();
@@ -265,6 +273,10 @@ export class FlagsDialog implements OnInit {
           this.snackBarService.showError('Failed to save flags');
         },
       });
+  }
+
+  handlePermissionChange(result: WritePermissionResult) {
+    this.hasPermission.set(result.hasPermission);
   }
 
   close() {

@@ -149,4 +149,137 @@ describe('ReleaseDialog', () => {
     expect(localComponent.selectedVersion()?.version).toEqual('2.0.0');
     expect(localComponent.currentStep()).toEqual(2);
   });
+
+  it('should pre-select current version and proceed to step 2 when preSelectCurrent is true', () => {
+    const versions: DeployableVersion[] = [
+      {version: '2.0.0', name: 'v2', status: 'LATEST', buildTime: '2026-05-14'},
+      {
+        version: '1.0.0',
+        name: 'v1',
+        status: 'CURRENT',
+        buildTime: '2026-05-14',
+      },
+    ];
+
+    const testDialogData: ReleaseDialogData = {
+      hostName: 'test-host',
+      passThroughFlags: signal(''),
+      releaseConfigs: versions,
+      preSelectCurrent: true,
+    };
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [ReleaseDialog, NoopAnimationsModule],
+      providers: [
+        {provide: MAT_DIALOG_DATA, useValue: testDialogData},
+        {
+          provide: SnackBarService,
+          useValue: jasmine.createSpyObj('SnackBarService', [
+            'showSuccess',
+            'showError',
+          ]),
+        },
+        {
+          provide: MatDialog,
+          useValue: jasmine.createSpyObj('MatDialog', ['open']),
+        },
+      ],
+    }).compileComponents();
+
+    const localFixture = TestBed.createComponent(ReleaseDialog);
+    const localComponent = localFixture.componentInstance;
+    localFixture.detectChanges();
+
+    expect(localComponent.selectedVersion()?.version).toEqual('1.0.0');
+    expect(localComponent.currentStep()).toEqual(2);
+  });
+
+  it('should pre-select latest version when status is LATEST_AND_CURRENT and preSelectLatest is true', () => {
+    const versions: DeployableVersion[] = [
+      {
+        version: '1.0.0',
+        name: 'v1',
+        status: 'LATEST_AND_CURRENT',
+        buildTime: '2026-05-14',
+      },
+    ];
+
+    const testDialogData: ReleaseDialogData = {
+      hostName: 'test-host',
+      passThroughFlags: signal(''),
+      releaseConfigs: versions,
+      preSelectLatest: true,
+    };
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [ReleaseDialog, NoopAnimationsModule],
+      providers: [
+        {provide: MAT_DIALOG_DATA, useValue: testDialogData},
+        {
+          provide: SnackBarService,
+          useValue: jasmine.createSpyObj('SnackBarService', [
+            'showSuccess',
+            'showError',
+          ]),
+        },
+        {
+          provide: MatDialog,
+          useValue: jasmine.createSpyObj('MatDialog', ['open']),
+        },
+      ],
+    }).compileComponents();
+
+    const localFixture = TestBed.createComponent(ReleaseDialog);
+    const localComponent = localFixture.componentInstance;
+    localFixture.detectChanges();
+
+    expect(localComponent.selectedVersion()?.version).toEqual('1.0.0');
+    expect(localComponent.currentStep()).toEqual(2);
+  });
+
+  it('should pre-select current version when status is LATEST_AND_CURRENT and preSelectCurrent is true', () => {
+    const versions: DeployableVersion[] = [
+      {
+        version: '1.0.0',
+        name: 'v1',
+        status: 'LATEST_AND_CURRENT',
+        buildTime: '2026-05-14',
+      },
+    ];
+
+    const testDialogData: ReleaseDialogData = {
+      hostName: 'test-host',
+      passThroughFlags: signal(''),
+      releaseConfigs: versions,
+      preSelectCurrent: true,
+    };
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [ReleaseDialog, NoopAnimationsModule],
+      providers: [
+        {provide: MAT_DIALOG_DATA, useValue: testDialogData},
+        {
+          provide: SnackBarService,
+          useValue: jasmine.createSpyObj('SnackBarService', [
+            'showSuccess',
+            'showError',
+          ]),
+        },
+        {
+          provide: MatDialog,
+          useValue: jasmine.createSpyObj('MatDialog', ['open']),
+        },
+      ],
+    }).compileComponents();
+
+    const localFixture = TestBed.createComponent(ReleaseDialog);
+    const localComponent = localFixture.componentInstance;
+    localFixture.detectChanges();
+
+    expect(localComponent.selectedVersion()?.version).toEqual('1.0.0');
+    expect(localComponent.currentStep()).toEqual(2);
+  });
 });

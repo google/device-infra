@@ -18,7 +18,7 @@ import {
   startWith,
   switchMap,
 } from 'rxjs/operators';
-import {CheckDeviceWritePermissionResult} from '../../../../core/models/device_config_models';
+import {WritePermissionResult} from '../../../../core/models/action_common';
 import {CONFIG_SERVICE} from '../../../../core/services/config/config_service';
 
 interface PermissionState {
@@ -45,33 +45,32 @@ export class Footer implements OnInit, OnChanges {
     hostName: '',
     universe: '',
   };
+  @Input() grantedMessage?: string;
+  @Input() deniedMessage?: string;
 
   @Output() readonly onPermissionChange =
-    new EventEmitter<CheckDeviceWritePermissionResult>();
+    new EventEmitter<WritePermissionResult>();
 
   private readonly configService = inject(CONFIG_SERVICE);
   private readonly inputChange$ = new ReplaySubject<void>(1);
 
   readonly permissionResult$: Observable<PermissionState | void> =
     this.inputChange$.pipe(
-      map(() =>
-        this.type === 'device' ? this.param.deviceId : this.param.hostName,
+      map(() => ({
+        id: this.type === 'device' ? this.param.deviceId : this.param.hostName,
+        universe: this.param.universe,
+      })),
+      distinctUntilChanged(
+        (a, b) => a.id === b.id && a.universe === b.universe,
       ),
-      distinctUntilChanged(),
-      switchMap((id) => {
+      switchMap(({id, universe}) => {
         if (!id) {
           return of({isChecking: false, hasPermission: false, message: ''});
         }
         const checkPermission =
           this.type === 'device'
-            ? this.configService.checkDeviceWritePermission(
-                id,
-                this.param.universe,
-              )
-            : this.configService.checkHostWritePermission(
-                id,
-                this.param.universe,
-              );
+            ? this.configService.checkDeviceWritePermission(id, universe)
+            : this.configService.checkHostWritePermission(id, universe);
 
         return checkPermission.pipe(
           map((result) => {
@@ -104,6 +103,13 @@ export class Footer implements OnInit, OnChanges {
   }
 
   private getPermissionMessage(type: string, hasPermission: boolean): string {
+    if (hasPermission && this.grantedMessage) {
+      return this.grantedMessage;
+    }
+    if (!hasPermission && this.deniedMessage) {
+      return this.deniedMessage;
+    }
+
     const messages = {
       device: {
         granted: 'Current user has permission to configure this device.',

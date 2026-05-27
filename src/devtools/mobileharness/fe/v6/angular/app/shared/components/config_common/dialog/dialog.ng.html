@@ -22,6 +22,8 @@
       <app-footer
         [type]="type"
         [param]="param"
+        [grantedMessage]="grantedMessage"
+        [deniedMessage]="deniedMessage"
         (onPermissionChange)="onPermissionChange.emit($event)"
       >
         <ng-container *ngTemplateOutlet="actionsTemplate" footer-buttons></ng-container>
