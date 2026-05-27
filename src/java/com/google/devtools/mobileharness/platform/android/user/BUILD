@@ -18,18 +18,32 @@ load("@rules_java//java:defs.bzl", "java_library")
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
+    name = "android_user_state",
+    srcs = ["AndroidUserState.java"],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
+    deps = [
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "android_user_util",
     srcs = [
         "AndroidCreateUserArgs.java",
         "AndroidUserInfo.java",
-        "AndroidUserState.java",
         "AndroidUserUtil.java",
     ],
     visibility = [
         "//:deviceinfra_all_pkg",
         "//:omnilab_fusion",
     ],
+    exports = [
+        ":android_user_state",
+    ],
     deps = [
+        ":android_user_state",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
