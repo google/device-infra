@@ -61,6 +61,9 @@ public class CaptureLogs extends FinishWithFailureTestWatcher {
 
   /** Returns the captured logs. */
   public String getLogs() {
+    if (logHandler != null) {
+      logHandler.flush();
+    }
     return logOutputStream.toString(UTF_8);
   }
 

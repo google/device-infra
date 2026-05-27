@@ -61,6 +61,10 @@ public class MoreFutures {
 
           @Override
           public void onFailure(Throwable t) {
+            if (t instanceof CancellationException) {
+              logger.at(Level.INFO).logVarargs(message + " (cancelled)", params);
+              return;
+            }
             boolean interrupted = t instanceof InterruptedException;
             logger.at(level).withCause(interrupted ? null : t).logVarargs(message, params);
             if (interrupted) {

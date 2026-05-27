@@ -29,6 +29,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:service_module",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:capture_logs",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
         "@maven//:junit_junit",

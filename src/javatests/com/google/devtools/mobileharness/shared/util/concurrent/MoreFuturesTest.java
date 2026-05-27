@@ -22,13 +22,20 @@ import static org.junit.Assert.assertThrows;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import com.google.devtools.mobileharness.shared.util.junit.rule.CaptureLogs;
 import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class MoreFuturesTest {
+  private static final Logger sysLogger = Logger.getLogger(MoreFutures.class.getName());
+
+  @Rule public final CaptureLogs captureLogs = new CaptureLogs();
 
   @Test
   public void allAsMap_allSucceed() throws Exception {
@@ -89,5 +96,36 @@ public class MoreFuturesTest {
 
     assertThat(result.isCancelled()).isTrue();
     assertThat(future2.isCancelled()).isTrue();
+  }
+
+  @Test
+  public void logFailure_cancellationException_loggedAsInfo() {
+    sysLogger.setLevel(Level.INFO);
+    SettableFuture<String> future = SettableFuture.create();
+    MoreFutures.logFailure(future, Level.WARNING, "Error occurred: %s", "test_param");
+
+    future.cancel(true);
+
+    String logs = captureLogs.getLogs();
+    assertThat(logs).contains(" I ");
+    assertThat(logs).contains("Error occurred: test_param (cancelled)");
+    assertThat(logs).doesNotContain(" W ");
+    assertThat(logs).doesNotContain("CancellationException");
+  }
+
+  @Test
+  public void logFailure_otherException_loggedAsWarningWithStackTrace() {
+    sysLogger.setLevel(Level.INFO);
+    SettableFuture<String> future = SettableFuture.create();
+    MoreFutures.logFailure(future, Level.WARNING, "Error occurred: %s", "test_param");
+
+    RuntimeException exception = new RuntimeException("test exception");
+    future.setException(exception);
+
+    String logs = captureLogs.getLogs();
+    assertThat(logs).contains(" W ");
+    assertThat(logs).contains("Error occurred: test_param");
+    assertThat(logs).contains("RuntimeException");
+    assertThat(logs).contains("test exception");
   }
 }
