@@ -121,6 +121,28 @@ java_library(
 )
 
 java_library(
+    name = "local_device_util",
+    srcs = ["LocalDeviceUtil.java"],
+    deps = [
+        ":device_details",
+        ":device_details_retriever",
+        ":device_selection",
+        ":device_selection_options",
+        ":session_request_info",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_helper",
+        "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "session_request_handler_util",
     srcs = ["SessionRequestHandlerUtil.java"],
     resources = [
@@ -130,9 +152,7 @@ java_library(
     deps = [
         ":ats_master_util",
         ":device_details",
-        ":device_details_retriever",
-        ":device_selection",
-        ":device_selection_options",
+        ":local_device_util",
         ":session_handler_helper",
         ":session_request_info",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
@@ -148,7 +168,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:test_plan_parser",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info_factory",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:annotations",
-        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:abi_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:mobly_test_loader",

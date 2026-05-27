@@ -60,7 +60,6 @@ import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.S
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
-import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.MoblyTestLoader;
@@ -160,11 +159,10 @@ public class SessionRequestHandlerUtil {
   private final ConfigurationUtil configurationUtil;
   private final ModuleConfigurationHelper moduleConfigurationHelper;
   private final CertificationSuiteInfoFactory certificationSuiteInfoFactory;
-  private final Provider<AndroidAdbUtil> androidAdbUtilProvider;
   private final Path sessionGenDir;
   private final Path sessionTempDir;
   private final Provider<ResUtil> resUtilProvider;
-  private final DeviceDetailsRetriever deviceDetailsRetriever;
+  private final LocalDeviceUtil localDeviceUtil;
   private final MoblyTestLoader moblyTestLoader;
   private final TestPlanParser testPlanParser;
   private final Sleeper sleeper;
@@ -176,11 +174,10 @@ public class SessionRequestHandlerUtil {
       ConfigurationUtil configurationUtil,
       ModuleConfigurationHelper moduleConfigurationHelper,
       CertificationSuiteInfoFactory certificationSuiteInfoFactory,
-      Provider<AndroidAdbUtil> androidAdbUtilProvider,
       @SessionGenDir Path sessionGenDir,
       @SessionTempDir Path sessionTempDir,
       Provider<ResUtil> resUtilProvider,
-      DeviceDetailsRetriever deviceDetailsRetriever,
+      LocalDeviceUtil localDeviceUtil,
       MoblyTestLoader moblyTestLoader,
       TestPlanParser testPlanParser,
       Sleeper sleeper,
@@ -189,11 +186,10 @@ public class SessionRequestHandlerUtil {
     this.configurationUtil = configurationUtil;
     this.moduleConfigurationHelper = moduleConfigurationHelper;
     this.certificationSuiteInfoFactory = certificationSuiteInfoFactory;
-    this.androidAdbUtilProvider = androidAdbUtilProvider;
     this.sessionGenDir = sessionGenDir;
     this.sessionTempDir = sessionTempDir;
     this.resUtilProvider = resUtilProvider;
-    this.deviceDetailsRetriever = deviceDetailsRetriever;
+    this.localDeviceUtil = localDeviceUtil;
     this.moblyTestLoader = moblyTestLoader;
     this.testPlanParser = testPlanParser;
     this.sleeper = sleeper;
@@ -235,7 +231,8 @@ public class SessionRequestHandlerUtil {
     int requestedShardCount = sessionRequestInfo.shardCount().orElse(0);
     int minDeviceCount = testPlan.matches(xtsType + "-multi-?device") ? 2 : 1;
     int shardCount = max(requestedShardCount, minDeviceCount);
-    ImmutableSet<DeviceDetails> availableDevices = getLocalAvailableDevices(sessionRequestInfo);
+    ImmutableSet<DeviceDetails> availableDevices =
+        localDeviceUtil.getLocalAvailableDevices(sessionRequestInfo);
     if (sessionRequestInfo.deviceSerials().isEmpty()) {
       return pickAndroidOnlineDevices(
           sessionRequestInfo,
@@ -343,39 +340,6 @@ public class SessionRequestHandlerUtil {
                       .build())
           .collect(toImmutableList());
     }
-  }
-
-  private ImmutableSet<DeviceDetails> getLocalAvailableDevices(
-      SessionRequestInfo sessionRequestInfo) throws MobileHarnessException, InterruptedException {
-    ImmutableMap<String, DeviceDetails> allAndroidDevices =
-        deviceDetailsRetriever.getAllLocalAndroidDevicesWithNeededDetails(sessionRequestInfo);
-    logger.atInfo().log("All android devices: %s", allAndroidDevices.keySet());
-
-    DeviceSelectionOptions.Builder optionsBuilder =
-        DeviceSelectionOptions.builder()
-            .setSerials(sessionRequestInfo.deviceSerials())
-            .setExcludeSerials(sessionRequestInfo.excludeDeviceSerials())
-            .setProductTypes(sessionRequestInfo.productTypes())
-            .setDeviceProperties(sessionRequestInfo.deviceProperties());
-    sessionRequestInfo.maxBatteryLevel().ifPresent(optionsBuilder::setMaxBatteryLevel);
-    sessionRequestInfo.minBatteryLevel().ifPresent(optionsBuilder::setMinBatteryLevel);
-    sessionRequestInfo.maxBatteryTemperature().ifPresent(optionsBuilder::setMaxBatteryTemperature);
-    sessionRequestInfo.minSdkLevel().ifPresent(optionsBuilder::setMinSdkLevel);
-    sessionRequestInfo.maxSdkLevel().ifPresent(optionsBuilder::setMaxSdkLevel);
-    DeviceSelectionOptions deviceSelectionOptions = optionsBuilder.build();
-
-    ImmutableSet<DeviceDetails> availableDevices =
-        allAndroidDevices.values().stream()
-            .filter(deviceDetails -> DeviceSelection.matches(deviceDetails, deviceSelectionOptions))
-            .collect(toImmutableSet());
-
-    if (availableDevices.isEmpty()) {
-      throw MobileHarnessExceptionFactory.createUserFacingException(
-          InfraErrorId.OLCS_NO_AVAILABLE_DEVICE,
-          "No available device is found.",
-          /* cause= */ null);
-    }
-    return availableDevices;
   }
 
   /**
@@ -752,7 +716,7 @@ public class SessionRequestHandlerUtil {
     Optional<DeviceInfo> deviceInfo =
         Flags.enableAtsMode.getNonNull()
             ? getDeviceInfoFromMaster(sessionRequestInfo)
-            : getDeviceInfoFromLocal(sessionRequestInfo);
+            : localDeviceUtil.getDeviceInfoFromLocal(sessionRequestInfo);
 
     logger.atInfo().log("Obtained device info: %s", deviceInfo.orElse(null));
     return deviceInfo;
@@ -812,51 +776,6 @@ public class SessionRequestHandlerUtil {
             .build());
   }
 
-  private Optional<DeviceInfo> getDeviceInfoFromLocal(SessionRequestInfo sessionRequestInfo)
-      throws MobileHarnessException, InterruptedException {
-    ImmutableSet<String> allLocalAndroidDevices =
-        deviceDetailsRetriever
-            .getAllLocalAndroidDevicesWithNeededDetails(sessionRequestInfo)
-            .keySet();
-    if (!allLocalAndroidDevices.isEmpty()) {
-      Optional<String> deviceSerial;
-      if (sessionRequestInfo.deviceSerials().isEmpty()) {
-        deviceSerial = allLocalAndroidDevices.stream().findFirst();
-      } else {
-        deviceSerial =
-            sessionRequestInfo.deviceSerials().stream()
-                .filter(allLocalAndroidDevices::contains)
-                .findFirst();
-      }
-      if (deviceSerial.isEmpty()) {
-        logger
-            .atInfo()
-            .with(IMPORTANCE, IMPORTANT)
-            .log(
-                "No match local Android devices, return empty device info. Detected all local"
-                    + " Android devices: %s",
-                allLocalAndroidDevices);
-        return Optional.empty();
-      }
-
-      String abiList =
-          androidAdbUtilProvider.get().getProperty(deviceSerial.get(), AndroidProperty.ABILIST);
-      String abi =
-          androidAdbUtilProvider.get().getProperty(deviceSerial.get(), AndroidProperty.ABI);
-      return Optional.of(
-          DeviceInfo.builder()
-              .setDeviceId(deviceSerial.get())
-              .setSupportedAbiList(abiList)
-              .setSupportedAbi(abi)
-              .build());
-    }
-    logger
-        .atInfo()
-        .with(IMPORTANCE, IMPORTANT)
-        .log("Detected no local Android devices, return empty device info.");
-    return Optional.empty();
-  }
-
   /**
    * Checks if non-tradefed jobs can be created based on the {@code SessionRequestInfo}.
    *
@@ -896,7 +815,7 @@ public class SessionRequestHandlerUtil {
       availableDeviceSerials = ImmutableSet.copyOf(sessionRequestInfo.deviceSerials());
     } else {
       availableDeviceSerials =
-          getLocalAvailableDevices(sessionRequestInfo).stream()
+          localDeviceUtil.getLocalAvailableDevices(sessionRequestInfo).stream()
               .map(DeviceDetails::id)
               .collect(toImmutableSet());
     }
