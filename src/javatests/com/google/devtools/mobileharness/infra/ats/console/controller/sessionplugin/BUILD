@@ -43,6 +43,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:xts_device_cache",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:local_device_util",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:local_device_util_impl",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_handler_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",

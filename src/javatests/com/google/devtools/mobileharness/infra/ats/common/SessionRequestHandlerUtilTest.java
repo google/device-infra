@@ -60,6 +60,7 @@ import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -128,7 +129,15 @@ public final class SessionRequestHandlerUtilTest {
     sessionGenDir = folder.newFolder("session_gen_dir").toPath();
     sessionTempDir = folder.newFolder("session_temp_dir").toPath();
 
-    Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+    Guice.createInjector(
+            BoundFieldModule.of(this),
+            new AbstractModule() {
+              @Override
+              protected void configure() {
+                bind(LocalDeviceUtil.class).to(LocalDeviceUtilImpl.class);
+              }
+            })
+        .injectMembers(this);
 
     when(testPlanParser.parseFilters(any(), anyString(), anyString())).thenReturn(testPlanFilter);
     when(atsMasterUtil.queryAndroidDevicesFromMaster())

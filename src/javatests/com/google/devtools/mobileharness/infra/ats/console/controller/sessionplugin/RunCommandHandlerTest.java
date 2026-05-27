@@ -28,6 +28,8 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.LocalDeviceUtil;
+import com.google.devtools.mobileharness.infra.ats.common.LocalDeviceUtilImpl;
 import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
@@ -139,6 +141,7 @@ public final class RunCommandHandlerTest {
               @Override
               protected void configure() {
                 bind(Clock.class).toInstance(Clock.systemUTC());
+                bind(LocalDeviceUtil.class).to(LocalDeviceUtilImpl.class);
               }
             });
     injector.injectMembers(this);

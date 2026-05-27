@@ -125,9 +125,22 @@ java_library(
     srcs = ["LocalDeviceUtil.java"],
     deps = [
         ":device_details",
+        ":session_request_info",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_helper",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "local_device_util_impl",
+    srcs = ["LocalDeviceUtilImpl.java"],
+    deps = [
+        ":device_details",
         ":device_details_retriever",
         ":device_selection",
         ":device_selection_options",
+        ":local_device_util",
         ":session_request_info",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",

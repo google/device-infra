@@ -35,6 +35,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:device_selection",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:device_selection_options",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:local_device_util",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:local_device_util_impl",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_handler_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",

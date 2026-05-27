@@ -27,7 +27,6 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/constant:builtin_flags",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
     ],
 )

@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
+import com.google.devtools.mobileharness.infra.ats.common.LocalDeviceUtil;
+import com.google.devtools.mobileharness.infra.ats.common.LocalDeviceUtilImpl;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.ConsoleJobCreator;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
@@ -28,6 +30,7 @@ public final class AtsSessionPluginModule extends AbstractModule {
   @Override
   protected void configure() {
     install(new CompatibilityReportModule());
+    bind(LocalDeviceUtil.class).to(LocalDeviceUtilImpl.class);
     bind(XtsJobCreator.class).to(ConsoleJobCreator.class);
     bind(DeviceManagementFilter.class).toInstance(DeviceManagementFilter.getInstance());
   }

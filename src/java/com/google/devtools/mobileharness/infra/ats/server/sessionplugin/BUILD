@@ -125,6 +125,7 @@ java_library(
     name = "ats_server_session_plugin_module",
     srcs = ["AtsServerSessionPluginModule.java"],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:local_device_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:server_job_creator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:xts_job_creator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_module",

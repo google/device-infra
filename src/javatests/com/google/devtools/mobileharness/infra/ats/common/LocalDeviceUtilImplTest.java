@@ -41,16 +41,16 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-/** Unit tests for {@link LocalDeviceUtil}. */
+/** Unit tests for {@link LocalDeviceUtilImpl}. */
 @RunWith(JUnit4.class)
-public final class LocalDeviceUtilTest {
+public final class LocalDeviceUtilImplTest {
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
   @Bind @Mock private DeviceDetailsRetriever deviceDetailsRetriever;
   @Bind @Mock private AndroidAdbUtil androidAdbUtil;
 
-  @Inject private LocalDeviceUtil localDeviceUtil;
+  @Inject private LocalDeviceUtilImpl localDeviceUtil;
 
   @Before
   public void setUp() throws Exception {
