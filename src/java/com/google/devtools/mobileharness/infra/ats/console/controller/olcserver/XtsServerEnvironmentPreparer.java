@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.olcserver
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
+import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -118,8 +119,7 @@ public class XtsServerEnvironmentPreparer implements ServerEnvironmentPreparer {
       logger
           .atInfo()
           .with(IMPORTANCE, DEBUG)
-          .withCause(e)
-          .log("Failed to grant access to [%s]", path);
+          .log("Failed to grant access to [%s], reason: %s", path, shortDebugString(e));
     }
   }
 

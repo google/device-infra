@@ -33,6 +33,8 @@ import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
+import com.google.devtools.mobileharness.shared.util.junit.rule.CaptureLogs;
+import com.google.devtools.mobileharness.shared.util.junit.rule.PrintTestName;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
@@ -62,6 +64,8 @@ public final class AtsConsoleTest {
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
   @Rule public final SetFlags flags = new SetFlags();
+  @Rule public final CaptureLogs captureLogs = new CaptureLogs();
+  @Rule public final PrintTestName printTestName = new PrintTestName();
 
   @Mock private LineReader lineReader;
   @Mock private History history;
