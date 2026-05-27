@@ -122,3 +122,9 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "stack_trace_extractor",
+    srcs = ["StackTraceExtractor.java"],
+    deps = ["@maven//:com_google_guava_guava"],
+)
