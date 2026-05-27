@@ -28,7 +28,13 @@ import java.util.regex.Pattern;
 public final class StackTraceExtractor {
 
   /** Represents an extracted consecutive stack trace containing a list of frame locations. */
-  public record StackTrace(ImmutableList<String> frames) {}
+  public record StackTrace(ImmutableList<String> frames) {
+
+    @Override
+    public String toString() {
+      return String.join("\n", frames);
+    }
+  }
 
   private static final String STACK_TRACE_LINE_PREFIX = "\tat ";
   private static final Splitter LINE_SPLITTER = Splitter.on(Pattern.compile("\\R"));

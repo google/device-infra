@@ -77,4 +77,10 @@ public final class StackTraceExtractorTest {
             "com.google.Class2.init(Class2.java:15)", "com.google.Class2.start(Class2.java:25)")
         .inOrder();
   }
+
+  @Test
+  public void toString_returnsNewlineSeparatedFrames() {
+    StackTrace stackTrace = new StackTrace(ImmutableList.of("frame1", "frame2"));
+    assertThat(stackTrace.toString()).isEqualTo("frame1\nframe2");
+  }
 }
