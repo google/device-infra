@@ -74,7 +74,7 @@ import {objectUtils} from '../../../../shared/utils/object_utils';
 import {ActionNoPermissionContent} from './action_no_permission_content/action_no_permission_content';
 import {DecommissionContent} from './decommission_content/decommission_content';
 import {FlagsDialog} from './flags_dialog/flags_dialog';
-import {NoValidVersionsContent} from './no_valid_versions_content/no_valid_versions_content';
+import {NoValidVersionsContent} from './release_dialog/no_valid_versions_content/no_valid_versions_content';
 import {ReleaseDialog} from './release_dialog/release_dialog';
 
 const HEALTH_SEMANTIC_MAP: Record<
@@ -260,15 +260,10 @@ export class HostOverviewPage implements OnChanges {
   deviceFilterValue = '';
   isDeviceLoading = signal(false);
   expandedElement = signal<DeviceSummary | null>(null);
-  readonly isOpeningRelease = signal(false);
-  readonly isOpeningUpgrade = signal(false);
-  readonly isOpeningRedeploy = signal(false);
-  readonly isOpeningReleaseDialog = computed(
-    () =>
-      this.isOpeningRelease() ||
-      this.isOpeningUpgrade() ||
-      this.isOpeningRedeploy(),
-  );
+  isOpeningReleaseDialog = signal(false);
+  isOpeningUpgrade = signal(false);
+  isOpeningRedeploy = signal(false);
+  isOpeningRelease = signal(false);
 
   // --- Dimensions Overlay State ---
   activeOverlay = signal<{
@@ -437,7 +432,7 @@ export class HostOverviewPage implements OnChanges {
   }
 
   onUpgrade() {
-    this.onRelease({preSelectLatest: true});
+    this.showComingSoonPopup('Release');
   }
 
   getLabActivitySemantic(activity: LabServerActivity) {
@@ -486,22 +481,22 @@ export class HostOverviewPage implements OnChanges {
       customIcon: 'rocket_launch',
       primaryButtonLabel: 'Release Now',
       secondaryButtonLabel: 'Later',
-      onConfirm: () => this.preflightAndOpenRelease({preSelectCurrent: true}),
     };
 
-    this.dialog.open(ConfirmDialog, {
+    const restartDialogRef = this.dialog.open(ConfirmDialog, {
       data: dialogData,
       panelClass: 'confirm-dialog-panel',
       disableClose: true,
     });
-  }
 
-  onRelease(
-    options: {preSelectLatest?: boolean; preSelectCurrent?: boolean} = {},
-  ) {
-    this.preflightAndOpenRelease(options).subscribe({
-      error: () => {},
-    });
+    restartDialogRef
+      .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((result) => {
+        if (result === 'primary') {
+          this.onRestart();
+        }
+      });
   }
 
   preflightAndOpenRelease(

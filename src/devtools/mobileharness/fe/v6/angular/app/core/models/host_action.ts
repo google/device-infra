@@ -101,6 +101,7 @@ export declare interface DeployableVersion {
   readonly buildTime: string;
   readonly ports?: ReleasePort[];
   readonly releaseDetails?: ReleaseDetails;
+  readonly releaseName?: string;
 }
 
 /**
@@ -226,5 +227,6 @@ export declare interface StopLabServerResponse extends RolloutResponse {}
 export declare interface ReleaseLabServerRequest {
   readonly version: string;
   readonly flags?: string;
+  readonly releaseName?: string;
 }
 

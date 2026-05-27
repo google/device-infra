@@ -173,12 +173,16 @@ enum VersionStatus {
 }
 
 message DeployableVersion {
-  string name = 1;     // Release name
+  string name = 1;     // Formatted user-friendly display name (e.g.,
+                       // "[RELEASE] 1.0.0 mobileharness_lab_server").
   string version = 2;  // Version string (e.g. "v4.358.0")
   VersionStatus status = 3;
   string build_time = 4;  // Build timestamp
   repeated ReleasePort ports = 5;
   ReleaseDetails release_details = 6;
+  string release_name =
+      7;  // Raw logical release key (e.g., "mobileharness_lab_server") used for
+          // backend rollout configuration.
 }
 
 // Port configuration for a release.
