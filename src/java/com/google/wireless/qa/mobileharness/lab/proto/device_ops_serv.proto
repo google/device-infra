@@ -73,6 +73,24 @@ message GetDeviceDebugInfoResponse {
   repeated CommandExecutionResult device_debug_info = 1;
 }
 
+message RunTroubleshootScriptRequest {
+  // The specific troubleshoot script to run.
+  // NOTE: For security reasons, all troubleshoot scripts must be pre-written
+  // and statically compiled/mapped in the codebase. Dynamic or arbitrary
+  // script execution is strictly prohibited to prevent remote command
+  // injection.
+  enum TroubleshootScript {
+    UNKNOWN = 0;
+  }
+  optional TroubleshootScript script = 1;
+}
+
+message RunTroubleshootScriptResponse {
+  optional int32 exit_code = 1;
+  optional string stdout = 2;
+  optional string stderr = 3;
+}
+
 // Lab service for FE to take the screenshot.
 service DeviceOpsService {
   // Sends the screenshot file info to the lab.
@@ -85,4 +103,8 @@ service DeviceOpsService {
   // "lsusb", etc.
   rpc GetDeviceDebugInfo(GetDeviceDebugInfoRequest)
       returns (GetDeviceDebugInfoResponse) {}
+
+  // Runs a troubleshooting script on the lab host.
+  rpc RunTroubleshootScript(RunTroubleshootScriptRequest)
+      returns (RunTroubleshootScriptResponse) {}
 }
