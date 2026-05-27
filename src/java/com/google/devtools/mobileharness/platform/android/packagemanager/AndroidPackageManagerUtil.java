@@ -1032,6 +1032,30 @@ public class AndroidPackageManagerUtil {
           "Failed to install package %s to device %s on [Internal Storage]:%n%s%n",
           packageName, serial, output);
 
+      if (output.contains("Can't find service: package")) {
+        logger.atWarning().log(
+            "Package manager service is down on device %s. Waiting for recovery...", serial);
+        try {
+          waitForPackageManager(serial, Duration.ofMinutes(2));
+          // Retry internal install
+          output =
+              installPackageNoRetry(
+                  utilArgs, installCmdArgs, isRemoteInstall, artifactPaths, installTimeout);
+          logger.atInfo().log(
+              "Successfully installed package %s to device %s on [Internal Storage] after package"
+                  + " manager recovery:%n%s",
+              packageName, serial, cutInstallOutput(output));
+          return;
+        } catch (MobileHarnessException re) {
+          output = re.getMessage();
+          e = re;
+          logger.atWarning().log(
+              "Failed to install package %s to device %s on [Internal Storage] after"
+                  + " retrying:%n%s%n",
+              packageName, serial, output);
+        }
+      }
+
       if (output.contains(OUTPUT_KILLED)) {
         // Throws the exception when adb was killed, because:
         // For Google experience devices, the definition of output can be found in
@@ -1849,6 +1873,16 @@ public class AndroidPackageManagerUtil {
     }
   }
 
+  private boolean isPackageManagerReady(String serial) throws InterruptedException {
+    try {
+      String output = adb.runShell(serial, "service check package", Duration.ofSeconds(10));
+      return output.trim().equals("Service package: found");
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log("Failed to check package service on %s", serial);
+      return false;
+    }
+  }
+
   private boolean isQtOrAboveBuild(String serial, int sdkVersion)
       throws MobileHarnessException, InterruptedException {
     String versionCodename = "";
@@ -1932,5 +1966,20 @@ public class AndroidPackageManagerUtil {
     }
 
     return packages;
+  }
+
+  private void waitForPackageManager(String serial, Duration timeout)
+      throws InterruptedException, MobileHarnessException {
+    int maxAttempts = (int) (timeout.toSeconds() / 5);
+    for (int attempt = 0; attempt < maxAttempts; attempt++) {
+      if (isPackageManagerReady(serial)) {
+        return;
+      }
+      logger.atInfo().log("Package manager not ready on %s, waiting...", serial);
+      sleeper.sleep(Duration.ofSeconds(5));
+    }
+    throw new MobileHarnessException(
+        AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_ERROR,
+        "Package manager service is not responsive on " + serial);
   }
 }
