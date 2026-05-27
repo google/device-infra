@@ -32,9 +32,10 @@ public class Annotations {
   @Retention(RetentionPolicy.RUNTIME)
   public @interface ClientId {}
 
+  /** Channel to the OLC server. */
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
-  @interface ServerChannel {}
+  public @interface ServerChannel {}
 
   /** OLC server stub for ATS console / local runner. */
   @Qualifier

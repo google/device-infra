@@ -30,6 +30,8 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerChannel;
+import com.google.devtools.mobileharness.shared.util.base.StackTraceExtractor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
@@ -40,6 +42,8 @@ import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import io.grpc.Channel;
+import io.grpc.ManagedChannel;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.file.Path;
@@ -48,6 +52,7 @@ import javax.inject.Inject;
 import org.jline.reader.History;
 import org.jline.reader.LineReader;
 import org.jline.utils.AttributedString;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -77,6 +82,7 @@ public final class AtsConsoleTest {
   private ImmutableMap<String, String> systemProperties;
 
   @Inject private AtsConsole atsConsole;
+  @Inject @ServerChannel private Channel channel;
 
   private final LocalFileUtil localFileUtil = new LocalFileUtil();
 
@@ -147,8 +153,15 @@ public final class AtsConsoleTest {
     atsConsole.injector = injector;
   }
 
+  @After
+  public void tearDown() throws Exception {
+    cleanUpChannel();
+    assertThat(StackTraceExtractor.extract(captureLogs.getLogs())).isEmpty();
+  }
+
   @Test
   public void startsConsoleWithHelp_exitConsoleAfterCommandExecution() throws Exception {
+    cleanUpChannel();
     Injector injector =
         Guice.createInjector(
             new AtsConsoleModule(
@@ -185,6 +198,7 @@ public final class AtsConsoleTest {
   @Test
   public void run_nonEmbeddedModeWithFilter_throwsException() throws Exception {
     flags.set("ats_console_olc_server_embedded_mode", "false");
+    cleanUpChannel();
     Injector injector =
         Guice.createInjector(
             new AtsConsoleModule(
@@ -203,5 +217,12 @@ public final class AtsConsoleTest {
     IllegalArgumentException exception =
         assertThrows(IllegalArgumentException.class, () -> atsConsole.run());
     assertThat(exception).hasMessageThat().contains("only supported in xTS Console embedded mode");
+  }
+
+  private void cleanUpChannel() throws InterruptedException {
+    if (channel instanceof ManagedChannel managedChannel) {
+      managedChannel.shutdownNow();
+      managedChannel.awaitTermination(1L, TimeUnit.SECONDS);
+    }
   }
 }

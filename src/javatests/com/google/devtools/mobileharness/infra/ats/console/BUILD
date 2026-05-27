@@ -29,8 +29,10 @@ java_library(
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:flags_string",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:ats_console_lib",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:ats_console_module",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:stack_trace_extractor",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
         "//src/java/com/google/devtools/mobileharness/shared/util/inject:common_module",
@@ -40,6 +42,7 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:capture_logs",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:print_test_name",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
+        "@grpc-java//core",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
