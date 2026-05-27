@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInf
 import com.google.devtools.mobileharness.infra.ats.common.constant.BuiltinFlags;
 import com.google.devtools.mobileharness.infra.ats.dda.stub.AtsDdaStub.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
+import com.google.devtools.mobileharness.shared.util.base.StackTraceExtractor;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -450,10 +451,12 @@ public class AtsDdaIntegrationTest {
         "A successful run should not print exception stack traces, which will confuse"
             + " users and affect debuggability when debugging a failed one.\n";
     assertWithMessage("%sOLC server stderr", checkWarningsMessagePrefix)
-        .that(stringBuilders.getOrCreate("olc_server_stderr").toString())
-        .doesNotContain("\tat ");
+        .that(
+            StackTraceExtractor.extract(stringBuilders.getOrCreate("olc_server_stderr").toString()))
+        .isEmpty();
     assertWithMessage("%sLab server stderr", checkWarningsMessagePrefix)
-        .that(stringBuilders.getOrCreate("lab_server_stderr").toString())
-        .doesNotContain("\tat ");
+        .that(
+            StackTraceExtractor.extract(stringBuilders.getOrCreate("lab_server_stderr").toString()))
+        .isEmpty();
   }
 }

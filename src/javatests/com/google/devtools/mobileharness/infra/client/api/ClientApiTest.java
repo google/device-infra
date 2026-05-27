@@ -57,6 +57,7 @@ import com.google.devtools.mobileharness.infra.controller.messaging.MessagingSer
 import com.google.devtools.mobileharness.shared.context.InvocationContext.ContextScope;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationInfo;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
+import com.google.devtools.mobileharness.shared.util.base.StackTraceExtractor;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.junit.rule.CaptureLogs;
@@ -196,8 +197,8 @@ public class ClientApiTest {
       assertWithMessage(
               "Log of a passed MH job should not contain exception stack traces, which will"
                   + " confuse users when they debug a failed one")
-          .that(logs)
-          .doesNotContain("\tat ");
+          .that(StackTraceExtractor.extract(logs))
+          .isEmpty();
 
       assertThat(jobStartResults).containsExactly("1", "2", "3").inOrder();
 

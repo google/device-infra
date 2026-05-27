@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInte
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.ClientApiModule;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalMode;
+import com.google.devtools.mobileharness.shared.util.base.StackTraceExtractor;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.junit.rule.CaptureLogs;
@@ -98,8 +99,8 @@ public class ProxyModeIntegrationTest {
     assertWithMessage(
             "Log of a passed MH job should not contain exception stack traces, which will"
                 + " confuse users when they debug a failed one")
-        .that(captureLogs.getLogs())
-        .doesNotContain("\tat ");
+        .that(StackTraceExtractor.extract(captureLogs.getLogs()))
+        .isEmpty();
   }
 
   private static JobInfo createJobInfo() {

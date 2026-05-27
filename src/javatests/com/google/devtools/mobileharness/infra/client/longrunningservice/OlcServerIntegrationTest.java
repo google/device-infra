@@ -78,6 +78,7 @@ import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabInfoGrpcS
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.devtools.mobileharness.shared.util.base.CountDownSet;
+import com.google.devtools.mobileharness.shared.util.base.StackTraceExtractor;
 import com.google.devtools.mobileharness.shared.util.comm.relay.client.ClientCreator;
 import com.google.devtools.mobileharness.shared.util.comm.relay.proto.DestinationProto;
 import com.google.devtools.mobileharness.shared.util.comm.relay.proto.DestinationProto.Destination;
@@ -923,7 +924,7 @@ public class OlcServerIntegrationTest {
             "A successful test run should not print exception stack traces, which will confuse"
                 + " users and affect debuggability when debugging a failed one.\n\n%s",
             stderrLabel)
-        .that(stderrToCheck)
-        .doesNotContain("\tat ");
+        .that(StackTraceExtractor.extract(stderrToCheck))
+        .isEmpty();
   }
 }

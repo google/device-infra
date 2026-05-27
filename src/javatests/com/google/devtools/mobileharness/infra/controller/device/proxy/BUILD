@@ -39,6 +39,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/proxy:proxy_device_manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/proxy:proxy_device_manager_module",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/proxy:proxy_device_requirement",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:stack_trace_extractor",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",

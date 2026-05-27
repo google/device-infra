@@ -23,7 +23,6 @@ import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.devtools.mobileharness.shared.util.truth.Correspondences.isInstanceOf;
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -53,6 +52,7 @@ import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceGrpc
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceGrpc.LabInfoServiceBlockingStub;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
+import com.google.devtools.mobileharness.shared.util.base.StackTraceExtractor;
 import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.junit.rule.CaptureLogs;
 import com.google.devtools.mobileharness.shared.util.junit.rule.PrintTestName;
@@ -82,7 +82,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.regex.Pattern;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -379,27 +378,11 @@ public class LocalModeIntegrationTest {
   private void verifyStackTrace() {
     String logs = captureLogs.getLogs();
 
-    // Groups multiple "\tat " lines to a "stack trace".
-    List<List<String>> stackTraces = new ArrayList<>();
-    List<String> currentStackTrace = null;
-    for (String line : Splitter.on(Pattern.compile("\\R")).splitToList(logs)) {
-      if (line.startsWith("\tat ")) {
-        if (currentStackTrace == null) {
-          currentStackTrace = new ArrayList<>();
-          stackTraces.add(currentStackTrace);
-        }
-        currentStackTrace.add(line);
-      } else {
-        currentStackTrace = null;
-      }
-    }
-
     // Uses the 2nd line of a stack trace as its source.
     ImmutableSet<String> stackTraceSources =
-        stackTraces.stream()
-            .map(
-                stackTrace ->
-                    (stackTrace.size() >= 2 ? stackTrace.get(1) : stackTrace.get(0)).substring(4))
+        StackTraceExtractor.extract(logs).stream()
+            .map(StackTraceExtractor.StackTrace::frames)
+            .map(frames -> frames.size() >= 2 ? frames.get(1) : frames.get(0))
             .collect(toImmutableSet());
 
     assertWithMessage(

@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.allocation.
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsModeModule;
+import com.google.devtools.mobileharness.shared.util.base.StackTraceExtractor;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -211,8 +212,9 @@ public class LabServerIntegrationTest {
             "A normal lab server run should not print exception stack traces, which will confuse"
                 + " users and affect debuggability when debugging lab server logs.\n"
                 + "lab server stderr")
-        .that(stringBuilders.getOrCreate("lab_server_stderr").toString())
-        .doesNotContain("\tat ");
+        .that(
+            StackTraceExtractor.extract(stringBuilders.getOrCreate("lab_server_stderr").toString()))
+        .isEmpty();
   }
 
   @Test

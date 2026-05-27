@@ -36,6 +36,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/constant:builtin_flags",
         "//src/java/com/google/devtools/mobileharness/infra/ats/dda/stub:ats_dda_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:logs",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:stack_trace_extractor",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
