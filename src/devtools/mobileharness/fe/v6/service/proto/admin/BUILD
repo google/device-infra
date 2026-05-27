@@ -32,6 +32,12 @@ proto_library(
 
 java_proto_library(
     name = "admin_resources_java_proto",
+    visibility = [
+        "//google/corp/devtools/mobileharness/fe:__subpackages__",
+        "//java/com/google/devtools/mobileharness/fe/v5/dc/service:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/dc/service/util:__pkg__",
+        "//src/devtools/mobileharness/fe/v6:visibility",
+    ],
     deps = [":admin_resources_proto"],
 )
 
