@@ -248,6 +248,8 @@ export declare interface HostOverview {
   readonly properties: {[key: string]: string};
   /** OS of the host machine, e.g., "gLinux", "macOS". */
   readonly os: string;
+  /** The logical release key, e.g., "mobileharness_lab_server". */
+  readonly releaseName?: string;
   /** Links to diagnostic tools (logs, statusz, etc.). */
   readonly diagnosticLinks?: DiagnosticLink[];
   /** Whether a newer release version is available for this host. */

@@ -3,6 +3,8 @@ import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {MAT_DIALOG_DATA, MatDialog} from '@angular/material/dialog';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {DeployableVersion} from '../../../../../core/models/host_action';
+import {FakeHostService} from '../../../../../core/services/host/fake_host_service';
+import {HOST_SERVICE} from '../../../../../core/services/host/host_service';
 import {SnackBarService} from '../../../../../shared/services/snackbar_service';
 import {ReleaseDialog, ReleaseDialogData} from './release_dialog';
 
@@ -20,6 +22,7 @@ describe('ReleaseDialog', () => {
       imports: [ReleaseDialog, NoopAnimationsModule],
       providers: [
         {provide: MAT_DIALOG_DATA, useValue: dialogData},
+        {provide: HOST_SERVICE, useClass: FakeHostService},
         {
           provide: SnackBarService,
           useValue: jasmine.createSpyObj('SnackBarService', [
@@ -128,6 +131,7 @@ describe('ReleaseDialog', () => {
       imports: [ReleaseDialog, NoopAnimationsModule],
       providers: [
         {provide: MAT_DIALOG_DATA, useValue: testDialogData},
+        {provide: HOST_SERVICE, useClass: FakeHostService},
         {
           provide: SnackBarService,
           useValue: jasmine.createSpyObj('SnackBarService', [
@@ -173,6 +177,7 @@ describe('ReleaseDialog', () => {
       imports: [ReleaseDialog, NoopAnimationsModule],
       providers: [
         {provide: MAT_DIALOG_DATA, useValue: testDialogData},
+        {provide: HOST_SERVICE, useClass: FakeHostService},
         {
           provide: SnackBarService,
           useValue: jasmine.createSpyObj('SnackBarService', [
@@ -217,6 +222,7 @@ describe('ReleaseDialog', () => {
       imports: [ReleaseDialog, NoopAnimationsModule],
       providers: [
         {provide: MAT_DIALOG_DATA, useValue: testDialogData},
+        {provide: HOST_SERVICE, useClass: FakeHostService},
         {
           provide: SnackBarService,
           useValue: jasmine.createSpyObj('SnackBarService', [
@@ -261,6 +267,7 @@ describe('ReleaseDialog', () => {
       imports: [ReleaseDialog, NoopAnimationsModule],
       providers: [
         {provide: MAT_DIALOG_DATA, useValue: testDialogData},
+        {provide: HOST_SERVICE, useClass: FakeHostService},
         {
           provide: SnackBarService,
           useValue: jasmine.createSpyObj('SnackBarService', [

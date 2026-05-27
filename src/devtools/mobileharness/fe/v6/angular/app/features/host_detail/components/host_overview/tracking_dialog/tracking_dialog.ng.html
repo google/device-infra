@@ -1,0 +1,70 @@
+<div class="tracking-dialog-container">
+  <h3 mat-dialog-title class="tracking-title">
+    @if (errorMessage()) {
+      <mat-icon class="title-icon error">error</mat-icon>
+      Rollout Error
+    } @else {
+      <mat-icon class="title-icon">info</mat-icon>
+      {{ isReady() ? 'Rollout In Progress' : 'Initializing Rollout...' }}
+    }
+  </h3>
+
+  <div mat-dialog-content class="tracking-content">
+    <p class="message">
+      Initializing deployment process for version <strong>{{ data.version }}</strong> to host <strong>{{ data.hostName }}</strong>.
+    </p>
+
+    <div class="summary-box">
+      <div><strong>Version:</strong> {{ data.version }}</div>
+      @if (data.flags) {
+        <div class="flags-section">
+          <strong>Pass Through Flags:</strong>
+          <pre class="flags-text">{{ data.flags }}</pre>
+        </div>
+      }
+    </div>
+
+    @if (!isReady() && !errorMessage()) {
+      <p class="hint">
+        Generating Legislator tracking link. You can close this dialog; the operation will continue in the background.
+      </p>
+    }
+
+    <div class="link-container">
+      @if (errorMessage()) {
+        <div class="error-state">
+          <mat-icon class="error-icon">error_outline</mat-icon>
+          <span>{{ errorMessage() }}</span>
+        </div>
+      } @else if (!isReady()) {
+        <div class="loading-state">
+          <mat-icon class="spinner">sync</mat-icon>
+          Generating link...
+        </div>
+      } @else if (trackingUrl()) {
+        <div class="url-text">
+          {{ trackingUrl() }}
+        </div>
+      } @else {
+        <div class="no-link-state">
+          <mat-icon class="warning-icon">info</mat-icon>
+          <span>Deployment has been triggered, but no tracking URL is available in this environment.</span>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div mat-dialog-actions class="tracking-actions">
+    <div class="action-group">
+      <button class="m3-button m3-button-text" (click)="copyLink()" [disabled]="!isReady() || !trackingUrl() || errorMessage()">
+        <mat-icon>content_copy</mat-icon>
+        Copy Link
+      </button>
+      <button class="m3-button m3-button-text" (click)="openLink()" [disabled]="!isReady() || !trackingUrl() || errorMessage()">
+        <mat-icon>open_in_new</mat-icon>
+        Open Link
+      </button>
+    </div>
+    <button class="m3-button m3-button-filled" mat-dialog-close>Close</button>
+  </div>
+</div>
