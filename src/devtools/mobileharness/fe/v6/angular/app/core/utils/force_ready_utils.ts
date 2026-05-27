@@ -65,18 +65,35 @@ export function modifyHostOverview(
     modified = true;
   }
 
-  if (newBody.overviewContent?.labServer?.actions) {
-    newBody.overviewContent = {
-      ...newBody.overviewContent,
-      labServer: {
-        ...newBody.overviewContent.labServer,
-        actions: updateActions(
-          newBody.overviewContent.labServer.actions,
-          forcedButtons,
-        ),
-      },
-    };
-    modified = true;
+  if (newBody.overviewContent) {
+    const newContent = {...newBody.overviewContent};
+    let contentModified = false;
+
+    if (newContent.labServer?.actions) {
+      const updatedActions = updateActions(
+        newContent.labServer.actions,
+        forcedButtons,
+      );
+      if (updatedActions !== newContent.labServer.actions) {
+        newContent.labServer = {
+          ...newContent.labServer,
+          actions: updatedActions,
+        };
+        contentModified = true;
+      }
+    }
+
+    if (forcedButtons.includes('canUpgrade') || forcedButtons.includes('*')) {
+      if (!newContent.canUpgrade) {
+        newContent.canUpgrade = true;
+        contentModified = true;
+      }
+    }
+
+    if (contentModified) {
+      newBody.overviewContent = newContent;
+      modified = true;
+    }
   }
 
   return modified ? newBody : b;

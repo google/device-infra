@@ -79,10 +79,44 @@ describe('forceReadyUtils', () => {
         },
       };
       const result = modifyHostOverview(body, ['debug', 'start']);
-      expect(result.headerInfo.actions.debug.isReady).toBeTrue();
+      expect(result.headerInfo.actions!.debug.isReady).toBeTrue();
       expect(
-        result.overviewContent.labServer.actions!.start.isReady,
+        result.overviewContent.labServer!.actions!.start.isReady,
       ).toBeTrue();
+    });
+
+    it('should patch canUpgrade in host overview', () => {
+      const body = {
+        overviewContent: {
+          canUpgrade: false,
+        },
+      };
+      const result = modifyHostOverview(body, ['canUpgrade']);
+      expect(result.overviewContent.canUpgrade).toBeTrue();
+    });
+
+    it('should patch canUpgrade in host overview if forcedButtons contains "*"', () => {
+      const body = {
+        overviewContent: {
+          canUpgrade: false,
+        },
+      };
+      const result = modifyHostOverview(body, ['*']);
+      expect(result.overviewContent.canUpgrade).toBeTrue();
+    });
+
+    it('should return original object if no changes are made', () => {
+      const body = {
+        overviewContent: {
+          labServer: {
+            actions: {
+              start: {isReady: false},
+            },
+          },
+        },
+      };
+      const result = modifyHostOverview(body, ['nonexistent']);
+      expect(result as unknown).toBe(body);
     });
   });
 
