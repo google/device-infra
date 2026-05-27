@@ -20,6 +20,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
 import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUtil;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import java.time.Duration;
@@ -30,10 +31,19 @@ final class JobConfigHelper {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** Finalizes the timeout setting for MH Job/Test/Start. */
-  public static Timeout.Builder finalizeTimeout(JobConfig jobConfig) {
-    Duration finalizedJobTimeout = Duration.ofSeconds(jobConfig.getJobTimeoutSec());
-    Duration finalizedTestTimeout = Duration.ofSeconds(jobConfig.getTestTimeoutSec());
-    Duration finalizedStartTimeout = Duration.ofSeconds(jobConfig.getStartTimeoutSec());
+  public static Timeout.Builder finalizeTimeout(JobConfig jobConfig, SystemUtil systemUtil) {
+    Duration finalizedJobTimeout =
+        jobConfig.getJobTimeoutSec() > 0
+            ? Duration.ofSeconds(jobConfig.getJobTimeoutSec())
+            : Duration.ofMillis(Timeout.getDefaultInstance().getJobTimeoutMs());
+    Duration finalizedTestTimeout =
+        jobConfig.getTestTimeoutSec() > 0
+            ? Duration.ofSeconds(jobConfig.getTestTimeoutSec())
+            : Duration.ofMillis(Timeout.getDefaultInstance().getTestTimeoutMs());
+    Duration finalizedStartTimeout =
+        jobConfig.getStartTimeoutSec() > 0
+            ? Duration.ofSeconds(jobConfig.getStartTimeoutSec())
+            : Duration.ofMillis(Timeout.getDefaultInstance().getStartTimeoutMs());
     Timeout.Builder timeout = Timeout.newBuilder();
 
     timeout.setJobTimeoutMs(finalizedJobTimeout.toMillis());
@@ -44,7 +54,8 @@ final class JobConfigHelper {
     return SharedPoolJobUtil.maybeExtendStartTimeout(timeout.build(), jobConfig).toBuilder();
   }
 
-  public static JobUser finalizeUser(JobConfig jobConfig) throws MobileHarnessException {
+  public static JobUser finalizeUser(JobConfig jobConfig, SystemUtil systemUtil)
+      throws MobileHarnessException {
     return JobUser.newBuilder()
         .setRunAs(jobConfig.getRunAs())
         .setActualUser(jobConfig.getRunAs())
