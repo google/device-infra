@@ -58,7 +58,13 @@ fi
 
 if [ ! -f "$VENV_DIR/bin/pip" ]; then
     echo "📥 Bootstrapping pip..."
-    curl -sSL https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
+    PY_MAJOR_MINOR="$("$VENV_DIR/bin/python3" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+    if [ "$PY_MAJOR_MINOR" = "3.9" ]; then
+        GET_PIP_URL="https://bootstrap.pypa.io/pip/3.9/get-pip.py"
+    else
+        GET_PIP_URL="https://bootstrap.pypa.io/get-pip.py"
+    fi
+    curl -sSL "$GET_PIP_URL" -o /tmp/get-pip.py
     "$VENV_DIR/bin/python3" /tmp/get-pip.py
     rm /tmp/get-pip.py
 fi
