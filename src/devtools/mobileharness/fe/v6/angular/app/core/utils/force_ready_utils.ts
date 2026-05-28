@@ -174,15 +174,25 @@ export function updateActions<T>(actions: T, forcedButtons: string[]): T {
 
   if (forcedButtons.includes('*')) {
     for (const key of Object.keys(actionMap)) {
-      if (actionMap[key] && !actionMap[key].isReady) {
-        actionMap[key] = {...actionMap[key], isReady: true};
+      if (actionMap[key] && (!actionMap[key].isReady || !actionMap[key].visible || !actionMap[key].enabled)) {
+        actionMap[key] = {
+          ...actionMap[key],
+          isReady: true,
+          visible: true,
+          enabled: true,
+        };
         modified = true;
       }
     }
   } else {
     for (const btn of forcedButtons) {
       if (actionMap[btn]) {
-        actionMap[btn] = {...actionMap[btn], isReady: true};
+        actionMap[btn] = {
+          ...actionMap[btn],
+          isReady: true,
+          visible: true,
+          enabled: true,
+        };
         modified = true;
       }
     }
