@@ -228,8 +228,14 @@ message FlashButtonParams {
 }
 
 // State of flash action button.
-message FlashActionButtonState {
-  common.ActionButtonState state = 1;
+message FlashActionInfo {
+  reserved 1;
+
+  // Flattened from common.ActionButtonState
+  bool enabled = 3;
+  bool visible = 4;
+  string tooltip = 5;
+  bool is_ready = 6;
   FlashButtonParams params = 2;
 }
 
@@ -243,7 +249,7 @@ message QuarantineInfo {
 message DeviceActions {
   common.ActionButtonState screenshot = 1;
   common.ActionButtonState logcat = 2;
-  FlashActionButtonState flash = 3;
+  FlashActionInfo flash = 3;
   common.ActionButtonState remote_control = 4;
   common.ActionButtonState quarantine = 5;
   common.ActionButtonState configuration = 6;

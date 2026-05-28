@@ -35,7 +35,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButton
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceActions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceType;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionButtonState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.RemoteControlInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DeviceHealthState;
@@ -179,13 +179,12 @@ public final class GetHostDeviceSummariesHandler {
   }
 
   private DeviceActions createDeviceActions() {
+    // TODO: Populate the device actions based on the device info, just like in
+    // DeviceHeaderInfoBuilder.
     return DeviceActions.newBuilder()
         .setScreenshot(ActionButtonState.newBuilder().setIsReady(false).build())
         .setRemoteControl(ActionButtonState.newBuilder().setIsReady(false).build())
-        .setFlash(
-            FlashActionButtonState.newBuilder()
-                .setState(ActionButtonState.newBuilder().setIsReady(false).build())
-                .build())
+        .setFlash(FlashActionInfo.newBuilder().setIsReady(false).build())
         .setConfiguration(ActionButtonState.newBuilder().setIsReady(false).build())
         .setDecommission(ActionButtonState.newBuilder().setIsReady(false).build())
         .build();

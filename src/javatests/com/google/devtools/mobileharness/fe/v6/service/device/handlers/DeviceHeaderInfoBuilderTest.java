@@ -29,7 +29,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInf
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceActions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionButtonState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HostInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineInfo;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseFactory;
@@ -70,7 +70,7 @@ public final class DeviceHeaderInfoBuilderTest {
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     when(flashButtonBuilder.build(any(DeviceInfo.class), any(UniverseScope.class)))
-        .thenReturn(FlashActionButtonState.getDefaultInstance());
+        .thenReturn(FlashActionInfo.getDefaultInstance());
     when(logcatButtonBuilder.build(any(DeviceInfo.class), any(UniverseScope.class)))
         .thenReturn(ActionButtonState.getDefaultInstance());
     when(quarantineButtonBuilder.build(any(DeviceInfo.class), any(UniverseScope.class)))
@@ -110,7 +110,7 @@ public final class DeviceHeaderInfoBuilderTest {
                 DeviceActions.newBuilder()
                     .setScreenshot(ActionButtonState.getDefaultInstance())
                     .setLogcat(ActionButtonState.getDefaultInstance())
-                    .setFlash(FlashActionButtonState.getDefaultInstance())
+                    .setFlash(FlashActionInfo.getDefaultInstance())
                     .setRemoteControl(ActionButtonState.getDefaultInstance())
                     .setQuarantine(ActionButtonState.getDefaultInstance())
                     .setConfiguration(ActionButtonState.getDefaultInstance()))
@@ -141,7 +141,7 @@ public final class DeviceHeaderInfoBuilderTest {
                 DeviceActions.newBuilder()
                     .setScreenshot(ActionButtonState.getDefaultInstance())
                     .setLogcat(ActionButtonState.getDefaultInstance())
-                    .setFlash(FlashActionButtonState.getDefaultInstance())
+                    .setFlash(FlashActionInfo.getDefaultInstance())
                     .setRemoteControl(ActionButtonState.getDefaultInstance())
                     .setQuarantine(ActionButtonState.getDefaultInstance())
                     .setConfiguration(ActionButtonState.getDefaultInstance()))

@@ -24,7 +24,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionButtonState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionInfo;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
@@ -61,9 +61,9 @@ public final class FlashButtonBuilderTest {
     when(featureManager.isDeviceFlashingFeatureEnabled()).thenReturn(false);
     DeviceInfo deviceInfo = DeviceInfo.getDefaultInstance();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
+    FlashActionInfo state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
 
-    assertThat(state.getState().getVisible()).isFalse();
+    assertThat(state.getVisible()).isFalse();
   }
 
   @Test
@@ -75,9 +75,9 @@ public final class FlashButtonBuilderTest {
             .setDeviceStatus(DeviceStatus.IDLE)
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
+    FlashActionInfo state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
 
-    assertThat(state.getState().getVisible()).isFalse();
+    assertThat(state.getVisible()).isFalse();
   }
 
   @Test
@@ -88,9 +88,9 @@ public final class FlashButtonBuilderTest {
             .setDeviceFeature(DeviceFeature.newBuilder().addType("IosRealDevice"))
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
+    FlashActionInfo state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
 
-    assertThat(state.getState().getVisible()).isFalse();
+    assertThat(state.getVisible()).isFalse();
   }
 
   @Test
@@ -108,11 +108,11 @@ public final class FlashButtonBuilderTest {
             .setDeviceStatus(DeviceStatus.IDLE)
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
+    FlashActionInfo state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
 
-    assertThat(state.getState().getVisible()).isTrue();
-    assertThat(state.getState().getEnabled()).isFalse();
-    assertThat(state.getState().getTooltip())
+    assertThat(state.getVisible()).isTrue();
+    assertThat(state.getEnabled()).isFalse();
+    assertThat(state.getTooltip())
         .isEqualTo("Device flashing is only supported on satellite lab Android devices.");
   }
 
@@ -126,11 +126,11 @@ public final class FlashButtonBuilderTest {
             .setDeviceStatus(DeviceStatus.IDLE)
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
+    FlashActionInfo state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
 
-    assertThat(state.getState().getVisible()).isTrue();
-    assertThat(state.getState().getEnabled()).isFalse();
-    assertThat(state.getState().getTooltip())
+    assertThat(state.getVisible()).isTrue();
+    assertThat(state.getEnabled()).isFalse();
+    assertThat(state.getTooltip())
         .isEqualTo("Device flashing is only supported on satellite lab Android devices.");
   }
 
@@ -143,11 +143,11 @@ public final class FlashButtonBuilderTest {
             .setDeviceStatus(DeviceStatus.IDLE)
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
+    FlashActionInfo state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
 
-    assertThat(state.getState().getVisible()).isTrue();
-    assertThat(state.getState().getEnabled()).isTrue();
-    assertThat(state.getState().getTooltip()).isEqualTo("Flash the device");
+    assertThat(state.getVisible()).isTrue();
+    assertThat(state.getEnabled()).isTrue();
+    assertThat(state.getTooltip()).isEqualTo("Flash the device");
   }
 
   @Test
@@ -159,11 +159,11 @@ public final class FlashButtonBuilderTest {
             .setDeviceStatus(DeviceStatus.BUSY)
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
+    FlashActionInfo state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
 
-    assertThat(state.getState().getVisible()).isTrue();
-    assertThat(state.getState().getEnabled()).isFalse();
-    assertThat(state.getState().getTooltip())
+    assertThat(state.getVisible()).isTrue();
+    assertThat(state.getEnabled()).isFalse();
+    assertThat(state.getTooltip())
         .isEqualTo(
             "Device flash is only allowed on IDLE device. Please wait for device idle and retry.");
   }
@@ -177,11 +177,11 @@ public final class FlashButtonBuilderTest {
             .setDeviceStatus(DeviceStatus.IDLE)
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
+    FlashActionInfo state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
 
-    assertThat(state.getState().getVisible()).isTrue();
-    assertThat(state.getState().getEnabled()).isTrue();
-    assertThat(state.getState().getTooltip()).isEqualTo("Flash the device");
+    assertThat(state.getVisible()).isTrue();
+    assertThat(state.getEnabled()).isTrue();
+    assertThat(state.getTooltip()).isEqualTo("Flash the device");
   }
 
   @Test
@@ -194,8 +194,8 @@ public final class FlashButtonBuilderTest {
             .setDeviceStatus(DeviceStatus.IDLE)
             .build();
 
-    FlashActionButtonState state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
+    FlashActionInfo state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
 
-    assertThat(state.getState().getIsReady()).isFalse();
+    assertThat(state.getIsReady()).isFalse();
   }
 }

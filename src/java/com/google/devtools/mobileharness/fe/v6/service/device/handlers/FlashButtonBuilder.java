@@ -19,8 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
-import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionButtonState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionInfo;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
@@ -28,7 +27,7 @@ import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-/** Utility class to build {@link FlashActionButtonState} for flash button. */
+/** Utility class to build {@link FlashActionInfo} for flash button. */
 @Singleton
 public class FlashButtonBuilder {
 
@@ -42,14 +41,13 @@ public class FlashButtonBuilder {
     this.featureReadiness = featureReadiness;
   }
 
-  public FlashActionButtonState build(DeviceInfo deviceInfo, UniverseScope universe) {
+  public FlashActionInfo build(DeviceInfo deviceInfo, UniverseScope universe) {
     if (!featureManagerFactory.create(universe).isDeviceFlashingFeatureEnabled()) {
-      return FlashActionButtonState.newBuilder()
-          .setState(ActionButtonState.newBuilder().setVisible(false))
-          .build();
+      return FlashActionInfo.newBuilder().setVisible(false).build();
     }
 
     List<String> deviceTypes = deviceInfo.getDeviceFeature().getTypeList();
+
     List<DeviceDimension> dimensions =
         deviceInfo.getDeviceFeature().getCompositeDimension().getRequiredDimensionList();
 
@@ -57,9 +55,7 @@ public class FlashButtonBuilder {
         deviceTypes.contains("AndroidRealDevice") || deviceTypes.contains("AndroidFlashableDevice");
 
     if (!isFlashableDevice) {
-      return FlashActionButtonState.newBuilder()
-          .setState(ActionButtonState.newBuilder().setVisible(false))
-          .build();
+      return FlashActionInfo.newBuilder().setVisible(false).build();
     }
 
     boolean isTestBed = deviceTypes.contains("TestbedDevice");
@@ -69,24 +65,21 @@ public class FlashButtonBuilder {
 
     boolean isDeviceIdle = deviceInfo.getDeviceStatus().equals(DeviceStatus.IDLE);
 
-    FlashActionButtonState.Builder stateBuilder =
-        FlashActionButtonState.newBuilder()
-            .setState(
-                ActionButtonState.newBuilder()
-                    .setVisible(true)
-                    .setIsReady(featureReadiness.isDeviceFlashingReady()));
+    // TODO: Add params for flash button.
+    FlashActionInfo.Builder stateBuilder =
+        FlashActionInfo.newBuilder()
+            .setVisible(true)
+            .setIsReady(featureReadiness.isDeviceFlashingReady());
 
     if (isSharedDevice || isTestBed) {
       stateBuilder
-          .getStateBuilder()
           .setEnabled(false)
           .setTooltip("Device flashing is only supported on satellite lab Android devices.");
     } else {
       if (isDeviceIdle) {
-        stateBuilder.getStateBuilder().setEnabled(true).setTooltip("Flash the device");
+        stateBuilder.setEnabled(true).setTooltip("Flash the device");
       } else {
         stateBuilder
-            .getStateBuilder()
             .setEnabled(false)
             .setTooltip(
                 "Device flash is only allowed on IDLE device. Please wait for device idle and"
