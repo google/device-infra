@@ -48,6 +48,7 @@ java_library(
     srcs = ["RemoteTestRunner.java"],
     deps = [
         ":lab_server_locator",
+        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
@@ -60,6 +61,7 @@ java_library(
         "//src/devtools/mobileharness/shared/version/proto:version_java_proto",
         "//src/devtools/mobileharness/shared/version/proto:version_service_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/converter",
+        "//src/java/com/google/devtools/common/metrics/stability/model:error_id",
         "//src/java/com/google/devtools/common/metrics/stability/rpc:exception",
         "//src/java/com/google/devtools/common/metrics/stability/util:error_id_comparator",
         "//src/java/com/google/devtools/deviceinfra/shared/util/file/remote/constant:remote_file_type",

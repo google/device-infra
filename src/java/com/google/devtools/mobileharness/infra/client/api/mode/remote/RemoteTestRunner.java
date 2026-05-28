@@ -32,6 +32,8 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
+import com.google.devtools.common.metrics.stability.model.ErrorId;
+import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.common.metrics.stability.util.ErrorIdComparator;
 import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
@@ -654,6 +656,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
       response = prepareTestStub.createTest(createTestRequest, impersonationUser);
     } catch (RpcExceptionWithErrorId e) {
       testInfo.properties().add(PropertyName.Test.UNSTARTED_TEST, "true");
+      checkDependencyIssueAndThrowIfMatch(e);
       throw createExceptionWithoutStackTrace(
           InfraErrorId.CLIENT_REMOTE_MODE_TEST_CREATE_ERROR,
           "Failed to create test in Lab Server",
@@ -661,6 +664,19 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     }
 
     return response;
+  }
+
+  private static void checkDependencyIssueAndThrowIfMatch(RpcExceptionWithErrorId e)
+      throws MobileHarnessException {
+    if (e.getApplicationError().isPresent()) {
+      ErrorId errorId = e.getApplicationError().get().getErrorId();
+      if (errorId != null && errorId.type() == ErrorType.DEPENDENCY_ISSUE) {
+        throw createExceptionWithoutStackTrace(
+            InfraErrorId.CLIENT_REMOTE_MODE_TEST_CREATE_DEPENDENCY_ERROR,
+            "Failed to create test in Lab Server due to dependency issue",
+            e);
+      }
+    }
   }
 
   private ImmutableList<ResolveFileItem> getLabResolveFiles(JobInfo jobInfo)

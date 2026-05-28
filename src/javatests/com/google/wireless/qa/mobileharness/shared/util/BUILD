@@ -23,6 +23,7 @@ java_library(
     testonly = 1,
     srcs = glob(["*.java"]),
     deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",  # deviceinfra:google-only(internal)
         "//src/java/com/google/devtools/mobileharness/shared/util/network",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:luhn",
