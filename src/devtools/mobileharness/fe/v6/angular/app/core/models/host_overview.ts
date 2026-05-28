@@ -11,6 +11,7 @@ import {HealthState, SubDeviceInfo} from './device_overview';
 import {HostHeaderInfo, LabServerActions} from './host_action';
 
 
+// Note: advanced_operations is defined in host_action.ts LabServerActions.
 /**
  * Semantic state of host connectivity with the OmniLab master server.
  * Frontend uses this to determine icon and color.

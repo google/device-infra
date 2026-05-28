@@ -35,6 +35,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetPopularFlag
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostServiceGrpc;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.ListTroubleshootScriptsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.ListTroubleshootScriptsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ReleaseLabServerRequest;
@@ -43,6 +45,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlD
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RestartLabServerRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RestartLabServerResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.RunTroubleshootScriptRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.RunTroubleshootScriptResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.StartLabServerRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.StartLabServerResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.StopLabServerRequest;
@@ -249,5 +253,31 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
         executor,
         HostServiceGrpc.getServiceDescriptor(),
         HostServiceGrpc.getStopLabServerMethod());
+  }
+
+  @Override
+  public void runTroubleshootScript(
+      RunTroubleshootScriptRequest request,
+      StreamObserver<RunTroubleshootScriptResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::runTroubleshootScript,
+        executor,
+        HostServiceGrpc.getServiceDescriptor(),
+        HostServiceGrpc.getRunTroubleshootScriptMethod());
+  }
+
+  @Override
+  public void listTroubleshootScripts(
+      ListTroubleshootScriptsRequest request,
+      StreamObserver<ListTroubleshootScriptsResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::listTroubleshootScripts,
+        executor,
+        HostServiceGrpc.getServiceDescriptor(),
+        HostServiceGrpc.getListTroubleshootScriptsMethod());
   }
 }

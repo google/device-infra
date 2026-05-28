@@ -45,6 +45,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetPopularFlag
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetPopularFlagsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.ListTroubleshootScriptsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.ListTroubleshootScriptsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ReleaseLabServerRequest;
@@ -53,6 +55,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlD
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RestartLabServerRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RestartLabServerResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.RunTroubleshootScriptRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.RunTroubleshootScriptResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.StartLabServerRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.StartLabServerResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.StopLabServerRequest;
@@ -267,5 +271,17 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
     String universe = request.getUniverse();
     // TODO: Implement this method.
     return immediateFuture(StopLabServerResponse.getDefaultInstance());
+  }
+
+  @Override
+  public ListenableFuture<RunTroubleshootScriptResponse> runTroubleshootScript(
+      RunTroubleshootScriptRequest request) {
+    return immediateFuture(RunTroubleshootScriptResponse.getDefaultInstance());
+  }
+
+  @Override
+  public ListenableFuture<ListTroubleshootScriptsResponse> listTroubleshootScripts(
+      ListTroubleshootScriptsRequest request) {
+    return immediateFuture(ListTroubleshootScriptsResponse.getDefaultInstance());
   }
 }

@@ -33,6 +33,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetPopularFlag
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetPopularFlagsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.ListTroubleshootScriptsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.ListTroubleshootScriptsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ReleaseLabServerRequest;
@@ -41,6 +43,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlD
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RemoteControlDevicesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RestartLabServerRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RestartLabServerResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.RunTroubleshootScriptRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.RunTroubleshootScriptResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.StartLabServerRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.StartLabServerResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.StopLabServerRequest;
@@ -86,4 +90,10 @@ public interface HostServiceLogic {
   ListenableFuture<RestartLabServerResponse> restartLabServer(RestartLabServerRequest request);
 
   ListenableFuture<StopLabServerResponse> stopLabServer(StopLabServerRequest request);
+
+  ListenableFuture<RunTroubleshootScriptResponse> runTroubleshootScript(
+      RunTroubleshootScriptRequest request);
+
+  ListenableFuture<ListTroubleshootScriptsResponse> listTroubleshootScripts(
+      ListTroubleshootScriptsRequest request);
 }

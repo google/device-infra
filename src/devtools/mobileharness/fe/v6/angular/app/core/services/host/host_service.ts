@@ -6,10 +6,12 @@ import {
   GetHostDebugInfoResponse,
   GetPopularFlagsResponse,
   HostHeaderInfo,
+  ListTroubleshootScriptsResponse,
   PreflightLabServerReleaseResponse,
   ReleaseLabServerRequest,
   ReleaseLabServerResponse,
   RestartLabServerResponse,
+  RunTroubleshootScriptResponse,
   StartLabServerResponse,
   StopLabServerResponse,
   UpdatePassThroughFlagsResponse,
@@ -145,4 +147,22 @@ export abstract class HostService {
    * Stops the lab server process on the host.
    */
   abstract stopLabServer(hostName: string): Observable<StopLabServerResponse>;
+
+  /**
+   * Runs a troubleshooting script on the host.
+   */
+  abstract runTroubleshootScript(
+    hostName: string,
+    script: string,
+    argumentsMap: {[key: string]: string},
+    universe: string,
+  ): Observable<RunTroubleshootScriptResponse>;
+
+  /**
+   * Lists all available troubleshooting scripts for the host with their safety metadata.
+   */
+  abstract listTroubleshootScripts(
+    hostName: string,
+    universe: string,
+  ): Observable<ListTroubleshootScriptsResponse>;
 }

@@ -10,10 +10,12 @@ import {
   GetHostDebugInfoResponse,
   GetPopularFlagsResponse,
   HostHeaderInfo,
+  ListTroubleshootScriptsResponse,
   PreflightLabServerReleaseResponse,
   ReleaseLabServerRequest,
   ReleaseLabServerResponse,
   RestartLabServerResponse,
+  RunTroubleshootScriptResponse,
   StartLabServerResponse,
   StopLabServerResponse,
   UpdatePassThroughFlagsResponse,
@@ -188,6 +190,36 @@ export class HttpHostService extends HostService {
     return this.http.post<StopLabServerResponse>(
       `${this.apiUrl}/${hostName}:stop`,
       {},
+    );
+  }
+
+  override runTroubleshootScript(
+    hostName: string,
+    script: string,
+    argumentsMap: {[key: string]: string},
+    universe: string,
+  ): Observable<RunTroubleshootScriptResponse> {
+    return this.http.post<RunTroubleshootScriptResponse>(
+      `${this.apiUrl}/${hostName}/runTroubleshootScript`,
+      {
+        hostName,
+        script,
+        arguments: argumentsMap,
+        universe,
+      },
+    );
+  }
+
+  override listTroubleshootScripts(
+    hostName: string,
+    universe: string,
+  ): Observable<ListTroubleshootScriptsResponse> {
+    return this.http.post<ListTroubleshootScriptsResponse>(
+      `${this.apiUrl}/${hostName}/listTroubleshootScripts`,
+      {
+        hostName,
+        universe,
+      },
     );
   }
 }

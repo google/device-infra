@@ -107,6 +107,7 @@ message LabServerActions {
   common.ActionButtonState start = 3;
   common.ActionButtonState restart = 4;
   common.ActionButtonState stop = 5;
+  common.ActionButtonState advanced_operations = 7;
 
   reserved 2, 6;
 }

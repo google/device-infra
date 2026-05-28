@@ -18,6 +18,7 @@ export declare interface LabServerActions {
   readonly start: ActionButtonState;
   readonly restart: ActionButtonState;
   readonly stop: ActionButtonState;
+  readonly advancedOperations: ActionButtonState;
 }
 
 /**
@@ -228,5 +229,32 @@ export declare interface ReleaseLabServerRequest {
   readonly version: string;
   readonly flags?: string;
   readonly releaseName?: string;
+}
+
+/**
+ * Response for RunTroubleshootScript API.
+ */
+export declare interface RunTroubleshootScriptResponse {
+  readonly exitCode: number;
+  readonly stdout: string;
+  readonly stderr: string;
+}
+
+/**
+ * Represents an individual dynamic troubleshoot action model.
+ */
+export declare interface TroubleshootScriptAction {
+  readonly script: string;
+  readonly displayName: string;
+  readonly description: string;
+  readonly enabled: boolean;
+  readonly constraintTooltip: string;
+}
+
+/**
+ * Response for ListTroubleshootScripts API.
+ */
+export declare interface ListTroubleshootScriptsResponse {
+  readonly actions: TroubleshootScriptAction[];
 }
 

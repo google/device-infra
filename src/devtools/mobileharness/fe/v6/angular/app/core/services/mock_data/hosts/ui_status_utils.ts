@@ -510,5 +510,15 @@ export function createLabServerActions(
           : '',
       isReady: true,
     },
+    advancedOperations: {
+      enabled: isRunning && actionEnabled,
+      visible: true,
+      tooltip: !isRunning
+        ? 'Lab server must be running to trigger advanced operations'
+        : isCoreLab
+          ? 'Cannot perform advanced operations in a Shared Lab'
+          : 'Advanced Operations',
+      isReady: true,
+    },
   };
 }

@@ -7,10 +7,12 @@ import {
   GetHostDebugInfoResponse,
   GetPopularFlagsResponse,
   HostHeaderInfo,
+  ListTroubleshootScriptsResponse,
   PreflightLabServerReleaseResponse,
   ReleaseLabServerRequest,
   ReleaseLabServerResponse,
   RestartLabServerResponse,
+  RunTroubleshootScriptResponse,
   StartLabServerResponse,
   StopLabServerResponse,
   UpdatePassThroughFlagsResponse,
@@ -484,6 +486,43 @@ export class FakeHostService extends HostService {
     return of({
       trackingUrl:
         'https://rollouts.corp.example.com/rollouts/prodchange-rollout/stop%2F123',
+    }).pipe(delay(1000));
+  }
+
+  override runTroubleshootScript(
+    hostName: string,
+    script: string,
+    argumentsMap: {[key: string]: string},
+    universe: string,
+  ): Observable<RunTroubleshootScriptResponse> {
+    return of({
+      exitCode: 0,
+      stdout: `[Fake Host Service] Successfully executed ${script} on ${hostName}.`,
+      stderr: '',
+    }).pipe(delay(1500));
+  }
+
+  override listTroubleshootScripts(
+    hostName: string,
+    universe: string,
+  ): Observable<ListTroubleshootScriptsResponse> {
+    const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    const isDrained =
+      scenario?.overview?.labServer?.activity?.state === 'DRAINED';
+
+    return of({
+      actions: [
+        {
+          script: 'RESET_USB_HUB',
+          displayName: 'Reset USB Hub',
+          description:
+            'Power cycle smart USB hub ports to recover missing devices.',
+          enabled: isDrained,
+          constraintTooltip: isDrained
+            ? 'Power cycle smart USB hub ports'
+            : 'Reset USB hub is only supported on DRAINED hosts to avoid disrupting tests.',
+        },
+      ],
     }).pipe(delay(1000));
   }
 }

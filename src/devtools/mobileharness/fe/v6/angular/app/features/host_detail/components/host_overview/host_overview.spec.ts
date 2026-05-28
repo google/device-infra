@@ -43,6 +43,12 @@ describe('HostOverview Component', () => {
           isReady: true,
           tooltip: 'Already stopped',
         },
+        advancedOperations: {
+          visible: true,
+          enabled: true,
+          isReady: true,
+          tooltip: '',
+        },
       },
     },
     daemonServer: {

@@ -154,6 +154,25 @@ service HostService {
       body: "*"
     };
   }
+
+  // Runs a troubleshooting script on the host.
+  rpc RunTroubleshootScript(RunTroubleshootScriptRequest)
+      returns (RunTroubleshootScriptResponse) {
+    option (google.api.http) = {
+      post: "/v6/hosts/{host_name}/runTroubleshootScript"
+      body: "*"
+    };
+  }
+
+  // Lists all available troubleshooting scripts for the host along with their
+  // safety and enabled states.
+  rpc ListTroubleshootScripts(ListTroubleshootScriptsRequest)
+      returns (ListTroubleshootScriptsResponse) {
+    option (google.api.http) = {
+      post: "/v6/hosts/{host_name}/listTroubleshootScripts"
+      body: "*"
+    };
+  }
 }
 
 // Request message for GetHostHeaderInfo.
@@ -414,4 +433,47 @@ message RestartLabServerResponse {
 message StopLabServerResponse {
   // The tracking URL for the rollout.
   string tracking_url = 1;
+}
+
+// Request message for RunTroubleshootScript.
+message RunTroubleshootScriptRequest {
+  string host_name = 1;
+  // The specific troubleshoot script to run.
+  // NOTE: For security reasons, all troubleshoot scripts must be pre-written
+  // and statically compiled/mapped in the codebase. Dynamic or arbitrary
+  // script execution is strictly prohibited to prevent remote command
+  // injection.
+  enum TroubleshootScript {
+    UNKNOWN = 0;
+  }
+  TroubleshootScript script = 2;
+  string universe = 4;
+}
+
+// Response message for RunTroubleshootScript.
+message RunTroubleshootScriptResponse {
+  int32 exit_code = 1;
+  string stdout = 2;
+  string stderr = 3;
+}
+
+// Request message for ListTroubleshootScripts.
+message ListTroubleshootScriptsRequest {
+  string host_name = 1;
+  string universe = 2;
+}
+
+// Response message for ListTroubleshootScripts.
+message ListTroubleshootScriptsResponse {
+  repeated TroubleshootScriptAction actions = 1;
+}
+
+// Represents an individual troubleshoot script and its invocable state
+// metadata.
+message TroubleshootScriptAction {
+  optional RunTroubleshootScriptRequest.TroubleshootScript script = 1;
+  optional string display_name = 2;
+  optional string description = 3;
+  optional bool enabled = 4;
+  optional string constraint_tooltip = 5;
 }
