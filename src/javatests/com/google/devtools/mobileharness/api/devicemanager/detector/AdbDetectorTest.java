@@ -21,7 +21,9 @@ import static com.google.devtools.mobileharness.api.devicemanager.detector.AdbDe
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -76,7 +78,8 @@ public class AdbDetectorTest {
 
   @Before
   public void setUp() throws Exception {
-    detector = new AdbDetector(adbInternalUtil, apiConfig, testbedLoader, testbedUtil, systemUtil);
+    detector =
+        spy(new AdbDetector(adbInternalUtil, apiConfig, testbedLoader, testbedUtil, systemUtil));
   }
 
   @Test
@@ -210,6 +213,63 @@ public class AdbDetectorTest {
   @Test
   public void detectDevices_failedDueToAdbAddressInUse_noRecoverIfNotMhManaged() throws Exception {
     flags.set("should_manage_devices", "false");
+
+    when(adbInternalUtil.getDeviceSerialsAsMap())
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_INTERNAL_UTIL_GET_DEVICE_SERIALS_CMD_ERROR,
+                "Failed to list devices with command [/usr/bin/adb devices -l]",
+                new MobileHarnessException(
+                    AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE,
+                    "Failed to run adb command",
+                    commandFailureException)));
+    when(commandFailureException.getMessage())
+        .thenReturn(
+            "* daemon not running; starting now at tcp:5037\n"
+                + "ADB server didn't ACK\n"
+                + "Full server startup log: /tmp/adb.1001.log\n"
+                + "Server had pid: 14911\n"
+                + "--- adb starting (pid 14925) ---\n"
+                + "adb I 09-21 02:04:39 14925 14925 main.cpp:63] Android Debug Bridge version"
+                + " 1.0.41\n"
+                + "adb I 09-21 02:04:39 14925 14925 main.cpp:63] Version 31.0.2-7425079\n"
+                + "adb I 09-21 02:04:39 14925 14925 main.cpp:63] Installed as /usr/bin/adb\n"
+                + "adb I 09-21 02:04:39 14925 14925 main.cpp:63]\n"
+                + "adb F 09-21 02:04:39 14911 14911 main.cpp:160] could not install *smartsocket*"
+                + " listener: Address already in use\n"
+                + "adb F 09-21 02:04:39 14920 14920 main.cpp:160] could not install *smartsocket*"
+                + " listener: Address already in use\n"
+                + "adb F 09-21 02:04:39 14925 14925 main.cpp:160] could not install *smartsocket*"
+                + " listener: Address already in use\n"
+                + "* failed to start daemon\n"
+                + "adb: failed to check server version: cannot connect to daemon");
+
+    for (int i = 0; i <= MAX_ADB_ADDRESS_IN_USE_ERROR_ROUNDS; i++) {
+      assertThat(
+              assertThrows(MobileHarnessException.class, () -> detector.detectDevices())
+                  .getErrorId())
+          .isEqualTo(AndroidErrorId.ANDROID_DM_DETECTOR_ADB_ERROR);
+    }
+
+    verify(systemUtil, never()).killAllProcesses(eq("adb"), any());
+  }
+
+  @Test
+  public void detectDevices_noDevicesDetected_noRecoverIfAteDualStackEnabled() throws Exception {
+    doReturn(true).when(detector).isAteDualStackEnabled();
+    when(adbInternalUtil.getDeviceSerialsAsMap()).thenReturn(ImmutableMap.of());
+
+    for (int i = 0; i <= Flags.adbMaxNoDeviceDetectionRounds.getNonNull(); i++) {
+      var unused = detector.detectDevices();
+    }
+
+    verify(adbInternalUtil, never()).killAdbServer();
+  }
+
+  @Test
+  public void detectDevices_failedDueToAdbAddressInUse_noRecoverIfAteDualStackEnabled()
+      throws Exception {
+    doReturn(true).when(detector).isAteDualStackEnabled();
 
     when(adbInternalUtil.getDeviceSerialsAsMap())
         .thenThrow(

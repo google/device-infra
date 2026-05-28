@@ -184,7 +184,7 @@ public class AdbDetector implements Detector {
 
   /** Returns whether the detector need to check adb process. */
   private boolean needCheckAdbProcess(int maxNoDeviceDetectionRounds) {
-    return maxNoDeviceDetectionRounds > 0 && !DeviceUtil.inSharedLab();
+    return maxNoDeviceDetectionRounds > 0 && !DeviceUtil.inSharedLab() && !isAteDualStackEnabled();
   }
 
   /**
@@ -198,6 +198,11 @@ public class AdbDetector implements Detector {
   /** Returns whether the device id need to be kept. */
   private boolean needKeepDevice(String id) {
     return !AndroidRealDeviceProxyManager.isRealDeviceProxy(id);
+  }
+
+  @VisibleForTesting
+  boolean isAteDualStackEnabled() {
+    return DeviceUtil.isAteDualStackEnabled();
   }
 
   /** Connects/Disconnects the devices which needs to be connected/disconnected. */
@@ -234,6 +239,10 @@ public class AdbDetector implements Detector {
   private void killAllAdbIfNeeded(MobileHarnessException e) {
     if (DeviceUtil.inSharedLab()) {
       logger.atInfo().log("The devices are not managed by MH, skip killing adb processes.");
+      return;
+    }
+    if (isAteDualStackEnabled()) {
+      logger.atInfo().log("The devices are in ATE stack, skip killing adb processes.");
       return;
     }
     Optional<CommandFailureException> commandFailureException =
