@@ -373,6 +373,7 @@ public final class CheckRemoteControlEligibilityHandler {
     // If all devices are eligible, calculate common proxies.
     Set<DeviceProxyType> commonProxies =
         results.stream()
+            .filter(DeviceEligibilityResult::getIsEligible)
             .map(r -> (Set<DeviceProxyType>) ImmutableSet.copyOf(r.getSupportedProxyTypesList()))
             .reduce(Sets::intersection)
             .orElse(ImmutableSet.of());
@@ -382,15 +383,16 @@ public final class CheckRemoteControlEligibilityHandler {
     }
 
     // calculate common run as candidates.
-    Set<String> commonRunAsCandidates =
-        results.stream()
-            .filter(
-                r ->
-                    r.getIneligibilityReason().getCode()
-                        != IneligibilityReasonCode.PERMISSION_DENIED)
-            .map(r -> (Set<String>) ImmutableSet.copyOf(r.getRunAsCandidatesList()))
-            .reduce(Sets::intersection)
-            .orElse(ImmutableSet.of());
+    long eligibleCount = results.stream().filter(DeviceEligibilityResult::getIsEligible).count();
+    Set<String> commonRunAsCandidates = ImmutableSet.of();
+    if (eligibleCount > 1) {
+      commonRunAsCandidates =
+          results.stream()
+              .filter(DeviceEligibilityResult::getIsEligible)
+              .map(r -> (Set<String>) ImmutableSet.copyOf(r.getRunAsCandidatesList()))
+              .reduce(Sets::intersection)
+              .orElse(ImmutableSet.of());
+    }
 
     return responseBuilder
         .setStatus(EligibilityStatus.READY)

@@ -116,6 +116,7 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
   // State for UI toggles
   showAdvancedSettings = signal(false);
   showSkippedInConfirm = signal(true);
+  private isSyncingDuration = false;
 
   // Processed data for the view
   deviceList = signal<DeviceListItem[]>([]);
@@ -209,6 +210,7 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
     this.setupDurationSync();
     this.setupGlobalRunAsSync();
     this.setupFlashValidation();
+    this.setupDurationValidators();
 
     // Timer to update currentTime every minute.
     // Run outside Angular Zone to prevent triggering global change detection
@@ -384,26 +386,71 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
   private setupDurationSync() {
     // Slider -> Inputs
     this.form.get('durationMinutes')?.valueChanges.subscribe((val) => {
+      if (this.isSyncingDuration) return;
       if (val === null || val === undefined) return;
+      this.isSyncingDuration = true;
       const h = Math.floor(val / 60);
       const m = val % 60;
       this.form.get('durationH')?.setValue(h, {emitEvent: false});
       this.form.get('durationM')?.setValue(m, {emitEvent: false});
+      this.isSyncingDuration = false;
     });
 
     // Inputs -> Slider
     const syncToSlider = () => {
+      if (this.isSyncingDuration) return;
       const h = this.form.get('durationH')?.value || 0;
       const m = this.form.get('durationM')?.value || 0;
-      let total = h * 60 + m;
-      if (total > this.maxDurationHours() * 60) {
-        total = this.maxDurationHours() * 60;
-      }
+      const total = h * 60 + m;
+      this.isSyncingDuration = true;
       this.form.get('durationMinutes')?.setValue(total);
+      this.isSyncingDuration = false;
     };
 
     this.form.get('durationH')?.valueChanges.subscribe(syncToSlider);
     this.form.get('durationM')?.valueChanges.subscribe(syncToSlider);
+  }
+
+  private setupDurationValidators() {
+    const maxMinutes = this.maxDurationHours() * 60;
+    const maxHours = this.maxDurationHours();
+
+    this.form.get('durationMinutes')?.setValidators([
+      Validators.required,
+      Validators.min(10),
+      Validators.max(maxMinutes),
+    ]);
+
+    this.form.get('durationH')?.setValidators([
+      Validators.required,
+      Validators.min(0),
+      Validators.max(maxHours),
+      this.integerValidator(),
+    ]);
+
+    this.form.get('durationM')?.setValidators([
+      Validators.required,
+      Validators.min(0),
+      Validators.max(59),
+      this.integerValidator(),
+    ]);
+
+    this.form.get('durationMinutes')?.updateValueAndValidity();
+    this.form.get('durationH')?.updateValueAndValidity();
+    this.form.get('durationM')?.updateValueAndValidity();
+  }
+
+  private integerValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const val = control.value;
+      if (val === null || val === undefined || val === '') {
+        return null;
+      }
+      if (!Number.isInteger(Number(val))) {
+        return {'integer': true};
+      }
+      return null;
+    };
   }
 
   private setupGlobalRunAsSync() {
@@ -526,6 +573,26 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
     return this.form.valid;
   }
 
+  isControlInvalid(controlName: string): boolean {
+    const control = this.form.get(controlName);
+    return !!(control && control.invalid && (control.touched || control.dirty));
+  }
+
+  isDurationCombinedInvalid(): boolean {
+    const minutes = this.form.get('durationMinutes');
+    const h = this.form.get('durationH');
+    const m = this.form.get('durationM');
+
+    const anyInvalid = !!(minutes?.invalid || h?.invalid || m?.invalid);
+    const anyTouchedOrDirty = !!(
+      minutes?.touched || minutes?.dirty ||
+      h?.touched || h?.dirty ||
+      m?.touched || m?.dirty
+    );
+
+    return anyInvalid && anyTouchedOrDirty;
+  }
+
   /** Validates the form and initiates the remote control session start process. */
   startSession() {
     if (!this.isFormValid()) {
@@ -618,8 +685,8 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
           title: 'Confirm Connection',
           contentComponent: ConfirmConnectionContent,
           contentComponentInputs: {
-            request: req,
-            skippedDevices,
+            'request': req,
+            'skippedDevices': skippedDevices,
           },
           type: 'info',
           primaryButtonLabel: `Launch Session (${req.deviceConfigs.length})`,

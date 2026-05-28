@@ -155,12 +155,14 @@
           </mat-slider>
 
           <div class="inputs">
-            <div class="input-wrapper">
+            <div class="input-wrapper"
+                 [class.invalid]="isControlInvalid('durationH') || isDurationCombinedInvalid()">
               <input type="number" formControlName="durationH" min="0" [max]="maxDurationHours()">
               <span>h</span>
             </div>
             <span class="colon">:</span>
-            <div class="input-wrapper">
+            <div class="input-wrapper"
+                 [class.invalid]="isControlInvalid('durationM') || isDurationCombinedInvalid()">
               <input type="number" formControlName="durationM" min="0" max="59">
               <span>m</span>
             </div>
@@ -178,6 +180,26 @@
             </mat-chip-option>
           }
         </mat-chip-listbox>
+
+        @if (isDurationCombinedInvalid()) {
+          <div class="duration-error">
+            @if (form.get('durationH')?.errors?.['integer'] || form.get('durationM')?.errors?.['integer']) {
+              <span>Decimals are not allowed. Please enter integers.</span>
+            }
+            @else if (form.get('durationH')?.errors?.['min'] || form.get('durationM')?.errors?.['min']) {
+              <span>Duration cannot be negative.</span>
+            }
+            @else if (form.get('durationMinutes')?.errors?.['min']) {
+              <span>Duration must be at least 10 minutes.</span>
+            }
+            @else if (form.get('durationMinutes')?.errors?.['max'] || form.get('durationH')?.errors?.['max']) {
+              <span>Duration cannot exceed {{ maxDurationHours() }} hours.</span>
+            }
+            @else {
+              <span>Please enter a valid duration.</span>
+            }
+          </div>
+        }
 
         <div class="note-footer">
           <mat-icon>info</mat-icon>
@@ -265,6 +287,11 @@
                 <mat-error>Target is required</mat-error>
               }
             </mat-form-field>
+          </div>
+
+          <div class="note-footer">
+            <mat-icon>info</mat-icon>
+            <span>Need help finding a build? Visit <a href="http://go/ab" target="_blank">go/ab</a>.</span>
           </div>
         </div>
       }

@@ -126,6 +126,7 @@ public class RemoteControlEligibilityChecker {
                 .setIsEligible(false)
                 .setReasonCode(IneligibilityReasonCode.PERMISSION_DENIED)
                 .setReasonMessage("Permission denied")
+                .setSupportedProxyTypes(ImmutableList.of())
                 .build();
           }
 

@@ -231,7 +231,7 @@
 
                 <div class="separator"></div>
 
-                <button mat-flat-button class="action-button" matTooltip="Configure" (click)="isDeviceActionReady(selection.selected, 'configuration') ? null : showComingSoonPopup('Configure')">
+                <button mat-flat-button class="action-button hidden-button" matTooltip="Configure" (click)="isDeviceActionReady(selection.selected, 'configuration') ? null : showComingSoonPopup('Configure')">
                   <mat-icon>settings</mat-icon>
                   <span class="action-button-text">Configure</span>
                 </button>
@@ -240,7 +240,7 @@
                   <span class="action-button-text">Remote Control</span>
                 </button>
                 @if(decommissionMissingCount() > 0) {
-                  <button mat-flat-button class="action-button" [matTooltip]="'Decommission Missing (' + decommissionMissingCount() + ')'" (click)="isDeviceActionReady(selection.selected, 'decommission') ? decommissionMissing() : showComingSoonPopup('Decommission')">
+                  <button mat-flat-button class="action-button" [matTooltip]="'Decommission Missing (' + decommissionMissingCount() + ')'" (click)="isDeviceActionReady(selection.selected, 'decommission') ? decommission(selection.selected) : showComingSoonPopup('Decommission')">
                     <mat-icon>delete_sweep</mat-icon>
                     <span class="action-button-text">Decommission Missing ({{decommissionMissingCount()}})</span>
                   </button>
@@ -429,20 +429,28 @@
                   </button>
                   <mat-menu #menu="matMenu">
                     @if (element.actions; as elementActions) {
-                      <button mat-menu-item (click)="elementActions.screenshot.isReady ? null : showComingSoonPopup('Screenshot', element)">
+                      <button mat-menu-item (click)="elementActions.screenshot?.isReady ? takeScreenshot(element) : showComingSoonPopup('Screenshot', element)">
                         <mat-icon>screenshot</mat-icon>
                         <span>Screenshot</span>
                       </button>
-                      <button mat-menu-item (click)="elementActions.remoteControl.isReady ? startRemoteControl([element]) : showComingSoonPopup('Remote Control', element)">
+                      <button mat-menu-item (click)="elementActions.logcat?.isReady ? getLogcat(element) : showComingSoonPopup('Logcat', element)">
+                        <mat-icon>description</mat-icon>
+                        <span>Get Logcat</span>
+                      </button>
+                      <button mat-menu-item (click)="elementActions.remoteControl?.isReady ? startRemoteControl([element]) : showComingSoonPopup('Remote Control', element)">
                         <mat-icon>important_devices</mat-icon>
                         <span>Remote Control</span>
                       </button>
-                      <button mat-menu-item (click)="elementActions.flash.isReady ? null : showComingSoonPopup('Flash', element)">
+                      <button mat-menu-item (click)="elementActions.flash?.isReady ? flashDevice(element) : showComingSoonPopup('Flash', element)">
                         <mat-icon>flash_on</mat-icon>
                         <span>Flash</span>
                       </button>
+                      <button mat-menu-item (click)="elementActions.quarantine?.isReady ? quarantineDevice(element) : showComingSoonPopup('Quarantine', element)">
+                        <mat-icon>block</mat-icon>
+                        <span>Quarantine</span>
+                      </button>
                       @if(element.deviceStatus.status === 'MISSING') {
-                        <button mat-menu-item (click)="elementActions.decommission.isReady ? null : showComingSoonPopup('Decommission', element)">
+                        <button mat-menu-item (click)="elementActions.decommission?.isReady ? decommission(element) : showComingSoonPopup('Decommission', element)">
                           <mat-icon>delete_sweep</mat-icon>
                           <span>Decommission</span>
                         </button>

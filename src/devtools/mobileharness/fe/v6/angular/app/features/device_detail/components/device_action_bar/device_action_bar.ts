@@ -5,16 +5,12 @@ import {
   computed,
   inject,
   input,
-  signal,
-  WritableSignal,
 } from '@angular/core';
 import {MatDialog} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {ActivatedRoute} from '@angular/router';
-import {Observable} from 'rxjs';
-import {finalize} from 'rxjs/operators';
 
 import {ActionBarAction} from '@deviceinfra/app/core/constants/action_bar_config';
 import {
@@ -22,27 +18,15 @@ import {
   getLegacyFeUrl,
 } from '@deviceinfra/app/core/models/app_data';
 import {ActionButtonState} from '../../../../core/models/action_common';
-import {
-  DeviceActions,
-  QuarantineDialogData,
-  ScreenshotDialogData,
-} from '../../../../core/models/device_action';
+import {DeviceActions} from '../../../../core/models/device_action';
 import type {DeviceOverviewPageData} from '../../../../core/models/device_overview';
-import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
 import {Environment} from '../../../../core/services/environment';
-import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
-import {RemoteControlDeviceInfo} from '../../../../shared/components/remote_control/remote_control.types';
+import {useDeviceActions} from '../../../../shared/composables/device_actions';
 import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
-import {RemoteControlService} from '../../../../shared/services/remote_control_service';
-import {SnackBarService} from '../../../../shared/services/snackbar_service';
-import {openInNewTab} from '../../../../shared/utils/safe_dom';
 import {DeviceConfig} from '../device_config/device_config';
 import {DeviceEmpty} from '../device_config/device_empty/device_empty';
 import {DeviceSettings} from '../device_config/device_settings/device_settings';
 import {DeviceWizard} from '../device_config/device_wizard/device_wizard';
-import {FlashDialog} from '../flash_dialog/flash_dialog';
-import {QuarantineDialog} from '../quarantine_dialog/quarantine_dialog';
-import {ScreenshotDialog} from '../screenshot_dialog/screenshot_dialog';
 
 /**
  * Component for the action bar in the device detail page header.
@@ -56,10 +40,8 @@ import {ScreenshotDialog} from '../screenshot_dialog/screenshot_dialog';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DeviceActionBar {
-  private readonly deviceService = inject(DEVICE_SERVICE);
-  private readonly remoteControlService = inject(RemoteControlService);
+  protected readonly deviceActions = useDeviceActions();
   private readonly dialog = inject(MatDialog);
-  private readonly snackBar = inject(SnackBarService);
   private readonly environment = inject(Environment);
   private readonly route = inject(ActivatedRoute);
   private readonly comingSoonService = inject(ComingSoonService);
@@ -69,10 +51,6 @@ export class DeviceActionBar {
 
   readonly pageData = input.required<DeviceOverviewPageData>();
 
-  takingScreenshot = signal(false);
-  gettingLogcat = signal(false);
-  unquarantining = signal(false);
-  checkingRemoteControl = signal(false);
 
   protected readonly actions = computed(
     () => this.pageData().headerInfo.actions,
@@ -94,17 +72,41 @@ export class DeviceActionBar {
 
   readonly onConfiguration = this.openConfiguration.bind(this);
 
-  readonly onScreenshot = this.takeScreenshot.bind(this);
+  readonly onScreenshot = () =>
+    { this.deviceActions.takeScreenshot(this.deviceId()); };
 
-  readonly onRemoteControl = this.remoteControl.bind(this);
+  readonly onRemoteControl = () =>
+    { this.deviceActions.startRemoteControl(
+      this.hostName(),
+      this.pageData().overview,
+    ); };
 
-  readonly onFlash = this.flashDevice.bind(this);
+  readonly onFlash = () =>
+    { this.deviceActions.flashDevice(
+      this.deviceId(),
+      this.hostName(),
+      this.actions()?.flash?.params,
+    ); };
 
-  readonly onLogcat = this.getLogcat.bind(this);
+  readonly onLogcat = () => { this.deviceActions.getLogcat(this.deviceId()); };
 
-  readonly onQuarantine = this.quarantineDevice.bind(this);
+  readonly onQuarantine = () => {
+    const quarantine = this.quarantineInfo()
+      ? {
+          isQuarantined: this.quarantineInfo()!.isQuarantined,
+          expiry: this.quarantineInfo()!.expiry,
+        }
+      : undefined;
+    this.deviceActions.quarantineDevice(this.deviceId(), {
+      quarantineInfo: quarantine,
+    });
+  };
 
-  readonly onChangeQuarantine = this.changeQuarantine.bind(this);
+  readonly onChangeQuarantine = () =>
+    { this.deviceActions.changeQuarantine(
+      this.deviceId(),
+      this.quarantineInfo()?.expiry,
+    ); };
 
   getAction(key: keyof DeviceActions): ActionButtonState | undefined {
     return (this.actions() as unknown as Record<string, ActionButtonState>)?.[
@@ -237,161 +239,7 @@ export class DeviceActionBar {
     }
   }
 
-  takeScreenshot(): void {
-    const deviceId = this.deviceId();
-    this.handleAsyncAction(
-      this.takingScreenshot,
-      'Taking screenshot...',
-      this.deviceService.takeScreenshot(deviceId),
-      (response) => {
-        this.snackBar.showSuccess('Screenshot taken successfully.');
-        this.dialog.open(ScreenshotDialog, {
-          data: {
-            deviceId,
-            screenshotUrl: response.screenshotUrl,
-            capturedAt: response.capturedAt,
-          } as ScreenshotDialogData,
-        });
-      },
-      'Failed to take screenshot.',
-    );
-  }
 
-  remoteControl(): void {
-    const overview = this.pageData().overview;
-    const device: RemoteControlDeviceInfo[] = [
-      {
-        id: overview.id,
-        model: overview.basicInfo.model || '',
-        isTestbed: overview.healthAndActivity.deviceTypes.some(
-          (t) => t.type === 'TestbedDevice',
-        ),
-        subDevices: overview.subDevices,
-      },
-    ];
-    this.remoteControlService.startRemoteControl(this.hostName(), device);
-  }
-
-  flashDevice(): void {
-    const params = this.actions()?.flash?.params;
-    this.dialog.open(FlashDialog, {
-      data: {
-        deviceId: this.deviceId(),
-        hostName: this.hostName(),
-        deviceType: params?.deviceType || '',
-        requiredDimensions: params?.requiredDimensions || '',
-      },
-    });
-  }
-
-  getLogcat(): void {
-    const deviceId = this.deviceId();
-    this.handleAsyncAction(
-      this.gettingLogcat,
-      'Getting logcat...',
-      this.deviceService.getLogcat(deviceId),
-      (response) => {
-        this.snackBar.showSuccess(
-          'Logcat retrieved successfully. And opened in a new browser tab.',
-        );
-        openInNewTab(response.logUrl);
-        // TODO: fetch the log content from the BE download proxy when it's ready.
-        // Because let the browser to fetch that download URL directly will be blocked by CORS,
-        // we need to use an intermediate server(the BE) (i.e. download proxy) to fetch the log for us.
-        // For now, since we cannot get the log file content, we won't show the logcat dialog.
-        // Instead we will open this log file URL in a new browser tab and let the user view/download it
-        // manually.
-        /*
-        fetch(response.logUrl) // result to be CORS error.
-          .then((res) => res.text())
-          .then((logContent) => {
-            this.dialog.open(LogcatDialog, {
-              data: {
-                deviceId,
-                logContent,
-                capturedAt: response.capturedAt,
-                logUrl: response.logUrl,
-              } as LogcatDialogData,
-            });
-          })
-          .catch((err) => {
-            this.snackBar.showError('Failed to fetch log content.');
-            console.error('Failed to fetch log content:', err);
-          });
-          */
-      },
-      'Failed to get logcat.',
-    );
-  }
-
-  quarantineDevice(): void {
-    const deviceId = this.deviceId();
-    const {isQuarantined} = this.quarantineInfo() ?? {
-      isQuarantined: false,
-      expiry: '',
-    };
-    if (isQuarantined) {
-      const unquarantineDialogRef = this.dialog.open(ConfirmDialog, {
-        data: {
-          title: `Unquarantine Device ${deviceId}?`,
-          content:
-            'This action will make the device available for test allocation immediately.',
-          type: 'info',
-          primaryButtonLabel: 'Unquarantine',
-          secondaryButtonLabel: 'Cancel',
-        },
-      });
-      unquarantineDialogRef.afterClosed().subscribe((result) => {
-        if (result === 'primary') {
-          this.handleAsyncAction(
-            this.unquarantining,
-            'Unquarantining device...',
-            this.deviceService.unquarantineDevice(deviceId),
-            () => {
-              this.snackBar.showSuccess(
-                'Device unquarantined successfully.\nIt may take a few minutes to take effect at the UI side.',
-              );
-              // TODO: refresh device header info or page data.
-            },
-            'Failed to unquarantine device.',
-          );
-        }
-      });
-    } else {
-      this.dialog.open(QuarantineDialog, {
-        data: {
-          deviceId,
-          isUpdate: false,
-          title: `Quarantine Device - ${deviceId}`,
-          description: `Quarantining device <strong>${deviceId}</strong> will make it <strong>unavailable</strong> for new test allocations for the specified duration.
-             <ul class="list-disc list-inside text-xs text-gray-600 mt-2 space-y-1">
-                 <li>If a test is currently running, quarantine will take effect after it finishes.</li>
-                 <li>The device will be automatically unquarantined when the duration expires.</li>
-                 <li>You can manually unquarantine or change the duration at any time after the device is quarantined.</li>
-             </ul>`,
-          confirmText: 'Quarantine',
-        } as QuarantineDialogData,
-      });
-    }
-  }
-
-  changeQuarantine(): void {
-    const deviceId = this.deviceId();
-    const {expiry} = this.quarantineInfo() ?? {
-      isQuarantined: false,
-      expiry: '',
-    };
-    this.dialog.open(QuarantineDialog, {
-      data: {
-        deviceId,
-        isUpdate: true,
-        currentExpiry: expiry,
-        title: `Update Quarantine Duration - ${deviceId}`,
-        description: `Please specify a new duration for how long <strong>${deviceId}</strong> should remain quarantined, starting from now.`,
-        confirmText: 'Update',
-      } as QuarantineDialogData,
-    });
-  }
 
   showComingSoonPopup(key: string) {
     const featureMap: Record<string, ActionBarAction> = {
@@ -409,31 +257,5 @@ export class DeviceActionBar {
         : undefined;
       this.comingSoonService.show(feature, 'default', deviceLegacyUrl);
     }
-  }
-
-  private handleAsyncAction<T>(
-    loadingSignal: WritableSignal<boolean>,
-    progressMessage: string,
-    actionObservable: Observable<T>,
-    successCallback: (result: T) => void,
-    errorMessage: string,
-  ) {
-    loadingSignal.set(true);
-    const snackBarRef = this.snackBar.showInProgress(progressMessage);
-
-    actionObservable
-      .pipe(
-        finalize(() => {
-          loadingSignal.set(false);
-          snackBarRef.dismiss();
-        }),
-      )
-      .subscribe({
-        next: successCallback,
-        error: (err) => {
-          this.snackBar.showError(errorMessage);
-          console.error(errorMessage, err);
-        },
-      });
   }
 }

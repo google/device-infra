@@ -151,7 +151,7 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
 
   unquarantineDevice() {
     if (this.actionBar.getAction('quarantine')?.isReady) {
-      this.actionBar.quarantineDevice();
+      this.actionBar.onQuarantine();
     } else {
       this.actionBar.showComingSoonPopup('quarantine');
     }
@@ -159,7 +159,7 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
 
   changeQuarantine() {
     if (this.actionBar.getAction('quarantine')?.isReady) {
-      this.actionBar.changeQuarantine();
+      this.actionBar.onChangeQuarantine();
     } else {
       this.actionBar.showComingSoonPopup('quarantine');
     }

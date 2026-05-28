@@ -794,8 +794,80 @@ public final class CheckRemoteControlEligibilityHandlerTest {
         handler.checkRemoteControlEligibility(request, Optional.of("user"), UNIVERSE).get();
 
     assertThat(response.getStatus()).isEqualTo(EligibilityStatus.READY);
+    assertThat(response.getSessionOptions().getCommonRunAsCandidatesList()).isEmpty();
+  }
+
+  @Test
+  public void
+      checkRemoteControlEligibility_multipleDevicesEligible_returnsReadyWithIntersectedRunAsCandidates()
+          throws Exception {
+    CheckRemoteControlEligibilityRequest request =
+        CheckRemoteControlEligibilityRequest.newBuilder()
+            .setHostName("test_host")
+            .addTargets(
+                CheckRemoteControlEligibilityRequest.DeviceTarget.newBuilder()
+                    .setDeviceId(DEVICE_ID_1))
+            .addTargets(
+                CheckRemoteControlEligibilityRequest.DeviceTarget.newBuilder()
+                    .setDeviceId(DEVICE_ID_2))
+            .build();
+
+    com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension idDim1 =
+        com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension.newBuilder()
+            .setName("id")
+            .setValue(DEVICE_ID_1)
+            .build();
+    DeviceInfo deviceInfo1 =
+        DEVICE_INFO_1.toBuilder()
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder().addSupportedDimension(idDim1)))
+            .build();
+
+    com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension idDim2 =
+        com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension.newBuilder()
+            .setName("id")
+            .setValue(DEVICE_ID_2)
+            .build();
+    DeviceInfo deviceInfo2 =
+        DEVICE_INFO_2.toBuilder()
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder().addSupportedDimension(idDim2)))
+            .build();
+
+    setUpLabInfoResponse(ImmutableList.of(deviceInfo1, deviceInfo2));
+
+    RemoteControlEligibilityResult result1 =
+        RemoteControlEligibilityResult.builder()
+            .setIsEligible(true)
+            .setRunAsCandidates(ImmutableList.of("user1", "user2", "user3"))
+            .setSupportedProxyTypes(ImmutableList.of(DeviceProxyType.ADB_ONLY))
+            .build();
+
+    RemoteControlEligibilityResult result2 =
+        RemoteControlEligibilityResult.builder()
+            .setIsEligible(true)
+            .setRunAsCandidates(ImmutableList.of("user2", "user3", "user4"))
+            .setSupportedProxyTypes(ImmutableList.of(DeviceProxyType.ADB_ONLY))
+            .build();
+
+    when(remoteControlEligibilityChecker.checkEligibility(
+            argThat(c -> c != null && Objects.equals(c.dimensions().get("id"), DEVICE_ID_1))))
+        .thenReturn(Futures.immediateFuture(result1));
+
+    when(remoteControlEligibilityChecker.checkEligibility(
+            argThat(c -> c != null && Objects.equals(c.dimensions().get("id"), DEVICE_ID_2))))
+        .thenReturn(Futures.immediateFuture(result2));
+
+    CheckRemoteControlEligibilityResponse response =
+        handler.checkRemoteControlEligibility(request, Optional.of("user"), UNIVERSE).get();
+
+    assertThat(response.getStatus()).isEqualTo(EligibilityStatus.READY);
     assertThat(response.getSessionOptions().getCommonRunAsCandidatesList())
-        .containsExactly("user1", "user2");
+        .containsExactly("user2", "user3");
   }
 
   private void setUpLabInfoResponse(ImmutableList<DeviceInfo> deviceInfos) {

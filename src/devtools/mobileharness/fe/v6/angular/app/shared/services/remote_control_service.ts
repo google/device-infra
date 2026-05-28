@@ -1,5 +1,7 @@
 import {Injectable, inject} from '@angular/core';
 import {MatDialog} from '@angular/material/dialog';
+import {Observable, of, throwError} from 'rxjs';
+import {catchError, filter, switchMap, tap} from 'rxjs/operators';
 import {
   CheckRemoteControlEligibilityResponse,
   DeviceProxyType,
@@ -31,17 +33,17 @@ export class RemoteControlService {
     hostName: string,
     selectedDevices: RemoteControlDeviceInfo[],
     isSubDevice = false,
-  ) {
+  ): Observable<unknown> {
     // 1. Quantity Check
     if (selectedDevices.length === 0) {
       this.snackBar.showError('Please select at least one device.');
-      return;
+      return of(undefined);
     }
     if (selectedDevices.length > 3) {
       this.snackBar.showError(
         'Can not remote control more than 3 devices at the same time.',
       );
-      return;
+      return of(undefined);
     }
 
     const targets: DeviceTarget[] = selectedDevices.map((d) => ({
@@ -49,44 +51,82 @@ export class RemoteControlService {
       subDeviceId: isSubDevice ? d.subDevices?.[0]?.id : undefined,
     }));
 
-    // if subDevice is true, pass the sub-device info.
-    // if (isSubDevice) {
-    //   selectedDevices = selectedDevices.map((d) => {
-    //     d.id = d.subDevices?.[0]?.id || '';
-    //     d.model = d.subDevices?.[0]?.model || '';
-    //     d.isTestbed = true;
-    //     d.subDevices = [];
-    //     return d;
-    //   });
-    // }
-
-    this.hostService
+    return this.hostService
       .checkRemoteControlEligibility(hostName, targets)
-      .subscribe({
-        next: (response: CheckRemoteControlEligibilityResponse) => {
-          this.handleEligibilityResponse(
-            response,
-            selectedDevices,
-            hostName,
-            isSubDevice,
+      .pipe(
+        switchMap((response) => {
+          if (response.status !== EligibilityStatus.READY) {
+            this.showIneligibilityDialog(response, selectedDevices);
+            return of(undefined);
+          }
+
+          const dialogRef = this.dialog.open(RemoteControlDialog, {
+            panelClass: 'remote-control-dialog-panel',
+            width: '672px',
+            maxHeight: '90vh',
+            data: {
+              devices: selectedDevices,
+              eligibilityResults: response.results,
+              sessionOptions: response.sessionOptions!,
+              isSubDevice,
+            },
+            disableClose: true,
+          });
+
+          return dialogRef.afterClosed().pipe(
+            filter((req): req is RemoteControlDevicesRequest => !!req),
+            tap((req) => {
+              this.snackBar.showSuccess(
+                `Starting remote control for ${req.deviceConfigs.length} devices...`,
+              );
+            }),
+            switchMap((req) =>
+              this.hostService.remoteControlDevices(hostName, req).pipe(
+                tap((res) => {
+                  if (!res?.sessions || res.sessions.length === 0) {
+                    this.snackBar.showError(
+                      'No sessions found in the response.',
+                    );
+                    return;
+                  }
+                  for (const session of res.sessions) {
+                    if (session.sessionUrl) {
+                      console.log('acid url: ', session.sessionUrl);
+                      openInNewTab(session.sessionUrl);
+                    } else {
+                      this.snackBar.showError(
+                        `Invalid session URL for device ${session.deviceId}`,
+                      );
+                    }
+                  }
+                }),
+                catchError((err: unknown) => {
+                  const errorMessage =
+                    err instanceof Error ? err.message : 'Unknown error';
+                  this.snackBar.showError(
+                    `Failed to start remote control: ${errorMessage}`,
+                  );
+                  return throwError(() => err);
+                }),
+              ),
+            ),
           );
-        },
-        error: (err: unknown) => {
+        }),
+        catchError((err: unknown) => {
           console.error(err);
           const errorMessage =
             err instanceof Error ? err.message : 'Unknown error';
           this.snackBar.showError(
             `Failed to check proxy compatibility: ${errorMessage}`,
           );
-        },
-      });
+          return throwError(() => err);
+        }),
+      );
   }
 
-  private handleEligibilityResponse(
+  private showIneligibilityDialog(
     response: CheckRemoteControlEligibilityResponse,
     selectedDevices: RemoteControlDeviceInfo[],
-    hostName: string,
-    isSubDevice = false,
   ) {
     switch (response.status) {
       case EligibilityStatus.BLOCK_DEVICES_INELIGIBLE: {
@@ -102,8 +142,8 @@ export class RemoteControlService {
             title: 'Unable to Start Remote Control',
             contentComponent: IncompatibleDevicesContent,
             contentComponentInputs: {
-              invalidDevices,
-              isSingleDevice: selectedDevices.length === 1,
+              'invalidDevices': invalidDevices,
+              'isSingleDevice': selectedDevices.length === 1,
             },
             type: 'warning',
             primaryButtonLabel: 'Got it',
@@ -120,27 +160,29 @@ export class RemoteControlService {
               title: 'Connection Error',
               contentComponent: ConnectionErrorContent,
               contentComponentInputs: {
-                device: {id: device.id},
-                isTestbed: device.isTestbed,
+                'device': {id: device.id},
+                'isTestbed': device.isTestbed,
               },
               type: 'warning',
               primaryButtonLabel: 'Got it',
             },
           });
         } else {
-          const capabilitiesList = response.results.map((d) => {
-            const modes = d.supportedProxyTypes
-              .map((m: DeviceProxyType) => PROXY_TYPE_LABELS[m] || 'Unknown')
-              .join(', ');
-            return {id: d.deviceId, modes: modes || 'None'};
-          });
+          const capabilitiesList = response.results
+            .filter((d) => d.isEligible)
+            .map((d) => {
+              const modes = d.supportedProxyTypes
+                .map((m: DeviceProxyType) => PROXY_TYPE_LABELS[m] || 'Unknown')
+                .join(', ');
+              return {id: d.deviceId, modes: modes || 'None'};
+            });
 
           this.dialog.open(ConfirmDialog, {
             panelClass: 'confirm-dialog-panel',
             data: {
               title: 'Connection Error',
               contentComponent: ConnectionErrorContent,
-              contentComponentInputs: {capabilitiesList},
+              contentComponentInputs: {'capabilitiesList': capabilitiesList},
               type: 'warning',
               primaryButtonLabel: 'Got it',
             },
@@ -155,7 +197,7 @@ export class RemoteControlService {
             title: 'Access Denied',
             contentComponent: AccessDeniedContent,
             contentComponentInputs: {
-              devices: selectedDevices.map((d) => ({id: d.id})),
+              'devices': selectedDevices.map((d) => ({id: d.id})),
             },
             type: 'error',
             primaryButtonLabel: 'Got it',
@@ -163,80 +205,8 @@ export class RemoteControlService {
         });
         break;
       }
-      case EligibilityStatus.READY: {
-        this.openRemoteControlDialog(
-          selectedDevices,
-          response,
-          hostName,
-          isSubDevice,
-        );
-        break;
-      }
       default:
         break;
     }
-  }
-
-  private openRemoteControlDialog(
-    selectedDevices: RemoteControlDeviceInfo[],
-    eligibilityResponse: CheckRemoteControlEligibilityResponse,
-    hostName: string,
-    isSubDevice = false,
-  ) {
-    const dialogRef = this.dialog.open(RemoteControlDialog, {
-      panelClass: 'remote-control-dialog-panel',
-      width: '672px',
-      maxHeight: '90vh',
-      data: {
-        devices: selectedDevices,
-        eligibilityResults: eligibilityResponse.results,
-        sessionOptions: eligibilityResponse.sessionOptions!,
-        isSubDevice,
-      },
-      disableClose: true,
-    });
-
-    dialogRef
-      .afterClosed()
-      .subscribe((req: RemoteControlDevicesRequest | undefined) => {
-        if (req) {
-          this.startRemoteControlSessions(req, hostName);
-        }
-      });
-  }
-
-  private startRemoteControlSessions(
-    req: RemoteControlDevicesRequest,
-    hostName: string,
-  ) {
-    this.snackBar.showSuccess(
-      `Starting remote control for ${req.deviceConfigs.length} devices...`,
-    );
-
-    this.hostService.remoteControlDevices(hostName, req).subscribe({
-      next: (res) => {
-        if (!res?.sessions || res.sessions.length === 0) {
-          this.snackBar.showError('No sessions found in the response.');
-          return;
-        }
-
-        res.sessions.forEach((session) => {
-          if (session.sessionUrl) {
-            openInNewTab(session.sessionUrl);
-          } else {
-            this.snackBar.showError(
-              `Invalid session URL for device ${session.deviceId}`,
-            );
-          }
-        });
-      },
-      error: (err: unknown) => {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Unknown error';
-        this.snackBar.showError(
-          `Failed to start remote control: ${errorMessage}`,
-        );
-      },
-    });
   }
 }

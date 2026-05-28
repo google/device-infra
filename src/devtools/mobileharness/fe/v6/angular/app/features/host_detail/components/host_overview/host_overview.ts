@@ -52,6 +52,7 @@ import {
   UiLabType,
   type HostOverview,
 } from '../../../../core/models/host_overview';
+
 import {EnvUniverseService} from '../../../../core/services/env_universe_service';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
@@ -61,16 +62,15 @@ import {
   NavItem,
 } from '../../../../shared/components/master_detail_layout/master_detail_layout';
 import {OverflowList} from '../../../../shared/components/overflow_list/overflow_list';
-import {RemoteControlDeviceInfo} from '../../../../shared/components/remote_control/remote_control.types';
+import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
 import {
   SearchableListOverlayComponent,
   SearchableListOverlayData,
 } from '../../../../shared/components/searchable_list_overlay/searchable_list_overlay';
-import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
-import {RemoteControlService} from '../../../../shared/services/remote_control_service';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {dateUtils} from '../../../../shared/utils/date_utils';
 import {objectUtils} from '../../../../shared/utils/object_utils';
+import {useDeviceActions} from '../../../../shared/composables/device_actions';
 import {ActionNoPermissionContent} from './action_no_permission_content/action_no_permission_content';
 import {DecommissionContent} from './decommission_content/decommission_content';
 import {FlagsDialog} from './flags_dialog/flags_dialog';
@@ -170,7 +170,7 @@ const STATUS_SEMANTIC_MAP: Record<string, {icon: string; colorClass: string}> =
 export class HostOverviewPage implements OnChanges {
   private readonly dialog = inject(MatDialog);
   private readonly hostService = inject(HOST_SERVICE);
-  private readonly remoteControlService = inject(RemoteControlService);
+  protected readonly deviceActions = useDeviceActions();
   private readonly destroyRef = inject(DestroyRef);
   private readonly snackBar = inject(SnackBarService);
   private readonly envUniverseService = inject(EnvUniverseService);
@@ -528,7 +528,7 @@ export class HostOverviewPage implements OnChanges {
               title: 'No Access',
               contentComponent: ActionNoPermissionContent,
               contentComponentInputs: {
-                hostName: this.host.hostName,
+                'hostName': this.host.hostName,
               },
               type: 'error',
               customIcon: 'lock_outline',
@@ -549,7 +549,7 @@ export class HostOverviewPage implements OnChanges {
               title: 'No Valid Versions',
               contentComponent: NoValidVersionsContent,
               contentComponentInputs: {
-                hostName: this.host.hostName,
+                'hostName': this.host.hostName,
               },
               type: 'warning',
               customIcon: 'warning_amber',
@@ -705,25 +705,29 @@ export class HostOverviewPage implements OnChanges {
   }
 
   // device table actions - Decommission missing devices
-  decommissionMissing() {
-    const missingDevices = this.selection.selected.filter(
+  decommission(devices: DeviceSummary | DeviceSummary[]) {
+    const devicesList = Array.isArray(devices) ? devices : [devices];
+    const devicesToDecommission = devicesList.filter(
       (device) => device.deviceStatus.status === 'MISSING',
     );
 
-    if (missingDevices.length === 0) {
+    if (devicesToDecommission.length === 0) {
       return;
     }
 
+    const isSingle = devicesToDecommission.length === 1;
+    const title = isSingle
+      ? `Decommission Device ${devicesToDecommission[0].id}?`
+      : `Decommission ${devicesToDecommission.length} Devices?`;
+
     const dialogData = {
-      title: `Decommission ${missingDevices.length} Device${
-        missingDevices.length > 1 ? 's' : ''
-      }?`,
+      title,
       contentComponent: DecommissionContent,
-      contentComponentInputs: {devices: missingDevices},
+      contentComponentInputs: {'devices': devicesToDecommission},
       type: 'error',
       primaryButtonLabel: 'Decommission',
       secondaryButtonLabel: 'Cancel',
-      onConfirm: () => this.decommissionDevices(missingDevices),
+      onConfirm: () => this.executeDecommission(devicesToDecommission),
     };
 
     this.dialog.open(ConfirmDialog, {
@@ -733,7 +737,7 @@ export class HostOverviewPage implements OnChanges {
     });
   }
 
-  private decommissionDevices(devices: DeviceSummary[]) {
+  private executeDecommission(devices: DeviceSummary[]) {
     return this.hostService
       .decommissionMissingDevices(
         this.host.hostName,
@@ -760,6 +764,8 @@ export class HostOverviewPage implements OnChanges {
       'Decommission': ActionBarAction.DEVICE_DECOMMISSION,
       'Screenshot': ActionBarAction.DEVICE_SCREENSHOT,
       'Flash': ActionBarAction.DEVICE_FLASH,
+      'Logcat': ActionBarAction.DEVICE_LOGCAT,
+      'Quarantine': ActionBarAction.DEVICE_QUARANTINE,
       'Release': ActionBarAction.HOST_RELEASE,
       'Start': ActionBarAction.HOST_START,
       'Restart': ActionBarAction.HOST_RESTART,
@@ -794,36 +800,17 @@ export class HostOverviewPage implements OnChanges {
 
   // device table actions -  Multi-device remote control
   startRemoteControl(devices: DeviceSummary[]) {
-    const selectedDevices: RemoteControlDeviceInfo[] = devices.map((d) => ({
-      id: d.id,
-      model: d.model,
-      isTestbed: this.isTestbed(d),
-      subDevices: d.subDevices,
-    }));
-    this.remoteControlService.startRemoteControl(
-      this.host.hostName,
-      selectedDevices,
-    );
+    this.deviceActions.startRemoteControl(this.host.hostName, devices);
   }
 
   startSubDeviceRemoteControl(
     subDevice: SubDeviceInfo,
     parentDevice: DeviceSummary,
   ) {
-    const device: RemoteControlDeviceInfo[] = [
-      {
-        id: parentDevice.id,
-        model: parentDevice.model,
-        isTestbed: true,
-        subDevices: [subDevice],
-      },
-    ];
-
-    this.remoteControlService.startRemoteControl(
-      this.host.hostName,
-      device,
-      true,
-    );
+    this.deviceActions.startRemoteControl(this.host.hostName, parentDevice, {
+      isSubDevice: true,
+      subDeviceOnly: subDevice,
+    });
   }
 
   toggleRow(element: DeviceSummary) {
@@ -962,5 +949,27 @@ export class HostOverviewPage implements OnChanges {
       clearTimeout(this.overlayHideTimer);
       this.overlayHideTimer = null;
     }
+  }
+
+  takeScreenshot(element: DeviceSummary): void {
+    this.deviceActions.takeScreenshot(element.id);
+  }
+
+  getLogcat(element: DeviceSummary): void {
+    this.deviceActions.getLogcat(element.id);
+  }
+
+  flashDevice(element: DeviceSummary): void {
+    this.deviceActions.flashDevice(
+      element.id,
+      this.host.hostName,
+      element.actions?.flash?.params,
+    );
+  }
+
+  quarantineDevice(element: DeviceSummary): void {
+    this.deviceActions.quarantineDevice(element.id, {
+      onSuccess: () => { this.loadDevices(); },
+    });
   }
 }

@@ -190,7 +190,7 @@ describe('HttpHostService', () => {
       'http://testdomain.com/v6/hosts/test-host/decommissionMissingDevices',
     );
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({deviceControlIds: ['device-1']});
+    expect(req.request.body).toEqual({deviceIds: ['device-1']});
     req.flush({});
   });
 

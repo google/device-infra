@@ -5,31 +5,24 @@ import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
 import {ActionBarAction} from '@deviceinfra/app/core/constants/action_bar_config';
 import {APP_DATA} from '@deviceinfra/app/core/models/app_data';
-import {of} from 'rxjs';
+import {of, Subject} from 'rxjs';
+import {TakeScreenshotResponse, GetLogcatResponse} from '../../../../core/models/device_action';
 import {DeviceOverviewPageData} from '../../../../core/models/device_overview';
-import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
-import {FakeDeviceService} from '../../../../core/services/device/fake_device_service';
 import {FakeHostService} from '../../../../core/services/host/fake_host_service';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
-import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
 import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
 import {RemoteControlService} from '../../../../shared/services/remote_control_service';
-import {SnackBarService} from '../../../../shared/services/snackbar_service';
-import * as safeDom from '../../../../shared/utils/safe_dom';
-import {FlashDialog} from '../flash_dialog/flash_dialog';
-import {QuarantineDialog} from '../quarantine_dialog/quarantine_dialog';
-import {ScreenshotDialog} from '../screenshot_dialog/screenshot_dialog';
+import {DeviceActionService} from '../../../../shared/services/device_action_service';
 import {DeviceActionBar} from './device_action_bar';
 
 describe('DeviceActionBar', () => {
   let component: DeviceActionBar;
   let fixture: ComponentFixture<DeviceActionBar>;
-  let snackBarService: jasmine.SpyObj<SnackBarService>;
   let dialog: jasmine.SpyObj<MatDialog>;
-  let deviceService: FakeDeviceService;
   let hostService: FakeHostService;
   let remoteControlService: jasmine.SpyObj<RemoteControlService>;
   let comingSoonService: jasmine.SpyObj<ComingSoonService>;
+  let deviceActionService: jasmine.SpyObj<DeviceActionService>;
 
   const mockPageData: DeviceOverviewPageData = {
     overview: {
@@ -95,30 +88,38 @@ describe('DeviceActionBar', () => {
   };
 
   beforeEach(async () => {
-    snackBarService = jasmine.createSpyObj('SnackBarService', [
-      'showError',
-      'showSuccess',
-      'showInProgress',
-    ]);
     dialog = jasmine.createSpyObj('MatDialog', ['open']);
-    deviceService = new FakeDeviceService();
     hostService = new FakeHostService();
     comingSoonService = jasmine.createSpyObj('ComingSoonService', ['show']);
 
     remoteControlService = jasmine.createSpyObj('RemoteControlService', [
       'startRemoteControl',
     ]);
+    remoteControlService.startRemoteControl.and.returnValue(of(undefined));
+
+    deviceActionService = jasmine.createSpyObj('DeviceActionService', [
+      'takeScreenshot',
+      'flashDevice',
+      'getLogcat',
+      'quarantineDevice',
+      'changeQuarantine',
+    ]);
+    deviceActionService.takeScreenshot.and.returnValue(
+      of({} as TakeScreenshotResponse),
+    );
+    deviceActionService.getLogcat.and.returnValue(of({} as GetLogcatResponse));
+    deviceActionService.quarantineDevice.and.returnValue(of(undefined));
+    deviceActionService.changeQuarantine.and.returnValue(of(undefined));
 
     await TestBed.configureTestingModule({
       imports: [DeviceActionBar, NoopAnimationsModule],
       providers: [
         provideRouter([]),
-        {provide: DEVICE_SERVICE, useValue: deviceService},
         {provide: HOST_SERVICE, useValue: hostService},
-        {provide: SnackBarService, useValue: snackBarService},
         {provide: MatDialog, useValue: dialog},
         {provide: RemoteControlService, useValue: remoteControlService},
         {provide: ComingSoonService, useValue: comingSoonService},
+        {provide: DeviceActionService, useValue: deviceActionService},
         {provide: APP_DATA, useValue: {applicationId: 'test-app'}},
       ],
     }).compileComponents();
@@ -195,7 +196,6 @@ describe('DeviceActionBar', () => {
   });
 
   it('should show coming soon popup if an action is not ready', () => {
-    spyOn(deviceService, 'takeScreenshot');
     fixture.componentRef.setInput('pageData', {
       ...mockPageData,
       headerInfo: {
@@ -225,35 +225,48 @@ describe('DeviceActionBar', () => {
       'default',
       component.legacyFeUrl ? jasmine.anything() : undefined,
     );
-    expect(deviceService.takeScreenshot).not.toHaveBeenCalled();
+    expect(deviceActionService.takeScreenshot).not.toHaveBeenCalled();
   });
 
-  it('should call takeScreenshot and open dialog on success', () => {
-    spyOn(deviceService, 'takeScreenshot').and.returnValue(
-      of({
-        screenshotUrl: 'http://example.com/screenshot.png',
-        capturedAt: new Date().toISOString(),
-      }),
-    );
+  it('should call deviceActionService.takeScreenshot when screenshot button is clicked', () => {
     const screenshotButton = fixture.nativeElement.querySelector(
       '[data-testid="screenshot-button-2xl"]',
     );
     screenshotButton.click();
 
-    expect(deviceService.takeScreenshot).toHaveBeenCalledWith('test-device');
-    expect(snackBarService.showInProgress).toHaveBeenCalledWith(
-      'Taking screenshot...',
+    expect(deviceActionService.takeScreenshot).toHaveBeenCalledWith('test-device');
+  });
+
+  it('should show loading spinner and disable button while taking screenshot', () => {
+    const screenshotSubject = new Subject<TakeScreenshotResponse>();
+    deviceActionService.takeScreenshot.and.returnValue(
+      screenshotSubject.asObservable(),
     );
-    expect(snackBarService.showSuccess).toHaveBeenCalledWith(
-      'Screenshot taken successfully.',
-    );
-    expect(dialog.open).toHaveBeenCalledWith(ScreenshotDialog, {
-      data: {
-        deviceId: 'test-device',
-        screenshotUrl: 'http://example.com/screenshot.png',
-        capturedAt: jasmine.any(String),
-      },
+
+    const screenshotButton = fixture.nativeElement.querySelector(
+      '[data-testid="screenshot-button-2xl"]',
+    ) as HTMLButtonElement;
+
+    expect(screenshotButton.disabled).toBeFalse();
+    expect(screenshotButton.querySelector('.spin-animation')).toBeNull();
+
+    screenshotButton.click();
+    fixture.detectChanges();
+
+    expect(screenshotButton.disabled).toBeTrue();
+    expect(screenshotButton.querySelector('.spin-animation')).toBeTruthy();
+    expect(screenshotButton.textContent).toContain('Taking...');
+
+    screenshotSubject.next({
+      screenshotUrl: 'http://mock-url',
+      capturedAt: '123456',
     });
+    screenshotSubject.complete();
+    fixture.detectChanges();
+
+    expect(screenshotButton.disabled).toBeFalse();
+    expect(screenshotButton.querySelector('.spin-animation')).toBeNull();
+    expect(screenshotButton.textContent).toContain('Screenshot');
   });
 
   it('should call startRemoteControl when remote control button is clicked', () => {
@@ -265,47 +278,38 @@ describe('DeviceActionBar', () => {
     expect(remoteControlService.startRemoteControl).toHaveBeenCalledWith(
       'test-host',
       jasmine.any(Array),
+      false,
     );
   });
 
-  it('should open FlashDialog when flash button is clicked', () => {
+  it('should call deviceActionService.flashDevice when flash button is clicked', () => {
     const flashButton = fixture.nativeElement.querySelector(
       '[data-testid="flash-button-2xl"]',
     );
     flashButton.click();
 
-    expect(dialog.open).toHaveBeenCalledWith(FlashDialog, {
-      data: {
-        deviceId: 'test-device',
-        hostName: 'test-host',
-        deviceType: 'AndroidRealDevice',
-        requiredDimensions: '',
-      },
-    });
+    expect(deviceActionService.flashDevice).toHaveBeenCalledWith(
+      'test-device',
+      'test-host',
+      mockPageData.headerInfo.actions!.flash!.params,
+    );
   });
 
-  it('should open QuarantineDialog when quarantine button is clicked', () => {
-    const mockDialogRef = jasmine.createSpyObj('MatDialogRef', ['afterClosed']);
-    mockDialogRef.afterClosed.and.returnValue(of(true));
-    dialog.open.and.returnValue(mockDialogRef);
-
+  it('should call deviceActionService.quarantineDevice when quarantine button is clicked', () => {
     const quarantineButton = fixture.nativeElement.querySelector(
       '[data-testid="quarantine-button-2xl"]',
     );
     quarantineButton.click();
 
-    expect(dialog.open).toHaveBeenCalledWith(QuarantineDialog, {
-      data: {
-        deviceId: 'test-device',
-        isUpdate: false,
-        title: jasmine.any(String),
-        description: jasmine.any(String),
-        confirmText: 'Quarantine',
+    expect(deviceActionService.quarantineDevice).toHaveBeenCalledWith('test-device', {
+      quarantineInfo: {
+        isQuarantined: false,
+        expiry: '',
       },
     });
   });
 
-  it('should open ConfirmDialog when unquarantine button is clicked', () => {
+  it('should call deviceActionService.quarantineDevice with isQuarantined: true when unquarantine button is clicked', () => {
     fixture.componentRef.setInput('pageData', {
       ...mockPageData,
       headerInfo: {
@@ -317,55 +321,25 @@ describe('DeviceActionBar', () => {
     cdr.markForCheck();
     fixture.detectChanges();
 
-    // Mock the dialog.open to return an object with afterClosed() observable
-    const mockDialogRef = jasmine.createSpyObj('MatDialogRef', ['afterClosed']);
-    mockDialogRef.afterClosed.and.returnValue(of('primary'));
-    dialog.open.and.returnValue(mockDialogRef);
-
-    spyOn(deviceService, 'unquarantineDevice').and.returnValue(of(undefined));
-
     const unquarantineButton = fixture.nativeElement.querySelector(
       '[data-testid="quarantine-group-2xl"] .main-action',
     );
     unquarantineButton.click();
 
-    expect(dialog.open).toHaveBeenCalledWith(ConfirmDialog, {
-      data: {
-        title: 'Unquarantine Device test-device?',
-        content: jasmine.any(String),
-        type: 'info',
-        primaryButtonLabel: 'Unquarantine',
-        secondaryButtonLabel: 'Cancel',
+    expect(deviceActionService.quarantineDevice).toHaveBeenCalledWith('test-device', {
+      quarantineInfo: {
+        isQuarantined: true,
+        expiry: '2025-12-31T23:59:59Z',
       },
     });
-
-    expect(deviceService.unquarantineDevice).toHaveBeenCalledWith(
-      'test-device',
-    );
-    expect(snackBarService.showInProgress).toHaveBeenCalledWith(
-      'Unquarantining device...',
-    );
-    expect(snackBarService.showSuccess).toHaveBeenCalledWith(
-      'Device unquarantined successfully.\nIt may take a few minutes to take effect at the UI side.',
-    );
   });
 
-  it('should open QuarantineDialog on changeQuarantine', () => {
-    const mockDialogRef = jasmine.createSpyObj('MatDialogRef', ['afterClosed']);
-    mockDialogRef.afterClosed.and.returnValue(of(true));
-    dialog.open.and.returnValue(mockDialogRef);
+  it('should call deviceActionService.changeQuarantine on changeQuarantine', () => {
+    component.onChangeQuarantine();
 
-    component.changeQuarantine();
-
-    expect(dialog.open).toHaveBeenCalledWith(QuarantineDialog, {
-      data: {
-        deviceId: 'test-device',
-        isUpdate: true,
-        currentExpiry: '',
-        title: jasmine.any(String),
-        description: jasmine.any(String),
-        confirmText: 'Update',
-      },
-    });
+    expect(deviceActionService.changeQuarantine).toHaveBeenCalledWith(
+      'test-device',
+      '',
+    );
   });
 });

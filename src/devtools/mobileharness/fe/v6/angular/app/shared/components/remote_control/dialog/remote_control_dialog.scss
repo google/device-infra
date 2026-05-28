@@ -397,6 +397,16 @@ section {
     font-weight: 600;
     color: $gray-700;
   }
+
+  a {
+    color: $blue-600;
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
 }
 
 // Device Grid
@@ -773,6 +783,13 @@ section {
           font-weight: 500;
           pointer-events: none;
         }
+
+        &.invalid {
+          input {
+            border-color: $red-600;
+            background-color: $red-50;
+          }
+        }
       }
 
       .colon {
@@ -830,6 +847,13 @@ section {
         }
       }
     }
+  }
+
+  .duration-error {
+    color: $red-600;
+    font-size: 0.75rem;
+    margin-top: 0.5rem;
+    display: block;
   }
 }
 

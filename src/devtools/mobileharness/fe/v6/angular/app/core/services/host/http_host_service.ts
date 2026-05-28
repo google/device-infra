@@ -83,7 +83,7 @@ export class HttpHostService extends HostService {
     return this.http.post<UpdatePassThroughFlagsResponse>(
       `${this.apiUrl}/${hostName}/updatePassThroughFlags`,
       {
-        flags,
+        'flags': flags,
       },
     );
   }
@@ -98,12 +98,12 @@ export class HttpHostService extends HostService {
 
   override decommissionMissingDevices(
     hostName: string,
-    deviceControlIds: string[],
+    deviceIds: string[],
   ): Observable<void> {
     return this.http.post<void>(
       `${this.apiUrl}/${hostName}/decommissionMissingDevices`,
       {
-        deviceControlIds,
+        'deviceIds': deviceIds,
       },
     );
   }

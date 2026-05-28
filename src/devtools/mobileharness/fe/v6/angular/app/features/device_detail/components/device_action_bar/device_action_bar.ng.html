@@ -16,7 +16,7 @@
       label: 'Screenshot',
       handler: onScreenshot,
       mode: 'button',
-      loading: takingScreenshot(),
+      loading: deviceActions.isRunning('screenshot')(),
       loadingLabel: 'Taking...',
       suffix: '2xl'
     }"></ng-container>
@@ -45,7 +45,7 @@
       label: 'Get Logcat',
       handler: onLogcat,
       mode: 'button',
-      loading: gettingLogcat(),
+      loading: deviceActions.isRunning('logcat')(),
       loadingLabel: 'Fetching...',
       suffix: '2xl'
     }"></ng-container>
@@ -53,14 +53,14 @@
     @if (actions()?.quarantine?.visible) {
       @if (quarantineInfo()?.isQuarantined) {
         <div class="m3-split-button-group" data-testid="quarantine-group-2xl">
-          <button class="m3-split-button main-action" (click)="actions()?.quarantine?.isReady ? onQuarantine() : showComingSoonPopup('quarantine')" [disabled]="!actions()?.quarantine?.enabled || unquarantining()" [matTooltip]="actions()?.quarantine?.tooltip || ''">
-            @if (unquarantining()) {
+          <button class="m3-split-button main-action" (click)="actions()?.quarantine?.isReady ? onQuarantine() : showComingSoonPopup('quarantine')" [disabled]="!actions()?.quarantine?.enabled || deviceActions.isRunning('quarantine')()" [matTooltip]="actions()?.quarantine?.tooltip || ''">
+            @if (deviceActions.isRunning('quarantine')()) {
               <mat-icon class="spin-animation">sync</mat-icon>Working...
             } @else {
               <mat-icon>play_circle_outline</mat-icon>Unquarantine
             }
           </button>
-          <button class="m3-split-button dropdown-action" [matMenuTriggerFor]="quarantineMenu2xl" matTooltip="Quarantine options" [disabled]="!actions()?.quarantine?.enabled || unquarantining()">
+          <button class="m3-split-button dropdown-action" [matMenuTriggerFor]="quarantineMenu2xl" matTooltip="Quarantine options" [disabled]="!actions()?.quarantine?.enabled || deviceActions.isRunning('quarantine')()">
             <mat-icon>arrow_drop_down</mat-icon>
           </button>
           <mat-menu #quarantineMenu2xl="matMenu">
@@ -104,7 +104,7 @@
       label: 'Screenshot',
       handler: onScreenshot,
       mode: 'button',
-      loading: takingScreenshot(),
+      loading: deviceActions.isRunning('screenshot')(),
       loadingLabel: 'Taking...',
       suffix: 'xl'
     }"></ng-container>
@@ -143,7 +143,7 @@
           label: 'Get Logcat',
           handler: onLogcat,
           mode: 'menu',
-          loading: gettingLogcat(),
+          loading: deviceActions.isRunning('logcat')(),
           loadingLabel: 'Fetching...',
           suffix: 'xl'
         }"></ng-container>
@@ -156,7 +156,7 @@
               label: 'Unquarantine',
               handler: onQuarantine,
               mode: 'menu',
-              loading: unquarantining(),
+              loading: deviceActions.isRunning('quarantine')(),
               loadingLabel: 'Working...',
               suffix: 'xl'
             }"></ng-container>
@@ -211,7 +211,7 @@
           label: 'Screenshot',
           handler: onScreenshot,
           mode: 'menu',
-          loading: takingScreenshot(),
+          loading: deviceActions.isRunning('screenshot')(),
           loadingLabel: 'Taking...',
           suffix: 'sm'
         }"></ng-container>
@@ -240,7 +240,7 @@
           label: 'Get Logcat',
           handler: onLogcat,
           mode: 'menu',
-          loading: gettingLogcat(),
+          loading: deviceActions.isRunning('logcat')(),
           loadingLabel: 'Fetching...',
           suffix: 'sm'
         }"></ng-container>
@@ -253,7 +253,7 @@
               label: 'Unquarantine',
               handler: onQuarantine,
               mode: 'menu',
-              loading: unquarantining(),
+              loading: deviceActions.isRunning('quarantine')(),
               loadingLabel: 'Working...',
               suffix: 'sm'
             }"></ng-container>

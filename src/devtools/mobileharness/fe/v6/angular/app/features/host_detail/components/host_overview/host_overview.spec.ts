@@ -2,17 +2,19 @@ import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {MatDialog, MatDialogRef} from '@angular/material/dialog';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
-import {Observable, of, Subject, throwError} from 'rxjs';
+
+import {of, Subject, throwError} from 'rxjs';
 
 import {APP_DATA} from '../../../../core/models/app_data';
-import {
-  DeployableVersion,
-  PreflightLabServerReleaseResponse,
-} from '../../../../core/models/host_action';
-import {HostOverview} from '../../../../core/models/host_overview';
+import {TakeScreenshotResponse, GetLogcatResponse} from '../../../../core/models/device_action';
+import {SubDeviceInfo} from '../../../../core/models/device_overview';
+import {PreflightLabServerReleaseResponse} from '../../../../core/models/host_action';
+import {HostOverview, DeviceSummary} from '../../../../core/models/host_overview';
 import {FakeHostService} from '../../../../core/services/host/fake_host_service';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
+import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
+import {DeviceActionService} from '../../../../shared/services/device_action_service';
 import {RemoteControlService} from '../../../../shared/services/remote_control_service';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {HostOverviewPage} from './host_overview';
@@ -66,15 +68,20 @@ describe('HostOverview Component', () => {
   let fixture: ComponentFixture<HostOverviewPage>;
   let component: HostOverviewPage;
   let dialogSpy: jasmine.SpyObj<MatDialog>;
+  let snackBarSpy: jasmine.SpyObj<SnackBarService>;
+  let comingSoonServiceSpy: jasmine.SpyObj<ComingSoonService>;
+  let hostService: FakeHostService;
 
   beforeEach(async () => {
     dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
+    snackBarSpy = jasmine.createSpyObj('SnackBarService', [
+      'showError',
+      'showSuccess',
+    ]);
+    comingSoonServiceSpy = jasmine.createSpyObj('ComingSoonService', ['show']);
 
     await TestBed.configureTestingModule({
-      imports: [
-        HostOverviewPage,
-        NoopAnimationsModule, // This makes test faster and more stable.
-      ],
+      imports: [HostOverviewPage, NoopAnimationsModule],
       providers: [
         provideRouter([]),
         {provide: APP_DATA, useValue: {applicationId: 'arsenal'}},
@@ -85,9 +92,16 @@ describe('HostOverview Component', () => {
             'startRemoteControl',
           ]),
         },
+        {provide: SnackBarService, useValue: snackBarSpy},
+        {provide: ComingSoonService, useValue: comingSoonServiceSpy},
         {
-          provide: SnackBarService,
-          useValue: jasmine.createSpyObj('SnackBarService', ['showError']),
+          provide: DeviceActionService,
+          useValue: jasmine.createSpyObj('DeviceActionService', [
+            'takeScreenshot',
+            'getLogcat',
+            'flashDevice',
+            'quarantineDevice',
+          ]),
         },
       ],
     })
@@ -101,6 +115,7 @@ describe('HostOverview Component', () => {
     fixture = TestBed.createComponent(HostOverviewPage);
     component = fixture.componentInstance;
     component.host = mockHost;
+    hostService = TestBed.inject(HOST_SERVICE) as FakeHostService;
   });
 
   it('should be created', () => {
@@ -171,310 +186,307 @@ describe('HostOverview Component', () => {
     expect(stopButton.disabled).toBeTrue();
   });
 
-  describe('Release & Upgrade Actions', () => {
-    let snackBarSpy: jasmine.SpyObj<SnackBarService>;
-    let fakeHostService: FakeHostService;
+  it('should handle onUpgrade click, show upgrade spinner, and open ReleaseDialog with preSelectLatest=true', () => {
+    const subject = new Subject<PreflightLabServerReleaseResponse>();
+    spyOn(hostService, 'preflightLabServerRelease').and.returnValue(subject);
 
-    function getReleaseButton(compiled: HTMLElement): HTMLButtonElement {
-      const buttons = compiled.querySelectorAll(
-        '#lab-server .operation-button button',
-      );
-      return Array.from(buttons).find((b) =>
-        b.textContent?.trim().toLowerCase().includes('release'),
-      ) as HTMLButtonElement;
-    }
+    dialogSpy.open.and.returnValue({
+      afterClosed: () => of('close'),
+    } as unknown as MatDialogRef<unknown, unknown>);
 
-    function getUpgradeButton(compiled: HTMLElement): HTMLButtonElement {
-      return compiled.querySelector(
-        '.upgrade-version-button',
-      ) as HTMLButtonElement;
-    }
+    component.onUpgrade();
 
-    function getSuggestChip(compiled: HTMLElement): HTMLButtonElement {
-      return compiled.querySelector('.m3-chip-suggestion') as HTMLButtonElement;
-    }
+    expect(component.isOpeningUpgrade()).toBeTrue();
+    expect(component.isOpeningRelease()).toBeFalse();
 
-    beforeEach(() => {
-      // Re-use global dialogSpy, but configure return value for this suite
-      dialogSpy.open.and.returnValue({
-        afterClosed: () => of('close'),
-      } as unknown as MatDialogRef<unknown, unknown>);
-      snackBarSpy = TestBed.inject(
-        SnackBarService,
-      ) as jasmine.SpyObj<SnackBarService>;
-      fakeHostService = TestBed.inject(HOST_SERVICE) as FakeHostService;
+    // Emit versions to trigger dialog open
+    const mockVersions = [
+      {
+        version: '2.0.0',
+        name: 'v2',
+        status: 'LATEST' as const,
+        buildTime: '2026-05-14',
+      },
+    ];
+    subject.next({ready: {versions: mockVersions}});
+    subject.complete();
+
+    expect(component.isOpeningUpgrade()).toBeFalse();
+    expect(component.isOpeningRelease()).toBeFalse();
+    expect(dialogSpy.open).toHaveBeenCalledWith(ReleaseDialog, {
+      data: {
+        hostName: component.host.hostName,
+        releaseConfigs: mockVersions,
+        passThroughFlags: component.passThroughFlags,
+        preSelectLatest: true,
+        preSelectCurrent: false,
+      },
+      autoFocus: false,
     });
+  });
 
-    it('should handle onUpgrade click, show upgrade spinner, and open ReleaseDialog with preSelectLatest=true', () => {
-      component.host = {
-        ...mockHost,
-        canUpgrade: true,
+  it('should handle onRelease click, show release spinner, and open ReleaseDialog with preSelectLatest=false', () => {
+    const subject = new Subject<PreflightLabServerReleaseResponse>();
+    spyOn(hostService, 'preflightLabServerRelease').and.returnValue(subject);
+
+    dialogSpy.open.and.returnValue({
+      afterClosed: () => of('close'),
+    } as unknown as MatDialogRef<unknown, unknown>);
+
+    component.onRelease({preSelectLatest: false});
+
+    expect(component.isOpeningRelease()).toBeTrue();
+    expect(component.isOpeningUpgrade()).toBeFalse();
+
+    // Emit versions to trigger dialog open
+    const mockVersions = [
+      {
+        version: '2.0.0',
+        name: 'v2',
+        status: 'LATEST' as const,
+        buildTime: '2026-05-14',
+      },
+    ];
+    subject.next({ready: {versions: mockVersions}});
+    subject.complete();
+
+    expect(component.isOpeningRelease()).toBeFalse();
+    expect(component.isOpeningUpgrade()).toBeFalse();
+    expect(dialogSpy.open).toHaveBeenCalledWith(ReleaseDialog, {
+      data: {
+        hostName: component.host.hostName,
+        releaseConfigs: mockVersions,
+        passThroughFlags: component.passThroughFlags,
+        preSelectLatest: false,
+        preSelectCurrent: false,
+      },
+      autoFocus: false,
+    });
+  });
+
+  it('should reset loading states and trigger alert on preflight spec error', () => {
+    spyOn(hostService, 'preflightLabServerRelease').and.returnValue(
+      throwError(() => new Error('Failed speculation')),
+    );
+
+    component.onRelease({preSelectLatest: true}); // under upgrade loading context
+
+    expect(component.isOpeningUpgrade()).toBeFalse();
+    expect(component.isOpeningRelease()).toBeFalse();
+    expect(snackBarSpy.showError).toHaveBeenCalledWith(
+      'Failed to load release info: Failed speculation',
+    );
+  });
+
+  it('onStart should trigger startLabServer, show success snackbar on success', () => {
+    spyOn(hostService, 'startLabServer').and.returnValue(
+      of({trackingUrl: 'http://start-url'}),
+    );
+
+    component.onStart();
+
+    expect(hostService.startLabServer).toHaveBeenCalledWith(mockHost.hostName);
+    expect(snackBarSpy.showSuccess).toHaveBeenCalledWith(
+      'Lab Server starting...',
+    );
+  });
+
+  it('onStart should show error snackbar on startLabServer error', () => {
+    spyOn(hostService, 'startLabServer').and.returnValue(
+      throwError(() => new Error('Start failed')),
+    );
+
+    component.onStart();
+
+    expect(snackBarSpy.showError).toHaveBeenCalledWith(
+      'Failed to start: Start failed',
+    );
+  });
+
+  it('onRestart should trigger restartLabServer, show success snackbar on success', () => {
+    spyOn(hostService, 'restartLabServer').and.returnValue(
+      of({trackingUrl: 'http://restart-url'}),
+    );
+
+    component.onRestart();
+
+    expect(hostService.restartLabServer).toHaveBeenCalledWith(
+      mockHost.hostName,
+    );
+    expect(snackBarSpy.showSuccess).toHaveBeenCalledWith(
+      'Lab Server restarting...',
+    );
+  });
+
+  it('onRestart should show error snackbar on restartLabServer error', () => {
+    spyOn(hostService, 'restartLabServer').and.returnValue(
+      throwError(() => new Error('Restart failed')),
+    );
+
+    component.onRestart();
+
+    expect(snackBarSpy.showError).toHaveBeenCalledWith(
+      'Failed to restart: Restart failed',
+    );
+  });
+
+  it('onStop should trigger stopLabServer, show success snackbar on success', () => {
+    spyOn(hostService, 'stopLabServer').and.returnValue(
+      of({trackingUrl: 'http://stop-url'}),
+    );
+
+    component.onStop();
+
+    expect(hostService.stopLabServer).toHaveBeenCalledWith(mockHost.hostName);
+    expect(snackBarSpy.showSuccess).toHaveBeenCalledWith(
+      'Lab Server stopping...',
+    );
+  });
+
+  it('onStop should show error snackbar on stopLabServer error', () => {
+    spyOn(hostService, 'stopLabServer').and.returnValue(
+      throwError(() => new Error('Stop failed')),
+    );
+
+    component.onStop();
+
+    expect(snackBarSpy.showError).toHaveBeenCalledWith(
+      'Failed to stop: Stop failed',
+    );
+  });
+
+  it('onDeploy should not show popup due to missing mapping', () => {
+    component.onDeploy();
+
+    expect(comingSoonServiceSpy.show).not.toHaveBeenCalled();
+  });
+
+  it('openFlagsDialog should open FlagsDialog and handle closed with valid flags', () => {
+    const flagsDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    flagsDialogRefSpy.afterClosed.and.returnValue(of('--new-flags'));
+
+    const restartDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    restartDialogRefSpy.afterClosed.and.returnValue(of(undefined));
+
+    dialogSpy.open.and.returnValues(flagsDialogRefSpy, restartDialogRefSpy);
+
+    spyOn(component, 'preflightAndOpenRelease').and.returnValue(of(undefined));
+
+    component.openFlagsDialog();
+
+    expect(dialogSpy.open).toHaveBeenCalledTimes(2);
+    expect(component.passThroughFlags()).toBe('--new-flags');
+    expect(component.host.labServer.passThroughFlags).toBe('--new-flags');
+
+    const secondOpenCall = dialogSpy.open.calls.mostRecent();
+    expect(secondOpenCall).toBeTruthy();
+    expect(secondOpenCall!.args[0]).toBe(ConfirmDialog);
+    expect(secondOpenCall!.args[1]).toBeTruthy();
+    const dialogConfig = secondOpenCall!.args[1] as {
+      data: {
+        primaryButtonLabel: string;
+        onConfirm: () => void;
       };
-      fixture.detectChanges();
+    };
+    expect(dialogConfig.data).toBeTruthy();
+    const dialogData = dialogConfig.data;
+    expect(dialogData.primaryButtonLabel).toBe('Release Now');
 
-      const compiled = fixture.nativeElement as HTMLElement;
-      const upgradeButton = getUpgradeButton(compiled);
-      const suggestChip = getSuggestChip(compiled);
+    dialogData.onConfirm();
+    expect(component.preflightAndOpenRelease).toHaveBeenCalledWith({preSelectCurrent: true});
+  });
 
-      expect(upgradeButton.disabled).toBeFalse();
-      expect(suggestChip.disabled).toBeFalse();
+  it('startRemoteControl should delegate to deviceActions', () => {
+    const mockDevices: DeviceSummary[] = [
+      { id: 'device-1', model: 'Pixel 9', types: [], subDevices: [] } as unknown as DeviceSummary
+    ];
+    const remoteControlService = TestBed.inject(RemoteControlService) as jasmine.SpyObj<RemoteControlService>;
+    remoteControlService.startRemoteControl.and.returnValue(of(undefined));
 
-      const subject = new Subject<PreflightLabServerReleaseResponse>();
-      spyOn(fakeHostService, 'preflightLabServerRelease').and.returnValue(
-        subject,
-      );
+    component.startRemoteControl(mockDevices);
 
-      upgradeButton.click();
-      fixture.detectChanges();
+    expect(remoteControlService.startRemoteControl).toHaveBeenCalled();
+  });
 
-      expect(component.isOpeningUpgrade()).toBeTrue();
-      expect(upgradeButton.disabled).toBeTrue();
-      expect(suggestChip.disabled).toBeTrue();
+  it('startSubDeviceRemoteControl should delegate to deviceActions with sub-device options', () => {
+    const mockParent: DeviceSummary = { id: 'parent-1', model: 'Pixel 9', types: [], subDevices: [] } as unknown as DeviceSummary;
+    const mockSub: SubDeviceInfo = { id: 'sub-1', model: 'Pixel 8' } as unknown as SubDeviceInfo;
+    const remoteControlService = TestBed.inject(RemoteControlService) as jasmine.SpyObj<RemoteControlService>;
+    remoteControlService.startRemoteControl.and.returnValue(of(undefined));
 
-      // Emit versions to trigger dialog open
-      const mockVersions: DeployableVersion[] = [
-        {
-          version: '2.0.0',
-          name: 'v2',
-          status: 'LATEST' as const,
-          buildTime: '2026-05-14',
-        },
-      ];
-      subject.next({ready: {versions: mockVersions}});
-      subject.complete();
-      fixture.detectChanges();
+    component.startSubDeviceRemoteControl(mockSub, mockParent);
 
-      expect(component.isOpeningUpgrade()).toBeFalse();
-      expect(upgradeButton.disabled).toBeFalse();
-      expect(suggestChip.disabled).toBeFalse();
-      expect(dialogSpy.open).toHaveBeenCalledWith(ReleaseDialog, {
-        data: {
-          hostName: component.host.hostName,
-          releaseConfigs: mockVersions,
-          passThroughFlags: component.passThroughFlags,
-          preSelectLatest: true,
-          preSelectCurrent: false,
-        },
-        autoFocus: false,
-      });
-    });
+    expect(remoteControlService.startRemoteControl).toHaveBeenCalledWith(
+      component.host.hostName,
+      jasmine.any(Array),
+      true
+    );
+  });
 
-    it('should handle onRelease click, show release spinner, and open ReleaseDialog with preSelectLatest=false', () => {
-      fixture.detectChanges();
-      const compiled = fixture.nativeElement as HTMLElement;
-      const releaseButton = getReleaseButton(compiled);
-      expect(releaseButton.disabled).toBeFalse();
+  it('takeScreenshot should delegate to deviceActions', () => {
+    const mockDevice = { id: 'device-1' } as unknown as DeviceSummary;
+    const deviceActionService = TestBed.inject(DeviceActionService) as jasmine.SpyObj<DeviceActionService>;
+    deviceActionService.takeScreenshot.and.returnValue(of({} as TakeScreenshotResponse));
 
-      const subject = new Subject<PreflightLabServerReleaseResponse>();
-      spyOn(fakeHostService, 'preflightLabServerRelease').and.returnValue(
-        subject,
-      );
+    component.takeScreenshot(mockDevice);
 
-      component.onRelease();
-      fixture.detectChanges();
+    expect(deviceActionService.takeScreenshot).toHaveBeenCalledWith('device-1');
+  });
+  it('getLogcat should delegate to deviceActions', () => {
+    const mockDevice = { id: 'device-1' } as unknown as DeviceSummary;
+    const deviceActionService = TestBed.inject(DeviceActionService) as jasmine.SpyObj<DeviceActionService>;
+    deviceActionService.getLogcat.and.returnValue(of({} as GetLogcatResponse));
 
-      expect(component.isOpeningRelease()).toBeTrue();
-      expect(releaseButton.disabled).toBeTrue();
-      expect(component.isOpeningUpgrade()).toBeFalse();
+    component.getLogcat(mockDevice);
 
-      // Emit versions to trigger dialog open
-      const mockVersions: DeployableVersion[] = [
-        {
-          version: '2.0.0',
-          name: 'v2',
-          status: 'LATEST' as const,
-          buildTime: '2026-05-14',
-        },
-      ];
-      subject.next({ready: {versions: mockVersions}});
-      subject.complete();
-      fixture.detectChanges();
+    expect(deviceActionService.getLogcat).toHaveBeenCalledWith('device-1');
+  });
 
-      expect(component.isOpeningRelease()).toBeFalse();
-      expect(releaseButton.disabled).toBeFalse();
-      expect(component.isOpeningUpgrade()).toBeFalse();
-      expect(dialogSpy.open).toHaveBeenCalledWith(ReleaseDialog, {
-        data: {
-          hostName: component.host.hostName,
-          releaseConfigs: mockVersions,
-          passThroughFlags: component.passThroughFlags,
-          preSelectLatest: false,
-          preSelectCurrent: false,
-        },
-        autoFocus: false,
-      });
-    });
+  it('flashDevice should delegate to deviceActions', () => {
+    const mockDevice = {
+      id: 'device-1',
+      actions: {
+        flash: { params: { deviceType: 'Pixel' } }
+      }
+    } as unknown as DeviceSummary;
+    const deviceActionService = TestBed.inject(DeviceActionService) as jasmine.SpyObj<DeviceActionService>;
 
-    it('should handle onRelease with preSelectCurrent=true, show redeploy spinner, and open ReleaseDialog with preSelectCurrent=true', () => {
-      fixture.detectChanges();
-      const compiled = fixture.nativeElement as HTMLElement;
-      const releaseButton = getReleaseButton(compiled);
-      expect(releaseButton.disabled).toBeFalse();
+    component.flashDevice(mockDevice);
 
-      const subject = new Subject<PreflightLabServerReleaseResponse>();
-      spyOn(fakeHostService, 'preflightLabServerRelease').and.returnValue(
-        subject,
-      );
+    expect(deviceActionService.flashDevice).toHaveBeenCalledWith(
+      'device-1',
+      component.host.hostName,
+      jasmine.objectContaining({ deviceType: 'Pixel' }),
+    );
+  });
 
-      component.onRelease({preSelectCurrent: true});
-      fixture.detectChanges();
+  it('quarantineDevice should delegate to deviceActions and reload devices on success', () => {
+    const mockDevice = { id: 'device-1' } as unknown as DeviceSummary;
+    const quarantineSpy = jasmine.createSpy('quarantineDevice');
+    (component as unknown as {deviceActions: unknown}).deviceActions = {
+      quarantineDevice: quarantineSpy,
+    };
 
-      expect(component.isOpeningRedeploy()).toBeTrue();
-      expect(releaseButton.disabled).toBeTrue();
-      expect(component.isOpeningRelease()).toBeFalse();
-      expect(component.isOpeningUpgrade()).toBeFalse();
+    spyOn(component, 'loadDevices');
 
-      // Emit versions to trigger dialog open
-      const mockVersions: DeployableVersion[] = [
-        {
-          version: '2.0.0',
-          name: 'v2',
-          status: 'CURRENT' as const,
-          buildTime: '2026-05-14',
-        },
-      ];
-      subject.next({ready: {versions: mockVersions}});
-      subject.complete();
-      fixture.detectChanges();
+    component.quarantineDevice(mockDevice);
 
-      expect(component.isOpeningRedeploy()).toBeFalse();
-      expect(releaseButton.disabled).toBeFalse();
-      expect(component.isOpeningRelease()).toBeFalse();
-      expect(component.isOpeningUpgrade()).toBeFalse();
-      expect(dialogSpy.open).toHaveBeenCalledWith(ReleaseDialog, {
-        data: {
-          hostName: component.host.hostName,
-          releaseConfigs: mockVersions,
-          passThroughFlags: component.passThroughFlags,
-          preSelectLatest: false,
-          preSelectCurrent: true,
-        },
-        autoFocus: false,
-      });
-    });
+    expect(quarantineSpy).toHaveBeenCalledWith(
+      'device-1',
+      jasmine.objectContaining({ onSuccess: jasmine.any(Function) })
+    );
 
-    it('should reset isOpeningUpgrade loading state on preflight error', () => {
-      spyOn(fakeHostService, 'preflightLabServerRelease').and.returnValue(
-        throwError(() => new Error('Failed speculation')),
-      );
+    const mostRecentCall = quarantineSpy.calls.mostRecent();
+    expect(mostRecentCall).toBeTruthy();
+    const options = mostRecentCall!.args[1] as { onSuccess: () => void };
+    expect(options.onSuccess).toBeTruthy();
 
-      component.onRelease({preSelectLatest: true}); // under upgrade loading context
+    options.onSuccess();
 
-      expect(component.isOpeningUpgrade()).toBeFalse();
-      expect(snackBarSpy.showError).toHaveBeenCalledWith(
-        'Failed to load release info: Failed speculation',
-      );
-    });
-
-    it('should reset isOpeningRelease loading state on preflight error', () => {
-      spyOn(fakeHostService, 'preflightLabServerRelease').and.returnValue(
-        throwError(() => new Error('Failed speculation')),
-      );
-
-      component.onRelease(); // under release loading context
-
-      expect(component.isOpeningRelease()).toBeFalse();
-      expect(snackBarSpy.showError).toHaveBeenCalledWith(
-        'Failed to load release info: Failed speculation',
-      );
-    });
-
-    it('should reset isOpeningRedeploy loading state on preflight error', () => {
-      spyOn(fakeHostService, 'preflightLabServerRelease').and.returnValue(
-        throwError(() => new Error('Failed speculation')),
-      );
-
-      component.onRelease({preSelectCurrent: true}); // under redeploy loading context
-
-      expect(component.isOpeningRedeploy()).toBeFalse();
-      expect(snackBarSpy.showError).toHaveBeenCalledWith(
-        'Failed to load release info: Failed speculation',
-      );
-    });
-
-    it('should show restart dialog and handle confirm', () => {
-      const subject = new Subject<PreflightLabServerReleaseResponse>();
-      spyOn(fakeHostService, 'preflightLabServerRelease').and.returnValue(
-        subject,
-      );
-
-      component.showRestartDialog();
-
-      // Verify ConfirmDialog was opened
-      expect(dialogSpy.open).toHaveBeenCalledWith(
-        ConfirmDialog,
-        jasmine.objectContaining({
-          data: jasmine.objectContaining({
-            title: 'Flags Updated',
-          }),
-        }),
-      );
-
-      // Get the dialog config passed to open
-      const dialogArgs = dialogSpy.open.calls.mostRecent().args;
-      const dialogData = dialogArgs[1]?.data as
-        | {onConfirm?: () => Observable<void>}
-        | undefined;
-      expect(dialogData?.onConfirm).toBeDefined();
-
-      // Trigger onConfirm
-      dialogData!.onConfirm!().subscribe({
-        error: () => {},
-      });
-
-      // Verify preflight check was triggered
-      expect(fakeHostService.preflightLabServerRelease).toHaveBeenCalledWith(
-        component.host.hostName,
-      );
-      expect(component.isOpeningRedeploy()).toBeTrue();
-    });
-
-    it('should show No Access dialog when preflight returns permissionDenied', () => {
-      const subject = new Subject<PreflightLabServerReleaseResponse>();
-      spyOn(fakeHostService, 'preflightLabServerRelease').and.returnValue(
-        subject,
-      );
-
-      component.onRelease();
-
-      // Emit permissionDenied
-      subject.next({permissionDenied: {}});
-      subject.complete();
-
-      // Verify ConfirmDialog was opened with "No Access"
-      expect(dialogSpy.open).toHaveBeenCalledWith(
-        ConfirmDialog,
-        jasmine.objectContaining({
-          data: jasmine.objectContaining({
-            title: 'No Access',
-            type: 'error',
-          }),
-        }),
-      );
-    });
-
-    it('should show No Valid Versions dialog when preflight returns empty versions', () => {
-      const subject = new Subject<PreflightLabServerReleaseResponse>();
-      spyOn(fakeHostService, 'preflightLabServerRelease').and.returnValue(
-        subject,
-      );
-
-      component.onRelease();
-
-      // Emit empty versions
-      subject.next({ready: {versions: []}});
-      subject.complete();
-
-      // Verify ConfirmDialog was opened with "No Valid Versions"
-      expect(dialogSpy.open).toHaveBeenCalledWith(
-        ConfirmDialog,
-        jasmine.objectContaining({
-          data: jasmine.objectContaining({
-            title: 'No Valid Versions',
-            type: 'warning',
-          }),
-        }),
-      );
-    });
+    expect(component.loadDevices).toHaveBeenCalled();
   });
 });
