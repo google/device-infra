@@ -29,6 +29,7 @@ java_library(
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:flags_string",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/constant:builtin_flags",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:ats_console_lib",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:ats_console_module",

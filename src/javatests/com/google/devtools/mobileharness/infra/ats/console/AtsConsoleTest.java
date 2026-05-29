@@ -30,6 +30,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
+import com.google.devtools.mobileharness.infra.ats.common.constant.BuiltinFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerChannel;
 import com.google.devtools.mobileharness.shared.util.base.StackTraceExtractor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -106,25 +107,19 @@ public final class AtsConsoleTest {
     systemProperties = ImmutableMap.of("XTS_ROOT", xtsRootDirPath);
 
     ImmutableMap<String, String> flagMap =
-        ImmutableMap.of(
-            "ats_console_olc_server_path",
-            olcServerBinary.toString(),
-            "detect_adb_device",
-            "false",
-            "external_adb_initializer_template",
-            "true",
-            "olc_server_port",
-            Integer.toString(olcServerPort),
-            "public_dir",
-            publicDirPath,
-            "simplified_log_format",
-            "true",
-            "tmp_dir_root",
-            tmpDirPath,
-            "xts_res_dir_root",
-            xtsResourceDirPath,
-            "xts_server_res_dir_root",
-            xtsServerResourceDirPath);
+        ImmutableMap.<String, String>builder()
+            .putAll(BuiltinFlags.atsConsoleFlagMap())
+            // keep-sorted start
+            .put("ats_console_olc_server_path", olcServerBinary.toString())
+            .put("detect_adb_device", "false")
+            .put("external_adb_initializer_template", "true")
+            .put("olc_server_port", Integer.toString(olcServerPort))
+            .put("public_dir", publicDirPath)
+            .put("tmp_dir_root", tmpDirPath)
+            .put("xts_res_dir_root", xtsResourceDirPath)
+            .put("xts_server_res_dir_root", xtsServerResourceDirPath)
+            // keep-sorted end
+            .buildOrThrow();
     flags.setAll(flagMap);
     ImmutableList<String> flagList =
         flagMap.entrySet().stream()
