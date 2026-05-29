@@ -742,10 +742,12 @@ public class AndroidSystemSettingUtilTest {
   @Test
   public void setAppOpsPermission_success() throws Exception {
     settingUtil.setAppOpsPermission(
-        DEVICE_ID, "com.sample.package", "WRITE_SETTINGS", AppOpsMode.ALLOW);
+        DEVICE_ID, "com.sample.package", "WRITE_SETTINGS", AppOpsMode.ALLOW, "0");
     verify(adb)
         .runShell(
-            DEVICE_ID, "appops set com.sample.package WRITE_SETTINGS allow", Duration.ofSeconds(3));
+            DEVICE_ID,
+            "appops set com.sample.package WRITE_SETTINGS allow --user 0",
+            Duration.ofSeconds(3));
   }
 
   @Test

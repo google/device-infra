@@ -1380,13 +1380,17 @@ public class AndroidSystemSettingUtil {
    * @param packageName the package name of the app
    * @param permissionName the permission name for the app
    * @param mode the appops mode to set, i.e., allow, deny or ignore
+   * @param userId the user id to set the permission for
    * @throws MobileHarnessException if error occurs when setting the permission
    * @throws InterruptedException if the thread executing the command is interrupted
    */
   public void setAppOpsPermission(
-      String serial, String packageName, String permissionName, AppOpsMode mode)
+      String serial, String packageName, String permissionName, AppOpsMode mode, String userId)
       throws MobileHarnessException, InterruptedException {
-    String[] cmd = new String[] {ADB_SHELL_APPOPS, "set", packageName, permissionName, mode.value};
+    String[] cmd =
+        new String[] {
+          ADB_SHELL_APPOPS, "set", packageName, permissionName, mode.value, "--user", userId
+        };
     try {
       var unused = adb.runShell(serial, Joiner.on(' ').join(cmd), Duration.ofSeconds(3));
     } catch (MobileHarnessException e) {

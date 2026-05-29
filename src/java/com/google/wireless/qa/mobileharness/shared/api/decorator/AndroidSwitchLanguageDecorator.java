@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.DumpSysTyp
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil.AppOpsMode;
+import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -96,6 +97,8 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
 
   private final AndroidSystemSettingUtil androidSystemSettingUtil;
 
+  private final AndroidUserUtil androidUserUtil;
+
   private final AndroidAdbUtil adbUtil;
 
   private AndroidSwitchLanguageDecoratorSpec spec;
@@ -116,6 +119,7 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
         new AndroidInstrumentationUtil(),
         new AndroidPackageManagerUtil(),
         new AndroidSystemSettingUtil(),
+        new AndroidUserUtil(),
         new AndroidAdbUtil(),
         Sleeper.defaultSleeper());
   }
@@ -130,6 +134,7 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
       AndroidInstrumentationUtil instrumentationUtil,
       AndroidPackageManagerUtil androidPackageManagerUtil,
       AndroidSystemSettingUtil androidSystemSettingUtil,
+      AndroidUserUtil androidUserUtil,
       AndroidAdbUtil adbUtil,
       Sleeper sleeper) {
     super(decoratedDriver, testInfo);
@@ -139,6 +144,7 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
     this.instrumentationUtil = instrumentationUtil;
     this.androidPackageManagerUtil = androidPackageManagerUtil;
     this.androidSystemSettingUtil = androidSystemSettingUtil;
+    this.androidUserUtil = androidUserUtil;
     this.adbUtil = adbUtil;
     this.sleeper = sleeper;
   }
@@ -211,6 +217,7 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
       throws MobileHarnessException, InterruptedException {
     String deviceId = device.getDeviceId();
     String packageName = AndroidPackages.MH_SWITCH_LANGUAGE.getPackageName();
+    var currentUserId = androidUserUtil.getCurrentUser(deviceId, sdkVersion);
 
     for (int i = 1; i <= MAX_ATTEMPTS; i++) {
       apkInstaller.installApkIfNotExist(
@@ -237,7 +244,11 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
                     "hidden_api_blacklist_exemptions \"\\*\""));
         if (sdkVersion >= 23) {
           androidSystemSettingUtil.setAppOpsPermission(
-              deviceId, packageName, "WRITE_SETTINGS", AppOpsMode.ALLOW);
+              deviceId,
+              packageName,
+              "WRITE_SETTINGS",
+              AppOpsMode.ALLOW,
+              String.valueOf(currentUserId));
           sleeper.sleep(Duration.ofSeconds(1));
         }
         break;
