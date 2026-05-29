@@ -17,10 +17,13 @@
 package com.google.devtools.mobileharness.infra.ats.common.constant;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import java.util.Map;
 
 /** Built-in flags for ATS components. */
 public final class BuiltinFlags {
@@ -40,58 +43,60 @@ public final class BuiltinFlags {
    *
    * <p>xTS console/ATS local runner can also override these flags.
    */
-  private static final ImmutableList<String> ATS_CONSOLE_FLAGS =
-      ImmutableList.of(
+  private static final ImmutableMap<String, String> ATS_CONSOLE_FLAG_MAP =
+      ImmutableMap.<String, String>builder()
           // keep-sorted start
-          "--adb_dont_kill_server=true",
-          "--adb_max_no_device_detection_rounds=1200",
-          "--android_device_daemon=false",
-          "--cache_installed_apks=false",
-          "--check_android_device_sim_card_type=true",
-          "--check_device_interval=30d",
-          "--clear_android_device_multi_users=false",
-          "--detect_device_interval_sec=2",
-          "--disable_calling=false",
-          "--disable_device_reboot=true",
-          "--disable_wifi_util_func=true",
-          "--enable_android_device_ready_check=false",
-          "--enable_device_state_change_recover=false",
-          "--enable_device_system_settings_change=false",
-          "--enable_fastboot_detector=false",
-          "--enable_root_device=false",
-          "--ignore_check_device_failure=true",
-          "--mute_android=false",
-          "--olc_server_max_started_running_session_num=30",
-          "--set_test_harness_property=false",
-          "--simplified_log_format=true"
+          .put("adb_dont_kill_server", "true")
+          .put("adb_max_no_device_detection_rounds", "1200")
+          .put("android_device_daemon", "false")
+          .put("cache_installed_apks", "false")
+          .put("check_android_device_sim_card_type", "true")
+          .put("check_device_interval", "30d")
+          .put("clear_android_device_multi_users", "false")
+          .put("detect_device_interval_sec", "2")
+          .put("disable_calling", "false")
+          .put("disable_device_reboot", "true")
+          .put("disable_wifi_util_func", "true")
+          .put("enable_android_device_ready_check", "false")
+          .put("enable_device_state_change_recover", "false")
+          .put("enable_device_system_settings_change", "false")
+          .put("enable_fastboot_detector", "false")
+          .put("enable_root_device", "false")
+          .put("ignore_check_device_failure", "true")
+          .put("mute_android", "false")
+          .put("olc_server_max_started_running_session_num", "30")
+          .put("set_test_harness_property", "false")
+          .put("simplified_log_format", "true")
           // keep-sorted end
-          );
+          .buildOrThrow();
+
+  private static final ImmutableList<String> ATS_CONSOLE_FLAGS = toFlagList(ATS_CONSOLE_FLAG_MAP);
 
   /** Built-in flags of the components [lab server] for all ATS lab server types. */
-  private static final ImmutableList<String> ATS_LAB_SERVER_COMMON_FLAGS =
-      ImmutableList.of(
+  private static final ImmutableMap<String, String> ATS_LAB_SERVER_COMMON_FLAG_MAP =
+      ImmutableMap.<String, String>builder()
           // keep-sorted start
-          "--adb_dont_kill_server=true",
-          "--adb_max_no_device_detection_rounds=1200",
-          "--android_device_daemon=false",
-          "--cache_installed_apks=false",
-          "--check_device_interval=1h",
-          "--detect_device_interval_sec=2",
-          "--disable_calling=false",
-          "--disable_device_reboot_for_ro_properties=true",
-          "--enable_ats_mode=true",
-          "--enable_device_state_change_recover=false",
-          "--enable_device_system_settings_change=false",
-          "--enable_external_master_server=true",
-          "--enable_root_device=false",
-          "--enable_test_log_collector=true",
-          "--mute_android=false",
-          "--resource_dir_name=lab_server_res_files",
-          "--serv_via_cloud_rpc=false",
-          "--set_test_harness_property=false",
-          "--use_emulator_name_in_uuid=true"
+          .put("adb_dont_kill_server", "true")
+          .put("adb_max_no_device_detection_rounds", "1200")
+          .put("android_device_daemon", "false")
+          .put("cache_installed_apks", "false")
+          .put("check_device_interval", "1h")
+          .put("detect_device_interval_sec", "2")
+          .put("disable_calling", "false")
+          .put("disable_device_reboot_for_ro_properties", "true")
+          .put("enable_ats_mode", "true")
+          .put("enable_device_state_change_recover", "false")
+          .put("enable_device_system_settings_change", "false")
+          .put("enable_external_master_server", "true")
+          .put("enable_root_device", "false")
+          .put("enable_test_log_collector", "true")
+          .put("mute_android", "false")
+          .put("resource_dir_name", "lab_server_res_files")
+          .put("serv_via_cloud_rpc", "false")
+          .put("set_test_harness_property", "false")
+          .put("use_emulator_name_in_uuid", "true")
           // keep-sorted end
-          );
+          .buildOrThrow();
 
   /**
    * Built-in flags of the components [lab server] for ATS On-Prem Mode/Omni Mode, by ATS lab server
@@ -99,113 +104,138 @@ public final class BuiltinFlags {
    *
    * <p>ATS On-Prem Mode/Omni Mode can also override these flags.
    */
+  private static final ImmutableMap<String, ImmutableMap<String, String>> ATS_LAB_SERVER_FLAG_MAPS =
+      ImmutableMap.<String, ImmutableMap<String, String>>builder()
+          .put(
+              "on-prem",
+              ImmutableMap.<String, String>builder()
+                  .putAll(ATS_LAB_SERVER_COMMON_FLAG_MAP)
+                  // keep-sorted start
+                  .put("check_android_device_sim_card_type", "true")
+                  .put("clear_android_device_multi_users", "false")
+                  .put("disable_device_reboot", "true")
+                  .put("disable_wifi_util_func", "true")
+                  .put("enable_android_device_ready_check", "false")
+                  .put("enable_caching_reserved_device", "true")
+                  .put("enable_cloud_logging", "false")
+                  .put("enable_fastboot_detector", "false")
+                  .put("ignore_check_device_failure", "true")
+                  // keep-sorted end
+                  .buildOrThrow())
+          .put(
+              "omni-dda",
+              ImmutableMap.<String, String>builder()
+                  .putAll(ATS_LAB_SERVER_COMMON_FLAG_MAP)
+                  // keep-sorted start
+                  .put("add_supported_dimension_for_omni_mode_usage", "dda")
+                  .put("android_factory_reset_wait_time", "3m")
+                  .put("check_android_device_sim_card_type", "false")
+                  .put("clear_android_device_multi_users", "true")
+                  .put("disable_device_reboot", "false")
+                  .put("disable_wifi_util_func", "false")
+                  .put("enable_android_device_ready_check", "true")
+                  .put("enable_caching_reserved_device", "false")
+                  .put("enable_fastboot_detector", "true")
+                  .put("force_device_reboot_after_test", "true")
+                  .put("ignore_check_device_failure", "false")
+                  .put("reset_device_in_android_real_device_setup", "true")
+                  // keep-sorted end
+                  .buildOrThrow())
+          .put(
+              "omni-public-testing",
+              ImmutableMap.<String, String>builder()
+                  .putAll(ATS_LAB_SERVER_COMMON_FLAG_MAP)
+                  // keep-sorted start
+                  .put("add_required_dimension_for_partner_shared_pool", "true")
+                  .put("add_supported_dimension_for_omni_mode_usage", "public_testing")
+                  .put("android_factory_reset_wait_time", "3m")
+                  .put("check_android_device_sim_card_type", "false")
+                  .put("clear_android_device_multi_users", "false")
+                  .put("disable_device_reboot", "false")
+                  .put("disable_wifi_util_func", "false")
+                  .put("enable_android_device_ready_check", "true")
+                  .put("enable_caching_reserved_device", "false")
+                  .put("enable_fastboot_detector", "true")
+                  .put("force_device_reboot_after_test", "true")
+                  .put("ignore_check_device_failure", "false")
+                  .put("reset_device_in_android_real_device_setup", "true")
+                  // keep-sorted end
+                  .buildOrThrow())
+          .put(
+              "omni-internal-testing",
+              ImmutableMap.<String, String>builder()
+                  .putAll(ATS_LAB_SERVER_COMMON_FLAG_MAP)
+                  // keep-sorted start
+                  .put("add_supported_dimension_for_omni_mode_usage", "internal_testing")
+                  .put("android_factory_reset_wait_time", "3m")
+                  .put("check_android_device_sim_card_type", "true")
+                  .put("clear_android_device_multi_users", "false")
+                  .put("disable_device_reboot", "true")
+                  .put("disable_wifi_util_func", "false")
+                  .put("enable_android_device_ready_check", "true")
+                  .put("enable_caching_reserved_device", "true")
+                  .put("enable_fastboot_detector", "false")
+                  .put("force_device_reboot_after_test", "true")
+                  .put("ignore_check_device_failure", "true")
+                  .put("reset_device_in_android_real_device_setup", "true")
+                  // keep-sorted end
+                  .buildOrThrow())
+          .put(
+              "omni-xts-testing",
+              ImmutableMap.<String, String>builder()
+                  .putAll(ATS_LAB_SERVER_COMMON_FLAG_MAP)
+                  // keep-sorted start
+                  .put("add_supported_dimension_for_omni_mode_usage", "cts_testing")
+                  .put("check_android_device_sim_card_type", "true")
+                  .put("clear_android_device_multi_users", "false")
+                  .put("disable_device_reboot", "true")
+                  .put("disable_wifi_util_func", "true")
+                  .put("enable_android_device_ready_check", "false")
+                  .put("enable_caching_reserved_device", "true")
+                  .put("enable_fastboot_detector", "false")
+                  .put("ignore_check_device_failure", "true")
+                  .put("keep_test_harness_false", "true")
+                  // keep-sorted end
+                  .buildOrThrow())
+          .put(
+              "omni-private",
+              ImmutableMap.<String, String>builder()
+                  .putAll(ATS_LAB_SERVER_COMMON_FLAG_MAP)
+                  // keep-sorted start
+                  .put("add_supported_dimension_for_omni_mode_usage", "private_usage")
+                  .put("check_android_device_sim_card_type", "true")
+                  .put("clear_android_device_multi_users", "false")
+                  .put("disable_device_reboot", "true")
+                  .put("disable_wifi_util_func", "true")
+                  .put("enable_android_device_ready_check", "false")
+                  .put("enable_caching_reserved_device", "true")
+                  .put("enable_fastboot_detector", "false")
+                  .put("ignore_check_device_failure", "true")
+                  // keep-sorted end
+                  .buildOrThrow())
+          .buildOrThrow();
+
   @VisibleForTesting
   static final ImmutableMap<String, ImmutableList<String>> ATS_LAB_SERVER_FLAGS =
-      ImmutableMap.of(
-          "on-prem",
-          append(
-              ATS_LAB_SERVER_COMMON_FLAGS,
-              // keep-sorted start
-              "--check_android_device_sim_card_type=true",
-              "--clear_android_device_multi_users=false",
-              "--disable_device_reboot=true",
-              "--disable_wifi_util_func=true",
-              "--enable_android_device_ready_check=false",
-              "--enable_caching_reserved_device=true",
-              "--enable_cloud_logging=false",
-              "--enable_fastboot_detector=false",
-              "--ignore_check_device_failure=true"
-              // keep-sorted end
-              ),
-          "omni-dda",
-          append(
-              ATS_LAB_SERVER_COMMON_FLAGS,
-              // keep-sorted start
-              "--add_supported_dimension_for_omni_mode_usage=dda",
-              "--android_factory_reset_wait_time=3m",
-              "--check_android_device_sim_card_type=false",
-              "--clear_android_device_multi_users=true",
-              "--disable_device_reboot=false",
-              "--disable_wifi_util_func=false",
-              "--enable_android_device_ready_check=true",
-              "--enable_caching_reserved_device=false",
-              "--enable_fastboot_detector=true",
-              "--force_device_reboot_after_test=true",
-              "--ignore_check_device_failure=false",
-              "--reset_device_in_android_real_device_setup=true"
-              // keep-sorted end
-              ),
-          "omni-public-testing",
-          append(
-              ATS_LAB_SERVER_COMMON_FLAGS,
-              // keep-sorted start
-              "--add_required_dimension_for_partner_shared_pool=true",
-              "--add_supported_dimension_for_omni_mode_usage=public_testing",
-              "--android_factory_reset_wait_time=3m",
-              "--check_android_device_sim_card_type=false",
-              "--clear_android_device_multi_users=false",
-              "--disable_device_reboot=false",
-              "--disable_wifi_util_func=false",
-              "--enable_android_device_ready_check=true",
-              "--enable_caching_reserved_device=false",
-              "--enable_fastboot_detector=true",
-              "--force_device_reboot_after_test=true",
-              "--ignore_check_device_failure=false",
-              "--reset_device_in_android_real_device_setup=true"
-              // keep-sorted end
-              ),
-          "omni-internal-testing",
-          append(
-              ATS_LAB_SERVER_COMMON_FLAGS,
-              // keep-sorted start
-              "--add_supported_dimension_for_omni_mode_usage=internal_testing",
-              "--android_factory_reset_wait_time=3m",
-              "--check_android_device_sim_card_type=true",
-              "--clear_android_device_multi_users=false",
-              "--disable_device_reboot=true",
-              "--disable_wifi_util_func=false",
-              "--enable_android_device_ready_check=true",
-              "--enable_caching_reserved_device=true",
-              "--enable_fastboot_detector=false",
-              "--force_device_reboot_after_test=true",
-              "--ignore_check_device_failure=true",
-              "--reset_device_in_android_real_device_setup=true"
-              // keep-sorted end
-              ),
-          "omni-xts-testing",
-          append(
-              ATS_LAB_SERVER_COMMON_FLAGS,
-              // keep-sorted start
-              "--add_supported_dimension_for_omni_mode_usage=cts_testing",
-              "--check_android_device_sim_card_type=true",
-              "--clear_android_device_multi_users=false",
-              "--disable_device_reboot=true",
-              "--disable_wifi_util_func=true",
-              "--enable_android_device_ready_check=false",
-              "--enable_caching_reserved_device=true",
-              "--enable_fastboot_detector=false",
-              "--ignore_check_device_failure=true",
-              "--keep_test_harness_false=true"
-              // keep-sorted end
-              ),
-          "omni-private",
-          append(
-              ATS_LAB_SERVER_COMMON_FLAGS,
-              // keep-sorted start
-              "--add_supported_dimension_for_omni_mode_usage=private_usage",
-              "--check_android_device_sim_card_type=true",
-              "--clear_android_device_multi_users=false",
-              "--disable_device_reboot=true",
-              "--disable_wifi_util_func=true",
-              "--enable_android_device_ready_check=false",
-              "--enable_caching_reserved_device=true",
-              "--enable_fastboot_detector=false",
-              "--ignore_check_device_failure=true"
-              // keep-sorted end
-              ));
+      ATS_LAB_SERVER_FLAG_MAPS.entrySet().stream()
+          .collect(toImmutableMap(Map.Entry::getKey, e -> toFlagList(e.getValue())));
+
+  public static ImmutableMap<String, String> atsConsoleFlagMap() {
+    return ATS_CONSOLE_FLAG_MAP;
+  }
 
   public static ImmutableList<String> atsConsoleFlags() {
     return ATS_CONSOLE_FLAGS;
+  }
+
+  /**
+   * Returns built-in flags map of an ATS lab server.
+   *
+   * @throws IllegalArgumentException if the {@code atsLabServerType} is not valid
+   */
+  public static ImmutableMap<String, String> atsLabServerFlagMap(String atsLabServerType) {
+    checkAtsLabServerType(atsLabServerType);
+    return ATS_LAB_SERVER_FLAG_MAPS.get(atsLabServerType);
   }
 
   /**
@@ -214,19 +244,22 @@ public final class BuiltinFlags {
    * @throws IllegalArgumentException if the {@code atsLabServerType} is not valid
    */
   public static ImmutableList<String> atsLabServerFlags(String atsLabServerType) {
-    checkArgument(
-        ATS_LAB_SERVER_FLAGS.containsKey(atsLabServerType),
-        "Invalid ATS lab server type: [%s], valid types: %s",
-        atsLabServerType,
-        ATS_LAB_SERVER_FLAGS.keySet());
+    checkAtsLabServerType(atsLabServerType);
     return ATS_LAB_SERVER_FLAGS.get(atsLabServerType);
   }
 
-  private static ImmutableList<String> append(ImmutableList<String> list, String... elements) {
-    if (elements.length == 0) {
-      return list;
-    }
-    return ImmutableList.<String>builder().addAll(list).add(elements).build();
+  private static void checkAtsLabServerType(String atsLabServerType) {
+    checkArgument(
+        ATS_LAB_SERVER_FLAG_MAPS.containsKey(atsLabServerType),
+        "Invalid ATS lab server type: [%s], valid types: %s",
+        atsLabServerType,
+        ATS_LAB_SERVER_FLAG_MAPS.keySet());
+  }
+
+  private static ImmutableList<String> toFlagList(ImmutableMap<String, String> flagMap) {
+    return flagMap.entrySet().stream()
+        .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
+        .collect(toImmutableList());
   }
 
   private BuiltinFlags() {}

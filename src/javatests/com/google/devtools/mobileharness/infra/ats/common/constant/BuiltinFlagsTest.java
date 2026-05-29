@@ -50,4 +50,20 @@ public class BuiltinFlagsTest {
             "omni-xts-testing",
             "omni-private");
   }
+
+  @Test
+  public void atsConsoleFlags_notEmpty() {
+    assertThat(BuiltinFlags.atsConsoleFlags()).isNotEmpty();
+    assertThat(BuiltinFlags.atsConsoleFlagMap()).isNotEmpty();
+    assertThat(BuiltinFlags.atsConsoleFlagMap().get("simplified_log_format")).isEqualTo("true");
+  }
+
+  @Test
+  public void atsLabServerFlagMap_notEmpty() {
+    assertThat(BuiltinFlags.atsLabServerFlagMap("on-prem")).isNotEmpty();
+    assertThat(BuiltinFlags.atsLabServerFlagMap("omni-dda")).isNotEmpty();
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> BuiltinFlags.atsLabServerFlagMap("wrong-ats-lab-server-type"));
+  }
 }
