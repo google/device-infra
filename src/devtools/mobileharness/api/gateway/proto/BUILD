@@ -45,7 +45,6 @@ java_proto_library(
     name = "setting_java_proto",
     visibility = [
         ":default_visibility",
-        "//javatests/wireless/android/engprod/fleetpurser:__pkg__",
     ],
     deps = [":setting_proto"],
 )
