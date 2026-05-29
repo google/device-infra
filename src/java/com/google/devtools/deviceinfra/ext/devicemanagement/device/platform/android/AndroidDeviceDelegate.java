@@ -494,6 +494,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidAccountDecorator");
     device.addSupportedDecorator("AndroidAdbShellDecorator");
     device.addSupportedDecorator("AndroidAtsDynamicConfigPusherDecorator");
+    device.addSupportedDecorator("AndroidBusinessLogicSkipModuleDecorator");
     device.addSupportedDecorator("AndroidCleanAppsDecorator");
     device.addSupportedDecorator("AndroidDeviceFeaturesCheckDecorator");
     // Advanced device settings. This decorator is only full tested on AndroidRealDevice. Some

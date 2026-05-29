@@ -22,7 +22,9 @@ package(
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
     ],
 )
 
