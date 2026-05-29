@@ -26,6 +26,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.ServerEnvironment;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.GuiceFactory;
@@ -35,7 +36,6 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultListerHelper;
-import com.google.devtools.mobileharness.shared.constant.inject.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -43,7 +43,6 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
-import com.google.inject.util.Modules;
 import java.io.File;
 import java.nio.file.Path;
 import javax.annotation.Nullable;
@@ -71,7 +70,6 @@ public final class RunCommandTest {
 
   @Captor private ArgumentCaptor<AtsSessionPluginConfig> atsSessionPluginConfigCaptor;
 
-  @Bind @SystemProperties
   private static final ImmutableMap<String, String> SYSTEM_PROPERTIES =
       ImmutableMap.of("XTS_ROOT", XTS_ROOT_DIR);
 
@@ -90,13 +88,14 @@ public final class RunCommandTest {
   public void setUp() {
     Injector injector =
         Guice.createInjector(
-            Modules.override(
-                    new ConsoleCommandTestModule(
-                        ServerEnvironment.of(
-                            Path.of("/fake_server_binary"),
-                            Path.of("/fake_java_binary"),
-                            Path.of("/fake_working_dir"))))
-                .with(BoundFieldModule.of(this)));
+            new ConsoleCommandTestModule(
+                ServerEnvironment.of(
+                    Path.of("/fake_server_binary"),
+                    Path.of("/fake_java_binary"),
+                    Path.of("/fake_working_dir")),
+                SYSTEM_PROPERTIES,
+                FlagsString.of("", ImmutableList.of())),
+            BoundFieldModule.of(this));
     commandLine =
         new CommandLine(RunCommand.class, new GuiceFactory(injector))
             .setCaseInsensitiveEnumValuesAllowed(true)

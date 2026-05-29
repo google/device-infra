@@ -33,18 +33,23 @@ import com.google.inject.Singleton;
 public class ConsoleCommandTestModule extends AbstractModule {
 
   private final ServerEnvironment serverEnvironment;
+  private final ImmutableMap<String, String> systemProperties;
+  private final FlagsString deviceInfraServiceFlags;
 
-  ConsoleCommandTestModule(ServerEnvironment serverEnvironment) {
+  ConsoleCommandTestModule(
+      ServerEnvironment serverEnvironment,
+      ImmutableMap<String, String> systemProperties,
+      FlagsString deviceInfraServiceFlags) {
     this.serverEnvironment = serverEnvironment;
+    this.systemProperties = systemProperties;
+    this.deviceInfraServiceFlags = deviceInfraServiceFlags;
   }
 
   @Override
   protected void configure() {
-    install(
-        new OlcServerConnectorModule(
-            FlagsString.of("", ImmutableList.of()), "ATS console", "fake_client_id"));
+    install(new OlcServerConnectorModule(deviceInfraServiceFlags, "ATS console", "fake_client_id"));
     install(new CompatibilityReportModule());
-    install(new CommonModule(ImmutableList.of(), ImmutableMap.of(), ImmutableMap.of()));
+    install(new CommonModule(ImmutableList.of(), ImmutableMap.of(), systemProperties));
   }
 
   @Provides

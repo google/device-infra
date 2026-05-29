@@ -20,17 +20,17 @@ import static com.google.common.truth.OptionalSubject.optionals;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.ServerEnvironment;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.GuiceFactory;
-import com.google.devtools.mobileharness.shared.constant.inject.Annotations.SystemProperties;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
-import com.google.inject.util.Modules;
 import java.nio.file.Path;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -50,7 +50,6 @@ public final class SetCommandTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
-  @Bind @SystemProperties
   private static final ImmutableMap<String, String> SYSTEM_PROPERTIES = ImmutableMap.of();
 
   @Mock @Bind @Nullable @ConsoleLineReader private LineReader lineReader;
@@ -62,13 +61,14 @@ public final class SetCommandTest {
   public void setUp() {
     Injector injector =
         Guice.createInjector(
-            Modules.override(
-                    new ConsoleCommandTestModule(
-                        ServerEnvironment.of(
-                            Path.of("/fake_server_binary"),
-                            Path.of("/fake_java_binary"),
-                            Path.of("/fake_working_dir"))))
-                .with(BoundFieldModule.of(this)));
+            new ConsoleCommandTestModule(
+                ServerEnvironment.of(
+                    Path.of("/fake_server_binary"),
+                    Path.of("/fake_java_binary"),
+                    Path.of("/fake_working_dir")),
+                SYSTEM_PROPERTIES,
+                FlagsString.of("", ImmutableList.of())),
+            BoundFieldModule.of(this));
     injector.injectMembers(this);
     commandLine = new CommandLine(RootCommand.class, new GuiceFactory(injector));
   }

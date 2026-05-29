@@ -18,37 +18,34 @@ package com.google.devtools.mobileharness.infra.ats.console.command;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
-import com.google.devtools.mobileharness.infra.ats.console.AtsConsole;
-import com.google.devtools.mobileharness.infra.ats.console.AtsConsoleModule;
+import com.google.devtools.mobileharness.infra.ats.common.constant.BuiltinFlags;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.ServerEnvironment;
+import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
+import com.google.devtools.mobileharness.infra.ats.console.GuiceFactory;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
-import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.util.truth.Correspondences;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
+import com.google.inject.testing.fieldbinder.Bind;
+import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.stream.Stream;
-import javax.inject.Inject;
+import java.time.Duration;
+import javax.annotation.Nullable;
 import org.jline.reader.LineReader;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -57,15 +54,13 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
+import picocli.CommandLine;
 
 @RunWith(JUnit4.class)
 public class ListCommandTest {
-
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final ImmutableList<String> CTS_MODULE_LIST =
       ImmutableList.of(
@@ -82,23 +77,24 @@ public class ListCommandTest {
   @Rule public final SetFlags flags = new SetFlags();
 
   private final LocalFileUtil realLocalFileUtil = new LocalFileUtil();
+  private final SystemUtil systemUtil = new SystemUtil();
 
-  @Mock private LineReader lineReader;
+  @Mock @Bind @Nullable @ConsoleLineReader private LineReader lineReader;
+
+  private ImmutableMap<String, String> systemProperties;
+
+  private FlagsString deviceInfraServiceFlags;
 
   @Captor private ArgumentCaptor<String> consoleStdoutCaptor;
 
-  private String publicDirPath;
-  private String tmpDirPath;
   private String xtsRootDirPath;
-
-  @Inject private AtsConsole atsConsole;
+  private CommandLine commandLine;
 
   @Before
   public void setUp() throws Exception {
-    // Prepares environment.
     int olcServerPort = PortProber.pickUnusedPort();
-    publicDirPath = tmpFolder.newFolder("public_dir").toString();
-    tmpDirPath = tmpFolder.newFolder("tmp_dir").toString();
+    String publicDirPath = tmpFolder.newFolder("public_dir").toString();
+    String tmpDirPath = tmpFolder.newFolder("tmp_dir").toString();
     String xtsResourceDirPath = tmpFolder.newFolder("xts_resource_dir").toString();
     String xtsServerResourceDirPath = tmpFolder.newFolder("xts_server_resource_dir").toString();
     xtsRootDirPath = tmpFolder.newFolder("xts_root_dir").toString();
@@ -108,103 +104,82 @@ public class ListCommandTest {
                 "java/com/google/devtools/mobileharness/infra/ats/common/"
                     + "olcserver/ats_olc_server_local_mode_deploy.jar"));
 
-    // Sets flags.
     ImmutableMap<String, String> flagMap =
-        ImmutableMap.of(
-            "ats_console_olc_server_path",
-            olcServerBinary.toString(),
-            "olc_server_port",
-            Integer.toString(olcServerPort),
-            "public_dir",
-            publicDirPath,
-            "detect_adb_device",
-            "false",
-            "no_op_device_num",
-            "1",
-            "simplified_log_format",
-            "true",
-            "tmp_dir_root",
-            tmpDirPath,
-            "xts_res_dir_root",
-            xtsResourceDirPath,
-            "xts_server_res_dir_root",
-            xtsServerResourceDirPath);
+        ImmutableMap.<String, String>builder()
+            .putAll(BuiltinFlags.atsConsoleFlagMap())
+            // keep-sorted start
+            .put("ats_console_olc_server_embedded_mode", "false")
+            .put("ats_console_olc_server_path", olcServerBinary.toString())
+            .put("detect_adb_device", "false")
+            .put("no_op_device_num", "1")
+            .put("olc_server_port", Integer.toString(olcServerPort))
+            .put("public_dir", publicDirPath)
+            .put("tmp_dir_root", tmpDirPath)
+            .put("xts_res_dir_root", xtsResourceDirPath)
+            .put("xts_server_res_dir_root", xtsServerResourceDirPath)
+            // keep-sorted end
+            .buildOrThrow();
     flags.setAll(flagMap);
+
     ImmutableList<String> flagList =
         flagMap.entrySet().stream()
             .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
             .collect(toImmutableList());
-    FlagsString deviceInfraServiceFlags = FlagsString.of(String.join(" ", flagList), flagList);
+    deviceInfraServiceFlags = FlagsString.of(String.join(" ", flagList), flagList);
 
-    // Sets console stdout/stderr.
-    ByteArrayOutputStream consoleOutOutputStream = new ByteArrayOutputStream();
-    PrintStream consoleOutPrintStream = new PrintStream(consoleOutOutputStream, false, UTF_8);
-    ByteArrayOutputStream consoleErrOutputStream = new ByteArrayOutputStream();
-    PrintStream consoleErrPrintStream = new PrintStream(consoleErrOutputStream, false, UTF_8);
+    systemProperties = ImmutableMap.of("XTS_ROOT", xtsRootDirPath);
 
-    // Creates ATS console.
     Injector injector =
         Guice.createInjector(
-            new AtsConsoleModule(
-                "fake_console_id",
-                deviceInfraServiceFlags,
-                lineReader,
-                consoleOutPrintStream,
-                consoleErrPrintStream),
-            new CommonModule(
-                /* mainArgs= */ ImmutableList.of(),
-                System.getenv(),
-                /* systemProperties= */ ImmutableMap.of("XTS_ROOT", xtsRootDirPath)));
+            new ConsoleCommandTestModule(
+                ServerEnvironment.of(
+                    olcServerBinary,
+                    Path.of(systemUtil.getJavaBin()),
+                    tmpFolder.getRoot().toPath()),
+                systemProperties,
+                deviceInfraServiceFlags),
+            BoundFieldModule.of(this));
     injector.injectMembers(this);
-    atsConsole.injector = injector;
+    commandLine = new CommandLine(RootCommand.class, new GuiceFactory(injector));
+    commandLine.setExecutionExceptionHandler(
+        (exception, commandLineToUse, parseResult) -> {
+          throw exception;
+        });
 
-    // Prepares the cts configs file for testing
     realLocalFileUtil.copyFileOrDir(TEST_CTS_CONFIG_DIR, xtsRootDirPath);
   }
 
-  @After
-  public void tearDown() throws Exception {
-    Path serverLogDir = Path.of(publicDirPath, "olc_server_log");
-    if (Files.exists(serverLogDir)) {
-      try (Stream<Path> files = Files.list(serverLogDir)) {
-        files.forEach(
-            path -> {
-              if (!Files.isDirectory(path)) {
-                try {
-                  String fileContent = Files.readString(path);
-                  logger.atInfo().log(
-                      "OLC server log file [%s]:\n"
-                          + "**BEGIN******************\n"
-                          + "%s\n"
-                          + "**END******************\n",
-                      path, fileContent);
-                } catch (IOException e) {
-                  logger.atWarning().withCause(e).log("Failed to read %s", path);
-                }
-              }
-            });
-      }
-    }
+  @Test
+  public void listDevices_expectedOutput() throws Exception {
+    int exitCode = commandLine.execute("list", "devices");
+
+    assertThat(exitCode).isEqualTo(0);
+    verify(lineReader, atLeastOnce()).printAbove(consoleStdoutCaptor.capture());
+    assertThat(consoleStdoutCaptor.getAllValues())
+        .comparingElementsUsing(Correspondences.contains())
+        .contains("NoOpDevice-0");
   }
 
   @Test
-  public void listDevicesAndModules_expectedOutput() throws Exception {
-    when(lineReader.readLine(anyString()))
-        .thenReturn("list devices")
-        .thenReturn("list devices all")
-        .thenReturn("list modules")
-        .thenReturn("exit");
+  public void listDevicesAll_expectedOutput() throws Exception {
+    int exitCode = commandLine.execute("list", "devices", "all");
 
-    atsConsole.run();
-
+    assertThat(exitCode).isEqualTo(0);
     verify(lineReader, atLeastOnce()).printAbove(consoleStdoutCaptor.capture());
-
     assertThat(consoleStdoutCaptor.getAllValues())
         .comparingElementsUsing(Correspondences.contains())
         .contains("TestDeviceState");
     assertThat(consoleStdoutCaptor.getAllValues())
         .comparingElementsUsing(Correspondences.contains())
-        .containsAtLeast("NoOpDevice-0", "NoOpDevice-0");
+        .contains("NoOpDevice-0");
+  }
+
+  @Test
+  public void listModules_expectedOutput() throws Exception {
+    int exitCode = commandLine.execute("list", "modules");
+
+    assertThat(exitCode).isEqualTo(0);
+    verify(lineReader, atLeastOnce()).printAbove(consoleStdoutCaptor.capture());
     for (String module : CTS_MODULE_LIST) {
       assertThat(consoleStdoutCaptor.getAllValues())
           .comparingElementsUsing(Correspondences.contains())
@@ -224,16 +199,27 @@ public class ListCommandTest {
     localFileUtil.prepareParentDir(resultFilePath);
     localFileUtil.copyFileOrDir(resultFileOriginalPath, resultFilePath);
 
-    when(lineReader.readLine(anyString())).thenReturn("list results").thenReturn("exit");
+    int exitCode = commandLine.execute("list", "results");
 
-    atsConsole.run();
-
+    assertThat(exitCode).isEqualTo(0);
     verify(lineReader)
         .printAbove(
             "Session  Pass  Fail  Warning  Modules Complete  Result Directory     Test Plan  Device"
                 + " serial(s)  Build ID            Product\n"
                 + "0        117   0     0        1 of 1            2023.11.30_12.34.56  cts       "
                 + " ABC, DEF          SQ3A.220705.003.A1  redfin");
+  }
+
+  @Test
+  public void listCommands() throws Exception {
+    commandLine.execute("run", "cts");
+
+    Sleeper.defaultSleeper().sleep(Duration.ofMillis(100));
+
+    int exitCode = commandLine.execute("list", "commands");
+
+    assertThat(exitCode).isEqualTo(0);
+    verify(lineReader).printAbove(matches("Command (1|n/a): \\[0m:00\\] (cts)?"));
   }
 
   @Test
@@ -251,13 +237,11 @@ public class ListCommandTest {
     Files.createFile(Path.of(subPlanFilePath2));
     Files.createFile(Path.of(subPlanFilePath3));
 
-    when(lineReader.readLine(anyString())).thenReturn("list subplans").thenReturn("exit");
+    int exitCode = commandLine.execute("list", "subplans");
 
-    atsConsole.run();
-
-    InOrder lineReaderInOrder = inOrder(lineReader);
-    lineReaderInOrder.verify(lineReader).printAbove("a_subplan");
-    lineReaderInOrder.verify(lineReader).printAbove("subplan1");
-    lineReaderInOrder.verify(lineReader).printAbove("subplan2");
+    assertThat(exitCode).isEqualTo(0);
+    verify(lineReader).printAbove("a_subplan");
+    verify(lineReader).printAbove("subplan1");
+    verify(lineReader).printAbove("subplan2");
   }
 }
