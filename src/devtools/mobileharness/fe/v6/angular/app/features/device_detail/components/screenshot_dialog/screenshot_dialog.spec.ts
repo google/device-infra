@@ -40,10 +40,10 @@ describe('ScreenshotDialog', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should format timestamp for display', () => {
-    const timestamp = new Date(dialogData.capturedAt);
-    const formatted = component.getDisplayTimestamp();
-    expect(formatted).toContain(timestamp.getFullYear().toString());
+  it('should show the device ID and datetime trigger in subtitle', () => {
+    const subtitleElement = document.querySelector('.dialog-subtitle-container');
+    expect(subtitleElement?.textContent).toContain('Device: test-device');
+    expect(subtitleElement?.querySelector('app-datetime-trigger')).toBeTruthy();
   });
 
   it('should format timestamp for filenames', () => {

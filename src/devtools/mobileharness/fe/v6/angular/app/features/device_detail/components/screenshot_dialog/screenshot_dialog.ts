@@ -18,6 +18,7 @@ import {
   setSafeHref,
 } from '@deviceinfra/app/shared/utils/safe_dom';
 import {ScreenshotDialogData} from '../../../../core/models/device_action';
+import {DatetimeTrigger} from '../../../../shared/components/datetime_trigger/datetime_trigger';
 import {Dialog} from '../../../../shared/components/config_common/dialog/dialog';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 
@@ -37,6 +38,7 @@ import {SnackBarService} from '../../../../shared/services/snackbar_service';
     MatButtonModule,
     MatProgressSpinnerModule,
     Dialog,
+    DatetimeTrigger,
   ],
 })
 export class ScreenshotDialog implements OnInit {
@@ -45,12 +47,6 @@ export class ScreenshotDialog implements OnInit {
   isDownloading = signal(false);
 
   ngOnInit() {}
-
-  getDisplayTimestamp(): string {
-    // We don't need to explicitly tell the timezone here, because the date
-    // string already contains the timezone.
-    return dateUtils.format(this.data.capturedAt);
-  }
 
   async downloadImage() {
     this.isDownloading.set(true);

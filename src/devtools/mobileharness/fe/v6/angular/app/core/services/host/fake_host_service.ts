@@ -1,6 +1,6 @@
 import {Injectable} from '@angular/core';
-import {Observable, of, throwError} from 'rxjs';
-import {delay} from 'rxjs/operators';
+import {Observable, of, throwError, timer} from 'rxjs';
+import {delay, switchMap} from 'rxjs/operators';
 
 import {
   DecommissionHostResponse,
@@ -77,12 +77,16 @@ export class FakeHostService extends HostService {
         overviewContent: scenario.overview,
       }).pipe(delay(1000));
     } else {
-      return throwError(
-        () =>
-          new Error(
-            `Host with '${hostName}' not found or has no overview in mock data.`,
+      return timer(1000).pipe(
+        switchMap(() =>
+          throwError(
+            () =>
+              new Error(
+                `Host with '${hostName}' not found or has no overview in mock data.`,
+              ),
           ),
-      ).pipe(delay(1000));
+        ),
+      );
     }
   }
 
@@ -99,18 +103,145 @@ export class FakeHostService extends HostService {
   override getHostDebugInfo(
     hostName: string,
   ): Observable<GetHostDebugInfoResponse> {
+    if (Math.random() < 0.25) {
+      return timer(1000).pipe(
+        switchMap(() =>
+          throwError(() => new Error('Random simulated failure')),
+        ),
+      );
+    }
     return of({
       results: [
         {
-          command: 'adb devices -l',
-          stdout: 'List of devices attached\n8070cdc device usb:1-5',
+          command: 'lsusb',
+          stdout: `Bus 002 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+Bus 001 Device 015: ID 05c6:90db Qualcomm, Inc. Xiaomi 14 Pro
+Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub`,
           stderr: '',
         },
         {
-          command: 'lsusb',
-          stdout:
-            'Bus 001 Device 002: ID 18d1:4ee2 Google Inc. Nexus/Pixel Device (MTP + debug)',
+          command: 'grep -E mobileharness|udcluster',
+          stdout: `628461 628459 408306 grep -E mobileharness|udcluster`,
           stderr: '',
+        },
+        {
+          command: 'adb devices -l',
+          stdout: `List of devices attached
+8070cdc device usb:1-5 product:shennong_global model:23116PN5BG device:shennong transport_id:1`,
+          stderr: '',
+        },
+        {
+          command: 'fastboot devices',
+          stdout: ``,
+          stderr: '',
+        },
+        {
+          command: 'ndm devices',
+          stdout: '',
+          stderr: `MobileHarnessException: Failed to get binary path of ndm [MH|UNDETERMINED|COMMAND_EXEC_FAIL|39998]`,
+        },
+        {
+          command: 'ndm -v',
+          stdout: '',
+          stderr: `MobileHarnessException: Failed to get binary path of ndm [MH|UNDETERMINED|COMMAND_EXEC_FAIL|39998]`,
+        },
+        {
+          command: 'some_command_with_stdout_and_stderr',
+          stdout: `This is line 1 of stdout.
+This is line 2 of stdout.`,
+          stderr: `This is line 1 of stderr - a warning message.`,
+        },
+        {
+          command: 'usb_device_detector --gid= --uid= --minloglevel=2',
+          stdout: `Serial idVendor:idProduct:product usb
+8070cdc 05c6:90db:Xiaomi_14_Pro usb:1-5`,
+          stderr: '',
+        },
+        {
+          command: 'ip link show',
+          stdout: `1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: eno1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP mode DEFAULT group default qlen 1000
+link/ether dc:4a:3e:83:25:c9 brd ff:ff:ff:ff:ff:ff
+altname enp0s31f6
+3: docker0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN mode DEFAULT group default
+link/ether 62:56:d1:31:48:41 brd ff:ff:ff:ff:ff:ff
+15: wwan0: <POINTOPOINT,MULTICAST,NOARP> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+link/none`,
+          stderr: '',
+        },
+        {
+          command: 'arp -a',
+          stdout: `? (100.87.74.61) at 08:81:f4:8b:f8:e0 [ether] on eno1
+? (100.87.74.43) at 00:e0:20:ac:90:9c [ether] on eno1
+_gateway (100.87.74.62) at 00:00:5e:00:01:aa [ether] on eno1
+? (100.87.74.60) at d8:b1:22:ec:1a:70 [ether] on eno1
+? (100.87.74.17) at 00:0e:c6:84:97:65 [ether] on eno1`,
+          stderr: '',
+        },
+        {
+          command: 'which adb',
+          stdout: `/usr/bin/adb`,
+          stderr: '',
+        },
+        {
+          command: 'ifconfig',
+          stdout: `docker0: flags=4099<UP,BROADCAST,MULTICAST> mtu 1500
+inet 172.17.0.1 netmask 255.255.0.0 broadcast 172.17.255.255
+ether 62:56:d1:31:48:41 txqueuelen 0 (Ethernet)
+RX packets 0 bytes 0 (0.0 B)
+RX errors 0 dropped 0 overruns 0 frame 0
+TX packets 0 bytes 0 (0.0 B)
+TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0
+
+eno1: flags=4163<UP,BROADCAST,RUNNING,MULTICAST> mtu 1500
+inet 100.87.74.47 netmask 255.255.255.192 broadcast 100.87.74.63
+inet6 2401:fa00:44:81c:79a:6479:2b10:4fd7 prefixlen 64 scopeid 0x0<global>
+inet6 2401:fa00:44:81c:57ab:c8f3:976c:8bbb prefixlen 64 scopeid 0x0<global>
+inet6 fe80::8599:e591:d289:896a prefixlen 64 scopeid 0x20<link>
+inet6 2401:fa00:44:81c:299c:a1b0:38e0:81b1 prefixlen 64 scopeid 0x0<global>
+inet6 2401:fa00:44:81c:c1ac:6fbb:b5ee:cc45 prefixlen 64 scopeid 0x0<global>
+inet6 2401:fa00:44:81c:19e2:5387:fc74:854b prefixlen 64 scopeid 0x0<global>
+inet6 2401:fa00:44:81c:e7cc:cbf:8f32:c0dc prefixlen 64 scopeid 0x0<global>
+inet6 2401:fa00:44:81c:e5c6:c384:7003:2df8 prefixlen 64 scopeid 0x0<global>
+inet6 2401:fa00:44:81c:8cca:ef61:3163:6886 prefixlen 64 scopeid 0x0<global>
+ether dc:4a:3e:83:25:c9 txqueuelen 1000 (Ethernet)
+RX packets 55466625 bytes 57965553569 (57.9 GB)
+RX errors 0 dropped 0 overruns 0 frame 0
+TX packets 16160631 bytes 5638170896 (5.6 GB)
+TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0
+device interrupt 16 memory 0xd3100000-d3120000
+
+lo: flags=73<UP,LOOPBACK,RUNNING> mtu 65536
+inet 127.0.0.1 netmask 255.0.0.0
+inet6 ::1 prefixlen 128 scopeid 0x10<host>
+loop txqueuelen 1000 (Local Loopback)
+RX packets 197019517 bytes 70929305047 (70.9 GB)
+RX errors 0 dropped 0 overruns 0 frame 0
+TX packets 197019517 bytes 70929305047 (70.9 GB)
+TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0`,
+          stderr: '',
+        },
+        /* Mock commands added to match all available mock data in the UX Design */
+        {
+          command: 'idevicedevmodectl list',
+          stdout: '',
+          stderr: `CommandStartException: Failed to start command, command=[/idevicedevmodectl list] [MH|UNDETERMINED|COMMAND_START_ERROR|39997]`,
+        },
+        {
+          command: 'UHUBCTL_LIST',
+          stdout: '',
+          stderr: `Unimplemented Command: UHUBCTL_LIST`,
+        },
+        {
+          command: 'CFGUTIL_LIST',
+          stdout: '',
+          stderr: `Unimplemented Command: CFGUTIL_LIST`,
+        },
+        {
+          command: 'DEVICECTL_LIST',
+          stdout: '',
+          stderr: `Unimplemented Command: DEVICECTL_LIST`,
         },
       ],
       timestamp: new Date().toISOString(),
@@ -170,12 +301,16 @@ export class FakeHostService extends HostService {
       scenario.overview.labServer.passThroughFlags = flags;
       return of({success: true}).pipe(delay(1000));
     } else {
-      return throwError(
-        () =>
-          new Error(
-            `Host with '${hostName}' not found or has no overview in mock data.`,
+      return timer(1000).pipe(
+        switchMap(() =>
+          throwError(
+            () =>
+              new Error(
+                `Host with '${hostName}' not found or has no overview in mock data.`,
+              ),
           ),
-      ).pipe(delay(1000));
+        ),
+      );
     }
   }
 
@@ -199,12 +334,16 @@ export class FakeHostService extends HostService {
       );
       return of(undefined).pipe(delay(1000));
     } else {
-      return throwError(
-        () =>
-          new Error(
-            `Host with '${hostName}' not found or has no devices in mock data.`,
+      return timer(1000).pipe(
+        switchMap(() =>
+          throwError(
+            () =>
+              new Error(
+                `Host with '${hostName}' not found or has no devices in mock data.`,
+              ),
           ),
-      ).pipe(delay(1000));
+        ),
+      );
     }
   }
 
@@ -448,9 +587,13 @@ export class FakeHostService extends HostService {
       // Simulate success if host is found in mock data.
       return of({}).pipe(delay(1000));
     } else {
-      return throwError(
-        () => new Error(`Host with '${hostName}' not found in mock data.`),
-      ).pipe(delay(1000));
+      return timer(1000).pipe(
+        switchMap(() =>
+          throwError(
+            () => new Error(`Host with '${hostName}' not found in mock data.`),
+          ),
+        ),
+      );
     }
   }
 

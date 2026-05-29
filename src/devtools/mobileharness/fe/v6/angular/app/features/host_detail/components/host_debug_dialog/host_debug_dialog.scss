@@ -1,0 +1,529 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.host-debug-dialog {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: #fff;
+  border-radius: 16px; // rounded-2xl
+  overflow: hidden;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04); // shadow-xl
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px; // px-6 py-4
+    border-bottom: 1px solid #f3f4f6; // border-gray-100
+    background-color: #f9fafb; // bg-gray-50
+    flex-shrink: 0;
+  }
+
+  &__title-section {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1.25rem; // text-xl
+    font-weight: 700; // font-bold
+    color: #1f2937; // text-gray-800
+  }
+
+  &__subtitle {
+    font-size: 0.875rem; // text-sm
+    color: #6b7280; // text-gray-500
+    margin-top: 4px; // mt-1
+  }
+
+  &__host-name {
+    font-weight: 700;
+    color: #374151; // text-gray-700
+  }
+
+  &__timestamp {
+    margin-left: 8px;
+  }
+
+  &__close-btn {
+    color: #9ca3af; // text-gray-400
+    &:hover {
+      color: #4b5563; // text-gray-600
+      background-color: #e5e7eb; // hover:bg-gray-200
+    }
+  }
+
+  &__body {
+    flex-grow: 1;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+    min-height: 0;
+    max-height: none;
+    padding: 0;
+  }
+
+  &__loading-overlay {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 60;
+
+    .host-debug-dialog__loading-text {
+      margin-top: 16px;
+      color: #4b5563;
+      font-weight: 500;
+      font-size: 1.125rem;
+    }
+  }
+
+  &__layout {
+    display: flex;
+    width: 100%;
+    height: 100%;
+  }
+
+  &__sidebar {
+    width: 300px;
+    min-width: 300px;
+    max-width: 300px;
+    background-color: #f9fafb; // bg-gray-50
+    border-right: 1px solid #e5e7eb; // border-gray-200
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  &__sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  &__sidebar-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  &__sidebar-actions {
+    display: flex;
+    gap: 8px;
+
+    .host-debug-dialog__action-btn {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #2563eb;
+      min-width: 0;
+      padding: 0 4px;
+      &:hover {
+        color: #1d4ed8;
+      }
+    }
+  }
+
+  &__sidebar-nav {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__sidebar-item {
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    font-size: 0.875rem;
+    color: #374151;
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: #f3f4f6;
+    }
+
+    &--error {
+      color: #ef4444;
+      &:hover {
+        background-color: #fee2e2;
+      }
+    }
+  }
+
+  &__sidebar-error-icon {
+    margin-right: 8px;
+    font-size: 1rem;
+    height: 1rem;
+    width: 1rem;
+  }
+
+  &__sidebar-command-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__main {
+    flex-grow: 1;
+    padding: 16px;
+    overflow-y: auto;
+    background-color: #f1f5f9; // bg-slate-100
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 0;
+  }
+
+  &__accordion-group {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  // Use higher specificity to override Angular Material defaults without !important
+  mat-accordion.host-debug-dialog__accordion-group {
+    mat-expansion-panel.host-debug-dialog__panel {
+      background-color: #fff;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      box-shadow: none;
+
+      &:hover {
+        box-shadow:
+          0 1px 3px 0 rgba(0, 0, 0, 0.1),
+          0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      }
+
+      &.mat-expansion-panel-spacing {
+        margin: 0;
+      }
+
+      ::ng-deep .mat-expansion-panel-body {
+        padding: 0;
+      }
+
+      ::ng-deep .mat-expansion-panel-content {
+        border-top: 1px solid #e5e7eb;
+      }
+
+      mat-expansion-panel-header.host-debug-dialog__panel-header {
+        padding: 12px 16px;
+        background-color: #fff;
+        height: auto;
+
+        &:focus,
+        &.cdk-keyboard-focused,
+        &.cdk-program-focused {
+          background-color: #fff;
+        }
+
+        ::ng-deep .mat-content {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-grow: 1;
+          overflow: hidden;
+          margin-right: 0;
+        }
+
+        // Styled to match prototype's smaller copy button
+        button.host-debug-dialog__copy-cmd-btn {
+          width: 24px;
+          height: 24px;
+          line-height: 24px;
+          padding: 0;
+          opacity: 0;
+          transition:
+            opacity 0.2s,
+            background-color 0.2s;
+          margin-left: 8px;
+
+          &:hover {
+            background-color: #f3f4f6;
+          }
+
+          ::ng-deep .mat-icon {
+            font-size: 16px;
+            width: 16px;
+            height: 16px;
+            line-height: 16px;
+          }
+        }
+
+        &:hover {
+          button.host-debug-dialog__copy-cmd-btn {
+            opacity: 1;
+          }
+        }
+      }
+    }
+  }
+
+  &__accordion-title {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    flex-grow: 1;
+    margin-right: 16px;
+  }
+
+  &__accordion-error-icon {
+    color: #ef4444;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+
+  &__accordion-code-icon {
+    color: #9ca3af;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+
+  &__accordion-command-text {
+    font-family: monospace;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #1f2937;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &--error {
+      color: #b91c1c; // text-red-700
+    }
+  }
+
+  &__expand-icon {
+    color: #6b7280;
+    transition: transform 0.2s;
+  }
+
+  &__accordion-content {
+    border-top: 1px solid #e5e7eb;
+    padding: 0; // Remove padding to let terminal theme fill the width
+    background-color: #111827; // gray-900, dark background for terminal feel
+  }
+
+  &__tabs {
+    display: flex;
+    background-color: #1f2937; // gray-800
+    padding: 8px 16px 0 16px;
+    gap: 8px;
+    border-bottom: 1px solid #374151; // gray-700
+  }
+
+  &__tab-btn {
+    padding: 8px 16px;
+    border: none;
+    background: none;
+    color: #9ca3af; // gray-400
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+
+    &:hover {
+      color: #e5e7eb; // gray-200
+    }
+
+    &--active {
+      color: #fff;
+      border-bottom-color: #3b82f6; // blue-500 for stdout
+
+      // Red indicator for stderr tab when active
+      &.host-debug-dialog__tab-btn--stderr {
+        border-bottom-color: #ef4444; // red-500
+      }
+    }
+  }
+
+  &__output {
+    position: relative;
+    border-radius: 0;
+    overflow: hidden;
+    border: none;
+    padding: 12px;
+    min-height: 64px; // Ensure enough height for copy button on short output
+
+    &--hidden {
+      display: none;
+    }
+
+    &:hover {
+      .host-debug-dialog__copy-btn {
+        opacity: 1;
+      }
+    }
+  }
+
+  &__copy-btn {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background-color: #374151;
+    color: #d1d5db;
+    opacity: 0;
+    transition: all 0.2s;
+    &:hover {
+      background-color: #1f2937;
+      color: #fff;
+    }
+  }
+
+  &__output-content {
+    margin: 0;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    overflow-x: auto;
+    white-space: pre-wrap;
+  }
+
+  &__terminal-theme {
+    background-color: #1e293b; // slate-800
+    border-color: #334155;
+    color: #e2e8f0; // slate-200
+
+    .host-debug-dialog__output-content {
+      color: #e2e8f0;
+    }
+  }
+
+  &__error-theme {
+    background-color: #271a1a; // Dark red background to match terminal feel
+    border-color: #4c1d15;
+    color: #ffb0b0; // Light red text for readability on dark background
+
+    .host-debug-dialog__output-content {
+      color: #ffb0b0;
+    }
+
+    .host-debug-dialog__copy-btn {
+      background-color: #3f2b2b;
+      color: #ffb0b0;
+      &:hover {
+        background-color: #553c3c;
+        color: #fff;
+      }
+    }
+  }
+
+  &__output--no-output {
+    background-color: #fff;
+    border-color: #e5e7eb;
+    color: #6b7280;
+    text-align: center;
+    padding: 24px;
+    font-style: italic;
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    border-top: 1px solid #f3f4f6;
+    background-color: #f9fafb;
+    flex-shrink: 0;
+  }
+
+  &__footer-left {
+    display: flex;
+    gap: 12px;
+  }
+
+  &__footer-btn {
+    border-radius: 4px;
+    padding: 0 16px;
+    height: 36px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+
+    .material-icons {
+      font-size: 18px;
+      margin-right: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 18px;
+      width: 18px;
+    }
+
+    &--outlined {
+      color: #2563eb; // Primary blue for text buttons
+      background-color: transparent;
+      border: none;
+      &:hover:not(:disabled) {
+        background-color: rgba(37, 99, 235, 0.08);
+      }
+      &:disabled {
+        opacity: 0.5;
+        color: #9ca3af;
+        cursor: not-allowed;
+      }
+    }
+
+    &--filled {
+      background-color: #2563eb; // primary blue
+      color: #fff;
+      &:hover:not(:disabled) {
+        filter: brightness(1.1);
+        transform: translateY(-1px);
+        box-shadow:
+          0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+      &:active:not(:disabled) {
+        transform: translateY(0);
+      }
+      &:disabled {
+        opacity: 0.5;
+        background-color: #9ca3af;
+        cursor: not-allowed;
+      }
+    }
+  }
+}
+
+@keyframes highlight-fade-blue {
+  0% {
+    box-shadow:
+      0 0 8px 4px rgba(59, 130, 246, 0.6),
+      0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  100% {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+}
+
+.highlight-flash {
+  animation: highlight-fade-blue 2s ease-out;
+}

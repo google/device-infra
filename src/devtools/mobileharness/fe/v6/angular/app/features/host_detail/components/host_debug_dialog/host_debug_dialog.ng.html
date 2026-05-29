@@ -1,0 +1,153 @@
+<div class="host-debug-dialog">
+  <!-- Header -->
+  <div class="host-debug-dialog__header">
+    <div class="host-debug-dialog__title-section">
+      <h2 class="host-debug-dialog__title">Host Debug Diagnostics</h2>
+      @if (debugInfo()) {
+        <div class="host-debug-dialog__subtitle">
+          Diagnostics from <span class="host-debug-dialog__host-name">{{ data.hostName }}</span>.
+          Snapshot from <app-datetime-trigger [timestamp]="debugInfo()!.timestamp"></app-datetime-trigger>.
+        </div>
+      }
+    </div>
+    <button mat-icon-button class="host-debug-dialog__close-btn" (click)="onClose()" aria-label="Close">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <!-- Body -->
+  <div class="host-debug-dialog__body">
+    <!-- Loading Overlay: Shown while fetching data -->
+    @if (isLoading()) {
+      <div class="host-debug-dialog__loading-overlay">
+        <div class="common-spinner"></div>
+        <p class="host-debug-dialog__loading-text">Running diagnostics on host...</p>
+      </div>
+    }
+
+    <!-- Main Layout: Visible after data is loaded -->
+    @if (!isLoading() && debugInfo()) {
+      <div class="host-debug-dialog__layout">
+        <!-- Commands Sidebar: Left pane for quick navigation -->
+        <aside class="host-debug-dialog__sidebar">
+          <div class="host-debug-dialog__sidebar-header">
+            <span class="host-debug-dialog__sidebar-title">Commands</span>
+            <div class="host-debug-dialog__sidebar-actions">
+              <button mat-button class="host-debug-dialog__action-btn" (click)="toggleExpandAll()">
+                {{ allExpanded() ? 'Collapse All' : 'Expand All' }}
+              </button>
+            </div>
+          </div>
+          <!-- Sidebar navigation: clicking an item scrolls to the corresponding command section -->
+          <nav class="host-debug-dialog__sidebar-nav">
+            @for (result of debugInfo()?.results; track result.command) {
+              <div
+                class="host-debug-dialog__sidebar-item"
+                [class.host-debug-dialog__sidebar-item--error]="result.stderr"
+                (click)="navigateToCommand(result.command)"
+                role="button"
+                tabindex="0"
+              >
+                @if (result.stderr) {
+                  <mat-icon class="host-debug-dialog__sidebar-error-icon">error_outline</mat-icon>
+                }
+                <span class="host-debug-dialog__sidebar-command-name">{{ result.command }}</span>
+              </div>
+            }
+          </nav>
+        </aside>
+
+        <!-- Main Content: Right pane displaying command details in accordions -->
+        <main #mainContent class="host-debug-dialog__main">
+          <mat-accordion multi class="host-debug-dialog__accordion-group">
+            @for (result of debugInfo()?.results; track result.command) {
+              <mat-expansion-panel
+                #commandPanel
+                [expanded]="expandedCommands()[result.command]"
+                (opened)="setExpandedState(result.command, true)"
+                (closed)="setExpandedState(result.command, false)"
+                [attr.id]="'cmd-' + getSafeId(result.command)"
+                class="host-debug-dialog__panel"
+                hideToggle
+              >
+                <mat-expansion-panel-header class="host-debug-dialog__panel-header">
+                  <div class="host-debug-dialog__accordion-title">
+                    @if (result.stderr) {
+                      <mat-icon class="host-debug-dialog__accordion-error-icon">error_outline</mat-icon>
+                    }
+                    @if (!result.stderr) {
+                      <mat-icon class="host-debug-dialog__accordion-code-icon">code</mat-icon>
+                    }
+                    <span class="host-debug-dialog__accordion-command-text" [class.host-debug-dialog__accordion-command-text--error]="result.stderr" [title]="result.command">{{ result.command }}</span>
+                    <button mat-icon-button class="host-debug-dialog__copy-cmd-btn" (click)="$event.stopPropagation(); copyToClipboard(result.command, 'Command copied')" matTooltip="Copy command">
+                      <mat-icon>content_copy</mat-icon>
+                    </button>
+                  </div>
+                  <div class="host-debug-dialog__accordion-actions">
+                    <mat-icon class="host-debug-dialog__expand-icon">{{ expandedCommands()[result.command] ? 'expand_less' : 'expand_more' }}</mat-icon>
+                  </div>
+                </mat-expansion-panel-header>
+
+                @if (expandedCommands()[result.command]) {
+                  <div class="host-debug-dialog__accordion-content">
+                    <!-- Tabs if both stdout and stderr -->
+                    @if (result.stdout && result.stderr) {
+                      <div class="host-debug-dialog__tabs">
+                        <button class="host-debug-dialog__tab-btn" [class.host-debug-dialog__tab-btn--active]="activeTabs()[result.command] === 'stdout'" (click)="switchTab(result.command, 'stdout')">STDOUT</button>
+                        <button class="host-debug-dialog__tab-btn host-debug-dialog__tab-btn--stderr" [class.host-debug-dialog__tab-btn--active]="activeTabs()[result.command] === 'stderr'" (click)="switchTab(result.command, 'stderr')">STDERR</button>
+                      </div>
+                    }
+
+                    <!-- STDOUT -->
+                    @if (result.stdout) {
+                      <div class="host-debug-dialog__output host-debug-dialog__output--stdout host-debug-dialog__terminal-theme" [class.host-debug-dialog__output--hidden]="result.stderr && activeTabs()[result.command] !== 'stdout'">
+                        <button mat-icon-button class="host-debug-dialog__copy-btn" (click)="copyToClipboard(result.stdout, 'STDOUT copied')" matTooltip="Copy STDOUT">
+                          <mat-icon>content_copy</mat-icon>
+                        </button>
+                        <pre class="host-debug-dialog__output-content">{{ result.stdout }}</pre>
+                      </div>
+                    }
+
+                    <!-- STDERR -->
+                    @if (result.stderr) {
+                      <div class="host-debug-dialog__output host-debug-dialog__output--stderr host-debug-dialog__error-theme" [class.host-debug-dialog__output--hidden]="result.stdout && activeTabs()[result.command] !== 'stderr'">
+                        <button mat-icon-button class="host-debug-dialog__copy-btn" (click)="copyToClipboard(result.stderr, 'STDERR copied')" matTooltip="Copy STDERR">
+                          <mat-icon>content_copy</mat-icon>
+                        </button>
+                        <pre class="host-debug-dialog__output-content">{{ result.stderr }}</pre>
+                      </div>
+                    }
+
+                    <!-- No Output -->
+                    @if (!result.stdout && !result.stderr) {
+                      <div class="host-debug-dialog__output host-debug-dialog__output--no-output">
+                        No output for command.
+                      </div>
+                    }
+                  </div>
+                }
+              </mat-expansion-panel>
+            }
+          </mat-accordion>
+        </main>
+      </div>
+    }
+  </div>
+
+  <!-- Footer -->
+  <div class="host-debug-dialog__footer">
+    <div class="host-debug-dialog__footer-left">
+      <button class="host-debug-dialog__footer-btn host-debug-dialog__footer-btn--outlined" (click)="fetchDebugInfo(true)" [disabled]="isLoading()">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+      <button class="host-debug-dialog__footer-btn host-debug-dialog__footer-btn--outlined" (click)="copyAll()" [disabled]="!debugInfo()">
+        <mat-icon>copy_all</mat-icon>
+        Copy All
+      </button>
+    </div>
+    <div class="host-debug-dialog__footer-right">
+      <button class="host-debug-dialog__footer-btn host-debug-dialog__footer-btn--filled" (click)="onClose()">Done</button>
+    </div>
+  </div>
+</div>

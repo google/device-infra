@@ -9,13 +9,14 @@ import {
   HostOverviewPageData,
 } from '../../../../core/models/host_overview';
 import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
-import {SnackBarService} from '../../../../shared/services/snackbar_service';
+import {MatDialog} from '@angular/material/dialog';
 import {HostActionBar} from './host_action_bar';
+import {HostDebugDialog} from '../host_debug_dialog/host_debug_dialog';
 
 describe('HostActionBar', () => {
   let component: HostActionBar;
   let fixture: ComponentFixture<HostActionBar>;
-  let snackBarService: jasmine.SpyObj<SnackBarService>;
+  let dialog: jasmine.SpyObj<MatDialog>;
   let comingSoonService: jasmine.SpyObj<ComingSoonService>;
 
   const mockPageData: HostOverviewPageData = {
@@ -49,13 +50,13 @@ describe('HostActionBar', () => {
   };
 
   beforeEach(async () => {
-    snackBarService = jasmine.createSpyObj('SnackBarService', ['showInfo']);
+    dialog = jasmine.createSpyObj('MatDialog', ['open']);
     comingSoonService = jasmine.createSpyObj('ComingSoonService', ['show']);
 
     await TestBed.configureTestingModule({
       imports: [HostActionBar, MatTooltipModule, NoopAnimationsModule],
       providers: [
-        {provide: SnackBarService, useValue: snackBarService},
+        {provide: MatDialog, useValue: dialog},
         {provide: ComingSoonService, useValue: comingSoonService},
         {provide: APP_DATA, useValue: {applicationId: 'test-app'}},
       ],
@@ -87,13 +88,16 @@ describe('HostActionBar', () => {
     expect(decommissionButton).toBeTruthy();
   });
 
-  it('should trigger snackbar on action click', () => {
+  it('should open debug dialog on action click', () => {
     const debugButton = fixture.debugElement.query(
       By.css('[data-testid="debug-button-2xl"]'),
     );
     debugButton.nativeElement.click();
-    expect(snackBarService.showInfo).toHaveBeenCalledWith(
-      jasmine.stringMatching(/Debug action triggered for test-host/),
+    expect(dialog.open).toHaveBeenCalledWith(
+      HostDebugDialog,
+      jasmine.objectContaining({
+        data: {hostName: 'test-host'},
+      }),
     );
   });
 

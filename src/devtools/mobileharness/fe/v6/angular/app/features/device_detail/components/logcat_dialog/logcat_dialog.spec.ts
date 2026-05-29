@@ -40,6 +40,12 @@ describe('LogcatDialog', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should show the device ID and datetime trigger in subtitle', () => {
+    const subtitleElement = document.querySelector('.dialog-subtitle-container');
+    expect(subtitleElement?.textContent).toContain('Device: test-device');
+    expect(subtitleElement?.querySelector('app-datetime-trigger')).toBeTruthy();
+  });
+
   it('should initialize with all log lines', () => {
     expect(component.allLogLines).toEqual(['line 1', 'line 2-test', 'line 3']);
     expect(component.filteredLogLines()).toEqual([

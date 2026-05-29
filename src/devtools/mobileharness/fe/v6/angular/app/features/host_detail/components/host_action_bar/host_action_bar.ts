@@ -21,11 +21,11 @@ import {HostActions} from '../../../../core/models/host_action';
 import type {HostOverviewPageData} from '../../../../core/models/host_overview';
 import {Environment} from '../../../../core/services/environment';
 import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
-import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {HostConfig} from '../host_config/host_config';
 import {HostEmpty} from '../host_config/host_empty/host_empty';
 import {HostSettings} from '../host_config/host_settings/host_settings';
 import {HostWizard} from '../host_config/host_wizard/host_wizard';
+import {HostDebugDialog} from '../host_debug_dialog/host_debug_dialog';
 import {HostDecommissionDialog} from '../host_decommission_dialog/host_decommission_dialog';
 
 /**
@@ -40,7 +40,6 @@ import {HostDecommissionDialog} from '../host_decommission_dialog/host_decommiss
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HostActionBar {
-  private readonly snackBar = inject(SnackBarService);
   private readonly dialog = inject(MatDialog);
   private readonly environment = inject(Environment);
   private readonly comingSoonService = inject(ComingSoonService);
@@ -136,7 +135,14 @@ export class HostActionBar {
   }
 
   readonly onDebug = () => {
-    this.snackBar.showInfo(`Debug action triggered for ${this.hostName}`);
+    this.dialog.open(HostDebugDialog, {
+      data: {hostName: this.hostName},
+      autoFocus: false,
+      width: '90vw',
+      height: '90vh',
+      maxHeight: '90vh',
+      maxWidth: '1280px',
+    });
   };
 
   readonly onDecommission = () => {

@@ -1,10 +1,12 @@
 <app-dialog
   title="Screenshot"
-  subtitle="Device: {{ data.deviceId }} | Captured at {{ getDisplayTimestamp() }}"
   width="60rem"
   height="80vh"
   footerType="normal"
 >
+  <div subtitle class="dialog-subtitle-container">
+    Device: {{ data.deviceId }} | Captured at <app-datetime-trigger [timestamp]="data.capturedAt"></app-datetime-trigger>
+  </div>
   <div class="screenshot-content">
     <div
       id="screenshot-image-container"

@@ -21,6 +21,7 @@ import {
   setSafeHref,
 } from '@deviceinfra/app/shared/utils/safe_dom';
 import {LogcatDialogData} from '../../../../core/models/device_action';
+import {DatetimeTrigger} from '../../../../shared/components/datetime_trigger/datetime_trigger';
 import {Dialog} from '../../../../shared/components/config_common/dialog/dialog';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 
@@ -44,6 +45,7 @@ import {SnackBarService} from '../../../../shared/services/snackbar_service';
     MatButtonModule,
     MatProgressSpinnerModule,
     Dialog,
+    DatetimeTrigger,
   ],
 })
 export class LogcatDialog implements OnInit {
@@ -57,12 +59,6 @@ export class LogcatDialog implements OnInit {
   ngOnInit() {
     this.allLogLines = this.data.logContent.split('\n');
     this.filteredLogLines.set(this.allLogLines);
-  }
-
-  getDisplayTimestamp(): string {
-    // We don't need to explicitly tell the timezone here, because the date
-    // string already contains the timezone.
-    return dateUtils.format(this.data.capturedAt);
   }
 
   filterLogs() {

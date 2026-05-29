@@ -1,10 +1,12 @@
 <app-dialog
   title="Logcat"
-  subtitle="Device: {{ data.deviceId }} | Log snapshot captured at {{ getDisplayTimestamp() }}. This is not a live log stream."
   width="80rem"
   height="80vh"
   footerType="normal"
 >
+  <div subtitle class="dialog-subtitle-container">
+    Device: {{ data.deviceId }} | Log snapshot captured at <app-datetime-trigger [timestamp]="data.capturedAt"></app-datetime-trigger>. This is not a live log stream.
+  </div>
   <mat-dialog-content class="logcat-dialog-content">
     <mat-form-field appearance="outline" subscriptSizing="dynamic" class="logcat-search-field">
       <mat-icon matPrefix>search</mat-icon>

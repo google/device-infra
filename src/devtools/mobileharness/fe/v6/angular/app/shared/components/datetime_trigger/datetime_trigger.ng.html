@@ -1,0 +1,51 @@
+<button
+  [matMenuTriggerFor]="menu"
+  class="datetime-trigger-btn"
+  (click)="$event.stopPropagation()"
+  (menuOpened)="onMenuOpened()"
+  (menuClosed)="onMenuClosed()"
+>
+  {{ formattedDate() }}
+</button>
+
+<mat-menu
+  #menu="matMenu"
+  class="datetime-popover-menu"
+  xPosition="after"
+  yPosition="below"
+>
+  <!-- Use a wrapper to prevent click events from closing the menu, except for copy buttons which we handle manually -->
+  <div class="datetime-popover-content" (click)="$event.stopPropagation()">
+    <dl class="datetime-grid">
+      <dt>Relative time</dt>
+      <dd>{{ relativeTime() }}</dd>
+      <button class="time-copy-btn" (click)="copyTime(relativeTime(), 'relative', $event)" aria-label="Copy relative time">
+        <mat-icon>{{ copiedFields()['relative'] ? 'check' : 'content_copy' }}</mat-icon>
+      </button>
+
+      <dt>Local time</dt>
+      <dd>{{ localTime() }}</dd>
+      <button class="time-copy-btn" (click)="copyTime(localTime(), 'local', $event)" aria-label="Copy local time">
+        <mat-icon>{{ copiedFields()['local'] ? 'check' : 'content_copy' }}</mat-icon>
+      </button>
+
+      <dt>Mountain View time</dt>
+      <dd>{{ mtvTime() }}</dd>
+      <button class="time-copy-btn" (click)="copyTime(mtvTime(), 'mtv', $event)" aria-label="Copy Mountain View time">
+        <mat-icon>{{ copiedFields()['mtv'] ? 'check' : 'content_copy' }}</mat-icon>
+      </button>
+
+      <dt>UTC time</dt>
+      <dd>{{ utcTime() }}</dd>
+      <button class="time-copy-btn" (click)="copyTime(utcTime(), 'utc', $event)" aria-label="Copy UTC time">
+        <mat-icon>{{ copiedFields()['utc'] ? 'check' : 'content_copy' }}</mat-icon>
+      </button>
+
+      <dt>Epoch time (ms)</dt>
+      <dd>{{ epochTime() }}</dd>
+      <button class="time-copy-btn" (click)="copyTime(epochTime(), 'epoch', $event)" aria-label="Copy epoch time">
+        <mat-icon>{{ copiedFields()['epoch'] ? 'check' : 'content_copy' }}</mat-icon>
+      </button>
+    </dl>
+  </div>
+</mat-menu>

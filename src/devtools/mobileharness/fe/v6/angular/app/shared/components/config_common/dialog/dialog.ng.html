@@ -4,7 +4,10 @@
       <ng-content select="[header-prefix]"></ng-content>
       <div class="header-title-container">
         <h2 class="config-title">{{ title }}</h2>
-        <p class="config-subtitle" [innerHTML]="subtitle | safeHtmlPipe"></p>
+        @if (subtitle) {
+          <p class="config-subtitle" [innerHTML]="subtitle | safeHtmlPipe"></p>
+        }
+        <ng-content select="[subtitle]"></ng-content>
       </div>
       <div class="header-menu-container">
         <div class="header-menu">
