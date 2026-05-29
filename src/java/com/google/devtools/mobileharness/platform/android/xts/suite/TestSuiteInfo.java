@@ -17,13 +17,16 @@
 package com.google.devtools.mobileharness.platform.android.xts.suite;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.base.Splitter;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.ats.common.plan.JarFileUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -41,6 +44,8 @@ public class TestSuiteInfo {
 
   /** Expected property filename in jar resource. */
   private static final String SUITE_INFO_PROPERTY = "test-suite-info.properties";
+
+  private static final String VERSION_FILE_NAME = "version.txt";
 
   private static final String STUB_BUILD_NUMBER = "[stub build number]";
   private static final String STUB_TARGET_ARCH = "[stub target arch]";
@@ -93,6 +98,9 @@ public class TestSuiteInfo {
               SUITE_INFO_PROPERTY, xtsTfJar),
           e);
     }
+
+    loadBuildNumberFromVersionFile()
+        .ifPresent(buildNumber -> testSuiteInfoProps.setProperty(BUILD_NUMBER, buildNumber));
   }
 
   private Properties loadSuiteInfoFromInputStream(InputStream testSuiteInfoPropsInputStream)
@@ -100,6 +108,23 @@ public class TestSuiteInfo {
     Properties props = new Properties();
     props.load(testSuiteInfoPropsInputStream);
     return props;
+  }
+
+  private Optional<String> loadBuildNumberFromVersionFile() {
+    Path versionFile = getToolsDir().resolve(VERSION_FILE_NAME);
+    try (BufferedReader reader = Files.newBufferedReader(versionFile, UTF_8)) {
+      String buildNumber = reader.readLine();
+      if (buildNumber != null) {
+        buildNumber = buildNumber.trim();
+        if (!buildNumber.isEmpty()) {
+          return Optional.of(buildNumber);
+        }
+      }
+    } catch (IOException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to read build number from %s", versionFile.toAbsolutePath());
+    }
+    return Optional.empty();
   }
 
   /** Gets the build number of the test suite. */

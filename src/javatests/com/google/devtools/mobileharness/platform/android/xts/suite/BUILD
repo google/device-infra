@@ -25,11 +25,13 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:jar_file_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:abi",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:module_arg",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_result_reporter",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_test_filter",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_helper",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_info",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_version",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_stats_helper",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
