@@ -228,6 +228,10 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
         break;
       }
 
+      // Needed, otherwise setting appops permission success is flaky but the command still
+      // succeeds without an error (b/505022628#comment16).
+      sleeper.sleep(Duration.ofSeconds(3));
+
       // In API >= 17, an explicitly permission grant to change config is needed via pm
       // since this permission is for system/dev only.
       try {
