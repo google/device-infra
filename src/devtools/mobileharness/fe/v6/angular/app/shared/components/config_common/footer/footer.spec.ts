@@ -51,7 +51,6 @@ describe('Footer Component', () => {
       '',
     );
   });
-
   it('should re-run permission check only when id or universe changes', () => {
     mockConfigService.checkDeviceWritePermission.calls.reset();
 

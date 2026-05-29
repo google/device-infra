@@ -1,0 +1,22 @@
+<div class="save-flags-confirm-box">
+  <div class="warning-callout">
+    <p class="warning-title">
+      <mat-icon class="info-icon-small">info</mat-icon>
+      Release Impact Warning
+    </p>
+    <p class="warning-text">
+      These flags will take effect during the <b>next release or restart</b>. Invalid flags will prevent the Lab Server from starting successfully.
+    </p>
+  </div>
+
+  <div class="flags-to-save-container">
+    <span class="section-title">Flags to be saved</span>
+    <div class="flags-scroll-box custom-scrollbar">
+      @if (flags) {
+        <code class="flags-code">{{ flags }}</code>
+      } @else {
+        <span class="italic text-gray-400">No flags (default configuration)</span>
+      }
+    </div>
+  </div>
+</div>

@@ -1,11 +1,8 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {MAT_DIALOG_DATA} from '@angular/material/dialog';
-import {
-  MatTestDialogOpener,
-  MatTestDialogOpenerModule,
-} from '@angular/material/dialog/testing';
+import {MatDialog} from '@angular/material/dialog';
+import {MatTestDialogOpener} from '@angular/material/dialog/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
-import {of} from 'rxjs';
+import {of, Subject} from 'rxjs';
 
 import {
   PopularFlag,
@@ -22,8 +19,10 @@ import {FlagsDialog, FlagsDialogData} from './flags_dialog';
 describe('FlagsDialog', () => {
   let component: FlagsDialog;
   let fixture: ComponentFixture<MatTestDialogOpener<FlagsDialog>>;
+  let opener: MatTestDialogOpener<FlagsDialog>;
   let hostService: jasmine.SpyObj<HostService>;
   let snackBarService: jasmine.SpyObj<SnackBarService>;
+  let dialog: jasmine.SpyObj<MatDialog>;
 
   const dialogData: FlagsDialogData = {
     hostName: 'test-host',
@@ -39,6 +38,7 @@ describe('FlagsDialog', () => {
       'showSuccess',
       'showError',
     ]);
+    dialog = jasmine.createSpyObj('MatDialog', ['open']);
     const configService = jasmine.createSpyObj('CONFIG_SERVICE', [
       'checkDeviceWritePermission',
       'checkHostWritePermission',
@@ -53,20 +53,26 @@ describe('FlagsDialog', () => {
     hostService.getPopularFlags.and.returnValue(of({flags: []}));
 
     await TestBed.configureTestingModule({
-      imports: [FlagsDialog, NoopAnimationsModule, MatTestDialogOpenerModule],
+      imports: [NoopAnimationsModule],
       providers: [
-        {provide: MAT_DIALOG_DATA, useValue: dialogData},
         {provide: HOST_SERVICE, useValue: hostService},
         {provide: SnackBarService, useValue: snackBarService},
         {provide: CONFIG_SERVICE, useValue: configService},
       ],
-    }).compileComponents();
+    })
+      .overrideComponent(FlagsDialog, {
+        set: {
+          providers: [{provide: MatDialog, useValue: dialog}],
+        },
+      })
+      .compileComponents();
 
     fixture = TestBed.createComponent(
       MatTestDialogOpener.withComponent(FlagsDialog, {data: dialogData}),
     );
+    opener = fixture.componentInstance;
+    component = opener.dialogRef.componentInstance;
     fixture.detectChanges();
-    component = fixture.componentInstance.dialogRef.componentInstance;
   });
 
   it('should create', () => {
@@ -127,10 +133,79 @@ describe('FlagsDialog', () => {
     };
     hostService.updatePassThroughFlags.and.returnValue(of(response));
 
+    const mockConfirmDialogRef = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    mockConfirmDialogRef.afterClosed.and.returnValue(of('primary'));
+    dialog.open.and.returnValue(mockConfirmDialogRef);
+
     component.save();
 
+    expect(dialog.open).toHaveBeenCalled();
+    expect(hostService.updatePassThroughFlags).toHaveBeenCalledWith(
+      'test-host',
+      '--flag1 --flag2',
+    );
     expect(component.isSaving()).toBeFalse();
     expect(snackBarService.showError).toHaveBeenCalledWith('Error message');
+  });
+
+  it('should handle save success response', () => {
+    const response: UpdatePassThroughFlagsResponse = {
+      success: true,
+    };
+    hostService.updatePassThroughFlags.and.returnValue(of(response));
+
+    const mockConfirmDialogRef = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    mockConfirmDialogRef.afterClosed.and.returnValue(of('primary'));
+    dialog.open.and.returnValue(mockConfirmDialogRef);
+
+    spyOn(opener.dialogRef, 'close');
+
+    component.save();
+
+    expect(dialog.open).toHaveBeenCalled();
+    expect(hostService.updatePassThroughFlags).toHaveBeenCalledWith(
+      'test-host',
+      '--flag1 --flag2',
+    );
+    expect(opener.dialogRef.close).toHaveBeenCalledWith('--flag1 --flag2');
+  });
+
+  it('should not save flags if confirmation is cancelled', () => {
+    const mockConfirmDialogRef = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    mockConfirmDialogRef.afterClosed.and.returnValue(of('cancel'));
+    dialog.open.and.returnValue(mockConfirmDialogRef);
+
+    component.save();
+
+    expect(dialog.open).toHaveBeenCalled();
+    expect(hostService.updatePassThroughFlags).not.toHaveBeenCalled();
+    expect(component.isSaving()).toBeFalse();
+  });
+
+  it('should set isSaving to true while saving', () => {
+    const subject = new Subject<UpdatePassThroughFlagsResponse>();
+    hostService.updatePassThroughFlags.and.returnValue(subject);
+
+    const mockConfirmDialogRef = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    mockConfirmDialogRef.afterClosed.and.returnValue(of('primary'));
+    dialog.open.and.returnValue(mockConfirmDialogRef);
+
+    component.save();
+
+    expect(component.isSaving()).toBeTrue();
+
+    subject.next({success: true});
+    subject.complete();
+
+    expect(component.isSaving()).toBeFalse();
   });
 
   it('should update hasPermission when permission changes', () => {

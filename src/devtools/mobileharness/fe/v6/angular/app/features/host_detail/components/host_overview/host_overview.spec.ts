@@ -3,13 +3,20 @@ import {MatDialog, MatDialogRef} from '@angular/material/dialog';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
 
-import {of, Subject, throwError} from 'rxjs';
+import {Observable, of, Subject, throwError} from 'rxjs';
 
+import {ActionBarAction} from '../../../../core/constants/action_bar_config';
 import {APP_DATA} from '../../../../core/models/app_data';
-import {TakeScreenshotResponse, GetLogcatResponse} from '../../../../core/models/device_action';
+import {
+  GetLogcatResponse,
+  TakeScreenshotResponse,
+} from '../../../../core/models/device_action';
 import {SubDeviceInfo} from '../../../../core/models/device_overview';
 import {PreflightLabServerReleaseResponse} from '../../../../core/models/host_action';
-import {HostOverview, DeviceSummary} from '../../../../core/models/host_overview';
+import {
+  DeviceSummary,
+  HostOverview,
+} from '../../../../core/models/host_overview';
 import {FakeHostService} from '../../../../core/services/host/fake_host_service';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
@@ -231,6 +238,40 @@ describe('HostOverview Component', () => {
     });
   });
 
+  it('should show coming soon popup on onUpgrade click when release action is not ready', () => {
+    component.host = {
+      ...mockHost,
+      labServer: {
+        ...mockHost.labServer,
+        actions: {
+          release: {
+            visible: true,
+            enabled: true,
+            isReady: false,
+            tooltip: '',
+          },
+          restart: mockHost.labServer.actions!.restart,
+          start: mockHost.labServer.actions!.start,
+          stop: mockHost.labServer.actions!.stop,
+          advancedOperations: mockHost.labServer.actions!.advancedOperations,
+        },
+      },
+    };
+    fixture.detectChanges();
+
+    component.onUpgrade();
+
+    const expectedUrl = component.legacyFeUrl
+      ? `${component.legacyFeUrl}/labdetailview/${component.host.hostName}/${component.host.ip}`
+      : undefined;
+
+    expect(comingSoonServiceSpy.show).toHaveBeenCalledWith(
+      ActionBarAction.HOST_RELEASE,
+      'hostDevices',
+      expectedUrl,
+    );
+  });
+
   it('should handle onRelease click, show release spinner, and open ReleaseDialog with preSelectLatest=false', () => {
     const subject = new Subject<PreflightLabServerReleaseResponse>();
     spyOn(hostService, 'preflightLabServerRelease').and.returnValue(subject);
@@ -309,55 +350,60 @@ describe('HostOverview Component', () => {
     );
   });
 
-  it('onRestart should trigger restartLabServer, show success snackbar on success', () => {
-    spyOn(hostService, 'restartLabServer').and.returnValue(
-      of({trackingUrl: 'http://restart-url'}),
+  it('should show release confirm dialog and handle confirm', () => {
+    const subject = new Subject<PreflightLabServerReleaseResponse>();
+    spyOn(hostService, 'preflightLabServerRelease').and.returnValue(subject);
+
+    component.showReleaseConfirmDialog();
+
+    // Verify ConfirmDialog was opened
+    expect(dialogSpy.open).toHaveBeenCalledWith(
+      ConfirmDialog,
+      jasmine.objectContaining({
+        data: jasmine.objectContaining({
+          title: 'Flags Updated',
+        }),
+      }),
     );
 
-    component.onRestart();
+    // Get the dialog config passed to open
+    const dialogArgs = dialogSpy.open.calls.mostRecent().args;
+    const dialogData = dialogArgs[1]?.data as
+      | {onConfirm?: () => Observable<void>}
+      | undefined;
+    expect(dialogData?.onConfirm).toBeDefined();
 
-    expect(hostService.restartLabServer).toHaveBeenCalledWith(
-      mockHost.hostName,
+    // Trigger onConfirm
+    dialogData!.onConfirm!().subscribe({
+      error: () => {},
+    });
+
+    // Verify preflight check was triggered
+    expect(hostService.preflightLabServerRelease).toHaveBeenCalledWith(
+      component.host.hostName,
     );
-    expect(snackBarSpy.showSuccess).toHaveBeenCalledWith(
-      'Lab Server restarting...',
-    );
+    expect(component.isOpeningRelease()).toBeTrue();
   });
 
-  it('onRestart should show error snackbar on restartLabServer error', () => {
-    spyOn(hostService, 'restartLabServer').and.returnValue(
-      throwError(() => new Error('Restart failed')),
-    );
+  it('should show No Access dialog when preflight returns permissionDenied', () => {
+    const subject = new Subject<PreflightLabServerReleaseResponse>();
+    spyOn(hostService, 'preflightLabServerRelease').and.returnValue(subject);
 
-    component.onRestart();
+    component.onRelease();
 
-    expect(snackBarSpy.showError).toHaveBeenCalledWith(
-      'Failed to restart: Restart failed',
-    );
-  });
+    // Emit permissionDenied
+    subject.next({permissionDenied: {}});
+    subject.complete();
 
-  it('onStop should trigger stopLabServer, show success snackbar on success', () => {
-    spyOn(hostService, 'stopLabServer').and.returnValue(
-      of({trackingUrl: 'http://stop-url'}),
-    );
-
-    component.onStop();
-
-    expect(hostService.stopLabServer).toHaveBeenCalledWith(mockHost.hostName);
-    expect(snackBarSpy.showSuccess).toHaveBeenCalledWith(
-      'Lab Server stopping...',
-    );
-  });
-
-  it('onStop should show error snackbar on stopLabServer error', () => {
-    spyOn(hostService, 'stopLabServer').and.returnValue(
-      throwError(() => new Error('Stop failed')),
-    );
-
-    component.onStop();
-
-    expect(snackBarSpy.showError).toHaveBeenCalledWith(
-      'Failed to stop: Stop failed',
+    // Verify ConfirmDialog was opened with "No Access"
+    expect(dialogSpy.open).toHaveBeenCalledWith(
+      ConfirmDialog,
+      jasmine.objectContaining({
+        data: jasmine.objectContaining({
+          title: 'No Access',
+          type: 'error',
+        }),
+      }),
     );
   });
 
@@ -403,14 +449,21 @@ describe('HostOverview Component', () => {
     expect(dialogData.primaryButtonLabel).toBe('Release Now');
 
     dialogData.onConfirm();
-    expect(component.preflightAndOpenRelease).toHaveBeenCalledWith({preSelectCurrent: true});
+    expect(component.preflightAndOpenRelease).toHaveBeenCalledWith();
   });
 
   it('startRemoteControl should delegate to deviceActions', () => {
     const mockDevices: DeviceSummary[] = [
-      { id: 'device-1', model: 'Pixel 9', types: [], subDevices: [] } as unknown as DeviceSummary
+      {
+        id: 'device-1',
+        model: 'Pixel 9',
+        types: [],
+        subDevices: [],
+      } as unknown as DeviceSummary,
     ];
-    const remoteControlService = TestBed.inject(RemoteControlService) as jasmine.SpyObj<RemoteControlService>;
+    const remoteControlService = TestBed.inject(
+      RemoteControlService,
+    ) as jasmine.SpyObj<RemoteControlService>;
     remoteControlService.startRemoteControl.and.returnValue(of(undefined));
 
     component.startRemoteControl(mockDevices);
@@ -419,9 +472,19 @@ describe('HostOverview Component', () => {
   });
 
   it('startSubDeviceRemoteControl should delegate to deviceActions with sub-device options', () => {
-    const mockParent: DeviceSummary = { id: 'parent-1', model: 'Pixel 9', types: [], subDevices: [] } as unknown as DeviceSummary;
-    const mockSub: SubDeviceInfo = { id: 'sub-1', model: 'Pixel 8' } as unknown as SubDeviceInfo;
-    const remoteControlService = TestBed.inject(RemoteControlService) as jasmine.SpyObj<RemoteControlService>;
+    const mockParent: DeviceSummary = {
+      id: 'parent-1',
+      model: 'Pixel 9',
+      types: [],
+      subDevices: [],
+    } as unknown as DeviceSummary;
+    const mockSub: SubDeviceInfo = {
+      id: 'sub-1',
+      model: 'Pixel 8',
+    } as unknown as SubDeviceInfo;
+    const remoteControlService = TestBed.inject(
+      RemoteControlService,
+    ) as jasmine.SpyObj<RemoteControlService>;
     remoteControlService.startRemoteControl.and.returnValue(of(undefined));
 
     component.startSubDeviceRemoteControl(mockSub, mockParent);
@@ -429,22 +492,28 @@ describe('HostOverview Component', () => {
     expect(remoteControlService.startRemoteControl).toHaveBeenCalledWith(
       component.host.hostName,
       jasmine.any(Array),
-      true
+      true,
     );
   });
 
   it('takeScreenshot should delegate to deviceActions', () => {
-    const mockDevice = { id: 'device-1' } as unknown as DeviceSummary;
-    const deviceActionService = TestBed.inject(DeviceActionService) as jasmine.SpyObj<DeviceActionService>;
-    deviceActionService.takeScreenshot.and.returnValue(of({} as TakeScreenshotResponse));
+    const mockDevice = {id: 'device-1'} as unknown as DeviceSummary;
+    const deviceActionService = TestBed.inject(
+      DeviceActionService,
+    ) as jasmine.SpyObj<DeviceActionService>;
+    deviceActionService.takeScreenshot.and.returnValue(
+      of({} as TakeScreenshotResponse),
+    );
 
     component.takeScreenshot(mockDevice);
 
     expect(deviceActionService.takeScreenshot).toHaveBeenCalledWith('device-1');
   });
   it('getLogcat should delegate to deviceActions', () => {
-    const mockDevice = { id: 'device-1' } as unknown as DeviceSummary;
-    const deviceActionService = TestBed.inject(DeviceActionService) as jasmine.SpyObj<DeviceActionService>;
+    const mockDevice = {id: 'device-1'} as unknown as DeviceSummary;
+    const deviceActionService = TestBed.inject(
+      DeviceActionService,
+    ) as jasmine.SpyObj<DeviceActionService>;
     deviceActionService.getLogcat.and.returnValue(of({} as GetLogcatResponse));
 
     component.getLogcat(mockDevice);
@@ -456,22 +525,24 @@ describe('HostOverview Component', () => {
     const mockDevice = {
       id: 'device-1',
       actions: {
-        flash: { params: { deviceType: 'Pixel' } }
-      }
+        flash: {params: {deviceType: 'Pixel'}},
+      },
     } as unknown as DeviceSummary;
-    const deviceActionService = TestBed.inject(DeviceActionService) as jasmine.SpyObj<DeviceActionService>;
+    const deviceActionService = TestBed.inject(
+      DeviceActionService,
+    ) as jasmine.SpyObj<DeviceActionService>;
 
     component.flashDevice(mockDevice);
 
     expect(deviceActionService.flashDevice).toHaveBeenCalledWith(
       'device-1',
       component.host.hostName,
-      jasmine.objectContaining({ deviceType: 'Pixel' }),
+      jasmine.objectContaining({deviceType: 'Pixel'}),
     );
   });
 
   it('quarantineDevice should delegate to deviceActions and reload devices on success', () => {
-    const mockDevice = { id: 'device-1' } as unknown as DeviceSummary;
+    const mockDevice = {id: 'device-1'} as unknown as DeviceSummary;
     const quarantineSpy = jasmine.createSpy('quarantineDevice');
     (component as unknown as {deviceActions: unknown}).deviceActions = {
       quarantineDevice: quarantineSpy,
@@ -483,12 +554,12 @@ describe('HostOverview Component', () => {
 
     expect(quarantineSpy).toHaveBeenCalledWith(
       'device-1',
-      jasmine.objectContaining({ onSuccess: jasmine.any(Function) })
+      jasmine.objectContaining({onSuccess: jasmine.any(Function)}),
     );
 
     const mostRecentCall = quarantineSpy.calls.mostRecent();
     expect(mostRecentCall).toBeTruthy();
-    const options = mostRecentCall!.args[1] as { onSuccess: () => void };
+    const options = mostRecentCall!.args[1] as {onSuccess: () => void};
     expect(options.onSuccess).toBeTruthy();
 
     options.onSuccess();

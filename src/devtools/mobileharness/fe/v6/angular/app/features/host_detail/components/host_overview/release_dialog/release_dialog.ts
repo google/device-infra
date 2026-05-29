@@ -20,8 +20,13 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatInputModule} from '@angular/material/input';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 
-import {DeployableVersion} from '@deviceinfra/app/core/models/host_action';
+import {
+  DeployableVersion,
+  ReleaseLabServerRequest,
+} from '@deviceinfra/app/core/models/host_action';
+import {HOST_SERVICE} from '@deviceinfra/app/core/services/host/host_service';
 import {FlagsDialog} from '@deviceinfra/app/features/host_detail/components/host_overview/flags_dialog/flags_dialog';
+import {TrackingDialog} from '@deviceinfra/app/features/host_detail/components/host_overview/tracking_dialog/tracking_dialog';
 import {Dialog} from '@deviceinfra/app/shared/components/config_common/dialog/dialog';
 import {SnackBarService} from '@deviceinfra/app/shared/services/snackbar_service';
 
@@ -67,6 +72,7 @@ export class ReleaseDialog implements OnInit {
   readonly data: ReleaseDialogData = inject(MAT_DIALOG_DATA);
   private readonly snackBar = inject(SnackBarService);
   private readonly dialog = inject(MatDialog);
+  private readonly hostService = inject(HOST_SERVICE);
 
   readonly currentStep = signal<number>(1);
   readonly selectedVersion = signal<DeployableVersion | null>(null);
@@ -98,11 +104,14 @@ export class ReleaseDialog implements OnInit {
   });
 
   readonly versionDeltaInfo = computed<VersionDelta>(() => {
-    const target = this.selectedVersion()?.version || '';
-    const current =
+    const targetRaw = this.selectedVersion()?.version || '';
+    const currentRaw =
       this.formattedAvailableVersions().find(
         (v) => v.status === 'CURRENT' || v.status === 'LATEST_AND_CURRENT',
       )?.version || '';
+
+    const target = targetRaw.replace(/^v/i, '');
+    const current = currentRaw.replace(/^v/i, '');
 
     const defaultResult: VersionDelta = {
       type: 'deploy',
@@ -114,8 +123,8 @@ export class ReleaseDialog implements OnInit {
       return defaultResult;
     }
 
-    const s1 = target.replace(/^v/i, '').split('.');
-    const s2 = current.replace(/^v/i, '').split('.');
+    const s1 = target.split('.');
+    const s2 = current.split('.');
 
     let type: 'upgrade' | 'downgrade' | 'redeploy' = 'redeploy';
 
@@ -218,14 +227,34 @@ export class ReleaseDialog implements OnInit {
   }
 
   deploy() {
+    const version = this.selectedVersion()?.version;
+    if (!version) {
+      this.snackBar.showError('No version selected');
+      return;
+    }
     this.isDeploying.set(true);
-    // Simulate deployment delay
-    setTimeout(() => {
-      this.isDeploying.set(false);
-      this.snackBar.showSuccess(
-        `Deployed ${this.selectedVersion()?.version} successfully`,
-      );
-    }, 1500);
+    const req: ReleaseLabServerRequest = {
+      version,
+      flags: this.tempFlags(),
+      releaseName: this.selectedVersion()?.releaseName,
+    };
+    const response$ = this.hostService.releaseLabServer(
+      this.data.hostName,
+      req,
+    );
+
+    this.dialog.open(TrackingDialog, {
+      data: {
+        hostName: this.data.hostName,
+        version,
+        flags: this.tempFlags(),
+        response$,
+      },
+      panelClass: 'tracking-dialog-panel',
+      autoFocus: false,
+    });
+
+    this.isDeploying.set(false);
   }
 
   openFlagsDialog() {

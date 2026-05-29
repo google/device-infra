@@ -12,6 +12,7 @@ import {FormsModule} from '@angular/forms';
 import {MatButtonModule} from '@angular/material/button';
 import {
   MAT_DIALOG_DATA,
+  MatDialog,
   MatDialogModule,
   MatDialogRef,
 } from '@angular/material/dialog';
@@ -19,7 +20,7 @@ import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatIconModule} from '@angular/material/icon';
 import {MatInputModule} from '@angular/material/input';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
-import {take} from 'rxjs/operators';
+import {finalize, take} from 'rxjs/operators';
 
 import {SnackBarService} from '@deviceinfra/app/shared/services/snackbar_service';
 import {WritePermissionResult} from '../../../../../core/models/action_common';
@@ -29,6 +30,8 @@ import {
 } from '../../../../../core/models/host_action';
 import {HOST_SERVICE} from '../../../../../core/services/host/host_service';
 import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
+import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/confirm_dialog';
+import {SaveFlagsConfirmContent} from './save_flags_confirm_content/save_flags_confirm_content';
 
 /**
  * Structure for passing data including host identity and current flags to FlagsDialog.
@@ -62,6 +65,7 @@ export interface FlagsDialogData {
 export class FlagsDialog implements OnInit {
   readonly data = inject<FlagsDialogData>(MAT_DIALOG_DATA);
   private readonly dialogRef = inject(MatDialogRef<FlagsDialog>);
+  private readonly dialog = inject(MatDialog);
   private readonly hostService = inject(HOST_SERVICE);
   private readonly snackBarService = inject(SnackBarService);
 
@@ -249,30 +253,51 @@ export class FlagsDialog implements OnInit {
       this.currentFlagsArray.set(flags);
     }
 
-    this.isSaving.set(true);
+    const confirmDialogRef = this.dialog.open(ConfirmDialog, {
+      data: {
+        title: 'Save Pass-through Flags?',
+        contentComponent: SaveFlagsConfirmContent,
+        contentComponentInputs: {
+          flags: finalString,
+        },
+        type: 'warning',
+        customIcon: 'warning',
+        primaryButtonLabel: 'Save Anyway',
+        secondaryButtonLabel: 'Cancel',
+      },
+      panelClass: 'confirm-dialog-panel',
+      autoFocus: false,
+    });
 
-    this.hostService
-      .updatePassThroughFlags(this.data.hostName, finalString)
-      .pipe(take(1))
-      .subscribe({
-        next: (response: UpdatePassThroughFlagsResponse) => {
-          if (response.success) {
-            this.isSaving.set(false);
-            this.dialogRef.close(finalString);
-          } else {
-            this.isSaving.set(false);
-            const msg =
-              response.error?.message ||
-              response.error?.code ||
-              'Failed to save flags';
-            this.snackBarService.showError(msg);
-          }
-        },
-        error: () => {
-          this.isSaving.set(false);
-          this.snackBarService.showError('Failed to save flags');
-        },
-      });
+    confirmDialogRef.afterClosed().subscribe((result) => {
+      if (result === 'primary') {
+        this.isSaving.set(true);
+        this.hostService
+          .updatePassThroughFlags(this.data.hostName, finalString)
+          .pipe(
+            take(1),
+            finalize(() => {
+              this.isSaving.set(false);
+            }),
+          )
+          .subscribe({
+            next: (response: UpdatePassThroughFlagsResponse) => {
+              if (response.success) {
+                this.dialogRef.close(finalString);
+              } else {
+                const msg =
+                  response.error?.message ||
+                  response.error?.code ||
+                  'Failed to save flags';
+                this.snackBarService.showError(msg);
+              }
+            },
+            error: () => {
+              this.snackBarService.showError('Failed to save flags');
+            },
+          });
+      }
+    });
   }
 
   handlePermissionChange(result: WritePermissionResult) {

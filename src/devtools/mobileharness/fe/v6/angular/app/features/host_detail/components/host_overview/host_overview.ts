@@ -62,19 +62,19 @@ import {
   NavItem,
 } from '../../../../shared/components/master_detail_layout/master_detail_layout';
 import {OverflowList} from '../../../../shared/components/overflow_list/overflow_list';
-import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
 import {
   SearchableListOverlayComponent,
   SearchableListOverlayData,
 } from '../../../../shared/components/searchable_list_overlay/searchable_list_overlay';
+import {useDeviceActions} from '../../../../shared/composables/device_actions';
+import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {dateUtils} from '../../../../shared/utils/date_utils';
 import {objectUtils} from '../../../../shared/utils/object_utils';
-import {useDeviceActions} from '../../../../shared/composables/device_actions';
 import {ActionNoPermissionContent} from './action_no_permission_content/action_no_permission_content';
 import {DecommissionContent} from './decommission_content/decommission_content';
 import {FlagsDialog} from './flags_dialog/flags_dialog';
-import {NoValidVersionsContent} from './no_valid_versions_content/no_valid_versions_content';
+import {NoValidVersionsContent} from './release_dialog/no_valid_versions_content/no_valid_versions_content';
 import {ReleaseDialog} from './release_dialog/release_dialog';
 
 const HEALTH_SEMANTIC_MAP: Record<
@@ -260,15 +260,16 @@ export class HostOverviewPage implements OnChanges {
   deviceFilterValue = '';
   isDeviceLoading = signal(false);
   expandedElement = signal<DeviceSummary | null>(null);
-  readonly isOpeningRelease = signal(false);
-  readonly isOpeningUpgrade = signal(false);
-  readonly isOpeningRedeploy = signal(false);
-  readonly isOpeningReleaseDialog = computed(
-    () =>
+  readonly isOpeningReleaseDialog = computed(() => {
+    return (
       this.isOpeningRelease() ||
       this.isOpeningUpgrade() ||
-      this.isOpeningRedeploy(),
-  );
+      this.isOpeningRedeploy()
+    );
+  });
+  isOpeningUpgrade = signal(false);
+  isOpeningRedeploy = signal(false);
+  isOpeningRelease = signal(false);
 
   // --- Dimensions Overlay State ---
   activeOverlay = signal<{
@@ -406,6 +407,14 @@ export class HostOverviewPage implements OnChanges {
       this.selection.clear();
       this.passThroughFlags.set(this.host.labServer.passThroughFlags);
       this.loadDevices();
+
+      console.log('*** Current host data received by component:', this.host);
+      console.log(
+        '*** canUpgrade value:',
+        this.host.canUpgrade,
+        'Type:',
+        typeof this.host.canUpgrade,
+      );
     }
   }
 
@@ -437,7 +446,21 @@ export class HostOverviewPage implements OnChanges {
   }
 
   onUpgrade() {
-    this.onRelease({preSelectLatest: true});
+    if (this.host.labServer.actions?.release?.isReady) {
+      this.preflightAndOpenRelease({preSelectLatest: true}).subscribe({
+        error: () => {},
+      });
+    } else {
+      this.showComingSoonPopup('Release');
+    }
+  }
+
+  onRelease(
+    options: {preSelectLatest?: boolean; preSelectCurrent?: boolean} = {},
+  ) {
+    this.preflightAndOpenRelease(options).subscribe({
+      error: () => {},
+    });
   }
 
   getLabActivitySemantic(activity: LabServerActivity) {
@@ -474,33 +497,25 @@ export class HostOverviewPage implements OnChanges {
         ) {
           this.passThroughFlags.set(result);
           this.host.labServer.passThroughFlags = result;
-          this.showRestartDialog();
+          this.showReleaseConfirmDialog();
         }
       });
   }
 
-  showRestartDialog() {
+  showReleaseConfirmDialog() {
     const dialogData = {
       title: 'Flags Updated',
       content: `Pass-through flags have been updated successfully. Would you like to perform a release now to apply these changes?`,
       customIcon: 'rocket_launch',
       primaryButtonLabel: 'Release Now',
       secondaryButtonLabel: 'Later',
-      onConfirm: () => this.preflightAndOpenRelease({preSelectCurrent: true}),
+      onConfirm: () => this.preflightAndOpenRelease(),
     };
 
     this.dialog.open(ConfirmDialog, {
       data: dialogData,
       panelClass: 'confirm-dialog-panel',
       disableClose: true,
-    });
-  }
-
-  onRelease(
-    options: {preSelectLatest?: boolean; preSelectCurrent?: boolean} = {},
-  ) {
-    this.preflightAndOpenRelease(options).subscribe({
-      error: () => {},
     });
   }
 
@@ -969,7 +984,9 @@ export class HostOverviewPage implements OnChanges {
 
   quarantineDevice(element: DeviceSummary): void {
     this.deviceActions.quarantineDevice(element.id, {
-      onSuccess: () => { this.loadDevices(); },
+      onSuccess: () => {
+        this.loadDevices();
+      },
     });
   }
 }
