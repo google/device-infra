@@ -5,7 +5,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"net/url"
 	"os"
@@ -47,7 +47,8 @@ func main() {
 	flag.Parse()
 
 	if cfg.UseSAToken && cfg.SAKeyFile == "" {
-		log.Fatal("sa_key_file must be set when use_sa_token is true")
+		slog.Error("sa_key_file must be set when use_sa_token is true")
+		os.Exit(1)
 	}
 
 	audience := cfg.AcceptorTarget
@@ -69,19 +70,21 @@ func main() {
 	// 1. Perform pre-flight check
 	dialerSvc := dialer.New(context.Background(), cfg.Hostname, cfg.ForwardAddress, newTransporter)
 	if err := dialerSvc.CheckConnection(context.Background()); err != nil {
-		log.Fatalf("Pre-flight check failed: %v", err)
+		slog.Error("Pre-flight check failed", "error", err)
+		os.Exit(1)
 	}
 
 	for _, fc := range forwardConduits {
 		req, err := flagutil.ParseForwardConduitFlag(fc)
 		if err != nil {
-			log.Fatalf("Failed to parse -L flag %q: %v", fc, err)
+			slog.Error("Failed to parse -L flag", "flag", fc, "error", err)
+			os.Exit(1)
 		}
 		req.InstanceId = cfg.Hostname
 		if req.InstanceId == "" {
 			hostname, err := os.Hostname()
 			if err != nil {
-				log.Printf("Failed to get hostname: %v", err)
+				slog.Warn("Failed to get hostname", "error", err)
 				// Proceed with an empty InstanceId if os.Hostname fails.
 			} else {
 				req.InstanceId = hostname
@@ -90,15 +93,17 @@ func main() {
 
 		resp, err := dialerSvc.EstablishConduit(context.Background(), req)
 		if err != nil {
-			log.Fatalf("Failed to establish forward conduit for %q: %v", fc, err)
+			slog.Error("Failed to establish forward conduit", "flag", fc, "error", err)
+			os.Exit(1)
 		}
-		log.Printf("Established forward conduit: %s, locator: %+v", resp.ConduitId, resp.ServiceLocator)
+		slog.Info("Established forward conduit", "id", resp.ConduitId, "locator", resp.ServiceLocator)
 	}
 
 	// 2. Start Dialer gRPC server
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
-		log.Fatalf("Failed to listen on port %d: %v", port, err)
+		slog.Error("Failed to listen on port", "port", port, "error", err)
+		os.Exit(1)
 	}
 
 	s := grpc.NewServer()
@@ -113,15 +118,16 @@ func main() {
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		sig := <-sigChan
-		log.Printf("Received signal %v, shutting down...", sig)
+		slog.Info("Received signal, shutting down", "signal", sig)
 		dialerSvc.Manager.Shutdown()
 		s.GracefulStop()
-		log.Println("Graceful shutdown complete.")
+		slog.Info("Graceful shutdown complete")
 		os.Exit(0)
 	}()
 
-	log.Printf("Dialer gRPC server listening on port %d", port)
+	slog.Info("Dialer gRPC server listening", "port", port)
 	if err := s.Serve(lis); err != nil {
-		log.Fatalf("Failed to serve: %v", err)
+		slog.Error("Failed to serve", "error", err)
+		os.Exit(1)
 	}
 }

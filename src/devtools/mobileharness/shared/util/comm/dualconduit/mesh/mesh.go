@@ -5,7 +5,7 @@ package mesh
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"strconv"
 	"sync"
@@ -113,14 +113,14 @@ func (s *Server) updateSnapshot(ctx context.Context) error {
 	version := fmt.Sprintf("v%d", s.version)
 	snap, err := s.generateSnapshot(version)
 	if err != nil {
-		log.Printf("Failed to generate snapshot: %v", err)
+		slog.Error("Failed to generate snapshot", "error", err)
 		return err
 	}
 
 	// We assume node ID is "node" for simplicity. In real case it should match Envoy node ID.
 	err = s.cache.SetSnapshot(ctx, "node", snap)
 	if err != nil {
-		log.Printf("Failed to set snapshot: %v", err)
+		slog.Error("Failed to set snapshot", "error", err)
 		return err
 	}
 	return nil
@@ -342,7 +342,7 @@ func (s *Server) generateSnapshot(version string) (*cache.Snapshot, error) {
 func makeEndpoint(clusterName string, address string) *endpointpb.ClusterLoadAssignment {
 	host, portStr, err := net.SplitHostPort(address)
 	if err != nil {
-		log.Printf("Failed to split host port from %s: %v", address, err)
+		slog.Warn("Failed to split host port", "address", address, "error", err)
 		host = address // Fallback to address as host if split fails
 	}
 	var port uint32

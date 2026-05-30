@@ -3,7 +3,7 @@ package conduit
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"sync"
 
 	"github.com/rsocket/rsocket-go"
@@ -35,6 +35,11 @@ func (c *Conduit) Context() context.Context {
 
 // New creates the tunnel and sets up the bidirectional lifecycle bridge.
 func New(ctx context.Context, id string, meta *dconpb.EstablishConduitRequest, rs rsocket.CloseableRSocket, onRemove func(), beforeClose func()) *Conduit {
+	if meta != nil {
+		slog.Info("Creating Conduit", "id", id, "type", meta.Type, "destination", meta.DestinationEndpoint, "entry_port", meta.EntryPort)
+	} else {
+		slog.Info("Creating Conduit with nil metadata", "id", id)
+	}
 	pumpCtx, cancel := context.WithCancel(ctx)
 	c := &Conduit{
 		ID:          id,
@@ -58,7 +63,7 @@ func New(ctx context.Context, id string, meta *dconpb.EstablishConduitRequest, r
 		// 2. RSocket -> Context: If the RSocket connection is closed by the peer or network,
 		// we must cancel the IO pump context in a goroutine to prevent deadlocks during synchronous Close().
 		rs.OnClose(func(err error) {
-			log.Printf("Conduit %q underlying socket closed: %v", id, err)
+			slog.Info("Conduit underlying socket closed", "id", id, "error", err)
 			go c.Close()
 		})
 	}
@@ -69,7 +74,9 @@ func New(ctx context.Context, id string, meta *dconpb.EstablishConduitRequest, r
 // Close deterministically tears down the Conduit, no matter who triggers it.
 // sync.Once guarantees this teardown logic only ever runs exactly one time.
 func (c *Conduit) Close() error {
+	slog.Info("Closing Conduit", "id", c.ID)
 	c.closeOnce.Do(func() {
+		slog.Debug("Conduit teardown started", "id", c.ID)
 		// 1. Call beforeClose callback
 		if c.beforeClose != nil {
 			c.beforeClose()
@@ -79,17 +86,20 @@ func (c *Conduit) Close() error {
 
 		// Wait for all registered stream goroutines to finish.
 		c.activeConnections.Wait()
+		slog.Debug("Conduit active connections finished", "id", c.ID)
 
 		// 3. Close the physical transport synchronously
 		if c.rsocket != nil {
+			slog.Debug("Conduit closing underlying RSocket", "id", c.ID)
 			if err := c.rsocket.Close(); err != nil {
-				log.Printf("Conduit %q failed to close underlying RSocket: %v", c.ID, err)
+				slog.Error("Conduit failed to close underlying RSocket", "id", c.ID, "error", err)
 			}
 		}
 		// 4. Notify the Manager to remove this Conduit from its map
 		if c.onRemove != nil {
 			c.onRemove()
 		}
+		slog.Info("Conduit teardown completed", "id", c.ID)
 	})
 	return nil
 }

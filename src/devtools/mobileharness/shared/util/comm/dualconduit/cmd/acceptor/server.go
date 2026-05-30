@@ -5,7 +5,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -48,11 +48,13 @@ func main() {
 
 		lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *xdsPort))
 		if err != nil {
-			log.Fatalf("Failed to listen on xDS port %d: %v", *xdsPort, err)
+			slog.Error("Failed to listen on xDS port", "port", *xdsPort, "error", err)
+			os.Exit(1)
 		}
-		log.Printf("xDS server listening on %d\n", *xdsPort)
+		slog.Info("xDS server listening", "port", *xdsPort)
 		if err := grpcServer.Serve(lis); err != nil {
-			log.Fatalf("xDS server error: %v", err)
+			slog.Error("xDS server error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -60,10 +62,12 @@ func main() {
 	go func() {
 		srv, err := acceptor.New(newTransporter, meshServer, *reverseForwardAddress)
 		if err != nil {
-			log.Fatalf("Failed to create acceptor: %v", err)
+			slog.Error("Failed to create acceptor", "error", err)
+			os.Exit(1)
 		}
 		if err := srv.Run(ctx); err != nil {
-			log.Fatalf("Acceptor error: %v", err)
+			slog.Error("Acceptor error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -73,5 +77,5 @@ func main() {
 	<-sigs
 
 	cancel()
-	log.Println("Acceptor shutting down.")
+	slog.Info("Acceptor shutting down")
 }

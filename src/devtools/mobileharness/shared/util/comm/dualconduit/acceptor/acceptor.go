@@ -4,7 +4,7 @@ package acceptor
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"time"
 
@@ -63,7 +63,7 @@ func (s *Service) DeregisterService(ctx context.Context, req *dconpb.EstablishCo
 
 // Run starts the Acceptor service, listening for incoming RSocket connections.
 func (s *Service) Run(ctx context.Context) error {
-	log.Println("Acceptor starting up...")
+	slog.Info("Acceptor starting up")
 
 	defer s.Manager.Shutdown()
 
@@ -79,11 +79,11 @@ func (s *Service) Run(ctx context.Context) error {
 			return nil, err
 		}
 
-		log.Printf("RSocket Connection incoming. Conduit ID: %s, Metadata: %+v", conduitID, req)
+		slog.Info("RSocket Connection incoming", "id", conduitID, "metadata", req)
 
 		con, err := s.Manager.Add(ctx, conduitID, req, rs, nil)
 		if err != nil {
-			log.Printf("Failed to add conduit: %v", err)
+			slog.Error("Failed to add conduit", "id", conduitID, "error", err)
 			return nil, err
 		}
 
@@ -102,11 +102,11 @@ func (s *Service) Run(ctx context.Context) error {
 }
 
 func (s *Service) handleProbe() rsocket.RSocket {
-	log.Printf("Received check connection, acknowledging.")
+	slog.Info("Received check connection, acknowledging")
 	return rsocket.NewAbstractSocket(
 		rsocket.RequestResponse(func(msg payload.Payload) mono.Mono {
 			clientHostname := msg.DataUTF8()
-			log.Printf("Probe from client hostname: %s", clientHostname)
+			slog.Info("Probe from client", "hostname", clientHostname)
 			return mono.Just(payload.New([]byte("ACK "+clientHostname), nil))
 		}),
 	)
@@ -115,12 +115,12 @@ func (s *Service) handleProbe() rsocket.RSocket {
 func (s *Service) parseSetupMetadata(setup payload.SetupPayload) (*dconpb.EstablishConduitRequest, error) {
 	metadata, ok := setup.Metadata()
 	if !ok {
-		log.Printf("Setup payload is missing metadata.")
+		slog.Error("Setup payload is missing metadata")
 		return nil, fmt.Errorf("setup payload is missing metadata")
 	}
 	req := &dconpb.EstablishConduitRequest{}
 	if err := proto.Unmarshal(metadata, req); err != nil {
-		log.Printf("Invalid setup metadata: %v", err)
+		slog.Error("Invalid setup metadata", "error", err)
 		return nil, err
 	}
 	return req, nil
@@ -133,7 +133,7 @@ func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, re
 	}
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Printf("Failed to allocate port for reverse conduit: %v", err)
+		slog.Error("Failed to allocate port for reverse conduit", "id", conduitID, "error", err)
 		return nil, err
 	}
 	tcpAddr, ok := lis.Addr().(*net.TCPAddr)
@@ -147,7 +147,7 @@ func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, re
 	go func() {
 		logicalName, regErr := s.RegisterService(ctx, req, dynamicPort)
 		if regErr != nil {
-			log.Printf("Service register failed: %v", regErr)
+			slog.Error("Service register failed", "id", conduitID, "error", regErr)
 			lis.Close()
 			con.Close()
 			return
@@ -179,7 +179,7 @@ func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, re
 				},
 			}
 		default:
-			log.Printf("Unsupported protocol for reverse conduit: %v", req.Protocol)
+			slog.Error("Unsupported protocol for reverse conduit", "id", conduitID, "protocol", req.Protocol)
 			lis.Close()
 			con.Close()
 			return
@@ -191,7 +191,7 @@ func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, re
 		}
 		metadata, err := proto.Marshal(resp)
 		if err != nil {
-			log.Printf("Failed to marshal registration metadata: %v", err)
+			slog.Error("Failed to marshal registration metadata", "id", conduitID, "error", err)
 			lis.Close()
 			con.Close()
 			return
@@ -203,7 +203,7 @@ func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, re
 		if err := conduit.StartListeningLoop(con, func() (net.Listener, error) {
 			return lis, nil
 		}); err != nil {
-			log.Printf("StartListeningLoop error: %v", err)
+			slog.Error("StartListeningLoop error", "id", conduitID, "error", err)
 		}
 	}()
 
@@ -212,7 +212,7 @@ func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, re
 		rsocket.MetadataPush(func(msg payload.Payload) {
 			metadata, ok := msg.Metadata()
 			if ok && string(metadata) == "CLOSE" {
-				log.Printf("Received CLOSE signal from Dialer for conduit %s", conduitID)
+				slog.Info("Received CLOSE signal from Dialer", "id", conduitID)
 				con.Close()
 			}
 		}),

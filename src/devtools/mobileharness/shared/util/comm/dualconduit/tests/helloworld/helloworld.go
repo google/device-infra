@@ -3,7 +3,7 @@ package helloworld
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	helloworldpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld/proto/helloworldpb"
 	helloworldsvcpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld/proto/helloworldsvcpb"
@@ -16,6 +16,6 @@ type Server struct {
 
 // SayHello implements helloworld.GreeterServer
 func (s *Server) SayHello(ctx context.Context, in *helloworldpb.HelloRequest) (*helloworldpb.HelloReply, error) {
-	log.Printf("Received SayHello: %v", in.GetName())
+	slog.Info("Received SayHello", "name", in.GetName())
 	return &helloworldpb.HelloReply{Message: "Hello " + in.GetName()}, nil
 }

@@ -32,6 +32,8 @@ go_library(
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_go_proto",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/rxconn",
         "@com_github_rsocket_rsocket_go//:rsocket-go",
+        "@com_github_rsocket_rsocket_go//payload",
+        "@com_github_rsocket_rsocket_go//rx",
         "@com_github_rsocket_rsocket_go//rx/flux",
     ],
 )

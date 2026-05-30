@@ -4,7 +4,7 @@ package dialer
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"os"
 	"time"
@@ -59,7 +59,7 @@ func New(ctx context.Context, hostname string, forwardAddress string, newTranspo
 
 // EstablishConduit handles the gRPC request to establish a forward/reverse conduit.
 func (s *Service) EstablishConduit(ctx context.Context, req *dconpb.EstablishConduitRequest) (*dconpb.EstablishConduitResponse, error) {
-	log.Printf("Received EstablishConduit request: %+v", req)
+	slog.Info("Received EstablishConduit request", "request", req)
 
 	if req.Type == dconpb.EstablishConduitRequest_CONDUIT_TYPE_FORWARD && req.EntryPort == 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "entry port must be set for forward conduit")
@@ -92,7 +92,7 @@ func (s *Service) EstablishConduit(ctx context.Context, req *dconpb.EstablishCon
 	var beforeClose func()
 	if req.Type == dconpb.EstablishConduitRequest_CONDUIT_TYPE_REVERSE {
 		beforeClose = func() {
-			log.Printf("Sending CLOSE signal to Acceptor for conduit %s", id)
+			slog.Info("Sending CLOSE signal to Acceptor", "id", id)
 			rsClient.MetadataPush(payload.New(nil, []byte(closeSignal)))
 			time.Sleep(reverseConduitCloseSignalDelay)
 		}
@@ -215,7 +215,7 @@ func (s *Service) startForwardConduit(con *conduit.Conduit, entryPort uint32) (*
 		if err := conduit.StartListeningLoop(con, func() (net.Listener, error) {
 			return lis, nil
 		}); err != nil {
-			log.Printf("StartListeningLoop error: %v", err)
+			slog.Error("StartListeningLoop error", "error", err)
 		}
 	}()
 	return serviceLocator, nil
@@ -246,7 +246,7 @@ func (s *Service) waitForReverseConduitLocator(ctx context.Context, metadataPush
 
 // TeardownConduit handles the gRPC request to tear down a conduit.
 func (s *Service) TeardownConduit(ctx context.Context, req *dconpb.TeardownConduitRequest) (*dconpb.TeardownConduitResponse, error) {
-	log.Printf("Received TeardownConduit request: %+v", req)
+	slog.Info("Received TeardownConduit request", "request", req)
 	s.Manager.Remove(req.ConduitId)
 	return &dconpb.TeardownConduitResponse{}, nil
 }
@@ -273,7 +273,7 @@ func (s *Service) CheckConnection(ctx context.Context) error {
 		return err
 	}
 
-	log.Println("Performing pre-flight check to acceptor...")
+	slog.Info("Performing pre-flight check to acceptor")
 	client, err := rsocket.Connect().
 		SetupPayload(payload.New([]byte(probeSignal), nil)).
 		Transport(trans).
@@ -297,6 +297,6 @@ func (s *Service) CheckConnection(ctx context.Context) error {
 		return fmt.Errorf("unexpected pre-flight check response: %q, want: %q", string(resp.Data()), expectedAck)
 	}
 
-	log.Println("Pre-flight check successful.")
+	slog.Info("Pre-flight check successful")
 	return nil
 }
