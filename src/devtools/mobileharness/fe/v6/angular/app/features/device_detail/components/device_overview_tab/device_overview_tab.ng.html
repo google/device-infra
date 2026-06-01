@@ -140,23 +140,30 @@
       [collapsible]="false"
     >
       <div class="info-card-content">
-        <div class="basic-info-grid-wrapper">
-          <dl class="info-grid-tight">
+        <dl class="basic-info-responsive-grid">
+          @if (device.isAndroid || (device.basicInfo.model && device.basicInfo.model !== 'N/A')) {
             <dt title="Model">Model</dt>
             <dd [title]="device.basicInfo.model" [matTooltip]="device.basicInfo.model">{{ device.basicInfo.model || 'N/A' }}</dd>
+          }
 
+          @if (device.isAndroid || (device.basicInfo.version && device.basicInfo.version !== 'N/A')) {
             <dt title="Version">Version</dt>
             <dd [title]="device.basicInfo.version">
               {{ device.basicInfo.version || 'N/A' }}
             </dd>
+          }
 
+          @if (device.isAndroid || (device.basicInfo.form && device.basicInfo.form !== 'unknown')) {
             <dt title="Form">Form</dt>
             <dd [title]="device.basicInfo.form">{{ device.basicInfo.form || 'N/A' }}</dd>
+          }
 
+          @if (device.isAndroid || (device.basicInfo.os && device.basicInfo.os !== 'N/A')) {
             <dt title="OS">OS</dt>
             <dd [title]="device.basicInfo.os">{{ device.basicInfo.os || 'N/A' }}</dd>
-          </dl>
-          <dl class="info-grid-tight">
+          }
+
+          @if (device.isAndroid || (device.basicInfo.batteryLevel !== null && device.basicInfo.batteryLevel !== undefined && device.basicInfo.batteryLevel !== -1)) {
             <dt title="Battery">Battery</dt>
             <dd>
               @if (device.basicInfo.batteryLevel === -1) {
@@ -167,7 +174,9 @@
                 N/A
               }
             </dd>
+          }
 
+          @if (device.isAndroid || device.basicInfo.network.wifiRssi !== undefined || device.basicInfo.network.hasInternet !== undefined) {
             <dt title="Network">Network</dt>
             <dd>
               <div class="network-status">
@@ -199,15 +208,20 @@
                 }
               </div>
             </dd>
+          }
+
+          @if (device.isAndroid || (device.basicInfo.hardware && device.basicInfo.hardware !== 'N/A')) {
             <dt title="Hardware">Hardware</dt
             ><dd
               [title]="device.basicInfo.hardware"
               >{{ device.basicInfo.hardware || 'N/A' }}</dd
             >
+          }
+          @if (device.isAndroid || (device.basicInfo.build && device.basicInfo.build !== 'N/A')) {
             <dt title="Build">Build</dt
             ><dd [title]="device.basicInfo.build" [matTooltip]="device.basicInfo.build">{{ device.basicInfo.build || 'N/A' }}</dd>
-          </dl>
-        </div>
+          }
+        </dl>
       </div>
     </app-info-card>
 

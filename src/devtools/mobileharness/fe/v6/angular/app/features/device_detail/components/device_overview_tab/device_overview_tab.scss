@@ -288,23 +288,17 @@
 }
 
 // Basic Information Card
-.basic-info-grid-wrapper {
+.basic-info-responsive-grid {
   display: grid;
-  gap: 1.5rem 2rem;
-  grid-template-columns: 1fr;
-
-  @media (min-width: 1024px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-.info-grid-tight {
-  display: grid;
-  grid-template-columns: 120px 1fr; // Adjusted column width
+  grid-template-columns: 120px 1fr;
   gap: 0.75rem 1.5rem;
   align-items: flex-start;
   font-size: 0.875rem;
   margin: 0;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(2, 120px 1fr);
+  }
 
   dt {
     font-weight: 500;

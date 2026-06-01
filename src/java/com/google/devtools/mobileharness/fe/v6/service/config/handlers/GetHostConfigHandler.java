@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigConverter;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigPusherHelper;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapability;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfigRequest;
@@ -41,15 +42,18 @@ public final class GetHostConfigHandler {
 
   private final ConfigurationProvider configurationProvider;
   private final ConfigServiceCapabilityFactory configServiceCapabilityFactory;
+  private final ConfigPusherHelper configPusherHelper;
   private final ListeningExecutorService executor;
 
   @Inject
   GetHostConfigHandler(
       ConfigurationProvider configurationProvider,
       ConfigServiceCapabilityFactory configServiceCapabilityFactory,
+      ConfigPusherHelper configPusherHelper,
       ListeningExecutorService executor) {
     this.configurationProvider = configurationProvider;
     this.configServiceCapabilityFactory = configServiceCapabilityFactory;
+    this.configPusherHelper = configPusherHelper;
     this.executor = executor;
   }
 
@@ -68,13 +72,13 @@ public final class GetHostConfigHandler {
         configurationProvider.getLabConfig(request.getHostName(), universe),
         labConfigResult -> {
           HostConfigUiStatus uiStatus = configServiceCapability.calculateHostUiStatus();
-          GetHostConfigResponse.Builder responseBuilder =
-              GetHostConfigResponse.newBuilder().setUiStatus(uiStatus);
+          GetHostConfigResponse.Builder responseBuilder = GetHostConfigResponse.newBuilder();
           if (labConfigResult.config().isPresent()) {
             LabConfig labConfig = labConfigResult.config().get();
+            uiStatus = configPusherHelper.decorateUiStatus(uiStatus, labConfig);
             responseBuilder.setHostConfig(ConfigConverter.toFeHostConfig(labConfig));
           }
-          return responseBuilder.build();
+          return responseBuilder.setUiStatus(uiStatus).build();
         },
         executor);
   }

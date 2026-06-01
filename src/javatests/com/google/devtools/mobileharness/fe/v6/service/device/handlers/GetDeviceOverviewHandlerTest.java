@@ -709,6 +709,7 @@ public final class GetDeviceOverviewHandlerTest {
             .getOverview();
 
     assertThat(response.getBasicInfo().getVersion()).isEqualTo("31");
+    assertThat(response.getIsAndroid()).isTrue();
 
     DeviceInfo otherDevice =
         DEFAULT_DEVICE_INFO.toBuilder()
@@ -739,6 +740,55 @@ public final class GetDeviceOverviewHandlerTest {
             .get()
             .getOverview();
     assertThat(response.getBasicInfo().getVersion()).isEqualTo("ubuntu_20.04");
+    assertThat(response.getIsAndroid()).isFalse();
+  }
+
+  @Test
+  public void getDeviceOverview_isAndroidDetectionLogic() throws Exception {
+    // Case 1: Type is lowercase "android" -> true
+    DeviceInfo androidDevice =
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceFeature(
+                DEFAULT_DEVICE_INFO.getDeviceFeature().toBuilder().clearType().addType("android"))
+            .build();
+    mockDeviceInfo(androidDevice);
+    DeviceOverview response =
+        getDeviceOverviewHandler
+            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
+            .get()
+            .getOverview();
+    assertThat(response.getIsAndroid()).isTrue();
+
+    // Case 2: Type is "FailedAndroidRealDevice" -> true
+    DeviceInfo failedAndroidDevice =
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceFeature(
+                DEFAULT_DEVICE_INFO.getDeviceFeature().toBuilder()
+                    .clearType()
+                    .addType("FailedAndroidRealDevice"))
+            .build();
+    mockDeviceInfo(failedAndroidDevice);
+    GetDeviceOverviewRequest forceRefreshRequest =
+        DEFAULT_REQUEST.toBuilder().setForceRefresh(true).build();
+    response =
+        getDeviceOverviewHandler
+            .getDeviceOverview(forceRefreshRequest, SELF_UNIVERSE)
+            .get()
+            .getOverview();
+    assertThat(response.getIsAndroid()).isTrue();
+
+    // Case 3: Type list is empty -> false
+    DeviceInfo noTypeDevice =
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceFeature(DEFAULT_DEVICE_INFO.getDeviceFeature().toBuilder().clearType())
+            .build();
+    mockDeviceInfo(noTypeDevice);
+    response =
+        getDeviceOverviewHandler
+            .getDeviceOverview(forceRefreshRequest, SELF_UNIVERSE)
+            .get()
+            .getOverview();
+    assertThat(response.getIsAndroid()).isFalse();
   }
 
   @Test

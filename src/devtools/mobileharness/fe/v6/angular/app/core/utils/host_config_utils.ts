@@ -1,5 +1,5 @@
 import {DEFAULT_HOST_CONFIG} from '../constants/host_config_constants';
-import {HostConfig} from '../models/host_config_models';
+import {HostConfig, HostProperty} from '../models/host_config_models';
 import {normalizeDeviceConfig} from './device_config_utils';
 
 /**
@@ -35,4 +35,22 @@ export function normalizeHostConfig(
   };
 
   return normalized;
+}
+
+/**
+ * Checks if there are any empty host properties (both key and value are empty).
+ */
+export function hasEmptyProperties(properties?: HostProperty[]): boolean {
+  const list = properties || [];
+  return list.some((item) => !item.key || !item.value);
+}
+
+/**
+ * Filters out empty host properties (where both key and value are empty).
+ */
+export function clearEmptyProperties(
+  properties?: HostProperty[],
+): HostProperty[] {
+  const list = properties || [];
+  return list.filter((item) => item.key && item.value);
 }

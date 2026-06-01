@@ -2,12 +2,14 @@ import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   computed,
   inject,
   Input,
   OnInit,
   signal,
 } from '@angular/core';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {FormsModule} from '@angular/forms';
 import {MatButtonModule} from '@angular/material/button';
 import {
@@ -36,9 +38,12 @@ import {
 } from '../../../../../core/models/device_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {
+  clearEmptyDimensions,
+  hasEmptyDimensions,
   normalizeDeviceConfig,
   normalizeDeviceConfigUiStatus,
 } from '../../../../../core/utils/device_config_utils';
+import {useSaveInterceptors} from '../../../../../shared/composables/save_interceptors';
 import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
 import {Footer} from '../../../../../shared/components/config_common/footer/footer';
 import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/confirm_dialog';
@@ -81,6 +86,8 @@ export class DeviceSettings implements OnInit {
 
   private readonly dialog = inject(MatDialog); // to open confirm dialog
   private readonly dialogRef = inject(MatDialogRef<DeviceSettings>);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly saveInterceptors = useSaveInterceptors();
   private readonly dialogData = inject(MAT_DIALOG_DATA, {optional: true}) as {
     deviceId: string;
     config: DeviceConfig;
@@ -186,7 +193,23 @@ export class DeviceSettings implements OnInit {
   activeSection = signal<ConfigSection>(ConfigSection.PERMISSIONS);
 
   private originalConfig: DeviceConfig = this.config;
-  newConfig: DeviceConfig = this.config;
+  readonly newConfig = signal<DeviceConfig>(DEFAULT_DEVICE_CONFIG);
+
+  updatePermissions(permissions: DeviceConfig['permissions']) {
+    this.newConfig.update((c) => ({...c, permissions}));
+  }
+
+  updateWifi(wifi: unknown) {
+    this.newConfig.update((c) => ({...c, wifi: wifi as DeviceConfig['wifi']}));
+  }
+
+  updateDimensions(dimensions: DeviceConfig['dimensions']) {
+    this.newConfig.update((c) => ({...c, dimensions}));
+  }
+
+  updateSettings(settings: DeviceConfig['settings']) {
+    this.newConfig.update((c) => ({...c, settings}));
+  }
 
   // used for dimensions step duplicate check
   hasError = false;
@@ -203,7 +226,7 @@ export class DeviceSettings implements OnInit {
     }
 
     this.originalConfig = objectUtils.deepCopy(this.config) as DeviceConfig;
-    this.newConfig = objectUtils.deepCopy(this.config) as DeviceConfig;
+    this.newConfig.set(objectUtils.deepCopy(this.config) as DeviceConfig);
 
     if (
       this.navList.length > 0 &&
@@ -236,11 +259,13 @@ export class DeviceSettings implements OnInit {
         data: dialogData,
         disableClose: true,
       });
-      unsaveDialogRef.afterClosed().subscribe((result) => {
+      unsaveDialogRef.afterClosed()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((result) => {
         if (result === 'primary') {
-          this.newConfig = objectUtils.deepCopy(
+          this.newConfig.set(objectUtils.deepCopy(
             this.originalConfig,
-          ) as DeviceConfig;
+          ) as DeviceConfig);
           this.activeSection.set(targetSection);
         }
 
@@ -260,24 +285,10 @@ export class DeviceSettings implements OnInit {
   }
 
   isCategoryDirty(category: ConfigSection) {
-    let newDimensions = {
-      supported: this.newConfig.dimensions?.supported,
-      required: this.newConfig.dimensions?.required,
+    const newDimensions = {
+      supported: this.newConfig().dimensions?.supported,
+      required: this.newConfig().dimensions?.required,
     };
-
-    if (category === ConfigSection.DIMENSIONS) {
-      const supportDimensions = (
-        this.newConfig.dimensions?.supported || []
-      ).filter((item) => !(!item.name && !item.value));
-      const requiredDimensions = (
-        this.newConfig.dimensions?.required || []
-      ).filter((item) => !(!item.name && !item.value));
-
-      newDimensions = {
-        supported: supportDimensions,
-        required: requiredDimensions,
-      };
-    }
 
     const originalMap: Partial<Record<ConfigSection, unknown>> = {
       [ConfigSection.PERMISSIONS]: this.originalConfig.permissions,
@@ -286,10 +297,10 @@ export class DeviceSettings implements OnInit {
       [ConfigSection.STABILITY]: this.originalConfig.settings,
     };
     const newMap: Partial<Record<ConfigSection, unknown>> = {
-      [ConfigSection.PERMISSIONS]: this.newConfig.permissions,
-      [ConfigSection.WIFI]: this.newConfig.wifi,
+      [ConfigSection.PERMISSIONS]: this.newConfig().permissions,
+      [ConfigSection.WIFI]: this.newConfig().wifi,
       [ConfigSection.DIMENSIONS]: newDimensions,
-      [ConfigSection.STABILITY]: this.newConfig.settings,
+      [ConfigSection.STABILITY]: this.newConfig().settings,
     };
 
     return (
@@ -361,20 +372,32 @@ export class DeviceSettings implements OnInit {
       type: 'error',
       primaryButtonLabel: 'OK',
     };
-
     this.dialog.open(ConfirmDialog, {
       data: dialogData,
       disableClose: true,
     });
   }
 
-  save(selfLockout = false) {
-    this.saving.set(true);
+  save(selfLockout = false, forceSave = false) {
     const section = this.activeSection();
+
+    if (section === ConfigSection.DIMENSIONS && !forceSave && hasEmptyDimensions(this.newConfig().dimensions)) {
+      this.saveInterceptors.promptEmptyData('dimensions', () => {
+        this.updateDimensions(clearEmptyDimensions(this.newConfig().dimensions));
+        if (!this.isCategoryDirty(section)) {
+          this.originalConfig = objectUtils.deepCopy(this.newConfig()) as DeviceConfig;
+          return;
+        }
+        this.save(selfLockout, true);
+      });
+      return;
+    }
+
+    this.saving.set(true);
 
     const request: UpdateDeviceConfigRequest = {
       id: this.deviceId,
-      config: this.newConfig,
+      config: this.newConfig(),
       section,
       options: {overrideSelfLockout: selfLockout},
       universe: this.universe,
@@ -394,7 +417,7 @@ export class DeviceSettings implements OnInit {
         }
 
         this.originalConfig = objectUtils.deepCopy(
-          this.newConfig,
+          this.newConfig(),
         ) as DeviceConfig;
 
         this.success(selfLockout);
@@ -402,6 +425,6 @@ export class DeviceSettings implements OnInit {
   }
 
   discard() {
-    this.newConfig = objectUtils.deepCopy(this.originalConfig) as DeviceConfig;
+    this.newConfig.set(objectUtils.deepCopy(this.originalConfig) as DeviceConfig);
   }
 }

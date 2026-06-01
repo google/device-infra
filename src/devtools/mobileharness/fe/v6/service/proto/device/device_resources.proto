@@ -56,6 +56,9 @@ message DeviceOverview {
   // If the device is a testbed, this contains information about its
   // sub-devices.
   repeated SubDeviceInfo sub_devices = 9;
+
+  // Whether the device is an Android device.
+  bool is_android = 10;
 }
 
 // Device type information.

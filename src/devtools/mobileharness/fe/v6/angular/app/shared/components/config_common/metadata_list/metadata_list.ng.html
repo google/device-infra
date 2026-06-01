@@ -18,6 +18,7 @@
           <mat-form-field appearance="outline" subscriptSizing="dynamic" class="form-field"
             [class.mat-form-field-error]="(duplicate(i) && errorMessage[i] )|| (column.required && !element[column.cell]) || (column.pattern && !isPatternValid(element[column.cell], column.pattern))" >
             <input
+              #metadataInput
               matInput
               [type]="column.inputType || 'text'"
               [placeholder]="column.placeholder || ''"

@@ -2,10 +2,8 @@ import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
-  EventEmitter,
-  Input,
-  OnInit,
-  Output,
+  input,
+  output,
 } from '@angular/core';
 
 import type {HostProperty} from '../../../../../../core/models/host_config_models';
@@ -27,15 +25,14 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, MetadataList],
 })
-export class HostProperties implements OnInit {
-  @Input() workflow: 'wizard' | 'settings' = 'settings';
-  @Input()
-  uiStatus: MetadataUiStatus = {
+export class HostProperties {
+  readonly workflow = input<'wizard' | 'settings'>('settings');
+  readonly uiStatus = input<MetadataUiStatus>({
     sectionStatus: {visible: true, editability: {editable: true}},
-  };
+  });
 
-  @Input() properties: HostProperty[] = [];
-  @Output() readonly propertiesChange = new EventEmitter<HostProperty[]>();
+  readonly properties = input<HostProperty[]>([]);
+  readonly propertiesChange = output<HostProperty[]>();
 
   readonly columns: MetadataColumn[] = [
     {
@@ -56,5 +53,4 @@ export class HostProperties implements OnInit {
     },
   ];
 
-  ngOnInit() {}
 }

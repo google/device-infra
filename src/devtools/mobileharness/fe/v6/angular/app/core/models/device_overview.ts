@@ -51,6 +51,9 @@ export declare interface DeviceOverview {
    * If the device is a testbed, this contains information about its sub-devices.
    */
   subDevices?: SubDeviceInfo[];
+
+  /** Whether the device is an Android device. */
+  isAndroid?: boolean;
 }
 
 // --- Helper Interfaces for DeviceOverview ---
