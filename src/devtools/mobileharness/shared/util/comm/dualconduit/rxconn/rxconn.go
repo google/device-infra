@@ -86,7 +86,11 @@ func (c *Conn) ToFlux(ctx context.Context) flux.Flux {
 					}
 				}
 				if err != nil {
-					slog.Error("rxconn.ToFlux TCP Read Pump read error", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr(), "error", err)
+					if errors.Is(err, io.EOF) {
+						slog.Info("rxconn.ToFlux TCP Read Pump connection closed gracefully", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
+					} else {
+						slog.Error("rxconn.ToFlux TCP Read Pump read error", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr(), "error", err)
+					}
 					errChan <- err
 					return
 				}
