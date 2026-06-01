@@ -33,4 +33,11 @@ public interface ConfigPusherHelper {
 
   /** Checks if a section is restricted by Config Pusher. */
   boolean isSectionRestricted(HostConfigSection section, LabConfig existing);
+
+  /**
+   * Unlocks the host properties by removing Config Pusher related keys.
+   *
+   * @return true if the config was modified (unlocked), false otherwise.
+   */
+  boolean unlockHostProperties(LabConfig.Builder builder);
 }

@@ -29,6 +29,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefau
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigRequest;
@@ -58,4 +60,7 @@ public interface ConfigServiceLogic {
 
   ListenableFuture<UpdateHostConfigResponse> updateHostConfig(
       UpdateHostConfigRequest request, Optional<String> username);
+
+  ListenableFuture<UnlockHostPropertiesResponse> unlockHostProperties(
+      UnlockHostPropertiesRequest request);
 }

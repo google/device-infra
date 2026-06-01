@@ -33,6 +33,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefau
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigRequest;
@@ -156,5 +158,18 @@ public final class ConfigServiceGrpcImpl extends ConfigServiceGrpc.ConfigService
         executor,
         ConfigServiceGrpc.getServiceDescriptor(),
         ConfigServiceGrpc.getUpdateHostConfigMethod());
+  }
+
+  @Override
+  public void unlockHostProperties(
+      UnlockHostPropertiesRequest request,
+      StreamObserver<UnlockHostPropertiesResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        req -> logic.unlockHostProperties(req),
+        executor,
+        ConfigServiceGrpc.getServiceDescriptor(),
+        ConfigServiceGrpc.getUnlockHostPropertiesMethod());
   }
 }

@@ -38,4 +38,9 @@ public final class NoOpConfigPusherHelper implements ConfigPusherHelper {
   public boolean isSectionRestricted(HostConfigSection section, LabConfig existing) {
     return false;
   }
+
+  @Override
+  public boolean unlockHostProperties(LabConfig.Builder builder) {
+    return false;
+  }
 }

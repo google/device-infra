@@ -17,17 +17,26 @@
 package com.google.devtools.mobileharness.fe.v6.service.config;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.util.concurrent.Futures.immediateFuture;
+import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static org.junit.Assert.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigPusherHelper;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.WifiCredentialsStore;
@@ -36,6 +45,7 @@ import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import org.junit.Before;
 import org.junit.Rule;
@@ -80,6 +90,47 @@ public final class ConfigServiceLogicImplTest {
     ExecutionException e =
         assertThrows(
             ExecutionException.class, () -> configServiceLogicImpl.getDeviceConfig(request).get());
+    assertThat(e).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void unlockHostProperties_success() throws Exception {
+    UnlockHostPropertiesRequest request =
+        UnlockHostPropertiesRequest.newBuilder().setHostName("host").setUniverse("self").build();
+    LabConfig existingConfig = LabConfig.newBuilder().setHostName("host").build();
+
+    when(configurationProvider.getLabConfig(eq("host"), any(UniverseScope.class)))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
+    when(configPusherHelper.unlockHostProperties(any(LabConfig.Builder.class)))
+        .thenAnswer(
+            invocation -> {
+              LabConfig.Builder builder = invocation.getArgument(0);
+              builder.setHostName("host-modified"); // simulate modification
+              return true;
+            });
+    when(configurationProvider.updateLabConfig(
+            eq("host"), any(LabConfig.class), any(UniverseScope.class)))
+        .thenReturn(immediateVoidFuture());
+
+    UnlockHostPropertiesResponse response =
+        configServiceLogicImpl.unlockHostProperties(request).get();
+
+    assertThat(response.getSuccess()).isTrue();
+    verify(configurationProvider)
+        .updateLabConfig(eq("host"), any(LabConfig.class), any(UniverseScope.class));
+  }
+
+  @Test
+  public void unlockHostProperties_invalidUniverse_fails() {
+    UnlockHostPropertiesRequest request =
+        UnlockHostPropertiesRequest.newBuilder().setHostName("host").setUniverse("invalid").build();
+
+    when(universeFactory.create("invalid")).thenThrow(new IllegalArgumentException("invalid"));
+
+    ExecutionException e =
+        assertThrows(
+            ExecutionException.class,
+            () -> configServiceLogicImpl.unlockHostProperties(request).get());
     assertThat(e).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
   }
 }

@@ -162,3 +162,18 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
     ],
 )
+
+java_library(
+    name = "unlock_host_properties_handler",
+    srcs = ["UnlockHostPropertiesHandler.java"],
+    deps = [
+        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_pusher_helper",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)

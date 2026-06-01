@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.fe.v6.service.config.handlers.GetDevice
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.GetHostConfigHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.GetHostDefaultDeviceConfigHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.GetRecommendedWifiHandler;
+import com.google.devtools.mobileharness.fe.v6.service.config.handlers.UnlockHostPropertiesHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.UpdateDeviceConfigHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.UpdateHostConfigHandler;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionRequest;
@@ -39,6 +40,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefau
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigRequest;
@@ -61,6 +64,7 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
   private final GetHostConfigHandler getHostConfigHandler;
   private final CheckHostWritePermissionHandler checkHostWritePermissionHandler;
   private final UpdateHostConfigHandler updateHostConfigHandler;
+  private final UnlockHostPropertiesHandler unlockHostPropertiesHandler;
   private final UniverseFactory universeFactory;
 
   @Inject
@@ -73,6 +77,7 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
       GetHostConfigHandler getHostConfigHandler,
       CheckHostWritePermissionHandler checkHostWritePermissionHandler,
       UpdateHostConfigHandler updateHostConfigHandler,
+      UnlockHostPropertiesHandler unlockHostPropertiesHandler,
       UniverseFactory universeFactory) {
     this.getDeviceConfigHandler = getDeviceConfigHandler;
     this.checkDeviceWritePermissionHandler = checkDeviceWritePermissionHandler;
@@ -82,6 +87,7 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
     this.getHostConfigHandler = getHostConfigHandler;
     this.checkHostWritePermissionHandler = checkHostWritePermissionHandler;
     this.updateHostConfigHandler = updateHostConfigHandler;
+    this.unlockHostPropertiesHandler = unlockHostPropertiesHandler;
     this.universeFactory = universeFactory;
   }
 
@@ -179,5 +185,17 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
       return immediateFailedFuture(e);
     }
     return updateHostConfigHandler.updateHostConfig(request, universe, username);
+  }
+
+  @Override
+  public ListenableFuture<UnlockHostPropertiesResponse> unlockHostProperties(
+      UnlockHostPropertiesRequest request) {
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return unlockHostPropertiesHandler.unlockHostProperties(request, universe);
   }
 }

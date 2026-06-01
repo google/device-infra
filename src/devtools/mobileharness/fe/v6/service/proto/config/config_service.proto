@@ -94,6 +94,15 @@ service ConfigService {
       body: "*"
     };
   }
+
+  // Unlocks the host properties by disabling Config Pusher management.
+  rpc UnlockHostProperties(UnlockHostPropertiesRequest)
+      returns (UnlockHostPropertiesResponse) {
+    option (google.api.http) = {
+      post: "/v6/hosts/{host_name}/config:unlockHostProperties",
+      body: "*"
+    };
+  }
 }
 
 // Request for GetDeviceConfig.
@@ -221,6 +230,19 @@ message UpdateHostConfigRequest {
 
 // Response for UpdateHostConfig.
 message UpdateHostConfigResponse {
+  bool success = 1;
+  UpdateError error = 2;
+}
+
+// Request for UnlockHostProperties.
+message UnlockHostPropertiesRequest {
+  string host_name = 1;
+  // The universe the host belongs to.
+  string universe = 2;
+}
+
+// Response for UnlockHostProperties.
+message UnlockHostPropertiesResponse {
   bool success = 1;
   UpdateError error = 2;
 }
