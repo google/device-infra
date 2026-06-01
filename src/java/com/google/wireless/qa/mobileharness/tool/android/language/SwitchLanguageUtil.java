@@ -55,6 +55,18 @@ public class SwitchLanguageUtil extends Instrumentation {
   public void onCreate(Bundle arguments) {
     super.onCreate(arguments);
     this.arguments = arguments;
+
+    // Force the instrumentation process to execute under ADB Shell's elevated security context.
+    // This assumes the UID of the shell process and bypasses the certain security checks. The
+    // WRITE_SETTINGS permission is appop level permission that is required for changing the system
+    // locale. There's certain amount of flakiness in the time required for with appop permission
+    // propagation and hence we use UI Automation to adopt the shell permission identity.
+    // This is available on API 29+.
+    if (VERSION.SDK_INT >= VERSION_CODES.Q) {
+      getUiAutomation()
+          .adoptShellPermissionIdentity(
+              "android.permission.WRITE_SETTINGS", "android.permission.CHANGE_CONFIGURATION");
+    }
     start();
   }
 
@@ -68,10 +80,16 @@ public class SwitchLanguageUtil extends Instrumentation {
     String country = Strings.nullToEmpty(arguments.getString("country"));
     Locale locale = new Locale.Builder().setLanguage(language).setRegion(country).build();
 
-    // Switches language and country.
-    Log.i(LOG_TAG, "Change locale to [" + locale.getDisplayName() + "]");
-    IActivityManager am = getActivityManager();
     try {
+      if (isSameAsSystemLocale(locale)) {
+        Log.i(LOG_TAG, "System locale same as supplied locale.");
+        finishSuccessfully(result);
+        return;
+      }
+
+      // Switches language and country.
+      Log.i(LOG_TAG, "Change locale to [" + locale.getDisplayName() + "]");
+      IActivityManager am = getActivityManager();
       Configuration config = am.getConfiguration();
       config.setLocale(locale);
 
@@ -82,17 +100,39 @@ public class SwitchLanguageUtil extends Instrumentation {
       } else {
         am.updateConfiguration(config);
       }
-
-      // Prints this log to check execution result, so do not change it.
-      Log.i(LOG_TAG, "Successfully switch language");
-
-      result.putString("result", "succeed");
-      finish(Activity.RESULT_OK, result);
+      finishSuccessfully(result);
     } catch (NumberFormatException | RemoteException e) {
       fail("Change locale error: " + e);
     } catch (Exception e) {
       fail(e.toString());
+    } finally {
+      // Clean up and drop the shell identity before exiting
+      if (VERSION.SDK_INT >= VERSION_CODES.Q) {
+        getUiAutomation().dropShellPermissionIdentity();
+      }
     }
+  }
+
+  private void finishSuccessfully(Bundle result) {
+    // This is a load bearing line.
+    // Prints this log to check execution result, so do not change it.
+    Log.i(LOG_TAG, "Successfully switch language");
+
+    result.putString("result", "succeed");
+    finish(Activity.RESULT_OK, result);
+  }
+
+  @SuppressWarnings("Deprecation")
+  private boolean isSameAsSystemLocale(Locale suppliedLocale) {
+    Locale currentSystemLocale;
+    if (VERSION.SDK_INT < VERSION_CODES.N) {
+      currentSystemLocale = getContext().getResources().getConfiguration().locale;
+    } else {
+      currentSystemLocale = getContext().getResources().getConfiguration().getLocales().get(0);
+    }
+    Log.i(LOG_TAG, "Current system locale is [" + currentSystemLocale.getDisplayName() + "]");
+    return currentSystemLocale.getCountry().equals(suppliedLocale.getCountry())
+        && currentSystemLocale.getLanguage().equals(suppliedLocale.getLanguage());
   }
 
   private IActivityManager getActivityManager() {
