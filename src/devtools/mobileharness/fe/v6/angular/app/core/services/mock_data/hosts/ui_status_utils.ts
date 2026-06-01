@@ -403,10 +403,12 @@ export function createDeviceActions(
         deviceType: 'AndroidRealDevice',
         requiredDimensions: 'required_dimensions',
       },
-      enabled,
-      visible: true,
-      tooltip: permissionState,
-      isReady: true,
+      state: {
+        enabled,
+        visible: true,
+        tooltip: permissionState,
+        isReady: true,
+      },
     },
     quarantine: {
       enabled,

@@ -228,11 +228,10 @@ message FlashButtonParams {
 }
 
 // State of flash action button.
-message FlashActionButtonState {
+message FlashActionInfo {
   common.ActionButtonState state = 1;
   FlashButtonParams params = 2;
 }
-
 // Quarantine information of device.
 message QuarantineInfo {
   bool is_quarantined = 1;
@@ -243,7 +242,7 @@ message QuarantineInfo {
 message DeviceActions {
   common.ActionButtonState screenshot = 1;
   common.ActionButtonState logcat = 2;
-  FlashActionButtonState flash = 3;
+  FlashActionInfo flash = 3;
   common.ActionButtonState remote_control = 4;
   common.ActionButtonState quarantine = 5;
   common.ActionButtonState configuration = 6;

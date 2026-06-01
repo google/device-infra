@@ -441,7 +441,7 @@
                         <mat-icon>important_devices</mat-icon>
                         <span>Remote Control</span>
                       </button>
-                      <button mat-menu-item (click)="elementActions.flash?.isReady ? flashDevice(element) : showComingSoonPopup('Flash', element)">
+                      <button mat-menu-item (click)="elementActions.flash?.state?.isReady ? flashDevice(element) : showComingSoonPopup('Flash', element)">
                         <mat-icon>flash_on</mat-icon>
                         <span>Flash</span>
                       </button>

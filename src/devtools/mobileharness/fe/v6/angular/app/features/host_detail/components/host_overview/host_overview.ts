@@ -806,6 +806,9 @@ export class HostOverviewPage implements OnChanges {
     actionKey: keyof DeviceActions,
   ): boolean {
     return devices.every((d) => {
+      if (actionKey === 'flash') {
+        return d.actions?.flash?.state?.isReady || false;
+      }
       const actions = d.actions as
         | Record<string, {isReady?: boolean}>
         | undefined;

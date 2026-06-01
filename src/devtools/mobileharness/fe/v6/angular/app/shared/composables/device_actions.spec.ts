@@ -2,19 +2,25 @@ import {TestBed} from '@angular/core/testing';
 
 import {of, Subject, throwError} from 'rxjs';
 
+import {MatDialog} from '@angular/material/dialog';
 import {
   GetLogcatResponse,
   TakeScreenshotResponse,
 } from '../../core/models/device_action';
 import {DeviceOverview, SubDeviceInfo} from '../../core/models/device_overview';
 import {DeviceSummary} from '../../core/models/host_overview';
+import {ConfirmDialog} from '../components/confirm_dialog/confirm_dialog';
+import {FlashErrorContent} from '../components/flash_error_content/flash_error_content';
 import {DeviceActionService} from '../services/device_action_service';
 import {RemoteControlService} from '../services/remote_control_service';
+import {SnackBarService} from '../services/snackbar_service';
 import {useDeviceActions} from './device_actions';
 
 describe('useDeviceActions', () => {
   let actionServiceSpy: jasmine.SpyObj<DeviceActionService>;
   let remoteControlServiceSpy: jasmine.SpyObj<RemoteControlService>;
+  let snackBarServiceSpy: jasmine.SpyObj<SnackBarService>;
+  let dialogSpy: jasmine.SpyObj<MatDialog>;
   beforeEach(() => {
     actionServiceSpy = jasmine.createSpyObj('DeviceActionService', [
       'takeScreenshot',
@@ -27,11 +33,15 @@ describe('useDeviceActions', () => {
       'startRemoteControl',
     ]);
     remoteControlServiceSpy.startRemoteControl.and.returnValue(of(undefined));
+    snackBarServiceSpy = jasmine.createSpyObj('SnackBarService', ['showError']);
+    dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
 
     TestBed.configureTestingModule({
       providers: [
         {provide: DeviceActionService, useValue: actionServiceSpy},
         {provide: RemoteControlService, useValue: remoteControlServiceSpy},
+        {provide: SnackBarService, useValue: snackBarServiceSpy},
+        {provide: MatDialog, useValue: dialogSpy},
       ],
     });
   });
@@ -293,6 +303,48 @@ describe('useDeviceActions', () => {
         'host-1',
         {deviceType: 'Pixel'},
       );
+    });
+  });
+
+  it('flashDevice should show error dialog if deviceType is missing', () => {
+    TestBed.runInInjectionContext(() => {
+      const {flashDevice} = useDeviceActions();
+
+      flashDevice('device-1', 'host-1', {});
+
+      expect(dialogSpy.open).toHaveBeenCalledWith(
+        ConfirmDialog,
+        jasmine.objectContaining({
+          data: jasmine.objectContaining({
+            title: 'Cannot start flashing',
+            contentComponent: FlashErrorContent,
+            type: 'error',
+            primaryButtonLabel: 'OK',
+          }),
+        }),
+      );
+      expect(actionServiceSpy.flashDevice).not.toHaveBeenCalled();
+    });
+  });
+
+  it('flashDevice should show error dialog if params is missing', () => {
+    TestBed.runInInjectionContext(() => {
+      const {flashDevice} = useDeviceActions();
+
+      flashDevice('device-1', 'host-1');
+
+      expect(dialogSpy.open).toHaveBeenCalledWith(
+        ConfirmDialog,
+        jasmine.objectContaining({
+          data: jasmine.objectContaining({
+            title: 'Cannot start flashing',
+            contentComponent: FlashErrorContent,
+            type: 'error',
+            primaryButtonLabel: 'OK',
+          }),
+        }),
+      );
+      expect(actionServiceSpy.flashDevice).not.toHaveBeenCalled();
     });
   });
 

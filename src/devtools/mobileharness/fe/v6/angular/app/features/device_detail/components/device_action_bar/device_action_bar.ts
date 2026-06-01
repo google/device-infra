@@ -51,7 +51,6 @@ export class DeviceActionBar {
 
   readonly pageData = input.required<DeviceOverviewPageData>();
 
-
   protected readonly actions = computed(
     () => this.pageData().headerInfo.actions,
   );
@@ -72,23 +71,28 @@ export class DeviceActionBar {
 
   readonly onConfiguration = this.openConfiguration.bind(this);
 
-  readonly onScreenshot = () =>
-    { this.deviceActions.takeScreenshot(this.deviceId()); };
+  readonly onScreenshot = () => {
+    this.deviceActions.takeScreenshot(this.deviceId());
+  };
 
-  readonly onRemoteControl = () =>
-    { this.deviceActions.startRemoteControl(
+  readonly onRemoteControl = () => {
+    this.deviceActions.startRemoteControl(
       this.hostName(),
       this.pageData().overview,
-    ); };
+    );
+  };
 
-  readonly onFlash = () =>
-    { this.deviceActions.flashDevice(
+  readonly onFlash = () => {
+    this.deviceActions.flashDevice(
       this.deviceId(),
       this.hostName(),
       this.actions()?.flash?.params,
-    ); };
+    );
+  };
 
-  readonly onLogcat = () => { this.deviceActions.getLogcat(this.deviceId()); };
+  readonly onLogcat = () => {
+    this.deviceActions.getLogcat(this.deviceId());
+  };
 
   readonly onQuarantine = () => {
     const quarantine = this.quarantineInfo()
@@ -102,13 +106,17 @@ export class DeviceActionBar {
     });
   };
 
-  readonly onChangeQuarantine = () =>
-    { this.deviceActions.changeQuarantine(
+  readonly onChangeQuarantine = () => {
+    this.deviceActions.changeQuarantine(
       this.deviceId(),
       this.quarantineInfo()?.expiry,
-    ); };
+    );
+  };
 
   getAction(key: keyof DeviceActions): ActionButtonState | undefined {
+    if (key === 'flash') {
+      return this.actions()?.flash?.state;
+    }
     return (this.actions() as unknown as Record<string, ActionButtonState>)?.[
       key
     ];
@@ -238,8 +246,6 @@ export class DeviceActionBar {
       });
     }
   }
-
-
 
   showComingSoonPopup(key: string) {
     const featureMap: Record<string, ActionBarAction> = {

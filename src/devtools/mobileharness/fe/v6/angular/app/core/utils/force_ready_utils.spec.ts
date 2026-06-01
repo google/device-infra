@@ -48,6 +48,34 @@ describe('forceReadyUtils', () => {
       expect(result.debug.isReady).toBeTrue();
       expect(result.decommission.isReady).toBeTrue();
     });
+
+    it('should handle flash action with nested state', () => {
+      const actions = {
+        screenshot: {isReady: false},
+        flash: {
+          state: {isReady: false},
+          params: {deviceType: '', requiredDimensions: ''},
+        },
+      };
+      const forcedButtons = ['flash'];
+      const result = updateActions(actions, forcedButtons);
+      expect(result.screenshot.isReady).toBeFalse();
+      expect(result.flash.state.isReady).toBeTrue();
+    });
+
+    it('should handle flash action with nested state when "*" is forced', () => {
+      const actions = {
+        screenshot: {isReady: false},
+        flash: {
+          state: {isReady: false},
+          params: {deviceType: '', requiredDimensions: ''},
+        },
+      };
+      const forcedButtons = ['*'];
+      const result = updateActions(actions, forcedButtons);
+      expect(result.screenshot.isReady).toBeTrue();
+      expect(result.flash.state.isReady).toBeTrue();
+    });
   });
 
   describe('modifyHostHeaderInfo', () => {

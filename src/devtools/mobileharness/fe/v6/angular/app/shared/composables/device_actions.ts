@@ -1,13 +1,16 @@
-import {inject, signal, computed, Signal, DestroyRef} from '@angular/core';
+import {computed, DestroyRef, inject, signal, Signal} from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import {MatDialog} from '@angular/material/dialog';
 import {Observable} from 'rxjs';
 import {filter, finalize, tap} from 'rxjs/operators';
 
-import {DeviceActionService} from '../services/device_action_service';
-import {RemoteControlService} from '../services/remote_control_service';
-import {RemoteControlDeviceInfo} from '../components/remote_control/remote_control.types';
 import {DeviceOverview, SubDeviceInfo} from '../../core/models/device_overview';
 import {DeviceSummary} from '../../core/models/host_overview';
+import {ConfirmDialog} from '../components/confirm_dialog/confirm_dialog';
+import {FlashErrorContent} from '../components/flash_error_content/flash_error_content';
+import {RemoteControlDeviceInfo} from '../components/remote_control/remote_control.types';
+import {DeviceActionService} from '../services/device_action_service';
+import {RemoteControlService} from '../services/remote_control_service';
 
 /**
  * Composable function encapsulating reactive state and boilerplate for executing
@@ -18,6 +21,7 @@ export function useDeviceActions() {
   const actionService = inject(DeviceActionService);
   const remoteControlService = inject(RemoteControlService);
   const destroyRef = inject(DestroyRef);
+  const dialog = inject(MatDialog);
 
   const activeActions = signal<Record<string, boolean>>({});
   const computedCache = new Map<string, Signal<boolean>>();
@@ -35,10 +39,10 @@ export function useDeviceActions() {
     action: string,
     stream$: Observable<T>,
   ): Observable<T> => {
-    activeActions.update((state) => ({ ...state, [action]: true }));
+    activeActions.update((state) => ({...state, [action]: true}));
     return stream$.pipe(
       finalize(() => {
-        activeActions.update((state) => ({ ...state, [action]: false }));
+        activeActions.update((state) => ({...state, [action]: false}));
       }),
     );
   };
@@ -120,6 +124,21 @@ export function useDeviceActions() {
       hostName: string,
       params?: {deviceType?: string; requiredDimensions?: string},
     ) => {
+      if (!params || !params?.deviceType) {
+        console.log(
+          `needed params for flash device is missing! params: ${JSON.stringify(params)}`,
+        );
+        dialog.open(ConfirmDialog, {
+          data: {
+            title: 'Cannot start flashing',
+            contentComponent: FlashErrorContent,
+            type: 'error',
+            primaryButtonLabel: 'OK',
+          },
+        });
+        return;
+      }
+
       actionService.flashDevice(deviceId, hostName, params);
     },
 
@@ -139,7 +158,9 @@ export function useDeviceActions() {
           .pipe(
             takeUntilDestroyed(destroyRef),
             filter((result) => !!result),
-            tap(() => { options?.onSuccess?.(); }),
+            tap(() => {
+              options?.onSuccess?.();
+            }),
           ),
       ).subscribe({
         error: () => {},

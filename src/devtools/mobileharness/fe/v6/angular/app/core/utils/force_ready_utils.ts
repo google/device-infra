@@ -1,6 +1,5 @@
 import {HttpRequest} from '@angular/common/http';
 
-import {ActionButtonState} from '../models/action_common';
 import {DeviceHeaderInfo} from '../models/device_action';
 import {DeviceOverviewPageData} from '../models/device_overview';
 import {HostHeaderInfo} from '../models/host_action';
@@ -169,20 +168,42 @@ export function updateActions<T>(actions: T, forcedButtons: string[]): T {
   let modified = false;
   const actionMap = updatedActions as unknown as Record<
     string,
-    ActionButtonState
+    {isReady?: boolean; state?: {isReady?: boolean}}
   >;
 
   if (forcedButtons.includes('*')) {
     for (const key of Object.keys(actionMap)) {
-      if (actionMap[key] && !actionMap[key].isReady) {
-        actionMap[key] = {...actionMap[key], isReady: true};
-        modified = true;
+      const action = actionMap[key];
+      if (!action) continue;
+
+      if (key === 'flash') {
+        if (action.state && !action.state.isReady) {
+          actionMap[key] = {
+            ...action,
+            state: {...action.state, isReady: true},
+          };
+          modified = true;
+        }
+      } else {
+        if (!action.isReady) {
+          actionMap[key] = {...action, isReady: true};
+          modified = true;
+        }
       }
     }
   } else {
     for (const btn of forcedButtons) {
-      if (actionMap[btn]) {
-        actionMap[btn] = {...actionMap[btn], isReady: true};
+      const action = actionMap[btn];
+      if (!action) continue;
+
+      if (btn === 'flash') {
+        actionMap[btn] = {
+          ...action,
+          state: {...action.state, isReady: true},
+        };
+        modified = true;
+      } else {
+        actionMap[btn] = {...action, isReady: true};
         modified = true;
       }
     }

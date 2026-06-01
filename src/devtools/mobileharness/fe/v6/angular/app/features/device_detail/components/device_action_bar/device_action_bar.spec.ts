@@ -6,13 +6,16 @@ import {provideRouter} from '@angular/router';
 import {ActionBarAction} from '@deviceinfra/app/core/constants/action_bar_config';
 import {APP_DATA} from '@deviceinfra/app/core/models/app_data';
 import {of, Subject} from 'rxjs';
-import {TakeScreenshotResponse, GetLogcatResponse} from '../../../../core/models/device_action';
+import {
+  GetLogcatResponse,
+  TakeScreenshotResponse,
+} from '../../../../core/models/device_action';
 import {DeviceOverviewPageData} from '../../../../core/models/device_overview';
 import {FakeHostService} from '../../../../core/services/host/fake_host_service';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
-import {RemoteControlService} from '../../../../shared/services/remote_control_service';
 import {DeviceActionService} from '../../../../shared/services/device_action_service';
+import {RemoteControlService} from '../../../../shared/services/remote_control_service';
 import {DeviceActionBar} from './device_action_bar';
 
 describe('DeviceActionBar', () => {
@@ -58,10 +61,12 @@ describe('DeviceActionBar', () => {
         screenshot: {enabled: true, visible: true, tooltip: '', isReady: true},
         logcat: {enabled: true, visible: true, tooltip: '', isReady: true},
         flash: {
-          enabled: true,
-          visible: true,
-          tooltip: '',
-          isReady: true,
+          state: {
+            enabled: true,
+            visible: true,
+            tooltip: '',
+            isReady: true,
+          },
           params: {deviceType: 'AndroidRealDevice', requiredDimensions: ''},
         },
         remoteControl: {
@@ -176,10 +181,12 @@ describe('DeviceActionBar', () => {
         actions: {
           ...mockPageData.headerInfo.actions!,
           flash: {
-            enabled: false,
-            visible: true,
-            tooltip: 'Disabled',
-            isReady: true,
+            state: {
+              enabled: false,
+              visible: true,
+              tooltip: 'Disabled',
+              isReady: true,
+            },
             params: {deviceType: 'AndroidRealDevice', requiredDimensions: ''},
           },
         },
@@ -234,7 +241,9 @@ describe('DeviceActionBar', () => {
     );
     screenshotButton.click();
 
-    expect(deviceActionService.takeScreenshot).toHaveBeenCalledWith('test-device');
+    expect(deviceActionService.takeScreenshot).toHaveBeenCalledWith(
+      'test-device',
+    );
   });
 
   it('should show loading spinner and disable button while taking screenshot', () => {
@@ -301,12 +310,15 @@ describe('DeviceActionBar', () => {
     );
     quarantineButton.click();
 
-    expect(deviceActionService.quarantineDevice).toHaveBeenCalledWith('test-device', {
-      quarantineInfo: {
-        isQuarantined: false,
-        expiry: '',
+    expect(deviceActionService.quarantineDevice).toHaveBeenCalledWith(
+      'test-device',
+      {
+        quarantineInfo: {
+          isQuarantined: false,
+          expiry: '',
+        },
       },
-    });
+    );
   });
 
   it('should call deviceActionService.quarantineDevice with isQuarantined: true when unquarantine button is clicked', () => {
@@ -326,12 +338,15 @@ describe('DeviceActionBar', () => {
     );
     unquarantineButton.click();
 
-    expect(deviceActionService.quarantineDevice).toHaveBeenCalledWith('test-device', {
-      quarantineInfo: {
-        isQuarantined: true,
-        expiry: '2025-12-31T23:59:59Z',
+    expect(deviceActionService.quarantineDevice).toHaveBeenCalledWith(
+      'test-device',
+      {
+        quarantineInfo: {
+          isQuarantined: true,
+          expiry: '2025-12-31T23:59:59Z',
+        },
       },
-    });
+    );
   });
 
   it('should call deviceActionService.changeQuarantine on changeQuarantine', () => {

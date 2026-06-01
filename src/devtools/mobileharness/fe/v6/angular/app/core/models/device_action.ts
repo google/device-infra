@@ -22,7 +22,8 @@ export declare interface FlashButtonParams {
 /**
  * State of flash action button.
  */
-export declare interface FlashActionButtonState extends ActionButtonState {
+export declare interface FlashActionInfo {
+  state: ActionButtonState;
   params: FlashButtonParams;
 }
 
@@ -41,7 +42,7 @@ export declare interface QuarantineInfo {
 export declare interface DeviceActions {
   screenshot: ActionButtonState;
   logcat: ActionButtonState;
-  flash: FlashActionButtonState;
+  flash: FlashActionInfo;
   remoteControl: ActionButtonState;
   quarantine: ActionButtonState;
   configuration: ActionButtonState;

@@ -20,7 +20,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionButtonState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionInfo;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
@@ -28,7 +28,7 @@ import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-/** Utility class to build {@link FlashActionButtonState} for flash button. */
+/** Utility class to build {@link FlashActionInfo} for flash button. */
 @Singleton
 public class FlashButtonBuilder {
 
@@ -42,9 +42,9 @@ public class FlashButtonBuilder {
     this.featureReadiness = featureReadiness;
   }
 
-  public FlashActionButtonState build(DeviceInfo deviceInfo, UniverseScope universe) {
+  public FlashActionInfo build(DeviceInfo deviceInfo, UniverseScope universe) {
     if (!featureManagerFactory.create(universe).isDeviceFlashingFeatureEnabled()) {
-      return FlashActionButtonState.newBuilder()
+      return FlashActionInfo.newBuilder()
           .setState(ActionButtonState.newBuilder().setVisible(false))
           .build();
     }
@@ -57,7 +57,7 @@ public class FlashButtonBuilder {
         deviceTypes.contains("AndroidRealDevice") || deviceTypes.contains("AndroidFlashableDevice");
 
     if (!isFlashableDevice) {
-      return FlashActionButtonState.newBuilder()
+      return FlashActionInfo.newBuilder()
           .setState(ActionButtonState.newBuilder().setVisible(false))
           .build();
     }
@@ -69,8 +69,8 @@ public class FlashButtonBuilder {
 
     boolean isDeviceIdle = deviceInfo.getDeviceStatus().equals(DeviceStatus.IDLE);
 
-    FlashActionButtonState.Builder stateBuilder =
-        FlashActionButtonState.newBuilder()
+    FlashActionInfo.Builder stateBuilder =
+        FlashActionInfo.newBuilder()
             .setState(
                 ActionButtonState.newBuilder()
                     .setVisible(true)

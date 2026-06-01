@@ -269,18 +269,20 @@ export class FakeDeviceService extends DeviceService {
           isReady: !scenario.allActionsNotReady,
         },
         flash: {
-          enabled: flashEnabled,
-          visible: flashVisible,
-          tooltip: flashEnabled
-            ? 'Flash device'
-            : !isAndroid
-              ? 'Only for Android devices'
-              : 'Device not flashable',
+          state: {
+            enabled: flashEnabled,
+            visible: flashVisible,
+            tooltip: flashEnabled
+              ? 'Flash device'
+              : !isAndroid
+                ? 'Only for Android devices'
+                : 'Device not flashable',
+            isReady: !scenario.allActionsNotReady,
+          },
           params: {
             deviceType: 'AndroidRealDevice',
             requiredDimensions: '',
           },
-          isReady: !scenario.allActionsNotReady,
         },
         remoteControl: {
           enabled: remoteControlEnabled,
