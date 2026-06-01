@@ -103,6 +103,11 @@ public class Flags {
   public static final Flag<String> addSupportedDimensionForOmniModeUsage = Flag.nullString();
 
   @FlagSpec(
+      name = "allow_insecure_mpm_plugin",
+      help = "Whether to allow MPM plugins built from untrusted sources.")
+  public static final Flag<Boolean> allowInsecureMpmPlugin = Flag.value(true);
+
+  @FlagSpec(
       name = "allow_insecure_plugin",
       help = "Whether to allow plugins built from untrusted sources.")
   public static final Flag<Boolean> allowInsecurePlugin = Flag.value(true);
