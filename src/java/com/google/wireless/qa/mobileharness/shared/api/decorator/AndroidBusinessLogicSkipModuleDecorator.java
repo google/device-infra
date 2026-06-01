@@ -16,8 +16,6 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toCollection;
 
 import com.google.common.base.Splitter;
@@ -45,7 +43,6 @@ import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidBusinessLogicSkipModuleDecoratorSpec;
-import java.net.URLEncoder;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.Map;
@@ -62,7 +59,6 @@ public class AndroidBusinessLogicSkipModuleDecorator extends BaseDecorator
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  /* Placeholder in the service URL for the suite to be configured */
   private static final String SUITE_PLACEHOLDER = "{suite-name}";
 
   private static final String FEATURE_PREFIX = "feature:";
@@ -135,19 +131,19 @@ public class AndroidBusinessLogicSkipModuleDecorator extends BaseDecorator
               : ImmutableMap.of();
 
       ImmutableSetMultimap<String, String> params =
-          buildRequestParams(testInfo, deviceId, xtsSuiteInfoMap, spec);
-      String businessLogicUrl =
-          appendParamsToUrl(
-              formatBusinessLogicUrl(spec.getBusinessLogicUrl(), xtsSuiteInfoMap), params);
-      testInfo
-          .log()
-          .atInfo()
-          .alsoTo(logger)
-          .log("Fetching business logic from %s", businessLogicUrl);
+          buildRequestParams(testInfo, deviceId, xtsSuiteInfoMap);
+
+      String formattedUrl = formatBusinessLogicUrl(spec.getBusinessLogicUrl(), xtsSuiteInfoMap);
+
       try {
         String json =
             businessLogicFetcher.fetchBusinessLogic(
-                businessLogicUrl, Duration.ofMillis(spec.getBusinessLogicTimeoutMs()));
+                formattedUrl,
+                spec.getBusinessLogicApiScope(),
+                spec.getBusinessLogicApiKey(),
+                System.getenv("APE_API_KEY"),
+                Duration.ofMillis(spec.getBusinessLogicTimeoutMs()),
+                params);
         BusinessLogic logic = BusinessLogic.fromJsonString(json);
 
         BusinessLogicExecutor executor = new BusinessLogicExecutor(this);
@@ -205,21 +201,13 @@ public class AndroidBusinessLogicSkipModuleDecorator extends BaseDecorator
   }
 
   private ImmutableSetMultimap<String, String> buildRequestParams(
-      TestInfo testInfo,
-      String deviceId,
-      Map<String, String> xtsSuiteInfoMap,
-      AndroidBusinessLogicSkipModuleDecoratorSpec spec)
+      TestInfo testInfo, String deviceId, Map<String, String> xtsSuiteInfoMap)
       throws InterruptedException {
     ImmutableSetMultimap.Builder<String, String> paramsBuilder = ImmutableSetMultimap.builder();
 
     String suiteVersion = xtsSuiteInfoMap.getOrDefault("suite_version", "");
     if (!suiteVersion.isEmpty()) {
       paramsBuilder.put("suite_version", suiteVersion);
-    }
-
-    String apiKey = spec.getBusinessLogicApiKey();
-    if (!apiKey.isEmpty()) {
-      paramsBuilder.put("key", apiKey);
     }
 
     try {
@@ -274,26 +262,6 @@ public class AndroidBusinessLogicSkipModuleDecorator extends BaseDecorator
     }
 
     return paramsBuilder.build();
-  }
-
-  private String appendParamsToUrl(String baseUrl, ImmutableSetMultimap<String, String> params) {
-    if (params.isEmpty()) {
-      return baseUrl;
-    }
-    String queryString =
-        params.entries().stream()
-            .map(
-                entry ->
-                    URLEncoder.encode(entry.getKey(), UTF_8)
-                        + "="
-                        + URLEncoder.encode(entry.getValue(), UTF_8))
-            .collect(joining("&"));
-
-    String separator = baseUrl.contains("?") ? "&" : "?";
-    if (baseUrl.endsWith("?") || baseUrl.endsWith("&")) {
-      separator = "";
-    }
-    return baseUrl + separator + queryString;
   }
 
   private String formatBusinessLogicUrl(String url, Map<String, String> xtsSuiteInfoMap) {

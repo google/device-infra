@@ -45,7 +45,7 @@ message AndroidBusinessLogicSkipModuleDecoratorSpec {
       [(field_detail) = { help: "The xts suite info for the test." }];
 
   optional int32 business_logic_timeout_ms = 6 [
-    default = 10000,
+    default = 60000,
     (field_detail) = {
       help: "Timeout in milliseconds for business logic request."
     }

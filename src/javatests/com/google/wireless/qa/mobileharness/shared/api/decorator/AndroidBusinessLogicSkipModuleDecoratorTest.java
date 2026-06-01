@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -127,7 +128,9 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
     decorator.run(testInfo);
 
     verify(decoratedDriver).run(testInfo);
-    verify(mockFetcher, never()).fetchBusinessLogic(anyString(), any(Duration.class));
+    verify(mockFetcher, never())
+        .fetchBusinessLogic(
+            anyString(), anyString(), anyString(), any(), any(Duration.class), any());
   }
 
   @Test
@@ -138,7 +141,8 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
             .build();
     when(jobInfo.combinedSpec(decorator, "fake_device_id")).thenReturn(spec);
 
-    when(mockFetcher.fetchBusinessLogic(anyString(), any(Duration.class)))
+    when(mockFetcher.fetchBusinessLogic(
+            anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
         .thenThrow(
             new MobileHarnessException(
                 AndroidErrorId.ANDROID_BUSINESS_LOGIC_SKIP_MODULE_DECORATOR_FETCH_ERROR,
@@ -159,12 +163,11 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
     when(jobInfo.combinedSpec(decorator, "fake_device_id")).thenReturn(spec);
 
     String jsonLogic =
-"""
+        """
         {
           "businessLogicRulesLists": [
             {
-              "testName":
-"com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidBusinessLogicSkipModuleDecorator#AndroidBusinessLogicSkipModuleDecorator",
+              "testName": "com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidBusinessLogicSkipModuleDecorator#AndroidBusinessLogicSkipModuleDecorator",
               "businessLogicRules": [
                 {
                   "ruleConditions": [],
@@ -179,8 +182,10 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
             }
           ]
         }
-""";
-    when(mockFetcher.fetchBusinessLogic(anyString(), any(Duration.class))).thenReturn(jsonLogic);
+        """;
+    when(mockFetcher.fetchBusinessLogic(
+            anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
+        .thenReturn(jsonLogic);
 
     decorator.run(testInfo);
 
@@ -197,16 +202,24 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
             .setXtsSuiteInfo("suite_name=cts,suite_version=12.0")
             .build();
     when(jobInfo.combinedSpec(decorator, "fake_device_id")).thenReturn(spec);
-    when(mockFetcher.fetchBusinessLogic(anyString(), any(Duration.class))).thenReturn("{}");
+    when(mockFetcher.fetchBusinessLogic(
+            anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
+        .thenReturn("{}");
 
     decorator.run(testInfo);
 
     verify(mockFetcher)
-        .fetchBusinessLogic("http://fake-url/cts/logic?suite_version=12.0", Duration.ofSeconds(10));
+        .fetchBusinessLogic(
+            eq("http://fake-url/cts/logic"),
+            eq(""),
+            eq(""),
+            eq(System.getenv("APE_API_KEY")),
+            eq(Duration.ofSeconds(60)),
+            eq(ImmutableSetMultimap.of("suite_version", "12.0")));
   }
 
   @Test
-  public void run_withDeviceData_appendsParamsToUrl() throws Exception {
+  public void run_withDeviceData_gathersParams() throws Exception {
     AndroidBusinessLogicSkipModuleDecoratorSpec spec =
         AndroidBusinessLogicSkipModuleDecoratorSpec.newBuilder()
             .setBusinessLogicUrl("http://fake-url/logic")
@@ -219,30 +232,49 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
         .thenReturn("30");
     when(mockAndroidPackageManagerUtil.listPackages("fake_device_id", PackageType.ALL))
         .thenReturn(ImmutableSet.of("com.google.android.gms"));
-    when(mockFetcher.fetchBusinessLogic(anyString(), any(Duration.class))).thenReturn("{}");
+    when(mockFetcher.fetchBusinessLogic(
+            anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
+        .thenReturn("{}");
 
     decorator.run(testInfo);
 
     verify(mockFetcher)
         .fetchBusinessLogic(
-            "http://fake-url/logic?features=android.hardware.type.television&properties=ro.build.version.sdk%3A30&packages=com.google.android.gms",
-            Duration.ofSeconds(10));
+            eq("http://fake-url/logic"),
+            eq(""),
+            eq(""),
+            eq(System.getenv("APE_API_KEY")),
+            eq(Duration.ofSeconds(60)),
+            eq(
+                ImmutableSetMultimap.<String, String>builder()
+                    .put("features", "android.hardware.type.television")
+                    .put("properties", "ro.build.version.sdk:30")
+                    .put("packages", "com.google.android.gms")
+                    .build()));
   }
 
   @Test
-  public void run_withApiKey_appendsKeyToUrl() throws Exception {
+  public void run_withApiKey_passesKeyToFetcher() throws Exception {
     AndroidBusinessLogicSkipModuleDecoratorSpec spec =
         AndroidBusinessLogicSkipModuleDecoratorSpec.newBuilder()
             .setBusinessLogicUrl("http://fake-url/logic")
             .setBusinessLogicApiKey("fake_api_key")
             .build();
     when(jobInfo.combinedSpec(decorator, "fake_device_id")).thenReturn(spec);
-    when(mockFetcher.fetchBusinessLogic(anyString(), any(Duration.class))).thenReturn("{}");
+    when(mockFetcher.fetchBusinessLogic(
+            anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
+        .thenReturn("{}");
 
     decorator.run(testInfo);
 
     verify(mockFetcher)
-        .fetchBusinessLogic("http://fake-url/logic?key=fake_api_key", Duration.ofSeconds(10));
+        .fetchBusinessLogic(
+            eq("http://fake-url/logic"),
+            eq(""),
+            eq("fake_api_key"),
+            eq(System.getenv("APE_API_KEY")),
+            eq(Duration.ofSeconds(60)),
+            eq(ImmutableSetMultimap.of()));
   }
 
   @Test
@@ -256,12 +288,11 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
         .thenReturn(Optional.of("AndroidBusinessLogicSkipModuleDecorator"));
 
     String jsonLogic =
-"""
+        """
         {
           "businessLogicRulesLists": [
             {
-              "testName":
-"com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidBusinessLogicSkipModuleDecorator#AndroidBusinessLogicSkipModuleDecorator",
+              "testName": "com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidBusinessLogicSkipModuleDecorator#AndroidBusinessLogicSkipModuleDecorator",
               "businessLogicRules": [
                 {
                   "ruleConditions": [],
@@ -276,8 +307,10 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
             }
           ]
         }
-""";
-    when(mockFetcher.fetchBusinessLogic(anyString(), any(Duration.class))).thenReturn(jsonLogic);
+        """;
+    when(mockFetcher.fetchBusinessLogic(
+            anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
+        .thenReturn(jsonLogic);
 
     decorator.run(testInfo);
 
@@ -294,17 +327,15 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
             .setConfigFilename("AndroidBusinessLogicSkipModuleDecorator")
             .build();
     when(jobInfo.combinedSpec(decorator, "fake_device_id")).thenReturn(spec);
-    // Stub property to return a different name that won't match the JSON
     when(jobProperties.getOptional(SessionHandlerHelper.XTS_MODULE_NAME_PROP))
         .thenReturn(Optional.of("DifferentModuleName"));
 
     String jsonLogic =
-"""
+        """
         {
           "businessLogicRulesLists": [
             {
-              "testName":
-"com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidBusinessLogicSkipModuleDecorator#AndroidBusinessLogicSkipModuleDecorator",
+              "testName": "com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidBusinessLogicSkipModuleDecorator#AndroidBusinessLogicSkipModuleDecorator",
               "businessLogicRules": [
                 {
                   "ruleConditions": [],
@@ -319,12 +350,13 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
             }
           ]
         }
-""";
-    when(mockFetcher.fetchBusinessLogic(anyString(), any(Duration.class))).thenReturn(jsonLogic);
+        """;
+    when(mockFetcher.fetchBusinessLogic(
+            anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
+        .thenReturn(jsonLogic);
 
     decorator.run(testInfo);
 
-    // Should still skip because configFilename matches "AndroidBusinessLogicSkipModuleDecorator"
     verify(testResultWithCause, Mockito.times(2))
         .setNonPassing(eq(TestResult.SKIP), any(MobileHarnessException.class));
     verify(decoratedDriver, never()).run(any());
@@ -340,19 +372,17 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
     when(jobInfo.combinedSpec(decorator, "fake_device_id")).thenReturn(spec);
 
     String jsonLogic =
-"""
+        """
         {
           "businessLogicRulesLists": [
             {
-              "testName":
-"com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidBusinessLogicSkipModuleDecorator#AndroidBusinessLogicSkipModuleDecorator",
+              "testName": "com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidBusinessLogicSkipModuleDecorator#AndroidBusinessLogicSkipModuleDecorator",
               "businessLogicRules": [
                 {
                   "ruleConditions": [],
                   "ruleActions": [
                     {
-                      "methodName":
-"com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidBusinessLogicSkipModuleDecorator.skipTest",
+                      "methodName": "com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidBusinessLogicSkipModuleDecorator.skipTest",
                       "methodArgs": ["not supported"]
                     }
                   ]
@@ -361,8 +391,10 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
             }
           ]
         }
-""";
-    when(mockFetcher.fetchBusinessLogic(anyString(), any(Duration.class))).thenReturn(jsonLogic);
+        """;
+    when(mockFetcher.fetchBusinessLogic(
+            anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
+        .thenReturn(jsonLogic);
 
     decorator.run(testInfo);
 
@@ -379,7 +411,9 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
             .setConfigFilename("AndroidBusinessLogicSkipModuleDecorator")
             .build();
     when(jobInfo.combinedSpec(decorator, "fake_device_id")).thenReturn(spec);
-    when(mockFetcher.fetchBusinessLogic(anyString(), any(Duration.class))).thenReturn("{}");
+    when(mockFetcher.fetchBusinessLogic(
+            anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
+        .thenReturn("{}");
 
     decorator.run(testInfo);
 
@@ -394,10 +428,19 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
             .setBusinessLogicTimeoutMs(100) // 100ms timeout
             .build();
     when(jobInfo.combinedSpec(decorator, "fake_device_id")).thenReturn(spec);
-    when(mockFetcher.fetchBusinessLogic(anyString(), any(Duration.class))).thenReturn("{}");
+    when(mockFetcher.fetchBusinessLogic(
+            anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
+        .thenReturn("{}");
 
     decorator.run(testInfo);
 
-    verify(mockFetcher).fetchBusinessLogic("http://fake-url/logic", Duration.ofMillis(100));
+    verify(mockFetcher)
+        .fetchBusinessLogic(
+            eq("http://fake-url/logic"),
+            anyString(),
+            anyString(),
+            any(),
+            eq(Duration.ofMillis(100)),
+            any());
   }
 }

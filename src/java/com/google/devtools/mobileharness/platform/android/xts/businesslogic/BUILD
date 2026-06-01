@@ -19,6 +19,7 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/businesslogic:__pkg__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
     ],
 )
@@ -32,6 +33,9 @@ java_library(
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_auth_google_auth_library_oauth2_http",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
