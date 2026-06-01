@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
@@ -132,6 +133,7 @@ public final class FlashButtonBuilderTest {
     assertThat(state.getState().getEnabled()).isFalse();
     assertThat(state.getState().getTooltip())
         .isEqualTo("Device flashing is only supported on satellite lab Android devices.");
+    assertThat(state.getParams().getDeviceType()).isEqualTo("TestbedDevice");
   }
 
   @Test
@@ -148,6 +150,33 @@ public final class FlashButtonBuilderTest {
     assertThat(state.getState().getVisible()).isTrue();
     assertThat(state.getState().getEnabled()).isTrue();
     assertThat(state.getState().getTooltip()).isEqualTo("Flash the device");
+  }
+
+  @Test
+  public void build_shouldFillParams() {
+    when(featureManager.isDeviceFlashingFeatureEnabled()).thenReturn(true);
+    DeviceInfo deviceInfo =
+        DeviceInfo.newBuilder()
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .addType("AndroidRealDevice")
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addRequiredDimension(
+                                DeviceDimension.newBuilder().setName("pool").setValue("shared"))
+                            .addRequiredDimension(
+                                DeviceDimension.newBuilder().setName("model").setValue("pixel 6"))
+                            .addRequiredDimension(
+                                DeviceDimension.newBuilder()
+                                    .setName("model")
+                                    .setValue("pixel 6 pro"))))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .build();
+
+    FlashActionInfo state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
+
+    assertThat(state.getParams().getDeviceType()).isEqualTo("AndroidRealDevice");
+    assertThat(state.getParams().getRequiredDimensions()).isEqualTo("pool=shared,model=pixel 6");
   }
 
   @Test
@@ -182,6 +211,7 @@ public final class FlashButtonBuilderTest {
     assertThat(state.getState().getVisible()).isTrue();
     assertThat(state.getState().getEnabled()).isTrue();
     assertThat(state.getState().getTooltip()).isEqualTo("Flash the device");
+    assertThat(state.getParams().getDeviceType()).isEqualTo("AndroidFlashableDevice");
   }
 
   @Test
@@ -197,5 +227,26 @@ public final class FlashButtonBuilderTest {
     FlashActionInfo state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
 
     assertThat(state.getState().getIsReady()).isFalse();
+  }
+
+  @Test
+  public void build_whenNestFctDevice_shouldSetDeviceTypeNestFctDevice() {
+    when(featureManager.isDeviceFlashingFeatureEnabled()).thenReturn(true);
+    DeviceInfo deviceInfo =
+        DeviceInfo.newBuilder()
+            .setDeviceFeature(
+                DeviceFeature.newBuilder().addType("AndroidRealDevice").addType("NestFctDevice"))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .build();
+
+    FlashActionInfo state = flashButtonBuilder.build(deviceInfo, SELF_UNIVERSE);
+
+    assertThat(state.getParams().getDeviceType()).isEqualTo("NestFctDevice");
+  }
+
+  @Test
+  public void getAcidDeviceType_whenEmptyList_returnsAndroidRealDevice() {
+    assertThat(FlashButtonBuilder.getAcidDeviceType(ImmutableList.of()))
+        .isEqualTo("AndroidRealDevice");
   }
 }

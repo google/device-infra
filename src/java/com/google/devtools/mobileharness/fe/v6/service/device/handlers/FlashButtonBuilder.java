@@ -16,15 +16,19 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashButtonParams;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -74,7 +78,12 @@ public class FlashButtonBuilder {
             .setState(
                 ActionButtonState.newBuilder()
                     .setVisible(true)
-                    .setIsReady(featureReadiness.isDeviceFlashingReady()));
+                    .setIsReady(featureReadiness.isDeviceFlashingReady()))
+            // Fill parameters required by the frontend to construct the flash command snippet.
+            .setParams(
+                FlashButtonParams.newBuilder()
+                    .setDeviceType(getAcidDeviceType(deviceTypes))
+                    .setRequiredDimensions(getRequiredDimensions(dimensions)));
 
     if (isSharedDevice || isTestBed) {
       stateBuilder
@@ -94,5 +103,65 @@ public class FlashButtonBuilder {
       }
     }
     return stateBuilder.build();
+  }
+
+  /**
+   * Determines the primary device type to be used by ACID for flashing.
+   *
+   * <p>Follows a predefined order of preference to select the most specific type supported by ACID.
+   * Defaults to "AndroidRealDevice" if no specific type matches or if the list is empty.
+   *
+   * <p>Refer to MHFE V5 implementation in:
+   * java/com/google/devtools/mobileharness/fe/v5/ui/util.js:getAcidDeviceType
+   */
+  @VisibleForTesting
+  static String getAcidDeviceType(List<String> deviceTypeList) {
+    if (deviceTypeList.contains("TestbedDevice")) {
+      return "TestbedDevice";
+    } else if (deviceTypeList.contains("NestFctDevice")) {
+      return "NestFctDevice";
+    } else if (deviceTypeList.contains("NestUartDevice")) {
+      return "NestUartDevice";
+    } else if (deviceTypeList.contains("UsbDevice")) {
+      return "UsbDevice";
+    } else if (deviceTypeList.contains("EmbeddedLinuxDevice")) {
+      return "EmbeddedLinuxDevice";
+    } else if (deviceTypeList.contains("AndroidLocalEmulator")) {
+      return "AndroidLocalEmulator";
+    } else if (deviceTypeList.contains("AndroidFastbootDevice")) {
+      return "AndroidFastbootDevice";
+    } else if (deviceTypeList.contains("VideoDevice")) {
+      return "VideoDevice";
+    } else if (deviceTypeList.contains("AndroidRealDevice")) {
+      return "AndroidRealDevice";
+    }
+    if (!deviceTypeList.isEmpty()) {
+      return deviceTypeList.get(0);
+    }
+    return "AndroidRealDevice";
+  }
+
+  /**
+   * Formats a list of required dimensions into a comma-separated string of {@code key=value} pairs.
+   *
+   * <p>If duplicate dimension names exist, it keeps the first one (first come first serve) to avoid
+   * conflicting parameters in the flash command. Uses {@link LinkedHashMap} to maintain insertion
+   * order for predictable output.
+   *
+   * <p>Refer to MHFE V5 implementation in:
+   * java/com/google/devtools/mobileharness/fe/v5/ui/devicecontrol/remote_control_controller.js:flashDevice
+   */
+  private static String getRequiredDimensions(List<DeviceDimension> dimensions) {
+    return dimensions.stream()
+        .collect(
+            Collectors.toMap(
+                DeviceDimension::getName,
+                DeviceDimension::getValue,
+                (v1, v2) -> v1, // keep first (deduplication)
+                LinkedHashMap::new))
+        .entrySet()
+        .stream()
+        .map(e -> e.getKey() + "=" + e.getValue())
+        .collect(Collectors.joining(","));
   }
 }
