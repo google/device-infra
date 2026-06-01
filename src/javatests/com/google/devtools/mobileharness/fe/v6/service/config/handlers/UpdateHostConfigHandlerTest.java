@@ -30,8 +30,11 @@ import static org.mockito.Mockito.when;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Lab;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigPusherHelper;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapability;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension;
@@ -82,6 +85,7 @@ public final class UpdateHostConfigHandlerTest {
   @Bind @Mock private GroupMembershipProvider groupMembershipProvider;
   @Mock private ConfigServiceCapability configServiceCapability;
   @Bind @Mock private ConfigServiceCapabilityFactory configServiceCapabilityFactory;
+  @Bind @Mock private ConfigPusherHelper configPusherHelper;
   @Bind @Mock private Environment environment;
   @Bind private ListeningExecutorService executorService = newDirectExecutorService();
 
@@ -94,6 +98,7 @@ public final class UpdateHostConfigHandlerTest {
   @Before
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+    when(configPusherHelper.isSectionRestricted(any(), any())).thenReturn(false);
     when(configServiceCapabilityFactory.create(any(UniverseScope.class)))
         .thenReturn(configServiceCapability);
     when(environment.isAts()).thenReturn(false);
@@ -173,6 +178,134 @@ public final class UpdateHostConfigHandlerTest {
                 .addHostProperty(
                     Lab.HostProperty.newBuilder().setKey("new_key").setValue("new_value").build())
                 .build());
+  }
+
+  @Test
+  public void updateHostConfig_restrictedSection_returnsPermissionDenied() throws Exception {
+    String hostName = "test_host";
+    String universe = "google_1p";
+    HostConfig feConfig = HostConfig.getDefaultInstance();
+    UpdateHostConfigRequest request =
+        UpdateHostConfigRequest.newBuilder()
+            .setHostName(hostName)
+            .setUniverse(universe)
+            .setConfig(feConfig)
+            .setScope(
+                HostConfigUpdateScope.newBuilder()
+                    .setSection(HostConfigSection.HOST_PROPERTIES)
+                    .build())
+            .build();
+
+    LabConfig existingConfig = LabConfig.newBuilder().setHostName(hostName).build();
+    when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
+
+    doThrow(
+            new MobileHarnessException(
+                BasicErrorId.NON_MH_EXCEPTION, "Section is managed by Config Pusher"))
+        .when(configPusherHelper)
+        .validateUpdate(eq(HostConfigSection.HOST_PROPERTIES), any(), eq(existingConfig));
+
+    UpdateHostConfigResponse response =
+        updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
+
+    assertThat(response.getSuccess()).isFalse();
+    assertThat(response.getError().getCode()).isEqualTo(UpdateError.Code.PERMISSION_DENIED);
+    assertThat(response.getError().getMessage()).contains("Section is managed by Config Pusher");
+  }
+
+  @Test
+  public void updateHostConfig_fullUpdateOnConfigPusherHost_filtersRestrictedSections()
+      throws Exception {
+    String hostName = "test_host";
+    String universe = "google_1p";
+
+    // New incoming config (trying to update everything)
+    HostConfig incomingConfig =
+        HostConfig.newBuilder()
+            .setPermissions(HostPermissions.newBuilder().addHostAdmins("new_admin").build())
+            .setDeviceConfigMode(DeviceConfigMode.SHARED)
+            .addHostProperties(
+                HostProperty.newBuilder().setKey("new_key").setValue("new_val").build())
+            .setDeviceDiscovery(
+                DeviceDiscoverySettings.newBuilder().addMonitoredDeviceUuids("new_uuid").build())
+            .build();
+
+    UpdateHostConfigRequest request =
+        UpdateHostConfigRequest.newBuilder()
+            .setHostName(hostName)
+            .setUniverse(universe)
+            .setConfig(incomingConfig)
+            .setScope(
+                HostConfigUpdateScope.newBuilder()
+                    .setSection(HostConfigSection.HOST_CONFIG_SECTION_UNSPECIFIED)
+                    .build())
+            .build();
+
+    // Old existing config in DB
+    LabConfig existingConfig =
+        LabConfig.newBuilder()
+            .setHostName(hostName)
+            .setDefaultDeviceConfig(BasicDeviceConfig.newBuilder().addOwner("old_admin").build())
+            .setHostProperties(
+                HostProperties.newBuilder()
+                    .addHostProperty(
+                        Lab.HostProperty.newBuilder()
+                            .setKey("device_config_mode")
+                            .setValue("per_device")
+                            .build())
+                    .addHostProperty(
+                        Lab.HostProperty.newBuilder().setKey("old_key").setValue("old_val").build())
+                    .build())
+            .build();
+
+    when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
+    when(configurationProvider.updateLabConfig(eq(hostName), any(), eq(SELF_UNIVERSE)))
+        .thenReturn(immediateVoidFuture());
+
+    // Mock ConfigPusherHelper to restrict hostAdmins, deviceConfigMode, and hostProperties, but NOT
+    // deviceDiscovery
+    when(configPusherHelper.isSectionRestricted(
+            eq(HostConfigSection.HOST_PERMISSIONS), eq(existingConfig)))
+        .thenReturn(true);
+    when(configPusherHelper.isSectionRestricted(
+            eq(HostConfigSection.DEVICE_CONFIG_MODE), eq(existingConfig)))
+        .thenReturn(true);
+    when(configPusherHelper.isSectionRestricted(
+            eq(HostConfigSection.HOST_PROPERTIES), eq(existingConfig)))
+        .thenReturn(true);
+    when(configPusherHelper.isSectionRestricted(
+            eq(HostConfigSection.DEVICE_CONFIG), eq(existingConfig)))
+        .thenReturn(true);
+    when(configPusherHelper.isSectionRestricted(
+            eq(HostConfigSection.DEVICE_DISCOVERY), eq(existingConfig)))
+        .thenReturn(false);
+
+    UpdateHostConfigResponse response =
+        updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
+
+    assertThat(response.getSuccess()).isTrue();
+
+    ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
+    verify(configurationProvider)
+        .updateLabConfig(eq(hostName), captor.capture(), eq(SELF_UNIVERSE));
+    LabConfig updatedConfig = captor.getValue();
+
+    // Restricted fields must remain unchanged (preserve old values)
+    assertThat(updatedConfig.getDefaultDeviceConfig().getOwnerList()).containsExactly("old_admin");
+
+    // host_properties is restricted, so both properties are preserved
+    assertThat(updatedConfig.getHostProperties().getHostPropertyList())
+        .containsExactly(
+            Lab.HostProperty.newBuilder()
+                .setKey("device_config_mode")
+                .setValue("per_device")
+                .build(),
+            Lab.HostProperty.newBuilder().setKey("old_key").setValue("old_val").build());
+
+    // Allowed fields must be updated (contain new values)
+    assertThat(updatedConfig.getMonitoredDeviceUuidList()).containsExactly("new_uuid");
   }
 
   @Test

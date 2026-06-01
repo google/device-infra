@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigPusherHelper;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapability;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfigMode;
@@ -61,6 +62,7 @@ public final class GetHostConfigHandlerTest {
   @Bind @Mock private ConfigurationProvider configurationProvider;
   @Mock private ConfigServiceCapability configServiceCapability;
   @Bind @Mock private ConfigServiceCapabilityFactory configServiceCapabilityFactory;
+  @Bind @Mock private ConfigPusherHelper configPusherHelper;
   @Bind private ListeningExecutorService executorService = newDirectExecutorService();
 
   @Inject private GetHostConfigHandler getHostConfigHandler;
@@ -68,6 +70,8 @@ public final class GetHostConfigHandlerTest {
   @Before
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+    when(configPusherHelper.decorateUiStatus(any(), any()))
+        .thenAnswer(invocation -> invocation.getArgument(0));
     when(configServiceCapabilityFactory.create(any(UniverseScope.class)))
         .thenReturn(configServiceCapability);
     when(configServiceCapability.calculateHostUiStatus())

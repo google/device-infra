@@ -14,6 +14,7 @@
 #
 
 load("@rules_java//java:java_library.bzl", "java_library")
+load("@rules_java//java:java_test.bzl", "java_test")
 load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
 package(
@@ -50,4 +51,17 @@ junit_test_suites(
     name = "gen_tests",
     sizes = ["small"],
     deps = [":util_tests"],
+)
+
+java_test(
+    name = "NoOpConfigPusherHelperTest",
+    size = "small",
+    srcs = ["NoOpConfigPusherHelperTest.java"],
+    deps = [
+        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_resources_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:no_op_config_pusher_helper",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:junit_junit",
+    ],
 )
