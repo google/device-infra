@@ -8,6 +8,7 @@ import {
   DeviceService,
 } from '../../core/services/device/device_service';
 import {FlashDialog} from '../../features/device_detail/components/flash_dialog/flash_dialog';
+import {LogcatLinkDialog} from '../../features/device_detail/components/logcat_link_dialog/logcat_link_dialog';
 import {QuarantineDialog} from '../../features/device_detail/components/quarantine_dialog/quarantine_dialog';
 import {ScreenshotDialog} from '../../features/device_detail/components/screenshot_dialog/screenshot_dialog';
 import {ConfirmDialog} from '../components/confirm_dialog/confirm_dialog';
@@ -111,6 +112,15 @@ describe('DeviceActionService', () => {
     const openArgs = (window.open as jasmine.Spy).calls.mostRecent().args;
     expect(openArgs[0]).toBe('http://mock-log-url');
     expect(openArgs[1]).toBe('_blank');
+
+    expect(dialogSpy.open).toHaveBeenCalledWith(
+      LogcatLinkDialog,
+      jasmine.objectContaining({
+        data: {
+          logUrl: 'http://mock-log-url',
+        },
+      }),
+    );
   });
 
   it('should show error snackbar when getLogcat fails', () => {

@@ -11,6 +11,7 @@ import {
 } from '../../core/models/device_action';
 import {DEVICE_SERVICE} from '../../core/services/device/device_service';
 import {FlashDialog} from '../../features/device_detail/components/flash_dialog/flash_dialog';
+import {LogcatLinkDialog} from '../../features/device_detail/components/logcat_link_dialog/logcat_link_dialog';
 import {QuarantineDialog} from '../../features/device_detail/components/quarantine_dialog/quarantine_dialog';
 import {ScreenshotDialog} from '../../features/device_detail/components/screenshot_dialog/screenshot_dialog';
 import {ConfirmDialog} from '../components/confirm_dialog/confirm_dialog';
@@ -56,6 +57,13 @@ export class DeviceActionService {
           'Logcat retrieved successfully. And opened in a new browser tab.',
         );
         openInNewTab(response.logUrl);
+
+        // Use dedicated LogcatLinkDialog to show the link prominently and bypass popup blockers.
+        this.dialog.open(LogcatLinkDialog, {
+          data: {
+            logUrl: response.logUrl,
+          },
+        });
       }),
       catchError((err) => {
         this.snackBar.showError('Failed to get logcat.');
@@ -102,7 +110,9 @@ export class DeviceActionService {
         });
         return unquarantineDialogRef.afterClosed().pipe(
           filter((result) => result === 'primary'),
-          tap(() => { this.snackBar.showInfo('Unquarantining device...'); }),
+          tap(() => {
+            this.snackBar.showInfo('Unquarantining device...');
+          }),
           switchMap(() => this.deviceService.unquarantineDevice(deviceId)),
           tap(() => {
             this.snackBar.showSuccess(

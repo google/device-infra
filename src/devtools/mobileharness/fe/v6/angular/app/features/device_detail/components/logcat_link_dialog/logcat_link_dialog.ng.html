@@ -1,0 +1,20 @@
+<div class="logcat-link-dialog-container">
+  <div class="logcat-link-dialog-header">
+    <mat-icon class="success-icon">check_circle</mat-icon>
+    <h3>Logcat File Opened</h3>
+  </div>
+
+  <mat-dialog-content class="logcat-link-dialog-content">
+    <p>Logcat File has been opened in a new browser tab. If it was blocked by your browser, you can click below link to open it manually:</p>
+
+    <div class="link-container">
+      <a [href]="data.logUrl" target="_blank" rel="noopener noreferrer" class="outstanding-link">
+        {{ data.logUrl }}
+      </a>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="center">
+    <button mat-button mat-dialog-close class="dialog-button dialog-button-primary">Close</button>
+  </mat-dialog-actions>
+</div>
