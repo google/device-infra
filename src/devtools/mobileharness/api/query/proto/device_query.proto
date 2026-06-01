@@ -155,4 +155,6 @@ message DeviceInfoMask {
   repeated string selected_driver = 3;
   // If not empty, only return decorators with these names.
   repeated string selected_decorator = 4;
+  // If true, include properties in the device info.
+  bool include_properties = 5;
 }
