@@ -38,7 +38,6 @@ java_library(
         "JobSettingsCreator.java",
     ],
     deps = [
-        "//src/devtools/mobileharness/api/gateway/proto:setting_java_proto",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/infra/client/proto:device_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -56,7 +55,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_config_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:job_spec_java_proto",

@@ -17,11 +17,11 @@
 package com.google.devtools.mobileharness.shared.util.jobconfig;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaInstant;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -45,7 +45,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.protobuf.Descriptors.FieldDescriptor;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.ParseException;
@@ -62,9 +61,9 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.DriverDecor
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecWalker;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
-import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.DeviceList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.Driver;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.FileConfigList.FileConfig;
@@ -76,7 +75,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -125,55 +123,26 @@ public final class JobInfoCreator {
   private static final ImmutableSet<String> LINKABLE_FILE_SUFFIX =
       ImmutableSet.of("apk", "gz", "img", "jar", "par", "tar", "zip");
 
-  /** Creates JobInfo from Gateway JobConfig. */
+  /** Creates JobInfo from Gateway parsed details. */
   public static JobInfo createJobInfo(
       String jobId,
       String actualUser,
       String jobAccessAccount,
       @Nullable Timestamp originalSubmitTimestamp,
-      com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfig jobConfig,
-      String sessionTmpDir,
-      String sessionGenDir,
-      @Nullable Timing timing)
-      throws MobileHarnessException, InterruptedException {
-    Map<String, String> propertiesMap = new LinkedHashMap<>();
-    jobConfig.getPropertyList().forEach(prop -> propertiesMap.put(prop.getName(), prop.getValue()));
-    return createJobInfo(
-        jobId,
-        actualUser,
-        jobAccessAccount,
-        originalSubmitTimestamp,
-        jobConfig,
-        /* mhJobConfig= */ null,
-        propertiesMap,
-        /* nonstandardFlags= */ ImmutableList.of(),
-        /* genDirPath= */ null,
-        sessionTmpDir,
-        sessionGenDir,
-        timing);
-  }
-
-  /** Creates JobInfo from Gateway JobConfig and parsed details. */
-  public static JobInfo createJobInfo(
-      String jobId,
-      String actualUser,
-      String jobAccessAccount,
-      @Nullable Timestamp originalSubmitTimestamp,
-      com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfig jobConfig,
-      @Nullable com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig,
+      JobConfig jobConfig,
       Map<String, String> properties,
       List<String> nonstandardFlags,
       @Nullable String genDirPath,
       String sessionTmpDir,
-      String sessionGenDir,
+      String sessionRemoteDir,
       @Nullable Timing timing)
       throws MobileHarnessException, InterruptedException {
+    Preconditions.checkNotNull(jobConfig);
     jobId = jobId == null ? UUID.randomUUID().toString() : jobId;
     String jobDir = PathUtil.join(sessionTmpDir, "j_" + jobId);
-    LocalFileUtil localFileUtil = new LocalFileUtil();
     JobSetting.Builder jobSettingBuilder =
         JobSetting.newBuilder()
-            .setRemoteFileDir(sessionGenDir)
+            .setRemoteFileDir(sessionRemoteDir)
             .setTmpFileDir(PathUtil.join(jobDir, "tmp"))
             .setRunFileDir(PathUtil.join(jobDir, "run"))
             .setGenFileDir(PathUtil.join(jobDir, "gen"));
@@ -187,99 +156,63 @@ public final class JobInfoCreator {
       }
     }
 
-    JobInfo jobInfo;
-    if (mhJobConfig != null
-        && !mhJobConfig.equals(
-            com.google.wireless.qa.mobileharness.shared.proto.JobConfig.getDefaultInstance())) {
-      long jobTimeoutMs = mhJobConfig.getJobTimeoutSec() * 1000L;
-      long testTimeoutMs = mhJobConfig.getTestTimeoutSec() * 1000L;
-      long startTimeoutMs = mhJobConfig.getStartTimeoutSec() * 1000L;
+    long jobTimeoutMs = jobConfig.getJobTimeoutSec() * 1000L;
+    long testTimeoutMs = jobConfig.getTestTimeoutSec() * 1000L;
+    long startTimeoutMs = jobConfig.getStartTimeoutSec() * 1000L;
 
-      Timeout.Builder timeoutBuilder = Timeout.newBuilder();
-      if (jobTimeoutMs > 0) {
-        timeoutBuilder.setJobTimeoutMs(jobTimeoutMs);
-      }
-      if (testTimeoutMs > 0) {
-        timeoutBuilder.setTestTimeoutMs(testTimeoutMs);
-      }
-      if (startTimeoutMs > 0) {
-        timeoutBuilder.setStartTimeoutMs(startTimeoutMs);
-      }
-      Timeout timeout = timeoutBuilder.build();
-      timeout = SharedPoolJobUtil.maybeExtendStartTimeout(timeout, mhJobConfig);
-      jobSettingBuilder.setTimeout(timeout);
-
-      if (mhJobConfig.hasRepeatRuns()) {
-        jobSettingBuilder.setRepeat(
-            Repeat.newBuilder().setRepeatRuns(mhJobConfig.getRepeatRuns()).build());
-      }
-
-      jobSettingBuilder.setRetry(
-          Retry.newBuilder()
-              .setTestAttempts(
-                  mhJobConfig.hasTestAttempts() && mhJobConfig.getTestAttempts() > 0
-                      ? mhJobConfig.getTestAttempts()
-                      : JobSetting.getDefaultRetryInstance().getTestAttempts())
-              .setRetryLevel(
-                  mhJobConfig.hasRetryLevel()
-                      ? mhJobConfig.getRetryLevel()
-                      : JobSetting.getDefaultRetryInstance().getRetryLevel())
-              .build());
-
-      if (mhJobConfig.hasPriority()) {
-        jobSettingBuilder.setPriority(mhJobConfig.getPriority());
-      }
-
-      JobSetting jobSetting = jobSettingBuilder.build();
-      logger.atInfo().log("Output jobSetting retry=%s", jobSetting.getRetry());
-
-      jobInfo =
-          createJobInfo(
-              jobId,
-              mhJobConfig,
-              nonstandardFlags,
-              jobSetting,
-              JobUser.newBuilder()
-                  .setRunAs(mhJobConfig.getRunAs())
-                  .setActualUser(actualUser)
-                  .setJobAccessAccount(jobAccessAccount)
-                  .build(),
-              sessionTmpDir,
-              genDirPath,
-              false,
-              timing);
-    } else {
-      logger.atInfo().log(
-          "Input gateway JobConfig.hasRetry=%b, repeat runs time = %d",
-          jobConfig.hasRetry(), jobConfig.getRepeat().getRepeatRuns());
-      Timeout timeout =
-          SharedPoolJobUtil.maybeExtendStartTimeout(jobConfig.getTimeout(), jobConfig);
-      jobSettingBuilder.setTimeout(timeout);
-      jobSettingBuilder.setRepeat(jobConfig.getRepeat());
-      if (jobConfig.hasRetry()) {
-        jobSettingBuilder.setRetry(jobConfig.getRetry());
-      } else {
-        jobSettingBuilder.setRetry(JobSetting.getDefaultRetryInstance());
-      }
-
-      if (jobConfig.hasPriority()) {
-        jobSettingBuilder.setPriority(jobConfig.getPriority());
-      }
-
-      JobSetting jobSetting = jobSettingBuilder.build();
-      logger.atInfo().log("Output jobSetting retry=%s", jobSetting.getRetry());
-
-      jobInfo =
-          createJobInfo(
-              jobId,
-              actualUser,
-              jobAccessAccount,
-              jobConfig,
-              jobSetting,
-              localFileUtil,
-              sessionTmpDir,
-              timing);
+    Timeout.Builder timeoutBuilder = Timeout.newBuilder();
+    if (jobTimeoutMs > 0) {
+      timeoutBuilder.setJobTimeoutMs(jobTimeoutMs);
     }
+    if (testTimeoutMs > 0) {
+      timeoutBuilder.setTestTimeoutMs(testTimeoutMs);
+    }
+    if (startTimeoutMs > 0) {
+      timeoutBuilder.setStartTimeoutMs(startTimeoutMs);
+    }
+    Timeout timeout = timeoutBuilder.build();
+    timeout = SharedPoolJobUtil.maybeExtendStartTimeout(timeout, jobConfig);
+    jobSettingBuilder.setTimeout(timeout);
+
+    if (jobConfig.hasRepeatRuns()) {
+      jobSettingBuilder.setRepeat(
+          Repeat.newBuilder().setRepeatRuns(jobConfig.getRepeatRuns()).build());
+    }
+
+    jobSettingBuilder.setRetry(
+        Retry.newBuilder()
+            .setTestAttempts(
+                jobConfig.hasTestAttempts() && jobConfig.getTestAttempts() > 0
+                    ? jobConfig.getTestAttempts()
+                    : JobSetting.getDefaultRetryInstance().getTestAttempts())
+            .setRetryLevel(
+                jobConfig.hasRetryLevel()
+                    ? jobConfig.getRetryLevel()
+                    : JobSetting.getDefaultRetryInstance().getRetryLevel())
+            .build());
+
+    if (jobConfig.hasPriority()) {
+      jobSettingBuilder.setPriority(jobConfig.getPriority());
+    }
+
+    JobSetting jobSetting = jobSettingBuilder.build();
+    logger.atInfo().log("Output jobSetting retry=%s", jobSetting.getRetry());
+
+    JobInfo jobInfo =
+        createJobInfo(
+            jobId,
+            jobConfig,
+            nonstandardFlags,
+            jobSetting,
+            JobUser.newBuilder()
+                .setRunAs(jobConfig.getRunAs())
+                .setActualUser(actualUser)
+                .setJobAccessAccount(jobAccessAccount)
+                .build(),
+            sessionTmpDir,
+            genDirPath,
+            false,
+            timing);
     properties.forEach((key, value) -> jobInfo.properties().add(key, value));
 
     return jobInfo;
@@ -438,87 +371,6 @@ public final class JobInfoCreator {
     if (sessionId != null) {
       jobInfo.properties().add(PropertyName.Job.SESSION_ID, sessionId);
     }
-    return jobInfo;
-  }
-
-  /** Creates JobInfo from Gateway JobConfig which does not contain MH JobConfig. */
-  private static JobInfo createJobInfo(
-      String jobId,
-      String actualUser,
-      String jobAccessAccount,
-      com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfig jobConfig,
-      JobSetting jobSetting,
-      LocalFileUtil localFileUtil,
-      String sessionTmpDir,
-      @Nullable Timing timing)
-      throws MobileHarnessException, InterruptedException {
-    JobInfo.Builder jobInfoBuilder =
-        JobInfo.newBuilder()
-            .setLocator(new JobLocator(jobId, jobConfig.getName()))
-            .setJobUser(
-                JobUser.newBuilder()
-                    .setRunAs(jobConfig.getUser())
-                    .setActualUser(actualUser)
-                    .setJobAccessAccount(jobAccessAccount)
-                    .build())
-            .setType(mayAppendDecorator(jobConfig.getType(), jobConfig))
-            .setSetting(jobSetting);
-    if (timing != null) {
-      jobInfoBuilder.setTiming(timing);
-    }
-    JobInfo jobInfo = jobInfoBuilder.build();
-
-    for (StrPair param : jobConfig.getParamList()) {
-      jobInfo.params().add(param.getName(), param.getValue());
-    }
-
-    for (StrPair file : jobConfig.getFileList()) {
-      String fileValue = file.getValue();
-      if (localFileUtil.isLocalFileOrDir(fileValue)
-          // The local file must be an absolute path.
-          && fileValue.startsWith("/")) {
-        // Copies file from session tmp dir to job run dir.
-        fileValue = PathUtil.join(jobSetting.getRunFileDir(), fileValue.replace(sessionTmpDir, ""));
-        localFileUtil.prepareDir(PathUtil.dirname(fileValue));
-        // Copies/links the source file/dir to the job specific run-file dir.
-        if (LINKABLE_FILE_SUFFIX.contains(Ascii.toLowerCase(Files.getFileExtension(fileValue)))) {
-          localFileUtil.linkFileOrDir(file.getValue(), fileValue);
-        } else {
-          localFileUtil.copyFileOrDir(file.getValue(), fileValue);
-        }
-      }
-      jobInfo.files().add(file.getName(), fileValue);
-    }
-
-    jobInfo.tests().addAll(jobConfig.getTestList());
-
-    try {
-      jobInfo
-          .protoSpec()
-          .setProto(
-              jobInfo.protoSpec().getProto().toBuilder()
-                  .mergeFrom(
-                      jobConfig.getJobSpec().toByteString(),
-                      JobSpecHelper.getDefaultHelper().getExtensionRegistry())
-                  .build());
-    } catch (InvalidProtocolBufferException e) {
-      throw new MobileHarnessException(
-          BasicErrorId.JOB_SPEC_PARSE_PROTOBUF_ERROR, "Invalid job spec proto.", e);
-    }
-
-    List<String> apksUnderTest =
-        putApksUnderTestInFront(new ArrayList<>(jobInfo.files().get(TAG_BUILD_APK)));
-    finalizeSubDeviceSpecs(
-        jobConfig.getSubDeviceSpecList(), jobConfig.getSharedDimensionNamesList(), jobInfo);
-
-    ImmutableMap<String, String> dimensionMap =
-        jobConfig.getDimensionList().stream()
-            .collect(toImmutableMap(StrPair::getName, StrPair::getValue));
-
-    jobInfo.subDeviceSpecs().getAllSubDevices().stream()
-        .map(com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec::dimensions)
-        .forEach(dimensions -> dimensions.addAll(dimensionMap));
-
     return jobInfo;
   }
 
@@ -706,16 +558,6 @@ public final class JobInfoCreator {
       JobType type, com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig) {
     JobType newType =
         SharedPoolJobUtil.isUsingSharedDefaultPerformancePool(mhJobConfig)
-            ? mayAppendPerformanceLockDecorator(type)
-            : type;
-    return mayAddSysLogDecoratorForIosTest(newType);
-  }
-
-  private static JobType mayAppendDecorator(
-      JobType type,
-      com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfig jobConfig) {
-    JobType newType =
-        SharedPoolJobUtil.isUsingSharedDefaultPerformancePool(jobConfig)
             ? mayAppendPerformanceLockDecorator(type)
             : type;
     return mayAddSysLogDecoratorForIosTest(newType);
