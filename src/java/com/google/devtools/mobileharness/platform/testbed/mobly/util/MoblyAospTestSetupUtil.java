@@ -22,7 +22,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -33,6 +32,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -231,7 +231,7 @@ public class MoblyAospTestSetupUtil {
       String testbedName,
       @Nullable String testCaseSelector)
       throws MobileHarnessException, InterruptedException {
-    List<String> cmdElements = Lists.newArrayList();
+    List<String> cmdElements = new ArrayList<>();
     if (testExecutionCommand.isEmpty()) {
       if (venvPythonBin != null) {
         cmdElements.add(venvPythonBin.toString());
@@ -282,7 +282,7 @@ public class MoblyAospTestSetupUtil {
   // Check if the test package is a Mobly suite via the test case list.
   boolean isMoblySuite(@Nullable Path venvPythonBin, Path moblyTestBin)
       throws MobileHarnessException, InterruptedException {
-    List<String> cmdElements = Lists.newArrayList();
+    List<String> cmdElements = new ArrayList<>();
     if (venvPythonBin != null) {
       cmdElements.add(venvPythonBin.toString());
     }
