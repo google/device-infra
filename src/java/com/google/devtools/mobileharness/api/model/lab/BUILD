@@ -56,6 +56,8 @@ java_library(
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/lab/in",
         "//src/java/com/google/devtools/mobileharness/api/model/lab/in:lite_dimension_factory",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab/out:property",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab/out:property_factory",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],

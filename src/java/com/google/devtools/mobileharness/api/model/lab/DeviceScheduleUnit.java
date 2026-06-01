@@ -24,7 +24,11 @@ import com.google.devtools.mobileharness.api.model.lab.in.Drivers;
 import com.google.devtools.mobileharness.api.model.lab.in.LiteDimensionsFactory;
 import com.google.devtools.mobileharness.api.model.lab.in.Owners;
 import com.google.devtools.mobileharness.api.model.lab.in.Types;
+import com.google.devtools.mobileharness.api.model.lab.out.Properties;
+import com.google.devtools.mobileharness.api.model.lab.out.PropertiesFactory;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceProperties;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceProperty;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /**
@@ -51,6 +55,9 @@ public class DeviceScheduleUnit implements Cloneable {
   /** Device dimension. */
   private final CompositeDimensions dimensions;
 
+  /** Device properties. */
+  private final Properties properties;
+
   /**
    * Creates a schedule unit of a Mobile Harness device.
    *
@@ -63,6 +70,7 @@ public class DeviceScheduleUnit implements Cloneable {
     this.decorators = new Decorators();
     this.dimensions = LiteDimensionsFactory.createCompositeDimensions();
     this.owners = new Owners();
+    this.properties = PropertiesFactory.create(locator.id());
   }
 
   protected DeviceScheduleUnit(DeviceScheduleUnit other) {
@@ -73,6 +81,8 @@ public class DeviceScheduleUnit implements Cloneable {
     this.owners.setAll(other.owners.getAll());
     this.dimensions.supported().addAll(other.dimensions.supported().getAll());
     this.dimensions.required().addAll(other.dimensions.required().getAll());
+    this.properties.clear();
+    other.properties.getAll().forEach(this.properties::put);
   }
 
   @Override
@@ -110,14 +120,28 @@ public class DeviceScheduleUnit implements Cloneable {
     return dimensions;
   }
 
+  /** Gets the device properties. */
+  public Properties properties() {
+    return properties;
+  }
+
   /** Converts to {@link DeviceFeature} proto. */
   public DeviceFeature toFeature() {
+    DeviceProperties.Builder propertiesBuilder = DeviceProperties.newBuilder();
+    properties
+        .getAll()
+        .forEach(
+            (k, v) ->
+                propertiesBuilder.addProperty(
+                    DeviceProperty.newBuilder().setName(k).setValue(v).build()));
+
     return DeviceFeature.newBuilder()
         .addAllOwner(owners.getAll())
         .addAllType(types.getAll())
         .addAllDriver(drivers.getAll())
         .addAllDecorator(decorators.getAll())
         .setCompositeDimension(dimensions.toProto())
+        .setProperties(propertiesBuilder.build())
         .build();
   }
 
@@ -129,6 +153,10 @@ public class DeviceScheduleUnit implements Cloneable {
     drivers.addAll(proto.getDriverList());
     decorators.addAll(proto.getDecoratorList());
     dimensions.addAll(proto.getCompositeDimension());
+    proto
+        .getProperties()
+        .getPropertyList()
+        .forEach(property -> properties.put(property.getName(), property.getValue()));
     return this;
   }
 
