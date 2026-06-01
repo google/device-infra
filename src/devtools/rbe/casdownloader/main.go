@@ -24,8 +24,10 @@ import (
 	"github.com/google/device-infra/src/devtools/rbe/casdownloader/cache"
 	"github.com/google/device-infra/src/devtools/rbe/casdownloader/download"
 	"github.com/google/device-infra/src/devtools/rbe/common"
+	"github.com/google/device-infra/src/devtools/rbe/common/monitoring"
 	"github.com/google/device-infra/src/devtools/rbe/rbeclient"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -33,7 +35,7 @@ import (
 var adcCredentialsScriptContent []byte
 
 const (
-	version = "1.29"
+	version = "2.0"
 	// The headers key of our RequestMetadata.
 	remoteHeadersKey = "build.bazel.remote.execution.v2.requestmetadata-bin"
 	// RBECASConcurrency is the default maximum number of concurrent upload and download operations for RBE clients.
@@ -183,6 +185,10 @@ func ContextWithMetadata(ctx context.Context) (context.Context, error) {
 }
 
 func main() {
+	os.Exit(runMain())
+}
+
+func runMain() int {
 	flag.Var(&excludeFilters, "exclude-filters", "Regular expression of paths to be excluded from uploading.")
 	flag.Var(&includeFilters, "include-filters", "Regular expression of paths to be excluded from uploading.")
 
@@ -194,20 +200,41 @@ func main() {
 
 	if *printVersion == true {
 		fmt.Printf("version: %s\n", version)
-		os.Exit(0)
+		return 0
 	}
+
+	// Initialize unified metrics collection.
+	monitoring.Init("casdownloader")
+	defer monitoring.Shutdown()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	if ctxMd, err := ContextWithMetadata(ctx); err != nil {
-		log.Infof("Failed to add metadata to context: %v", err)
+		log.InfoContextf(ctx, "Failed to add metadata to context: %v", err)
 	} else {
 		ctx = ctxMd
 	}
 
+	var success bool
+	var exitCode int
+	defer func() {
+		monitoring.RecordUsage(success, exitCode)
+	}()
+
+	if err := run(ctx); err != nil {
+		log.ErrorContextf(ctx, "casdownloader execution failed: %v", err)
+		exitCode = 1
+		return 1
+	}
+
+	success = true
+	return 0
+}
+
+func run(ctx context.Context) error {
 	if err := checkFlags(); err != nil {
-		log.Exit(err)
+		return err
 	}
 
 	setMemoryLimit(*memoryLimit)
@@ -221,20 +248,20 @@ func main() {
 	}
 
 	if *casConcurrency != RBECASConcurrency {
-		log.Infof("casConcurrency: %v\n", *casConcurrency)
+		log.InfoContextf(ctx, "casConcurrency: %v\n", *casConcurrency)
 	}
 	client, err := rbeclient.New(ctx, rbeclient.Opts{Instance: *casInstance, ServiceAddress: *casAddr, ServiceAccountJSON: *serviceAccount, UseApplicationDefault: *useADC, CASConcurrency: *casConcurrency, RPCTimeouts: rpcTimeouts})
 	if err != nil {
 		if strings.Contains(err.Error(), "rpc error: code = PermissionDenied") && *useADC == true {
 			logAdcCredentials()
 		}
-		log.Exit(err)
+		return err
 	}
 	defer client.Close()
 
 	cache, err := createCache(*disableCache, *cacheDir, *cacheMaxSize, *enableCacheLock, *useHardlink)
 	if err != nil {
-		log.Exit(err)
+		return err
 	}
 
 	d := download.DownloadJob{
@@ -251,10 +278,59 @@ func main() {
 		DownloadTimeout: *downloadTimeout,
 	}
 	reportMemoryStats()
-	if err = d.DoDownload(ctx); err != nil {
-		log.Exit(err)
+
+	start := time.Now()
+	err = d.DoDownload(ctx)
+	duration := time.Since(start)
+
+	downloadSuccess := (err == nil)
+	rbeStatusStr := "OK"
+	if err != nil {
+		rbeStatusStr = status.Code(err).String()
 	}
+
+	// Record download latency.
+	monitoring.RecordLatency(downloadSuccess, rbeStatusStr, duration)
+
+	// Record download cold payload size.
+	if downloadSuccess {
+		monitoring.RecordBytes(true, d.ColdSize())
+	} else {
+		monitoring.RecordBytes(false, 0)
+	}
+
+	// Record detailed download stats.
+	stats := d.Stats()
+	if stats == nil {
+		stats = &download.Stats{
+			DownloadError: "unknown error (stats nil)",
+		}
+		if err != nil {
+			stats.DownloadError = err.Error()
+		}
+	}
+	caller, bid, branch, flavor := parseInvocationID(*invocationID)
+	mStats := &monitoring.DownloadStats{
+		SizeCold:           stats.SizeCold,
+		SizeHot:            stats.SizeHot,
+		CountCold:          stats.CountCold,
+		CountHot:           stats.CountHot,
+		E2ETimeMS:          stats.E2ETimeMS,
+		DirRetrieveTimeMS:  stats.DirRetrieveTimeMS,
+		DirPrepareTimeMS:   stats.DirPrepareTimeMS,
+		FileDownloadTimeMS: stats.FileDownloadTimeMS,
+		ChunkRestoreTimeMS: stats.ChunkRestoreTimeMS,
+		DownloadError:      stats.DownloadError,
+		Caller:             caller,
+		Version:            version,
+		BuildID:            bid,
+		Branch:             branch,
+		Flavor:             flavor,
+	}
+	monitoring.RecordDownloadStats(mStats, *casInstance, !*disableCache, *chunksOnly)
+
 	reportMemoryStats()
+	return err
 }
 
 func logAdcCredentials() {
@@ -307,4 +383,33 @@ func reportMemoryStats() {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 	log.Infof("Total memory allocated: %v, heap allocation: %v\n", memStats.TotalAlloc, memStats.HeapAlloc)
+}
+
+func parseInvocationID(invocationID string) (string, string, string, string) {
+	caller := "unknown"
+	bid := "unknown"
+	branch := "unknown"
+	flavor := "unknown"
+
+	if invocationID == "" {
+		return caller, bid, branch, flavor
+	}
+	parts := strings.Split(invocationID, ",")
+	for _, part := range parts {
+		kv := strings.SplitN(part, "=", 2)
+		if len(kv) != 2 {
+			continue
+		}
+		switch kv[0] {
+		case "caller":
+			caller = kv[1]
+		case "bid":
+			bid = kv[1]
+		case "branch":
+			branch = kv[1]
+		case "flavor":
+			flavor = kv[1]
+		}
+	}
+	return caller, bid, branch, flavor
 }

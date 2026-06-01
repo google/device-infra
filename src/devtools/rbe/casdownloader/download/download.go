@@ -37,26 +37,33 @@ type DownloadJob struct {
 	// Filters applied to files to download
 	IncludeFilters  []string
 	ExcludeFilters  []string
-	downloadStats   *downloadStats
+	DownloadStats   *Stats
 	KeepChunks      bool
 	ChunksOnly      bool
 	MinDownloadMbps int64
 	DownloadTimeout time.Duration
 }
 
-type downloadStats struct {
+// Stats holds the telemetry data for a download job.
+type Stats struct {
 	SizeCold           int64  `json:"size_cold"`
 	SizeHot            int64  `json:"size_hot"`
 	CountCold          int    `json:"count_cold"`
 	CountHot           int    `json:"count_hot"`
-	E2eTimeMs          int64  `json:"e2e_time_ms"`
-	DirRetrieveTimeMs  int64  `json:"dir_retrieve_time_ms"`
-	DirPrepareTimeMs   int64  `json:"dir_prepare_time_ms"`
-	FileDownloadTimeMs int64  `json:"file_download_time_ms"`
-	ChunkRestoreTimeMs int64  `json:"chunk_restore_time_ms"`
+	E2ETimeMS          int64  `json:"e2e_time_ms"`
+	DirRetrieveTimeMS  int64  `json:"dir_retrieve_time_ms"`
+	DirPrepareTimeMS   int64  `json:"dir_prepare_time_ms"`
+	FileDownloadTimeMS int64  `json:"file_download_time_ms"`
+	ChunkRestoreTimeMS int64  `json:"chunk_restore_time_ms"`
 	DownloadError      string `json:"download_error"`
 	Notes              string `json:"notes"`
 }
+
+// Stats returns the download stats for the job.
+func (d *DownloadJob) Stats() *Stats {
+	return d.DownloadStats
+}
+
 
 // prepareSymLinksAndDirs creates directories and symbolic links. It is executed before checking
 // with cache or downloading files from remote since the TreeOutput contains information of
@@ -175,13 +182,13 @@ func (d *DownloadJob) updateDownloadStats(all []*client.TreeOutput, downloaded m
 	log.Infof("Stats of cache: SizeCold: %v, SizeHot: %v, CountCold: %d, CountHot: %d",
 		units.Size(sizeCold), units.Size(sizeHot), countCold, countHot)
 
-	d.downloadStats.SizeCold = sizeCold
-	d.downloadStats.SizeHot = sizeHot
-	d.downloadStats.CountCold = countCold
-	d.downloadStats.CountHot = countHot
+	d.DownloadStats.SizeCold = sizeCold
+	d.DownloadStats.SizeHot = sizeHot
+	d.DownloadStats.CountCold = countCold
+	d.DownloadStats.CountHot = countHot
 }
 
-func dumpStats(path string, stats *downloadStats) error {
+func dumpStats(path string, stats *Stats) error {
 	statsJSON, err := json.Marshal(stats)
 
 	if err != nil {
@@ -453,7 +460,7 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, cache cache.Ca
 //   - Copy duplicates files to target locations
 //   - Dump downloadStats
 func (d *DownloadJob) DoDownload(ctx context.Context) error {
-	d.downloadStats = &downloadStats{}
+	d.DownloadStats = &Stats{}
 	if d.DownloadTimeout > 0 {
 		var cancel context.CancelFunc
 		// Apply the fixed download timeout as a parent context.
@@ -464,27 +471,27 @@ func (d *DownloadJob) DoDownload(ctx context.Context) error {
 
 	start := time.Now()
 	err := d.doDownloadInternal(ctx)
-	d.downloadStats.E2eTimeMs = time.Since(start).Milliseconds()
+	d.DownloadStats.E2ETimeMS = time.Since(start).Milliseconds()
 
 	// We check the context state before the library error.
 	// If the context is done, it is a timeout (or cancel), regardless of the returned err.
 	if ctx.Err() != nil {
-		d.downloadStats.DownloadError = fmt.Sprintf("TIMED_OUT: download-timeout=%v", d.DownloadTimeout)
+		d.DownloadStats.DownloadError = fmt.Sprintf("TIMED_OUT: download-timeout=%v", d.DownloadTimeout)
 		err = context.DeadlineExceeded
 	} else if errors.Is(err, context.DeadlineExceeded) {
-		d.downloadStats.DownloadError = fmt.Sprintf("TIMED_OUT: min-download-mbps=%v", d.MinDownloadMbps)
+		d.DownloadStats.DownloadError = fmt.Sprintf("TIMED_OUT: min-download-mbps=%v", d.MinDownloadMbps)
 	} else if err != nil {
 		// Context is still healthy, so this is a genuine library or network failure.
-		d.downloadStats.DownloadError = err.Error()
+		d.DownloadStats.DownloadError = err.Error()
 		// Fallback: check gRPC status code if the library returned a remote timeout.
 		if status.Code(err) == codes.DeadlineExceeded {
-			d.downloadStats.DownloadError = fmt.Sprintf("TIMED_OUT: %v", err)
+			d.DownloadStats.DownloadError = fmt.Sprintf("TIMED_OUT: %v", err)
 			err = context.DeadlineExceeded
 		}
 	}
 
 	if d.DumpJSON != "" {
-		if dumpErr := dumpStats(d.DumpJSON, d.downloadStats); dumpErr != nil {
+		if dumpErr := dumpStats(d.DumpJSON, d.DownloadStats); dumpErr != nil {
 			log.ErrorContextf(ctx, "failed to dump stats to file: %v", dumpErr)
 		}
 	}
@@ -538,7 +545,7 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 	})
 	dirRetrieveTime := time.Since(start)
 	log.InfoContextf(ctx, "finished retriving directory tree from RBE, took %s", dirRetrieveTime)
-	d.downloadStats.DirRetrieveTimeMs = dirRetrieveTime.Milliseconds()
+	d.DownloadStats.DirRetrieveTimeMS = dirRetrieveTime.Milliseconds()
 
 	start = time.Now()
 	outputs, err = prepareSymLinksAndDirs(d.Dir, outputs)
@@ -547,7 +554,7 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 	}
 	dirPrepareTime := time.Since(start)
 	log.InfoContextf(ctx, "finished preparing directories, took %s", dirPrepareTime)
-	d.downloadStats.DirPrepareTimeMs = dirPrepareTime.Milliseconds()
+	d.DownloadStats.DirPrepareTimeMS = dirPrepareTime.Milliseconds()
 
 	start = time.Now()
 	if d.Cache == nil {
@@ -569,11 +576,11 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 
 	fileDownloadTime := time.Since(start)
 	log.InfoContextf(ctx, "finished downloading files, took %s", fileDownloadTime)
-	d.downloadStats.FileDownloadTimeMs = fileDownloadTime.Milliseconds()
+	d.DownloadStats.FileDownloadTimeMS = fileDownloadTime.Milliseconds()
 
 	if d.ChunksOnly {
 		log.InfoContextf(ctx, "Skipping restoring chunked files since chunks-only is true.")
-		d.downloadStats.ChunkRestoreTimeMs = 0
+		d.DownloadStats.ChunkRestoreTimeMS = 0
 	} else {
 		start = time.Now()
 		if err := chunkerutil.RestoreFiles(d.Dir, d.Dir, d.KeepChunks); err != nil {
@@ -581,7 +588,7 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 		}
 		chunkRestoreTime := time.Since(start)
 		log.InfoContextf(ctx, "finished restoring chunked files, took %s", chunkRestoreTime)
-		d.downloadStats.ChunkRestoreTimeMs = chunkRestoreTime.Milliseconds()
+		d.DownloadStats.ChunkRestoreTimeMS = chunkRestoreTime.Milliseconds()
 	}
 
 	return nil
@@ -607,7 +614,24 @@ func (d *DownloadJob) moveChunksIndexFileIfNeeded() error {
 
 	msg := fmt.Sprintf("Chunks index file moved from %s to %s.", secondaryIndexFile, primaryIndexFile)
 	log.Infof("%s", msg)
-	d.downloadStats.Notes = msg
+	d.DownloadStats.Notes = msg
 
 	return nil
 }
+
+// ColdSize returns the count of downloaded bytes from RBE CAS (cache misses).
+func (d *DownloadJob) ColdSize() int64 {
+	if d.DownloadStats == nil {
+		return 0
+	}
+	return d.DownloadStats.SizeCold
+}
+
+// TotalSize returns the sum of all file sizes in the tree.
+func (d *DownloadJob) TotalSize() int64 {
+	if d.DownloadStats == nil {
+		return 0
+	}
+	return d.DownloadStats.SizeCold + d.DownloadStats.SizeHot
+}
+
