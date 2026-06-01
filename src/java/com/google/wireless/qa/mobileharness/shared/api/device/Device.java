@@ -25,6 +25,8 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeD
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLogType;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceProperties;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceProperty;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -514,6 +516,18 @@ public interface Device {
                                 DeviceDimension.newBuilder()
                                     .setName(dimension.getName())
                                     .setValue(dimension.getValue())
+                                    .build())
+                        .collect(toImmutableList()))
+                .build())
+        .setProperties(
+            DeviceProperties.newBuilder()
+                .addAllProperty(
+                    getProperties().entrySet().stream()
+                        .map(
+                            entry ->
+                                DeviceProperty.newBuilder()
+                                    .setName(entry.getKey())
+                                    .setValue(entry.getValue())
                                     .build())
                         .collect(toImmutableList()))
                 .build())
