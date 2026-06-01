@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDevic
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.model.proto.Lab;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigPusherHelper;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapability;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension;
@@ -82,6 +83,7 @@ public final class UpdateHostConfigHandlerTest {
   @Bind @Mock private GroupMembershipProvider groupMembershipProvider;
   @Mock private ConfigServiceCapability configServiceCapability;
   @Bind @Mock private ConfigServiceCapabilityFactory configServiceCapabilityFactory;
+  @Bind @Mock private ConfigPusherHelper configPusherHelper;
   @Bind @Mock private Environment environment;
   @Bind private ListeningExecutorService executorService = newDirectExecutorService();
 
@@ -94,6 +96,7 @@ public final class UpdateHostConfigHandlerTest {
   @Before
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+    when(configPusherHelper.isSectionRestricted(any(), any())).thenReturn(false);
     when(configServiceCapabilityFactory.create(any(UniverseScope.class)))
         .thenReturn(configServiceCapability);
     when(environment.isAts()).thenReturn(false);

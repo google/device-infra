@@ -27,6 +27,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config:config_service_logic_impl",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_pusher_helper",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_service_capability",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/auth",

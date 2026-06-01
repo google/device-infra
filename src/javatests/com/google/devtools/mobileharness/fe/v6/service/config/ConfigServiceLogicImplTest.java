@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigPusherHelper;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
@@ -58,6 +59,7 @@ public final class ConfigServiceLogicImplTest {
   @Bind @Mock private ConfigurationProvider configurationProvider;
   @Bind @Mock private LabInfoProvider labInfoProvider;
   @Bind @Mock private WifiCredentialsStore wifiCredentialsStore;
+  @Bind @Mock private ConfigPusherHelper configPusherHelper;
 
   private ConfigServiceLogicImpl configServiceLogicImpl;
 

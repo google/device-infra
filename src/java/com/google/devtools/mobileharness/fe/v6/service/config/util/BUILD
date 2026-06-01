@@ -37,9 +37,7 @@ java_library(
 java_library(
     name = "config_util",
     srcs = ["ConfigUtil.java"],
-    deps = [
-        "@maven//:com_google_guava_guava",
-    ],
+    deps = ["@maven//:com_google_guava_guava"],
 )
 
 java_library(
@@ -53,5 +51,25 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "@maven//:com_google_inject_extensions_guice_assistedinject",
+    ],
+)
+
+java_library(
+    name = "config_pusher_helper",
+    srcs = ["ConfigPusherHelper.java"],
+    deps = [
+        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_resources_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+    ],
+)
+
+java_library(
+    name = "no_op_config_pusher_helper",
+    srcs = ["NoOpConfigPusherHelper.java"],
+    deps = [
+        ":config_pusher_helper",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_resources_java_proto",
     ],
 )

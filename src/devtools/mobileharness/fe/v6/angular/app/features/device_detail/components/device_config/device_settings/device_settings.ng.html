@@ -37,28 +37,32 @@
           @case (ConfigSection.PERMISSIONS) {
             <app-permissions
               workflow="settings"
-              [(permissions)]="newConfig.permissions!"
+              [permissions]="newConfig().permissions!"
+              (permissionsChange)="updatePermissions($event)"
               [uiStatus]="uiStatus.permissions"
             ></app-permissions>
           }
           @case (ConfigSection.WIFI) {
             <app-wifi
               workflow="settings"
-              [(wifi)]="newConfig.wifi!"
+              [wifi]="newConfig().wifi!"
+              (wifiChange)="updateWifi($event)"
               [uiStatus]="uiStatus.wifi"
             ></app-wifi>
           }
           @case (ConfigSection.DIMENSIONS) {
             <app-dimensions
               workflow="settings"
-              [(dimensions)]="newConfig.dimensions!"
+              [dimensions]="newConfig().dimensions!"
+              (dimensionsChange)="updateDimensions($event)"
               (hasError)="hasError = $event"
               [uiStatus]="{sectionStatus: uiStatus.dimensions}"
             ></app-dimensions>
           }
           @case (ConfigSection.STABILITY) {
             <app-stability
-              [(settings)]="newConfig.settings!"
+              [settings]="newConfig().settings!"
+              (settingsChange)="updateSettings($event)"
               [uiStatus]="uiStatus.settings"
             ></app-stability>
           }
@@ -73,7 +77,7 @@
         <ng-container footer-buttons>
           <button
             class="discard-button"
-            [disabled]="!isCategoryDirty(activeSection()) || !hasPermission()"
+            [disabled]="!isCategoryDirty(activeSection()) || saving() || !hasPermission()"
             (click)="discard()"
           >
             Discard Changes

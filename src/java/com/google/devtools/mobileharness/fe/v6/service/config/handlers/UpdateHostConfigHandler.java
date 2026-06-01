@@ -28,14 +28,17 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.OverSshDevice;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigConverter;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigPusherHelper;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfigMode;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfigSection;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceDiscoverySettings;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostConfig;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostConfigSection;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostConfigUpdateScope;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateError;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateHostConfigRequest;
@@ -58,17 +61,20 @@ public final class UpdateHostConfigHandler {
   private final ConfigServiceCapabilityFactory configServiceCapabilityFactory;
   private final GroupMembershipProvider groupMembershipProvider;
   private final Environment environment;
+  private final ConfigPusherHelper configPusherHelper;
   private final ListeningExecutorService executor;
 
   @Inject
   UpdateHostConfigHandler(
       ConfigurationProvider configurationProvider,
       ConfigServiceCapabilityFactory configServiceCapabilityFactory,
+      ConfigPusherHelper configPusherHelper,
       GroupMembershipProvider groupMembershipProvider,
       Environment environment,
       ListeningExecutorService executor) {
     this.configurationProvider = configurationProvider;
     this.configServiceCapabilityFactory = configServiceCapabilityFactory;
+    this.configPusherHelper = configPusherHelper;
     this.groupMembershipProvider = groupMembershipProvider;
     this.environment = environment;
     this.executor = executor;
@@ -148,6 +154,26 @@ public final class UpdateHostConfigHandler {
                   ? existingConfigOpt.get().toBuilder()
                   : LabConfig.newBuilder().setHostName(request.getHostName());
 
+          if (existingConfigOpt.isPresent()) {
+            LabConfig existingConfig = existingConfigOpt.get();
+            HostConfigSection requestedSection = request.getScope().getSection();
+            if (requestedSection != HostConfigSection.HOST_CONFIG_SECTION_UNSPECIFIED) {
+              try {
+                configPusherHelper.validateUpdate(
+                    requestedSection, request.getConfig(), existingConfig);
+              } catch (MobileHarnessException e) {
+                return immediateFuture(
+                    UpdateHostConfigResponse.newBuilder()
+                        .setSuccess(false)
+                        .setError(
+                            UpdateError.newBuilder()
+                                .setCode(UpdateError.Code.PERMISSION_DENIED)
+                                .setMessage(e.getMessage()))
+                        .build());
+              }
+            }
+          }
+
           updateLabConfigBuilder(builder, request.getConfig(), request.getScope());
 
           return Futures.transform(
@@ -187,28 +213,48 @@ public final class UpdateHostConfigHandler {
 
   private void updateLabConfigBuilder(
       LabConfig.Builder builder, HostConfig incoming, HostConfigUpdateScope scope) {
-    switch (scope.getSection()) {
-      case DEVICE_CONFIG_MODE -> updateDeviceConfigMode(builder, incoming.getDeviceConfigMode());
-      case HOST_PERMISSIONS -> updateHostPermissions(builder, incoming);
-      case HOST_PROPERTIES -> updateHostProperties(builder, incoming);
-      case DEVICE_CONFIG ->
-          builder.setDefaultDeviceConfig(
-              updateBasicConfig(
-                  builder.getDefaultDeviceConfig(),
-                  ConfigConverter.toBasicDeviceConfig(incoming.getDeviceConfig()),
-                  scope.getDeviceConfigSection()));
-      case DEVICE_DISCOVERY -> updateDeviceDiscovery(builder, incoming.getDeviceDiscovery());
-      case HOST_CONFIG_SECTION_UNSPECIFIED, UNRECOGNIZED -> {
-        // Update all sections
+    HostConfigSection sectionToUpdate = scope.getSection();
+
+    LabConfig existingConfig = builder.build();
+
+    if (sectionToUpdate == HostConfigSection.HOST_CONFIG_SECTION_UNSPECIFIED) {
+      if (!configPusherHelper.isSectionRestricted(
+          HostConfigSection.DEVICE_CONFIG_MODE, existingConfig)) {
         updateDeviceConfigMode(builder, incoming.getDeviceConfigMode());
+      }
+      if (!configPusherHelper.isSectionRestricted(
+          HostConfigSection.HOST_PERMISSIONS, existingConfig)) {
         updateHostPermissions(builder, incoming);
+      }
+      if (!configPusherHelper.isSectionRestricted(
+          HostConfigSection.HOST_PROPERTIES, existingConfig)) {
         updateHostProperties(builder, incoming);
+      }
+      if (!configPusherHelper.isSectionRestricted(
+          HostConfigSection.DEVICE_CONFIG, existingConfig)) {
         builder.setDefaultDeviceConfig(
             updateBasicConfig(
                 builder.getDefaultDeviceConfig(),
                 ConfigConverter.toBasicDeviceConfig(incoming.getDeviceConfig()),
                 scope.getDeviceConfigSection()));
+      }
+      if (!configPusherHelper.isSectionRestricted(
+          HostConfigSection.DEVICE_DISCOVERY, existingConfig)) {
         updateDeviceDiscovery(builder, incoming.getDeviceDiscovery());
+      }
+    } else {
+      switch (scope.getSection()) {
+        case DEVICE_CONFIG_MODE -> updateDeviceConfigMode(builder, incoming.getDeviceConfigMode());
+        case HOST_PERMISSIONS -> updateHostPermissions(builder, incoming);
+        case HOST_PROPERTIES -> updateHostProperties(builder, incoming);
+        case DEVICE_CONFIG ->
+            builder.setDefaultDeviceConfig(
+                updateBasicConfig(
+                    builder.getDefaultDeviceConfig(),
+                    ConfigConverter.toBasicDeviceConfig(incoming.getDeviceConfig()),
+                    scope.getDeviceConfigSection()));
+        case DEVICE_DISCOVERY -> updateDeviceDiscovery(builder, incoming.getDeviceDiscovery());
+        default -> {}
       }
     }
   }
