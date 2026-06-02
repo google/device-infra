@@ -18,6 +18,9 @@ syntax = "proto3";
 
 package devtools.mobileharness.fe.v6.service.proto.common;
 
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.common";
 option java_multiple_files = true;
 option java_outer_classname = "CommonResourcesProto";
@@ -42,4 +45,35 @@ message ActionButtonState {
   bool visible = 2;
   string tooltip = 3;
   bool is_ready = 4;
+}
+
+message TimelineStage {
+  // The structured name of the stage (e.g., "Device Allocation", "Pre-run
+  // Test")
+  string name = 1;
+
+  // Optional tag for extra context (e.g., the test ID being allocated, or file
+  // path)
+  string tag = 2;
+
+  // Start and end timestamps of this specific phase
+  google.protobuf.Timestamp start_time = 3;
+  google.protobuf.Timestamp end_time = 4;
+
+  // Optional progress checkpoints inside this stage
+  message MarkPoint {
+    string name = 1;
+    google.protobuf.Timestamp time = 2;
+  }
+  repeated MarkPoint mark_points = 5;
+}
+
+message TimeBreakdown {
+  google.protobuf.Timestamp create_time = 1;
+  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp end_time = 3;
+  google.protobuf.Duration total_duration = 4;
+
+  // Detailed segments for Gantt rendering
+  repeated TimelineStage stages = 5;
 }
