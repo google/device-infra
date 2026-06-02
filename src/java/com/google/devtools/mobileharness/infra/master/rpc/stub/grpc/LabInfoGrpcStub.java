@@ -24,6 +24,8 @@ import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceGrpc;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DiagnoseJobRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DiagnoseJobResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.devtools.mobileharness.shared.util.comm.stub.GrpcDirectTargetConfigures;
@@ -38,6 +40,8 @@ public class LabInfoGrpcStub implements LabInfoStub {
   /** Blocking interface for {@link LabInfoGrpcStub}. */
   public interface BlockingInterface {
     GetLabInfoResponse getLabInfo(GetLabInfoRequest request);
+
+    DiagnoseJobResponse diagnoseJob(DiagnoseJobRequest request);
   }
 
   /** Future interface for {@link LabInfoGrpcStub}. */
@@ -92,5 +96,15 @@ public class LabInfoGrpcStub implements LabInfoStub {
         request,
         InfraErrorId.MASTER_RPC_STUB_LAB_INFO_GET_LAB_INFO_ERROR,
         String.format("Failed to get lab info, request=%s", shortDebugString(request)));
+  }
+
+  @Override
+  public DiagnoseJobResponse diagnoseJob(DiagnoseJobRequest request)
+      throws GrpcExceptionWithErrorId {
+    return GrpcStubUtil.invoke(
+        blockingInterface::diagnoseJob,
+        request,
+        InfraErrorId.MASTER_RPC_STUB_LAB_INFO_DIAGNOSE_JOB_ERROR,
+        String.format("Failed to diagnose job, request=%s", shortDebugString(request)));
   }
 }
