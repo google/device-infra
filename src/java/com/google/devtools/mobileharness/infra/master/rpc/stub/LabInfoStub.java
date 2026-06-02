@@ -18,6 +18,8 @@ package com.google.devtools.mobileharness.infra.master.rpc.stub;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DiagnoseJobRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DiagnoseJobResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 
@@ -29,4 +31,7 @@ public interface LabInfoStub {
 
   /** Gets lab info from Master asynchronously. */
   ListenableFuture<GetLabInfoResponse> getLabInfoAsync(GetLabInfoRequest request);
+
+  /** Diagnoses job allocation failure. */
+  DiagnoseJobResponse diagnoseJob(DiagnoseJobRequest request) throws RpcExceptionWithErrorId;
 }
