@@ -34,8 +34,11 @@ import (
 //go:embed adc_credentials.sh
 var adcCredentialsScriptContent []byte
 
+var (
+	version = "dev"
+)
+
 const (
-	version = "2.0"
 	// The headers key of our RequestMetadata.
 	remoteHeadersKey = "build.bazel.remote.execution.v2.requestmetadata-bin"
 	// RBECASConcurrency is the default maximum number of concurrent upload and download operations for RBE clients.

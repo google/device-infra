@@ -20,11 +20,17 @@ package(
     default_visibility = ["//visibility:public"],
 )
 
+_VERSION = "2.0"
+
 # Default go_binary - may be dynamically linked
 go_binary(
     name = "downloader",
     srcs = ["main.go"],
     embedsrcs = ["adc_credentials.sh"],
+    gc_linkopts = [
+        "-X",
+        "main.version=%s" % _VERSION,
+    ],
     deps = [
         "//src/devtools/rbe/casdownloader/cache",
         "//src/devtools/rbe/casdownloader/download",
