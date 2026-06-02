@@ -25,20 +25,16 @@ import {
   DEFAULT_DEVICE_CONFIG,
   DEFAULT_DEVICE_CONFIG_UI_STATUS,
 } from '../../../../../core/constants/device_config_constants';
-import type {
-  CheckDeviceWritePermissionResult,
-  DeviceConfig,
-  DeviceConfigUiStatus,
-} from '../../../../../core/models/device_config_models';
 import {
   ConfigSection,
   UpdateDeviceConfigRequest,
+  type CheckDeviceWritePermissionResult,
+  type DeviceConfig,
+  type DeviceConfigUiStatus,
 } from '../../../../../core/models/device_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
-import {
-  normalizeDeviceConfig,
-  normalizeDeviceConfigUiStatus,
-} from '../../../../../core/utils/device_config_utils';
+import {DeviceConfigStateService} from '../../../../../core/services/config/device_config_state_service';
+import {normalizeDeviceConfig} from '../../../../../core/utils/device_config_utils';
 import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
 import {Footer} from '../../../../../shared/components/config_common/footer/footer';
 import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/confirm_dialog';
@@ -88,6 +84,7 @@ export class DeviceSettings implements OnInit {
   } | null;
 
   private readonly configService = inject(CONFIG_SERVICE);
+  private readonly deviceConfigStateService = inject(DeviceConfigStateService);
 
   @Input() deviceId = '';
   @Input() universe = '';
@@ -107,18 +104,11 @@ export class DeviceSettings implements OnInit {
     return this.configInternal;
   }
 
-  uiStatusInternal = signal<DeviceConfigUiStatus>(
-    DEFAULT_DEVICE_CONFIG_UI_STATUS,
-  );
-
-  @Input()
-  set uiStatus(value: Partial<DeviceConfigUiStatus> | undefined) {
-    this.uiStatusInternal.set(normalizeDeviceConfigUiStatus(value));
-  }
+  uiStatusBase: DeviceConfigUiStatus = DEFAULT_DEVICE_CONFIG_UI_STATUS;
 
   private readonly computedUiStatus = computed<DeviceConfigUiStatus>(() => {
     const hasPerm = this.hasPermission() ?? false;
-    const internal = this.uiStatusInternal();
+    const internal = this.uiStatusBase;
     return {
       permissions: {
         visible: internal.permissions.visible,
@@ -201,6 +191,10 @@ export class DeviceSettings implements OnInit {
       this.config = this.dialogData.config || this.config;
       this.universe = this.dialogData.universe || this.universe;
     }
+
+    this.uiStatusBase = this.deviceConfigStateService.getUiStatus(
+      this.deviceId,
+    );
 
     this.originalConfig = objectUtils.deepCopy(this.config) as DeviceConfig;
     this.newConfig = objectUtils.deepCopy(this.config) as DeviceConfig;

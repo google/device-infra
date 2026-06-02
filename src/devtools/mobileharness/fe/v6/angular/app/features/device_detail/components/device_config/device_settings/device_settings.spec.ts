@@ -7,6 +7,7 @@ import {of} from 'rxjs';
 
 import type {DeviceConfig} from '../../../../../core/models/device_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
+import {DeviceConfigStateService} from '../../../../../core/services/config/device_config_state_service';
 import {FakeConfigService} from '../../../../../core/services/config/fake_config_service';
 import {DEVICE_SERVICE} from '../../../../../core/services/device/device_service';
 import {FakeDeviceService} from '../../../../../core/services/device/fake_device_service';
@@ -22,6 +23,17 @@ describe('Device Settings Component', () => {
             of({hasPermission: true, userName: 'test-user'}),
         );
 
+    const fakeDeviceConfigStateService = jasmine.createSpyObj<DeviceConfigStateService>(
+        'DeviceConfigStateService',
+        ['getUiStatus', 'setUiStatus', 'clear'],
+    );
+    fakeDeviceConfigStateService.getUiStatus.and.returnValue({
+      permissions: {visible: true, editability: {editable: true}},
+      wifi: {visible: true, editability: {editable: true}},
+      dimensions: {visible: true, editability: {editable: true}},
+      settings: {visible: true, editability: {editable: true}},
+    });
+
     await TestBed
         .configureTestingModule({
           imports: [
@@ -34,6 +46,10 @@ describe('Device Settings Component', () => {
             provideRouter([]),
             {provide: DEVICE_SERVICE, useClass: FakeDeviceService},
             {provide: CONFIG_SERVICE, useValue: fakeConfigService},
+            {
+              provide: DeviceConfigStateService,
+              useValue: fakeDeviceConfigStateService,
+            },
           ],
         })
         .compileComponents();
