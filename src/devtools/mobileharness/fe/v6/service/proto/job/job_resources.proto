@@ -1,0 +1,101 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package devtools.mobileharness.fe.v6.service.proto.job;
+
+import "google/protobuf/timestamp.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/test/test_resources.proto";
+
+option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.job";
+option java_multiple_files = true;
+option java_outer_classname = "JobResourcesProto";
+
+// gRPC friendly Job Status (decoupled from Result)
+enum JobStatus {
+  JOB_STATUS_UNSPECIFIED = 0;
+  JOB_STATUS_NEW = 1;
+  JOB_STATUS_RUNNING = 2;
+  JOB_STATUS_DONE = 3;
+  JOB_STATUS_SUSPENDED = 4;
+}
+
+// gRPC friendly Job Result
+enum JobResult {
+  JOB_RESULT_UNSPECIFIED = 0;
+  JOB_RESULT_PASS = 1;
+  JOB_RESULT_FAIL = 2;
+  JOB_RESULT_ERROR = 3;
+  JOB_RESULT_TIMEOUT = 4;
+  JOB_RESULT_ABORT = 5;
+  JOB_RESULT_SKIP = 6;
+}
+
+message JobError {
+  string message = 1;
+  string trace = 2;
+}
+
+message JobSummary {
+  string id = 1;
+  string name = 2;
+  JobStatus status = 3;
+  JobResult result = 4;
+  google.protobuf.Timestamp start_time = 5;
+  google.protobuf.Timestamp end_time = 6;
+}
+
+message JobDetail {
+  string id = 1;
+  string name = 2;
+  JobStatus status = 3;
+  JobResult result = 4;
+
+  // Target Environment
+  string device_type = 5;
+  string driver = 6;
+  repeated string decorators = 7;
+
+  // Execution Details
+  string run_as = 8;
+  string actual_user = 9;
+  string sponge_link = 10;
+
+  google.protobuf.Timestamp create_time = 11;
+  google.protobuf.Timestamp start_time = 12;
+  google.protobuf.Timestamp end_time = 13;
+
+  // Configuration
+  map<string, string> params = 14;
+  map<string, string> dimensions = 15;
+  map<string, string> files = 16;  // tag -> location
+
+  // Properties
+  map<string, string> properties = 17;
+
+  // Parent Session Info
+  string session_id = 18;
+  string session_title = 19;
+
+  // Child Tests Summaries
+  repeated .devtools.mobileharness.fe.v6.service.proto.test.TestSummary tests =
+      20;
+
+  // Troubleshooting
+  repeated string warnings = 21;
+  JobError error = 22;
+}
