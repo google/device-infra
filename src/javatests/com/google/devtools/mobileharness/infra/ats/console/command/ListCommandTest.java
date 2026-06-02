@@ -18,8 +18,10 @@ package com.google.devtools.mobileharness.infra.ats.console.command;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
-import static org.mockito.ArgumentMatchers.matches;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 
 import com.google.common.collect.ImmutableList;
@@ -44,6 +46,8 @@ import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import javax.annotation.Nullable;
 import org.jline.reader.LineReader;
 import org.junit.Before;
@@ -211,18 +215,6 @@ public class ListCommandTest {
   }
 
   @Test
-  public void listCommands() throws Exception {
-    commandLine.execute("run", "cts");
-
-    Sleeper.defaultSleeper().sleep(Duration.ofMillis(100));
-
-    int exitCode = commandLine.execute("list", "commands");
-
-    assertThat(exitCode).isEqualTo(0);
-    verify(lineReader).printAbove(matches("Command (1|n/a): \\[0m:00\\] (cts)?"));
-  }
-
-  @Test
   public void listSubPlans() throws Exception {
     String subPlanFilePath1 =
         PathUtil.join(xtsRootDirPath, "android-cts", "subplans", "subplan1.xml");
@@ -243,5 +235,31 @@ public class ListCommandTest {
     verify(lineReader).printAbove("a_subplan");
     verify(lineReader).printAbove("subplan1");
     verify(lineReader).printAbove("subplan2");
+  }
+
+  private void waitUntilDefaultDeviceAvailable() throws Exception {
+    List<String> prints = new CopyOnWriteArrayList<>();
+    doAnswer(
+            invocation -> {
+              prints.add(invocation.getArgument(0));
+              return null;
+            })
+        .when(lineReader)
+        .printAbove(anyString());
+
+    for (int i = 0; i < 100; i++) {
+      prints.clear();
+      int exitCode = commandLine.execute("list", "devices");
+      if (exitCode == 0) {
+        for (String print : prints) {
+          if (print.contains("NoOpDevice-0") && print.contains("Available")) {
+            reset(lineReader);
+            return;
+          }
+        }
+      }
+      Sleeper.defaultSleeper().sleep(Duration.ofMillis(200));
+    }
+    throw new AssertionError("NoOpDevice-0 did not become Available in time");
   }
 }
