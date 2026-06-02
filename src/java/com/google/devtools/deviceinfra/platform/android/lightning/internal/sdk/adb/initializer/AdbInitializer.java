@@ -18,6 +18,7 @@ package com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.
 
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugCurrentStackTrace;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.platform.android.sdktool.proto.Adb.AdbParam;
@@ -36,8 +37,7 @@ public class AdbInitializer {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final Supplier<AdbParam> ADB_PARAM_SUPPLIER =
-      Suppliers.memoize(AdbInitializer::initializeAdb);
+  private static volatile Supplier<AdbParam> adbParamSupplier = createAdbParamSupplier();
 
   private static AdbParam initializeAdb() {
     logger.atInfo().log(
@@ -52,10 +52,20 @@ public class AdbInitializer {
    * <p>Invocations after the first call will return the cached info.
    */
   public AdbParam initializeAdbEnvironment() {
-    return ADB_PARAM_SUPPLIER.get();
+    return adbParamSupplier.get();
+  }
+
+  /** Resets the ADB initializer to allow re-initialization in unit tests. */
+  @VisibleForTesting
+  public static void resetForTest() {
+    adbParamSupplier = createAdbParamSupplier();
   }
 
   private static AdbInitializeTemplate getAdbInitializeTemplate() {
     return new AdbInitializeTemplateImpl();
+  }
+
+  private static Supplier<AdbParam> createAdbParamSupplier() {
+    return Suppliers.memoize(AdbInitializer::initializeAdb);
   }
 }
