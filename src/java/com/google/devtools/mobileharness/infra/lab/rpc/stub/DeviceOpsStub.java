@@ -77,4 +77,10 @@ public interface DeviceOpsStub extends NonThrowingAutoCloseable {
   /** Gets the device debug info asynchronously. */
   ListenableFuture<GetDeviceDebugInfoResponse> getDeviceDebugInfoAsync(
       GetDeviceDebugInfoRequest request);
+
+  /** Gets the device debug info asynchronously with optional client RPC authority. */
+  default ListenableFuture<GetDeviceDebugInfoResponse> getDeviceDebugInfoAsync(
+      GetDeviceDebugInfoRequest request, boolean useClientRpcAuthority) {
+    return getDeviceDebugInfoAsync(request);
+  }
 }
