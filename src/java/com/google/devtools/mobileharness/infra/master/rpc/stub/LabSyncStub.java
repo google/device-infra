@@ -22,6 +22,8 @@ import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServicePr
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingDevicesRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingDevicesResponse;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingHostRequest;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingHostResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignOutDeviceRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignOutDeviceResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest;
@@ -49,5 +51,14 @@ public interface LabSyncStub extends AutoCloseable {
   default ListenableFuture<RemoveMissingDevicesResponse> removeMissingDevices(
       RemoveMissingDevicesRequest request, boolean useClientRpcAuthority) {
     return removeMissingDevices(request);
+  }
+
+  /** Removes missing host on master. */
+  ListenableFuture<RemoveMissingHostResponse> removeMissingHost(RemoveMissingHostRequest request);
+
+  /** Removes missing host on master with optional client RPC authority. */
+  default ListenableFuture<RemoveMissingHostResponse> removeMissingHost(
+      RemoveMissingHostRequest request, boolean useClientRpcAuthority) {
+    return removeMissingHost(request);
   }
 }

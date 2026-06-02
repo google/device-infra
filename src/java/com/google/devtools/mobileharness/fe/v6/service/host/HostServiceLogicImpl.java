@@ -21,6 +21,7 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.CheckRemoteControlEligibilityHandler;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.DecommissionHostHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.DecommissionMissingDevicesHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostDeviceSummariesHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostHeaderInfoHandler;
@@ -78,6 +79,7 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   private final CheckRemoteControlEligibilityHandler checkRemoteControlEligibilityHandler;
   private final RemoteControlDevicesHandler remoteControlDevicesHandler;
   private final GetHostHeaderInfoHandler getHostHeaderInfoHandler;
+  private final DecommissionHostHandler decommissionHostHandler;
   private final DecommissionMissingDevicesHandler decommissionMissingDevicesHandler;
   private final PreflightLabServerReleaseHandler preflightLabServerReleaseHandler;
   private final ReleaseLabServerHandler releaseLabServerHandler;
@@ -91,6 +93,7 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
       CheckRemoteControlEligibilityHandler checkRemoteControlEligibilityHandler,
       RemoteControlDevicesHandler remoteControlDevicesHandler,
       GetHostHeaderInfoHandler getHostHeaderInfoHandler,
+      DecommissionHostHandler decommissionHostHandler,
       DecommissionMissingDevicesHandler decommissionMissingDevicesHandler,
       PreflightLabServerReleaseHandler preflightLabServerReleaseHandler,
       ReleaseLabServerHandler releaseLabServerHandler,
@@ -101,6 +104,7 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
     this.checkRemoteControlEligibilityHandler = checkRemoteControlEligibilityHandler;
     this.remoteControlDevicesHandler = remoteControlDevicesHandler;
     this.getHostHeaderInfoHandler = getHostHeaderInfoHandler;
+    this.decommissionHostHandler = decommissionHostHandler;
     this.decommissionMissingDevicesHandler = decommissionMissingDevicesHandler;
     this.preflightLabServerReleaseHandler = preflightLabServerReleaseHandler;
     this.releaseLabServerHandler = releaseLabServerHandler;
@@ -226,11 +230,13 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   @Override
   public ListenableFuture<DecommissionHostResponse> decommissionHost(
       DecommissionHostRequest request) {
-    // TODO: Use the universe parameter.
-    @SuppressWarnings("unused")
-    String universe = request.getUniverse();
-    // TODO: Implement this method.
-    return immediateFuture(DecommissionHostResponse.getDefaultInstance());
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return decommissionHostHandler.decommissionHost(request, universe);
   }
 
   @Override
