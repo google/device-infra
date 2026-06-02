@@ -27,6 +27,7 @@ go_binary(
     pure = "on",
     deps = [
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/flagutil",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/logutil",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/dialer",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_service_go_grpc",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/transport",

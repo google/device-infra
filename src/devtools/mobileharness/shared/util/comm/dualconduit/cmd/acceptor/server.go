@@ -6,19 +6,21 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/acceptor"
+	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/logutil"
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/mesh"
 	dcontransport "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/transport"
 	rsockettransport "github.com/rsocket/rsocket-go/core/transport"
 	"google.golang.org/grpc"
-	"net"
 )
 
 func main() {
+	logutil.Setup("/logs/acceptor.log")
 	port := flag.Int("port", 7878, "The RSocket server port")
 	transportType := flag.String("transport", "tcp", "The transport protocol to use (tcp, websocket)")
 	xdsPort := flag.Int("xds_port", 18000, "The xDS gRPC server port")

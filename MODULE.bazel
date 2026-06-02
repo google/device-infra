@@ -163,6 +163,7 @@ use_repo(
     "com_github_pkg_xattr",
     "com_github_rsocket_rsocket_go",
     "dev_cel_expr",
+    "in_gopkg_natefinch_lumberjack_v2",
     "org_chromium_go_luci",
     "org_golang_google_grpc",
     "org_golang_google_protobuf",

@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/logutil"
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld"
 	helloworldsvcpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld/proto/helloworldsvcpb"
 )
@@ -20,6 +21,7 @@ var (
 )
 
 func main() {
+	logutil.Setup("/logs/helloworld.log")
 	flag.Parse()
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {

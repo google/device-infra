@@ -27,6 +27,7 @@ go_binary(
     pure = "on",
     deps = [
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/acceptor",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/logutil",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/mesh",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/transport",
         "@com_github_rsocket_rsocket_go//core/transport",

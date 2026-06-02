@@ -13,6 +13,7 @@ import (
 	"syscall"
 
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/flagutil"
+	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/logutil"
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/dialer"
 	dconsvcpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconsvcpb"
 	dcontransport "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/transport"
@@ -31,6 +32,7 @@ type config struct {
 }
 
 func main() {
+	logutil.Setup("/logs/dialer.log")
 	var cfg config
 	var port int
 

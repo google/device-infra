@@ -26,6 +26,7 @@ go_binary(
     goos = "linux",
     pure = "on",
     deps = [
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/logutil",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/tests/helloworld:helloworld_service_go_grpc",
         "@org_golang_google_grpc//:grpc",
