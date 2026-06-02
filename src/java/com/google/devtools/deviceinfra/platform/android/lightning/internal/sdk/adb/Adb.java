@@ -65,6 +65,8 @@ public class Adb {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private static final AdbInitializer ADB_INITIALIZER = new AdbInitializer();
+
   /** Default timeout of running commands. */
   private static final Duration DEFAULT_ADB_COMMAND_TIMEOUT = Constants.DEFAULT_ADB_COMMAND_TIMEOUT;
 
@@ -107,9 +109,7 @@ public class Adb {
   private volatile OutputCallbackImpl defaultOutputCallback;
 
   public Adb() {
-    this(
-        Suppliers.memoize(() -> new AdbInitializer().initializeAdbEnvironment()),
-        new CommandExecutor());
+    this(ADB_INITIALIZER::initializeAdbEnvironment, new CommandExecutor());
   }
 
   private Adb(Supplier<AdbParam> adbParamSupplier, CommandExecutor commandExecutor) {
