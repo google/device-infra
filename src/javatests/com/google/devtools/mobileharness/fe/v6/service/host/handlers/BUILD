@@ -37,6 +37,7 @@ java_library(
         "//src/devtools/mobileharness/fe/v6/service/proto/host:host_service_java_proto",
         "//src/devtools/mobileharness/infra/master/rpc/proto:lab_sync_service_java_proto",
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/builder",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/handlers",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/provider",
@@ -45,7 +46,9 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/remotecontrol",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:device_ops",
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:lab_sync",
+        "//src/java/com/google/wireless/qa/mobileharness/lab/proto:device_ops_serv_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:testbed_device_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:device_model_java_proto",
@@ -57,6 +60,7 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
+        "@protobuf//:protobuf_java_util",
     ],
 )
 

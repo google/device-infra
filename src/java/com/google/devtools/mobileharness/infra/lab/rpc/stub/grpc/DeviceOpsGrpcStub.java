@@ -114,6 +114,16 @@ public class DeviceOpsGrpcStub implements DeviceOpsStub {
   }
 
   @Override
+  public ListenableFuture<GetDeviceDebugInfoResponse> getDeviceDebugInfoAsync(
+      GetDeviceDebugInfoRequest request, boolean useClientRpcAuthority) {
+    if (useClientRpcAuthority) {
+      throw new UnsupportedOperationException(
+          "useClientRpcAuthority is not supported in gRPC stub");
+    }
+    return getDeviceDebugInfoAsync(request);
+  }
+
+  @Override
   public void close() {
     // This stub is not responsible for managing lifecycle of the channel.
   }
