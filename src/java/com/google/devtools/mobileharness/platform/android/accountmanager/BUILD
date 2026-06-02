@@ -31,6 +31,8 @@ java_library(
         "AndroidAccountManagerUtil.java",
     ],
     visibility = [
+        "//java/com/google/devtools/mobileharness/api/action/deviceaction:__pkg__",
+        "//javatests/com/google/devtools/mobileharness/api/action/deviceaction:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/accountmanager:__subpackages__",
     ],
     deps = [
