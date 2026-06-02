@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
             package="com.google.devtools.mobileharness.platform.android.app.binary.wifiutil"
             android:versionCode="1"
-            android:versionName="1.0.1">
+            android:versionName="1.0.2">
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -11,7 +11,8 @@
     <uses-sdk android:minSdkVersion="19"
               android:targetSdkVersion="31" />
 
-    <application android:usesCleartextTraffic="true">
+    <application android:usesCleartextTraffic="true"
+                 android:networkSecurityConfig="@xml/network_security_config">
         <uses-library android:name="android.test.runner" />
         <service android:name=".WifiMonitorService"
                  android:exported="false">

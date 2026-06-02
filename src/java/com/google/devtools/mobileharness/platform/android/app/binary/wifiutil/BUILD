@@ -36,4 +36,5 @@ android_library(
     srcs = glob(["*.java"]),
     custom_package = "com.google.devtools.mobileharness.platform.android.app.binary.wifiutil",
     manifest = "AndroidManifest.xml",
+    resource_files = glob(["res/**"]),
 )
