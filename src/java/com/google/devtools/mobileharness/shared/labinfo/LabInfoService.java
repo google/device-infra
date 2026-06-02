@@ -32,8 +32,11 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.Page;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceGrpc;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DiagnoseJobRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DiagnoseJobResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
+import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import java.time.Duration;
 import java.util.Optional;
@@ -77,6 +80,16 @@ public class LabInfoService extends LabInfoServiceGrpc.LabInfoServiceImplBase {
         this::doGetLabInfo,
         LabInfoServiceGrpc.getServiceDescriptor(),
         LabInfoServiceGrpc.getGetLabInfoMethod());
+  }
+
+  // TODO: DiagnoseJob is handled by the Master server only.
+  @Override
+  public void diagnoseJob(
+      DiagnoseJobRequest request, StreamObserver<DiagnoseJobResponse> responseObserver) {
+    responseObserver.onError(
+        Status.UNIMPLEMENTED
+            .withDescription("DiagnoseJob is only supported on the Master server")
+            .asRuntimeException());
   }
 
   @VisibleForTesting
