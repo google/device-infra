@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.flogger.FluentLogger;
@@ -46,6 +47,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
@@ -86,6 +88,21 @@ public class Aapt {
       Pattern.compile("^\\s*launchable-activity:\\s*name='([^\\\"]+?)'");
   private static final Pattern BADGING_REPEATED_FIELD_PATTERN = Pattern.compile("'([^'\\s]+)'");
 
+  @VisibleForTesting static final boolean DEFAULT_ENABLE_AAPT_OUTPUT_CACHE = false;
+
+  /** Patterns for native code are not always present, so the list may stay empty. */
+  private static final String NATIVE_CODE_PREFIX = "native-code: ";
+
+  private static final String ALT_NATIVE_CODE_PREFIX = "alt-native-code: ";
+
+  private static volatile Supplier<AaptPathResult> aaptPathSupplier = createAaptPathSupplier();
+
+  private record AaptPathResult(@Nullable String path, @Nullable String errorMsg) {}
+
+  private static Supplier<AaptPathResult> createAaptPathSupplier() {
+    return Suppliers.memoize(Aapt::initializeAaptPath);
+  }
+
   /** Path of the AAPT command line tool. */
   private final String aaptPath;
 
@@ -95,74 +112,54 @@ public class Aapt {
    */
   private final boolean enableAaptOutputCache;
 
-  @VisibleForTesting static final boolean DEFAULT_ENABLE_AAPT_OUTPUT_CACHE = false;
-
   /** System command executor. */
   private final CommandExecutor cmdExecutor;
 
-  /** Patterns for native code are not always present, so the list may stay empty. */
-  private static final String NATIVE_CODE_PREFIX = "native-code: ";
-
-  private static final String ALT_NATIVE_CODE_PREFIX = "alt-native-code: ";
-
   private final Map<String, String> aaptOutputCache = new HashMap<>();
 
-  /**
-   * Android SDK lazy initializer. It will do initialization only once before the first {@link Aapt}
-   * instance is created.
-   */
+  private static AaptPathResult initializeAaptPath() {
+    logger.atInfo().log("Initializing AAPT tools, stack_trace=%s", shortDebugCurrentStackTrace(0L));
+    String path = null;
+    String error = null;
+    try {
+      path = getAaptPathExternal();
+    } catch (IllegalStateException e) {
+      error = e.getMessage();
+    }
+    logger.atInfo().log("Android SDK AAPT tool path: %s", path);
+    if (error != null) {
+      logger.atWarning().log("Failed to initialize AAPT: %s", error);
+    }
+    return new AaptPathResult(path, error);
+  }
+
+  private static String getAaptPathExternal() {
+    String result = Flags.aaptPath.getNonNull();
+    if (result.isEmpty()) {
+      logger.atInfo().log("AAPT path --aapt not specified, use \"aapt\" as AAPT path");
+      result = "aapt";
+    } else {
+      logger.atInfo().log("AAPT path from user: %s", result);
+    }
+
+    if (new LocalFileUtil().isFileExistInPath(result)) {
+      return result;
+    } else {
+      throw new IllegalStateException(
+          String.format(
+              "Invalid AAPT path [%s] (file doesn't exist or isn't in PATH dirs)", result));
+    }
+  }
+
+  /** Resets the AAPT initializer to allow re-initialization in unit tests. */
   @VisibleForTesting
-  static class LazyInitializer {
-    @Nullable private static final String AAPT_PATH;
-
-    private static final String ERROR;
-
-    public static String getAaptPath() {
-      return AAPT_PATH;
-    }
-
-    static {
-      logger.atInfo().log(
-          "Initializing AAPT tools, stack_trace=%s", shortDebugCurrentStackTrace(0L));
-      String path = null;
-      String error = null;
-      try {
-        path = getAaptPathExternal();
-      } catch (IllegalStateException e) {
-        error = e.getMessage();
-      }
-      AAPT_PATH = path;
-      ERROR = error;
-      logger.atInfo().log("Android SDK AAPT tool path: %s", AAPT_PATH);
-      if (ERROR != null) {
-        logger.atWarning().log("Failed to initialize AAPT: %s", ERROR);
-      }
-    }
-
-    private static String getAaptPathExternal() {
-      String result = Flags.aaptPath.getNonNull();
-      if (result.isEmpty()) {
-        logger.atInfo().log("AAPT path --aapt not specified, use \"aapt\" as AAPT path");
-        result = "aapt";
-      } else {
-        logger.atInfo().log("AAPT path from user: %s", result);
-      }
-
-      if (new LocalFileUtil().isFileExistInPath(result)) {
-        return result;
-      } else {
-        throw new IllegalStateException(
-            String.format(
-                "Invalid AAPT path [%s] (file doesn't exist or isn't in PATH dirs)", result));
-      }
-    }
-
-    private LazyInitializer() {}
+  public static void resetForTest() {
+    aaptPathSupplier = createAaptPathSupplier();
   }
 
   /** Creates a executor for running AAPT commands using Android SDK tools. */
   public Aapt() {
-    this(LazyInitializer.getAaptPath(), DEFAULT_ENABLE_AAPT_OUTPUT_CACHE, new CommandExecutor());
+    this(aaptPathSupplier.get().path(), DEFAULT_ENABLE_AAPT_OUTPUT_CACHE, new CommandExecutor());
   }
 
   /**
@@ -171,7 +168,7 @@ public class Aapt {
    * @param enableAaptOutputCache whether to cache aapt command output
    */
   public Aapt(boolean enableAaptOutputCache) {
-    this(LazyInitializer.getAaptPath(), enableAaptOutputCache, new CommandExecutor());
+    this(aaptPathSupplier.get().path(), enableAaptOutputCache, new CommandExecutor());
   }
 
   @VisibleForTesting
@@ -520,7 +517,7 @@ public class Aapt {
   public void checkAapt() throws MobileHarnessException {
     if (aaptPath == null) {
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_AAPT_PATH_NOT_SET, LazyInitializer.ERROR);
+          AndroidErrorId.ANDROID_AAPT_PATH_NOT_SET, aaptPathSupplier.get().errorMsg());
     }
   }
 
