@@ -21,6 +21,7 @@ import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorS
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.stream.Collectors.joining;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
@@ -117,7 +118,13 @@ public abstract class AbstractFileResolver implements FileResolver {
   public Optional<ResolveResult> resolve(ResolveSource resolveSource)
       throws MobileHarnessException, InterruptedException {
     if (shouldActuallyResolve(resolveSource)) {
+      logger.atInfo().log(
+          "[%s] Resolving file: %s", getClass().getSimpleName(), resolveSource.path());
+      Stopwatch stopwatch = Stopwatch.createStarted();
       ResolveResult result = actuallyResolve(resolveSource);
+      logger.atInfo().log(
+          "[%s] Successfully resolved file: %s in %s",
+          getClass().getSimpleName(), resolveSource.path(), stopwatch.elapsed());
       return Optional.of(
           ResolveResult.of(
               ImmutableList.sortedCopyOf(
