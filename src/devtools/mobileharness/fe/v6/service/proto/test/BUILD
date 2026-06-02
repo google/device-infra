@@ -13,24 +13,47 @@
 # limitations under the License.
 #
 
+load("@grpc-java//:java_grpc_library.bzl", "java_grpc_library")
 load("@protobuf//bazel:java_proto_library.bzl", "java_proto_library")
 load("@protobuf//bazel:proto_library.bzl", "proto_library")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = ["//visibility:public"],
+    default_visibility = [
+        "//google/corp/devtools/mobileharness/fe:__subpackages__",
+        "//src/devtools/mobileharness/fe/v6:visibility",
+    ],
 )
 
 proto_library(
-    name = "common_resources_proto",
-    srcs = ["common_resources.proto"],
+    name = "test_resources_proto",
+    srcs = ["test_resources.proto"],
     deps = [
-        "@protobuf//:duration_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_proto",
         "@protobuf//:timestamp_proto",
     ],
 )
 
 java_proto_library(
-    name = "common_resources_java_proto",
-    deps = [":common_resources_proto"],
+    name = "test_resources_java_proto",
+    deps = [":test_resources_proto"],
+)
+
+proto_library(
+    name = "test_service_proto",
+    srcs = ["test_service.proto"],
+    deps = [
+        ":test_resources_proto",
+    ],
+)
+
+java_proto_library(
+    name = "test_service_java_proto",
+    deps = [":test_service_proto"],
+)
+
+java_grpc_library(
+    name = "test_service_java_grpc",
+    srcs = [":test_service_proto"],
+    deps = [":test_service_java_proto"],
 )

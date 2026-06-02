@@ -18,9 +18,96 @@ syntax = "proto3";
 
 package devtools.mobileharness.fe.v6.service.proto.common;
 
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.common";
 option java_multiple_files = true;
 option java_outer_classname = "CommonResourcesProto";
+
+// Status and result enums shared across the v6 test/job/session protos.
+//
+// These follow "gRPC-friendly" enum conventions, which matter because gRPC
+// uses proto3, where enum fields have no presence: an unset field is silently
+// read as the zero value. The conventions below keep that safe and composable:
+//
+//  1. Each enum reserves 0 as an explicit `*_UNSPECIFIED` sentinel. Because an
+//     unpopulated field decodes to 0, that 0 must mean "not set / unknown" and
+//     never a real state. (Contrast the legacy api.model enums, where e.g.
+//     TestStatus NEW = 0 makes "unset" indistinguishable from "genuinely new".)
+//
+//  2. Every value name is prefixed with the enum name (TEST_RESULT_PASS, not
+//     PASS). Proto enum value names are scoped to the enclosing file, not the
+//     enum, so unprefixed names would collide. The prefixes are exactly what
+//     let all six enums live together in this one common file.
+//
+//  3. Status (lifecycle) and Result (outcome) are kept as separate enums, so a
+//     RUNNING item simply has an UNSPECIFIED result until it finishes instead
+//     of needing a fake "in progress" result value.
+//
+//  4. They are FE-owned (not reused from the internal execution-layer
+//     api.model protos), so this public gRPC contract stays decoupled from
+//     internal proto churn and build dependencies.
+
+// gRPC-friendly status of a test, decoupled from its result.
+enum TestStatus {
+  TEST_STATUS_UNSPECIFIED = 0;
+  TEST_STATUS_NEW = 1;
+  TEST_STATUS_ASSIGNED = 2;
+  TEST_STATUS_RUNNING = 3;
+  TEST_STATUS_DONE = 4;
+  TEST_STATUS_SUSPENDED = 5;
+}
+
+// gRPC-friendly result of a test.
+enum TestResult {
+  TEST_RESULT_UNSPECIFIED = 0;
+  TEST_RESULT_PASS = 1;
+  TEST_RESULT_FAIL = 2;
+  TEST_RESULT_ERROR = 3;
+  TEST_RESULT_TIMEOUT = 4;
+  TEST_RESULT_ABORT = 5;
+  TEST_RESULT_SKIP = 6;
+}
+
+// gRPC-friendly status of a job, decoupled from its result.
+enum JobStatus {
+  JOB_STATUS_UNSPECIFIED = 0;
+  JOB_STATUS_NEW = 1;
+  JOB_STATUS_RUNNING = 2;
+  JOB_STATUS_DONE = 3;
+  JOB_STATUS_SUSPENDED = 4;
+}
+
+// gRPC-friendly result of a job.
+enum JobResult {
+  JOB_RESULT_UNSPECIFIED = 0;
+  JOB_RESULT_PASS = 1;
+  JOB_RESULT_FAIL = 2;
+  JOB_RESULT_ERROR = 3;
+  JOB_RESULT_TIMEOUT = 4;
+  JOB_RESULT_ABORT = 5;
+  JOB_RESULT_SKIP = 6;
+}
+
+// gRPC-friendly status of a session, decoupled from its result.
+enum SessionStatus {
+  SESSION_STATUS_UNSPECIFIED = 0;
+  SESSION_STATUS_NEW = 1;
+  SESSION_STATUS_RUNNING = 2;
+  SESSION_STATUS_DONE = 3;
+}
+
+// gRPC-friendly result of a session.
+enum SessionResult {
+  SESSION_RESULT_UNSPECIFIED = 0;
+  SESSION_RESULT_PASS = 1;
+  SESSION_RESULT_FAIL = 2;
+  SESSION_RESULT_ERROR = 3;
+  SESSION_RESULT_TIMEOUT = 4;
+  SESSION_RESULT_ABORT = 5;
+  SESSION_RESULT_SKIP = 6;
+}
 
 // Information about user and group permissions.
 message PermissionInfo {
@@ -42,4 +129,39 @@ message ActionButtonState {
   bool visible = 2;
   string tooltip = 3;
   bool is_ready = 4;
+}
+
+message TimelineStage {
+  // The structured name of the stage (e.g., "Device Allocation", "Pre-run
+  // Test")
+  string name = 1;
+
+  // Optional tag for extra context (e.g., the test ID being allocated, or file
+  // path)
+  string tag = 2;
+
+  // Start and end timestamps of this specific phase
+  google.protobuf.Timestamp start_time = 3;
+  google.protobuf.Timestamp end_time = 4;
+
+  // Optional progress checkpoints inside this stage
+  message MarkPoint {
+    string name = 1;
+    google.protobuf.Timestamp time = 2;
+  }
+  repeated MarkPoint mark_points = 5;
+}
+
+// Detailed timing breakdown for Gantt chart / timeline rendering.
+// Note: create/start/end times intentionally duplicate the parent message's
+// (e.g. TestDetail, JobDetail) top-level timestamps so that this message is
+// self-contained when passed to a standalone timeline component.
+message TimeBreakdown {
+  google.protobuf.Timestamp create_time = 1;
+  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp end_time = 3;
+  google.protobuf.Duration total_duration = 4;
+
+  // Detailed segments for Gantt rendering.
+  repeated TimelineStage stages = 5;
 }
