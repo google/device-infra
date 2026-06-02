@@ -43,11 +43,14 @@ import java.util.concurrent.ExecutionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 
 /** File resolver for resolving GCS file. */
 public class GcsFileResolver extends AbstractFileResolver {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  public static final String PARAM_GCS_SERVICE_ACCOUNT = "gcs_service_account";
 
   private static final Pattern GCS_PATH_PATTERN =
       Pattern.compile("^gs://(?<bucket>[^/]+)/(?<path>[^@]+)(@(?<project>.+))?$");
@@ -62,8 +65,14 @@ public class GcsFileResolver extends AbstractFileResolver {
 
     abstract Optional<String> credentialFile();
 
-    static GcsKey create(String project, String bucket, Optional<String> credentialFile) {
-      return new AutoValue_GcsFileResolver_GcsKey(project, bucket, credentialFile);
+    abstract Optional<String> serviceAccount();
+
+    static GcsKey create(
+        String project,
+        String bucket,
+        Optional<String> credentialFile,
+        Optional<String> serviceAccount) {
+      return new AutoValue_GcsFileResolver_GcsKey(project, bucket, credentialFile, serviceAccount);
     }
   }
 
@@ -79,13 +88,18 @@ public class GcsFileResolver extends AbstractFileResolver {
     }
   }
 
+  @Inject
   public GcsFileResolver(@Nullable ListeningExecutorService executorService) {
     super(executorService);
     CacheLoader<GcsKey, GcsUtil> cacheLoader =
         new CacheLoader<>() {
           @Override
           public GcsUtil load(GcsKey key) throws MobileHarnessException {
-            return createGcsUtil(key.project(), key.bucket(), key.credentialFile().orElse(null));
+            return createGcsUtil(
+                key.project(),
+                key.bucket(),
+                key.credentialFile().orElse(null),
+                key.serviceAccount().orElse(null));
           }
         };
     gcsUtilCache = CacheBuilder.newBuilder().build(cacheLoader);
@@ -150,9 +164,15 @@ public class GcsFileResolver extends AbstractFileResolver {
           String.format("No project specified in GCS file path: %s", fileOrDirPath));
     }
     String credentialFile = getCredentialFile(project);
+    String serviceAccount = resolveSource.parameters().get(PARAM_GCS_SERVICE_ACCOUNT);
 
     return ParseResult.create(
-        GcsKey.create(project, bucket, Optional.ofNullable(credentialFile)), filePath);
+        GcsKey.create(
+            project,
+            bucket,
+            Optional.ofNullable(credentialFile),
+            Optional.ofNullable(serviceAccount)),
+        filePath);
   }
 
   @Nullable
@@ -176,16 +196,18 @@ public class GcsFileResolver extends AbstractFileResolver {
   }
 
   @VisibleForTesting
-  GcsUtil createGcsUtil(String project, String bucket, @Nullable String credentialFile)
+  GcsUtil createGcsUtil(
+      String project,
+      String bucket,
+      @Nullable String credentialFile,
+      @Nullable String serviceAccount)
       throws MobileHarnessException {
+    GcsUtil.CredentialType credentialType = GcsUtil.CredentialType.ofAppDefault();
+    if (credentialFile != null) {
+      credentialType = GcsUtil.CredentialType.ofCredentialFile(credentialFile);
+    }
+
     return GcsUtilFactory.create(
-        credentialFile != null
-            ? new GcsParams(
-                project,
-                bucket,
-                GcsParams.Scope.READ_ONLY,
-                GcsUtil.CredentialType.ofCredentialFile(credentialFile))
-            : new GcsParams(
-                project, bucket, GcsParams.Scope.READ_ONLY, GcsUtil.CredentialType.ofAppDefault()));
+        new GcsParams(project, bucket, GcsParams.Scope.READ_ONLY, credentialType));
   }
 }
