@@ -43,11 +43,13 @@ public final class AaptTest {
 
   @Test
   public void resetForTest_allowsRereadingFlags() throws Exception {
+    Aapt aapt = new Aapt();
+
     flags.set("aapt", "sh");
-    assertThat(new Aapt().getAaptPath()).isEqualTo("sh");
+    assertThat(aapt.getAaptPath()).isEqualTo("sh");
 
     flags.set("aapt", "ls");
     Aapt.resetForTest();
-    assertThat(new Aapt().getAaptPath()).isEqualTo("ls");
+    assertThat(aapt.getAaptPath()).isEqualTo("ls");
   }
 }

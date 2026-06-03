@@ -16,13 +16,13 @@
 
 package com.google.wireless.qa.mobileharness.shared.android;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.util.command.LineCallback.does;
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugCurrentStackTrace;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
@@ -97,14 +97,15 @@ public class Aapt {
 
   private static volatile Supplier<AaptPathResult> aaptPathSupplier = createAaptPathSupplier();
 
-  private record AaptPathResult(@Nullable String path, @Nullable String errorMsg) {}
+  @VisibleForTesting
+  record AaptPathResult(@Nullable String path, @Nullable String errorMsg) {}
 
   private static Supplier<AaptPathResult> createAaptPathSupplier() {
     return Suppliers.memoize(Aapt::initializeAaptPath);
   }
 
-  /** Path of the AAPT command line tool. */
-  private final String aaptPath;
+  /** Path supplier of the AAPT command line tool. */
+  private final Supplier<AaptPathResult> pathSupplier;
 
   /**
    * Whether to cache aapt command output. The default value is {@link
@@ -159,7 +160,7 @@ public class Aapt {
 
   /** Creates a executor for running AAPT commands using Android SDK tools. */
   public Aapt() {
-    this(aaptPathSupplier.get().path(), DEFAULT_ENABLE_AAPT_OUTPUT_CACHE, new CommandExecutor());
+    this(() -> aaptPathSupplier.get(), DEFAULT_ENABLE_AAPT_OUTPUT_CACHE, new CommandExecutor());
   }
 
   /**
@@ -168,14 +169,17 @@ public class Aapt {
    * @param enableAaptOutputCache whether to cache aapt command output
    */
   public Aapt(boolean enableAaptOutputCache) {
-    this(aaptPathSupplier.get().path(), enableAaptOutputCache, new CommandExecutor());
+    this(() -> aaptPathSupplier.get(), enableAaptOutputCache, new CommandExecutor());
   }
 
   @VisibleForTesting
-  Aapt(String aaptPath, boolean enableAaptOutputCache, CommandExecutor cmdExecutor) {
-    this.aaptPath = aaptPath;
+  Aapt(
+      Supplier<AaptPathResult> pathSupplier,
+      boolean enableAaptOutputCache,
+      CommandExecutor cmdExecutor) {
+    this.pathSupplier = checkNotNull(pathSupplier);
     this.enableAaptOutputCache = enableAaptOutputCache;
-    this.cmdExecutor = Preconditions.checkNotNull(cmdExecutor);
+    this.cmdExecutor = checkNotNull(cmdExecutor);
   }
 
   /**
@@ -372,7 +376,7 @@ public class Aapt {
 
   /** Returns the path to the Aapt binary. */
   public String getAaptPath() {
-    return aaptPath;
+    return pathSupplier.get().path();
   }
 
   /** Gets launchable activity with command 'dump badging'. */
@@ -477,7 +481,7 @@ public class Aapt {
     checkAapt();
     StringBuilder output = new StringBuilder();
     Command command =
-        Command.of(ArrayUtil.join(aaptPath, args))
+        Command.of(ArrayUtil.join(getAaptPath(), args))
             .onStdout(does(line -> output.append(line).append('\n')));
     String commandStr = command.toString();
     if (enableAaptOutputCache && aaptOutputCache.containsKey(commandStr)) {
@@ -515,9 +519,9 @@ public class Aapt {
    * @throws MobileHarnessException if fails to initialize the AAPT
    */
   public void checkAapt() throws MobileHarnessException {
-    if (aaptPath == null) {
+    if (getAaptPath() == null) {
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_AAPT_PATH_NOT_SET, aaptPathSupplier.get().errorMsg());
+          AndroidErrorId.ANDROID_AAPT_PATH_NOT_SET, pathSupplier.get().errorMsg());
     }
   }
 
