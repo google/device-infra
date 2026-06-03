@@ -27,7 +27,7 @@ public enum RemoteFileType {
   ATS_FILE_SERVER("ats-file-server::"),
   // Google Cloud Storage Uri
   // E.g.,
-  // gs://bucket/path@google_cloud_project
+  // gs://bucket/path
   GCS("gs://");
 
   private final String prefix;

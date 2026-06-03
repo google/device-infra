@@ -53,26 +53,18 @@ public class GcsFileResolver extends AbstractFileResolver {
   public static final String PARAM_GCS_SERVICE_ACCOUNT = "gcs_service_account";
 
   private static final Pattern GCS_PATH_PATTERN =
-      Pattern.compile("^gs://(?<bucket>[^/]+)/(?<path>[^@]+)(@(?<project>.+))?$");
+      Pattern.compile("^gs://(?<bucket>[^/]+)/(?<path>.+)$");
 
   private final LoadingCache<GcsKey, GcsUtil> gcsUtilCache;
 
   @AutoValue
   abstract static class GcsKey {
-    abstract String project();
-
     abstract String bucket();
 
-    abstract Optional<String> credentialFile();
+    abstract GcsUtil.CredentialType credentialType();
 
-    abstract Optional<String> serviceAccount();
-
-    static GcsKey create(
-        String project,
-        String bucket,
-        Optional<String> credentialFile,
-        Optional<String> serviceAccount) {
-      return new AutoValue_GcsFileResolver_GcsKey(project, bucket, credentialFile, serviceAccount);
+    static GcsKey create(String bucket, GcsUtil.CredentialType credentialType) {
+      return new AutoValue_GcsFileResolver_GcsKey(bucket, credentialType);
     }
   }
 
@@ -95,11 +87,7 @@ public class GcsFileResolver extends AbstractFileResolver {
         new CacheLoader<>() {
           @Override
           public GcsUtil load(GcsKey key) throws MobileHarnessException {
-            return createGcsUtil(
-                key.project(),
-                key.bucket(),
-                key.credentialFile().orElse(null),
-                key.serviceAccount().orElse(null));
+            return createGcsUtil(key.bucket(), key.credentialType());
           }
         };
     gcsUtilCache = CacheBuilder.newBuilder().build(cacheLoader);
@@ -154,29 +142,22 @@ public class GcsFileResolver extends AbstractFileResolver {
 
     String bucket = matcher.group("bucket");
     String filePath = matcher.group("path");
-    String project = matcher.group("project");
-    if (project == null && Flags.gcsResolverProjectId.get() != null) {
-      project = Flags.gcsResolverProjectId.get();
-    }
-    if (project == null) {
-      throw new MobileHarnessException(
-          BasicErrorId.GCS_ILLEGAL_PATH_ERROR,
-          String.format("No project specified in GCS file path: %s", fileOrDirPath));
-    }
-    String credentialFile = getCredentialFile(project);
-    String serviceAccount = resolveSource.parameters().get(PARAM_GCS_SERVICE_ACCOUNT);
+    GcsUtil.CredentialType credentialType =
+        getCredentialType(resolveSource.parameters().get(PARAM_GCS_SERVICE_ACCOUNT));
 
-    return ParseResult.create(
-        GcsKey.create(
-            project,
-            bucket,
-            Optional.ofNullable(credentialFile),
-            Optional.ofNullable(serviceAccount)),
-        filePath);
+    return ParseResult.create(GcsKey.create(bucket, credentialType), filePath);
+  }
+
+  private static GcsUtil.CredentialType getCredentialType(@Nullable String serviceAccount) {
+    String credentialFile = getCredentialFile();
+    if (credentialFile != null) {
+      return GcsUtil.CredentialType.ofCredentialFile(credentialFile);
+    }
+    return GcsUtil.CredentialType.ofAppDefault();
   }
 
   @Nullable
-  private static String getCredentialFile(String project) {
+  private static String getCredentialFile() {
     if (Flags.gcsResolverCredentialFile.get() != null) {
       return Flags.gcsResolverCredentialFile.get();
     }
@@ -196,18 +177,10 @@ public class GcsFileResolver extends AbstractFileResolver {
   }
 
   @VisibleForTesting
-  GcsUtil createGcsUtil(
-      String project,
-      String bucket,
-      @Nullable String credentialFile,
-      @Nullable String serviceAccount)
+  GcsUtil createGcsUtil(String bucket, GcsUtil.CredentialType credentialType)
       throws MobileHarnessException {
-    GcsUtil.CredentialType credentialType = GcsUtil.CredentialType.ofAppDefault();
-    if (credentialFile != null) {
-      credentialType = GcsUtil.CredentialType.ofCredentialFile(credentialFile);
-    }
-
     return GcsUtilFactory.create(
-        new GcsParams(project, bucket, GcsParams.Scope.READ_ONLY, credentialType));
+        new GcsParams(
+            "mobile-harness-file-resolver", bucket, GcsParams.Scope.READ_ONLY, credentialType));
   }
 }
