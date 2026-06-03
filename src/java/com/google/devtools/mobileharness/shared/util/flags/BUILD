@@ -23,6 +23,10 @@ package_group(
         "//:deviceinfra_all_pkg",
         "//:omnilab_fusion",
     ],
+    packages = [
+        "//java/com/google/devtools/mobileharness/platform/maneki/...",
+        "//javatests/com/google/devtools/mobileharness/platform/maneki/...",
+    ],
 )
 
 java_library(
