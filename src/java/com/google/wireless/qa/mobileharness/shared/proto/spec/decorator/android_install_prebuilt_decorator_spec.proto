@@ -24,7 +24,7 @@ option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.de
 option java_multiple_files = true;
 
 // Specs for {@link AndroidInstallPrebuiltDecorator}
-// Next tag: 6
+// Next tag: 7
 message AndroidInstallPrebuiltDecoratorSpec {
   extend DecoratorSpec {
     optional AndroidInstallPrebuiltDecoratorSpec ext = 1008;
@@ -51,4 +51,15 @@ message AndroidInstallPrebuiltDecoratorSpec {
     default = false,
     (field_detail) = { help: "If the decorator is disabled. Default is false." }
   ];
+
+  optional string multi_runs_params_json = 6 [(field_detail) = {
+    help: "JSON string representing a list of prebuilts to install sequentially. "
+          "Each entry should be a dictionary containing the above prebuilt "
+          "params for a single run. "
+          "Example:\n"
+          "[\n"
+          "  {\"prebuilt_type\":\"kernel\", \"prebuilt_target\":\"kernel_target\", \"prebuilt_build_id\":\"12345\"},\n"
+          "  {\"prebuilt_type\":\"adsp\", \"prebuilt_target\":\"adsp_target\", \"prebuilt_branch\":\"my_branch\"}\n"
+          "]"
+  }];
 }
