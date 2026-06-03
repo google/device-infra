@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.fe.v6.service.device.handlers.NoOpScree
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.OssTestbedConfigBuilderImpl;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.ScreenshotActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.TestbedConfigBuilder;
+import com.google.devtools.mobileharness.fe.v6.service.device.provider.DeviceOpsStubProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.builder.NoOpRemoteControlUrlBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.host.builder.RemoteControlUrlBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.NoOpPreflightLabServerReleaseActionHelper;
@@ -52,6 +53,8 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.providers.NoOpWifi
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.RoutedUniverseLabInfoStubFactory;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.WifiCredentialsStore;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
+import com.google.devtools.mobileharness.infra.lab.rpc.stub.DeviceOpsStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabSyncStub;
@@ -67,6 +70,12 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.AbstractModule;
 import com.google.inject.Key;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
+import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.GetDeviceDebugInfoRequest;
+import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.GetDeviceDebugInfoResponse;
+import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.GetDeviceLogRequest;
+import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.GetDeviceLogResponse;
+import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.TakeScreenshotRequest;
+import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.TakeScreenshotResponse;
 import io.grpc.ManagedChannel;
 import java.util.List;
 import javax.inject.Singleton;
@@ -122,6 +131,7 @@ public final class OssStubsModule extends AbstractModule {
     bind(GroupMembershipProvider.class).to(NoOpGroupMembershipProvider.class).in(Singleton.class);
     bind(TestbedConfigBuilder.class).to(OssTestbedConfigBuilderImpl.class).in(Singleton.class);
     bind(ConfigPusherHelper.class).to(NoOpConfigPusherHelper.class).in(Singleton.class);
+    bind(DeviceOpsStubProvider.class).to(NoOpDeviceOpsStubProvider.class).in(Singleton.class);
   }
 
   private static final class NoOpGroupMembershipProvider implements GroupMembershipProvider {
@@ -129,5 +139,49 @@ public final class OssStubsModule extends AbstractModule {
     public ListenableFuture<Boolean> isMemberOfAny(String username, List<String> groupNames) {
       return immediateFuture(false);
     }
+  }
+
+  private static final class NoOpDeviceOpsStubProvider implements DeviceOpsStubProvider {
+    @Override
+    public DeviceOpsStub createStub(String hostName, UniverseScope universe) {
+      return new NoOpDeviceOpsStub();
+    }
+  }
+
+  private static final class NoOpDeviceOpsStub implements DeviceOpsStub {
+    @Override
+    public TakeScreenshotResponse takeScreenshot(TakeScreenshotRequest request) {
+      return TakeScreenshotResponse.getDefaultInstance();
+    }
+
+    @Override
+    public ListenableFuture<TakeScreenshotResponse> takeScreenshotAsync(
+        TakeScreenshotRequest request) {
+      return immediateFuture(TakeScreenshotResponse.getDefaultInstance());
+    }
+
+    @Override
+    public GetDeviceLogResponse getDeviceLog(GetDeviceLogRequest request) {
+      return GetDeviceLogResponse.getDefaultInstance();
+    }
+
+    @Override
+    public ListenableFuture<GetDeviceLogResponse> getDeviceLogAsync(GetDeviceLogRequest request) {
+      return immediateFuture(GetDeviceLogResponse.getDefaultInstance());
+    }
+
+    @Override
+    public GetDeviceDebugInfoResponse getDeviceDebugInfo(GetDeviceDebugInfoRequest request) {
+      return GetDeviceDebugInfoResponse.getDefaultInstance();
+    }
+
+    @Override
+    public ListenableFuture<GetDeviceDebugInfoResponse> getDeviceDebugInfoAsync(
+        GetDeviceDebugInfoRequest request) {
+      return immediateFuture(GetDeviceDebugInfoResponse.getDefaultInstance());
+    }
+
+    @Override
+    public void close() {}
   }
 }
