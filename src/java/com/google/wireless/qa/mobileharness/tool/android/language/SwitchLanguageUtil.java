@@ -21,6 +21,7 @@ import android.app.ActivityManager;
 import android.app.ActivityManagerNative;
 import android.app.IActivityManager;
 import android.app.Instrumentation;
+import android.app.UiAutomation;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.os.Build.VERSION;
@@ -30,6 +31,7 @@ import android.os.RemoteException;
 import android.util.Log;
 import com.google.common.base.Strings;
 import java.util.Locale;
+import java.util.Optional;
 
 /**
  * Switch language main activity for switching language and country of the device.
@@ -51,6 +53,8 @@ public class SwitchLanguageUtil extends Instrumentation {
 
   protected Bundle arguments;
 
+  private Optional<UiAutomation> uiAutomation = Optional.empty();
+
   @Override
   public void onCreate(Bundle arguments) {
     super.onCreate(arguments);
@@ -62,12 +66,37 @@ public class SwitchLanguageUtil extends Instrumentation {
     // locale. There's certain amount of flakiness in the time required for with appop permission
     // propagation and hence we use UI Automation to adopt the shell permission identity.
     // This is available on API 29+.
-    if (VERSION.SDK_INT >= VERSION_CODES.Q) {
-      getUiAutomation()
+    uiAutomation = tryGetUiAutomation();
+    if (uiAutomation.isPresent()
+        && VERSION.SDK_INT >= VERSION_CODES.Q /* Check needed  again for linter */) {
+      uiAutomation
+          .get()
           .adoptShellPermissionIdentity(
               "android.permission.WRITE_SETTINGS", "android.permission.CHANGE_CONFIGURATION");
     }
     start();
+  }
+
+  private Optional<UiAutomation> tryGetUiAutomation() {
+    try {
+      if (VERSION.SDK_INT >= VERSION_CODES.Q) {
+        return Optional.of(getUiAutomation());
+      }
+    } catch (RuntimeException e) {
+      Log.w(LOG_TAG, "Could not get UiAutomation", e);
+    }
+    Log.i(LOG_TAG, "UiAutomation not available, trying without accessibility mode.");
+    try {
+      // FLAG_DONT_USE_ACCESSIBILITY allows you to obtain a UiAutomation instance
+      // to adopt shell permissions if there is an existing UiAutomation connection to another
+      // process.
+      if (VERSION.SDK_INT >= VERSION_CODES.S) {
+        return Optional.of(getUiAutomation(UiAutomation.FLAG_DONT_USE_ACCESSIBILITY));
+      }
+    } catch (RuntimeException e) {
+      Log.w(LOG_TAG, "Could not get UiAutomation without accessibility", e);
+    }
+    return Optional.empty();
   }
 
   @Override
@@ -107,8 +136,9 @@ public class SwitchLanguageUtil extends Instrumentation {
       fail(e.toString());
     } finally {
       // Clean up and drop the shell identity before exiting
-      if (VERSION.SDK_INT >= VERSION_CODES.Q) {
-        getUiAutomation().dropShellPermissionIdentity();
+      if (uiAutomation.isPresent()
+          && VERSION.SDK_INT >= VERSION_CODES.Q /* Check needed  again for linter */) {
+        uiAutomation.get().dropShellPermissionIdentity();
       }
     }
   }
