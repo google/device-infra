@@ -179,7 +179,14 @@ public class GcsFileManager {
   public static GcsUtil.CredentialType getCredentialType(String bucketName, SystemUtil systemUtil) {
 
     Optional<String> credentialFile = getCredentialFile();
-    return GcsUtil.CredentialType.ofCredentialFile(credentialFile.get());
+    if (credentialFile.isPresent()) {
+      // If the bucket is the file transfer bucket and the credential file is provided, use the
+      // credential file.
+      return GcsUtil.CredentialType.ofCredentialFile(credentialFile.get());
+    }
+
+    // Otherwise, use app default credential.
+    return GcsUtil.CredentialType.ofAppDefault();
   }
 
   /**
