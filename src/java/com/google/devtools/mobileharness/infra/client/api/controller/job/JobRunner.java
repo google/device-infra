@@ -44,6 +44,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
+import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageSend;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
@@ -57,12 +58,9 @@ import com.google.devtools.mobileharness.api.model.proto.Test;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.AllocationWithStats;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
-import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.AllocationDiagnostician;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.DeviceFilter;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.DeviceFilter.FilterType;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.Report;
-import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.multidevice.MultiDeviceDiagnostician;
-import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.singledevice.SingleDeviceDiagnostician;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.JobCancelledException;
@@ -75,7 +73,11 @@ import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerS
 import com.google.devtools.mobileharness.infra.controller.test.manager.DirectTestRunnerUtil;
 import com.google.devtools.mobileharness.infra.controller.test.manager.TestManager;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.MasterStubFlag;
 import com.google.devtools.mobileharness.shared.constant.closeable.MobileHarnessAutoCloseable;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DiagnoseJobRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DiagnoseJobResponse;
 import com.google.devtools.mobileharness.shared.util.algorithm.GraphMatching;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
@@ -86,9 +88,11 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.AbstractModule;
+import com.google.net.rpc.contrib.parambuilder.CombinedServerSpec;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
 import com.google.wireless.qa.mobileharness.client.api.event.internal.JobFirstAllocationEvent;
+import com.google.wireless.qa.mobileharness.client.api.util.stub.StubManager;
 import com.google.wireless.qa.mobileharness.shared.api.validator.JobChecker;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
@@ -227,9 +231,6 @@ public class JobRunner implements Runnable {
   private final Sleeper sleeper;
   private final PendingTestPrinter pendingTestPrinter;
   @Nullable private final SuitableDeviceChecker suitableDeviceChecker;
-
-  /** Util for diagnostic the reasons when the job fails to allocate devices. */
-  private volatile AllocationDiagnostician allocDiagnostician;
 
   private int diagnosticTimes = 0;
 
@@ -1325,9 +1326,7 @@ public class JobRunner implements Runnable {
               MobileHarnessException cause = null;
               if (diagnosticReport.isPresent()) {
                 errorId = diagnosticReport.get().getResult().errorId();
-                if (errorId == InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR) {
-                  allocDiagnostician.logExtraInfo();
-                }
+
                 String diagnosticResult = diagnosticReport.get().getResult().readableReport();
                 if (errorId == InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR) {
                   hasAllocFailTests = true;
@@ -1572,75 +1571,83 @@ public class JobRunner implements Runnable {
   @CanIgnoreReturnValue
   private Optional<Report> diagnose(boolean noPerfectCandidate) throws InterruptedException {
     diagnosticTimes++;
-    if (deviceQuerier == null) {
-      logger.atInfo().log("DeviceQuerier is disabled, skip diagnose.");
+
+    String execMode = jobInfo.properties().get(PropertyName.Job.EXEC_MODE);
+    if (!"remote".equalsIgnoreCase(execMode)) {
+      logger.atInfo().log(
+          "Job is not in remote mode (exec_mode=%s), skip master-side diagnose.", execMode);
       return Optional.empty();
     }
 
     try {
-      if (allocDiagnostician == null) {
-        allocDiagnostician = createAllocationDiagnostician(jobInfo, deviceQuerier);
-      }
-      if (allocDiagnostician != null) {
-        // Double check to guarantee result accurate if previous check finds max score device.
-        // b/64825449
-        if (allocDiagnostician.getLastReport().isEmpty()
-            || (allocDiagnostician.getLastReport().get().hasPerfectMatch()
-                && diagnosticTimes < MAX_ALLOCATION_DIAGNOSE_TIMES)) {
-          jobInfo
-              .log()
-              .atInfo()
-              .alsoTo(logger)
-              .log("Diagnose allocation failure of job %s...", jobInfo.locator().getId());
-          // TODO: after the long-term solution is launched, always generate
-          // diagnostic.
-          if (Runtime.getRuntime().maxMemory()
-              <= Flags.lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnostic.getNonNull()) {
-            String message =
-                String.format(
-                    "Current max memory is set as %d, less than %d. To avoid OOM when querying all"
-                        + " devices, we stop the diagnose.",
-                    Runtime.getRuntime().maxMemory(),
-                    Flags.lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnostic.getNonNull());
-            jobInfo
-                .warnings()
-                .addAndLog(
-                    createExceptionWithoutStackTrace(
-                        InfraErrorId.CLIENT_JR_ALLOC_DIAGNOSTIC_ERROR, message),
-                    logger);
-            return Optional.empty();
-          } else {
-            allocDiagnostician.diagnoseJob(noPerfectCandidate);
-            jobInfo
-                .log()
-                .atInfo()
-                .alsoTo(logger)
-                .log(
-                    "Successfully generated allocation diagnostic report for job %s",
-                    jobInfo.locator().getId());
-          }
-        }
-        return allocDiagnostician.getLastReport();
-      }
-    } catch (MobileHarnessException e) {
+      jobInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("Diagnose allocation failure of job %s via Master...", jobInfo.locator().getId());
+
+      CombinedServerSpec masterSpec = MasterStubFlag.getPrimaryMasterSpec();
+      LabInfoStub stub = getLabInfoStub(masterSpec);
+
+      DiagnoseJobRequest request =
+          DiagnoseJobRequest.newBuilder().setJobId(jobInfo.locator().getId()).build();
+
+      DiagnoseJobResponse response = stub.diagnoseJob(request);
+
+      jobInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "Successfully generated allocation diagnostic report for job %s via Master",
+              jobInfo.locator().getId());
+
+      return Optional.of(new MasterDiagnosticReport(response));
+    } catch (RpcExceptionWithErrorId e) {
       jobInfo
           .warnings()
           .addAndLog(
               createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_ALLOC_DIAGNOSTIC_ERROR,
-                  "Failed to diagnose the allocation failure",
+                  "Failed to diagnose the allocation failure via Master",
                   e),
               logger);
     }
     return Optional.empty();
   }
 
+  private static class MasterDiagnosticReport implements Report {
+    private final DiagnoseJobResponse response;
+
+    MasterDiagnosticReport(DiagnoseJobResponse response) {
+      this.response = response;
+    }
+
+    @Override
+    public boolean hasPerfectMatch() {
+      return response.getErrorType() == DiagnoseJobResponse.ErrorType.INFRA_ERROR;
+    }
+
+    @Override
+    public Result getResult() {
+      ErrorId errorId;
+      switch (response.getErrorType()) {
+        case INFRA_ERROR:
+          errorId = InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR;
+          break;
+        case USER_CONFIG_ERROR:
+          errorId = InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR;
+          break;
+        default:
+          errorId = InfraErrorId.CLIENT_JR_ALLOC_UNKNOWN_ERROR;
+      }
+      return Result.create(errorId, response.getReadableReport(), /* cause= */ null);
+    }
+  }
+
   @VisibleForTesting
-  AllocationDiagnostician createAllocationDiagnostician(
-      JobInfo jobInfo, DeviceQuerier deviceQuerier) {
-    return jobInfo.subDeviceSpecs().hasMultipleDevices()
-        ? new MultiDeviceDiagnostician(jobInfo, deviceQuerier)
-        : new SingleDeviceDiagnostician(jobInfo, deviceQuerier);
+  LabInfoStub getLabInfoStub(CombinedServerSpec masterSpec) {
+    return StubManager.getInstance().getMasterNewLabInfoStub(masterSpec);
   }
 
   /**

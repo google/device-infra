@@ -59,6 +59,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@grpc-java//core",
         "@grpc-java//stub",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
