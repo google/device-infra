@@ -26,6 +26,9 @@ option java_outer_classname = "LabInfoServiceProto";
 service LabInfoService {
   // Gets lab and device information.
   rpc GetLabInfo(GetLabInfoRequest) returns (GetLabInfoResponse);
+
+  // Diagnoses job allocation failure.
+  rpc DiagnoseJob(DiagnoseJobRequest) returns (DiagnoseJobResponse) {}
 }
 
 message GetLabInfoRequest {
@@ -44,4 +47,22 @@ message GetLabInfoRequest {
 message GetLabInfoResponse {
   // Required.
   mobileharness.api.query.LabQueryResult lab_query_result = 1;
+}
+
+message DiagnoseJobRequest {
+  // Required. The ID of the job to diagnose.
+  string job_id = 1;
+}
+
+message DiagnoseJobResponse {
+  // Required. The human-readable diagnostic report.
+  string readable_report = 1;
+
+  enum ErrorType {
+    UNKNOWN = 0;
+    INFRA_ERROR = 1;
+    USER_CONFIG_ERROR = 2;
+  }
+  // Required. The error type of the allocation failure.
+  ErrorType error_type = 2;
 }
