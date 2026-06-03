@@ -67,13 +67,17 @@ java_library(
     srcs = [
         "MasterGrpcStubHelper.java",
     ],
+    resources = [
+        "//java/com/google/devtools/mobileharness/shared/util/file/remote/config:cloud_storage_resources",
+    ],
     runtime_deps = [
     ],
     deps = [
         ":grpc_address_util",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
         "@grpc-java//core",
-        "@grpc-java//stub",
         "@maven//:com_google_guava_guava",
     ],
 )
