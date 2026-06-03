@@ -20,6 +20,7 @@ licenses(["notice"])
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
+        "//nest/engprod/gna/inception/android/kramer/communal_dashboard:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:__pkg__",
     ],
 )
