@@ -22,6 +22,7 @@ option go_package = "github.com/google/device-infra/src/devtools/mobileharness/s
 option java_package = "com.google.devtools.mobileharness.shared.util.comm.dualconduit.proto";
 option java_outer_classname = "DualConduitProto";
 
+// Low level dual conduit request.
 message EstablishConduitRequest {
   enum ConduitType {
     CONDUIT_TYPE_UNSPECIFIED = 0;
@@ -35,6 +36,8 @@ message EstablishConduitRequest {
     PROTOCOL_HTTP = 3;
   }
   ConduitType type = 1;
+  // Deprecated. Use the auto_reconnect field in EstablishSessionRequest
+  // instead.
   bool auto_reconnect = 2;
   // Server name to identify the server.
   string server_name = 3;
@@ -66,8 +69,34 @@ message EstablishConduitResponse {
   ServiceLocator service_locator = 2;
 }
 
+// Low level dual conduit teardown request.
 message TeardownConduitRequest {
   string conduit_id = 1;
 }
 
 message TeardownConduitResponse {}
+
+// High level dual conduit session request.
+message EstablishSessionRequest {
+  EstablishConduitRequest establish_conduit_request = 1;
+  // Reverse conduit count is number of conduits at the same time.
+  // Only valid for REVERSE type.
+  // The default value is 1.
+  int32 reverse_conduit_count = 2;
+  bool auto_reconnect = 3;
+}
+
+message EstablishSessionResponse {
+  string session_id = 1;
+  // The responses for the initial conduits. The number of responses will be
+  // equal to reverse_conduit_count in the request if the request is REVERSE
+  // type, otherwise it will be 1.
+  repeated EstablishConduitResponse establish_conduit_responses = 2;
+}
+
+// High level dual conduit session teardown request.
+message TeardownSessionRequest {
+  string session_id = 1;
+}
+
+message TeardownSessionResponse {}

@@ -11,10 +11,12 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/flagutil"
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/logutil"
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/dialer"
+	dconpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb"
 	dconsvcpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconsvcpb"
 	dcontransport "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/transport"
 	rsockettransport "github.com/rsocket/rsocket-go/core/transport"
@@ -35,6 +37,11 @@ func main() {
 	logutil.Setup("/logs/dialer.log")
 	var cfg config
 	var port int
+	var retryStrategy string
+	var retryInitialInterval time.Duration
+	var retryMaxInterval time.Duration
+	var retryMultiplier float64
+	var retryMaxAttempts int
 
 	flag.StringVar(&cfg.AcceptorTarget, "acceptor_target", "localhost:7878", "Acceptor target address (host:port or ws://host:port)")
 	flag.BoolVar(&cfg.UseSAToken, "use_sa_token", false, "Use Self-Signed JWT from Service Account key")
@@ -45,6 +52,12 @@ func main() {
 	flag.StringVar(&cfg.ForwardAddress, "forward_address", "", "Forward address (e.g., 127.0.0.1 or 0.0.0.0) to listen on for forward conduits")
 	var forwardConduits flagutil.MultiString
 	flag.Var(&forwardConduits, "L", "Establish forward conduit (format: entry_port:destination_endpoint), can be specified multiple times")
+
+	flag.StringVar(&retryStrategy, "retry_strategy", "exponential", "Retry strategy (exponential, constant, none)")
+	flag.DurationVar(&retryInitialInterval, "retry_initial_interval", 1*time.Second, "Initial interval for retry backoff")
+	flag.DurationVar(&retryMaxInterval, "retry_max_interval", 10*time.Minute, "Maximum interval for exponential retry backoff")
+	flag.Float64Var(&retryMultiplier, "retry_multiplier", 2.0, "Multiplier for exponential retry backoff")
+	flag.IntVar(&retryMaxAttempts, "retry_max_attempts", 0, "Maximum retry attempts (0 for infinite, 1 for no retry)")
 
 	flag.Parse()
 
@@ -69,8 +82,32 @@ func main() {
 		return dcontransport.CreateClientTransport(clientCfg)
 	}
 
+	policy := dialer.RetryPolicy{
+		MaxAttempts: retryMaxAttempts,
+	}
+	switch retryStrategy {
+	case "exponential":
+		policy.Strategy = &dialer.ExponentialBackoff{
+			InitialInterval: retryInitialInterval,
+			MaxInterval:     retryMaxInterval,
+			Multiplier:      retryMultiplier,
+		}
+	case "constant":
+		policy.Strategy = &dialer.ConstantBackoff{
+			Interval: retryInitialInterval,
+		}
+	case "none":
+		policy.MaxAttempts = 1
+		policy.Strategy = &dialer.ConstantBackoff{}
+	default:
+		slog.Error("Invalid retry_strategy", "strategy", retryStrategy)
+		os.Exit(1)
+	}
+
 	// 1. Perform pre-flight check
-	dialerSvc := dialer.New(context.Background(), cfg.Hostname, cfg.ForwardAddress, newTransporter)
+	dialerCtx, dialerCancel := context.WithCancel(context.Background())
+	defer dialerCancel()
+	dialerSvc := dialer.New(dialerCtx, cfg.Hostname, cfg.ForwardAddress, newTransporter, policy)
 	if err := dialerSvc.CheckConnection(context.Background()); err != nil {
 		slog.Error("Pre-flight check failed", "error", err)
 		os.Exit(1)
@@ -93,12 +130,21 @@ func main() {
 			}
 		}
 
-		resp, err := dialerSvc.EstablishConduit(context.Background(), req)
+		sessionReq := &dconpb.EstablishSessionRequest{
+			EstablishConduitRequest: req,
+			AutoReconnect:           true,
+		}
+		resp, err := dialerSvc.EstablishSession(context.Background(), sessionReq)
 		if err != nil {
-			slog.Error("Failed to establish forward conduit", "flag", fc, "error", err)
+			slog.Error("Failed to establish forward session", "flag", fc, "error", err)
 			os.Exit(1)
 		}
-		slog.Info("Established forward conduit", "id", resp.ConduitId, "locator", resp.ServiceLocator)
+		if len(resp.EstablishConduitResponses) > 0 {
+			cResp := resp.EstablishConduitResponses[0]
+			slog.Info("Established forward session", "session_id", resp.SessionId, "conduit_id", cResp.ConduitId, "locator", cResp.ServiceLocator)
+		} else {
+			slog.Info("Established forward session", "session_id", resp.SessionId)
+		}
 	}
 
 	// 2. Start Dialer gRPC server
@@ -121,6 +167,7 @@ func main() {
 	go func() {
 		sig := <-sigChan
 		slog.Info("Received signal, shutting down", "signal", sig)
+		dialerCancel()
 		dialerSvc.Manager.Shutdown()
 		s.GracefulStop()
 		slog.Info("Graceful shutdown complete")

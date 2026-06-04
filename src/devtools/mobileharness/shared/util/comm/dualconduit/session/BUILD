@@ -17,40 +17,29 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = ["//src/devtools/mobileharness/shared/util/comm/dualconduit:__subpackages__"],
+    default_visibility = ["//visibility:public"],
 )
 
 go_library(
-    name = "conduit",
+    name = "session",
     srcs = [
-        "conduit.go",
         "manager.go",
-        "pump.go",
+        "session.go",
     ],
-    importpath = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/conduit",
+    importpath = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/session",
     deps = [
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_go_proto",
-        "//src/devtools/mobileharness/shared/util/comm/dualconduit/rxconn",
-        "@com_github_rsocket_rsocket_go//:rsocket-go",
-        "@com_github_rsocket_rsocket_go//payload",
-        "@com_github_rsocket_rsocket_go//rx",
-        "@com_github_rsocket_rsocket_go//rx/flux",
     ],
 )
 
 go_test(
-    name = "conduit_test",
+    name = "session_test",
     srcs = [
-        "conduit_test.go",
         "manager_test.go",
-        "pump_test.go",
+        "session_test.go",
     ],
-    embed = [":conduit"],
+    embed = [":session"],
     deps = [
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_go_proto",
-        "@com_github_rsocket_rsocket_go//:rsocket-go",
-        "@com_github_rsocket_rsocket_go//payload",
-        "@com_github_rsocket_rsocket_go//rx/flux",
-        "@com_github_rsocket_rsocket_go//rx/mono",
     ],
 )

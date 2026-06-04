@@ -1,11 +1,13 @@
 package conduit
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"testing"
 	"time"
 
+	dconpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb"
 	"github.com/rsocket/rsocket-go"
 )
 
@@ -161,4 +163,161 @@ func TestManagerConcurrent(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+func TestManagerSubscribeToRemove_Remove(t *testing.T) {
+	m := NewManager()
+
+	var called1, called2 bool
+	var gotID1, gotID2 string
+	var gotMeta1, gotMeta2 *dconpb.EstablishConduitRequest
+
+	handler1 := func(id string, meta *dconpb.EstablishConduitRequest) {
+		called1 = true
+		gotID1 = id
+		gotMeta1 = meta
+	}
+	handler2 := func(id string, meta *dconpb.EstablishConduitRequest) {
+		called2 = true
+		gotID2 = id
+		gotMeta2 = meta
+	}
+
+	// 1. SubscribeToRemove before Add.
+	m.SubscribeToRemove(handler1)
+
+	var mockRS rsocket.CloseableRSocket
+	meta := &dconpb.EstablishConduitRequest{
+		ServerName: "test-server",
+	}
+
+	_, err := m.Add(t.Context(), "conduit-1", meta, mockRS, nil)
+	if err != nil {
+		t.Fatalf("Add() err = %v, want nil", err)
+	}
+
+	// 2. SubscribeToRemove after Add.
+	// Since remove handlers are dynamically copied at removal time from the Manager instance,
+	// handlers registered after a conduit is added but before it is removed also get invoked.
+	m.SubscribeToRemove(handler2)
+
+	m.Remove("conduit-1")
+
+	if !called1 {
+		t.Errorf("handler1 (registered before Add) was not called on Remove()")
+	}
+	if gotID1 != "conduit-1" {
+		t.Errorf("handler1 got id %q, want %q", gotID1, "conduit-1")
+	}
+	if gotMeta1 != meta {
+		t.Errorf("handler1 got meta %v, want %v", gotMeta1, meta)
+	}
+
+	if !called2 {
+		t.Errorf("handler2 (registered after Add) was not called on Remove()")
+	}
+	if gotID2 != "conduit-1" {
+		t.Errorf("handler2 got id %q, want %q", gotID2, "conduit-1")
+	}
+	if gotMeta2 != meta {
+		t.Errorf("handler2 got meta %v, want %v", gotMeta2, meta)
+	}
+}
+
+func TestManagerSubscribeToRemove_Close(t *testing.T) {
+	m := NewManager()
+
+	var called bool
+	var gotID string
+	var gotMeta *dconpb.EstablishConduitRequest
+
+	m.SubscribeToRemove(func(id string, meta *dconpb.EstablishConduitRequest) {
+		called = true
+		gotID = id
+		gotMeta = meta
+	})
+
+	var mockRS rsocket.CloseableRSocket
+	meta := &dconpb.EstablishConduitRequest{
+		ServerName: "test-server",
+	}
+
+	c, err := m.Add(t.Context(), "conduit-2", meta, mockRS, nil)
+	if err != nil {
+		t.Fatalf("Add() err = %v, want nil", err)
+	}
+
+	c.Close()
+
+	if !called {
+		t.Errorf("handler was not called on c.Close()")
+	}
+	if gotID != "conduit-2" {
+		t.Errorf("handler got id %q, want %q", gotID, "conduit-2")
+	}
+	if gotMeta != meta {
+		t.Errorf("handler got meta %v, want %v", gotMeta, meta)
+	}
+}
+
+func TestManagerSubscribeToRemove_Shutdown(t *testing.T) {
+	m := NewManager()
+
+	var mu sync.Mutex
+	removedIDs := make(map[string]bool)
+
+	m.SubscribeToRemove(func(id string, meta *dconpb.EstablishConduitRequest) {
+		mu.Lock()
+		defer mu.Unlock()
+		removedIDs[id] = true
+	})
+
+	var mockRS rsocket.CloseableRSocket
+	_, err := m.Add(t.Context(), "conduit-a", nil, mockRS, nil)
+	if err != nil {
+		t.Fatalf("Add() err = %v, want nil", err)
+	}
+	_, err = m.Add(t.Context(), "conduit-b", nil, mockRS, nil)
+	if err != nil {
+		t.Fatalf("Add() err = %v, want nil", err)
+	}
+
+	m.Shutdown()
+
+	mu.Lock()
+	defer mu.Unlock()
+	if !removedIDs["conduit-a"] {
+		t.Errorf("conduit-a was not reported as removed after Shutdown()")
+	}
+	if !removedIDs["conduit-b"] {
+		t.Errorf("conduit-b was not reported as removed after Shutdown()")
+	}
+}
+
+func TestManagerSubscribeToRemove_ContextCancel(t *testing.T) {
+	m := NewManager()
+
+	removedChan := make(chan string, 1)
+	m.SubscribeToRemove(func(id string, meta *dconpb.EstablishConduitRequest) {
+		removedChan <- id
+	})
+
+	ctx, cancel := context.WithCancel(t.Context())
+	var mockRS rsocket.CloseableRSocket
+	_, err := m.Add(ctx, "conduit-cancel", nil, mockRS, nil)
+	if err != nil {
+		cancel()
+		t.Fatalf("Add() err = %v, want nil", err)
+	}
+
+	cancel()
+
+	select {
+	case id := <-removedChan:
+		if id != "conduit-cancel" {
+			t.Errorf("handler got id %q, want %q", id, "conduit-cancel")
+		}
+	case <-time.After(1 * time.Second):
+		t.Errorf("handler was not called within 1s after context cancellation")
+	}
 }

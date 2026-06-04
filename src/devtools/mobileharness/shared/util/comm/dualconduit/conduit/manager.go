@@ -18,10 +18,15 @@ var (
 	ErrAlreadyExists = errors.New("conduit already exists")
 )
 
+// RemoveHandler is a function that is called when a conduit is removed from the manager.
+// We use this to subscribe to the removal events.
+type RemoveHandler func(id string, meta *dconpb.EstablishConduitRequest)
+
 // Manager is responsible for storing active conduits and handling their lifecycle across the system.
 type Manager struct {
-	mu       sync.RWMutex
-	conduits map[string]*Conduit
+	mu             sync.RWMutex
+	conduits       map[string]*Conduit
+	removeHandlers []RemoveHandler // List of removal subscribers.
 }
 
 // NewManager creates an empty manager for Conduits.
@@ -49,7 +54,12 @@ func (m *Manager) Add(ctx context.Context, id string, meta *dconpb.EstablishCond
 	onRemove := func() {
 		m.mu.Lock()
 		delete(m.conduits, id)
+		subs := make([]RemoveHandler, len(m.removeHandlers))
+		copy(subs, m.removeHandlers)
 		m.mu.Unlock()
+		for _, sub := range subs {
+			sub(id, meta)
+		}
 	}
 
 	c := New(ctx, id, meta, rs, onRemove, beforeClose)
@@ -81,6 +91,13 @@ func (m *Manager) Remove(id string) {
 	if ok {
 		c.Close()
 	}
+}
+
+// SubscribeToRemove registers a handler that is called whenever a conduit is removed from the manager.
+func (m *Manager) SubscribeToRemove(handler RemoveHandler) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.removeHandlers = append(m.removeHandlers, handler)
 }
 
 // Shutdown gracefully terminates all tracked conduits.

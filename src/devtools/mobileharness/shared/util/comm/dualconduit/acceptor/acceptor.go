@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
-	"time"
 
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/conduit"
 	rsockettransport "github.com/rsocket/rsocket-go/core/transport"
@@ -95,7 +94,6 @@ func (s *Service) Run(ctx context.Context) error {
 	}
 
 	return rsocket.Receive().
-		Resume(rsocket.WithServerResumeSessionDuration(1 * time.Minute)).
 		Acceptor(handler).
 		Transport(s.serverTransporter).
 		Serve(ctx)

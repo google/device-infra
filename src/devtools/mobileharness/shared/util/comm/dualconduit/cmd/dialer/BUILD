@@ -29,6 +29,7 @@ go_binary(
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/flagutil",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/logutil",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/dialer",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_go_proto",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_service_go_grpc",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/transport",
         "@com_github_rsocket_rsocket_go//core/transport",

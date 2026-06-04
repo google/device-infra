@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -25,12 +25,16 @@ package(
 
 go_library(
     name = "dialer",
-    srcs = ["dialer.go"],
+    srcs = [
+        "dialer.go",
+        "retry.go",
+    ],
     importpath = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/dialer",
     deps = [
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/conduit",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_go_proto",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_service_go_grpc",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/session",
         "@com_github_rsocket_rsocket_go//:rsocket-go",
         "@com_github_rsocket_rsocket_go//core/transport",
         "@com_github_rsocket_rsocket_go//payload",
@@ -40,4 +44,10 @@ go_library(
         "@org_golang_google_grpc//status",
         "@org_golang_google_protobuf//proto",
     ],
+)
+
+go_test(
+    name = "dialer_test",
+    srcs = ["retry_test.go"],
+    embed = [":dialer"],
 )

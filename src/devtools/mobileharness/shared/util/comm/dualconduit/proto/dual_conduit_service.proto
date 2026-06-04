@@ -30,6 +30,19 @@ service DualConduitService {
       returns (EstablishConduitResponse) {}
 
   // Tears down an established conduit.
+  // Warning: Do not call this low level method because if the conduit is part
+  // of an auto reconnect session, it will get reconnected. Call the higher
+  // level TeardownSession instead.
   rpc TeardownConduit(TeardownConduitRequest)
       returns (TeardownConduitResponse) {}
+
+  // Establishes a session of conduits.
+  // A conduit session is a higher level concept that provide persistence and
+  // automatic conduit repair.
+  rpc EstablishSession(EstablishSessionRequest)
+      returns (EstablishSessionResponse) {}
+
+  // Tears down a session of conduits.
+  rpc TeardownSession(TeardownSessionRequest)
+      returns (TeardownSessionResponse) {}
 }
