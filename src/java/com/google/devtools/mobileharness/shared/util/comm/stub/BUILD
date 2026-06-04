@@ -63,6 +63,28 @@ java_library(
 )
 
 java_library(
+    name = "grpc_interceptor_util",
+    srcs = ["GrpcInterceptorUtil.java"],
+    resources = [
+    ],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
+    deps = [
+        ":grpc_address_util",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "@grpc-java//core",
+        "@grpc-java//stub",
+        "@maven//:com_google_auth_google_auth_library_oauth2_http",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "master_grpc_stub_helper",
     srcs = [
         "MasterGrpcStubHelper.java",
@@ -71,9 +93,11 @@ java_library(
     ],
     deps = [
         ":grpc_address_util",
+        ":grpc_interceptor_util",
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "@grpc-java//core",
-        "@grpc-java//stub",
+        "@grpc-java//netty",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -81,9 +105,7 @@ java_library(
 java_library(
     name = "stubs",
     srcs = ["Stubs.java"],
-    deps = [
-        "@grpc-java//stub",
-    ],
+    deps = ["@grpc-java//stub"],
 )
 
 java_library(

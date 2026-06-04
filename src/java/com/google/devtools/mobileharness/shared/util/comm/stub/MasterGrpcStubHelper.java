@@ -32,7 +32,7 @@ public class MasterGrpcStubHelper implements NonThrowingAutoCloseable {
   private final ImmutableList<ClientInterceptor> interceptors;
 
   public MasterGrpcStubHelper(ManagedChannel channel) {
-    this(channel, ImmutableList.of());
+    this(channel, GrpcInterceptorUtil.getInstance().createInterceptors(channel.authority()));
   }
 
   private MasterGrpcStubHelper(
