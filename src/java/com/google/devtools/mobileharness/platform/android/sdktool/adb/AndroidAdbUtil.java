@@ -630,6 +630,11 @@ public class AndroidAdbUtil {
     }
   }
 
+  /** Returns the path to the adb binary. */
+  public String getAdbPath() {
+    return adb.getAdbPath();
+  }
+
   /**
    * Gets all property values of a device by executing `adb shell getprop`.
    *
