@@ -168,8 +168,13 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
       if (job != null) {
         logger.atInfo().log("Job deleted: %s", jobId);
         for (String testId : job.getTests().keySet()) {
-          // No need to close test, because the job is removed.
-          unallocate(allocations.getAllocationByTest(testId), removeDevices, false);
+          Allocation allocation = allocations.getAllocationByTest(testId);
+          if (allocation != null) {
+            unallocate(
+                allocation,
+                removeDevices ? allocation.getAllDevices() : ImmutableList.of(),
+                /* closeTest= */ false);
+          }
         }
       } else {
         logger.atInfo().log("Job does not exist: %s", jobId);
@@ -285,7 +290,10 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
     synchronized (allocationLock) {
       Allocation allocation = allocations.getAllocationByDevice(deviceLocator.universalId());
       if (allocation != null) {
-        unallocate(allocation, removeDevices, closeTest);
+        unallocate(
+            allocation,
+            removeDevices ? ImmutableList.of(deviceLocator) : ImmutableList.of(),
+            closeTest);
       } else if (removeDevices) {
         removeDevice(deviceLocator);
       }
@@ -297,7 +305,8 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
     synchronized (allocationLock) {
       Allocation allocation = allocations.getAllocationByTest(testLocator.getId());
       if (allocation != null) {
-        unallocate(allocation, removeDevices, closeTest);
+        unallocate(
+            allocation, removeDevices ? allocation.getAllDevices() : ImmutableList.of(), closeTest);
       } else if (closeTest) {
         removeTest(
             /* jobId= */ testLocator.getJobLocator().getId(), /* testId= */ testLocator.getId());
@@ -307,7 +316,9 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
 
   @Override
   public void unallocate(
-      @Nullable Allocation allocation, boolean removeDevices, boolean closeTest) {
+      @Nullable Allocation allocation,
+      Collection<DeviceLocator> devicesToRemove,
+      boolean closeTest) {
     if (allocation == null) {
       return;
     }
@@ -315,8 +326,8 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
     synchronized (allocationLock) {
       Allocations.RemoveAllocationResult removeAllocationResult =
           allocations.removeAllocation(allocation);
-      if (removeDevices) {
-        for (DeviceLocator deviceLocator : removeAllocationResult.removedDevices()) {
+      for (DeviceLocator deviceLocator : removeAllocationResult.removedDevices()) {
+        if (devicesToRemove.contains(deviceLocator)) {
           removeDevice(deviceLocator);
           logger.atInfo().log("Remove device %s", deviceLocator);
         }

@@ -22,6 +22,7 @@ import static com.google.common.util.concurrent.Futures.addCallback;
 import static java.util.Objects.requireNonNull;
 import static java.util.function.Function.identity;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
@@ -195,7 +196,7 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
           scheduler.unallocate(
               allocation,
               // Releases the device back to IDLE.
-              false,
+              ImmutableList.of(),
               // Closes the test because it doesn't exist.
               true);
           continue;
@@ -210,28 +211,30 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
           scheduler.unallocate(
               allocation,
               // Releases the device back to IDLE.
-              false,
+              ImmutableList.of(),
               // Closes the test in scheduler because it is not new and doesn't need new allocation.
               true);
           continue;
         }
 
-        String deviceSerial = allocation.getDevice().id();
-        Optional<String> verificationError = deviceVerifier.verifyDeviceForAllocation(deviceSerial);
-        if (verificationError.isPresent()) {
-          jobInfo
-              .warnings()
-              .addAndLog(
-                  new MobileHarnessException(
-                      InfraErrorId.CLIENT_LOCAL_MODE_DEVICE_NOT_READY, verificationError.get()),
-                  logger);
-          scheduler.unallocate(
-              allocation,
-              // Device is not active. Also removes it from scheduler.
-              /* removeDevices= */ true,
-              // Closes the test and adds it back to scheduler below to get a new allocation.
-              /* closeTest= */ true);
-          // Note that even if calling unallocate(allocation, true, false) above, it is necessary to
+        List<DeviceLocator> failedDevices = new ArrayList<>();
+        for (DeviceLocator deviceLocator : allocation.getAllDevices()) {
+          String deviceSerial = deviceLocator.id();
+          Optional<String> verificationError =
+              deviceVerifier.verifyDeviceForAllocation(deviceSerial);
+          if (verificationError.isPresent()) {
+            jobInfo
+                .warnings()
+                .addAndLog(
+                    new MobileHarnessException(
+                        InfraErrorId.CLIENT_LOCAL_MODE_DEVICE_NOT_READY, verificationError.get()),
+                    logger);
+            failedDevices.add(deviceLocator);
+          }
+        }
+        if (!failedDevices.isEmpty()) {
+          scheduler.unallocate(allocation, failedDevices, /* closeTest= */ true);
+          // Note that even if calling unallocate(allocation, false, true) above, it is necessary to
           // add the test back to scheduler here because the test may be removed from scheduler by
           // local device manager.
           scheduler.addTest(test);

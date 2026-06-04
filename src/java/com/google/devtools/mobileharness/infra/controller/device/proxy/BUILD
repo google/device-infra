@@ -22,6 +22,7 @@ java_library(
     srcs = ["ProxyDeviceManager.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/device/proxy:__pkg__",
     ],
     deps = [

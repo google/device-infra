@@ -115,7 +115,10 @@ java_library(
 java_library(
     name = "local_device_allocator",
     srcs = ["LocalDeviceAllocator.java"],
-    visibility = ["//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:__pkg__"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__",
+    ],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",

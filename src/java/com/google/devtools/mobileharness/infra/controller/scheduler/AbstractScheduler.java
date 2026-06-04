@@ -29,6 +29,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobScheduleUnit;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestScheduleUnit;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
+import java.util.Collection;
 import javax.annotation.Nullable;
 
 /** Scheduler for scheduling the device resource to execute multiple jobs in parallel. */
@@ -82,7 +83,9 @@ public abstract class AbstractScheduler {
 
   /** Undoes the allocation. */
   public abstract void unallocate(
-      @Nullable Allocation allocation, boolean removeDevices, boolean closeTest);
+      @Nullable Allocation allocation,
+      Collection<DeviceLocator> devicesToRemove,
+      boolean closeTest);
 
   /** Returns jobs and allocations. */
   public abstract JobsAndAllocations getJobsAndAllocations();
