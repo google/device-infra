@@ -322,4 +322,60 @@ public final class LabInfoPullerImplTest {
                         .setValue(DEVICE_SOFTWARE_VERSION_2))
                 .build());
   }
+
+  @Test
+  public void pull_success_iosDeviceModelSelection() throws Exception {
+    DeviceInfo iosDevice =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(
+                DeviceLocator.newBuilder().setId("ios_uuid").setLabLocator(LAB_LOCATOR))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .addType("IosRealDevice")
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder()
+                                    .setName("model")
+                                    .setValue("iphone12,3"))
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder()
+                                    .setName("model")
+                                    .setValue("iPhone 11 Pro"))
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder()
+                                    .setName("software_version")
+                                    .setValue("15.0"))))
+            .build();
+
+    when(labInfoProvider.getLabInfos(any(Filter.class)))
+        .thenReturn(
+            LabView.newBuilder()
+                .setLabTotalCount(1)
+                .addLabData(
+                    LabData.newBuilder()
+                        .setLabInfo(LAB_INFO)
+                        .setDeviceList(
+                            DeviceList.newBuilder()
+                                .setDeviceTotalCount(1)
+                                .addDeviceInfo(iosDevice)))
+                .build());
+
+    ImmutableList<MonitoredRecord> monitoredRecords = labInfoPuller.pull();
+
+    assertThat(monitoredRecords).hasSize(1);
+    MonitoredRecord monitoredRecord = monitoredRecords.get(0);
+    assertThat(monitoredRecord.getDeviceEntryList())
+        .containsExactly(
+            MonitoredEntry.newBuilder()
+                .putIdentifier("device_id", "ios_uuid")
+                .addAttribute(
+                    Attribute.newBuilder().setName("device_type").setValue("IosRealDevice"))
+                .addAttribute(Attribute.newBuilder().setName("status").setValue("IDLE"))
+                .addAttribute(Attribute.newBuilder().setName("version").setValue("15.0"))
+                .addAttribute(Attribute.newBuilder().setName("model").setValue("iPhone 11 Pro"))
+                .addAttribute(Attribute.newBuilder().setName("software_version").setValue("15.0"))
+                .build());
+  }
 }

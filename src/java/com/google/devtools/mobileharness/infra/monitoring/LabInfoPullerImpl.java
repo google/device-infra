@@ -47,7 +47,7 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
   // TODO: This is a temp solution. Reserved dimension keys should be supported at device config
   // service.
   private static final ImmutableSet<String> RESERVED_DIMENSION_NAMES =
-      ImmutableSet.of("decorator", "device_type", "driver", "executor", "owner", "status");
+      ImmutableSet.of("decorator", "device_type", "driver", "executor", "owner", "status", "model");
 
   private final LabInfoProvider labInfoProvider;
 
@@ -119,8 +119,28 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
                         dimensionList, Ascii.toLowerCase(Dimension.Name.SOFTWARE_VERSION.name())))
                 .flatMap(Optional::stream)
                 .findFirst());
+
+        Stream<String> modelValues =
+            dimensionList.stream()
+                .filter(
+                    dimension ->
+                        Ascii.equalsIgnoreCase(
+                            dimension.getName(), Ascii.toLowerCase(Dimension.Name.MODEL.name())))
+                .map(DeviceDimension::getValue);
+        // For iOS real devices, model values contain two types: human readable model name
+        // (e.g. "iPhone 11 Pro"), and model ID (e.g. "iphone12,3"). We prefer the human readable
+        // model name if both exist.
+        addAttribute(
+            deviceEntry,
+            "model",
+            deviceInfo.getDeviceFeature().getTypeList().contains("IosRealDevice")
+                ? modelValues.min((v1, v2) -> Boolean.compare(v1.contains(","), v2.contains(",")))
+                : modelValues.findFirst()); // Only one model is expected at MonitoredRecord.
+
         dimensionList.stream()
-            .filter(dimension -> !RESERVED_DIMENSION_NAMES.contains(dimension.getName()))
+            .filter(
+                dimension ->
+                    !RESERVED_DIMENSION_NAMES.contains(Ascii.toLowerCase(dimension.getName())))
             .forEach(
                 dimension ->
                     addAttribute(
