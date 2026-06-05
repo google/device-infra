@@ -211,7 +211,7 @@ export class FakeDeviceService extends DeviceService {
     scenario: MockDeviceScenario,
   ): DeviceHeaderInfo {
     const overview = scenario.overview;
-    const isAndroid = overview.basicInfo.os === 'Android';
+    const isAndroid = overview.isAndroid ?? overview.basicInfo.os === 'Android';
     const isMissing =
       overview.healthAndActivity.deviceStatus.status === 'MISSING';
     const isIdle = overview.healthAndActivity.deviceStatus.status === 'IDLE';

@@ -5,6 +5,7 @@ import {
 import {
   DeviceConfig,
   DeviceConfigUiStatus,
+  DeviceDimension,
   StabilitySettings,
   WifiConfig,
 } from '../models/device_config_models';
@@ -57,4 +58,41 @@ export function normalizeDeviceConfigUiStatus(
     dimensions: status.dimensions || DEFAULT_DEVICE_CONFIG_UI_STATUS.dimensions,
     settings: status.settings || DEFAULT_DEVICE_CONFIG_UI_STATUS.settings,
   };
+}
+
+/**
+ * Checks if there are any empty dimensions (both name and value are empty).
+ */
+export function hasEmptyDimensions(dimensions?: {
+  supported?: DeviceDimension[];
+  required?: DeviceDimension[];
+}): boolean {
+  const supported = dimensions?.supported || [];
+  const required = dimensions?.required || [];
+  return (
+    supported.some((item) => !item.name || !item.value) ||
+    required.some((item) => !item.name || !item.value)
+  );
+}
+
+/**
+ * Filters out empty dimensions (where both name and value are empty).
+ */
+export function clearEmptyDimensions(dimensions?: {
+  supported?: DeviceDimension[];
+  required?: DeviceDimension[];
+}): {
+  supported: DeviceDimension[];
+  required: DeviceDimension[];
+} {
+  if (!dimensions) {
+    return {supported: [], required: []};
+  }
+  const supported = (dimensions.supported || []).filter(
+    (item) => item.name && item.value,
+  );
+  const required = (dimensions.required || []).filter(
+    (item) => item.name && item.value,
+  );
+  return {supported, required};
 }

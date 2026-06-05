@@ -68,16 +68,17 @@
           @case ('host-permissions') {
             <app-host-permissions
               workflow="settings"
-              [permissions]="hostConfig.permissions!"
+              [permissions]="hostConfig().permissions!"
               (permissionsChange)="onHostPermissionsChange($event)"
-              [uiStatus]="hostPermissionsUiStatus"
+              [uiStatus]="hostPermissionsUiStatus()"
             ></app-host-permissions>
           }
           @case ('config-mode') {
             <app-config-mode
               workflow="settings"
-              [(mode)]="hostConfig.deviceConfigMode"
-              [uiStatus]="configModeUiStatus"
+              [mode]="hostConfig().deviceConfigMode"
+              (modeChange)="updateDeviceConfigMode($event)"
+              [uiStatus]="configModeUiStatus()"
             ></app-config-mode>
           }
           @case ('permissions') {
@@ -85,19 +86,20 @@
               type="host"
               workflow="settings"
               [title]="
-                hostConfig.deviceConfigMode === 'PER_DEVICE'
+                hostConfig().deviceConfigMode === 'PER_DEVICE'
                   ? 'Default Device Config: Permissions'
                   : 'Shared Device Config: Permissions'
               "
               [description]="'Manage permissions for devices on this host.'"
               [hostTooltipText]="tooltipText()"
-              [(permissions)]="deviceConfig.permissions!"
-              [uiStatus]="permissionsUiStatus"
+              [permissions]="deviceConfig().permissions!"
+              (permissionsChange)="updateDevicePermissions($event)"
+              [uiStatus]="permissionsUiStatus()"
             ></app-permissions>
           }
           @case ('wifi') {
             <h3 class="settings-title font-semibold text-gray-800">
-              @if (hostConfig.deviceConfigMode === 'PER_DEVICE') {
+              @if (hostConfig().deviceConfigMode === 'PER_DEVICE') {
                 Default Device Config: Wi-Fi
               } @else {
                 Shared Device Config: Wi-Fi
@@ -111,8 +113,9 @@
             <app-wifi
               type="host"
               workflow="settings"
-              [(wifi)]="deviceConfig.wifi!"
-              [uiStatus]="wifiUiStatus"
+              [wifi]="deviceConfig().wifi!"
+              (wifiChange)="updateDeviceWifi($event)"
+              [uiStatus]="wifiUiStatus()"
             ></app-wifi>
           }
           @case ('dimensions') {
@@ -120,13 +123,14 @@
               type="host"
               workflow="settings"
               [title]="
-                hostConfig.deviceConfigMode === 'PER_DEVICE'
+                hostConfig().deviceConfigMode === 'PER_DEVICE'
                   ? 'Default Device Config: Dimensions'
                   : 'Shared Device Config: Dimensions'
               "
               [tooltipText]="tooltipText()"
-              [(dimensions)]="deviceConfig.dimensions!"
-              [uiStatus]="dimensionsUiStatus"
+              [dimensions]="deviceConfig().dimensions!"
+              (dimensionsChange)="updateDeviceDimensions($event)"
+              [uiStatus]="dimensionsUiStatus()"
               (hasError)="hasError = $event"
             ></app-dimensions>
           }
@@ -134,28 +138,31 @@
             <app-stability
               type="host"
               [title]="
-                hostConfig.deviceConfigMode === 'PER_DEVICE'
+                hostConfig().deviceConfigMode === 'PER_DEVICE'
                   ? 'Default Device Config: Stability & Reboot'
                   : 'Shared Device Config: Stability & Reboot'
               "
               [hostTooltipText]="tooltipText()"
-              [(settings)]="deviceConfig.settings!"
-              [uiStatus]="settingsUiStatus"
+              [settings]="deviceConfig().settings!"
+              (settingsChange)="updateDeviceSettings($event)"
+              [uiStatus]="settingsUiStatus()"
             ></app-stability>
           }
           @case ('device-discovery') {
             <app-device-discovery
               workflow="settings"
-              [(deviceDiscovery)]="hostConfig.deviceDiscovery!"
-              [uiStatus]="deviceDiscoveryUiStatus"
+              [deviceDiscovery]="hostConfig().deviceDiscovery!"
+              (deviceDiscoveryChange)="updateDeviceDiscovery($event)"
+              [uiStatus]="deviceDiscoveryUiStatus()"
               (hasError)="hasError = $event"
             ></app-device-discovery>
           }
           @case ('host-properties') {
             <app-host-properties
               workflow="settings"
-              [(properties)]="hostConfig.hostProperties!"
-              [uiStatus]="hostPropertiesUiStatus"
+              [properties]="hostConfig().hostProperties!"
+              (propertiesChange)="updateHostProperties($event)"
+              [uiStatus]="hostPropertiesUiStatus()"
             ></app-host-properties>
           }
           @default {
@@ -172,7 +179,7 @@
         <ng-container footer-buttons>
           <button
             class="wizard-button wizard-button-secondary"
-            [disabled]="!isCategoryDirty(activeSection()) || !hasPermission()"
+            [disabled]="!isCategoryDirty(activeSection()) || saving() || !hasPermission()"
             (click)="discard()"
           >
             Discard Changes

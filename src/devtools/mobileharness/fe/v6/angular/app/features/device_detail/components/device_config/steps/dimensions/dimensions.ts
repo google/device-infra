@@ -2,12 +2,9 @@ import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
-  EventEmitter,
-  Input,
-  OnChanges,
-  OnInit,
-  Output,
-  SimpleChanges,
+  computed,
+  input,
+  output,
 } from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
@@ -29,28 +26,31 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, MetadataList, MatIconModule, MatTooltipModule],
 })
-export class Dimensions implements OnInit, OnChanges {
-  @Input() type: 'device' | 'host' = 'device';
-  @Input() workflow: 'wizard' | 'settings' = 'wizard';
-  @Input() uiStatus: MetadataUiStatus = {
+export class Dimensions {
+  readonly type = input<'device' | 'host'>('device');
+  readonly workflow = input<'wizard' | 'settings'>('wizard');
+  readonly uiStatus = input<MetadataUiStatus>({
     sectionStatus: {visible: true, editability: {editable: true}},
-  };
+  });
 
-  @Input() title = 'Dimensions';
-  @Input() tooltipText = '';
+  readonly title = input<string>('Dimensions');
+  readonly tooltipText = input<string>('');
 
-  @Input() dimensions: {
+  readonly dimensionsInput = input.required<{
     supported?: DeviceDimension[];
     required?: DeviceDimension[];
-  } = {
-    supported: [],
-    required: [],
-  };
-  @Output() readonly dimensionsChange = new EventEmitter<{
+  }>({alias: 'dimensions'});
+
+  readonly dimensions = computed(() => ({
+    supported: this.dimensionsInput().supported || [],
+    required: this.dimensionsInput().required || [],
+  }));
+
+  readonly dimensionsChange = output<{
     supported?: DeviceDimension[];
     required?: DeviceDimension[];
   }>();
-  @Output() readonly hasError = new EventEmitter<boolean>();
+  readonly hasError = output<boolean>();
 
   supportError = false;
   requiredError = false;
@@ -79,27 +79,17 @@ export class Dimensions implements OnInit, OnChanges {
     },
   ];
 
-  ngOnInit() {}
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['dimensions']) {
-      this.dimensions = {
-        supported: this.dimensions.supported || [],
-        required: this.dimensions.required || [],
-      };
-    }
-  }
-
   onMetadataListChange(
     type: 'supported' | 'required',
     list: DeviceDimension[],
   ) {
-    if (type === 'supported') {
-      this.dimensions.supported = list;
-    } else {
-      this.dimensions.required = list;
-    }
+    const current = this.dimensions();
+    const updated = {
+      ...current,
+      [type]: list,
+    };
 
-    this.dimensionsChange.emit(this.dimensions);
+    this.dimensionsChange.emit(updated);
   }
 
   onHasErrorChanged(type: 'supported' | 'required', hasError: boolean) {

@@ -2,11 +2,14 @@ import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
+  DestroyRef,
   inject,
   Input,
   OnInit,
   signal,
 } from '@angular/core';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {MatButtonModule} from '@angular/material/button';
 import {
   MAT_DIALOG_DATA,
@@ -32,9 +35,18 @@ import {
 } from '../../../../../core/models/host_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {HostConfigStateService} from '../../../../../core/services/config/host_config_state_service';
+import {
+  clearEmptyDimensions,
+  hasEmptyDimensions,
+} from '../../../../../core/utils/device_config_utils';
+import {
+  clearEmptyProperties,
+  hasEmptyProperties,
+} from '../../../../../core/utils/host_config_utils';
 import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
 import {Footer} from '../../../../../shared/components/config_common/footer/footer';
 import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/confirm_dialog';
+import {useSaveInterceptors} from '../../../../../shared/composables/save_interceptors';
 import {objectUtils} from '../../../../../shared/utils/object_utils';
 import {Dimensions} from '../../../../device_detail/components/device_config/steps/dimensions/dimensions';
 import {Permissions} from '../../../../device_detail/components/device_config/steps/permissions/permissions';
@@ -78,6 +90,8 @@ import {HostProperties} from '../steps/host_properties/host_properties';
 export class HostSettings implements OnInit {
   private readonly dialog = inject(MatDialog); // to open confirm dialog
   private readonly dialogRef = inject(MatDialogRef<HostSettings>);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly saveInterceptors = useSaveInterceptors();
   private readonly dialogData = inject(MAT_DIALOG_DATA, {optional: true}) as {
     hostName: string;
     config: HostConfig;
@@ -89,7 +103,7 @@ export class HostSettings implements OnInit {
   @Input() hostName = '';
   @Input() config?: HostConfig;
 
-  uiStatus: HostConfigUiStatus = {
+  readonly uiStatus = signal<HostConfigUiStatus>({
     hostAdmins: {visible: true, editability: {editable: true}},
     deviceConfigMode: {visible: true, editability: {editable: true}},
     deviceConfig: {
@@ -100,7 +114,7 @@ export class HostSettings implements OnInit {
       sectionStatus: {visible: true, editability: {editable: true}},
     },
     deviceDiscovery: {visible: true, editability: {editable: true}},
-  };
+  });
 
   readonly navList = [
     {
@@ -108,7 +122,7 @@ export class HostSettings implements OnInit {
       type: 'item',
       icon: 'security',
       label: 'Host Permissions',
-      visibility: () => this.uiStatus.hostAdmins.visible,
+      visibility: () => this.uiStatus().hostAdmins.visible,
     },
     {
       id: 'device-config',
@@ -119,15 +133,15 @@ export class HostSettings implements OnInit {
           id: 'config-mode',
           icon: 'settings_ethernet',
           label: 'Config Mode',
-          visibility: () => this.uiStatus.deviceConfigMode.visible,
+          visibility: () => this.uiStatus().deviceConfigMode.visible,
         },
         {
           id: 'permissions',
           icon: 'badge',
           label: 'Permissions',
           visibility: () =>
-            this.uiStatus.deviceConfig.sectionStatus.visible &&
-            this.uiStatus.deviceConfig.subSections.permissions?.visible ===
+            this.uiStatus().deviceConfig.sectionStatus.visible &&
+            this.uiStatus().deviceConfig.subSections.permissions?.visible ===
               true,
         },
         {
@@ -135,53 +149,54 @@ export class HostSettings implements OnInit {
           icon: 'wifi',
           label: 'Wi-Fi',
           visibility: () =>
-            this.uiStatus.deviceConfig.sectionStatus.visible &&
-            this.uiStatus.deviceConfig.subSections.wifi?.visible === true,
+            this.uiStatus().deviceConfig.sectionStatus.visible &&
+            this.uiStatus().deviceConfig.subSections.wifi?.visible === true,
         },
         {
           id: 'dimensions',
           icon: 'category',
           label: 'Dimensions',
           visibility: () =>
-            this.uiStatus.deviceConfig.sectionStatus.visible &&
-            this.uiStatus.deviceConfig.subSections.dimensions?.visible === true,
+            this.uiStatus().deviceConfig.sectionStatus.visible &&
+            this.uiStatus().deviceConfig.subSections.dimensions?.visible ===
+              true,
         },
         {
           id: 'stability',
           icon: 'autorenew',
           label: 'Stability & Reboot',
           visibility: () =>
-            this.uiStatus.deviceConfig.sectionStatus.visible &&
-            this.uiStatus.deviceConfig.subSections.settings?.visible === true,
+            this.uiStatus().deviceConfig.sectionStatus.visible &&
+            this.uiStatus().deviceConfig.subSections.settings?.visible === true,
         },
       ],
       visibility: () =>
-        this.uiStatus.deviceConfig.sectionStatus.visible ||
-        this.uiStatus.deviceConfigMode.visible,
+        this.uiStatus().deviceConfig.sectionStatus.visible ||
+        this.uiStatus().deviceConfigMode.visible,
     },
     {
       id: 'device-discovery',
       type: 'item',
       icon: 'travel_explore',
       label: 'Device Discovery',
-      visibility: () => this.uiStatus.deviceDiscovery.visible,
+      visibility: () => this.uiStatus().deviceDiscovery.visible,
     },
     {
       id: 'host-properties',
       type: 'item',
       icon: 'tune',
       label: 'Host Properties',
-      visibility: () => this.uiStatus.hostProperties.sectionStatus.visible,
+      visibility: () => this.uiStatus().hostProperties.sectionStatus.visible,
     },
   ];
   activeSection = signal<string>('host-permissions');
   activeSectionEditibility = signal<Editability>(
-    this.uiStatus.hostAdmins.editability || {editable: true},
+    this.uiStatus().hostAdmins.editability || {editable: true},
   );
 
-  get hostPermissionsUiStatus() {
+  readonly hostPermissionsUiStatus = computed(() => {
     const status = {
-      hostAdmins: this.uiStatus.hostAdmins,
+      hostAdmins: this.uiStatus().hostAdmins,
     };
     if (!this.hasPermission()) {
       return {
@@ -196,10 +211,10 @@ export class HostSettings implements OnInit {
       };
     }
     return status;
-  }
+  });
 
-  get configModeUiStatus() {
-    const status = this.uiStatus.deviceConfigMode;
+  readonly configModeUiStatus = computed(() => {
+    const status = this.uiStatus().deviceConfigMode;
     if (!this.hasPermission()) {
       return {
         ...status,
@@ -210,11 +225,11 @@ export class HostSettings implements OnInit {
       };
     }
     return status;
-  }
+  });
 
-  get dimensionsUiStatus() {
+  readonly dimensionsUiStatus = computed(() => {
     const status = {
-      sectionStatus: this.uiStatus.deviceConfig.sectionStatus,
+      sectionStatus: this.uiStatus().deviceConfig.sectionStatus,
     };
     if (!this.hasPermission()) {
       return {
@@ -229,11 +244,11 @@ export class HostSettings implements OnInit {
       };
     }
     return status;
-  }
+  });
 
-  get deviceDiscoveryUiStatus() {
+  readonly deviceDiscoveryUiStatus = computed(() => {
     const status = {
-      sectionStatus: this.uiStatus.deviceDiscovery,
+      sectionStatus: this.uiStatus().deviceDiscovery,
     };
     if (!this.hasPermission()) {
       return {
@@ -248,10 +263,10 @@ export class HostSettings implements OnInit {
       };
     }
     return status;
-  }
+  });
 
-  get permissionsUiStatus() {
-    const status = this.uiStatus.deviceConfig.subSections?.permissions || {
+  readonly permissionsUiStatus = computed(() => {
+    const status = this.uiStatus().deviceConfig.subSections?.permissions || {
       visible: true,
       editability: {editable: true},
     };
@@ -265,10 +280,10 @@ export class HostSettings implements OnInit {
       };
     }
     return status;
-  }
+  });
 
-  get wifiUiStatus() {
-    const status = this.uiStatus.deviceConfig.subSections?.wifi || {
+  readonly wifiUiStatus = computed(() => {
+    const status = this.uiStatus().deviceConfig.subSections?.wifi || {
       visible: true,
       editability: {editable: true},
     };
@@ -282,10 +297,10 @@ export class HostSettings implements OnInit {
       };
     }
     return status;
-  }
+  });
 
-  get settingsUiStatus() {
-    const status = this.uiStatus.deviceConfig.subSections?.settings || {
+  readonly settingsUiStatus = computed(() => {
+    const status = this.uiStatus().deviceConfig.subSections?.settings || {
       visible: true,
       editability: {editable: true},
     };
@@ -299,9 +314,9 @@ export class HostSettings implements OnInit {
       };
     }
     return status;
-  }
+  });
 
-  get hostPropertiesUiStatus() {
+  readonly hostPropertiesUiStatus = computed(() => {
     const defaultSectionStatus = {
       visible: true,
       editability: {editable: true},
@@ -311,7 +326,7 @@ export class HostSettings implements OnInit {
       reason: 'You do not have permission to edit this host configuration.',
     };
 
-    const currentStatus = this.uiStatus.hostProperties;
+    const currentStatus = this.uiStatus().hostProperties;
 
     if (!this.hasPermission()) {
       const sectionStatus = currentStatus?.sectionStatus
@@ -320,12 +335,11 @@ export class HostSettings implements OnInit {
       return {sectionStatus};
     }
 
-    // If hasPermission is true, return the existing status or a default if undefined.
     const sectionStatus = currentStatus?.sectionStatus || defaultSectionStatus;
     return {sectionStatus};
-  }
+  });
 
-  deviceConfig: DeviceConfig = {
+  readonly deviceConfig = signal<DeviceConfig>({
     permissions: {
       owners: [],
       executors: [],
@@ -344,16 +358,19 @@ export class HostSettings implements OnInit {
       maxConsecutiveFail: 5,
       maxConsecutiveTest: 10000,
     },
-  };
+  });
 
-  // host config for the host.
-  // This is used to display the host config in the UI.
-  hostConfig: HostConfig = {
+  readonly hostConfig = signal<HostConfig>({
     permissions: {
       hostAdmins: [],
     },
     deviceConfigMode: 'PER_DEVICE',
-    deviceConfig: this.deviceConfig,
+    deviceConfig: {
+      permissions: {owners: [], executors: []},
+      wifi: {type: 'none', ssid: '', psk: '', scanSsid: false},
+      dimensions: {supported: [], required: []},
+      settings: {maxConsecutiveFail: 5, maxConsecutiveTest: 10000},
+    },
     hostProperties: [],
     deviceDiscovery: {
       monitoredDeviceUuids: [],
@@ -363,10 +380,51 @@ export class HostSettings implements OnInit {
       overSshDevices: [],
       manekiSpecs: [],
     },
-  };
+  });
 
-  private originalDeviceConfig: DeviceConfig = this.deviceConfig;
-  private originalHostConfig: HostConfig = this.hostConfig;
+  updateHostPermissions(hostAdmins: string[]) {
+    this.hostConfig.update((c) => ({
+      ...c,
+      permissions: {hostAdmins},
+    }));
+  }
+
+  updateDeviceConfigMode(deviceConfigMode: string) {
+    this.hostConfig.update((c) => ({
+      ...c,
+      deviceConfigMode: deviceConfigMode as HostConfig['deviceConfigMode'],
+    }));
+  }
+
+  updateDevicePermissions(permissions: DeviceConfig['permissions']) {
+    this.deviceConfig.update((c) => ({...c, permissions}));
+  }
+
+  updateDeviceWifi(wifi: unknown) {
+    this.deviceConfig.update((c) => ({
+      ...c,
+      wifi: wifi as DeviceConfig['wifi'],
+    }));
+  }
+
+  updateDeviceDimensions(dimensions: DeviceConfig['dimensions']) {
+    this.deviceConfig.update((c) => ({...c, dimensions}));
+  }
+
+  updateDeviceSettings(settings: DeviceConfig['settings']) {
+    this.deviceConfig.update((c) => ({...c, settings}));
+  }
+
+  updateDeviceDiscovery(deviceDiscovery: HostConfig['deviceDiscovery']) {
+    this.hostConfig.update((c) => ({...c, deviceDiscovery}));
+  }
+
+  updateHostProperties(hostProperties: HostConfig['hostProperties']) {
+    this.hostConfig.update((c) => ({...c, hostProperties}));
+  }
+
+  private originalDeviceConfig: DeviceConfig = this.deviceConfig();
+  private originalHostConfig: HostConfig = this.hostConfig();
 
   tooltipText = signal<string>('');
 
@@ -384,7 +442,7 @@ export class HostSettings implements OnInit {
       }
     }
 
-    this.uiStatus = this.hostConfigStateService.getUiStatus(this.hostName);
+    this.uiStatus.set(this.hostConfigStateService.getUiStatus(this.hostName));
 
     // If there is no visible section, set the active section to default.
     if (this.visibleSections().length === 0) {
@@ -397,7 +455,7 @@ export class HostSettings implements OnInit {
 
     // Set the tooltip text of device config based on the device config mode.
     const tooltip =
-      this.hostConfig.deviceConfigMode === 'PER_DEVICE'
+      this.hostConfig().deviceConfigMode === 'PER_DEVICE'
         ? `The settings on this page define the default configuration that will be automatically applied to any new device connected to this host.`
         : `The settings on this page are shared by all devices on this host, as 'Shared Configuration' is selected in the Config Mode settings.`;
     this.tooltipText.set(tooltip);
@@ -425,14 +483,17 @@ export class HostSettings implements OnInit {
         data: dialogData,
         disableClose: true,
       });
-      unsaveDialogRef.afterClosed().subscribe((result) => {
-        if (result === 'primary') {
-          this.resetConfig();
-          this.activeSection.set(section);
-        }
+      unsaveDialogRef
+        .afterClosed()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((result) => {
+          if (result === 'primary') {
+            this.resetConfig();
+            this.activeSection.set(section);
+          }
 
-        return;
-      });
+          return;
+        });
     } else {
       this.activeSection.set(section);
     }
@@ -443,12 +504,12 @@ export class HostSettings implements OnInit {
 
     switch (section) {
       case 'host-permissions':
-        editability = this.uiStatus.hostAdmins.editability || {
+        editability = this.uiStatus().hostAdmins.editability || {
           editable: true,
         };
         break;
       case 'config-mode':
-        editability = this.uiStatus.deviceConfigMode.editability || {
+        editability = this.uiStatus().deviceConfigMode.editability || {
           editable: true,
         };
         break;
@@ -456,17 +517,18 @@ export class HostSettings implements OnInit {
       case 'wifi':
       case 'dimensions':
       case 'stability':
-        editability = this.uiStatus.deviceConfig.sectionStatus.editability || {
+        editability = this.uiStatus().deviceConfig.sectionStatus
+          .editability || {
           editable: true,
         };
         break;
       case 'device-discovery':
-        editability = this.uiStatus.deviceDiscovery.editability || {
+        editability = this.uiStatus().deviceDiscovery.editability || {
           editable: true,
         };
         break;
       case 'host-properties':
-        editability = this.uiStatus.hostProperties.sectionStatus
+        editability = this.uiStatus().hostProperties.sectionStatus
           .editability || {
           editable: true,
         };
@@ -509,46 +571,46 @@ export class HostSettings implements OnInit {
 
   initializeData() {
     if (this.config) {
-      this.deviceConfig = objectUtils.deepCopy({
-        ...this.config.deviceConfig!,
-        permissions: {
-          owners: this.config.permissions.hostAdmins,
-          executors: this.config.deviceConfig?.permissions?.executors || [],
-        },
-      }) as DeviceConfig;
-      this.hostConfig = objectUtils.deepCopy(this.config) as HostConfig;
+      this.deviceConfig.set(
+        objectUtils.deepCopy({
+          ...this.config.deviceConfig!,
+          permissions: {
+            owners: this.config.permissions.hostAdmins,
+            executors: this.config.deviceConfig?.permissions?.executors || [],
+          },
+        }) as DeviceConfig,
+      );
+      this.hostConfig.set(objectUtils.deepCopy(this.config) as HostConfig);
     }
 
     this.originalDeviceConfig = objectUtils.deepCopy(
-      this.deviceConfig,
+      this.deviceConfig(),
     ) as DeviceConfig;
     this.originalHostConfig = objectUtils.deepCopy(
-      this.hostConfig,
+      this.hostConfig(),
     ) as HostConfig;
   }
 
   onHostPermissionsChange(hostAdmins: string[]) {
-    if (!this.hostConfig.permissions) {
-      this.hostConfig.permissions = {hostAdmins: []};
-    }
-    this.hostConfig.permissions.hostAdmins = hostAdmins;
-    if (this.deviceConfig?.permissions) {
-      this.deviceConfig.permissions.owners = [...hostAdmins];
-    }
+    this.updateHostPermissions(hostAdmins);
+    this.updateDevicePermissions({
+      owners: [...hostAdmins],
+      executors: this.deviceConfig().permissions?.executors || [],
+    });
   }
 
   isCategoryDirty(category: string) {
     if (category === 'host-permissions') {
       return (
         JSON.stringify(this.originalHostConfig.permissions) !==
-        JSON.stringify(this.hostConfig.permissions)
+        JSON.stringify(this.hostConfig().permissions)
       );
     }
 
     if (category === 'config-mode') {
       return (
         this.originalHostConfig.deviceConfigMode !==
-        this.hostConfig.deviceConfigMode
+        this.hostConfig().deviceConfigMode
       );
     }
 
@@ -556,39 +618,39 @@ export class HostSettings implements OnInit {
     if (category === 'permissions') {
       return (
         JSON.stringify(this.originalDeviceConfig.permissions) !==
-        JSON.stringify(this.deviceConfig.permissions)
+        JSON.stringify(this.deviceConfig().permissions)
       );
     }
     if (category === 'wifi') {
       return (
         JSON.stringify(this.originalDeviceConfig.wifi) !==
-        JSON.stringify(this.deviceConfig.wifi)
+        JSON.stringify(this.deviceConfig().wifi)
       );
     }
     if (category === 'dimensions') {
       return (
         JSON.stringify(this.originalDeviceConfig.dimensions) !==
-        JSON.stringify(this.deviceConfig.dimensions)
+        JSON.stringify(this.deviceConfig().dimensions)
       );
     }
     if (category === 'stability') {
       return (
         JSON.stringify(this.originalDeviceConfig.settings) !==
-        JSON.stringify(this.deviceConfig.settings)
+        JSON.stringify(this.deviceConfig().settings)
       );
     }
 
     if (category === 'device-discovery') {
       return (
         JSON.stringify(this.originalHostConfig.deviceDiscovery) !==
-        JSON.stringify(this.hostConfig.deviceDiscovery)
+        JSON.stringify(this.hostConfig().deviceDiscovery)
       );
     }
 
     if (category === 'host-properties') {
       return (
         JSON.stringify(this.originalHostConfig.hostProperties) !==
-        JSON.stringify(this.hostConfig.hostProperties)
+        JSON.stringify(this.hostConfig().hostProperties)
       );
     }
 
@@ -601,12 +663,12 @@ export class HostSettings implements OnInit {
   }
 
   resetConfig() {
-    this.deviceConfig = objectUtils.deepCopy(
-      this.originalDeviceConfig,
-    ) as DeviceConfig;
-    this.hostConfig = objectUtils.deepCopy(
-      this.originalHostConfig,
-    ) as HostConfig;
+    this.deviceConfig.set(
+      objectUtils.deepCopy(this.originalDeviceConfig) as DeviceConfig,
+    );
+    this.hostConfig.set(
+      objectUtils.deepCopy(this.originalHostConfig) as HostConfig,
+    );
   }
 
   reset() {
@@ -679,8 +741,55 @@ export class HostSettings implements OnInit {
     });
   }
 
-  save(selfLockout = false) {
+  save(selfLockout = false, forceSave = false) {
     const section = this.activeSection();
+
+    if (
+      section === 'dimensions' &&
+      !forceSave &&
+      hasEmptyDimensions(this.deviceConfig().dimensions)
+    ) {
+      this.saveInterceptors.promptEmptyData('dimensions', () => {
+        this.updateDeviceDimensions(
+          clearEmptyDimensions(this.deviceConfig().dimensions),
+        );
+        if (!this.isCategoryDirty(section)) {
+          this.hostConfig.update((c) => ({
+            ...c,
+            deviceConfig: this.deviceConfig(),
+          }));
+          this.originalHostConfig = objectUtils.deepCopy(
+            this.hostConfig(),
+          ) as HostConfig;
+          this.originalDeviceConfig = objectUtils.deepCopy(
+            this.deviceConfig(),
+          ) as DeviceConfig;
+          return;
+        }
+        this.save(selfLockout, true);
+      });
+      return;
+    }
+
+    if (
+      section === 'host-properties' &&
+      !forceSave &&
+      hasEmptyProperties(this.hostConfig().hostProperties)
+    ) {
+      this.saveInterceptors.promptEmptyData('properties', () => {
+        this.updateHostProperties(
+          clearEmptyProperties(this.hostConfig().hostProperties),
+        );
+        if (!this.isCategoryDirty(section)) {
+          this.originalHostConfig = objectUtils.deepCopy(
+            this.hostConfig(),
+          ) as HostConfig;
+          return;
+        }
+        this.save(selfLockout, true);
+      });
+      return;
+    }
     const requestSectionMap: Record<string, HostConfigSection> = {
       'host-permissions': HostConfigSection.HOST_PERMISSIONS,
       'config-mode': HostConfigSection.DEVICE_CONFIG_MODE,
@@ -700,17 +809,18 @@ export class HostSettings implements OnInit {
     };
 
     if (
-      this.hostConfig.permissions?.hostAdmins &&
-      this.deviceConfig?.permissions
+      this.hostConfig().permissions?.hostAdmins &&
+      this.deviceConfig().permissions
     ) {
-      this.deviceConfig.permissions.owners = [
-        ...this.hostConfig.permissions.hostAdmins,
-      ];
+      this.updateDevicePermissions({
+        owners: [...this.hostConfig().permissions.hostAdmins],
+        executors: this.deviceConfig().permissions?.executors || [],
+      });
     }
-    this.hostConfig.deviceConfig = this.deviceConfig;
+    this.hostConfig.update((c) => ({...c, deviceConfig: this.deviceConfig()}));
     const request: UpdateHostConfigRequest = {
       hostName: this.hostName,
-      config: this.hostConfig,
+      config: this.hostConfig(),
       scope: {
         section: requestSectionMap[section],
         deviceConfigSection: deviceConfigSectionMap[section],
@@ -733,10 +843,10 @@ export class HostSettings implements OnInit {
         }
 
         this.originalHostConfig = objectUtils.deepCopy(
-          this.hostConfig,
+          this.hostConfig(),
         ) as HostConfig;
         this.originalDeviceConfig = objectUtils.deepCopy(
-          this.deviceConfig,
+          this.deviceConfig(),
         ) as DeviceConfig;
 
         this.success(selfLockout);

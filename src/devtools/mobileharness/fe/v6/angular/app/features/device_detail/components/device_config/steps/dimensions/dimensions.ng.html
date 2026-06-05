@@ -1,13 +1,13 @@
 <div class="dimension-editor-wrapper">
   <div class="dimension-editor-header">
     <h3 class="font-semibold text-gray-800">
-      {{ title }}
-      @if (type === 'host') {
-        <mat-icon class="help-icon" [matTooltip]="tooltipText"> help_outline </mat-icon>
+      {{ title() }}
+      @if (type() === 'host') {
+        <mat-icon class="help-icon" [matTooltip]="tooltipText()"> help_outline </mat-icon>
       }
     </h3>
 
-    @if (type === 'device' && workflow === 'wizard') {
+    @if (type() === 'device' && workflow() === 'wizard') {
       <p class="text-gray-600 header-desc">
         Do you need to add any custom dimensions for advanced scheduling? <br />
         <strong>
@@ -17,7 +17,7 @@
       </p>
     }
 
-    @if (type === 'host' && workflow === 'settings') {
+    @if (type() === 'host' && workflow() === 'settings') {
       <p class="font-margin text-gray-600">
         Define custom dimensions for scheduling. These will be applied to all devices according to
         the selected configuration mode.
@@ -29,12 +29,12 @@
     <div class="dimension-group">
       <h4 class="font-medium text-gray-700 dim-title">
         Supported Dimensions
-        @if (type === 'host') {
+        @if (type() === 'host') {
           <mat-icon class="help-icon" [matTooltip]="supportedTooltipText">help_outline</mat-icon>
         }
       </h4>
-      @if (type === 'device') {
-        @if (workflow === 'wizard') {
+      @if (type() === 'device') {
+        @if (workflow() === 'wizard') {
           <details class="wizard-details">
             <summary>What are 'Supported Dimensions'?</summary>
             <div class="wizard-details-content">
@@ -57,21 +57,21 @@
         emptyMessage="No dimensions of this type have been added."
         addButtonLabel="Add Dimension"
         [columns]="dimensionColumns"
-        [(metadataList)]="dimensions.supported!"
+        [metadataList]="dimensions().supported!"
         (metadataListChange)="onMetadataListChange('supported', $event)"
         (hasError)="onHasErrorChanged('supported', $event)"
-        [uiStatus]="uiStatus"
+        [uiStatus]="uiStatus()"
       ></app-metadata-list>
     </div>
     <div class="dimension-group">
       <h4 class="font-medium text-gray-700 dim-title">
         Required Dimensions
-        @if (type === 'host') {
+        @if (type() === 'host') {
           <mat-icon class="help-icon" [matTooltip]="requiredTooltipText">help_outline</mat-icon>
         }
       </h4>
-      @if (type === 'device') {
-        @if (workflow === 'wizard') {
+      @if (type() === 'device') {
+        @if (workflow() === 'wizard') {
           <details class="wizard-details">
             <summary>What are 'Required Dimensions'?</summary>
             <div class="wizard-details-content">
@@ -92,10 +92,10 @@
         emptyMessage="No dimensions of this type have been added."
         addButtonLabel="Add Dimension"
         [columns]="dimensionColumns"
-        [(metadataList)]="dimensions.required!"
+        [metadataList]="dimensions().required!"
         (metadataListChange)="onMetadataListChange('required', $event)"
         (hasError)="onHasErrorChanged('required', $event)"
-        [uiStatus]="uiStatus"
+        [uiStatus]="uiStatus()"
       ></app-metadata-list>
     </div>
   </div>

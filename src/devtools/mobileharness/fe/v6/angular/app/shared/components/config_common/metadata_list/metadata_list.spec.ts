@@ -19,7 +19,12 @@ describe('MetadataList Component', () => {
 
     fixture = TestBed.createComponent(MetadataList<Record<string, string>>);
     component = fixture.componentInstance;
+    document.body.appendChild(fixture.nativeElement);
     fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    fixture.nativeElement.remove();
   });
 
   it('should add a new metadata correctly', () => {
@@ -31,8 +36,8 @@ describe('MetadataList Component', () => {
 
   it('should remove a metadata correctly', () => {
     component.metadataList = [
-      {name: 'test_metadata_1', value: 'test_value_1'},
-      {name: 'test_metadata_2', value: 'test_value_2'},
+      {'name': 'test_metadata_1', 'value': 'test_value_1'},
+      {'name': 'test_metadata_2', 'value': 'test_value_2'},
     ];
     fixture.detectChanges();
     component.remove(0);
@@ -44,8 +49,8 @@ describe('MetadataList Component', () => {
 
   it('should update a metadata correctly', () => {
     component.metadataList = [
-      {name: 'test_metadata_1', value: 'test_value_1'},
-      {name: 'test_metadata_2', value: 'test_value_2'},
+      {'name': 'test_metadata_1', 'value': 'test_value_1'},
+      {'name': 'test_metadata_2', 'value': 'test_value_2'},
     ];
     fixture.detectChanges();
     component.metadataList[0]['name'] = 'test_metadata_3';
@@ -102,7 +107,7 @@ describe('MetadataList Component', () => {
         ],
       },
     ];
-    component.metadataList = [{type: 'value1'}];
+    component.metadataList = [{'type': 'value1'}];
     component.validate();
     fixture.detectChanges();
     await fixture.whenStable();
@@ -111,5 +116,52 @@ describe('MetadataList Component', () => {
     const table = fixture.nativeElement.querySelector('table');
     expect(table).toBeTruthy();
     expect(component.metadataList[0]['type']).toBe('value1');
+  });
+
+  it('should focus the first input of the newly added row', async () => {
+    const addButton = fixture.nativeElement.querySelector(
+      '.add-metadata-button',
+    ) as HTMLButtonElement;
+    expect(addButton).toBeTruthy();
+    addButton.click();
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const activeElement = document.activeElement;
+    expect(activeElement).toBeTruthy();
+    expect(activeElement?.tagName.toLowerCase()).toBe('input');
+
+    const inputs = fixture.nativeElement.querySelectorAll('input');
+    expect(inputs.length).toBe(2);
+    expect(activeElement).toBe(inputs[0]);
+  });
+
+  it('should focus the first input of the newly added row when rows already exist', async () => {
+    component.metadataList = [
+      {'name': 'existing_name', 'value': 'existing_value'},
+    ];
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const addButton = fixture.nativeElement.querySelector(
+      '.add-metadata-button',
+    ) as HTMLButtonElement;
+    expect(addButton).toBeTruthy();
+    addButton.click();
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const activeElement = document.activeElement;
+    expect(activeElement).toBeTruthy();
+    expect(activeElement?.tagName.toLowerCase()).toBe('input');
+
+    const inputs = fixture.nativeElement.querySelectorAll('input');
+    expect(inputs.length).toBe(4);
+    expect(activeElement).toBe(inputs[2]);
   });
 });

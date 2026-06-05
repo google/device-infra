@@ -1,5 +1,5 @@
 @use '@angular/material' as mat;
-@use  '../../../../shared/styles/overview.scss' as overview;
+@use '../../../../shared/styles/overview.scss' as overview;
 
 :host {
   display: block;
@@ -7,14 +7,16 @@
 }
 
 ::ng-deep .testbed-config-dialog-panel {
-  @include mat.dialog-overrides((
-    container-shape: 16px,
-    headline-padding: 0 24px 9px 0,
-    subhead-tracking: 0,
-    subhead-font: overview.$labconsole-font,
-    supporting-text-tracking: 0,
-    supporting-text-font: overview.$labconsole-font,
-  ));
+  @include mat.dialog-overrides(
+    (
+      container-shape: 16px,
+      headline-padding: 0 24px 9px 0,
+      subhead-tracking: 0,
+      subhead-font: overview.$labconsole-font,
+      supporting-text-tracking: 0,
+      supporting-text-font: overview.$labconsole-font,
+    )
+  );
 }
 
 .hidden {
@@ -38,31 +40,31 @@
   align-items: center;
   gap: 1rem;
 
-    // Background and text colors are applied dynamically
-    .bg-green-100 {
-      background-color: #d1fae5;
-    }
-    .text-green-600 {
-      color: #16a34a;
-    }
-    .bg-blue-100 {
-      background-color: #dbeafe;
-    }
-    .text-blue-600 {
-      color: #2563eb;
-    }
-    .bg-amber-100 {
-      background-color: #fef3c7;
-    }
-    .text-amber-600 {
-      color: #d97706;
-    }
-    .bg-red-100 {
-      background-color: #fee2e2;
-    }
-    .text-red-600 {
-      color: #dc2626;
-    }
+  // Background and text colors are applied dynamically
+  .bg-green-100 {
+    background-color: #d1fae5;
+  }
+  .text-green-600 {
+    color: #16a34a;
+  }
+  .bg-blue-100 {
+    background-color: #dbeafe;
+  }
+  .text-blue-600 {
+    color: #2563eb;
+  }
+  .bg-amber-100 {
+    background-color: #fef3c7;
+  }
+  .text-amber-600 {
+    color: #d97706;
+  }
+  .bg-red-100 {
+    background-color: #fee2e2;
+  }
+  .text-red-600 {
+    color: #dc2626;
+  }
 }
 
 .summary-icon-bg {
@@ -102,7 +104,7 @@
 .health-title {
   font-size: 1.25rem;
   font-weight: 700;
-  margin:0;
+  margin: 0;
 }
 
 .health-subtitle {
@@ -221,8 +223,6 @@
   gap: 0.5rem;
 }
 
-
-
 .no-types {
   color: #d93025;
   font-style: italic;
@@ -288,23 +288,17 @@
 }
 
 // Basic Information Card
-.basic-info-grid-wrapper {
+.basic-info-responsive-grid {
   display: grid;
-  gap: 1.5rem 2rem;
-  grid-template-columns: 1fr;
-
-  @media (min-width: 1024px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-.info-grid-tight {
-  display: grid;
-  grid-template-columns: 120px 1fr; // Adjusted column width
+  grid-template-columns: 120px 1fr;
   gap: 0.75rem 1.5rem;
   align-items: flex-start;
   font-size: 0.875rem;
   margin: 0;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: repeat(2, 120px 1fr);
+  }
 
   dt {
     font-weight: 500;
@@ -403,10 +397,12 @@
   background-color: white;
 
   @include mat.form-field-density(-4);
-  @include mat.form-field-overrides((
-    container-height: 36px,
-    container-vertical-padding: 0,
-  ));
+  @include mat.form-field-overrides(
+    (
+      container-height: 36px,
+      container-vertical-padding: 0,
+    )
+  );
 
   .mat-icon {
     font-size: 18px;
@@ -529,10 +525,12 @@
 
   // @include mat.form-field-density(-2);
 
-  @include mat.form-field-overrides((
-    container-height: 36px,
-    container-vertical-padding: 0,
-  ));
+  @include mat.form-field-overrides(
+    (
+      container-height: 36px,
+      container-vertical-padding: 0,
+    )
+  );
 
   // Adjust suffix button to prevent layout shift
   button[matSuffix] {
@@ -586,5 +584,3 @@
     line-height: 36px;
   }
 }
-
-

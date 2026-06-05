@@ -22,7 +22,7 @@
     min-width: 16rem;
 
     .settings-nav-group-title {
-      padding: .5rem 1rem;
+      padding: 0.5rem 1rem;
       font-size: 0.75rem;
       line-height: 1rem;
       font-weight: 600;
@@ -44,7 +44,7 @@
     }
 
     .settings-nav-item.active .nav-item-child-icon {
-      color:#1d4ed8;
+      color: #1d4ed8;
     }
 
     .nav-item-child {
@@ -74,7 +74,7 @@
 
       mat-icon {
         font-size: 1rem;
-        margin-right: .75rem;
+        margin-right: 0.75rem;
         width: auto;
         height: auto;
       }
@@ -91,14 +91,11 @@
     }
 
     .main-footer {
-       flex-shrink: 0;
+      flex-shrink: 0;
     }
   }
+}
 
-  // @media (min-width: 768px) {
-  //   .content-main {
-  //     padding: 2rem 2rem 0;
-  //   }
-  // }
-
+.wizard-button-spinner {
+  margin-right: 0.5rem;
 }

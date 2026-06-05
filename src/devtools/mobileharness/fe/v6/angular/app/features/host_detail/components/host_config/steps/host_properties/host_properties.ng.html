@@ -6,7 +6,7 @@
   emptyMessage="No host properties have been added."
   addButtonLabel="Add Property"
   [columns]="columns"
-  [metadataList]="properties"
+  [metadataList]="properties()"
   (metadataListChange)="propertiesChange.emit($event)"
-  [uiStatus]="uiStatus"
+  [uiStatus]="uiStatus()"
 ></app-metadata-list>

@@ -2,12 +2,15 @@ import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   EventEmitter,
   Input,
   OnChanges,
   OnInit,
   Output,
   SimpleChanges,
+  effect,
+  viewChildren,
 } from '@angular/core';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
 // import {MatAutocompleteModule} from '@angular/material/autocomplete';
@@ -79,6 +82,21 @@ export interface MetadataUiStatus {
 export class MetadataList<T extends Record<keyof T, string>>
   implements OnInit, OnChanges
 {
+  readonly metadataInputs =
+    viewChildren<ElementRef<HTMLInputElement>>('metadataInput');
+
+  private focusNewRow = false;
+
+  constructor() {
+    effect(() => {
+      const inputs = this.metadataInputs();
+      if (this.focusNewRow) {
+        this.focusNewRow = false;
+        this.focusLastRowFirstInput(inputs);
+      }
+    });
+  }
+
   @Input()
   uiStatus: MetadataUiStatus = {
     sectionStatus: {visible: true, editability: {editable: true, reason: ''}},
@@ -146,6 +164,7 @@ export class MetadataList<T extends Record<keyof T, string>>
       }
     });
     this.metadataList.push(newRow);
+    this.focusNewRow = true;
 
     this.onMetadataChanged();
   }
@@ -276,4 +295,17 @@ export class MetadataList<T extends Record<keyof T, string>>
   showErrorRow = (index: number, row: T) => {
     return this.errorMessage[index] && this.errorMessage[index] !== '';
   };
+
+  private focusLastRowFirstInput(
+    inputsArray: ReadonlyArray<ElementRef<HTMLInputElement>>,
+  ) {
+    const rowCount = this.metadataList.length;
+
+    if (rowCount > 0) {
+      const indexToFocus = rowCount - 1;
+      if (indexToFocus < inputsArray.length) {
+        inputsArray[indexToFocus].nativeElement.focus();
+      }
+    }
+  }
 }

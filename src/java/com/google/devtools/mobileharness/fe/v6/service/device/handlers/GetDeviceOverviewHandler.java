@@ -24,6 +24,7 @@ import com.github.benmanes.caffeine.cache.AsyncCacheLoader;
 import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Ascii;
 import com.google.common.base.Enums;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -224,7 +225,11 @@ public final class GetDeviceOverviewHandler {
       builder.addAllSubDevices(subDeviceInfoListFactory.create(dimensions));
     }
 
-    return builder.build();
+    boolean isAndroid =
+        deviceInfo.getDeviceFeature().getTypeList().stream()
+            .anyMatch(type -> Ascii.toLowerCase(type).contains("android"));
+
+    return builder.setIsAndroid(isAndroid).build();
   }
 
   private BasicDeviceInfo buildBasicDeviceInfo(ImmutableMap<String, String> allDimensions) {
