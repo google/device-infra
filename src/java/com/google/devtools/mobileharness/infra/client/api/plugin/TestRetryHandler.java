@@ -68,9 +68,14 @@ public class TestRetryHandler {
           "AndroidCopycatRemoteControlledMoblySnippetTest",
           "IosCopycatRemoteControlledMoblySnippetTest",
           "IosNativeXcTest",
+          "ManekiTest",
           "MoblyAospTest",
-          "VegaTest",
-          "TradefedTest");
+          "TradefedTest",
+          "VegaTest");
+
+  /** Blocklist for disabling the extra retry for infra errors by user. */
+  private static final ImmutableSet<String> USER_BLOCK_LIST_FOR_INFRA_ERROR_EXTRA_RETRY =
+      ImmutableSet.of("ytlr-lab-users");
 
   /** Minimal job remaining time needed for triggering the extra retry for infra errors. */
   private static final Duration MIN_JOB_REMAINING_TIME_FOR_INFRA_ERROR_EXTRA_RETRY =
@@ -252,6 +257,7 @@ public class TestRetryHandler {
       }
     } else if (validAttemptNum == retrySetting.getTestAttempts()
         && !DRIVER_BLOCK_LIST_FOR_INFRA_ERROR_EXTRA_RETRY.contains(jobInfo.type().getDriver())
+        && !USER_BLOCK_LIST_FOR_INFRA_ERROR_EXTRA_RETRY.contains(jobInfo.jobUser().getRunAs())
         && validAttemptNum
             == getAllAttempts(jobInfo, currentTestInfo).size() /* no auto retry for UTP */) {
       // Have another retry for the INFRA_ISSUE even when the max attempt number is reached.
