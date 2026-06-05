@@ -21,8 +21,12 @@ import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proto.Dual
 import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proto.DualConduitProto.EstablishConduitRequest.ConduitType;
 import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proto.DualConduitProto.EstablishConduitRequest.Protocol;
 import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proto.DualConduitProto.EstablishConduitResponse;
+import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proto.DualConduitProto.EstablishSessionRequest;
+import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proto.DualConduitProto.EstablishSessionResponse;
 import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proto.DualConduitProto.TeardownConduitRequest;
 import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proto.DualConduitProto.TeardownConduitResponse;
+import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proto.DualConduitProto.TeardownSessionRequest;
+import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proto.DualConduitProto.TeardownSessionResponse;
 import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proto.DualConduitServiceGrpc;
 import io.grpc.Channel;
 
@@ -40,31 +44,17 @@ public class DualConduitClient {
   /** Establishes a gRPC reverse conduit. */
   public EstablishConduitResponse establishReverseGrpcConduit(
       String serverName, String instanceId, String destinationEndpoint) {
-    EstablishConduitRequest request =
-        EstablishConduitRequest.newBuilder()
-            .setType(ConduitType.CONDUIT_TYPE_REVERSE)
-            .setProtocol(Protocol.PROTOCOL_GRPC)
-            .setAutoReconnect(true)
-            .setServerName(serverName)
-            .setInstanceId(instanceId)
-            .setDestinationEndpoint(destinationEndpoint)
-            .build();
-    return blockingStub.establishConduit(request);
+    return blockingStub.establishConduit(
+        createReverseGrpcConduitRequest(
+            serverName, instanceId, destinationEndpoint, /* autoReconnect= */ true));
   }
 
   /** Establishes a gRPC reverse conduit asynchronously. */
   public ListenableFuture<EstablishConduitResponse> establishReverseGrpcConduitAsync(
       String serverName, String instanceId, String destinationEndpoint) {
-    EstablishConduitRequest request =
-        EstablishConduitRequest.newBuilder()
-            .setType(ConduitType.CONDUIT_TYPE_REVERSE)
-            .setProtocol(Protocol.PROTOCOL_GRPC)
-            .setAutoReconnect(true)
-            .setServerName(serverName)
-            .setInstanceId(instanceId)
-            .setDestinationEndpoint(destinationEndpoint)
-            .build();
-    return futureStub.establishConduit(request);
+    return futureStub.establishConduit(
+        createReverseGrpcConduitRequest(
+            serverName, instanceId, destinationEndpoint, /* autoReconnect= */ true));
   }
 
   /** Tears down a conduit. */
@@ -79,5 +69,57 @@ public class DualConduitClient {
     TeardownConduitRequest request =
         TeardownConduitRequest.newBuilder().setConduitId(conduitId).build();
     return futureStub.teardownConduit(request);
+  }
+
+  /** Establishes a gRPC reverse conduit session. */
+  public EstablishSessionResponse establishReverseGrpcConduitSession(
+      String serverName, String instanceId, String destinationEndpoint) {
+    EstablishSessionRequest request =
+        EstablishSessionRequest.newBuilder()
+            .setEstablishConduitRequest(
+                createReverseGrpcConduitRequest(
+                    serverName, instanceId, destinationEndpoint, /* autoReconnect= */ false))
+            .setAutoReconnect(true)
+            .build();
+    return blockingStub.establishSession(request);
+  }
+
+  /** Establishes a gRPC reverse conduit session asynchronously. */
+  public ListenableFuture<EstablishSessionResponse> establishReverseGrpcConduitSessionAsync(
+      String serverName, String instanceId, String destinationEndpoint) {
+    EstablishSessionRequest request =
+        EstablishSessionRequest.newBuilder()
+            .setEstablishConduitRequest(
+                createReverseGrpcConduitRequest(
+                    serverName, instanceId, destinationEndpoint, /* autoReconnect= */ false))
+            .setAutoReconnect(true)
+            .build();
+    return futureStub.establishSession(request);
+  }
+
+  private static EstablishConduitRequest createReverseGrpcConduitRequest(
+      String serverName, String instanceId, String destinationEndpoint, boolean autoReconnect) {
+    return EstablishConduitRequest.newBuilder()
+        .setType(ConduitType.CONDUIT_TYPE_REVERSE)
+        .setProtocol(Protocol.PROTOCOL_GRPC)
+        .setAutoReconnect(autoReconnect)
+        .setServerName(serverName)
+        .setInstanceId(instanceId)
+        .setDestinationEndpoint(destinationEndpoint)
+        .build();
+  }
+
+  /** Tears down a session. */
+  public TeardownSessionResponse teardownSession(String sessionId) {
+    TeardownSessionRequest request =
+        TeardownSessionRequest.newBuilder().setSessionId(sessionId).build();
+    return blockingStub.teardownSession(request);
+  }
+
+  /** Tears down a session asynchronously. */
+  public ListenableFuture<TeardownSessionResponse> teardownSessionAsync(String sessionId) {
+    TeardownSessionRequest request =
+        TeardownSessionRequest.newBuilder().setSessionId(sessionId).build();
+    return futureStub.teardownSession(request);
   }
 }

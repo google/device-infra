@@ -20,7 +20,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.shared.util.comm.dualconduit.client.DualConduitClient;
-import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proto.DualConduitProto.EstablishConduitResponse;
+import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proto.DualConduitProto.EstablishSessionResponse;
 import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;
 import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager.Priority;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -55,7 +55,7 @@ public class ReverseProxiedServer extends Server {
   private final String serverName;
   private final String instanceId;
   private final String delegateHostname;
-  private String conduitId;
+  private String sessionId;
   @Nullable private Runnable teardownCallback;
 
   /**
@@ -122,16 +122,19 @@ public class ReverseProxiedServer extends Server {
   @Override
   public Server start() throws IOException {
     delegate.start();
-    logger.atInfo().log("Delegate server started, establishing conduit...");
+    logger.atInfo().log("Delegate server started, establishing session...");
     try {
       String destinationEndpoint = delegateHostname + ":" + delegate.getPort();
-      EstablishConduitResponse response =
-          client.establishReverseGrpcConduit(serverName, instanceId, destinationEndpoint);
-      this.conduitId = response.getConduitId();
+      EstablishSessionResponse response =
+          client.establishReverseGrpcConduitSession(serverName, instanceId, destinationEndpoint);
+      this.sessionId = response.getSessionId();
       logger.atInfo().log(
-          "Conduit established, conduitId: %s, and service is provided at serviceLocator: %s",
-          conduitId, response.getServiceLocator());
-      // The conduit is only torn down via a shutdown hook because in our deviceinfra use cases,
+          "Session established, sessionId: %s, and service is provided at serviceLocator: %s",
+          sessionId,
+          response.getEstablishConduitResponsesList().isEmpty()
+              ? "unknown"
+              : response.getEstablishConduitResponses(0).getServiceLocator());
+      // The session is only torn down via a shutdown hook because in our deviceinfra use cases,
       // the lifecycle of the proxied server is expected to be the same as the server process.
       ShutdownHookManager.getInstance()
           .addShutdownHook(
@@ -144,22 +147,22 @@ public class ReverseProxiedServer extends Server {
                       "Interrupted while waiting for delegate server termination");
                   Thread.currentThread().interrupt();
                 }
-                if (conduitId != null) {
+                if (sessionId != null) {
                   try {
-                    logger.atInfo().log("Tearing down conduit %s", conduitId);
-                    var unused = client.teardownConduit(conduitId);
+                    logger.atInfo().log("Tearing down session %s", sessionId);
+                    var unused = client.teardownSession(sessionId);
                   } catch (RuntimeException e) {
-                    logger.atWarning().withCause(e).log("Failed to teardown conduit %s", conduitId);
+                    logger.atWarning().withCause(e).log("Failed to teardown session %s", sessionId);
                   }
                 }
                 triggerTeardownCallback();
               },
-              "teardown-reverse-proxied-server-conduit",
+              "teardown-reverse-proxied-server-session",
               Priority.LOWEST);
     } catch (RuntimeException e) {
       delegate.shutdown();
       triggerTeardownCallback();
-      throw new IOException("Failed to establish conduit", e);
+      throw new IOException("Failed to establish session", e);
     }
     return this;
   }

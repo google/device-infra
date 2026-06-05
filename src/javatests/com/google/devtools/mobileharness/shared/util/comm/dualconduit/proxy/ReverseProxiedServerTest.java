@@ -24,6 +24,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.devtools.mobileharness.shared.util.comm.dualconduit.client.DualConduitClient;
 import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proto.DualConduitProto.EstablishConduitResponse;
+import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proto.DualConduitProto.EstablishSessionResponse;
 import io.grpc.Server;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -53,23 +54,28 @@ public final class ReverseProxiedServerTest {
 
   @Test
   public void start_success() throws Exception {
-    when(client.establishReverseGrpcConduit(anyString(), anyString(), anyString()))
-        .thenReturn(EstablishConduitResponse.newBuilder().setConduitId("fake-conduit-id").build());
+    when(client.establishReverseGrpcConduitSession(anyString(), anyString(), anyString()))
+        .thenReturn(
+            EstablishSessionResponse.newBuilder()
+                .setSessionId("fake-session-id")
+                .addEstablishConduitResponses(
+                    EstablishConduitResponse.newBuilder().setConduitId("fake-conduit-id").build())
+                .build());
     when(delegate.start()).thenReturn(delegate);
     when(delegate.getPort()).thenReturn(50051);
 
     var unused = proxyServer.start();
 
     verify(delegate).start();
-    verify(client).establishReverseGrpcConduit("my-server", "localhost", "backend:50051");
+    verify(client).establishReverseGrpcConduitSession("my-server", "localhost", "backend:50051");
   }
 
   @Test
   public void start_establishConduitFailed_shutdownDelegateAndTriggerCallbacks() throws Exception {
     when(delegate.start()).thenReturn(delegate);
     when(delegate.getPort()).thenReturn(50051);
-    when(client.establishReverseGrpcConduit(anyString(), anyString(), anyString()))
-        .thenThrow(new RuntimeException("Failed to establish conduit"));
+    when(client.establishReverseGrpcConduitSession(anyString(), anyString(), anyString()))
+        .thenThrow(new RuntimeException("Failed to establish session"));
 
     AtomicBoolean callbackCalled = new AtomicBoolean(false);
 
