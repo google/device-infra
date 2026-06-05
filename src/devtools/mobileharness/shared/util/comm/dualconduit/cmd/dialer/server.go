@@ -42,6 +42,7 @@ func main() {
 	var retryMaxInterval time.Duration
 	var retryMultiplier float64
 	var retryMaxAttempts int
+	var keepAliveTickPeriod time.Duration
 
 	flag.StringVar(&cfg.AcceptorTarget, "acceptor_target", "localhost:7878", "Acceptor target address (host:port or ws://host:port)")
 	flag.BoolVar(&cfg.UseSAToken, "use_sa_token", false, "Use Self-Signed JWT from Service Account key")
@@ -55,9 +56,10 @@ func main() {
 
 	flag.StringVar(&retryStrategy, "retry_strategy", "exponential", "Retry strategy (exponential, constant, none)")
 	flag.DurationVar(&retryInitialInterval, "retry_initial_interval", 1*time.Second, "Initial interval for retry backoff")
-	flag.DurationVar(&retryMaxInterval, "retry_max_interval", 10*time.Minute, "Maximum interval for exponential retry backoff")
+	flag.DurationVar(&retryMaxInterval, "retry_max_interval", 10*time.Second, "Maximum interval for exponential retry backoff")
 	flag.Float64Var(&retryMultiplier, "retry_multiplier", 2.0, "Multiplier for exponential retry backoff")
 	flag.IntVar(&retryMaxAttempts, "retry_max_attempts", 0, "Maximum retry attempts (0 for infinite, 1 for no retry)")
+	flag.DurationVar(&keepAliveTickPeriod, "keep_alive_tick_period", 60*time.Second, "Keep-alive tick period for the dialer connection")
 
 	flag.Parse()
 
@@ -107,7 +109,7 @@ func main() {
 	// 1. Perform pre-flight check
 	dialerCtx, dialerCancel := context.WithCancel(context.Background())
 	defer dialerCancel()
-	dialerSvc := dialer.New(dialerCtx, cfg.Hostname, cfg.ForwardAddress, newTransporter, policy)
+	dialerSvc := dialer.New(dialerCtx, cfg.Hostname, cfg.ForwardAddress, newTransporter, policy, keepAliveTickPeriod)
 	if err := dialerSvc.CheckConnection(context.Background()); err != nil {
 		slog.Error("Pre-flight check failed", "error", err)
 		os.Exit(1)

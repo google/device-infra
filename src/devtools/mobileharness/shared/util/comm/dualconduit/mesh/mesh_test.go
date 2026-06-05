@@ -10,16 +10,16 @@ import (
 
 func TestGenerateSnapshot(t *testing.T) {
 	ctx := t.Context()
-	srv := NewServer(ctx, 80, 443)
+	srv := New(ctx, 80, 443, "strict_dns")
 
 	// Register a TCP service
-	_, err := srv.RegisterService(ctx, "adb", "host-A", "127.0.0.1:5555", "tcp")
+	_, err := srv.RegisterEndpoint(ctx, "adb", "host-A", "127.0.0.1:5555", "tcp")
 	if err != nil {
 		t.Fatalf("Failed to register service: %v", err)
 	}
 
 	// Register a gRPC service
-	_, err = srv.RegisterService(ctx, "foo", "host-B", "127.0.0.1:6666", "grpc")
+	_, err = srv.RegisterEndpoint(ctx, "foo", "host-B", "127.0.0.1:6666", "grpc")
 	if err != nil {
 		t.Fatalf("Failed to register service: %v", err)
 	}

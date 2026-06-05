@@ -41,8 +41,8 @@ func New(newTransporter func() (rsockettransport.ServerTransporter, error), mesh
 	}, nil
 }
 
-// RegisterService registers service discovery with mesh server.
-func (s *Service) RegisterService(ctx context.Context, req *dconpb.EstablishConduitRequest, dynamicPort int) (string, error) {
+// RegisterEndpoint registers service discovery with mesh server.
+func (s *Service) RegisterEndpoint(ctx context.Context, req *dconpb.EstablishConduitRequest, dynamicPort int) (string, error) {
 	physicalAddress := fmt.Sprintf("%s:%d", s.reverseForwardAddress, dynamicPort)
 	protocolStr := "tcp"
 	switch req.Protocol {
@@ -52,12 +52,13 @@ func (s *Service) RegisterService(ctx context.Context, req *dconpb.EstablishCond
 		protocolStr = "http"
 	}
 
-	return s.meshServer.RegisterService(ctx, req.ServerName, req.InstanceId, physicalAddress, protocolStr)
+	return s.meshServer.RegisterEndpoint(ctx, req.ServerName, req.InstanceId, physicalAddress, protocolStr)
 }
 
-// DeregisterService deregisters service discovery with mesh server.
-func (s *Service) DeregisterService(ctx context.Context, req *dconpb.EstablishConduitRequest) error {
-	return s.meshServer.DeregisterService(ctx, req.ServerName, req.InstanceId)
+// DeregisterEndpoint deregisters service discovery with mesh server.
+func (s *Service) DeregisterEndpoint(ctx context.Context, req *dconpb.EstablishConduitRequest, dynamicPort int) error {
+	physicalAddress := fmt.Sprintf("%s:%d", s.reverseForwardAddress, dynamicPort)
+	return s.meshServer.DeregisterEndpoint(ctx, req.ServerName, req.InstanceId, physicalAddress)
 }
 
 // Run starts the Acceptor service, listening for incoming RSocket connections.
@@ -143,9 +144,9 @@ func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, re
 
 	// Async register and PUSHMETA_DATA to dialer
 	go func() {
-		logicalName, regErr := s.RegisterService(ctx, req, dynamicPort)
-		if regErr != nil {
-			slog.Error("Service register failed", "id", conduitID, "error", regErr)
+		logicalName, err := s.RegisterEndpoint(ctx, req, dynamicPort)
+		if err != nil {
+			slog.Error("Service register failed", "id", conduitID, "error", err)
 			lis.Close()
 			con.Close()
 			return
@@ -153,7 +154,9 @@ func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, re
 
 		go func() {
 			<-con.Context().Done()
-			s.DeregisterService(ctx, req)
+			if err := s.DeregisterEndpoint(ctx, req, dynamicPort); err != nil {
+				slog.Error("Service deregister failed", "id", conduitID, "error", err)
+			}
 		}()
 
 		var locator *dconpb.ServiceLocator

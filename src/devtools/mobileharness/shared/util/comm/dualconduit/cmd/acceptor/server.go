@@ -27,13 +27,14 @@ func main() {
 	reverseForwardAddress := flag.String("reverse_forward_address", "127.0.0.1", "The address to register in xDS for reverse conduits")
 	httpPort := flag.Int("http_port", 80, "The port for HTTP data plane in Envoy")
 	tcpPort := flag.Int("tcp_port", 443, "The port for TCP data plane in Envoy")
+	clusterDiscoveryType := flag.String("cluster_discovery_type", "strict_dns", "The cluster discovery type for registered services in xDS (static, strict_dns, logical_dns)")
 	flag.Parse()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// Initialize mesh server (xDS server)
-	meshServer := mesh.NewServer(ctx, *httpPort, *tcpPort)
+	meshServer := mesh.New(ctx, *httpPort, *tcpPort, *clusterDiscoveryType)
 
 	newTransporter := func() (rsockettransport.ServerTransporter, error) {
 		serverCfg := dcontransport.ServerConfig{

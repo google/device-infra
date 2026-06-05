@@ -48,6 +48,7 @@ go_library(
         "@org_golang_google_grpc//:grpc",
         "@org_golang_google_protobuf//types/known/anypb",
         "@org_golang_google_protobuf//types/known/durationpb",
+        "@org_golang_google_protobuf//types/known/wrapperspb",
     ],
 )
 

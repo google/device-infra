@@ -28,10 +28,10 @@ import (
 )
 
 const (
-	keepAliveTickPeriod = 20 * time.Second
-	keepAliveAckTimeout = 10 * time.Second
-	keepAliveMissedAcks = 3
-	ipv4Loopback        = "127.0.0.1"
+	defaultKeepAliveTickPeriod = 60 * time.Second
+	keepAliveAckTimeout        = 15 * time.Second
+	keepAliveMissedAcks        = 3
+	ipv4Loopback               = "127.0.0.1"
 
 	reverseConduitCloseSignalDelay = 100 * time.Millisecond
 	checkConnectionRequestTimeout  = 10 * time.Second
@@ -42,17 +42,18 @@ const (
 // Service is the implementation of the DualConduitService.
 type Service struct {
 	dconsvcpb.UnimplementedDualConduitServiceServer
-	ServiceCtx         context.Context
-	Manager            *conduit.Manager
-	Sessions           *session.Manager
-	NewTransporter     func() (rsockettransport.ClientTransporter, error)
-	Hostname           string
-	ForwardAddress     string
-	DefaultRetryPolicy RetryPolicy
+	ServiceCtx          context.Context
+	Manager             *conduit.Manager
+	Sessions            *session.Manager
+	NewTransporter      func() (rsockettransport.ClientTransporter, error)
+	Hostname            string
+	ForwardAddress      string
+	DefaultRetryPolicy  RetryPolicy
+	KeepAliveTickPeriod time.Duration
 }
 
 // New creates a new Service with an initialized conduit.Manager, session.Manager, and default retry policy.
-func New(ctx context.Context, hostname string, forwardAddress string, newTransporter func() (rsockettransport.ClientTransporter, error), policy RetryPolicy) *Service {
+func New(ctx context.Context, hostname string, forwardAddress string, newTransporter func() (rsockettransport.ClientTransporter, error), policy RetryPolicy, keepAliveTickPeriod time.Duration) *Service {
 	cm := conduit.NewManager()
 	sm := session.NewManager()
 
@@ -65,14 +66,20 @@ func New(ctx context.Context, hostname string, forwardAddress string, newTranspo
 		}
 	}
 
+	tickPeriod := keepAliveTickPeriod
+	if tickPeriod == 0 {
+		tickPeriod = defaultKeepAliveTickPeriod
+	}
+
 	s := &Service{
-		ServiceCtx:         ctx,
-		Manager:            cm,
-		Sessions:           sm,
-		NewTransporter:     newTransporter,
-		Hostname:           hostname,
-		ForwardAddress:     forwardAddress,
-		DefaultRetryPolicy: policy,
+		ServiceCtx:          ctx,
+		Manager:             cm,
+		Sessions:            sm,
+		NewTransporter:      newTransporter,
+		Hostname:            hostname,
+		ForwardAddress:      forwardAddress,
+		DefaultRetryPolicy:  policy,
+		KeepAliveTickPeriod: tickPeriod,
 	}
 	cm.SubscribeToRemove(s.handleConduitRemoved)
 	return s
@@ -178,7 +185,7 @@ func (s *Service) reverseConduitAcceptor(id string, destinationEndpoint string, 
 func (s *Service) startRSocketClient(id string, req *dconpb.EstablishConduitRequest, setup payload.Payload, condReady chan struct{}, metadataPush chan payload.Payload) (rsocket.Client, error) {
 	builder := rsocket.Connect().
 		SetupPayload(setup).
-		KeepAlive(keepAliveTickPeriod, keepAliveAckTimeout, keepAliveMissedAcks)
+		KeepAlive(s.KeepAliveTickPeriod, keepAliveAckTimeout, keepAliveMissedAcks)
 
 	var starter rsocket.ToClientStarter = builder
 	if req.Type == dconpb.EstablishConduitRequest_CONDUIT_TYPE_REVERSE {

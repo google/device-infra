@@ -29,6 +29,7 @@ import (
 	// Protocol Buffer imports
 	anypb "google.golang.org/protobuf/types/known/anypb"
 	durationpb "google.golang.org/protobuf/types/known/durationpb"
+	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 	clusterpb "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corepb "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointpb "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -42,52 +43,78 @@ import (
 
 // ServiceInfo holds information about a registered service.
 type ServiceInfo struct {
-	ServiceName     string
-	Hostname        string
-	PhysicalAddress string
-	Protocol        string // "tcp" or "grpc"
+	ServiceName       string
+	Hostname          string
+	PhysicalAddresses map[string]bool // key: physicalAddress
+	Protocol          string          // "tcp" or "grpc"
 }
 
 // Server wraps the go-control-plane server and manages snapshots.
 type Server struct {
-	cache    cache.SnapshotCache
-	server   server.Server
-	mu       sync.Mutex
-	services map[string]ServiceInfo // key: logicalName
-	version  int
-	tcpPort  int
-	httpPort int
+	cache                cache.SnapshotCache
+	server               server.Server
+	mu                   sync.Mutex
+	services             map[string]*ServiceInfo // key: logicalName
+	version              int
+	tcpPort              int
+	httpPort             int
+	clusterDiscoveryType clusterpb.Cluster_DiscoveryType
 }
 
-// NewServer creates a new Server.
-func NewServer(ctx context.Context, httpPort, tcpPort int) *Server {
+var discoveryTypes = map[string]clusterpb.Cluster_DiscoveryType{
+	"static":      clusterpb.Cluster_STATIC,
+	"strict_dns":  clusterpb.Cluster_STRICT_DNS,
+	"logical_dns": clusterpb.Cluster_LOGICAL_DNS,
+	"eds":         clusterpb.Cluster_EDS,
+}
+
+// New creates a new Server.
+func New(ctx context.Context, httpPort, tcpPort int, discoveryTypeStr string) *Server {
 	// Create a cache
 	cache := cache.NewSnapshotCache(false, cache.IDHash{}, nil)
 
 	// Create a server
 	srv := server.NewServer(ctx, cache, nil)
 
+	discType, ok := discoveryTypes[discoveryTypeStr]
+	if !ok {
+		slog.Warn("Unknown discovery type, defaulting to STRICT_DNS", "type", discoveryTypeStr)
+		discType = clusterpb.Cluster_STRICT_DNS
+	}
+
 	return &Server{
-		cache:    cache,
-		server:   srv,
-		services: make(map[string]ServiceInfo),
-		httpPort: httpPort,
-		tcpPort:  tcpPort,
+		cache:                cache,
+		server:               srv,
+		services:             make(map[string]*ServiceInfo),
+		httpPort:             httpPort,
+		tcpPort:              tcpPort,
+		clusterDiscoveryType: discType,
 	}
 }
 
-// RegisterService adds or updates a service and pushes a new snapshot.
-func (s *Server) RegisterService(ctx context.Context, serviceName, hostname, physicalAddress, protocol string) (string, error) {
+// RegisterEndpoint adds or updates an endpoint and pushes a new snapshot.
+func (s *Server) RegisterEndpoint(ctx context.Context, serviceName, hostname, physicalAddress, protocol string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	logicalName := fmt.Sprintf("%s.%s.dcon", serviceName, hostname)
-	s.services[logicalName] = ServiceInfo{
-		ServiceName:     serviceName,
-		Hostname:        hostname,
-		PhysicalAddress: physicalAddress,
-		Protocol:        protocol,
+	info, ok := s.services[logicalName]
+	if !ok {
+		info = &ServiceInfo{
+			ServiceName:       serviceName,
+			Hostname:          hostname,
+			PhysicalAddresses: make(map[string]bool),
+			Protocol:          protocol,
+		}
+		s.services[logicalName] = info
 	}
+
+	if _, exists := info.PhysicalAddresses[physicalAddress]; exists {
+		// Endpoint is already registered, no need to update the snapshot.
+		return logicalName, nil
+	}
+
+	info.PhysicalAddresses[physicalAddress] = true
 
 	s.version++
 	err := s.updateSnapshot(ctx)
@@ -97,16 +124,27 @@ func (s *Server) RegisterService(ctx context.Context, serviceName, hostname, phy
 	return logicalName, nil
 }
 
-// DeregisterService removes a service and pushes a new snapshot.
-func (s *Server) DeregisterService(ctx context.Context, serviceName, hostname string) error {
+// DeregisterEndpoint removes an endpoint and pushes a new snapshot.
+func (s *Server) DeregisterEndpoint(ctx context.Context, serviceName, hostname, physicalAddress string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	logicalName := fmt.Sprintf("%s.%s.dcon", serviceName, hostname)
-	delete(s.services, logicalName)
+	info, ok := s.services[logicalName]
+	if !ok {
+		return nil
+	}
 
-	s.version++
-	return s.updateSnapshot(ctx)
+	if _, exists := info.PhysicalAddresses[physicalAddress]; exists {
+		delete(info.PhysicalAddresses, physicalAddress)
+		if len(info.PhysicalAddresses) == 0 {
+			delete(s.services, logicalName)
+		}
+
+		s.version++
+		return s.updateSnapshot(ctx)
+	}
+	return nil
 }
 
 func (s *Server) updateSnapshot(ctx context.Context) error {
@@ -131,6 +169,7 @@ func (s *Server) updateSnapshot(ctx context.Context) error {
 func (s *Server) generateSnapshot(version string) (*cache.Snapshot, error) {
 	var clusters []types.Resource
 	var listeners []types.Resource
+	var endpoints []types.Resource
 
 	// Base listener for port 443 (TCP SNI matching)
 	// This listener will be updated with new FilterChains as services are added.
@@ -139,14 +178,37 @@ func (s *Server) generateSnapshot(version string) (*cache.Snapshot, error) {
 	for logicalName, info := range s.services {
 		clusterName := fmt.Sprintf("cluster.%s.%s", info.ServiceName, info.Hostname)
 
+		var addrs []string
+		for addr := range info.PhysicalAddresses {
+			addrs = append(addrs, addr)
+		}
+
+		// Determine cluster discovery type. gRPC requires EDS.
+		discoveryType := s.clusterDiscoveryType
+		if info.Protocol == "grpc" {
+			discoveryType = clusterpb.Cluster_EDS
+		}
+
 		// Create Cluster
 		c := &clusterpb.Cluster{
 			Name:                 clusterName,
 			ConnectTimeout:       durationpb.New(5 * time.Second),
-			ClusterDiscoveryType: &clusterpb.Cluster_Type{Type: clusterpb.Cluster_LOGICAL_DNS},
+			ClusterDiscoveryType: &clusterpb.Cluster_Type{Type: discoveryType},
 			LbPolicy:             clusterpb.Cluster_ROUND_ROBIN,
-			LoadAssignment:       makeEndpoint(clusterName, info.PhysicalAddress),
 			DnsLookupFamily:      clusterpb.Cluster_V4_ONLY,
+		}
+
+		if discoveryType == clusterpb.Cluster_EDS {
+			c.EdsClusterConfig = &clusterpb.Cluster_EdsClusterConfig{
+				EdsConfig: &corepb.ConfigSource{
+					ConfigSourceSpecifier: &corepb.ConfigSource_Ads{
+						Ads: &corepb.AggregatedConfigSource{},
+					},
+				},
+			}
+			endpoints = append(endpoints, makeEndpoints(clusterName, addrs))
+		} else {
+			c.LoadAssignment = makeEndpoints(clusterName, addrs)
 		}
 
 		if info.Protocol == "grpc" {
@@ -332,6 +394,7 @@ func (s *Server) generateSnapshot(version string) (*cache.Snapshot, error) {
 		resource.ClusterType:  clusters,
 		resource.ListenerType: listeners,
 		resource.RouteType:    routes,
+		resource.EndpointType: endpoints,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create snapshot: %w", err)
@@ -339,37 +402,46 @@ func (s *Server) generateSnapshot(version string) (*cache.Snapshot, error) {
 	return snap, nil
 }
 
-func makeEndpoint(clusterName string, address string) *endpointpb.ClusterLoadAssignment {
-	host, portStr, err := net.SplitHostPort(address)
-	if err != nil {
-		slog.Warn("Failed to split host port", "address", address, "error", err)
-		host = address // Fallback to address as host if split fails
-	}
-	var port uint32
-	if p, err := strconv.Atoi(portStr); err == nil {
-		port = uint32(p)
-	}
-
-	return &endpointpb.ClusterLoadAssignment{
-		ClusterName: clusterName,
-		Endpoints: []*endpointpb.LocalityLbEndpoints{{
-			LbEndpoints: []*endpointpb.LbEndpoint{{
-				HostIdentifier: &endpointpb.LbEndpoint_Endpoint{
-					Endpoint: &endpointpb.Endpoint{
-						Address: &corepb.Address{
-							Address: &corepb.Address_SocketAddress{
-								SocketAddress: &corepb.SocketAddress{
-									Protocol: corepb.SocketAddress_TCP,
-									Address:  host,
-									PortSpecifier: &corepb.SocketAddress_PortValue{
-										PortValue: port,
-									},
+func makeEndpoints(clusterName string, addresses []string) *endpointpb.ClusterLoadAssignment {
+	var lbEndpoints []*endpointpb.LbEndpoint
+	for _, address := range addresses {
+		host, portStr, err := net.SplitHostPort(address)
+		if err != nil {
+			slog.Warn("Failed to split host port", "address", address, "error", err)
+			host = address // Fallback to address as host if split fails
+		}
+		var port uint32
+		if p, err := strconv.Atoi(portStr); err == nil {
+			port = uint32(p)
+		}
+		lbEndpoints = append(lbEndpoints, &endpointpb.LbEndpoint{
+			HostIdentifier: &endpointpb.LbEndpoint_Endpoint{
+				Endpoint: &endpointpb.Endpoint{
+					Address: &corepb.Address{
+						Address: &corepb.Address_SocketAddress{
+							SocketAddress: &corepb.SocketAddress{
+								Protocol: corepb.SocketAddress_TCP,
+								Address:  host,
+								PortSpecifier: &corepb.SocketAddress_PortValue{
+									PortValue: port,
 								},
 							},
 						},
 					},
 				},
-			}},
+			},
+		})
+	}
+
+	return &endpointpb.ClusterLoadAssignment{
+		ClusterName: clusterName,
+		Endpoints: []*endpointpb.LocalityLbEndpoints{{
+			Locality: &corepb.Locality{
+				Region: "dcon-region",
+				Zone:   "dcon-zone",
+			},
+			LbEndpoints:         lbEndpoints,
+			LoadBalancingWeight: &wrapperspb.UInt32Value{Value: 1},
 		}},
 	}
 }

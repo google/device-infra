@@ -63,6 +63,7 @@ dcon_blaze_to_bazel_transforms = [
     dcon_build_file_replace(":pkg_go_grpc", ":go_default_library", export_only = True),
     dcon_build_file_replace("@protobuf//:any_proto_go_proto", "@org_golang_google_protobuf//types/known/anypb"),
     dcon_build_file_replace("@protobuf//:duration_proto_go_proto", "@org_golang_google_protobuf//types/known/durationpb"),
+    dcon_build_file_replace("@protobuf//:wrappers_proto_go_proto", "@org_golang_google_protobuf//types/known/wrapperspb"),
     dcon_build_file_replace("//base/go:runfiles", "@rules_go//go/runfiles"),
     dcon_build_file_replace("//third_party/golang/lumberjack", "@in_gopkg_natefinch_lumberjack_v2//:lumberjack_v2"),
 ]
@@ -89,6 +90,7 @@ dcon_go_imports_map = {
     "google3/third_party/golang/protobuf/v2/proto/proto": "google.golang.org/protobuf/proto",
     "google3/google/protobuf/any_go_proto": "google.golang.org/protobuf/types/known/anypb",
     "google3/google/protobuf/duration_go_proto": "google.golang.org/protobuf/types/known/durationpb",
+    "google3/google/protobuf/wrappers_go_proto": "google.golang.org/protobuf/types/known/wrapperspb",
     "google3/third_party/golang/googleuuid/uuid": "github.com/google/uuid",
     "google3/third_party/golang/oauth2/google/google": "golang.org/x/oauth2/google",
     "google3/third_party/golang/envoyproxy/go_control_plane/pkg/cache/types/types": "github.com/envoyproxy/go-control-plane/pkg/cache/types",
