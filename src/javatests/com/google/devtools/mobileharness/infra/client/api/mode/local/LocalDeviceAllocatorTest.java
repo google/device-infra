@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabScheduleUnit;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator.DeviceVerifier;
 import com.google.devtools.mobileharness.infra.controller.device.proxy.ProxyDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
@@ -190,5 +191,112 @@ public final class LocalDeviceAllocatorTest {
         .containsExactly(
             DeviceLocator.of("device-1", LabLocator.LOCALHOST),
             DeviceLocator.of("device-2", LabLocator.LOCALHOST));
+  }
+
+  @Test
+  public void releaseAllocation_oneDeviceIsDirty_releasesAllocationAndRemovesOnlyDirtyDevice()
+      throws Exception {
+    DeviceLocator device1 = DeviceLocator.of("device-1", LabLocator.LOCALHOST);
+    DeviceLocator device2 = DeviceLocator.of("device-2", LabLocator.LOCALHOST);
+
+    Allocation allocation =
+        new Allocation(testInfo.locator().toNewTestLocator(), ImmutableList.of(device1, device2));
+
+    // Stubs: device-1 is dirty upon release, device-2 is clean upon release.
+    when(deviceVerifier.getDeviceDirtyForAllocationRelease("device-1"))
+        .thenReturn(Optional.of(true));
+    when(deviceVerifier.getDeviceDirtyForAllocationRelease("device-2"))
+        .thenReturn(Optional.of(false));
+
+    allocator.releaseAllocation(allocation, TestResult.PASS, /* deviceDirty= */ false);
+
+    // Verifies scheduler.unallocate was called to release the allocation and remove only dirty
+    // device-1.
+    verify(scheduler).unallocate(allocation, ImmutableList.of(device1), /* closeTest= */ true);
+  }
+
+  @Test
+  public void
+      releaseAllocation_withRealSimpleScheduler_oneDeviceIsDirty_keepsHealthyDeviceUnremoved()
+          throws Exception {
+    SimpleScheduler realScheduler = new SimpleScheduler(threadPool);
+
+    // Creates job and test requesting 2 subdevices.
+    JobInfo multiDeviceJobInfo =
+        JobInfo.newBuilder()
+            .setLocator(new JobLocator("multi_device_job"))
+            .setType(JobType.newBuilder().setDevice("NoOpDevice").setDriver("NoOpDriver").build())
+            .build();
+    multiDeviceJobInfo.subDeviceSpecs().clearSubDevices();
+    multiDeviceJobInfo.subDeviceSpecs().addSubDevice("NoOpDevice");
+    multiDeviceJobInfo.subDeviceSpecs().addSubDevice("NoOpDevice");
+    multiDeviceJobInfo.tests().add("test_id_2", "test_name_2");
+
+    // Inits allocator with the real scheduler.
+    LocalDeviceAllocator realAllocator =
+        new LocalDeviceAllocator(
+            multiDeviceJobInfo, deviceVerifier, threadPool, proxyDeviceManager, realScheduler);
+
+    // Registers device-1 and device-2 (both are NoOpDevices of type "NoOpDevice")
+    DeviceScheduleUnit deviceUnit1 =
+        new DeviceScheduleUnit(DeviceLocator.of("device-1", LabLocator.LOCALHOST));
+    deviceUnit1.types().add("NoOpDevice");
+    deviceUnit1.drivers().add("NoOpDriver");
+    realScheduler.upsertDevice(deviceUnit1, new LabScheduleUnit(LabLocator.LOCALHOST));
+
+    DeviceScheduleUnit deviceUnit2 =
+        new DeviceScheduleUnit(DeviceLocator.of("device-2", LabLocator.LOCALHOST));
+    deviceUnit2.types().add("NoOpDevice");
+    deviceUnit2.drivers().add("NoOpDriver");
+    realScheduler.upsertDevice(deviceUnit2, new LabScheduleUnit(LabLocator.LOCALHOST));
+
+    // Stubs: both devices pass verification in the first round (allocation phase).
+    when(deviceVerifier.verifyDeviceForAllocation("device-1")).thenReturn(Optional.empty());
+    when(deviceVerifier.verifyDeviceForAllocation("device-2")).thenReturn(Optional.empty());
+
+    // Sets up allocator (which adds job/test to the scheduler and registers the event handler).
+    var unusedSetUp = realAllocator.setUp();
+    realScheduler.start(); // Starts the scheduler in a background thread of threadPool.
+
+    // Sleep a bit to allow the scheduler to allocate both devices.
+    Sleeper.defaultSleeper().sleep(Duration.ofMillis(500));
+
+    // Polls the allocation to trigger verification logic. This should succeed.
+    var allocations1 = realAllocator.pollAllocations();
+    assertThat(allocations1).hasSize(1);
+    Allocation allocation = allocations1.get(0).allocation();
+
+    // Stubs: device-1 becomes dirty upon release, device-2 remains clean.
+    when(deviceVerifier.getDeviceDirtyForAllocationRelease("device-1"))
+        .thenReturn(Optional.of(true));
+    when(deviceVerifier.getDeviceDirtyForAllocationRelease("device-2"))
+        .thenReturn(Optional.of(false));
+
+    // Release the allocation. This should trigger the new release logic:
+    // device-1 (dirty) is removed from the scheduler, device-2 (clean) is released but kept active.
+    realAllocator.releaseAllocation(allocation, TestResult.PASS, /* deviceDirty= */ false);
+
+    // To verify that device-2 remains active and was NOT removed from the scheduler:
+    // Submit a second test/job that requires only 1 device.
+    JobInfo singleDeviceJobInfo =
+        JobInfo.newBuilder()
+            .setLocator(new JobLocator("single_device_job"))
+            .setType(JobType.newBuilder().setDevice("NoOpDevice").setDriver("NoOpDriver").build())
+            .build();
+    singleDeviceJobInfo.tests().add("test_id_3", "test_name_3");
+    LocalDeviceAllocator singleDeviceAllocator =
+        new LocalDeviceAllocator(
+            singleDeviceJobInfo, deviceVerifier, threadPool, proxyDeviceManager, realScheduler);
+
+    var unusedSetUp2 = singleDeviceAllocator.setUp();
+    // Sleep a bit to allow the scheduler to allocate the remaining device-2 to the second test.
+    Sleeper.defaultSleeper().sleep(Duration.ofMillis(500));
+
+    // Polls again. Since only device-2 is free (and kept in scheduler pool), it should be
+    // allocated.
+    var allocations2 = singleDeviceAllocator.pollAllocations();
+    assertThat(allocations2).hasSize(1);
+    Allocation secondAllocation = allocations2.get(0).allocation();
+    assertThat(secondAllocation.getDevice().id()).isEqualTo("device-2");
   }
 }

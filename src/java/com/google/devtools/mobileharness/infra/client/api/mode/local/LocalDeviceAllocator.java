@@ -289,22 +289,26 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
       // Releases the test's devices synchronously.
       proxyDeviceManager.releaseDevicesOfTest(allocation.getTest());
     } else {
-      DeviceLocator deviceLocator = allocation.getDevice();
-      String deviceSerial = deviceLocator.id();
-      Optional<Boolean> deviceDirtyFromVerifier =
-          deviceVerifier.getDeviceDirtyForAllocationRelease(deviceSerial);
-      try {
+      List<DeviceLocator> dirtyDevices = new ArrayList<>();
+      for (DeviceLocator deviceLocator : allocation.getAllDevices()) {
+        String deviceSerial = deviceLocator.id();
+        boolean currentDeviceDirty = deviceDirty;
+        Optional<Boolean> deviceDirtyFromVerifier =
+            deviceVerifier.getDeviceDirtyForAllocationRelease(deviceSerial);
         if (deviceDirtyFromVerifier.isPresent()) {
-          deviceDirty = deviceDirtyFromVerifier.get();
+          currentDeviceDirty = deviceDirtyFromVerifier.get();
         }
-      } finally {
         jobInfo
             .log()
             .atInfo()
             .alsoTo(logger)
-            .log("Release device %s in scheduler, DeviceDirty=%s", deviceSerial, deviceDirty);
-        scheduler.unallocate(deviceLocator, deviceDirty, true);
+            .log(
+                "Release device %s in scheduler, DeviceDirty=%s", deviceSerial, currentDeviceDirty);
+        if (currentDeviceDirty) {
+          dirtyDevices.add(deviceLocator);
+        }
       }
+      scheduler.unallocate(allocation, dirtyDevices, /* closeTest= */ true);
     }
   }
 
