@@ -2,12 +2,10 @@ import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   EventEmitter,
-  Input,
-  OnChanges,
-  OnInit,
+  input,
   Output,
-  SimpleChanges,
 } from '@angular/core';
 
 import {MANEKI_DEVICE_TYPE_OPTIONS} from '@deviceinfra/app/core/constants/host_config_constants';
@@ -41,22 +39,20 @@ type MetadataKey = 'overSshDevices' | 'manekiSpecs';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, EntryChip, MetadataList],
 })
-export class DeviceDiscovery implements OnInit, OnChanges {
-  @Input() workflow: 'wizard' | 'settings' = 'settings';
-  @Input()
-  uiStatus: MetadataUiStatus = {
+export class DeviceDiscovery {
+  readonly workflow = input<'wizard' | 'settings'>('settings');
+  readonly uiStatus = input<MetadataUiStatus>({
     sectionStatus: {visible: true, editability: {editable: true}},
-  };
+  });
 
-  @Input()
-  deviceDiscovery: DeviceDiscoverySettings = {
+  readonly deviceDiscovery = input<DeviceDiscoverySettings>({
     monitoredDeviceUuids: [],
     testbedUuids: [],
     miscDeviceUuids: [],
     overTcpIps: [],
     overSshDevices: [],
     manekiSpecs: [],
-  };
+  });
   @Output()
   readonly deviceDiscoveryChange = new EventEmitter<DeviceDiscoverySettings>();
 
@@ -64,160 +60,131 @@ export class DeviceDiscovery implements OnInit, OnChanges {
 
   errorList: number[] = [];
 
-  chips: Array<{
-    key: ChipKey;
-    title: string;
-    description: string;
-    entries: string[];
-  }> = [
-    {
-      key: 'monitoredDeviceUuids',
-      title: 'Monitored Device UUIDs',
-      description: 'The UUIDs of devices which will be monitored by the lab.',
-      entries: [],
-    },
-    {
-      key: 'testbedUuids',
-      title: 'Testbed UUIDs',
-      description: 'The UUIDs of testbed configs for this lab.',
-      entries: [],
-    },
-    {
-      key: 'miscDeviceUuids',
-      title: 'Misc Device UUIDs',
-      description:
-        'The UUIDs of devices which should be treated as MiscDevice.',
-      entries: [],
-    },
-    {
-      key: 'overTcpIps',
-      title: 'TCP Discovery IPs',
-      description:
-        'IP addresses the lab will attempt to connect to via TCP by default.',
-      entries: [],
-    },
-  ];
+  readonly chips = computed(() => {
+    const settings = this.deviceDiscovery();
+    return [
+      {
+        key: 'monitoredDeviceUuids' as ChipKey,
+        title: 'Monitored Device UUIDs',
+        description: 'The UUIDs of devices which will be monitored by the lab.',
+        entries: settings.monitoredDeviceUuids || [],
+      },
+      {
+        key: 'testbedUuids' as ChipKey,
+        title: 'Testbed UUIDs',
+        description: 'The UUIDs of testbed configs for this lab.',
+        entries: settings.testbedUuids || [],
+      },
+      {
+        key: 'miscDeviceUuids' as ChipKey,
+        title: 'Misc Device UUIDs',
+        description:
+          'The UUIDs of devices which should be treated as MiscDevice.',
+        entries: settings.miscDeviceUuids || [],
+      },
+      {
+        key: 'overTcpIps' as ChipKey,
+        title: 'TCP Discovery IPs',
+        description:
+          'IP addresses the lab will attempt to connect to via TCP by default.',
+        entries: settings.overTcpIps || [],
+      },
+    ];
+  });
 
-  metadataList: Array<{
-    key: MetadataKey;
-    title: string;
-    description: string;
-    emptyMessage: string;
-    addButtonLabel: string;
-    columns: MetadataColumn[];
-    list: Array<Record<string, string> | ManekiSpec>;
-  }> = [
-    {
-      key: 'overSshDevices',
-      title: 'Over SSH Devices',
-      description: 'Define devices that the lab will connect to via SSH.',
-      emptyMessage: 'No SSH devices configured.',
-      addButtonLabel: 'Add SSH Device',
-      columns: [
-        {
-          columnDef: 'ipAddress',
-          header: 'IP Address',
-          cell: 'ipAddress',
-          type: 'input',
-          inputType: 'text',
-          required: true,
-        },
-        {
-          columnDef: 'username',
-          header: 'Username',
-          cell: 'username',
-          type: 'input',
-          inputType: 'text',
-          required: true,
-        },
-        {
-          columnDef: 'password',
-          header: 'Password',
-          cell: 'password',
-          type: 'input',
-          inputType: 'password',
-        },
-        {
-          columnDef: 'sshDeviceType',
-          header: 'Device Type',
-          cell: 'sshDeviceType',
-          type: 'input',
-          inputType: 'text',
-          required: true,
-        },
-      ] as MetadataColumn[],
-      list: [],
-    },
-    {
-      key: 'manekiSpecs',
-      title: 'Maneki Device Detector Specs',
-      description:
-        'Configure specs for Maneki, a network-based device detector.',
-      emptyMessage: 'No Maneki specs configured.',
-      addButtonLabel: 'Add Maneki Spec',
-      columns: [
-        {
-          columnDef: 'type',
-          header: 'Device Type',
-          cell: 'type',
-          type: 'select',
-          options: MANEKI_DEVICE_TYPE_OPTIONS,
-          defaultValue: 'android',
-          required: true,
-        },
-        {
-          columnDef: 'macAddress',
-          header: 'MAC Address',
-          cell: 'macAddress',
-          type: 'input',
-          inputType: 'text',
-          required: true,
-          pattern: '^([0-9A-Fa-f]{2}:){5}([0-9A-Fa-f]{2})$',
-          patternError:
-            'Invalid MAC address format. Expected: 00:11:22:33:44:55',
-        },
-      ] as MetadataColumn[],
-      list: [],
-    },
-  ];
-
-  ngOnInit() {
-    this.chips = this.chips.map((chip) => ({
-      ...chip,
-      entries: this.getDeviceDiscoveryEntries(this.deviceDiscovery, chip.key),
-    }));
-
-    this.metadataList = this.metadataList.map((item) => ({
-      ...item,
-      list: this.getDeviceDiscoveryMetadata(this.deviceDiscovery, item.key),
-    }));
-  }
-
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['deviceDiscovery']) {
-      this.updateInternalData(changes['deviceDiscovery'].currentValue);
-    }
-  }
-
-  updateInternalData(settings: DeviceDiscoverySettings) {
-    this.chips = this.chips.map((chip) => ({
-      ...chip,
-      entries: this.getDeviceDiscoveryEntries(settings, chip.key),
-    }));
-
-    this.metadataList = this.metadataList.map((item) => ({
-      ...item,
-      list: this.getDeviceDiscoveryMetadata(settings, item.key),
-    }));
-  }
+  readonly metadataList = computed(() => {
+    const settings = this.deviceDiscovery();
+    const list: Array<{
+      key: MetadataKey;
+      title: string;
+      description: string;
+      emptyMessage: string;
+      addButtonLabel: string;
+      columns: MetadataColumn[];
+      list: Array<Record<string, string> | ManekiSpec>;
+    }> = [
+      {
+        key: 'overSshDevices' as MetadataKey,
+        title: 'Over SSH Devices',
+        description: 'Define devices that the lab will connect to via SSH.',
+        emptyMessage: 'No SSH devices configured.',
+        addButtonLabel: 'Add SSH Device',
+        columns: [
+          {
+            columnDef: 'ipAddress',
+            header: 'IP Address',
+            cell: 'ipAddress',
+            type: 'input',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            columnDef: 'username',
+            header: 'Username',
+            cell: 'username',
+            type: 'input',
+            inputType: 'text',
+            required: true,
+          },
+          {
+            columnDef: 'password',
+            header: 'Password',
+            cell: 'password',
+            type: 'input',
+            inputType: 'password',
+          },
+          {
+            columnDef: 'sshDeviceType',
+            header: 'Device Type',
+            cell: 'sshDeviceType',
+            type: 'input',
+            inputType: 'text',
+            required: true,
+          },
+        ] as MetadataColumn[],
+        list: settings.overSshDevices || [],
+      },
+      {
+        key: 'manekiSpecs' as MetadataKey,
+        title: 'Maneki Device Detector Specs',
+        description:
+          'Configure specs for Maneki, a network-based device detector.',
+        emptyMessage: 'No Maneki specs configured.',
+        addButtonLabel: 'Add Maneki Spec',
+        columns: [
+          {
+            columnDef: 'type',
+            header: 'Device Type',
+            cell: 'type',
+            type: 'select',
+            options: MANEKI_DEVICE_TYPE_OPTIONS,
+            defaultValue: 'android',
+            required: true,
+          },
+          {
+            columnDef: 'macAddress',
+            header: 'MAC Address',
+            cell: 'macAddress',
+            type: 'input',
+            inputType: 'text',
+            required: true,
+            pattern: '^([0-9A-Fa-f]{2}:){5}([0-9A-Fa-f]{2})$',
+            patternError:
+              'Invalid MAC address format. Expected: 00:11:22:33:44:55',
+          },
+        ] as MetadataColumn[],
+        list: settings.manekiSpecs || [],
+      },
+    ];
+    return list;
+  });
 
   onChipChange(key: ChipKey, newEntries: string[]) {
     const newDeviceDiscovery = {
-      ...this.deviceDiscovery,
+      ...this.deviceDiscovery(),
       [key]: newEntries,
     };
-    this.deviceDiscovery = newDeviceDiscovery;
-    this.deviceDiscoveryChange.emit(this.deviceDiscovery);
+    this.deviceDiscoveryChange.emit(newDeviceDiscovery);
   }
 
   onMetadataChange(
@@ -225,11 +192,10 @@ export class DeviceDiscovery implements OnInit, OnChanges {
     newList: Array<Record<string, string> | ManekiSpec>,
   ) {
     const newDeviceDiscovery = {
-      ...this.deviceDiscovery,
+      ...this.deviceDiscovery(),
       [key]: newList,
     };
-    this.deviceDiscovery = newDeviceDiscovery;
-    this.deviceDiscoveryChange.emit(this.deviceDiscovery);
+    this.deviceDiscoveryChange.emit(newDeviceDiscovery);
   }
 
   onHasError(hasError: boolean, index: number) {
@@ -240,37 +206,5 @@ export class DeviceDiscovery implements OnInit, OnChanges {
     }
 
     this.hasError.emit(this.errorList.length > 0);
-  }
-
-  getDeviceDiscoveryEntries(
-    settings: DeviceDiscoverySettings,
-    key: ChipKey,
-  ): string[] {
-    switch (key) {
-      case 'monitoredDeviceUuids':
-        return settings.monitoredDeviceUuids;
-      case 'testbedUuids':
-        return settings.testbedUuids;
-      case 'miscDeviceUuids':
-        return settings.miscDeviceUuids;
-      case 'overTcpIps':
-        return settings.overTcpIps;
-      default:
-        return [];
-    }
-  }
-
-  getDeviceDiscoveryMetadata(
-    settings: DeviceDiscoverySettings,
-    key: MetadataKey,
-  ): Array<Record<string, string> | ManekiSpec> {
-    switch (key) {
-      case 'overSshDevices':
-        return settings.overSshDevices;
-      case 'manekiSpecs':
-        return settings.manekiSpecs;
-      default:
-        return [];
-    }
   }
 }

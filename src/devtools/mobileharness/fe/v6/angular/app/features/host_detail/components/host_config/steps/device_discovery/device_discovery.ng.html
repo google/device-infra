@@ -7,20 +7,20 @@
   </div>
   <div class="discovery-editor-content">
     <div class="space-y-10">
-      @for (chip of chips; track $index) {
+      @for (chip of chips(); track $index) {
         <div class="form-group">
           <h4 class="chip-title font-medium text-gray-700">{{ chip.title }}</h4>
           <p class="chip-desc text-gray-500">{{ chip.description }}</p>
           <app-entry-chip
             [entries]="chip.entries"
             (entriesChange)="onChipChange(chip.key, $event)"
-            [editable]="uiStatus.sectionStatus.editability?.editable ?? true"
+            [editable]="uiStatus().sectionStatus.editability?.editable ?? false"
             placeholder="Add new entry..."
           ></app-entry-chip>
         </div>
       }
 
-      @for (metadata of metadataList; track $index) {
+      @for (metadata of metadataList(); track $index) {
         <div>
           <h4 class="chip-title font-medium text-gray-700">{{ metadata.title }}</h4>
           <p class="chip-desc text-gray-500">{{ metadata.description }}</p>
@@ -30,7 +30,7 @@
             [columns]="metadata.columns"
             [metadataList]="metadata.list"
             (metadataListChange)="onMetadataChange(metadata.key, $event)"
-            [uiStatus]="uiStatus"
+            [uiStatus]="uiStatus()"
             (hasError)="onHasError($event, $index)"
           ></app-metadata-list>
         </div>

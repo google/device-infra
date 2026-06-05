@@ -1,5 +1,5 @@
 <div class="wifi-container">
-  @if (type === 'device' && workflow === 'wizard') {
+  @if (type() === 'device' && workflow() === 'wizard') {
     <h3 class="font-semibold text-gray-800">Wi-Fi Configuration</h3>
     <p class="font-margin text-gray-600">
       Would you like to set up a default Wi-Fi network for this device? <br />
@@ -13,7 +13,7 @@
     <label class="toggle-switch-label">
       <div class="toggle-switch-text-container">
         <span class="font-medium text-gray-800">Enable Default Wi-Fi</span>
-        @if (type === 'device') {
+        @if (type() === 'device') {
           <p class="text-xs text-gray-500">
             This sets the default network for the device. Tests may still connect to other networks
             as needed. Disabling this does not block the device's Wi-Fi capability.
@@ -23,7 +23,7 @@
       <div class="toggle-switch-icon-container">
         <toggle-switch
           color="#0b57d0"
-          [disabled]="!uiStatus.editability?.editable"
+          [disabled]="!(uiStatus().editability?.editable ?? false)"
           [checked]="wifiEnabled()"
           (checkedChange)="onWifiEnabledChange()"
         ></toggle-switch>
@@ -45,7 +45,7 @@
                   mat-button
                   class="select-network-btn"
                   (click)="toggleRecommendations()"
-                  [disabled]="!uiStatus.editability?.editable"
+                  [disabled]="!(uiStatus().editability?.editable ?? false)"
                 >
                   <mat-icon>format_list_bulleted</mat-icon>
                   Select Network
@@ -60,10 +60,10 @@
                     id="wifi-ssid"
                     type="text"
                     [(ngModel)]="wifi.ssid"
-                    [disabled]="!uiStatus.editability?.editable"
+                    [disabled]="!(uiStatus().editability?.editable ?? false)"
                     placeholder="Enter SSID..."
                   />
-                  @if (wifi.ssid && uiStatus.editability?.editable) {
+                  @if (wifi.ssid && (uiStatus().editability?.editable ?? false)) {
                     <button
                       mat-icon-button
                       matSuffix
@@ -85,7 +85,7 @@
                     id="wifi-psk"
                     [type]="passwordVisible() ? 'text' : 'password'"
                     [(ngModel)]="wifi.psk"
-                    [disabled]="!uiStatus.editability?.editable"
+                    [disabled]="!(uiStatus().editability?.editable ?? false)"
                     placeholder="Leave empty for open networks"
                   />
                   <button
@@ -94,7 +94,7 @@
                     class="input-suffix-btn"
                     (click)="togglePasswordVisibility()"
                     [matTooltip]="passwordVisible() ? 'Hide Password' : 'Show Password'"
-                    [disabled]="!uiStatus.editability?.editable"
+                    [disabled]="!(uiStatus().editability?.editable ?? false)"
                   >
                     <mat-icon>{{ passwordVisible() ? 'visibility' : 'visibility_off' }}</mat-icon>
                   </button>
@@ -107,7 +107,7 @@
                 <label class="container-flex">
                   <toggle-switch
                     color="#0b57d0"
-                    [disabled]="!uiStatus.editability?.editable"
+                    [disabled]="!(uiStatus().editability?.editable ?? false)"
                     [checked]="wifi.scanSsid"
                     (checkedChange)="onWifiScanSsidChange($event)"
                   ></toggle-switch>
@@ -157,7 +157,7 @@
                   <button
                     class="wifi-rec-item"
                     (click)="applyRecommendation(net)"
-                    [disabled]="!uiStatus.editability?.editable"
+                    [disabled]="!(uiStatus().editability?.editable ?? false)"
                   >
                     <div class="rec-item-content">
                       <mat-icon class="wifi-icon">wifi</mat-icon>

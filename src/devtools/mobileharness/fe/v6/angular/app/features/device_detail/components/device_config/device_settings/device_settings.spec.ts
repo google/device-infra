@@ -13,6 +13,7 @@ import {of, Subject} from 'rxjs';
 import {
   ConfigSection,
   type DeviceConfig,
+  type GetDeviceConfigResult,
   type StabilitySettings,
   type UpdateDeviceConfigResult,
   type WifiConfig,
@@ -30,9 +31,18 @@ import {DeviceSettings} from './device_settings';
 describe('Device Settings Component', () => {
   let fakeConfigService: FakeConfigService;
   let fakeDeviceConfigStateService: jasmine.SpyObj<DeviceConfigStateService>;
+  let deviceConfigResponse: GetDeviceConfigResult;
 
   beforeEach(async () => {
     fakeConfigService = new FakeConfigService();
+    deviceConfigResponse = {
+      deviceConfig: {},
+      isHostManaged: false,
+      uiStatus: {},
+    };
+    spyOn(fakeConfigService, 'getDeviceConfig').and.callFake(() =>
+      of(deviceConfigResponse),
+    );
     spyOn(fakeConfigService, 'checkDeviceWritePermission').and.returnValue(
       of({hasPermission: true, userName: 'test-user'}),
     );
@@ -321,6 +331,16 @@ describe('Device Settings Component', () => {
     expect(saveButton.disabled).toBeTrue();
     expect(discardButton.disabled).toBeTrue();
 
+    deviceConfigResponse = {
+      deviceConfig: {
+        dimensions: {
+          supported: [{name: 'existing', value: 'NEW_VALUE'}],
+          required: [],
+        },
+      },
+      isHostManaged: false,
+      uiStatus: {},
+    };
     updateConfigSubject.next({success: true});
     updateConfigSubject.complete();
     TestBed.inject(ApplicationRef).tick();
@@ -552,10 +572,21 @@ describe('Device Settings Component', () => {
       of({success: true}),
     );
     const dialog = TestBed.inject(MatDialog);
+    const successDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    successDialogRefSpy.afterClosed.and.returnValue(of('primary'));
     const dialogSpy = spyOn(dialog, 'open').and.returnValue(
-      jasmine.createSpyObj('MatDialogRef', ['afterClosed']),
+      successDialogRefSpy,
     );
 
+    deviceConfigResponse = {
+      deviceConfig: {
+        permissions: {owners: ['user1', 'user2']},
+      },
+      isHostManaged: false,
+      uiStatus: {},
+    };
     component.save();
 
     expect(fakeConfigService.updateDeviceConfig).toHaveBeenCalledWith({
@@ -568,6 +599,10 @@ describe('Device Settings Component', () => {
       universe: '',
     });
     expect(dialogSpy).toHaveBeenCalled(); // Success dialog
+    expect(component.newConfig().permissions?.owners).toEqual([
+      'user1',
+      'user2',
+    ]);
   });
 
   it('should update wifi in newConfig', () => {

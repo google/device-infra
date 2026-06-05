@@ -200,6 +200,56 @@ describe('deviceConfigUtils', () => {
     });
   });
 
+  it('should use default settings if settings is undefined', () => {
+    const partialConfig: Partial<DeviceConfig> = {
+      permissions: {},
+    };
+    const normalized = normalizeDeviceConfig(partialConfig);
+    expect(normalized.settings).toEqual({
+      maxConsecutiveFail: 5,
+      maxConsecutiveTest: 10000,
+    });
+  });
+
+  it('should use default settings if settings is null', () => {
+    const partialConfig = {
+      permissions: {},
+      settings: null,
+    } as unknown as Partial<DeviceConfig>;
+    const normalized = normalizeDeviceConfig(partialConfig);
+    expect(normalized.settings).toEqual({
+      maxConsecutiveFail: 5,
+      maxConsecutiveTest: 10000,
+    });
+  });
+
+  it('should use default settings if settings fields are null', () => {
+    const partialConfig = {
+      settings: {
+        maxConsecutiveFail: null,
+        maxConsecutiveTest: null,
+      },
+    } as unknown as Partial<DeviceConfig>;
+    const normalized = normalizeDeviceConfig(partialConfig);
+    expect(normalized.settings).toEqual({
+      maxConsecutiveFail: 5,
+      maxConsecutiveTest: 10000,
+    });
+  });
+
+  it('should merge partial settings with defaults', () => {
+    const partialConfig: Partial<DeviceConfig> = {
+      settings: {
+        maxConsecutiveFail: 3,
+      } as StabilitySettings,
+    };
+    const normalized = normalizeDeviceConfig(partialConfig);
+    expect(normalized.settings).toEqual({
+      maxConsecutiveFail: 3,
+      maxConsecutiveTest: 10000,
+    });
+  });
+
   it('should filter out dimensions with non-empty name but empty value', () => {
     const dimensions = {
       supported: [{name: 'name', value: ''}],

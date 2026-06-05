@@ -15,6 +15,7 @@ import {
   CheckHostWritePermissionResult,
   GetHostConfigResult,
   HostConfigSection,
+  UnlockHostPropertiesResponse,
   UpdateHostConfigRequest,
   UpdateHostConfigResult,
 } from '../../models/host_config_models';
@@ -127,9 +128,29 @@ export class FakeConfigService extends ConfigService {
       currentConfig = deepCopy(currentConfig);
     }
 
+    let uiStatus: Partial<DeviceConfigUiStatus> | undefined = {
+      permissions: {visible: true, editability: {editable: true}},
+      wifi: {visible: true, editability: {editable: true}},
+      dimensions: {visible: true, editability: {editable: true}},
+      settings: {visible: true, editability: {editable: true}},
+    };
+    if (request.id === 'WIFI_DIMENSIONS_ONLY_DEVICE') {
+      uiStatus = {
+        permissions: {visible: false},
+        wifi: {visible: true, editability: {editable: true}},
+        dimensions: {visible: true, editability: {editable: true}},
+        settings: {visible: false},
+      };
+    }
+
     if (request.section === ConfigSection.ALL) {
-      this.mockDeviceScenarios[scenarioIndex].config = deepCopy(request.config);
-      return of({success: true}).pipe(delay(1000));
+      const newConfig = deepCopy(request.config);
+      this.mockDeviceScenarios[scenarioIndex].config = newConfig;
+      return of({
+        success: true,
+        deviceConfig: newConfig,
+        uiStatus,
+      }).pipe(delay(1000));
     }
 
     switch (request.section) {
@@ -165,7 +186,11 @@ export class FakeConfigService extends ConfigService {
     }
 
     this.mockDeviceScenarios[scenarioIndex].config = currentConfig;
-    return of({success: true}).pipe(delay(1000));
+    return of({
+      success: true,
+      deviceConfig: currentConfig,
+      uiStatus,
+    }).pipe(delay(1000));
   }
 
   override getRecommendedWifi(): Observable<RecommendedWifi[]> {
@@ -299,6 +324,16 @@ export class FakeConfigService extends ConfigService {
 
     this.mockHostScenarios[scenarioIndex].hostConfigResult.hostConfig =
       updatedConfig;
+    return of({
+      success: true,
+      hostConfig: updatedConfig,
+      uiStatus: currentScenario.hostConfigResult.uiStatus,
+    }).pipe(delay(1000));
+  }
+
+  override unlockHostProperties(
+    hostName: string,
+  ): Observable<UnlockHostPropertiesResponse> {
     return of({success: true}).pipe(delay(1000));
   }
 }

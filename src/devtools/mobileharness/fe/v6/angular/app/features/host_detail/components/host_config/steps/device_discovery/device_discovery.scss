@@ -1,9 +1,10 @@
 @use '../../../../../../shared/styles/configuration' as config;
+@use '../../../../../../shared/styles/common';
 
 .discovery-editor-wrapper {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .discovery-editor-header {
@@ -16,13 +17,12 @@
   }
 }
 
-
-
-.discovery-editor-content{
+.discovery-editor-content {
+  @include common.shared-scrollbar-style();
   flex-grow: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: .5rem .25rem;
+  padding: 0.5rem 0.25rem;
 
   .form-group {
     margin-bottom: 1rem;
@@ -34,8 +34,8 @@
   }
 
   .chip-desc {
-    font-size: .875rem;
+    font-size: 0.875rem;
     line-height: 1.25rem;
-    margin: .25rem 0 .5rem 0;
+    margin: 0.25rem 0 0.5rem 0;
   }
 }

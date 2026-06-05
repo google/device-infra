@@ -4,7 +4,7 @@ import {
   Component,
   EventEmitter,
   Input,
-  OnInit,
+  input,
   Output,
 } from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
@@ -25,12 +25,12 @@ import type {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, MatIconModule],
 })
-export class ConfigMode implements OnInit {
-  @Input() workflow: 'wizard' | 'settings' = 'wizard';
-  @Input() uiStatus: PartStatus = {
+export class ConfigMode {
+  readonly workflow = input<'wizard' | 'settings'>('wizard');
+  readonly uiStatus = input<PartStatus>({
     visible: true,
     editability: {editable: true},
-  };
+  });
 
   @Input() mode: DeviceConfigMode = 'PER_DEVICE';
   @Output() readonly modeChange = new EventEmitter<string>();

@@ -71,6 +71,8 @@
       margin: 1.5rem 1.5rem 0; // Added margin to compensate for removed padding from parent
       font-weight: 500;
       flex-shrink: 0;
+      height: 48px;
+      box-sizing: border-box;
 
       mat-icon {
         font-size: 1rem;
@@ -78,9 +80,23 @@
         width: auto;
         height: auto;
       }
+
+      .unlock-button {
+        margin-left: auto;
+        color: #0b57d0;
+
+        &:hover {
+          background-color: rgba(11, 87, 208, 0.08);
+        }
+
+        mat-icon {
+          margin-right: 0;
+        }
+      }
     }
 
     .main-container {
+      @include common.shared-scrollbar-style();
       @extend .config-layout-content;
 
       .settings-title {

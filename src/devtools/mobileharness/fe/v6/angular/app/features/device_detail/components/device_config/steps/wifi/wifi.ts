@@ -6,6 +6,7 @@ import {
   EventEmitter,
   inject,
   Input,
+  input,
   OnChanges,
   OnInit,
   Output,
@@ -66,13 +67,12 @@ import {ToggleSwitch} from '../../../../../../shared/components/toggle_switch/to
 export class Wifi implements OnInit, OnChanges {
   private readonly configService = inject(CONFIG_SERVICE);
 
-  @Input() type: 'device' | 'host' = 'device';
-  @Input() workflow: 'wizard' | 'settings' = 'wizard';
-  @Input()
-  uiStatus: PartStatus = {
+  readonly type = input<'device' | 'host'>('device');
+  readonly workflow = input<'wizard' | 'settings'>('wizard');
+  readonly uiStatus = input<PartStatus>({
     visible: true,
     editability: {editable: true},
-  };
+  });
 
   @Input() wifi = {type: 'none', ssid: 'GoogleGuest', psk: '', scanSsid: false};
   @Output() readonly wifiChange = new EventEmitter<{}>();
@@ -96,7 +96,8 @@ export class Wifi implements OnInit, OnChanges {
     this.isLoading.set(true);
     this.configService
       .getRecommendedWifi()
-      .pipe(finalize(() => {
+      .pipe(
+        finalize(() => {
           this.isLoading.set(false);
         }),
       )

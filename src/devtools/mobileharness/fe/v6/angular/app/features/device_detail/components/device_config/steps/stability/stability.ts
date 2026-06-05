@@ -1,5 +1,12 @@
 import {CommonModule} from '@angular/common';
-import {ChangeDetectionStrategy, Component, EventEmitter, Input, OnInit, Output} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  EventEmitter,
+  Input,
+  input,
+  Output,
+} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {MatIconModule} from '@angular/material/icon';
 import {MatInputModule} from '@angular/material/input';
@@ -25,25 +32,24 @@ import type {PartStatus} from '../../../../../../core/models/host_config_models'
     MatTooltipModule,
   ],
 })
-export class Stability implements OnInit {
-  @Input() type: 'device'|'host' = 'device';
-  @Input()
-  uiStatus: PartStatus = {
+export class Stability {
+  readonly type = input<'device' | 'host'>('device');
+  readonly uiStatus = input<PartStatus>({
     visible: true,
     editability: {editable: true},
-  };
+  });
 
-  @Input() title = 'Stability & Reboot';
-  @Input() hostTooltipText = '';
+  readonly title = input<string>('Stability & Reboot');
+  readonly hostTooltipText = input<string>('');
 
   @Input()
-  settings: {maxConsecutiveFail: number; maxConsecutiveTest: number;} = {
+  settings: {maxConsecutiveFail: number; maxConsecutiveTest: number} = {
     maxConsecutiveFail: 5,
     maxConsecutiveTest: 10000,
   };
   @Output()
-  readonly settingsChange = new EventEmitter<
-      {maxConsecutiveFail: number; maxConsecutiveTest: number;}>();
-
-  ngOnInit() {}
+  readonly settingsChange = new EventEmitter<{
+    maxConsecutiveFail: number;
+    maxConsecutiveTest: number;
+  }>();
 }

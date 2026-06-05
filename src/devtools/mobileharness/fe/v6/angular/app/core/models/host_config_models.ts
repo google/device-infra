@@ -108,6 +108,29 @@ export declare interface HostPropertiesUiStatus {
   // keyed by their index in the HostConfig.hostProperties array.
   // Items NOT in this map are considered editable by default.
   itemEditabilityOverrides?: {[index: number]: Editability};
+
+  // Indicates if this section can be unlocked.
+  unlockable?: boolean;
+  // Prompt message to show to the user when they attempt to unlock.
+  unlockPrompt?: string;
+}
+
+/**
+ * Request to unlock host properties.
+ */
+export declare interface UnlockHostPropertiesRequest {
+  hostName: string;
+}
+
+/**
+ * Response of unlocking host properties.
+ */
+export declare interface UnlockHostPropertiesResponse {
+  success: boolean;
+  error?: {
+    code: string;
+    message?: string;
+  };
 }
 
 /**

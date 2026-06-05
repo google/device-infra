@@ -25,10 +25,7 @@
               [(ngModel)]="element[column.cell]"
               [required]="column.required || false"
               (input)="onMetadataChanged()"
-              [disabled]="
-                uiStatus.sectionStatus.editability?.editable === false ||
-                uiStatus.itemEditabilityOverrides?.[i]?.editable === false
-              "
+              [disabled]="isItemDisabled(i)"
               [attr.aria-label]="'Input field for ' + column.header"
             />
           </mat-form-field>
@@ -42,10 +39,7 @@
             <mat-select
               [(value)]="element[column.cell]"
               (selectionChange)="onMetadataChanged()"
-              [disabled]="
-                uiStatus.sectionStatus.editability?.editable === false ||
-                uiStatus.itemEditabilityOverrides?.[i]?.editable === false
-              "
+              [disabled]="isItemDisabled(i)"
             >
               @for (option of column.options; track $index) {
                 <mat-option [value]="option.value">{{ option.label }}</mat-option>
@@ -64,10 +58,7 @@
         mat-icon-button
         title="Remove metadata"
         (click)="remove(i)"
-        [disabled]="
-          uiStatus.sectionStatus.editability?.editable === false ||
-          uiStatus.itemEditabilityOverrides?.[i]?.editable === false
-        "
+        [disabled]="isItemDisabled(i)"
       >
         <mat-icon>delete</mat-icon>
       </button>
@@ -102,7 +93,7 @@
     [hidden]="metadataList && metadataList.length > 0"
   ></tr>
 </table>
-@if (uiStatus.sectionStatus.editability?.editable || false) {
+@if (uiStatus.sectionStatus.editability?.editable === true) {
   <button class="add-metadata-button" type="button" mat-button (click)="add()">
     <mat-icon>add</mat-icon>{{ addButtonLabel }}
   </button>

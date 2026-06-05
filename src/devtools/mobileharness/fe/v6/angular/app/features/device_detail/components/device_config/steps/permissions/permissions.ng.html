@@ -1,24 +1,24 @@
 <div class="permissions-container">
-  @if (title) {
+  @if (title()) {
     <h3 class="font-semibold text-gray-800">
-      {{ title }}
-      @if (type === 'host') {
-        <mat-icon class="help-icon" [matTooltip]="hostTooltipText"> help_outline </mat-icon>
+      {{ title() }}
+      @if (type() === 'host') {
+        <mat-icon class="help-icon" [matTooltip]="hostTooltipText()"> help_outline </mat-icon>
       }
     </h3>
   }
-  @if (description) {
+  @if (description()) {
     <p class="font-margin text-gray-600">
-      {{ description }}
+      {{ description() }}
     </p>
   }
 
-  <div [class]="type === 'device' && workflow === 'wizard' ? 'space-y-10' : 'space-y-8'">
-    @for (permission of PERMISSIONS; track permission.type) {
+  <div [class]="type() === 'device' && workflow() === 'wizard' ? 'space-y-10' : 'space-y-8'">
+    @for (permission of PERMISSIONS(); track permission.type) {
       <div>
         <h4
           class="title-medium"
-          [class]="type === 'device' && workflow === 'wizard' ? 'text-gray-800' : 'text-gray-700'"
+          [class]="type() === 'device' && workflow() === 'wizard' ? 'text-gray-800' : 'text-gray-700'"
         >
           {{ permission.title }}
           <mat-icon class="help-icon" [matTooltip]="permission.iconTitle">
@@ -27,7 +27,7 @@
         </h4>
         <p
           [class]="
-            type === 'device' && workflow === 'wizard'
+            type() === 'device' && workflow() === 'wizard'
               ? 'wizard-question-text'
               : 'definition-text text-gray-600'
           "

@@ -13,6 +13,7 @@ import {
 } from '../../models/device_config_models';
 import {UpdateHostConfigRequest} from '../../models/host_config_models';
 import {normalizeDeviceConfig} from '../../utils/device_config_utils';
+import {normalizeHostConfig} from '../../utils/host_config_utils';
 import {CONFIG_SERVICE} from './config_service';
 import {HttpConfigService} from './http_config_service';
 
@@ -148,5 +149,35 @@ describe('HttpConfigService', () => {
     );
     expect(req.request.method).toBe('POST');
     req.flush({success: true});
+  });
+
+  it('should unlock host properties via POST to :unlockHostProperties', () => {
+    service.unlockHostProperties('test-host').subscribe();
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/hosts/test-host/config:unlockHostProperties',
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({hostName: 'test-host'});
+    req.flush({success: true});
+  });
+
+  it('should retrieve a host config', () => {
+    const rawHostConfig = {
+      permissions: {hostAdmins: ['admin1']},
+    };
+    const mockHostConfigResult = {
+      hostConfig: rawHostConfig,
+    };
+
+    service.getHostConfig('test-host').subscribe((result) => {
+      expect(result.hostConfig).toEqual(normalizeHostConfig(rawHostConfig));
+    });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/hosts/test-host/config',
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush(mockHostConfigResult);
   });
 });

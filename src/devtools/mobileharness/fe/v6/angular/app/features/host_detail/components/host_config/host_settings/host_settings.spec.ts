@@ -11,14 +11,16 @@ import {
 } from '@angular/material/dialog/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
-import {of, Subject} from 'rxjs';
+import {Observable, of, Subject} from 'rxjs';
 
 import {
   type StabilitySettings,
   type WifiConfig,
 } from '../../../../../core/models/device_config_models';
 import {
+  type GetHostConfigResult,
   type HostConfig,
+  type HostConfigUiStatus,
   UpdateHostConfigResult,
 } from '../../../../../core/models/host_config_models';
 import {
@@ -39,6 +41,7 @@ describe('HostSettings Component', () => {
   } = {};
   let comp: HostSettings;
   let mockHostConfigStateService: jasmine.SpyObj<HostConfigStateService>;
+  let hostConfigResponse: GetHostConfigResult;
 
   beforeEach(async () => {
     mockConfigService = jasmine.createSpyObj<ConfigService>('ConfigService', [
@@ -50,9 +53,46 @@ describe('HostSettings Component', () => {
       'getHostConfig',
       'checkHostWritePermission',
       'updateHostConfig',
+      'unlockHostProperties',
     ]);
 
+    hostConfigResponse = {
+      hostConfig: {
+        permissions: {hostAdmins: []},
+        deviceConfigMode: 'PER_DEVICE',
+        deviceConfig: {
+          permissions: {owners: [], executors: []},
+          wifi: {type: 'none', ssid: '', psk: '', scanSsid: false},
+          dimensions: {supported: [], required: []},
+          settings: {maxConsecutiveFail: 5, maxConsecutiveTest: 10000},
+        },
+        hostProperties: [],
+        deviceDiscovery: {
+          monitoredDeviceUuids: [],
+          testbedUuids: [],
+          miscDeviceUuids: [],
+          overTcpIps: [],
+          overSshDevices: [],
+          manekiSpecs: [],
+        },
+      },
+      uiStatus: {
+        hostAdmins: {visible: true, editability: {editable: true}},
+        deviceConfigMode: {visible: true, editability: {editable: true}},
+        deviceConfig: {
+          sectionStatus: {visible: true, editability: {editable: true}},
+          subSections: {},
+        },
+        hostProperties: {
+          sectionStatus: {visible: true, editability: {editable: true}},
+        },
+        deviceDiscovery: {visible: true, editability: {editable: true}},
+      },
+    };
+
+    mockConfigService.getHostConfig.and.callFake(() => of(hostConfigResponse));
     mockConfigService.updateHostConfig.and.returnValue(of({success: true}));
+    mockConfigService.unlockHostProperties.and.returnValue(of({success: true}));
     mockConfigService.checkHostWritePermission.and.returnValue(
       of({hasPermission: true}),
     );
@@ -579,6 +619,16 @@ describe('HostSettings Component', () => {
       updateConfigSubject.asObservable(),
     );
 
+    hostConfigResponse.hostConfig!.deviceConfig = {
+      permissions: {owners: [], executors: []},
+      wifi: {type: 'none', ssid: '', psk: '', scanSsid: false},
+      dimensions: {
+        supported: [{name: 'existing', value: 'NEW_VALUE'}],
+        required: [],
+      },
+      settings: {maxConsecutiveFail: 5, maxConsecutiveTest: 10000},
+    };
+
     comp.save();
 
     expect(dialogSpy).toHaveBeenCalled();
@@ -649,6 +699,10 @@ describe('HostSettings Component', () => {
     const dialogSpy = spyOn(MatDialog.prototype, 'open').and.returnValue(
       confirmDialogRefSpy,
     );
+
+    hostConfigResponse.hostConfig!.hostProperties = [
+      {key: 'existing', value: 'NEW_VALUE'},
+    ];
 
     comp.save();
 
@@ -1038,41 +1092,166 @@ describe('HostSettings Component', () => {
     comp.hasPermission.set(true);
     TestBed.inject(ApplicationRef).tick();
 
-    comp.setActiveSectionEditibility('host-permissions');
+    comp.activeSection.set('host-permissions');
     expect(comp.activeSectionEditibility()).toEqual({
       editable: false,
       reason: 'r1',
     });
 
-    comp.setActiveSectionEditibility('config-mode');
+    comp.activeSection.set('config-mode');
     expect(comp.activeSectionEditibility()).toEqual({editable: true});
 
-    comp.setActiveSectionEditibility('permissions');
+    comp.activeSection.set('permissions');
     expect(comp.activeSectionEditibility()).toEqual({
       editable: false,
       reason: 'r2',
     });
 
-    comp.setActiveSectionEditibility('wifi');
+    comp.activeSection.set('wifi');
     expect(comp.activeSectionEditibility()).toEqual({
       editable: false,
       reason: 'r2',
     });
 
-    comp.setActiveSectionEditibility('device-discovery');
+    comp.activeSection.set('dimensions');
+    expect(comp.activeSectionEditibility()).toEqual({
+      editable: false,
+      reason: 'r2',
+    });
+
+    comp.activeSection.set('stability');
+    expect(comp.activeSectionEditibility()).toEqual({
+      editable: false,
+      reason: 'r2',
+    });
+
+    comp.activeSection.set('device-discovery');
     expect(comp.activeSectionEditibility()).toEqual({
       editable: false,
       reason: 'r3',
     });
 
-    comp.setActiveSectionEditibility('host-properties');
+    comp.activeSection.set('host-properties');
     expect(comp.activeSectionEditibility()).toEqual({editable: true});
 
-    comp.setActiveSectionEditibility('unknown');
+    comp.activeSection.set('unknown');
     expect(comp.activeSectionEditibility()).toEqual({
       editable: true,
       reason: '',
     });
+  });
+
+  it('should disable "Clear All" button when only some sections are editable', () => {
+    mockHostConfigStateService.getUiStatus.and.returnValue({
+      hostAdmins: {
+        visible: true,
+        editability: {editable: false, reason: 'r1'},
+      },
+      deviceConfigMode: {visible: true, editability: {editable: true}},
+      deviceConfig: {
+        sectionStatus: {visible: true, editability: {editable: true}},
+        subSections: {},
+      },
+      hostProperties: {sectionStatus: {visible: false}},
+      deviceDiscovery: {visible: false},
+    });
+
+    setupDialogData();
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostSettings, {
+        data: dialogData,
+      }),
+    );
+    comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    dialogRef = dialogOpener.componentInstance.dialogRef;
+    spyOn(dialogRef, 'close');
+    comp.hasPermission.set(true);
+    TestBed.inject(ApplicationRef).tick();
+
+    console.log('--- TEST: should disable "Clear All" button ---');
+    console.log('comp.testId:', comp.testId);
+    console.log('comp.hostName:', comp.hostName);
+    console.log('comp.uiStatus():', JSON.stringify(comp.uiStatus()));
+    console.log(
+      'comp.isAllVisibleSectionsEditable():',
+      comp.isAllVisibleSectionsEditable(),
+    );
+
+    expect(comp.isAllVisibleSectionsEditable()).toBeFalse();
+
+    const icon = Array.from(document.querySelectorAll('mat-icon')).find(
+      (el) => el.textContent?.trim() === 'more_vert',
+    );
+    expect(icon).toBeTruthy();
+    const menuTrigger = icon!.closest('button') as HTMLButtonElement;
+    expect(menuTrigger).toBeTruthy();
+    menuTrigger.click();
+    TestBed.inject(ApplicationRef).tick();
+
+    const clearButton = document
+      .querySelector('.config-menu-text')
+      ?.closest('button') as HTMLButtonElement;
+    console.log('clearButton found (should be disabled):', !!clearButton);
+    if (!clearButton) {
+      console.log('document.body.innerHTML:', document.body.innerHTML);
+    }
+    expect(clearButton).toBeTruthy();
+    expect(clearButton.disabled).toBeTrue();
+  });
+
+  it('should enable "Clear All" button when all visible sections are editable', () => {
+    mockHostConfigStateService.getUiStatus.and.returnValue({
+      hostAdmins: {visible: true, editability: {editable: true}},
+      deviceConfigMode: {visible: true, editability: {editable: true}},
+      deviceConfig: {
+        sectionStatus: {visible: true, editability: {editable: true}},
+        subSections: {},
+      },
+      hostProperties: {sectionStatus: {visible: false}},
+      deviceDiscovery: {visible: false},
+    });
+
+    setupDialogData();
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostSettings, {
+        data: dialogData,
+      }),
+    );
+    comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    dialogRef = dialogOpener.componentInstance.dialogRef;
+    spyOn(dialogRef, 'close');
+    comp.hasPermission.set(true);
+    TestBed.inject(ApplicationRef).tick();
+
+    console.log('--- TEST: should enable "Clear All" button ---');
+    console.log('comp.testId:', comp.testId);
+    console.log('comp.hostName:', comp.hostName);
+    console.log('comp.uiStatus():', JSON.stringify(comp.uiStatus()));
+    console.log(
+      'comp.isAllVisibleSectionsEditable():',
+      comp.isAllVisibleSectionsEditable(),
+    );
+
+    expect(comp.isAllVisibleSectionsEditable()).toBeTrue();
+
+    const icon = Array.from(document.querySelectorAll('mat-icon')).find(
+      (el) => el.textContent?.trim() === 'more_vert',
+    );
+    expect(icon).toBeTruthy();
+    const menuTrigger = icon!.closest('button') as HTMLButtonElement;
+    expect(menuTrigger).toBeTruthy();
+    menuTrigger.click();
+    TestBed.inject(ApplicationRef).tick();
+
+    const clearButton = document
+      .querySelector('.config-menu-text')
+      ?.closest('button') as HTMLButtonElement;
+    console.log('clearButton found (should be enabled):', !!clearButton);
+    if (!clearButton) {
+      console.log('document.body.innerHTML:', document.body.innerHTML);
+    }
+    expect(clearButton).toBeTruthy();
+    expect(clearButton.disabled).toBeFalse();
   });
 
   it('should detect dirty states correctly', () => {
@@ -1212,5 +1391,165 @@ describe('HostSettings Component', () => {
     comp.save(true); // selfLockout = true
 
     expect(dialogRef.close).toHaveBeenCalledWith(true);
+  });
+
+  it('should open ConfirmDialog with onConfirm callback and reload config on success', () => {
+    dialogData.hostName = 'test-host';
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostSettings, {
+        data: dialogData,
+      }),
+    );
+    const comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    TestBed.inject(ApplicationRef).tick();
+
+    // Set up UI status with unlockable host properties
+    comp.uiStatus.set({
+      hostAdmins: {visible: true, editability: {editable: true}},
+      deviceConfigMode: {visible: true, editability: {editable: true}},
+      deviceConfig: {
+        sectionStatus: {visible: true, editability: {editable: true}},
+        subSections: {},
+      },
+      hostProperties: {
+        sectionStatus: {
+          visible: true,
+          editability: {editable: false, reason: 'Managed by Config Pusher'},
+        },
+        unlockable: true,
+        unlockPrompt: 'Are you sure you want to unlock?',
+      },
+      deviceDiscovery: {visible: true, editability: {editable: true}},
+    });
+
+    const confirmDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    confirmDialogRefSpy.afterClosed.and.returnValue(of('primary')); // Confirm click
+    const dialog = TestBed.inject(MatDialog);
+    const dialogSpy = spyOn(dialog, 'open').and.returnValue(
+      confirmDialogRefSpy,
+    );
+
+    const mockUiStatus: HostConfigUiStatus = {
+      hostAdmins: {visible: true, editability: {editable: true}},
+      deviceConfigMode: {visible: true, editability: {editable: true}},
+      deviceConfig: {
+        sectionStatus: {visible: true, editability: {editable: true}},
+        subSections: {},
+      },
+      hostProperties: {
+        sectionStatus: {visible: true, editability: {editable: true}},
+      },
+      deviceDiscovery: {visible: true, editability: {editable: true}},
+    };
+    mockConfigService.getHostConfig.and.returnValue(
+      of({uiStatus: mockUiStatus}),
+    );
+    mockConfigService.unlockHostProperties.and.returnValue(of({success: true}));
+
+    comp.unlockHostProperties();
+
+    expect(dialogSpy).toHaveBeenCalledTimes(1);
+    const openCall = dialogSpy.calls.first();
+    expect(openCall).toBeTruthy();
+    expect(openCall!.args[0]).toBe(ConfirmDialog);
+
+    const dialogConfig = openCall!.args[1] as {
+      data: {
+        title: string;
+        content: string;
+        onConfirm: () => Observable<void>;
+      };
+    };
+    expect(dialogConfig.data.title).toBe('Unlock Host Properties');
+    expect(dialogConfig.data.onConfirm).toBeTruthy();
+
+    // Test the onConfirm callback
+    let onConfirmResult: void | undefined;
+    dialogConfig.data.onConfirm().subscribe((res: void) => {
+      onConfirmResult = res;
+    });
+
+    expect(mockConfigService.unlockHostProperties).toHaveBeenCalledWith(
+      'test-host',
+    );
+    expect(onConfirmResult).toBeUndefined(); // Should map to void successfully
+
+    // Reload config should be called since dialog closed with 'primary'
+    expect(mockConfigService.getHostConfig).toHaveBeenCalledWith('test-host');
+  });
+
+  it('should handle onConfirm API failure correctly', () => {
+    dialogData.hostName = 'test-host';
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostSettings, {
+        data: dialogData,
+      }),
+    );
+    const comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    TestBed.inject(ApplicationRef).tick();
+
+    // Set up UI status with unlockable host properties
+    comp.uiStatus.set({
+      hostAdmins: {visible: true, editability: {editable: true}},
+      deviceConfigMode: {visible: true, editability: {editable: true}},
+      deviceConfig: {
+        sectionStatus: {visible: true, editability: {editable: true}},
+        subSections: {},
+      },
+      hostProperties: {
+        sectionStatus: {
+          visible: true,
+          editability: {editable: false, reason: 'Managed by Config Pusher'},
+        },
+        unlockable: true,
+        unlockPrompt: 'Are you sure you want to unlock?',
+      },
+      deviceDiscovery: {visible: true, editability: {editable: true}},
+    });
+
+    const confirmDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    confirmDialogRefSpy.afterClosed.and.returnValue(of('secondary')); // Cancel click / failed
+    const dialog = TestBed.inject(MatDialog);
+    const dialogSpy = spyOn(dialog, 'open').and.returnValue(
+      confirmDialogRefSpy,
+    );
+
+    mockConfigService.unlockHostProperties.and.returnValue(
+      of({
+        success: false,
+        error: {code: 'VALIDATION_ERROR', message: 'Failed to unlock'},
+      }),
+    );
+
+    comp.unlockHostProperties();
+
+    const openCall = dialogSpy.calls.first();
+    const dialogConfig = openCall!.args[1] as {
+      data: {
+        onConfirm: () => Observable<void>;
+      };
+    };
+
+    // Test onConfirm callback failure
+    let errorThrown = false;
+    dialogConfig.data.onConfirm().subscribe({
+      next: () => {
+        fail('should have failed');
+      },
+      error: (err: Error) => {
+        errorThrown = true;
+        expect(err.message).toBe('Failed to unlock');
+      },
+    });
+
+    expect(errorThrown).toBeTrue();
+    expect(mockConfigService.unlockHostProperties).toHaveBeenCalledWith(
+      'test-host',
+    );
+    expect(mockConfigService.getHostConfig).not.toHaveBeenCalled();
   });
 });

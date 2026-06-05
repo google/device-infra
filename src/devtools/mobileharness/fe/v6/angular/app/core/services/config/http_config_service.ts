@@ -17,6 +17,7 @@ import {
   CheckHostWritePermissionResult,
   GetHostConfigResult,
   GetHostDefaultDeviceConfigResponse,
+  UnlockHostPropertiesResponse,
   UpdateHostConfigRequest,
   UpdateHostConfigResult,
 } from '../../models/host_config_models';
@@ -125,6 +126,15 @@ export class HttpConfigService extends ConfigService {
     return this.http.post<UpdateHostConfigResult>(
       `${this.apiUrl}/hosts/${request.hostName}/config:update`,
       request,
+    );
+  }
+
+  override unlockHostProperties(
+    hostName: string,
+  ): Observable<UnlockHostPropertiesResponse> {
+    return this.http.post<UnlockHostPropertiesResponse>(
+      `${this.apiUrl}/hosts/${hostName}/config:unlockHostProperties`,
+      {hostName},
     );
   }
 }

@@ -20,7 +20,8 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatTooltipModule} from '@angular/material/tooltip';
-import {finalize} from 'rxjs/operators';
+import {of, throwError} from 'rxjs';
+import {concatMap, finalize} from 'rxjs/operators';
 
 import {
   ConfigSection,
@@ -31,6 +32,7 @@ import {
   type HostConfig,
   HostConfigSection,
   type HostConfigUiStatus,
+  type PartStatus,
   type UpdateHostConfigRequest,
 } from '../../../../../core/models/host_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
@@ -47,6 +49,7 @@ import {Dialog} from '../../../../../shared/components/config_common/dialog/dial
 import {Footer} from '../../../../../shared/components/config_common/footer/footer';
 import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/confirm_dialog';
 import {useSaveInterceptors} from '../../../../../shared/composables/save_interceptors';
+import {SnackBarService} from '../../../../../shared/services/snackbar_service';
 import {objectUtils} from '../../../../../shared/utils/object_utils';
 import {Dimensions} from '../../../../device_detail/components/device_config/steps/dimensions/dimensions';
 import {Permissions} from '../../../../device_detail/components/device_config/steps/permissions/permissions';
@@ -88,6 +91,10 @@ import {HostProperties} from '../steps/host_properties/host_properties';
   ],
 })
 export class HostSettings implements OnInit {
+  readonly testId = Math.random();
+  constructor() {
+    console.log('HostSettings constructor called, testId =', this.testId);
+  }
   private readonly dialog = inject(MatDialog); // to open confirm dialog
   private readonly dialogRef = inject(MatDialogRef<HostSettings>);
   private readonly destroyRef = inject(DestroyRef);
@@ -99,6 +106,7 @@ export class HostSettings implements OnInit {
 
   private readonly configService = inject(CONFIG_SERVICE);
   private readonly hostConfigStateService = inject(HostConfigStateService);
+  private readonly snackBar = inject(SnackBarService);
 
   @Input() hostName = '';
   @Input() config?: HostConfig;
@@ -190,153 +198,223 @@ export class HostSettings implements OnInit {
     },
   ];
   activeSection = signal<string>('host-permissions');
-  activeSectionEditibility = signal<Editability>(
-    this.uiStatus().hostAdmins.editability || {editable: true},
-  );
 
-  readonly hostPermissionsUiStatus = computed(() => {
-    const status = {
-      hostAdmins: this.uiStatus().hostAdmins,
+  private getSectionEditability(section: string): Editability {
+    switch (section) {
+      case 'host-permissions':
+        return (
+          this.hostPermissionsUiStatus().hostAdmins.editability || {
+            editable: true,
+          }
+        );
+      case 'config-mode':
+        return this.configModeUiStatus().editability || {editable: true};
+      case 'permissions':
+        return this.permissionsUiStatus().editability || {editable: true};
+      case 'wifi':
+        return this.wifiUiStatus().editability || {editable: true};
+      case 'dimensions':
+        return (
+          this.dimensionsUiStatus().sectionStatus.editability || {
+            editable: true,
+          }
+        );
+      case 'stability':
+        return this.settingsUiStatus().editability || {editable: true};
+      case 'device-discovery':
+        return (
+          this.deviceDiscoveryUiStatus().sectionStatus.editability || {
+            editable: true,
+          }
+        );
+      case 'host-properties':
+        return (
+          this.hostPropertiesUiStatus().sectionStatus.editability || {
+            editable: true,
+          }
+        );
+      default:
+        return {editable: true, reason: ''};
+    }
+  }
+
+  readonly activeSectionEditibility = computed<Editability>(() => {
+    return this.getSectionEditability(this.activeSection());
+  });
+
+  private getVisibleLeafSectionIds(): string[] {
+    return this.navList
+      .filter((item) => item.visibility())
+      .flatMap((item) => {
+        if (item.type === 'item') {
+          return [item.id];
+        }
+        if (item.type === 'group') {
+          return (item.children ?? [])
+            .filter((child) => child.visibility())
+            .map((child) => child.id);
+        }
+        return [];
+      });
+  }
+
+  readonly isAllVisibleSectionsEditable = computed<boolean>(() => {
+    if (!this.hasPermission()) {
+      return false;
+    }
+    const leafSectionIds = this.getVisibleLeafSectionIds();
+    if (leafSectionIds.length === 0) {
+      return false;
+    }
+    return leafSectionIds.every(
+      (id) => this.getSectionEditability(id).editable,
+    );
+  });
+
+  private getPermissionOverriddenStatus(
+    status: PartStatus | undefined,
+  ): PartStatus {
+    const defaultStatus: PartStatus = {
+      visible: true,
+      editability: {editable: true},
     };
+    const currentStatus = status || defaultStatus;
+
     if (!this.hasPermission()) {
       return {
-        hostAdmins: {
-          ...status.hostAdmins,
-          editability: {
-            editable: false,
-            reason:
-              'You do not have permission to edit this host configuration.',
-          },
+        ...currentStatus,
+        editability: {
+          editable: false,
+          reason: 'You do not have permission to edit this host configuration.',
         },
       };
     }
-    return status;
+    return currentStatus;
+  }
+
+  private getDeviceConfigSectionEditability(): {
+    editable: boolean;
+    reason: string;
+  } {
+    const editability = this.uiStatus().deviceConfig.sectionStatus.editability;
+    if (!editability) {
+      return {
+        editable: false,
+        reason:
+          'Configuration editability status is unavailable. This section is read-only for safety.',
+      };
+    }
+    return {
+      editable: editability.editable === true,
+      reason: editability.reason || 'This section is not editable.',
+    };
+  }
+
+  readonly hostPermissionsUiStatus = computed(() => {
+    return {
+      hostAdmins: this.getPermissionOverriddenStatus(
+        this.uiStatus().hostAdmins,
+      ),
+    };
   });
 
   readonly configModeUiStatus = computed(() => {
-    const status = this.uiStatus().deviceConfigMode;
-    if (!this.hasPermission()) {
-      return {
-        ...status,
-        editability: {
-          editable: false,
-          reason: 'You do not have permission to edit this host configuration.',
-        },
-      };
-    }
-    return status;
-  });
-
-  readonly dimensionsUiStatus = computed(() => {
-    const status = {
-      sectionStatus: this.uiStatus().deviceConfig.sectionStatus,
-    };
-    if (!this.hasPermission()) {
-      return {
-        sectionStatus: {
-          ...status.sectionStatus,
-          editability: {
-            editable: false,
-            reason:
-              'You do not have permission to edit this host configuration.',
-          },
-        },
-      };
-    }
-    return status;
-  });
-
-  readonly deviceDiscoveryUiStatus = computed(() => {
-    const status = {
-      sectionStatus: this.uiStatus().deviceDiscovery,
-    };
-    if (!this.hasPermission()) {
-      return {
-        sectionStatus: {
-          ...status.sectionStatus,
-          editability: {
-            editable: false,
-            reason:
-              'You do not have permission to edit this host configuration.',
-          },
-        },
-      };
-    }
-    return status;
+    return this.getPermissionOverriddenStatus(this.uiStatus().deviceConfigMode);
   });
 
   readonly permissionsUiStatus = computed(() => {
-    const status = this.uiStatus().deviceConfig.subSections?.permissions || {
-      visible: true,
-      editability: {editable: true},
-    };
-    if (!this.hasPermission()) {
+    const parent = this.getDeviceConfigSectionEditability();
+    if (!parent.editable) {
       return {
-        ...status,
+        visible:
+          this.uiStatus().deviceConfig.subSections?.permissions?.visible ??
+          true,
         editability: {
           editable: false,
-          reason: 'You do not have permission to edit this host configuration.',
+          reason: parent.reason,
         },
       };
     }
-    return status;
+    return this.getPermissionOverriddenStatus(
+      this.uiStatus().deviceConfig.subSections?.permissions,
+    );
   });
 
   readonly wifiUiStatus = computed(() => {
-    const status = this.uiStatus().deviceConfig.subSections?.wifi || {
-      visible: true,
-      editability: {editable: true},
-    };
-    if (!this.hasPermission()) {
+    const parent = this.getDeviceConfigSectionEditability();
+    if (!parent.editable) {
       return {
-        ...status,
+        visible:
+          this.uiStatus().deviceConfig.subSections?.wifi?.visible ?? true,
         editability: {
           editable: false,
-          reason: 'You do not have permission to edit this host configuration.',
+          reason: parent.reason,
         },
       };
     }
-    return status;
+    return this.getPermissionOverriddenStatus(
+      this.uiStatus().deviceConfig.subSections?.wifi,
+    );
+  });
+
+  readonly dimensionsUiStatus = computed(() => {
+    const parent = this.getDeviceConfigSectionEditability();
+    if (!parent.editable) {
+      return {
+        sectionStatus: {
+          visible:
+            this.uiStatus().deviceConfig.subSections?.dimensions?.visible ??
+            true,
+          editability: {
+            editable: false,
+            reason: parent.reason,
+          },
+        },
+      };
+    }
+    return {
+      sectionStatus: this.getPermissionOverriddenStatus(
+        this.uiStatus().deviceConfig.subSections?.dimensions,
+      ),
+    };
   });
 
   readonly settingsUiStatus = computed(() => {
-    const status = this.uiStatus().deviceConfig.subSections?.settings || {
-      visible: true,
-      editability: {editable: true},
-    };
-    if (!this.hasPermission()) {
+    const parent = this.getDeviceConfigSectionEditability();
+    if (!parent.editable) {
       return {
-        ...status,
+        visible:
+          this.uiStatus().deviceConfig.subSections?.settings?.visible ?? true,
         editability: {
           editable: false,
-          reason: 'You do not have permission to edit this host configuration.',
+          reason: parent.reason,
         },
       };
     }
-    return status;
+    return this.getPermissionOverriddenStatus(
+      this.uiStatus().deviceConfig.subSections?.settings,
+    );
+  });
+
+  readonly deviceDiscoveryUiStatus = computed(() => {
+    return {
+      sectionStatus: this.getPermissionOverriddenStatus(
+        this.uiStatus().deviceDiscovery,
+      ),
+    };
   });
 
   readonly hostPropertiesUiStatus = computed(() => {
-    const defaultSectionStatus = {
-      visible: true,
-      editability: {editable: true},
-    };
-    const noPermissionEditability = {
-      editable: false,
-      reason: 'You do not have permission to edit this host configuration.',
-    };
-
     const currentStatus = this.uiStatus().hostProperties;
-
-    if (!this.hasPermission()) {
-      const sectionStatus = currentStatus?.sectionStatus
-        ? {...currentStatus.sectionStatus, editability: noPermissionEditability}
-        : {visible: true, editability: noPermissionEditability};
-      return {sectionStatus};
-    }
-
-    const sectionStatus = currentStatus?.sectionStatus || defaultSectionStatus;
-    return {sectionStatus};
+    const sectionStatus = this.getPermissionOverriddenStatus(
+      currentStatus?.sectionStatus,
+    );
+    return {
+      sectionStatus,
+      itemEditabilityOverrides: currentStatus?.itemEditabilityOverrides,
+      unlockable: currentStatus?.unlockable,
+      unlockPrompt: currentStatus?.unlockPrompt,
+    };
   });
 
   readonly deviceConfig = signal<DeviceConfig>({
@@ -435,12 +513,30 @@ export class HostSettings implements OnInit {
   hasPermission = signal<boolean>(false);
 
   ngOnInit() {
+    console.log(
+      'HostSettings.ngOnInit:',
+      this.testId,
+      'dialogData present:',
+      !!this.dialogData,
+    );
     if (this.dialogData) {
+      console.log(
+        'HostSettings.ngOnInit:',
+        this.testId,
+        'dialogData.hostName =',
+        this.dialogData.hostName,
+      );
       this.hostName = this.dialogData.hostName || this.hostName;
       if (this.dialogData.config) {
         this.config = this.dialogData.config;
       }
     }
+    console.log(
+      'HostSettings.ngOnInit:',
+      this.testId,
+      'hostName set to:',
+      this.hostName,
+    );
 
     this.uiStatus.set(this.hostConfigStateService.getUiStatus(this.hostName));
 
@@ -463,8 +559,6 @@ export class HostSettings implements OnInit {
 
   setActiveSection(event: Event, section: string) {
     event.preventDefault();
-
-    this.setActiveSectionEditibility(section);
 
     if (
       section !== this.activeSection() &&
@@ -499,54 +593,6 @@ export class HostSettings implements OnInit {
     }
   }
 
-  setActiveSectionEditibility(section: string) {
-    let editability: Editability = {editable: true};
-
-    switch (section) {
-      case 'host-permissions':
-        editability = this.uiStatus().hostAdmins.editability || {
-          editable: true,
-        };
-        break;
-      case 'config-mode':
-        editability = this.uiStatus().deviceConfigMode.editability || {
-          editable: true,
-        };
-        break;
-      case 'permissions':
-      case 'wifi':
-      case 'dimensions':
-      case 'stability':
-        editability = this.uiStatus().deviceConfig.sectionStatus
-          .editability || {
-          editable: true,
-        };
-        break;
-      case 'device-discovery':
-        editability = this.uiStatus().deviceDiscovery.editability || {
-          editable: true,
-        };
-        break;
-      case 'host-properties':
-        editability = this.uiStatus().hostProperties.sectionStatus
-          .editability || {
-          editable: true,
-        };
-        break;
-      default:
-        editability = {editable: true, reason: ''};
-    }
-
-    if (!this.hasPermission()) {
-      editability = {
-        editable: false,
-        reason: 'You do not have permission to edit this host configuration.',
-      };
-    }
-
-    this.activeSectionEditibility.set(editability);
-  }
-
   visibleSections() {
     return this.navList.filter((item) => item.visibility());
   }
@@ -566,7 +612,6 @@ export class HostSettings implements OnInit {
     }
 
     this.activeSection.set(sectionId);
-    this.setActiveSectionEditibility(this.activeSection());
   }
 
   initializeData() {
@@ -659,7 +704,6 @@ export class HostSettings implements OnInit {
 
   handlePermissionChange(result: {hasPermission: boolean}) {
     this.hasPermission.set(result.hasPermission);
-    this.setActiveSectionEditibility(this.activeSection());
   }
 
   resetConfig() {
@@ -842,18 +886,81 @@ export class HostSettings implements OnInit {
           return;
         }
 
-        this.originalHostConfig = objectUtils.deepCopy(
-          this.hostConfig(),
-        ) as HostConfig;
-        this.originalDeviceConfig = objectUtils.deepCopy(
-          this.deviceConfig(),
-        ) as DeviceConfig;
-
-        this.success(selfLockout);
+        this.reloadConfig(true, selfLockout);
       });
   }
 
   discard() {
     this.resetConfig();
+  }
+
+  unlockHostProperties() {
+    const unlockPrompt = this.uiStatus().hostProperties.unlockPrompt;
+    if (!unlockPrompt) return;
+
+    const dialogData = {
+      title: 'Unlock Host Properties',
+      content: unlockPrompt,
+      type: 'warning',
+      primaryButtonLabel: 'Unlock',
+      secondaryButtonLabel: 'Cancel',
+      onConfirm: () => {
+        return this.configService.unlockHostProperties(this.hostName).pipe(
+          concatMap((response) => {
+            if (response.success) {
+              return of(undefined);
+            } else {
+              this.snackBar.showError(
+                response.error?.message || 'Failed to unlock host properties.',
+              );
+              return throwError(() => new Error(response.error?.message));
+            }
+          }),
+        );
+      },
+    };
+
+    const confirmDialogRef = this.dialog.open(ConfirmDialog, {
+      data: dialogData,
+      disableClose: true,
+    });
+
+    confirmDialogRef
+      .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((result) => {
+        if (result === 'primary') {
+          this.reloadConfig();
+        }
+      });
+  }
+
+  private reloadConfig(showSuccess = false, selfLockout = false) {
+    this.configService.getHostConfig(this.hostName).subscribe({
+      next: (result) => {
+        if (result) {
+          if (result.uiStatus) {
+            this.uiStatus.set(result.uiStatus);
+            this.hostConfigStateService.setUiStatus(
+              this.hostName,
+              result.uiStatus,
+            );
+          }
+          if (result.hostConfig) {
+            this.config = result.hostConfig;
+            this.initializeData();
+          }
+        }
+        if (showSuccess) {
+          this.success(selfLockout);
+        }
+      },
+      error: (err) => {
+        this.snackBar.showError('Failed to reload configuration.');
+        if (showSuccess) {
+          this.success(selfLockout);
+        }
+      },
+    });
   }
 }

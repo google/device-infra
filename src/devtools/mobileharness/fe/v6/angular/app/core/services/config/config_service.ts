@@ -11,6 +11,7 @@ import {
 import {
   CheckHostWritePermissionResult,
   GetHostConfigResult,
+  UnlockHostPropertiesResponse,
   UpdateHostConfigRequest,
   UpdateHostConfigResult,
 } from '../../models/host_config_models';
@@ -102,4 +103,13 @@ export abstract class ConfigService {
   abstract updateHostConfig(
     request: UpdateHostConfigRequest,
   ): Observable<UpdateHostConfigResult>;
+
+  /**
+   * Unlocks the host properties for a specific host by disabling Config Pusher management.
+   * @param hostName The name of the host.
+   * @returns An Observable emitting the result of the unlock operation.
+   */
+  abstract unlockHostProperties(
+    hostName: string,
+  ): Observable<UnlockHostPropertiesResponse>;
 }

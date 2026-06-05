@@ -5,17 +5,17 @@
   height="90vh"
   footerType="none"
 >
-  <ng-content header-button>
+  <ng-container header-button>
     <button mat-icon-button [matMenuTriggerFor]="menu">
       <mat-icon>more_vert</mat-icon>
     </button>
     <mat-menu #menu="matMenu">
-      <button mat-menu-item (click)="reset()" [disabled]="!hasPermission()">
+      <button mat-menu-item (click)="reset()" [disabled]="!isAllVisibleSectionsEditable()">
         <mat-icon>delete_sweep</mat-icon>
         <span class="config-menu-text">Clear All & Start Over</span>
       </button>
     </mat-menu>
-  </ng-content>
+  </ng-container>
 
   <div class="content-container">
     <nav class="nav-bar">
@@ -61,6 +61,16 @@
           <span>
             {{ activeSectionEditibility().reason || 'Current selected section are not editable.' }}
           </span>
+          @if (activeSection() === 'host-properties' && uiStatus().hostProperties.unlockable) {
+            <button
+              mat-icon-button
+              class="unlock-button"
+              matTooltip="Unlock Host Properties"
+              (click)="unlockHostProperties()"
+            >
+              <mat-icon>lock_open</mat-icon>
+            </button>
+          }
         </div>
       }
       <div class="main-container">

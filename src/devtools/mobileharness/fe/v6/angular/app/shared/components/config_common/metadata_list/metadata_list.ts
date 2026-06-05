@@ -42,7 +42,7 @@ export interface MetadataColumn {
 }
 
 declare interface EditabilityOverride {
-  [index: number]: {editable: boolean; reason?: string};
+  [index: number]: {editable?: boolean; reason?: string};
 }
 
 /**
@@ -128,6 +128,21 @@ export class MetadataList<T extends Record<keyof T, string>>
   displayedColumns: string[] = [];
 
   errorMessage: string[] = [];
+
+  isItemDisabled(index: number): boolean {
+    const sectionDisabled = !(
+      this.uiStatus.sectionStatus.editability?.editable ?? false
+    );
+    const overrides = this.uiStatus.itemEditabilityOverrides;
+
+    if (!overrides) return sectionDisabled;
+    const override = overrides[index];
+
+    if (!override) return sectionDisabled;
+    const itemOverrideDisabled = !(override.editable ?? false);
+
+    return sectionDisabled || itemOverrideDisabled;
+  }
 
   ngOnInit() {
     this.updateColumns();

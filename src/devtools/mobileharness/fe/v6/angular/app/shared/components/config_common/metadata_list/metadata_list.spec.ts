@@ -164,4 +164,152 @@ describe('MetadataList Component', () => {
     expect(inputs.length).toBe(4);
     expect(activeElement).toBe(inputs[2]);
   });
+
+  describe('editability', () => {
+    beforeEach(async () => {
+      const addButton = fixture.nativeElement.querySelector(
+        '.add-metadata-button',
+      ) as HTMLButtonElement;
+      expect(addButton).toBeTruthy();
+
+      addButton.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      addButton.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    });
+
+    it('debug: should have metadataList', () => {
+      expect(component.metadataList.length).toBe(2);
+    });
+
+    it('debug: should have columns', () => {
+      expect(component.columns.length).toBe(2);
+      expect(component.displayedColumns.length).toBe(3); // 2 + 'action'
+    });
+
+    it('debug: should have table rows', () => {
+      const rows = fixture.nativeElement.querySelectorAll('.metadata-list-row');
+      expect(rows.length).toBe(2);
+    });
+
+    it('should enable all items when section is editable and no overrides', async () => {
+      component.uiStatus = {
+        sectionStatus: {visible: true, editability: {editable: true}},
+      };
+      fixture.changeDetectorRef.markForCheck();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const inputs = fixture.nativeElement.querySelectorAll('input');
+      expect(inputs.length).toBe(4); // 2 items * 2 columns
+      inputs.forEach((input: HTMLInputElement) => {
+        expect(input.disabled).toBeFalse();
+      });
+    });
+
+    it('should disable all items when section is not editable', async () => {
+      fixture.componentRef.setInput('uiStatus', {
+        sectionStatus: {visible: true, editability: {editable: false}},
+      });
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const inputs = fixture.nativeElement.querySelectorAll('input');
+      expect(inputs.length).toBe(4);
+      inputs.forEach((input: HTMLInputElement) => {
+        expect(input.disabled).toBeTrue();
+      });
+
+      const buttons = fixture.nativeElement.querySelectorAll('button');
+      expect(buttons.length).toBe(2); // Only 2 remove buttons, add button should be hidden
+      buttons.forEach((button: HTMLButtonElement) => {
+        expect(button.disabled).toBeTrue();
+      });
+    });
+
+    it('should disable specific item when it has editable false override', async () => {
+      fixture.componentRef.setInput('uiStatus', {
+        sectionStatus: {visible: true, editability: {editable: true}},
+        itemEditabilityOverrides: {
+          0: {editable: false},
+        },
+      });
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const inputs = fixture.nativeElement.querySelectorAll('input');
+      expect(inputs.length).toBe(4);
+      // Item 0 (inputs 0 and 1) should be disabled
+      expect(inputs[0].disabled).toBeTrue();
+      expect(inputs[1].disabled).toBeTrue();
+      // Item 1 (inputs 2 and 3) should be enabled
+      expect(inputs[2].disabled).toBeFalse();
+      expect(inputs[3].disabled).toBeFalse();
+    });
+
+    it('should disable specific item when it has empty override (simulating proto3 omission of false)', async () => {
+      fixture.componentRef.setInput('uiStatus', {
+        sectionStatus: {visible: true, editability: {editable: true}},
+        itemEditabilityOverrides: {
+          0: {}, // empty override
+        },
+      });
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const inputs = fixture.nativeElement.querySelectorAll('input');
+      expect(inputs.length).toBe(4);
+      // Item 0 (inputs 0 and 1) should be disabled
+      expect(inputs[0].disabled).toBeTrue();
+      expect(inputs[1].disabled).toBeTrue();
+      // Item 1 (inputs 2 and 3) should be enabled
+      expect(inputs[2].disabled).toBeFalse();
+      expect(inputs[3].disabled).toBeFalse();
+    });
+
+    it('should enable specific item when it has editable true override', async () => {
+      fixture.componentRef.setInput('uiStatus', {
+        sectionStatus: {visible: true, editability: {editable: true}},
+        itemEditabilityOverrides: {
+          0: {editable: true},
+        },
+      });
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const inputs = fixture.nativeElement.querySelectorAll('input');
+      expect(inputs.length).toBe(4);
+      inputs.forEach((input: HTMLInputElement) => {
+        expect(input.disabled).toBeFalse();
+      });
+    });
+
+    it('should disable item even with editable true override if section is not editable', async () => {
+      fixture.componentRef.setInput('uiStatus', {
+        sectionStatus: {visible: true, editability: {editable: false}},
+        itemEditabilityOverrides: {
+          0: {editable: true},
+        },
+      });
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const inputs = fixture.nativeElement.querySelectorAll('input');
+      expect(inputs.length).toBe(4);
+      inputs.forEach((input: HTMLInputElement) => {
+        expect(input.disabled).toBeTrue();
+      });
+    });
+  });
 });

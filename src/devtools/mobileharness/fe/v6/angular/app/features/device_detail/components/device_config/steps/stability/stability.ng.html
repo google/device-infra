@@ -1,8 +1,8 @@
 <div class="stability-container">
   <h3 class="title font-semibold text-gray-800">
-    {{ title }}
-    @if (type === 'host') {
-      <mat-icon class="help-icon" [matTooltip]="hostTooltipText"> help_outline </mat-icon>
+    {{ title() }}
+    @if (type() === 'host') {
+      <mat-icon class="help-icon" [matTooltip]="hostTooltipText()"> help_outline </mat-icon>
     }
   </h3>
   <p class="description">
@@ -20,7 +20,7 @@
           matInput
           type="number"
           [(ngModel)]="settings.maxConsecutiveFail"
-          [disabled]="!uiStatus.editability?.editable"
+          [disabled]="!(uiStatus().editability?.editable ?? false)"
           aria-labelledby="max-consecutive-failures-before-reboot-label"
         />
       </mat-form-field>
@@ -39,7 +39,7 @@
           matInput
           type="number"
           [(ngModel)]="settings.maxConsecutiveTest"
-          [disabled]="!uiStatus.editability?.editable"
+          [disabled]="!(uiStatus().editability?.editable ?? false)"
           aria-labelledby="max-tests-between-reboots-label"
         />
       </mat-form-field>

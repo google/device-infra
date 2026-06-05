@@ -36,8 +36,14 @@ export function normalizeDeviceConfig(
       ...(config.dimensions || {}),
     },
     settings: {
-      ...DEFAULT_DEVICE_CONFIG.settings,
-      ...(config.settings || {}),
+      maxConsecutiveFail:
+        config.settings?.maxConsecutiveFail ??
+        DEFAULT_DEVICE_CONFIG.settings?.maxConsecutiveFail ??
+        5,
+      maxConsecutiveTest:
+        config.settings?.maxConsecutiveTest ??
+        DEFAULT_DEVICE_CONFIG.settings?.maxConsecutiveTest ??
+        10000,
     } as StabilitySettings,
   };
 }
