@@ -354,6 +354,15 @@ public abstract class XtsJobCreator {
                           sessionRequestInfo.enableTokenSharding()
                               ? Stream.of("--enable-token-sharding")
                               : Stream.empty(),
+                          sessionRequestInfo.businessLogicUrl().isPresent()
+                              ? Stream.of(
+                                  String.format(
+                                      "--business-logic-url %s",
+                                      sessionRequestInfo.businessLogicUrl().get()))
+                              : Stream.empty(),
+                          sessionRequestInfo.ignoreBusinessLogicFailure()
+                              ? Stream.of("--ignore-business-logic-failure")
+                              : Stream.empty(),
                           sessionRequestInfo.moduleArgs().stream()
                               .map(arg -> arg.replace("\"", "\\\""))
                               .map(arg -> String.format("--module-arg \"%s\"", arg)),

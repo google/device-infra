@@ -206,6 +206,12 @@ message RunCommand {
   // For non-Tradefed (Mobly) jobs, we'll add a SIM card type dimension to the
   // job's device requirement.
   optional bool enable_token_sharding = 39;
+
+  // Optional. The URL to fetch business logic rules from.
+  optional string business_logic_url = 41;
+
+  // Optional. Whether to ignore business logic failures.
+  optional bool ignore_business_logic_failure = 42;
 }
 
 message RunCommandState {

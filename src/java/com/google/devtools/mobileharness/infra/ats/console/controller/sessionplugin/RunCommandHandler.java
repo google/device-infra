@@ -379,6 +379,10 @@ class RunCommandHandler {
     }
     builder.setEnableDefaultLogs(runCommand.getEnableDefaultLogs());
     builder.setEnableTokenSharding(runCommand.getEnableTokenSharding());
+    if (runCommand.hasBusinessLogicUrl()) {
+      builder.setBusinessLogicUrl(runCommand.getBusinessLogicUrl());
+    }
+    builder.setIgnoreBusinessLogicFailure(runCommand.getIgnoreBusinessLogicFailure());
 
     sessionInfo
         .getSessionProperty(SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID)

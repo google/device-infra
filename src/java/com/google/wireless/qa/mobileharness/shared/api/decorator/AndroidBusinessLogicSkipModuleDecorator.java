@@ -116,7 +116,7 @@ public class AndroidBusinessLogicSkipModuleDecorator extends BaseDecorator
     this.businessLogicFetcher = businessLogicFetcher;
   }
 
-  private boolean shouldSkipRun = false;
+  private boolean shouldSkipRun = true;
 
   @Override
   public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
@@ -161,7 +161,18 @@ public class AndroidBusinessLogicSkipModuleDecorator extends BaseDecorator
         if (this.shouldSkipRun) {
           return;
         }
-      } catch (MobileHarnessException | ReflectiveOperationException e) {
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw e;
+      } catch (Exception e) {
+        if (!spec.getIgnoreBusinessLogicFailure()) {
+          throw new MobileHarnessException(
+              AndroidErrorId.ANDROID_BUSINESS_LOGIC_SKIP_MODULE_DECORATOR_FAIL,
+              "Failed to evaluate business logic. If this problem persists, re-invoking with option"
+                  + " '--ignore-business-logic-failure' will cause tests to execute anyways"
+                  + " (though tests depending on the remote configuration will fail).",
+              e);
+        }
         testInfo
             .log()
             .atWarning()

@@ -50,4 +50,11 @@ message AndroidBusinessLogicSkipModuleDecoratorSpec {
       help: "Timeout in milliseconds for business logic request."
     }
   ];
+
+  optional bool ignore_business_logic_failure = 7 [
+    default = false,
+    (field_detail) = {
+      help: "If true, ignore the evaluate failures and continue the test. Else, throw the exception out."
+    }
+  ];
 }

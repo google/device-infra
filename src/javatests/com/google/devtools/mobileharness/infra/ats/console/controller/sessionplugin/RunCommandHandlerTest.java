@@ -195,6 +195,7 @@ public final class RunCommandHandlerTest {
             .setMinSdkLevel(32)
             .setMaxSdkLevel(35)
             .setEnableTokenSharding(true)
+            .setBusinessLogicUrl("business_logic_url")
             .build();
 
     SessionRequestInfo sessionRequestInfo = runCommandHandler.generateSessionRequestInfo(command);
@@ -228,6 +229,7 @@ public final class RunCommandHandlerTest {
     assertThat(sessionRequestInfo.minSdkLevel()).hasValue(32);
     assertThat(sessionRequestInfo.maxSdkLevel()).hasValue(35);
     assertThat(sessionRequestInfo.enableTokenSharding()).isTrue();
+    assertThat(sessionRequestInfo.businessLogicUrl()).hasValue("business_logic_url");
   }
 
   @Test

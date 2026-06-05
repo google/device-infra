@@ -183,6 +183,10 @@ public abstract class SessionRequestInfo {
 
   public abstract boolean enableTokenSharding();
 
+  public abstract Optional<String> businessLogicUrl();
+
+  public abstract boolean ignoreBusinessLogicFailure();
+
   public static Builder builder() {
     return new AutoValue_SessionRequestInfo.Builder()
         .setModuleNames(ImmutableList.of())
@@ -214,7 +218,8 @@ public abstract class SessionRequestInfo {
         .setAtsServerTestResources(ImmutableList.of())
         .setExcludeRunners(ImmutableSet.of())
         .setAllowPartialDeviceMatch(false)
-        .setEnableTokenSharding(false);
+        .setEnableTokenSharding(false)
+        .setIgnoreBusinessLogicFailure(false);
   }
 
   public abstract Builder toBuilder();
@@ -349,6 +354,10 @@ public abstract class SessionRequestInfo {
     public abstract Builder setEnableDefaultLogs(boolean enableDefaultLogs);
 
     public abstract Builder setEnableTokenSharding(boolean enableTokenSharding);
+
+    public abstract Builder setBusinessLogicUrl(String businessLogicUrl);
+
+    public abstract Builder setIgnoreBusinessLogicFailure(boolean ignoreBusinessLogicFailure);
 
     protected abstract SessionRequestInfo autoBuild();
 

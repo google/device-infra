@@ -1112,7 +1112,9 @@ public class SessionRequestHandlerUtil {
                 startTimeout,
                 isSkipDeviceInfo(sessionRequestInfo, subPlan),
                 sessionRequestInfo.xtsSuiteInfo(),
-                sessionRequestInfo.isAtsServerRequest());
+                sessionRequestInfo.isAtsServerRequest(),
+                sessionRequestInfo.businessLogicUrl(),
+                sessionRequestInfo.ignoreBusinessLogicFailure());
 
         if (sessionRequestInfo.enableTokenSharding()) {
           getSimCardTypeDimensionValue(moduleMetadata)
@@ -1295,7 +1297,9 @@ public class SessionRequestHandlerUtil {
       Duration startTimeout,
       boolean skipDeviceInfo,
       ImmutableMap<String, String> xtsSuiteInfo,
-      boolean isAtsServerRequest)
+      boolean isAtsServerRequest,
+      Optional<String> businessLogicUrl,
+      boolean ignoreBusinessLogicFailure)
       throws MobileHarnessException, InterruptedException {
     JobInfo jobInfo =
         createBaseXtsNonTradefedJob(
@@ -1344,6 +1348,12 @@ public class SessionRequestHandlerUtil {
     jobInfo.properties().add(Job.SKIP_COLLECTING_DEVICE_INFO, Boolean.toString(skipDeviceInfo));
     if (!matchedTestCases.isEmpty()) {
       jobInfo.params().add(MoblyTestSpec.TEST_SELECTOR_KEY, Joiner.on(" ").join(matchedTestCases));
+    }
+    if (businessLogicUrl.isPresent()) {
+      jobInfo.params().add("business_logic_url", businessLogicUrl.get());
+    }
+    if (ignoreBusinessLogicFailure) {
+      jobInfo.params().add("ignore_business_logic_failure", "true");
     }
     if (!isAtsServerRequest
         && jobInfo.params().getOptional(MoblyAospTestSpec.PARAM_VENV_PATH).isEmpty()) {

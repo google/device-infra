@@ -298,6 +298,10 @@ public final class RunCommand implements Callable<Integer> {
             .putAllXtsSuiteInfo(
                 new CertificationSuiteInfoFactory()
                     .generateSuiteInfoMap(xtsRootDirectory.toString(), xtsType, options.config));
+    if (!isNullOrEmpty(options.businessLogicUrl)) {
+      runCommand.setBusinessLogicUrl(options.businessLogicUrl);
+    }
+    runCommand.setIgnoreBusinessLogicFailure(options.ignoreBusinessLogicFailure);
     moduleMetadataIncludeFilters.forEach(
         (key, value) ->
             runCommand.addModuleMetadataIncludeFilter(

@@ -251,6 +251,19 @@ class RunCommandOptions {
   Boolean skipDeviceInfo = null;
 
   @Option(
+      names = {"--business-logic-url"},
+      paramLabel = "<business_logic_url>",
+      description = "The URL to fetch business logic rules from.")
+  String businessLogicUrl;
+
+  @Option(
+      names = {"--ignore-business-logic-failure"},
+      arity = "0..1",
+      paramLabel = "<ignore_business_logic_failure>",
+      description = "Whether to ignore business logic failures and proceed with test execution.")
+  boolean ignoreBusinessLogicFailure = false;
+
+  @Option(
       names = {"--subplan"},
       paramLabel = "<subplan_name>",
       description = "Run the specified subplan.")

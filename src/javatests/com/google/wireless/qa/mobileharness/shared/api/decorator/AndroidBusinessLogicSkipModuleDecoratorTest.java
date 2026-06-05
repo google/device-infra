@@ -138,6 +138,7 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
     AndroidBusinessLogicSkipModuleDecoratorSpec spec =
         AndroidBusinessLogicSkipModuleDecoratorSpec.newBuilder()
             .setBusinessLogicUrl("http://fake-url/logic")
+            .setIgnoreBusinessLogicFailure(true)
             .build();
     when(jobInfo.combinedSpec(decorator, "fake_device_id")).thenReturn(spec);
 
@@ -404,7 +405,7 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
   }
 
   @Test
-  public void run_noRulesMatch_callsGetDecoratedRun() throws Exception {
+  public void run_noRulesMatch_skipsModule() throws Exception {
     AndroidBusinessLogicSkipModuleDecoratorSpec spec =
         AndroidBusinessLogicSkipModuleDecoratorSpec.newBuilder()
             .setBusinessLogicUrl("http://fake-url/logic")
@@ -417,7 +418,7 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
 
     decorator.run(testInfo);
 
-    verify(decoratedDriver).run(testInfo);
+    verify(decoratedDriver, never()).run(any());
   }
 
   @Test
