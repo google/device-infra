@@ -102,6 +102,7 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/platform/android/sdktool/adb:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/systemspec:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/shared/usmf/example:__pkg__",
     ],
     deps = [
         ":android_adb_version_util",

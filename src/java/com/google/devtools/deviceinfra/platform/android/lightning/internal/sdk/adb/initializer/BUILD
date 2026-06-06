@@ -23,6 +23,7 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/shared/usmf:__subpackages__",
     ],
     deps = [
         ":adb_initialize_template",
