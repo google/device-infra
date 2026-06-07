@@ -563,6 +563,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
     }
   }
 
+  @SuppressWarnings("Interruption")
   @Override
   public synchronized void cancel(LocalDeviceTestExecutor test) {
     if (this.test != test) {
@@ -574,6 +575,12 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
           "Stopping device runner with test %s...",
           test.getTestRunner().getTestExecutionUnit().locator());
       cancelled = true;
+      synchronized (interruptLock) {
+        if (runningThread != null) {
+          logger.atInfo().log("Interrupting device runner thread to cancel test");
+          runningThread.interrupt();
+        }
+      }
     }
   }
 

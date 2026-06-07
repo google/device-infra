@@ -76,7 +76,12 @@ public class ProxyTestManager extends TestManager<ProxyTestRunner>
     Optional<ProxyTestRunner> testRunner = getTestRunner(testId);
     if (testRunner.isPresent()) {
       logger.atInfo().log("Close test [%s]", testId);
-      testRunner.get().closeTest();
+      ProxyTestRunner runner = testRunner.get();
+      runner.closeTest();
+      if (runner.isRunning()) {
+        logger.atInfo().log("Test [%s] is still running, killing it", testId);
+        runner.kill(/* timeout= */ false);
+      }
     } else {
       logger.atWarning().log("Try to close non-existing test [%s]", testId);
     }
