@@ -216,7 +216,15 @@ public final class GetHostOverviewHandler {
             .orElse(ImmutableMap.of());
     builder.putAllProperties(properties);
 
-    labInfoOpt.ifPresent(labInfo -> builder.setIp(labInfo.getLabLocator().getIp()));
+    labInfoOpt.ifPresent(
+        labInfo -> {
+          String ip = labInfo.getLabLocator().getIp();
+          // If the IP is not set, fallback to use the master detected IP.
+          if (ip.isEmpty() && labInfo.getLabLocator().hasMasterDetectedIp()) {
+            ip = labInfo.getLabLocator().getMasterDetectedIp();
+          }
+          builder.setIp(ip);
+        });
 
     builder.setOs(properties.getOrDefault("host_os", "Unknown"));
 
