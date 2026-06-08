@@ -547,7 +547,7 @@ public abstract class AndroidRealDeviceDelegate {
     try {
       logger.atInfo().log("Start to factory reset device %s via test harness", deviceId);
       androidFrpUtil.factoryResetViaTestHarnessWithFrpClear(
-          device, /* waitTime= */ null, /* log= */ null);
+          device.info(), /* waitTime= */ null, /* log= */ null);
       if (isOverTcpDevice) {
         systemStateUtil.waitForOverTcpDeviceConnection(deviceId, Duration.ofMinutes(5));
       }
@@ -1402,7 +1402,7 @@ public abstract class AndroidRealDeviceDelegate {
           if (shouldFactoryResetViaTestHarness()) {
             logger.atInfo().log("Factory reset device %s via Test Harness Mode.", deviceId);
             androidFrpUtil.factoryResetViaTestHarnessWithFrpClear(
-                device, /* waitTime= */ null, /* log= */ null);
+                device.info(), /* waitTime= */ null, /* log= */ null);
             device.removeDimension(Dimension.Name.RECOVERY_STATUS);
           } else {
             logger.atInfo().log("Device %s reboot to normal mode", deviceId);

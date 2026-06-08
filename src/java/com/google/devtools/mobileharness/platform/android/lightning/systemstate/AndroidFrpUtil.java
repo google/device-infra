@@ -22,11 +22,11 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.lab.DeviceInfo;
 import com.google.devtools.mobileharness.platform.android.lightning.shared.SharedLogUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
-import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
 import java.time.Duration;
 import javax.annotation.Nullable;
@@ -62,13 +62,15 @@ public class AndroidFrpUtil {
     this.androidAdbUtil = androidAdbUtil;
   }
 
-  public void clearFactoryResetProtection(Device device, @Nullable LogCollector<?> log)
+  public void clearFactoryResetProtection(DeviceInfo deviceInfo, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
-    String deviceId = device.getDeviceId();
+    String deviceId = deviceInfo.deviceId().controlId();
     String frpPersistentDataBlock =
         androidAdbUtil.getProperty(deviceId, ImmutableList.of("ro.frp.pst")).trim();
 
-    if (systemStateManager.becomeRoot(device)
+    String deviceType =
+        deviceInfo.deviceTypes().getAll().stream().findFirst().orElse("AndroidRealDevice");
+    if (systemStateManager.becomeRoot(deviceId, deviceType)
         && !StrUtil.isEmptyOrWhitespace(frpPersistentDataBlock)) {
       SharedLogUtil.logMsg(
           logger, log, "Clearing Factory Reset Protection (FRP) data on device %s", deviceId);
@@ -86,20 +88,20 @@ public class AndroidFrpUtil {
    * <p>Settings in Test Harness Mode include skipping setup wizard, staying device awake when
    * charging, etc. This mode works on user/userdebug builds on Q+.
    *
-   * @param device the device to be factory reset.
+   * @param deviceInfo the device info of the device to be factory reset.
    * @param waitTime wait time (seconds) for device to be disconnected after calling factory reset
    *     via test harness command, or null to use default wait time.
    */
   public void factoryResetViaTestHarnessWithFrpClear(
-      Device device, @Nullable Duration waitTime, @Nullable LogCollector<?> log)
+      DeviceInfo deviceInfo, @Nullable Duration waitTime, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
-    String deviceId = device.getDeviceId();
+    String deviceId = deviceInfo.deviceId().controlId();
     try {
       androidSystemStateUtil.factoryResetViaTestHarness(deviceId, waitTime);
     } catch (MobileHarnessException e) {
       if (e.getErrorId()
           == AndroidErrorId.ANDROID_SYSTEM_STATE_FACTORY_RESET_VIA_TEST_HARNESS_FRP_ERROR) {
-        clearFactoryResetProtection(device, log);
+        clearFactoryResetProtection(deviceInfo, log);
         SharedLogUtil.logMsg(
             logger, log, "Retry factory reset via test harness for device %s", deviceId);
         androidSystemStateUtil.factoryResetViaTestHarness(deviceId, waitTime);
