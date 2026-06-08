@@ -112,6 +112,10 @@ public class Adb {
     this(ADB_INITIALIZER::initializeAdbEnvironment, new CommandExecutor());
   }
 
+  public Adb(CommandExecutor commandExecutor) {
+    this(ADB_INITIALIZER::initializeAdbEnvironment, commandExecutor);
+  }
+
   private Adb(Supplier<AdbParam> adbParamSupplier, CommandExecutor commandExecutor) {
     this(
         adbParamSupplier,
