@@ -59,6 +59,10 @@ public class FeatureReadiness {
     return false;
   }
 
+  public boolean isDeviceDecommissionReady() {
+    return false;
+  }
+
   public boolean isLabServerStartReady() {
     return false;
   }

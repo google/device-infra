@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
+import com.google.devtools.mobileharness.fe.v6.service.device.handlers.DeviceActionsBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceActions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceType;
@@ -78,6 +79,17 @@ public final class GetHostDeviceSummariesHandlerTest {
       GetHostDeviceSummariesRequest.newBuilder().setHostName(HOST_NAME).build();
   private static final Instant NOW = Instant.parse("2025-11-21T10:00:00Z");
   private static final UniverseScope UNIVERSE = new UniverseScope.SelfUniverse();
+  private static final DeviceActions MOCKED_ACTIONS =
+      DeviceActions.newBuilder()
+          .setScreenshot(ActionButtonState.newBuilder().setIsReady(true).build())
+          .setRemoteControl(ActionButtonState.newBuilder().setIsReady(true).build())
+          .setFlash(
+              FlashActionInfo.newBuilder()
+                  .setState(ActionButtonState.newBuilder().setIsReady(true).build())
+                  .build())
+          .setConfiguration(ActionButtonState.newBuilder().setIsReady(true).build())
+          .setDecommission(ActionButtonState.newBuilder().setIsReady(true).build())
+          .build();
 
   private static final DeviceInfo DEVICE_INFO =
       DeviceInfo.newBuilder()
@@ -114,6 +126,7 @@ public final class GetHostDeviceSummariesHandlerTest {
   @Bind private ListeningExecutorService executorService = newDirectExecutorService();
 
   @Bind @Mock private RemoteControlEligibilityChecker remoteControlEligibilityChecker;
+  @Bind @Mock private DeviceActionsBuilder deviceActionsBuilder;
   @Bind private InstantSource instantSource = InstantSource.fixed(NOW);
 
   @Inject private GetHostDeviceSummariesHandler getHostDeviceSummariesHandler;
@@ -123,6 +136,7 @@ public final class GetHostDeviceSummariesHandlerTest {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     when(remoteControlEligibilityChecker.checkTechnicalEligibility(any()))
         .thenReturn(RemoteControlEligibilityResult.builder().setIsEligible(true).build());
+    when(deviceActionsBuilder.buildDeviceActions(any(), any())).thenReturn(MOCKED_ACTIONS);
   }
 
   @Test
@@ -134,17 +148,7 @@ public final class GetHostDeviceSummariesHandlerTest {
         getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST, UNIVERSE).get();
 
     assertThat(response.getDeviceSummariesList()).hasSize(1);
-    DeviceActions expectedActions =
-        DeviceActions.newBuilder()
-            .setScreenshot(ActionButtonState.newBuilder().setIsReady(false).build())
-            .setRemoteControl(ActionButtonState.newBuilder().setIsReady(false).build())
-            .setFlash(
-                FlashActionInfo.newBuilder()
-                    .setState(ActionButtonState.newBuilder().setIsReady(false).build())
-                    .build())
-            .setConfiguration(ActionButtonState.newBuilder().setIsReady(false).build())
-            .setDecommission(ActionButtonState.newBuilder().setIsReady(false).build())
-            .build();
+    DeviceActions expectedActions = MOCKED_ACTIONS;
     DeviceSummary expectedDeviceSummary =
         DeviceSummary.newBuilder()
             .setId(DEVICE_ID)

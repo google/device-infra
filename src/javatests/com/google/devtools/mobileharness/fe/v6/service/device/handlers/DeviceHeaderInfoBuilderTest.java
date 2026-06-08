@@ -57,30 +57,25 @@ public final class DeviceHeaderInfoBuilderTest {
   private static final String HOST_NAME = "test_host.google.com";
   private static final String IP = "192.168.1.1";
 
-  @Bind @Mock private FlashButtonBuilder flashButtonBuilder;
-  @Bind @Mock private LogcatButtonBuilder logcatButtonBuilder;
-  @Bind @Mock private QuarantineButtonBuilder quarantineButtonBuilder;
-  @Bind @Mock private ScreenshotButtonBuilder screenshotButtonBuilder;
-  @Bind @Mock private ConfigurationButtonBuilder configurationButtonBuilder;
-  @Bind @Mock private RemoteControlButtonBuilder remoteControlButtonBuilder;
+  @Bind @Mock private DeviceActionsBuilder deviceActionsBuilder;
   @Bind @Mock private UniverseFactory universeFactory;
   @Inject private DeviceHeaderInfoBuilder deviceHeaderInfoBuilder;
+
+  private static final DeviceActions EXPECTED_ACTIONS =
+      DeviceActions.newBuilder()
+          .setScreenshot(ActionButtonState.getDefaultInstance())
+          .setLogcat(ActionButtonState.getDefaultInstance())
+          .setFlash(FlashActionInfo.getDefaultInstance())
+          .setRemoteControl(ActionButtonState.getDefaultInstance())
+          .setQuarantine(ActionButtonState.getDefaultInstance())
+          .setConfiguration(ActionButtonState.getDefaultInstance())
+          .setDecommission(ActionButtonState.getDefaultInstance())
+          .build();
 
   @Before
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
-    when(flashButtonBuilder.build(any(DeviceInfo.class), any(UniverseScope.class)))
-        .thenReturn(FlashActionInfo.getDefaultInstance());
-    when(logcatButtonBuilder.build(any(DeviceInfo.class), any(UniverseScope.class)))
-        .thenReturn(ActionButtonState.getDefaultInstance());
-    when(quarantineButtonBuilder.build(any(DeviceInfo.class), any(UniverseScope.class)))
-        .thenReturn(ActionButtonState.getDefaultInstance());
-    when(screenshotButtonBuilder.build(any(DeviceInfo.class), any(UniverseScope.class)))
-        .thenReturn(ActionButtonState.getDefaultInstance());
-    when(configurationButtonBuilder.build(any(DeviceInfo.class), any(UniverseScope.class)))
-        .thenReturn(ActionButtonState.getDefaultInstance());
-    when(remoteControlButtonBuilder.build(any(DeviceInfo.class), any(UniverseScope.class)))
-        .thenReturn(ActionButtonState.getDefaultInstance());
+    when(deviceActionsBuilder.buildDeviceActions(any(), any())).thenReturn(EXPECTED_ACTIONS);
   }
 
   @Test
@@ -106,14 +101,7 @@ public final class DeviceHeaderInfoBuilderTest {
             .setId(DEVICE_ID)
             .setHost(HostInfo.newBuilder().setName(HOST_NAME).setIp(IP))
             .setQuarantine(QuarantineInfo.newBuilder().setIsQuarantined(true))
-            .setActions(
-                DeviceActions.newBuilder()
-                    .setScreenshot(ActionButtonState.getDefaultInstance())
-                    .setLogcat(ActionButtonState.getDefaultInstance())
-                    .setFlash(FlashActionInfo.getDefaultInstance())
-                    .setRemoteControl(ActionButtonState.getDefaultInstance())
-                    .setQuarantine(ActionButtonState.getDefaultInstance())
-                    .setConfiguration(ActionButtonState.getDefaultInstance()))
+            .setActions(EXPECTED_ACTIONS)
             .build();
 
     assertThat(
@@ -137,14 +125,7 @@ public final class DeviceHeaderInfoBuilderTest {
             .setId(DEVICE_ID)
             .setHost(HostInfo.newBuilder().setName(HOST_NAME).setIp(IP))
             .setQuarantine(QuarantineInfo.newBuilder().setIsQuarantined(false))
-            .setActions(
-                DeviceActions.newBuilder()
-                    .setScreenshot(ActionButtonState.getDefaultInstance())
-                    .setLogcat(ActionButtonState.getDefaultInstance())
-                    .setFlash(FlashActionInfo.getDefaultInstance())
-                    .setRemoteControl(ActionButtonState.getDefaultInstance())
-                    .setQuarantine(ActionButtonState.getDefaultInstance())
-                    .setConfiguration(ActionButtonState.getDefaultInstance()))
+            .setActions(EXPECTED_ACTIONS)
             .build();
 
     assertThat(

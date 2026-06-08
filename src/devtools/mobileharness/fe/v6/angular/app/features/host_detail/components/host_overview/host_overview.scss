@@ -736,3 +736,12 @@
 .hidden-button {
   display: none !important;
 }
+
+.tooltip-wrapper {
+  display: inline-flex;
+}
+
+.tooltip-wrapper-menu {
+  display: block;
+  width: 100%;
+}

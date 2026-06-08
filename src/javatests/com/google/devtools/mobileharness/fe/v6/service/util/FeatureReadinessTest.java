@@ -125,4 +125,9 @@ public final class FeatureReadinessTest {
   public void isLabServerReleaseReady_returnsFalse() {
     assertThat(featureReadiness.isLabServerReleaseReady()).isFalse();
   }
+
+  @Test
+  public void isDeviceDecommissionReady_returnsFalse() {
+    assertThat(featureReadiness.isDeviceDecommissionReady()).isFalse();
+  }
 }

@@ -107,6 +107,11 @@ public class FeatureManager {
     return environment.isGoogleInternal() && universe instanceof UniverseScope.SelfUniverse;
   }
 
+  /** Checks if the device decommission feature is enabled. */
+  public boolean isDeviceDecommissionFeatureEnabled() {
+    return environment.isGoogleInternal() && universe instanceof UniverseScope.SelfUniverse;
+  }
+
   /** Checks if the lab server release feature is enabled. */
   public boolean isLabServerReleaseFeatureEnabled() {
     return environment.isGoogleInternal() && universe instanceof UniverseScope.SelfUniverse;

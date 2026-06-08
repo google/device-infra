@@ -46,50 +46,43 @@
   <app-info-card #overviewSection id="lab-server" title="Lab Server" [collapsible]="false">
     <div operations class="operation-button">
       @if (host.labServer.actions; as actions) {
-        @if (actions.release.visible) {
-          <button
-            (click)="actions.release.isReady ? onRelease() : showComingSoonPopup('Release')"
-            [disabled]="!actions.release.enabled || isOpeningReleaseDialog()"
-            [matTooltip]="actions.release.tooltip"
-          >
-              @if (isOpeningRelease()) {
-                <mat-progress-spinner mode="indeterminate" diameter="18" class="operation-spinner"></mat-progress-spinner>
-              } @else {
-                <mat-icon>upgrade</mat-icon>
-              }
-              <span class="operation-text">Release</span>
-          </button>
-        }
-        @if (actions.restart.visible) {
-          <button
-            (click)="actions.restart.isReady ? onRestart() : showComingSoonPopup('Restart')"
-            [disabled]="!actions.restart.enabled"
-            [matTooltip]="actions.restart.tooltip"
-          >
-              <mat-icon>restart_alt</mat-icon>
-              <span class="operation-text">Restart</span>
-          </button>
-        }
-        @if (actions.start.visible) {
-          <button
-            (click)="actions.start.isReady ? onStart() : showComingSoonPopup('Start')"
-            [disabled]="!actions.start.enabled"
-            [matTooltip]="actions.start.tooltip"
-          >
-              <mat-icon>play_arrow</mat-icon>
-              <span class="operation-text">Start</span>
-          </button>
-        }
-        @if (actions.stop.visible) {
-          <button
-            (click)="actions.stop.isReady ? onStop() : showComingSoonPopup('Stop')"
-            [disabled]="!actions.stop.enabled"
-            [matTooltip]="actions.stop.tooltip"
-          >
-              <mat-icon>stop_circle</mat-icon>
-              <span class="operation-text">Stop</span>
-          </button>
-        }
+        <app-action-button
+          [action]="actions.release"
+          label="Release"
+          icon="upgrade"
+          mode="operation"
+          [disabled]="isOpeningReleaseDialog()"
+          [loading]="isOpeningRelease()"
+          (actionClick)="onRelease()"
+          (comingSoonClick)="showComingSoonPopup('Release')"
+        ></app-action-button>
+
+        <app-action-button
+          [action]="actions.restart"
+          label="Restart"
+          icon="restart_alt"
+          mode="operation"
+          (actionClick)="onRestart()"
+          (comingSoonClick)="showComingSoonPopup('Restart')"
+        ></app-action-button>
+
+        <app-action-button
+          [action]="actions.start"
+          label="Start"
+          icon="play_arrow"
+          mode="operation"
+          (actionClick)="onStart()"
+          (comingSoonClick)="showComingSoonPopup('Start')"
+        ></app-action-button>
+
+        <app-action-button
+          [action]="actions.stop"
+          label="Stop"
+          icon="stop_circle"
+          mode="operation"
+          (actionClick)="onStop()"
+          (comingSoonClick)="showComingSoonPopup('Stop')"
+        ></app-action-button>
       }
 
       @for (link of getDiagnosticLinks('LAB_SERVER'); track link.label) {
@@ -429,32 +422,59 @@
                   </button>
                   <mat-menu #menu="matMenu">
                     @if (element.actions; as elementActions) {
-                      <button mat-menu-item (click)="elementActions.screenshot?.isReady ? takeScreenshot(element) : showComingSoonPopup('Screenshot', element)">
-                        <mat-icon>screenshot</mat-icon>
-                        <span>Screenshot</span>
-                      </button>
-                      <button mat-menu-item (click)="elementActions.logcat?.isReady ? getLogcat(element) : showComingSoonPopup('Logcat', element)">
-                        <mat-icon>description</mat-icon>
-                        <span>Get Logcat</span>
-                      </button>
-                      <button mat-menu-item (click)="elementActions.remoteControl?.isReady ? startRemoteControl([element]) : showComingSoonPopup('Remote Control', element)">
-                        <mat-icon>important_devices</mat-icon>
-                        <span>Remote Control</span>
-                      </button>
-                      <button mat-menu-item (click)="elementActions.flash?.state?.isReady ? flashDevice(element) : showComingSoonPopup('Flash', element)">
-                        <mat-icon>flash_on</mat-icon>
-                        <span>Flash</span>
-                      </button>
-                      <button mat-menu-item (click)="elementActions.quarantine?.isReady ? quarantineDevice(element) : showComingSoonPopup('Quarantine', element)">
-                        <mat-icon>block</mat-icon>
-                        <span>Quarantine</span>
-                      </button>
-                      @if(element.deviceStatus.status === 'MISSING') {
-                        <button mat-menu-item (click)="elementActions.decommission?.isReady ? decommission(element) : showComingSoonPopup('Decommission', element)">
-                          <mat-icon>delete_sweep</mat-icon>
-                          <span>Decommission</span>
-                        </button>
-                      }
+                      <app-action-button
+                        [action]="elementActions.screenshot"
+                        label="Screenshot"
+                        icon="screenshot"
+                        mode="menu-item"
+                        (actionClick)="takeScreenshot(element)"
+                        (comingSoonClick)="showComingSoonPopup('Screenshot', element)"
+                      ></app-action-button>
+
+                      <app-action-button
+                        [action]="elementActions.logcat"
+                        label="Get Logcat"
+                        icon="description"
+                        mode="menu-item"
+                        (actionClick)="getLogcat(element)"
+                        (comingSoonClick)="showComingSoonPopup('Logcat', element)"
+                      ></app-action-button>
+
+                      <app-action-button
+                        [action]="elementActions.remoteControl"
+                        label="Remote Control"
+                        icon="important_devices"
+                        mode="menu-item"
+                        (actionClick)="startRemoteControl([element])"
+                        (comingSoonClick)="showComingSoonPopup('Remote Control', element)"
+                      ></app-action-button>
+
+                      <app-action-button
+                        [action]="elementActions.flash?.state"
+                        label="Flash"
+                        icon="flash_on"
+                        mode="menu-item"
+                        (actionClick)="flashDevice(element)"
+                        (comingSoonClick)="showComingSoonPopup('Flash', element)"
+                      ></app-action-button>
+
+                      <app-action-button
+                        [action]="elementActions.quarantine"
+                        label="Quarantine"
+                        icon="block"
+                        mode="menu-item"
+                        (actionClick)="quarantineDevice(element)"
+                        (comingSoonClick)="showComingSoonPopup('Quarantine', element)"
+                      ></app-action-button>
+
+                      <app-action-button
+                        [action]="elementActions.decommission"
+                        label="Decommission"
+                        icon="delete_sweep"
+                        mode="menu-item"
+                        (actionClick)="decommission(element)"
+                        (comingSoonClick)="showComingSoonPopup('Decommission', element)"
+                      ></app-action-button>
                     }
                   </mat-menu>
                 </td>

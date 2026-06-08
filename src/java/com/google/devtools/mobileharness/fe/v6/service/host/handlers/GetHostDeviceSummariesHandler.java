@@ -30,12 +30,11 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
+import com.google.devtools.mobileharness.fe.v6.service.device.handlers.DeviceActionsBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.HealthAndActivityBuilder;
-import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceActions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceType;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashActionInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.RemoteControlInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DeviceHealthState;
@@ -67,6 +66,7 @@ public final class GetHostDeviceSummariesHandler {
   private final HealthAndActivityBuilder healthAndActivityBuilder;
   private final SubDeviceInfoListFactory subDeviceInfoListFactory;
   private final RemoteControlEligibilityChecker remoteControlEligibilityChecker;
+  private final DeviceActionsBuilder deviceActionsBuilder;
   private final ListeningExecutorService executor;
 
   @Inject
@@ -75,11 +75,13 @@ public final class GetHostDeviceSummariesHandler {
       HealthAndActivityBuilder healthAndActivityBuilder,
       SubDeviceInfoListFactory subDeviceInfoListFactory,
       RemoteControlEligibilityChecker remoteControlEligibilityChecker,
+      DeviceActionsBuilder deviceActionsBuilder,
       ListeningExecutorService executor) {
     this.labInfoProvider = labInfoProvider;
     this.healthAndActivityBuilder = healthAndActivityBuilder;
     this.subDeviceInfoListFactory = subDeviceInfoListFactory;
     this.remoteControlEligibilityChecker = remoteControlEligibilityChecker;
+    this.deviceActionsBuilder = deviceActionsBuilder;
     this.executor = executor;
   }
 
@@ -90,22 +92,23 @@ public final class GetHostDeviceSummariesHandler {
     GetLabInfoRequest getLabInfoRequest = createGetLabInfoRequest(request.getHostName());
     return Futures.transform(
         labInfoProvider.getLabInfoAsync(getLabInfoRequest, universe),
-        this::processLabInfoResponse,
+        response -> processLabInfoResponse(response, universe),
         executor);
   }
 
-  private GetHostDeviceSummariesResponse processLabInfoResponse(GetLabInfoResponse response) {
+  private GetHostDeviceSummariesResponse processLabInfoResponse(
+      GetLabInfoResponse response, UniverseScope universe) {
     ImmutableList<DeviceSummary> deviceSummaries =
         response.getLabQueryResult().getLabView().getLabDataList().stream()
             .flatMap(labData -> labData.getDeviceList().getDeviceInfoList().stream())
-            .map(this::createDeviceSummary)
+            .map(deviceInfo -> createDeviceSummary(deviceInfo, universe))
             .collect(toImmutableList());
     return GetHostDeviceSummariesResponse.newBuilder()
         .addAllDeviceSummaries(deviceSummaries)
         .build();
   }
 
-  private DeviceSummary createDeviceSummary(DeviceInfo deviceInfo) {
+  private DeviceSummary createDeviceSummary(DeviceInfo deviceInfo, UniverseScope universe) {
     HealthAndActivityInfo healthAndActivityInfo =
         healthAndActivityBuilder.buildHealthAndActivityInfo(deviceInfo);
 
@@ -132,7 +135,7 @@ public final class GetHostDeviceSummariesHandler {
             .setVersion(
                 dimensions.getOrDefault(
                     DIMENSION_SOFTWARE_VERSION, dimensions.getOrDefault(DIMENSION_SDK_VERSION, "")))
-            .setActions(createDeviceActions());
+            .setActions(createDeviceActions(deviceInfo, universe));
 
     // If it is a testbed device, decode sub-device information.
     boolean isTestbed = deviceInfo.getDeviceFeature().getTypeList().contains("TestbedDevice");
@@ -178,19 +181,8 @@ public final class GetHostDeviceSummariesHandler {
     return deviceSummaryBuilder.build();
   }
 
-  private DeviceActions createDeviceActions() {
-    // TODO: Populate the device actions based on the device info, just like in
-    // DeviceHeaderInfoBuilder.
-    return DeviceActions.newBuilder()
-        .setScreenshot(ActionButtonState.newBuilder().setIsReady(false).build())
-        .setRemoteControl(ActionButtonState.newBuilder().setIsReady(false).build())
-        .setFlash(
-            FlashActionInfo.newBuilder()
-                .setState(ActionButtonState.newBuilder().setIsReady(false).build())
-                .build())
-        .setConfiguration(ActionButtonState.newBuilder().setIsReady(false).build())
-        .setDecommission(ActionButtonState.newBuilder().setIsReady(false).build())
-        .build();
+  private DeviceActions createDeviceActions(DeviceInfo deviceInfo, UniverseScope universe) {
+    return deviceActionsBuilder.buildDeviceActions(deviceInfo, universe);
   }
 
   /** Creates a {@link GetLabInfoRequest} to filter labs by host name. */

@@ -47,6 +47,7 @@
         class="m3-action-button transparent dropdown-trigger"
         [matMenuTriggerFor]="moreMenu"
         matTooltip="Show more actions"
+        matTooltipShowDelay="1000"
       >
         <span>More</span>
         <mat-icon>expand_more</mat-icon>
@@ -90,6 +91,7 @@
         class="m3-action-button transparent dropdown-trigger"
         [matMenuTriggerFor]="actionsMenu"
         matTooltip="Show more actions"
+        matTooltipShowDelay="1000"
       >
         <span>Take Action</span>
         <mat-icon>expand_more</mat-icon>
@@ -130,27 +132,29 @@
   @let action = getAction(key);
   @if (action?.visible) {
     @if (mode === 'button') {
-      <button
-        class="m3-action-button filled"
-        [class]="customClass"
-        (click)="action?.isReady ? handler() : showComingSoonPopup(key)"
-        [disabled]="!action?.enabled"
-        [matTooltip]="action?.tooltip || ''"
-        [attr.data-testid]="key + '-button-' + suffix"
-      >
-        <mat-icon>{{icon}}</mat-icon>{{label}}
-      </button>
+      <span [matTooltip]="action?.tooltip || ''" class="tooltip-wrapper" matTooltipShowDelay="1000">
+        <button
+          class="m3-action-button filled"
+          [class]="customClass"
+          (click)="action?.isReady ? handler() : showComingSoonPopup(key)"
+          [disabled]="!action?.enabled"
+          [attr.data-testid]="key + '-button-' + suffix"
+        >
+          <mat-icon>{{icon}}</mat-icon>{{label}}
+        </button>
+      </span>
     } @else {
-      <button
-        mat-menu-item
-        (click)="action?.isReady ? handler() : showComingSoonPopup(key)"
-        [disabled]="!action?.enabled"
-        [matTooltip]="action?.tooltip || ''"
-        [attr.data-testid]="key + '-menu-item-' + suffix"
-      >
-        <mat-icon class="dropdown-mat-icon">{{icon}}</mat-icon>
-        <span>{{label}}</span>
-      </button>
+      <span [matTooltip]="action?.tooltip || ''" class="tooltip-wrapper-menu" matTooltipShowDelay="1000">
+        <button
+          mat-menu-item
+          (click)="action?.isReady ? handler() : showComingSoonPopup(key)"
+          [disabled]="!action?.enabled"
+          [attr.data-testid]="key + '-menu-item-' + suffix"
+        >
+          <mat-icon class="dropdown-mat-icon">{{icon}}</mat-icon>
+          <span>{{label}}</span>
+        </button>
+      </span>
     }
   }
 </ng-template>

@@ -32,6 +32,7 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 
 import {Observable} from 'rxjs';
 import {map, tap} from 'rxjs/operators';
+import {ActionButton} from '../../../../shared/components/action_button/action_button';
 import {NavLink} from '../../../../shared/components/nav_link/nav_link';
 
 import {ActionBarAction} from '../../../../core/constants/action_bar_config';
@@ -165,6 +166,7 @@ const STATUS_SEMANTIC_MAP: Record<string, {icon: string; colorClass: string}> =
     NavLink,
     SearchableListOverlayComponent,
     OverflowList,
+    ActionButton,
   ],
 })
 export class HostOverviewPage implements OnChanges {

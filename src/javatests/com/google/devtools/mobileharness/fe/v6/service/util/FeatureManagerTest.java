@@ -119,6 +119,7 @@ public final class FeatureManagerTest {
     assertThat(featureManager.isHostDebugFeatureEnabled()).isTrue();
     assertThat(featureManager.isHostDecommissionFeatureEnabled()).isTrue();
     assertThat(featureManager.isLabServerReleaseFeatureEnabled()).isTrue();
+    assertThat(featureManager.isDeviceDecommissionFeatureEnabled()).isTrue();
   }
 
   @Test
@@ -132,6 +133,7 @@ public final class FeatureManagerTest {
     assertThat(featureManager.isHostDebugFeatureEnabled()).isFalse();
     assertThat(featureManager.isHostDecommissionFeatureEnabled()).isFalse();
     assertThat(featureManager.isLabServerReleaseFeatureEnabled()).isFalse();
+    assertThat(featureManager.isDeviceDecommissionFeatureEnabled()).isFalse();
   }
 
   @Test
@@ -145,5 +147,6 @@ public final class FeatureManagerTest {
     assertThat(featureManager.isHostDebugFeatureEnabled()).isFalse();
     assertThat(featureManager.isHostDecommissionFeatureEnabled()).isFalse();
     assertThat(featureManager.isLabServerReleaseFeatureEnabled()).isFalse();
+    assertThat(featureManager.isDeviceDecommissionFeatureEnabled()).isFalse();
   }
 }

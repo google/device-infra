@@ -21,7 +21,6 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceCon
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.model.proto.Device.TempDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
-import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceActions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HostInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineInfo;
@@ -35,27 +34,11 @@ import javax.inject.Singleton;
 @Singleton
 public class DeviceHeaderInfoBuilder {
 
-  private final FlashButtonBuilder flashButtonBuilder;
-  private final LogcatButtonBuilder logcatButtonBuilder;
-  private final QuarantineButtonBuilder quarantineButtonBuilder;
-  private final ScreenshotButtonBuilder screenshotButtonBuilder;
-  private final ConfigurationButtonBuilder configurationButtonBuilder;
-  private final RemoteControlButtonBuilder remoteControlButtonBuilder;
+  private final DeviceActionsBuilder deviceActionsBuilder;
 
   @Inject
-  DeviceHeaderInfoBuilder(
-      FlashButtonBuilder flashButtonBuilder,
-      LogcatButtonBuilder logcatButtonBuilder,
-      QuarantineButtonBuilder quarantineButtonBuilder,
-      ScreenshotButtonBuilder screenshotButtonBuilder,
-      ConfigurationButtonBuilder configurationButtonBuilder,
-      RemoteControlButtonBuilder remoteControlButtonBuilder) {
-    this.flashButtonBuilder = flashButtonBuilder;
-    this.logcatButtonBuilder = logcatButtonBuilder;
-    this.quarantineButtonBuilder = quarantineButtonBuilder;
-    this.screenshotButtonBuilder = screenshotButtonBuilder;
-    this.configurationButtonBuilder = configurationButtonBuilder;
-    this.remoteControlButtonBuilder = remoteControlButtonBuilder;
+  DeviceHeaderInfoBuilder(DeviceActionsBuilder deviceActionsBuilder) {
+    this.deviceActionsBuilder = deviceActionsBuilder;
   }
 
   /** Builds DeviceHeaderInfo based on device info and configs. */
@@ -90,15 +73,7 @@ public class DeviceHeaderInfoBuilder {
                 .setName(deviceInfo.getDeviceLocator().getLabLocator().getHostName())
                 .setIp(deviceInfo.getDeviceLocator().getLabLocator().getIp()))
         .setQuarantine(quarantineInfoBuilder.build())
-        // TODO: Fill device actions.
-        .setActions(
-            DeviceActions.newBuilder()
-                .setScreenshot(screenshotButtonBuilder.build(deviceInfo, universe))
-                .setLogcat(logcatButtonBuilder.build(deviceInfo, universe))
-                .setFlash(flashButtonBuilder.build(deviceInfo, universe))
-                .setRemoteControl(remoteControlButtonBuilder.build(deviceInfo, universe))
-                .setQuarantine(quarantineButtonBuilder.build(deviceInfo, universe))
-                .setConfiguration(configurationButtonBuilder.build(deviceInfo, universe)))
+        .setActions(deviceActionsBuilder.buildDeviceActions(deviceInfo, universe))
         .build();
   }
 }

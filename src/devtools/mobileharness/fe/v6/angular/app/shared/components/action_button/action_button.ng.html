@@ -1,0 +1,53 @@
+@if (action?.visible) {
+  @if (mode === 'button') {
+    <span [matTooltip]="action?.tooltip || ''" class="tooltip-wrapper" [matTooltipShowDelay]="tooltipDelay">
+      <button
+        class="m3-action-button filled"
+        [class]="customClass"
+        (click)="onButtonClick()"
+        [disabled]="!action?.enabled || loading || disabled"
+      >
+        @if (loading) {
+          <mat-icon class="spin-animation">sync</mat-icon>{{loadingLabel || label}}
+        } @else {
+          <mat-icon>{{icon}}</mat-icon>{{label}}
+        }
+      </button>
+    </span>
+  } @else if (mode === 'menu-item') {
+    <span [matTooltip]="action?.tooltip || ''" class="tooltip-wrapper-menu" [matTooltipShowDelay]="tooltipDelay">
+      <button
+        mat-menu-item
+        (click)="onButtonClick()"
+        [disabled]="!action?.enabled || loading || disabled"
+      >
+        @if (loading) {
+          <span>
+            <mat-icon class="spin-animation dropdown-mat-icon">sync</mat-icon>
+            <span>{{loadingLabel || label}}</span>
+          </span>
+        } @else {
+          <ng-container>
+            <mat-icon class="dropdown-mat-icon">{{icon}}</mat-icon>
+            <span>{{label}}</span>
+          </ng-container>
+        }
+      </button>
+    </span>
+  } @else if (mode === 'operation') {
+    <span [matTooltip]="action?.tooltip || ''" class="tooltip-wrapper" [matTooltipShowDelay]="tooltipDelay">
+      <button
+        [class]="'operation-btn ' + customClass"
+        (click)="onButtonClick()"
+        [disabled]="!action?.enabled || loading || disabled"
+      >
+        @if (loading) {
+          <mat-progress-spinner mode="indeterminate" diameter="18" class="operation-spinner"></mat-progress-spinner>
+        } @else {
+          <mat-icon>{{icon}}</mat-icon>
+        }
+        <span class="operation-text">{{label}}</span>
+      </button>
+    </span>
+  }
+}

@@ -57,3 +57,18 @@
     }
   }
 }
+
+.tooltip-wrapper {
+  display: inline-flex;
+}
+
+.m3-split-button-group {
+  .tooltip-wrapper {
+    height: 100%;
+  }
+}
+
+.tooltip-wrapper-menu {
+  display: block;
+  width: 100%;
+}

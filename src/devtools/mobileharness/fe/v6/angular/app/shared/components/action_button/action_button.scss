@@ -1,0 +1,81 @@
+@use '../../styles/typography';
+
+:host {
+  display: contents;
+}
+
+.tooltip-wrapper {
+  display: inline-flex;
+}
+
+.tooltip-wrapper-menu {
+  display: block;
+  width: 100%;
+}
+
+.spin-animation {
+  animation: spin 1.5s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.operation-spinner {
+  display: inline-block;
+  margin-right: 4px;
+}
+
+.operation-btn {
+  background-color: #e8f0fe;
+  color: #1967d2;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  border-radius: 18px;
+  font-weight: 500;
+  transition: background-color 0.2s, color 0.2s;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+  padding: 0.25rem 0.75rem;
+
+  &:hover:not(:disabled) {
+    background-color: #d2e3fc;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+
+  &:disabled {
+    background-color: #f1f3f4;
+    color: #9aa0a6;
+    cursor: not-allowed;
+  }
+
+  mat-icon {
+    font-size: 0.875rem;
+    vertical-align: middle;
+    height: 0.875rem;
+    width: 0.875rem;
+    margin-right: 4px;
+  }
+
+  .operation-text {
+    margin: 0 6px;
+    font-family: typography.$labconsole-font;
+  }
+}
+
+.dropdown-mat-icon {
+  margin-right: 12px;
+  vertical-align: middle;
+}
+

@@ -53,16 +53,20 @@
     @if (actions()?.quarantine?.visible) {
       @if (quarantineInfo()?.isQuarantined) {
         <div class="m3-split-button-group" data-testid="quarantine-group-2xl">
-          <button class="m3-split-button main-action" (click)="actions()?.quarantine?.isReady ? onQuarantine() : showComingSoonPopup('quarantine')" [disabled]="!actions()?.quarantine?.enabled || deviceActions.isRunning('quarantine')()" [matTooltip]="actions()?.quarantine?.tooltip || ''">
-            @if (deviceActions.isRunning('quarantine')()) {
-              <mat-icon class="spin-animation">sync</mat-icon>Working...
-            } @else {
-              <mat-icon>play_circle_outline</mat-icon>Unquarantine
-            }
-          </button>
-          <button class="m3-split-button dropdown-action" [matMenuTriggerFor]="quarantineMenu2xl" matTooltip="Quarantine options" [disabled]="!actions()?.quarantine?.enabled || deviceActions.isRunning('quarantine')()">
-            <mat-icon>arrow_drop_down</mat-icon>
-          </button>
+          <span [matTooltip]="actions()?.quarantine?.tooltip || ''" class="tooltip-wrapper" matTooltipShowDelay="1000">
+            <button class="m3-split-button main-action" (click)="actions()?.quarantine?.isReady ? onQuarantine() : showComingSoonPopup('quarantine')" [disabled]="!actions()?.quarantine?.enabled || deviceActions.isRunning('quarantine')()">
+              @if (deviceActions.isRunning('quarantine')()) {
+                <mat-icon class="spin-animation">sync</mat-icon>Working...
+              } @else {
+                <mat-icon>play_circle_outline</mat-icon>Unquarantine
+              }
+            </button>
+          </span>
+          <span matTooltip="Quarantine options" class="tooltip-wrapper" matTooltipShowDelay="1000">
+            <button class="m3-split-button dropdown-action" [matMenuTriggerFor]="quarantineMenu2xl" [disabled]="!actions()?.quarantine?.enabled || deviceActions.isRunning('quarantine')()">
+              <mat-icon>arrow_drop_down</mat-icon>
+            </button>
+          </span>
           <mat-menu #quarantineMenu2xl="matMenu">
             <ng-container *ngTemplateOutlet="actionItem; context: {
               key: 'quarantine',
@@ -123,6 +127,7 @@
         class="m3-action-button transparent dropdown-trigger"
         [matMenuTriggerFor]="moreMenu"
         matTooltip="Show more actions"
+        matTooltipShowDelay="1000"
       >
         <span>More</span>
         <mat-icon>expand_more</mat-icon>
@@ -200,6 +205,7 @@
         class="m3-action-button transparent dropdown-trigger"
         [matMenuTriggerFor]="actionsMenu"
         matTooltip="Show more actions"
+        matTooltipShowDelay="1000"
       >
         <span>Take Action</span>
         <mat-icon>expand_more</mat-icon>
@@ -295,39 +301,41 @@
   @let action = getAction(key);
   @if (action?.visible) {
     @if (mode === 'button') {
-      <button
-        class="m3-action-button filled"
-        (click)="action?.isReady ? handler() : showComingSoonPopup(key)"
-        [disabled]="!action?.enabled || (loading ?? false)"
-        [matTooltip]="action?.tooltip || ''"
-        [attr.data-testid]="key + '-button-' + suffix"
-      >
-        @if (loading) {
-          <mat-icon class="spin-animation">sync</mat-icon>{{loadingLabel}}
-        } @else {
-          <mat-icon>{{icon}}</mat-icon>{{label}}
-        }
-      </button>
+      <span [matTooltip]="action?.tooltip || ''" class="tooltip-wrapper" matTooltipShowDelay="1000">
+        <button
+          class="m3-action-button filled"
+          (click)="action?.isReady ? handler() : showComingSoonPopup(key)"
+          [disabled]="!action?.enabled || (loading ?? false)"
+          [attr.data-testid]="key + '-button-' + suffix"
+        >
+          @if (loading) {
+            <mat-icon class="spin-animation">sync</mat-icon>{{loadingLabel}}
+          } @else {
+            <mat-icon>{{icon}}</mat-icon>{{label}}
+          }
+        </button>
+      </span>
     } @else {
-      <button
-        mat-menu-item
-        (click)="action?.isReady ? handler() : showComingSoonPopup(key)"
-        [disabled]="!action?.enabled || (loading ?? false)"
-        [matTooltip]="action?.tooltip || ''"
-        [attr.data-testid]="key + '-menu-item-' + suffix"
-      >
-        @if (loading) {
-           <span>
-             <mat-icon class="spin-animation dropdown-mat-icon">sync</mat-icon>
-             <span>{{loadingLabel}}</span>
-           </span>
-        } @else {
-          <ng-container>
-            <mat-icon class="dropdown-mat-icon">{{icon}}</mat-icon>
-            <span>{{label}}</span>
-          </ng-container>
-        }
-      </button>
+      <span [matTooltip]="action?.tooltip || ''" class="tooltip-wrapper-menu" matTooltipShowDelay="1000">
+        <button
+          mat-menu-item
+          (click)="action?.isReady ? handler() : showComingSoonPopup(key)"
+          [disabled]="!action?.enabled || (loading ?? false)"
+          [attr.data-testid]="key + '-menu-item-' + suffix"
+        >
+          @if (loading) {
+             <span>
+               <mat-icon class="spin-animation dropdown-mat-icon">sync</mat-icon>
+               <span>{{loadingLabel}}</span>
+             </span>
+          } @else {
+            <ng-container>
+              <mat-icon class="dropdown-mat-icon">{{icon}}</mat-icon>
+              <span>{{label}}</span>
+            </ng-container>
+          }
+        </button>
+      </span>
     }
   }
 </ng-template>
