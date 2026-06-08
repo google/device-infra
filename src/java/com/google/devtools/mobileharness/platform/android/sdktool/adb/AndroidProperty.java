@@ -40,6 +40,10 @@ public enum AndroidProperty {
   // keep-sorted start sticky_prefixes=@
   ABI("ro.product.cpu.abi", "ro.product.cpu.abi2"),
   ABILIST("ro.product.cpu.abilist"),
+  // deviceinfra:google-begin(internal)
+  // DDA requires api_level as device dimension.
+  // deviceinfra:google-end
+  API_LEVEL("ro.build.version.sdk"),
   BASEBAND_VERSION("gsm.version.baseband"),
   BOOT_TO_VR("ro.boot.vr"),
   BRAND("ro.product.brand"),
