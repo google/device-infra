@@ -13,6 +13,7 @@ import {
 } from '../../models/device_action';
 import {
   DeviceOverviewPageData,
+  GetDeviceOverviewRequest,
   TestbedConfig,
 } from '../../models/device_overview';
 import {
@@ -44,12 +45,14 @@ export class FakeDeviceService extends DeviceService {
   /**
    * Retrieves the detailed overview data for a specific device by its ID
    * from the mock dataset.
-   * @param id The unique identifier of the device.
+   * @param request The request containing the unique identifier of the device.
    * @return An Observable emitting the DeviceOverview data if found,
    *          or an error Observable if not found.
    */
-  override getDeviceOverview(id: string): Observable<DeviceOverviewPageData> {
-    const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+  override getDeviceOverview(
+    request: GetDeviceOverviewRequest,
+  ): Observable<DeviceOverviewPageData> {
+    const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === request.id);
     if (scenario) {
       return of({
         overview: scenario.overview,
@@ -57,7 +60,8 @@ export class FakeDeviceService extends DeviceService {
       }).pipe(delay(1000));
     } else {
       return throwError(
-        () => new Error(`Device with ID '${id}' not found in mock data.`),
+        () =>
+          new Error(`Device with ID '${request.id}' not found in mock data.`),
       ).pipe(delay(1000));
     }
   }

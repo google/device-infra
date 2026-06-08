@@ -10,6 +10,7 @@ import {
 } from '../../models/device_action';
 import {
   DeviceOverviewPageData,
+  GetDeviceOverviewRequest,
   TestbedConfig,
 } from '../../models/device_overview';
 import {
@@ -32,7 +33,9 @@ export abstract class DeviceService {
   /**
    * Retrieves the detailed overview data for a specific device by its ID.
    */
-  abstract getDeviceOverview(id: string): Observable<DeviceOverviewPageData>;
+  abstract getDeviceOverview(
+    request: GetDeviceOverviewRequest,
+  ): Observable<DeviceOverviewPageData>;
 
   /**
    * Retrieves header info for a specific device by its ID.

@@ -293,6 +293,15 @@ export declare interface TestbedConfig {
 }
 
 /**
+ * Request for getDeviceOverview.
+ */
+export interface GetDeviceOverviewRequest {
+  id: string;
+  /** Force refresh the data by bypassing cache. */
+  forceRefresh?: boolean;
+}
+
+/**
  * Data for device overview page.
  */
 export declare interface DeviceOverviewPageData {

@@ -124,24 +124,26 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
             error: 'No device ID provided in the route.',
           });
         }
-        return this.deviceService.getDeviceOverview(id).pipe(
-          map((pageData) => ({
-            pageData,
-            error: null,
-          })),
-          catchError((err) => {
-            console.error(`Error fetching device ${id}:`, err);
-            return of<DevicePageData>({
-              pageData: null,
-              error: `Failed to load device data for ID: ${id}. ${
-                err.message || ''
-              }`,
-            });
-          }),
-          tap(() => {
-            this.loadingService.hide();
-          }),
-        );
+        return this.deviceService
+          .getDeviceOverview({id, forceRefresh: true})
+          .pipe(
+            map((pageData) => ({
+              pageData,
+              error: null,
+            })),
+            catchError((err) => {
+              console.error(`Error fetching device ${id}:`, err);
+              return of<DevicePageData>({
+                pageData: null,
+                error: `Failed to load device data for ID: ${id}. ${
+                  err.message || ''
+                }`,
+              });
+            }),
+            tap(() => {
+              this.loadingService.hide();
+            }),
+          );
       }),
     );
 

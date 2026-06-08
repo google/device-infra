@@ -13,6 +13,7 @@ import {
 } from '../../models/device_action';
 import {
   DeviceOverviewPageData,
+  GetDeviceOverviewRequest,
   TestbedConfig,
 } from '../../models/device_overview';
 import {
@@ -34,9 +35,15 @@ export class HttpDeviceService extends DeviceService {
     super();
   }
 
-  override getDeviceOverview(id: string): Observable<DeviceOverviewPageData> {
+  override getDeviceOverview(
+    request: GetDeviceOverviewRequest,
+  ): Observable<DeviceOverviewPageData> {
+    const options = request.forceRefresh
+      ? {params: {'force_refresh': 'true'}}
+      : {};
     return this.http.get<DeviceOverviewPageData>(
-      `${this.apiUrl}/${id}/overview`,
+      `${this.apiUrl}/${request.id}/overview`,
+      options,
     );
   }
 

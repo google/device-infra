@@ -107,7 +107,7 @@ public final class GetDeviceOverviewHandler {
     this.subDeviceInfoListFactory = subDeviceInfoListFactory;
     this.overviewCache =
         Caffeine.newBuilder()
-            .expireAfterWrite(Duration.ofMinutes(5))
+            .expireAfterWrite(Duration.ofMinutes(1))
             .maximumSize(1000)
             .executor(executor)
             .buildAsync(new DeviceOverviewLoader());
@@ -233,9 +233,8 @@ public final class GetDeviceOverviewHandler {
   }
 
   private BasicDeviceInfo buildBasicDeviceInfo(ImmutableMap<String, String> allDimensions) {
-    BasicDeviceInfo.Builder basicInfo = BasicDeviceInfo.newBuilder();
-
-    basicInfo.setModel(allDimensions.getOrDefault("model", ""));
+    BasicDeviceInfo.Builder basicInfo =
+        BasicDeviceInfo.newBuilder().setModel(allDimensions.getOrDefault("model", ""));
 
     String formStr = allDimensions.getOrDefault("device_form", "FORM_UNSPECIFIED");
     Form form =

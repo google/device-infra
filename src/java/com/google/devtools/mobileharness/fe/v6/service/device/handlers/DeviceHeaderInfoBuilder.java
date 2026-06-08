@@ -52,7 +52,7 @@ public class DeviceHeaderInfoBuilder {
             .filter(
                 dim ->
                     dim.getDimension().getName().equals("quarantined")
-                        && Ascii.toLowerCase(dim.getDimension().getValue()).equals("true"))
+                        && Ascii.equalsIgnoreCase(dim.getDimension().getValue(), "true"))
             .findFirst();
 
     QuarantineInfo.Builder quarantineInfoBuilder = QuarantineInfo.newBuilder();

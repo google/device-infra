@@ -54,12 +54,32 @@ describe('HttpDeviceService', () => {
       // Add other properties as needed
     } as DeviceOverviewPageData;
 
-    service.getDeviceOverview('test-device').subscribe((overview) => {
+    service.getDeviceOverview({id: 'test-device'}).subscribe((overview) => {
       expect(overview).toEqual(mockDeviceOverview);
     });
 
     const req = httpMock.expectOne(
       'http://testdomain.com/v6/devices/test-device/overview',
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush(mockDeviceOverview);
+  });
+
+  it('should retrieve a device overview with force_refresh', () => {
+    const mockDeviceOverview: DeviceOverviewPageData = {
+      overview: {
+        id: 'test-device',
+      },
+    } as DeviceOverviewPageData;
+
+    service
+      .getDeviceOverview({id: 'test-device', forceRefresh: true})
+      .subscribe((overview) => {
+        expect(overview).toEqual(mockDeviceOverview);
+      });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/devices/test-device/overview?force_refresh=true',
     );
     expect(req.request.method).toBe('GET');
     req.flush(mockDeviceOverview);

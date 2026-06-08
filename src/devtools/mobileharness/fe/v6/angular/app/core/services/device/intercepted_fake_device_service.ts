@@ -2,8 +2,14 @@ import {Injectable} from '@angular/core';
 import {Observable} from 'rxjs';
 import {map} from 'rxjs/operators';
 import {DeviceHeaderInfo} from '../../models/device_action';
-import {DeviceOverviewPageData} from '../../models/device_overview';
-import {modifyDeviceHeaderInfo, modifyDeviceOverview} from '../../utils/force_ready_utils';
+import {
+  DeviceOverviewPageData,
+  GetDeviceOverviewRequest,
+} from '../../models/device_overview';
+import {
+  modifyDeviceHeaderInfo,
+  modifyDeviceOverview,
+} from '../../utils/force_ready_utils';
 import {FakeDeviceService} from './fake_device_service';
 
 /**
@@ -33,8 +39,10 @@ export class InterceptedFakeDeviceService extends FakeDeviceService {
     );
   }
 
-  override getDeviceOverview(id: string): Observable<DeviceOverviewPageData> {
-    return super.getDeviceOverview(id).pipe(
+  override getDeviceOverview(
+    request: GetDeviceOverviewRequest,
+  ): Observable<DeviceOverviewPageData> {
+    return super.getDeviceOverview(request).pipe(
       map((body) => {
         if (this.forcedButtons.length > 0) {
           return modifyDeviceOverview(body, this.forcedButtons);
