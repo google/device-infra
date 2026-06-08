@@ -74,6 +74,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Key;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import io.grpc.ManagedChannel;
+import io.grpc.alts.AltsChannelBuilder;
 import java.util.List;
 import javax.inject.Singleton;
 
@@ -82,7 +83,12 @@ public final class OssStubsModule extends AbstractModule {
   @Override
   protected void configure() {
     ManagedChannel olcServerChannel =
-        ChannelFactory.createLocalChannel(Flags.olcServerPort.getNonNull(), directExecutor());
+        Flags.useAlts.getNonNull()
+            ? AltsChannelBuilder.forTarget("dns:///localhost:" + Flags.olcServerPort.getNonNull())
+                .executor(directExecutor())
+                .build()
+            : ChannelFactory.createLocalChannel(Flags.olcServerPort.getNonNull(), directExecutor());
+    System.out.println("olcServerChannel: " + olcServerChannel);
     bind(MasterGrpcStubHelper.class).toInstance(new MasterGrpcStubHelper(olcServerChannel));
     bind(LabInfoStub.class).to(LabInfoGrpcStub.class).in(Singleton.class);
     bind(JobSyncStub.class).to(JobSyncGrpcStub.class).in(Singleton.class);
