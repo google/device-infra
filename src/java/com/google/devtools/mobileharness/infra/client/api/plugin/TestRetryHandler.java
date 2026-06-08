@@ -71,7 +71,8 @@ public class TestRetryHandler {
           "ManekiTest",
           "MoblyAospTest",
           "TradefedTest",
-          "VegaTest");
+          "VegaTest",
+          "YtsTest");
 
   /** Blocklist for disabling the extra retry for infra errors by user. */
   private static final ImmutableSet<String> USER_BLOCK_LIST_FOR_INFRA_ERROR_EXTRA_RETRY =
