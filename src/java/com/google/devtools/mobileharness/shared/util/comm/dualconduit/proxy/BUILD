@@ -24,9 +24,13 @@ package(
 
 java_library(
     name = "proxy",
-    srcs = ["ReverseProxiedServer.java"],
+    srcs = [
+        "DualConduitProxyConfig.java",
+        "ReverseProxiedServer.java",
+    ],
     deps = [
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/dualconduit/client",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/system:shutdown_hook_manager",

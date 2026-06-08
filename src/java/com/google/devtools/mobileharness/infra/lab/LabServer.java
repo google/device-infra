@@ -85,6 +85,7 @@ import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.LocalLabInfoProvider;
 import com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
+import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proxy.DualConduitProxyConfig;
 import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proxy.ReverseProxiedServer;
 import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proxy.ServerType;
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rpc.service.CloudFileTransferServiceGrpcImpl;
@@ -384,12 +385,12 @@ public class LabServer {
         ManagedChannel channel = ChannelFactory.createChannel(dconDialerAddress, mainThreadPool);
         String instanceId = getInstanceId();
         String dconHostname = getDconHostname();
+        int dconReverseConduitCount = Flags.dconReverseConduitCount.getNonNull();
         new ReverseProxiedServer(
                 localGrpcServer,
                 channel,
                 ServerType.LAB_SERVER.toLowerCaseName(),
-                instanceId,
-                dconHostname)
+                DualConduitProxyConfig.of(instanceId, dconHostname, dconReverseConduitCount))
             .startWithTeardown(
                 () -> {
                   logger.atInfo().log("Closing DualConduit channel for LabServer");

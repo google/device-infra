@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.shared.util.comm.dualconduit.proxy;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -49,12 +50,14 @@ public final class ReverseProxiedServerTest {
 
   @Before
   public void setUp() {
-    proxyServer = new ReverseProxiedServer(delegate, client, "my-server", "localhost", "backend");
+    proxyServer =
+        new ReverseProxiedServer(
+            delegate, client, "my-server", DualConduitProxyConfig.of("localhost", "backend"));
   }
 
   @Test
   public void start_success() throws Exception {
-    when(client.establishReverseGrpcConduitSession(anyString(), anyString(), anyString()))
+    when(client.establishReverseGrpcConduitSession(anyString(), anyString(), anyString(), anyInt()))
         .thenReturn(
             EstablishSessionResponse.newBuilder()
                 .setSessionId("fake-session-id")
@@ -67,14 +70,14 @@ public final class ReverseProxiedServerTest {
     var unused = proxyServer.start();
 
     verify(delegate).start();
-    verify(client).establishReverseGrpcConduitSession("my-server", "localhost", "backend:50051");
+    verify(client).establishReverseGrpcConduitSession("my-server", "localhost", "backend:50051", 1);
   }
 
   @Test
   public void start_establishConduitFailed_shutdownDelegateAndTriggerCallbacks() throws Exception {
     when(delegate.start()).thenReturn(delegate);
     when(delegate.getPort()).thenReturn(50051);
-    when(client.establishReverseGrpcConduitSession(anyString(), anyString(), anyString()))
+    when(client.establishReverseGrpcConduitSession(anyString(), anyString(), anyString(), anyInt()))
         .thenThrow(new RuntimeException("Failed to establish session"));
 
     AtomicBoolean callbackCalled = new AtomicBoolean(false);

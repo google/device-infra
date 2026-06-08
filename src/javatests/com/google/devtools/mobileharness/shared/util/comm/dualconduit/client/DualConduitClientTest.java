@@ -113,7 +113,8 @@ public final class DualConduitClientTest {
   @Test
   public void establishReverseGrpcConduitSession_success() {
     EstablishSessionResponse response =
-        client.establishReverseGrpcConduitSession("my-server", "localhost", "backend:50051");
+        client.establishReverseGrpcConduitSession(
+            "my-server", "localhost", "backend:50051", /* reverseConduitCount= */ 1);
 
     assertThat(response.getSessionId()).isEqualTo("fake-session-id");
     assertThat(response.getEstablishConduitResponsesCount()).isEqualTo(1);
@@ -123,6 +124,7 @@ public final class DualConduitClientTest {
         .isEqualTo("xds:///my-server.dcon");
 
     EstablishSessionRequest recordedRequest = service.getRecordedSessionRequest();
+    assertThat(recordedRequest.getReverseConduitCount()).isEqualTo(1);
     assertThat(recordedRequest.getAutoReconnect()).isTrue();
     EstablishConduitRequest conduitRequest = recordedRequest.getEstablishConduitRequest();
     assertThat(conduitRequest.getType()).isEqualTo(ConduitType.CONDUIT_TYPE_REVERSE);
@@ -135,7 +137,8 @@ public final class DualConduitClientTest {
   @Test
   public void establishReverseGrpcConduitSessionAsync_success() throws Exception {
     ListenableFuture<EstablishSessionResponse> future =
-        client.establishReverseGrpcConduitSessionAsync("my-server", "localhost", "backend:50051");
+        client.establishReverseGrpcConduitSessionAsync(
+            "my-server", "localhost", "backend:50051", /* reverseConduitCount= */ 1);
 
     EstablishSessionResponse response = future.get();
 

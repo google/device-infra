@@ -500,6 +500,11 @@ public class Flags {
   public static final Flag<String> dconInstanceId = Flag.nullString();
 
   @FlagSpec(
+      name = "dcon_reverse_conduit_count",
+      help = "The number of reverse conduits at the same time.")
+  public static final Flag<Integer> dconReverseConduitCount = Flag.value(1);
+
+  @FlagSpec(
       name = "debug_random_exit",
       help = "Randomly exit and rely on prod scheduling for restart, only for debug/test purpose.")
   public static final Flag<Boolean> debugRandomExit = Flag.value(false);

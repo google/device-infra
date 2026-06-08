@@ -73,12 +73,13 @@ public class DualConduitClient {
 
   /** Establishes a gRPC reverse conduit session. */
   public EstablishSessionResponse establishReverseGrpcConduitSession(
-      String serverName, String instanceId, String destinationEndpoint) {
+      String serverName, String instanceId, String destinationEndpoint, int reverseConduitCount) {
     EstablishSessionRequest request =
         EstablishSessionRequest.newBuilder()
             .setEstablishConduitRequest(
                 createReverseGrpcConduitRequest(
                     serverName, instanceId, destinationEndpoint, /* autoReconnect= */ false))
+            .setReverseConduitCount(reverseConduitCount)
             .setAutoReconnect(true)
             .build();
     return blockingStub.establishSession(request);
@@ -86,12 +87,13 @@ public class DualConduitClient {
 
   /** Establishes a gRPC reverse conduit session asynchronously. */
   public ListenableFuture<EstablishSessionResponse> establishReverseGrpcConduitSessionAsync(
-      String serverName, String instanceId, String destinationEndpoint) {
+      String serverName, String instanceId, String destinationEndpoint, int reverseConduitCount) {
     EstablishSessionRequest request =
         EstablishSessionRequest.newBuilder()
             .setEstablishConduitRequest(
                 createReverseGrpcConduitRequest(
                     serverName, instanceId, destinationEndpoint, /* autoReconnect= */ false))
+            .setReverseConduitCount(reverseConduitCount)
             .setAutoReconnect(true)
             .build();
     return futureStub.establishSession(request);

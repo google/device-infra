@@ -53,8 +53,7 @@ public class ReverseProxiedServer extends Server {
   private final Server delegate;
   private final DualConduitClient client;
   private final String serverName;
-  private final String instanceId;
-  private final String delegateHostname;
+  private final DualConduitProxyConfig dconConfig;
   private String sessionId;
   @Nullable private Runnable teardownCallback;
 
@@ -64,22 +63,17 @@ public class ReverseProxiedServer extends Server {
    * @param delegate the actual gRPC server to be proxied
    * @param client the DualConduit client used to establish the reverse conduit
    * @param serverName the name of the server registered in the DualConduit dialer
-   * @param instanceId the unique instance ID, used by external clients to target this specific
-   *     server via the DualConduit proxy
-   * @param delegateHostname the hostname/address that the DualConduit dialer can use to connect
-   *     back to this delegate server locally (e.g., "localhost" or docker network alias)
+   * @param dconConfig the DualConduit proxy configuration
    */
   public ReverseProxiedServer(
       Server delegate,
       DualConduitClient client,
       String serverName,
-      String instanceId,
-      String delegateHostname) {
+      DualConduitProxyConfig dconConfig) {
     this.delegate = delegate;
     this.client = client;
     this.serverName = serverName;
-    this.instanceId = instanceId;
-    this.delegateHostname = delegateHostname;
+    this.dconConfig = dconConfig;
   }
 
   /**
@@ -88,18 +82,57 @@ public class ReverseProxiedServer extends Server {
    * @param delegate the actual gRPC server to be proxied
    * @param channel the externally created channel to the DualConduit dialer
    * @param serverName the name of the server registered in the DualConduit dialer
-   * @param instanceId the unique instance ID, used by external clients to target this specific
-   *     server via the DualConduit proxy
-   * @param delegateHostname the hostname/address that the DualConduit dialer can use to connect
-   *     back to this delegate server locally (e.g., "localhost" or docker network alias)
+   * @param dconConfig the DualConduit proxy configuration
    */
+  public ReverseProxiedServer(
+      Server delegate, Channel channel, String serverName, DualConduitProxyConfig dconConfig) {
+    this(delegate, new DualConduitClient(channel), serverName, dconConfig);
+  }
+
+  public ReverseProxiedServer(
+      Server delegate,
+      DualConduitClient client,
+      String serverName,
+      String instanceId,
+      String delegateHostname) {
+    this(delegate, client, serverName, DualConduitProxyConfig.of(instanceId, delegateHostname));
+  }
+
+  public ReverseProxiedServer(
+      Server delegate,
+      DualConduitClient client,
+      String serverName,
+      String instanceId,
+      String delegateHostname,
+      int dconReverseConduitCount) {
+    this(
+        delegate,
+        client,
+        serverName,
+        DualConduitProxyConfig.of(instanceId, delegateHostname, dconReverseConduitCount));
+  }
+
   public ReverseProxiedServer(
       Server delegate,
       Channel channel,
       String serverName,
       String instanceId,
       String delegateHostname) {
-    this(delegate, new DualConduitClient(channel), serverName, instanceId, delegateHostname);
+    this(delegate, channel, serverName, DualConduitProxyConfig.of(instanceId, delegateHostname));
+  }
+
+  public ReverseProxiedServer(
+      Server delegate,
+      Channel channel,
+      String serverName,
+      String instanceId,
+      String delegateHostname,
+      int dconReverseConduitCount) {
+    this(
+        delegate,
+        channel,
+        serverName,
+        DualConduitProxyConfig.of(instanceId, delegateHostname, dconReverseConduitCount));
   }
 
   private void triggerTeardownCallback() {
@@ -124,9 +157,13 @@ public class ReverseProxiedServer extends Server {
     delegate.start();
     logger.atInfo().log("Delegate server started, establishing session...");
     try {
-      String destinationEndpoint = delegateHostname + ":" + delegate.getPort();
+      String destinationEndpoint = dconConfig.dconHostname() + ":" + delegate.getPort();
       EstablishSessionResponse response =
-          client.establishReverseGrpcConduitSession(serverName, instanceId, destinationEndpoint);
+          client.establishReverseGrpcConduitSession(
+              serverName,
+              dconConfig.dconInstanceId(),
+              destinationEndpoint,
+              dconConfig.dconReverseConduitCount());
       this.sessionId = response.getSessionId();
       logger.atInfo().log(
           "Session established, sessionId: %s, and service is provided at serviceLocator: %s",
