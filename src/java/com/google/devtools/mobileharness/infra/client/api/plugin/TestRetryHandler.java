@@ -207,6 +207,11 @@ public class TestRetryHandler {
       addFinalAttemptProperty(currentTestInfo);
       return;
     }
+    // Do not retry if the job is manually aborted
+    if (jobInfo.properties().getBoolean(Job.MANUALLY_ABORTED).orElse(false)) {
+      addFinalAttemptProperty(currentTestInfo);
+      return;
+    }
     // Do not retry if the current test halts the future retry.
     if (currentTestInfo.properties().getBoolean(Test.HALT_RETRY).orElse(false)) {
       addFinalAttemptProperty(currentTestInfo);
