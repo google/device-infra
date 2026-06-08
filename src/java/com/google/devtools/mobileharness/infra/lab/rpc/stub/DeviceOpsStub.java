@@ -23,6 +23,8 @@ import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.GetDeviceDeb
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.GetDeviceDebugInfoResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.GetDeviceLogRequest;
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.GetDeviceLogResponse;
+import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.RunTroubleshootScriptRequest;
+import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.RunTroubleshootScriptResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.TakeScreenshotRequest;
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.TakeScreenshotResponse;
 import javax.annotation.Nullable;
@@ -77,4 +79,17 @@ public interface DeviceOpsStub extends NonThrowingAutoCloseable {
   /** Gets the device debug info asynchronously. */
   ListenableFuture<GetDeviceDebugInfoResponse> getDeviceDebugInfoAsync(
       GetDeviceDebugInfoRequest request);
+
+  RunTroubleshootScriptResponse runTroubleshootScript(RunTroubleshootScriptRequest request)
+      throws RpcExceptionWithErrorId;
+
+  default RunTroubleshootScriptResponse runTroubleshootScript(
+      RunTroubleshootScriptRequest request, @Nullable String impersonationUser)
+      throws RpcExceptionWithErrorId {
+    return runTroubleshootScript(request);
+  }
+
+  /** Runs a troubleshoot script asynchronously. */
+  ListenableFuture<RunTroubleshootScriptResponse> runTroubleshootScriptAsync(
+      RunTroubleshootScriptRequest request);
 }

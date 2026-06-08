@@ -26,6 +26,8 @@ import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.GetDeviceDeb
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.GetDeviceDebugInfoResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.GetDeviceLogRequest;
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.GetDeviceLogResponse;
+import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.RunTroubleshootScriptRequest;
+import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.RunTroubleshootScriptResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.TakeScreenshotRequest;
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.TakeScreenshotResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServiceGrpc;
@@ -114,6 +116,22 @@ public class DeviceOpsGrpcStub implements DeviceOpsStub {
   }
 
   @Override
+  public RunTroubleshootScriptResponse runTroubleshootScript(RunTroubleshootScriptRequest request)
+      throws RpcExceptionWithErrorId {
+    return GrpcStubUtil.invoke(
+        stub::runTroubleshootScript,
+        request,
+        InfraErrorId.LAB_RPC_DEVICE_OPS_RUN_TROUBLESHOOT_SCRIPT_GRPC_ERROR,
+        "Failed to run troubleshoot script");
+  }
+
+  @Override
+  public ListenableFuture<RunTroubleshootScriptResponse> runTroubleshootScriptAsync(
+      RunTroubleshootScriptRequest request) {
+    return futureStub.runTroubleshootScript(request);
+  }
+
+  @Override
   public void close() {
     // This stub is not responsible for managing lifecycle of the channel.
   }
@@ -125,6 +143,8 @@ public class DeviceOpsGrpcStub implements DeviceOpsStub {
     GetDeviceLogResponse getDeviceLog(GetDeviceLogRequest request);
 
     GetDeviceDebugInfoResponse getDeviceDebugInfo(GetDeviceDebugInfoRequest request);
+
+    RunTroubleshootScriptResponse runTroubleshootScript(RunTroubleshootScriptRequest request);
   }
 
   /** Interface for {@link DeviceOpsServiceFutureStub} */
@@ -135,6 +155,9 @@ public class DeviceOpsGrpcStub implements DeviceOpsStub {
 
     ListenableFuture<GetDeviceDebugInfoResponse> getDeviceDebugInfo(
         GetDeviceDebugInfoRequest request);
+
+    ListenableFuture<RunTroubleshootScriptResponse> runTroubleshootScript(
+        RunTroubleshootScriptRequest request);
   }
 
   public static BlockingInterface newBlockingInterface(Channel channel) {
