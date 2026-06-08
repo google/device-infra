@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLa
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.ReleaseLabServerActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.RestartLabServerActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.StartLabServerActionHelper;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.StopLabServerActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.UpdatePassThroughFlagsActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostLatestVersionProvider;
@@ -83,6 +84,7 @@ public final class HostServiceLogicImplTest {
   @Bind @Mock private ReleaseLabServerActionHelper releaseLabServerActionHelper;
   @Bind @Mock private RestartLabServerActionHelper restartLabServerActionHelper;
   @Bind @Mock private StartLabServerActionHelper startLabServerActionHelper;
+  @Bind @Mock private StopLabServerActionHelper stopLabServerActionHelper;
   @Bind @Mock private UpdatePassThroughFlagsActionHelper updatePassThroughFlagsActionHelper;
   @Mock private FeatureManager featureManager;
 
