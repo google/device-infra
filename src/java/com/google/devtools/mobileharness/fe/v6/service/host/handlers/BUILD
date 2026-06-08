@@ -49,6 +49,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:lab_sync",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/version",
+        "@grpc-java//core",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],

@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostOver
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLabServerReleaseHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.ReleaseLabServerHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.RemoteControlDevicesHandler;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.StartLabServerHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.UpdatePassThroughFlagsHandler;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityResponse;
@@ -81,6 +82,7 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   private final DecommissionMissingDevicesHandler decommissionMissingDevicesHandler;
   private final PreflightLabServerReleaseHandler preflightLabServerReleaseHandler;
   private final ReleaseLabServerHandler releaseLabServerHandler;
+  private final StartLabServerHandler startLabServerHandler;
   private final UpdatePassThroughFlagsHandler updatePassThroughFlagsHandler;
   private final UniverseFactory universeFactory;
 
@@ -94,6 +96,7 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
       DecommissionMissingDevicesHandler decommissionMissingDevicesHandler,
       PreflightLabServerReleaseHandler preflightLabServerReleaseHandler,
       ReleaseLabServerHandler releaseLabServerHandler,
+      StartLabServerHandler startLabServerHandler,
       UpdatePassThroughFlagsHandler updatePassThroughFlagsHandler,
       UniverseFactory universeFactory) {
     this.getHostOverviewHandler = getHostOverviewHandler;
@@ -104,6 +107,7 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
     this.decommissionMissingDevicesHandler = decommissionMissingDevicesHandler;
     this.preflightLabServerReleaseHandler = preflightLabServerReleaseHandler;
     this.releaseLabServerHandler = releaseLabServerHandler;
+    this.startLabServerHandler = startLabServerHandler;
     this.updatePassThroughFlagsHandler = updatePassThroughFlagsHandler;
     this.universeFactory = universeFactory;
   }
@@ -247,11 +251,13 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
 
   @Override
   public ListenableFuture<StartLabServerResponse> startLabServer(StartLabServerRequest request) {
-    // TODO: Use the universe parameter.
-    @SuppressWarnings("unused")
-    String universe = request.getUniverse();
-    // TODO: Implement this method.
-    return immediateFuture(StartLabServerResponse.getDefaultInstance());
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return startLabServerHandler.startLabServer(request, universe);
   }
 
   @Override

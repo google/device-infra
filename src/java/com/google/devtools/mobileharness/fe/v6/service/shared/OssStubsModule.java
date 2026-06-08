@@ -33,9 +33,11 @@ import com.google.devtools.mobileharness.fe.v6.service.host.builder.NoOpRemoteCo
 import com.google.devtools.mobileharness.fe.v6.service.host.builder.RemoteControlUrlBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.NoOpPreflightLabServerReleaseActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.NoOpReleaseLabServerActionHelper;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.NoOpStartLabServerActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.NoOpUpdatePassThroughFlagsActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLabServerReleaseActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.ReleaseLabServerActionHelper;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.StartLabServerActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.UpdatePassThroughFlagsActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostLatestVersionProvider;
@@ -114,6 +116,9 @@ public final class OssStubsModule extends AbstractModule {
         .in(Singleton.class);
     bind(ReleaseLabServerActionHelper.class)
         .to(NoOpReleaseLabServerActionHelper.class)
+        .in(Singleton.class);
+    bind(StartLabServerActionHelper.class)
+        .to(NoOpStartLabServerActionHelper.class)
         .in(Singleton.class);
     bind(LogcatActionHelper.class).to(NoOpLogcatActionHelper.class).in(Singleton.class);
     bind(RemoteControlUrlBuilder.class).to(NoOpRemoteControlUrlBuilder.class);
