@@ -24,9 +24,9 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.DeviceInfo;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
-import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -104,9 +104,11 @@ public final class LocalDeviceUtilImplTest {
 
     Optional<DeviceInfo> deviceInfo = localDeviceUtil.getDeviceInfoFromLocal(sessionRequestInfo);
     assertThat(deviceInfo).isPresent();
-    assertThat(deviceInfo.get().deviceId()).isEqualTo("device1");
-    assertThat(deviceInfo.get().supportedAbiList()).hasValue("arm64-v8a");
-    assertThat(deviceInfo.get().supportedAbi()).hasValue("arm64-v8a");
+    assertThat(deviceInfo.get().getDeviceId()).isEqualTo("device1");
+    assertThat(deviceInfo.get().hasSupportedAbiList()).isTrue();
+    assertThat(deviceInfo.get().getSupportedAbiList()).isEqualTo("arm64-v8a");
+    assertThat(deviceInfo.get().hasSupportedAbi()).isTrue();
+    assertThat(deviceInfo.get().getSupportedAbi()).isEqualTo("arm64-v8a");
   }
 
   private SessionRequestInfo.Builder defaultSessionRequestInfoBuilder() {

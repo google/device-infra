@@ -56,6 +56,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Job.AllocationExitStrategy;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser.TestPlanFilter;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.DeviceInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
@@ -78,7 +79,6 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.ModuleArg;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
-import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -751,7 +751,7 @@ public class SessionRequestHandlerUtil {
     }
 
     return Optional.of(
-        DeviceInfo.builder()
+        DeviceInfo.newBuilder()
             .setDeviceId(queryDeviceInfo.get().getId())
             .setSupportedAbiList(
                 queryDeviceInfo.get().getDimensionList().stream()

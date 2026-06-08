@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.TradefedJobInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.DeviceInfo;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
@@ -179,10 +180,7 @@ public abstract class XtsJobCreator {
         .put(Job.FILTERED_TRADEFED_MODULES, filteredTradefedModules)
         .put(
             Job.DEVICE_SUPPORTED_ABI_LIST,
-            sessionRequestInfo
-                .deviceInfo()
-                .flatMap(deviceInfo -> deviceInfo.supportedAbiList())
-                .orElse(""));
+            sessionRequestInfo.deviceInfo().map(DeviceInfo::getSupportedAbiList).orElse(""));
     if (sessionRequestInfo.androidXtsZipPassword().isPresent()
         && !sessionRequestInfo.androidXtsZipPassword().get().isEmpty()) {
       extraJobProperties.put(

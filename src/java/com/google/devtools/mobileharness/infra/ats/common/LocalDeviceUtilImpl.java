@@ -26,9 +26,9 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.DeviceInfo;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
-import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo;
 import com.google.inject.Provider;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -115,12 +115,15 @@ public class LocalDeviceUtilImpl implements LocalDeviceUtil {
           androidAdbUtilProvider.get().getProperty(deviceSerial.get(), AndroidProperty.ABILIST);
       String abi =
           androidAdbUtilProvider.get().getProperty(deviceSerial.get(), AndroidProperty.ABI);
-      return Optional.of(
-          DeviceInfo.builder()
-              .setDeviceId(deviceSerial.get())
-              .setSupportedAbiList(abiList)
-              .setSupportedAbi(abi)
-              .build());
+      DeviceInfo.Builder deviceInfoBuilder =
+          DeviceInfo.newBuilder().setDeviceId(deviceSerial.get());
+      if (abiList != null) {
+        deviceInfoBuilder.setSupportedAbiList(abiList);
+      }
+      if (abi != null) {
+        deviceInfoBuilder.setSupportedAbi(abi);
+      }
+      return Optional.of(deviceInfoBuilder.build());
     }
     logger
         .atInfo()

@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 
-import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -28,6 +27,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.DeviceInfo;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiFormatter;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
@@ -40,7 +40,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nullable;
 
@@ -145,7 +144,7 @@ public class TestSuiteHelper {
           ExtErrorId.TEST_SUITE_DEVICE_ABIS_MISSING,
           String.format(
               "Couldn't determinate the abi of the device '%s'.",
-              deviceInfo == null ? "UNKNOWN" : deviceInfo.deviceId()));
+              deviceInfo == null ? "UNKNOWN" : deviceInfo.getDeviceId()));
     }
 
     for (String abi : deviceAbis) {
@@ -183,7 +182,8 @@ public class TestSuiteHelper {
 
     return ImmutableSet.copyOf(
         AbiFormatter.getSupportedAbis(
-            deviceInfo.supportedAbiList().orElse(null), deviceInfo.supportedAbi().orElse(null)));
+            deviceInfo.hasSupportedAbiList() ? deviceInfo.getSupportedAbiList() : null,
+            deviceInfo.hasSupportedAbi() ? deviceInfo.getSupportedAbi() : null));
   }
 
   /** Gets the host machine abis. */
@@ -229,36 +229,5 @@ public class TestSuiteHelper {
 
   private SuiteModuleLoader createModuleLoader() {
     return new SuiteModuleLoader();
-  }
-
-  /** Device info used to load tests. */
-  @AutoValue
-  public abstract static class DeviceInfo {
-
-    /** Device ID. */
-    public abstract String deviceId();
-
-    /** Device's supported abi list. From Android device property `ro.product.cpu.abilist`. */
-    public abstract Optional<String> supportedAbiList();
-
-    /** Device's supported abi. From Android device property `ro.product.cpu.abi`. */
-    public abstract Optional<String> supportedAbi();
-
-    public static Builder builder() {
-      return new AutoValue_TestSuiteHelper_DeviceInfo.Builder();
-    }
-
-    /** Builder for {@link DeviceInfo}. */
-    @AutoValue.Builder
-    public abstract static class Builder {
-
-      public abstract Builder setDeviceId(String deviceId);
-
-      public abstract Builder setSupportedAbiList(String supportedAbiList);
-
-      public abstract Builder setSupportedAbi(String supportedAbi);
-
-      public abstract DeviceInfo build();
-    }
   }
 }

@@ -41,6 +41,7 @@ java_library(
     ],
     deps = [
         ":tradefed_run_strategy",
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/emulator:android_jit_emulator_util",

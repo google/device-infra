@@ -28,3 +28,10 @@ enum ShardingMode {
   // Schedule each module as a separate command
   MODULE = 2;
 }
+
+// Device info used to load tests.
+message DeviceInfo {
+  string device_id = 1;
+  optional string supported_abi_list = 2;
+  optional string supported_abi = 3;
+}

@@ -32,6 +32,7 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.DeviceInfo;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.AndroidJitEmulatorUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCommandUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
@@ -39,7 +40,6 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
-import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -653,7 +653,7 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
     // configurations. Note this includes both TradeFed and non-TradeFed (Mobly) modules.
     Map<String, Configuration> configs =
         suiteHelper.loadTests(
-            DeviceInfo.builder()
+            DeviceInfo.newBuilder()
                 .setDeviceId(device.getDeviceId())
                 .setSupportedAbiList(
                     testInfo

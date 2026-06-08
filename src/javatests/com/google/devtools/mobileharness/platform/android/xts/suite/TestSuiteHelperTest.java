@@ -26,7 +26,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.DeviceInfo;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -67,7 +67,7 @@ public final class TestSuiteHelperTest {
         .when(testSuiteHelper)
         .getAbisForBuildTargetArchFromSuite();
     DeviceInfo deviceInfo =
-        DeviceInfo.builder()
+        DeviceInfo.newBuilder()
             .setDeviceId("device_id")
             .setSupportedAbiList("arm64-v8a,armeabi-v7a,armeabi")
             .setSupportedAbi("arm64-v8a")
@@ -84,7 +84,7 @@ public final class TestSuiteHelperTest {
         .when(testSuiteHelper)
         .getAbisForBuildTargetArchFromSuite();
     DeviceInfo deviceInfo =
-        DeviceInfo.builder()
+        DeviceInfo.newBuilder()
             .setDeviceId("device_id")
             .setSupportedAbiList("arm64-v8a,armeabi-v7a,armeabi")
             .setSupportedAbi("arm64-v8a")
@@ -129,7 +129,7 @@ public final class TestSuiteHelperTest {
         .when(testSuiteHelper)
         .getAbisForBuildTargetArchFromSuite();
     DeviceInfo deviceInfo =
-        DeviceInfo.builder()
+        DeviceInfo.newBuilder()
             .setDeviceId("device_id")
             .setSupportedAbiList("x86_64")
             .setSupportedAbi("x86_64")

@@ -36,13 +36,13 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerU
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.TradefedJobInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.DeviceInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.util.AtsServerSessionUtil;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
-import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
@@ -196,7 +196,7 @@ public final class ServerJobCreatorTest {
             .setModuleNames(ImmutableList.of("mock_module"))
             .setDeviceInfo(
                 Optional.of(
-                    DeviceInfo.builder()
+                    DeviceInfo.newBuilder()
                         .setDeviceId("mock_device_id")
                         .setSupportedAbiList("arm64-v8a,armeabi-v7a")
                         .build()))
@@ -523,7 +523,7 @@ public final class ServerJobCreatorTest {
             .setModuleNames(ImmutableList.of("CtsAccelerationTestCases", "OtherTestModule"))
             .setDeviceInfo(
                 Optional.of(
-                    DeviceInfo.builder()
+                    DeviceInfo.newBuilder()
                         .setDeviceId("mock_device_id")
                         .setSupportedAbiList("arm64-v8a,armeabi-v7a")
                         .build()))
