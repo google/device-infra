@@ -92,7 +92,7 @@ public class AndroidFilePusherDecorator extends BaseDecorator implements Android
             jobInfo.params().get(AndroidFilePusherSpec.PARAM_PUSH_FILES),
             AndroidFilePusherSpec.FILE_ENTRY_DELIMITER,
             AndroidFilePusherSpec.FILE_MAP_KEY_VALUE_DELIMITER, /* allowDelimiterInValue */
-            false,
+            true,
             /* isValueOptional= */ true);
     int pushTimeoutSec =
         jobInfo
