@@ -111,4 +111,42 @@ public final class TestSuiteInfoTest {
 
     assertThat(testSuiteInfo.getBuildNumber()).isEqualTo("12345");
   }
+
+  @Test
+  public void getTestSuiteVersion_success() throws Exception {
+    String propsContent =
+        "build_number=12345\ntarget_arch=arm64\nname=CTS\nfullname=Compatibility Test Suite\n"
+            + "version=14_r1";
+    InputStream inputStream = new ByteArrayInputStream(propsContent.getBytes(UTF_8));
+    when(jarFileUtil.getZipEntryInputStream(any(Path.class), eq(SUITE_INFO_PROPERTY)))
+        .thenReturn(Optional.of(inputStream));
+
+    TestSuiteInfo testSuiteInfo = new TestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
+
+    assertThat(testSuiteInfo.getTestSuiteVersion()).hasValue(TestSuiteVersion.create(14, 0, 0, 1));
+  }
+
+  @Test
+  public void getTestSuiteVersion_invalid_fallbackToEmpty() throws Exception {
+    String propsContent =
+        "build_number=12345\ntarget_arch=arm64\nname=CTS\nfullname=Compatibility Test Suite\n"
+            + "version=invalid_format";
+    InputStream inputStream = new ByteArrayInputStream(propsContent.getBytes(UTF_8));
+    when(jarFileUtil.getZipEntryInputStream(any(Path.class), eq(SUITE_INFO_PROPERTY)))
+        .thenReturn(Optional.of(inputStream));
+
+    TestSuiteInfo testSuiteInfo = new TestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
+
+    assertThat(testSuiteInfo.getTestSuiteVersion()).isEmpty();
+  }
+
+  @Test
+  public void getTestSuiteVersion_stubVersion_returnsEmpty() throws Exception {
+    when(jarFileUtil.getZipEntryInputStream(any(Path.class), eq(SUITE_INFO_PROPERTY)))
+        .thenReturn(Optional.empty());
+
+    TestSuiteInfo testSuiteInfo = new TestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
+
+    assertThat(testSuiteInfo.getTestSuiteVersion()).isEmpty();
+  }
 }
