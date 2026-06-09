@@ -94,6 +94,7 @@ public final class DriverDecoratorSpecMapper {
     builder.put("AndroidShowInstructionDecorator", "AndroidShowInstructionDecoratorSpec");
     builder.put("AndroidSwitchLanguageDecorator", "AndroidSwitchLanguageDecoratorSpec");
     builder.put("AndroidSwitchUserDecorator", "AndroidSwitchUserDecoratorSpec");
+    builder.put("ApkPreconditionCheckDecorator", "ApkPreconditionCheckDecoratorSpec");
     builder.put("MoblyDecoratorAdapter", "MoblyDecoratorAdapterSpec");
     builder.put("NoOpDecorator", "NoOpDecoratorSpec");
     builder.put("PythonVersionCheckDecorator", "PythonVersionCheckDecoratorSpec");
