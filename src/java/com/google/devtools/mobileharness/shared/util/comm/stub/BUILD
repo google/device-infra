@@ -73,7 +73,7 @@ java_library(
         ":grpc_address_util",
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
         "@grpc-java//core",
-        "@grpc-java//stub",
+        "@grpc-java//netty",
         "@maven//:com_google_guava_guava",
     ],
 )
