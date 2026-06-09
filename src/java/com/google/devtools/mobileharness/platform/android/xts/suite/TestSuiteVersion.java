@@ -17,10 +17,7 @@
 package com.google.devtools.mobileharness.platform.android.xts.suite;
 
 import com.google.auto.value.AutoValue;
-import com.google.common.base.Splitter;
 import com.google.common.collect.ComparisonChain;
-import java.util.List;
-import java.util.Locale;
 
 /**
  * Version of a test suite.
@@ -38,50 +35,6 @@ public abstract class TestSuiteVersion implements Comparable<TestSuiteVersion> {
   public abstract int patch();
 
   public abstract int revision();
-
-  public static TestSuiteVersion create(String versionString) {
-    List<String> parts =
-        Splitter.on('_').trimResults().omitEmptyStrings().splitToList(versionString);
-    int major = 0;
-    int minor = 0;
-    int patch = 0;
-    int revision = 0;
-    // android-mts doesn't have revision in the version string, e.g., "6.0"
-    boolean hasRevision = parts.size() > 1;
-    if (parts.isEmpty()) {
-      throw new IllegalArgumentException(
-          String.format("Invalid version string: %s", versionString));
-    }
-
-    List<String> majorMinorPatch =
-        Splitter.on('.').trimResults().omitEmptyStrings().splitToList(parts.get(0));
-    if (majorMinorPatch.size() > 3) {
-      throw new IllegalArgumentException(
-          String.format("Invalid version string: %s", versionString));
-    }
-    if (majorMinorPatch.size() == 3) {
-      patch = Integer.parseInt(majorMinorPatch.get(2));
-    }
-    if (majorMinorPatch.size() >= 2) {
-      minor = Integer.parseInt(majorMinorPatch.get(1));
-    }
-    if (majorMinorPatch.size() >= 1) {
-      major = Integer.parseInt(majorMinorPatch.get(0));
-    }
-
-    if (hasRevision) {
-      String revisionString = parts.get(1);
-      // The revision string can be like "r1" or "sts-r46", so we parse from the last 'r'.
-      int rIndex = revisionString.toLowerCase(Locale.ROOT).lastIndexOf('r');
-      if (rIndex != -1) {
-        revision = Integer.parseInt(revisionString.substring(rIndex + 1));
-      } else {
-        throw new IllegalArgumentException(
-            String.format("Invalid revision in version string: %s", versionString));
-      }
-    }
-    return create(major, minor, patch, revision);
-  }
 
   public static TestSuiteVersion create(int major, int minor, int patch, int revision) {
     return new AutoValue_TestSuiteVersion(major, minor, patch, revision);

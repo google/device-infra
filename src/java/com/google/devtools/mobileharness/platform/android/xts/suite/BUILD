@@ -88,6 +88,7 @@ java_library(
     ],
     deps = [
         ":test_suite_version",
+        ":test_suite_version_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:jar_file_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
@@ -217,6 +218,19 @@ java_library(
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "test_suite_version_util",
+    srcs = ["TestSuiteVersionUtil.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
+    ],
+    deps = [
+        ":test_suite_version",
         "@maven//:com_google_guava_guava",
     ],
 )

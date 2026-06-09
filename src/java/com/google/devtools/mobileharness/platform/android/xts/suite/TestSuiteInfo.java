@@ -105,7 +105,7 @@ public class TestSuiteInfo {
 
     loadBuildNumberFromVersionFile()
         .ifPresent(buildNumber -> propsValue.setProperty(BUILD_NUMBER, buildNumber));
-    return ImmutableMap.copyOf(Maps.fromProperties(propsValue));
+    return Maps.fromProperties(propsValue);
   }
 
   private Properties loadSuiteInfoFromInputStream(InputStream testSuiteInfoPropsInputStream)
@@ -179,7 +179,7 @@ public class TestSuiteInfo {
       if (isNullOrEmpty(version) || version.trim().isEmpty() || version.equals(STUB_VERSION)) {
         return Optional.empty();
       } else {
-        return Optional.of(TestSuiteVersion.create(version.trim()));
+        return Optional.of(TestSuiteVersionUtil.parse(version.trim()));
       }
     } catch (IllegalArgumentException e) {
       logger.atWarning().withCause(e).log(

@@ -34,6 +34,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_info",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_version",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_version_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_stats_helper",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
