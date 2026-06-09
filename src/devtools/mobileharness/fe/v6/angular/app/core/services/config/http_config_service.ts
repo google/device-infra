@@ -92,9 +92,7 @@ export class HttpConfigService extends ConfigService {
         `${this.apiUrl}/hosts/${hostName}:getDefaultDeviceConfig`,
         {},
       )
-      .pipe(
-        map((response) => normalizeDeviceConfig(response.deviceConfig || null)),
-      );
+      .pipe(map((response) => response.deviceConfig || null));
   }
 
   override getHostConfig(hostName: string): Observable<GetHostConfigResult> {

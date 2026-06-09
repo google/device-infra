@@ -22,6 +22,7 @@ import {finalize} from 'rxjs/operators';
 import {DEFAULT_HOST_CONFIG} from '../../../../../core/constants/host_config_constants';
 import {HostConfig} from '../../../../../core/models/host_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
+import {Environment} from '../../../../../core/services/environment';
 import {normalizeHostConfig} from '../../../../../core/utils/host_config_utils';
 import {Permissions} from '../../../../../features/device_detail/components/device_config/steps/permissions/permissions';
 import {Wifi} from '../../../../../features/device_detail/components/device_config/steps/wifi/wifi';
@@ -71,6 +72,8 @@ export class HostWizard implements OnInit, AfterViewInit {
   private readonly dialogRef = inject(MatDialogRef<HostWizard>); // to close the dialog
 
   private readonly configService = inject(CONFIG_SERVICE);
+  private readonly environment = inject(Environment);
+  readonly isGoogleInternal = this.environment.isGoogleInternal();
 
   // used for stepper
   @ViewChild('permissions') permissionsTemplate!: TemplateRef<{}>;
@@ -94,11 +97,11 @@ export class HostWizard implements OnInit, AfterViewInit {
   // used for apply changes button
   @ViewChild('stepper') stepper!: WizardStepper;
   verifying = signal<boolean>(false);
-  applyChangesDisabled = signal<boolean>(false);
+  applyChangesDisabled = signal<boolean>(true);
 
   ngOnInit() {
     if (this.data.source === 'copy') {
-      this.currentStep.set('review-and-submit');
+      // this.currentStep.set('review-and-submit');
       this.covertToReviewTable();
     }
   }
@@ -158,33 +161,48 @@ export class HostWizard implements OnInit, AfterViewInit {
     const executors =
       this.hostConfig().deviceConfig?.permissions?.executors || [];
 
-    this.dataSource = [
-      {type: 'title', feature: 'Host Permissions'},
-      {
-        type: 'data',
-        feature: 'Host Admins',
-        value:
-          this.hostConfig().permissions.hostAdmins.length > 0
-            ? this.hostConfig().permissions.hostAdmins.join(', ')
-            : 'None',
-      },
+    const dataSource: ReviewTableRow[] = [];
+
+    if (this.isGoogleInternal) {
+      dataSource.push(
+        {type: 'title', feature: 'Host Permissions'},
+        {
+          type: 'data',
+          feature: 'Host Admins',
+          value:
+            this.hostConfig().permissions.hostAdmins.length > 0
+              ? this.hostConfig().permissions.hostAdmins.join(', ')
+              : 'None',
+        },
+      );
+    }
+
+    dataSource.push(
       {type: 'title', feature: 'Device Config Mode'},
       {
         type: 'data',
         feature: 'Device Config Mode',
         value: this.hostConfig().deviceConfigMode,
       },
-      {type: 'title', feature: 'Default Device Config - Permissions'},
-      {
-        type: 'data',
-        feature: 'Device Owners',
-        value: owners.length > 0 ? owners.join(', ') : 'None',
-      },
-      {
-        type: 'data',
-        feature: 'Device Executors',
-        value: executors.length > 0 ? executors.join(', ') : 'None',
-      },
+    );
+
+    if (this.isGoogleInternal) {
+      dataSource.push(
+        {type: 'title', feature: 'Default Device Config - Permissions'},
+        {
+          type: 'data',
+          feature: 'Device Owners',
+          value: owners.length > 0 ? owners.join(', ') : 'None',
+        },
+        {
+          type: 'data',
+          feature: 'Device Executors',
+          value: executors.length > 0 ? executors.join(', ') : 'None',
+        },
+      );
+    }
+
+    dataSource.push(
       {type: 'title', feature: 'Default Device Config - Wi-Fi'},
       {
         type: 'data',
@@ -205,7 +223,7 @@ export class HostWizard implements OnInit, AfterViewInit {
         feature: 'Hidden Network',
         value: this.hostConfig().deviceConfig?.wifi?.scanSsid ? 'Yes' : 'No',
       },
-    ];
+    );
 
     if (this.data.source === 'copy') {
       const supportDimensions = (
@@ -229,7 +247,7 @@ export class HostWizard implements OnInit, AfterViewInit {
         (v) => !(!v.key && !v.value),
       );
 
-      this.dataSource.push(
+      dataSource.push(
         {type: 'title', feature: 'Default Device Config - Dimensions'},
         {
           type: 'data',
@@ -243,7 +261,7 @@ export class HostWizard implements OnInit, AfterViewInit {
                         item.name
                       }</strong>: ${item.value}</div>`,
                   )
-                  .join(', ')
+                  .join('')
               : 'None',
         },
         {
@@ -258,126 +276,133 @@ export class HostWizard implements OnInit, AfterViewInit {
                         item.name
                       }</strong>: ${item.value}</div>`,
                   )
-                  .join(', ')
-              : 'None',
-        },
-        {
-          type: 'title',
-          feature: 'Default Device Config - Stability & Reboot',
-        },
-        {
-          type: 'data',
-          feature: 'Max Consecutive Failures',
-          value: this.hostConfig().deviceConfig?.settings?.maxConsecutiveFail,
-        },
-        {
-          type: 'data',
-          feature: 'Max Tests between Reboots',
-          value: this.hostConfig().deviceConfig?.settings?.maxConsecutiveTest,
-        },
-        {
-          type: 'title',
-          feature: 'Device Discovery',
-        },
-        {
-          type: 'data',
-          feature: 'Monitored Device UUIDs',
-          value:
-            this.hostConfig().deviceDiscovery.monitoredDeviceUuids.length > 0
-              ? this.hostConfig().deviceDiscovery.monitoredDeviceUuids.join(
-                  ', ',
-                )
-              : 'None',
-        },
-        {
-          type: 'data',
-          feature: 'Testbed UUIDs',
-          value:
-            this.hostConfig().deviceDiscovery.testbedUuids.length > 0
-              ? this.hostConfig().deviceDiscovery.testbedUuids.join(', ')
-              : 'None',
-        },
-        {
-          type: 'data',
-          feature: 'Misc Device UUIDs',
-          value:
-            this.hostConfig().deviceDiscovery.miscDeviceUuids.length > 0
-              ? this.hostConfig().deviceDiscovery.miscDeviceUuids.join(', ')
-              : 'None',
-        },
-        {
-          type: 'data',
-          feature: 'Over TCP IPs',
-          value:
-            this.hostConfig().deviceDiscovery.overTcpIps.length > 0
-              ? this.hostConfig().deviceDiscovery.overTcpIps.join('<br />')
-              : 'None',
-        },
-        {
-          type: 'data',
-          feature: 'Over SSH Devices',
-          value:
-            overSshDevices.length > 0
-              ? `<table class="review-ssh-table">
-                    <tr>
-                      <td width="20%"><strong>IP Address</strong></td>
-                      <td width="20%"><strong>Username</strong></td>
-                      <td width="20%"><strong>Password</strong></td>
-                      <td width="20%"><strong>SSH Device Type</strong></td>
-                    </tr>` +
-                overSshDevices
-                  .map(
-                    (item) => `<tr>
-                          <td>${item.ipAddress}</td>
-                          <td>${item.username}</td>
-                          <td>${item.password}</td>
-                          <td>${item.sshDeviceType}</td>
-                        </tr>`,
-                  )
-                  .join('') +
-                `</table>`
-              : 'None',
-        },
-        {
-          type: 'data',
-          feature: 'Maneki Specs',
-          value:
-            manekiSpecs.length > 0
-              ? `<table>
-                    <tr>
-                      <td width="20%"><strong>Device Type</strong></td>
-                      <td width="20%"><strong>Mac Address</strong></td>
-                    </tr>` +
-                manekiSpecs
-                  .map(
-                    (item) => `<tr>
-                          <td>${item.type}</td>
-                          <td>${item.macAddress}</td>
-                        </tr>`,
-                  )
-                  .join('') +
-                `</table>`
-              : 'None',
-        },
-        {
-          type: 'title',
-          feature: 'Host Properties',
-        },
-        {
-          type: 'data',
-          feature: 'Host Properties',
-          value:
-            hostProperties.length > 0
-              ? hostProperties
-                  .map(
-                    (item) =>
-                      `<div><strong>${item.key}</strong>: ${item.value}</div>`,
-                  )
                   .join('')
               : 'None',
         },
       );
+
+      if (this.isGoogleInternal) {
+        dataSource.push(
+          {
+            type: 'title',
+            feature: 'Default Device Config - Stability & Reboot',
+          },
+          {
+            type: 'data',
+            feature: 'Max Consecutive Failures',
+            value: this.hostConfig().deviceConfig?.settings?.maxConsecutiveFail,
+          },
+          {
+            type: 'data',
+            feature: 'Max Tests between Reboots',
+            value: this.hostConfig().deviceConfig?.settings?.maxConsecutiveTest,
+          },
+          {
+            type: 'title',
+            feature: 'Device Discovery',
+          },
+          {
+            type: 'data',
+            feature: 'Monitored Device UUIDs',
+            value:
+              this.hostConfig().deviceDiscovery.monitoredDeviceUuids.length > 0
+                ? this.hostConfig().deviceDiscovery.monitoredDeviceUuids.join(
+                    ', ',
+                  )
+                : 'None',
+          },
+          {
+            type: 'data',
+            feature: 'Testbed UUIDs',
+            value:
+              this.hostConfig().deviceDiscovery.testbedUuids.length > 0
+                ? this.hostConfig().deviceDiscovery.testbedUuids.join(', ')
+                : 'None',
+          },
+          {
+            type: 'data',
+            feature: 'Misc Device UUIDs',
+            value:
+              this.hostConfig().deviceDiscovery.miscDeviceUuids.length > 0
+                ? this.hostConfig().deviceDiscovery.miscDeviceUuids.join(', ')
+                : 'None',
+          },
+          {
+            type: 'data',
+            feature: 'Over TCP IPs',
+            value:
+              this.hostConfig().deviceDiscovery.overTcpIps.length > 0
+                ? this.hostConfig().deviceDiscovery.overTcpIps.join('<br />')
+                : 'None',
+          },
+          {
+            type: 'data',
+            feature: 'Over SSH Devices',
+            value:
+              overSshDevices.length > 0
+                ? `<table class="review-ssh-table">
+                      <tr>
+                        <td width="20%"><strong>IP Address</strong></td>
+                        <td width="20%"><strong>Username</strong></td>
+                        <td width="20%"><strong>Password</strong></td>
+                        <td width="20%"><strong>SSH Device Type</strong></td>
+                      </tr>` +
+                  overSshDevices
+                    .map(
+                      (item) => `<tr>
+                            <td>${item.ipAddress}</td>
+                            <td>${item.username}</td>
+                            <td>${item.password}</td>
+                            <td>${item.sshDeviceType}</td>
+                          </tr>`,
+                    )
+                    .join('') +
+                  `</table>`
+                : 'None',
+          },
+          {
+            type: 'data',
+            feature: 'Maneki Specs',
+            value:
+              manekiSpecs.length > 0
+                ? `<table>
+                      <tr>
+                        <td width="20%"><strong>Device Type</strong></td>
+                        <td width="20%"><strong>Mac Address</strong></td>
+                      </tr>` +
+                  manekiSpecs
+                    .map(
+                      (item) => `<tr>
+                            <td>${item.type}</td>
+                            <td>${item.macAddress}</td>
+                          </tr>`,
+                    )
+                    .join('') +
+                  `</table>`
+                : 'None',
+          },
+          {
+            type: 'title',
+            feature: 'Host Properties',
+          },
+          {
+            type: 'data',
+            feature: 'Host Properties',
+            value:
+              hostProperties.length > 0
+                ? hostProperties
+                    .map(
+                      (item) =>
+                        `<div><strong>${item.key}</strong>: ${item.value}</div>`,
+                    )
+                    .join('')
+                : 'None',
+          },
+        );
+      }
     }
+
+    this.dataSource = dataSource;
   }
 
   submit() {

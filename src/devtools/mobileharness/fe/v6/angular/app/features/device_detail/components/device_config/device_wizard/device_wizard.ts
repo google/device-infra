@@ -32,6 +32,8 @@ import {
   UpdateDeviceConfigRequest,
 } from '../../../../../core/models/device_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
+import {Environment} from '../../../../../core/services/environment';
+import {normalizeDeviceConfig} from '../../../../../core/utils/device_config_utils';
 import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
 import {
   ReviewTable,
@@ -80,6 +82,8 @@ export class DeviceWizard implements OnInit, AfterViewInit {
   readonly configService = inject(CONFIG_SERVICE);
   private readonly dialog = inject(MatDialog);
   private readonly dialogRef = inject(MatDialogRef<DeviceWizard>);
+  private readonly environment = inject(Environment);
+  readonly isGoogleInternal = this.environment.isGoogleInternal();
 
   // used for wizard stepper
   @ViewChild('permissions') permissionsTemplate!: TemplateRef<{}>;
@@ -102,7 +106,7 @@ export class DeviceWizard implements OnInit, AfterViewInit {
   // used for apply changes button
   @ViewChild('stepper') stepper!: WizardStepper;
   verifying = signal<boolean>(false);
-  applyChangesDisabled = signal<boolean>(false);
+  applyChangesDisabled = signal<boolean>(true);
 
   getWizardSteps(): WizardStep[] {
     return [
@@ -127,8 +131,8 @@ export class DeviceWizard implements OnInit, AfterViewInit {
 
   ngOnInit() {
     if (this.data.source === 'copy') {
-      this.currentStep.set('review-and-submit');
-      this.config = this.data.config;
+      // this.currentStep.set('review-and-submit');
+      this.config = normalizeDeviceConfig(this.data.config);
       this.covertToReviewTable();
     }
   }
@@ -160,18 +164,26 @@ export class DeviceWizard implements OnInit, AfterViewInit {
     );
     const owners = this.config.permissions?.owners || [];
     const executors = this.config.permissions?.executors || [];
-    this.dataSource = [
-      {type: 'title', feature: 'Permissions'},
-      {
-        type: 'data',
-        feature: 'Owners',
-        value: owners.length > 0 ? owners.join(', ') : 'None',
-      },
-      {
-        type: 'data',
-        feature: 'Executors',
-        value: executors.length > 0 ? executors.join(', ') : 'None',
-      },
+
+    this.dataSource = [];
+
+    if (this.isGoogleInternal) {
+      this.dataSource.push(
+        {type: 'title', feature: 'Permissions'},
+        {
+          type: 'data',
+          feature: 'Owners',
+          value: owners.length > 0 ? owners.join(', ') : 'None',
+        },
+        {
+          type: 'data',
+          feature: 'Executors',
+          value: executors.length > 0 ? executors.join(', ') : 'None',
+        },
+      );
+    }
+
+    this.dataSource.push(
       {type: 'title', feature: 'Wi-Fi'},
       {
         type: 'data',
@@ -218,8 +230,9 @@ export class DeviceWizard implements OnInit, AfterViewInit {
                 .join('')
             : 'None',
       },
-    ];
-    if (this.data.source === 'copy') {
+    );
+
+    if (this.isGoogleInternal && this.data.source === 'copy') {
       this.dataSource.push(
         {
           type: 'title',

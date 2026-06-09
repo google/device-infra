@@ -171,9 +171,12 @@ export class DeviceActionBar {
         return;
       }
 
-      if (result.action === 'new' || result.action === 'copy') {
-        this.createOrCopyConfiguration(result.action, deviceId, result.config);
-      }
+      this.createOrCopyConfiguration(
+        result.action,
+        result.deviceId,
+        result.config,
+        result.universe,
+      );
     });
   }
 
@@ -216,35 +219,57 @@ export class DeviceActionBar {
     config: DeviceConfig | null,
     universe?: string,
   ) {
-    // the configuration UI has more features in google internal,
+    // For google internal, the configuration UI has more features when create a new configuration,
     // thus we need a Wizard to guide the user to complete the configuration.
     // While for OSS, the configuration UI is simpler
     // thus we can directly use the HostSettings component.
-    if (this.environment.isGoogleInternal()) {
-      this.dialog.open(DeviceWizard, {
-        data: {source: action, deviceId, config, universe},
-        autoFocus: false,
-      });
-    } else {
-      const dialogRef = this.dialog.open(DeviceSettings, {
-        data: {deviceId, config, universe},
-        autoFocus: false,
-      });
-
-      dialogRef.afterClosed().subscribe((result) => {
-        if (!result) {
-          return;
-        }
-        if (result.action === 'reset') {
-          this.resetConfiguration(
-            result.deviceId,
-            this.hostName(),
-            this.pageData().overview.host.ip,
-            result.universe,
-          );
-        }
-      });
+    if (
+      (this.environment.isGoogleInternal() && action === 'new') ||
+      action === 'copy'
+    ) {
+      this.openDeviceWizard(action, deviceId, config, universe);
     }
+
+    if (!this.environment.isGoogleInternal() && action === 'new') {
+      this.openDeviceSettings(deviceId, config, universe);
+    }
+  }
+
+  openDeviceWizard(
+    action: string,
+    deviceId: string,
+    config: DeviceConfig | null,
+    universe?: string,
+  ) {
+    this.dialog.open(DeviceWizard, {
+      data: {source: action, deviceId, config, universe},
+      autoFocus: false,
+    });
+  }
+
+  openDeviceSettings(
+    deviceId: string,
+    config: DeviceConfig | null,
+    universe?: string,
+  ) {
+    const dialogRef = this.dialog.open(DeviceSettings, {
+      data: {deviceId, config, universe},
+      autoFocus: false,
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result) {
+        return;
+      }
+      if (result.action === 'reset') {
+        this.resetConfiguration(
+          result.deviceId,
+          this.hostName(),
+          this.pageData().overview.host.ip,
+          result.universe,
+        );
+      }
+    });
   }
 
   showComingSoonPopup(key: string) {

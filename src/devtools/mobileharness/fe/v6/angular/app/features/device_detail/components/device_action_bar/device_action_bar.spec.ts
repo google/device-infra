@@ -11,11 +11,16 @@ import {
   TakeScreenshotResponse,
 } from '../../../../core/models/device_action';
 import {DeviceOverviewPageData} from '../../../../core/models/device_overview';
+import {Environment} from '../../../../core/services/environment';
 import {FakeHostService} from '../../../../core/services/host/fake_host_service';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
 import {DeviceActionService} from '../../../../shared/services/device_action_service';
 import {RemoteControlService} from '../../../../shared/services/remote_control_service';
+import {DeviceConfig} from '../device_config/device_config';
+import {DeviceEmpty} from '../device_config/device_empty/device_empty';
+import {DeviceSettings} from '../device_config/device_settings/device_settings';
+import {DeviceWizard} from '../device_config/device_wizard/device_wizard';
 import {DeviceActionBar} from './device_action_bar';
 
 describe('DeviceActionBar', () => {
@@ -92,10 +97,14 @@ describe('DeviceActionBar', () => {
     },
   };
 
+  let mockEnvironment: jasmine.SpyObj<Environment>;
+
   beforeEach(async () => {
     dialog = jasmine.createSpyObj('MatDialog', ['open']);
     hostService = new FakeHostService();
     comingSoonService = jasmine.createSpyObj('ComingSoonService', ['show']);
+    mockEnvironment = jasmine.createSpyObj('Environment', ['isGoogleInternal']);
+    mockEnvironment.isGoogleInternal.and.returnValue(true);
 
     remoteControlService = jasmine.createSpyObj('RemoteControlService', [
       'startRemoteControl',
@@ -126,6 +135,7 @@ describe('DeviceActionBar', () => {
         {provide: ComingSoonService, useValue: comingSoonService},
         {provide: DeviceActionService, useValue: deviceActionService},
         {provide: APP_DATA, useValue: {applicationId: 'test-app'}},
+        {provide: Environment, useValue: mockEnvironment},
       ],
     }).compileComponents();
 
@@ -355,6 +365,118 @@ describe('DeviceActionBar', () => {
     expect(deviceActionService.changeQuarantine).toHaveBeenCalledWith(
       'test-device',
       '',
+    );
+  });
+
+  it('should open DeviceConfig dialog on openConfiguration, handle reset and call DeviceEmpty and DeviceWizard', () => {
+    mockEnvironment.isGoogleInternal.and.returnValue(true);
+    const configDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    const emptyDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    const wizardDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+
+    configDialogRefSpy.afterClosed.and.returnValue(
+      of({action: 'reset', deviceId: 'test-device'}),
+    );
+    emptyDialogRefSpy.afterClosed.and.returnValue(
+      of({action: 'new', deviceId: 'test-device', config: null}),
+    );
+
+    dialog.open.and.callFake((component: unknown) => {
+      if (component === DeviceConfig) {
+        return configDialogRefSpy;
+      }
+      if (component === DeviceEmpty) {
+        return emptyDialogRefSpy;
+      }
+      return wizardDialogRefSpy;
+    });
+
+    component.openConfiguration();
+
+    expect(dialog.open).toHaveBeenCalledWith(DeviceConfig, jasmine.any(Object));
+    expect(dialog.open).toHaveBeenCalledWith(DeviceEmpty, jasmine.any(Object));
+    expect(dialog.open).toHaveBeenCalledWith(DeviceWizard, jasmine.any(Object));
+  });
+
+  it('should open DeviceSettings dialog if non-internal, and call DeviceEmpty on reset result', () => {
+    mockEnvironment.isGoogleInternal.and.returnValue(false);
+    const configDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    const settingsDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    const emptyDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+
+    configDialogRefSpy.afterClosed.and.returnValue(
+      of({action: 'new', deviceId: 'test-device', config: null}),
+    );
+    settingsDialogRefSpy.afterClosed.and.returnValue(
+      of({action: 'reset', deviceId: 'test-device'}),
+    );
+    emptyDialogRefSpy.afterClosed.and.returnValue(of(undefined));
+
+    dialog.open.and.callFake((component: unknown) => {
+      if (component === DeviceConfig) {
+        return configDialogRefSpy;
+      }
+      if (component === DeviceSettings) {
+        return settingsDialogRefSpy;
+      }
+      return emptyDialogRefSpy;
+    });
+
+    component.openConfiguration();
+
+    expect(dialog.open).toHaveBeenCalledWith(DeviceConfig, jasmine.any(Object));
+    expect(dialog.open).toHaveBeenCalledWith(
+      DeviceSettings,
+      jasmine.any(Object),
+    );
+    expect(dialog.open).toHaveBeenCalledWith(DeviceEmpty, jasmine.any(Object));
+  });
+
+  it('should open DeviceSettings dialog and NOT call DeviceEmpty if action is not reset', () => {
+    mockEnvironment.isGoogleInternal.and.returnValue(false);
+    const configDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    const settingsDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+
+    configDialogRefSpy.afterClosed.and.returnValue(
+      of({action: 'new', deviceId: 'test-device', config: null}),
+    );
+    settingsDialogRefSpy.afterClosed.and.returnValue(
+      of({action: 'close', deviceId: 'test-device'}),
+    );
+
+    dialog.open.and.callFake((component: unknown) => {
+      if (component === DeviceConfig) {
+        return configDialogRefSpy;
+      }
+      return settingsDialogRefSpy;
+    });
+
+    component.openConfiguration();
+
+    expect(dialog.open).toHaveBeenCalledWith(DeviceConfig, jasmine.any(Object));
+    expect(dialog.open).toHaveBeenCalledWith(
+      DeviceSettings,
+      jasmine.any(Object),
+    );
+    expect(dialog.open).not.toHaveBeenCalledWith(
+      DeviceEmpty,
+      jasmine.any(Object),
     );
   });
 });

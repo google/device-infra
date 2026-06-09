@@ -12,7 +12,6 @@ import {
   UpdateDeviceConfigRequest,
 } from '../../models/device_config_models';
 import {UpdateHostConfigRequest} from '../../models/host_config_models';
-import {normalizeDeviceConfig} from '../../utils/device_config_utils';
 import {normalizeHostConfig} from '../../utils/host_config_utils';
 import {CONFIG_SERVICE} from './config_service';
 import {HttpConfigService} from './http_config_service';
@@ -126,9 +125,8 @@ describe('HttpConfigService', () => {
 
   it('should get host default device config via POST and map from object', () => {
     const mockConfig: DeviceConfig = {permissions: {owners: ['admin']}};
-    const expectedConfig = normalizeDeviceConfig(mockConfig);
     service.getHostDefaultDeviceConfig('test-host').subscribe((config) => {
-      expect(config).toEqual(expectedConfig);
+      expect(config).toEqual(mockConfig);
     });
 
     const req = httpMock.expectOne(
@@ -136,6 +134,18 @@ describe('HttpConfigService', () => {
     );
     expect(req.request.method).toBe('POST');
     req.flush({deviceConfig: mockConfig});
+  });
+
+  it('should get host default device config and return null if deviceConfig is missing', () => {
+    service.getHostDefaultDeviceConfig('test-host').subscribe((config) => {
+      expect(config).toBeNull();
+    });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/hosts/test-host:getDefaultDeviceConfig',
+    );
+    expect(req.request.method).toBe('POST');
+    req.flush({});
   });
 
   it('should update host config via POST to :update', () => {

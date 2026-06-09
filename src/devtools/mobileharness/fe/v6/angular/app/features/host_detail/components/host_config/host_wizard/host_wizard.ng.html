@@ -4,6 +4,7 @@
     title="Host Configuration Guided Setup"
     type="host"
     width="56rem"
+    [param]="{deviceId: '', hostName: data.hostName}"
     [WIZARD_STEPS]="WIZARD_STEPS"
     [currentStep]="currentStep()"
     (currentStepChange)="onCurrentStepChange($event)"
@@ -71,6 +72,8 @@
     title="Review Configuration"
     subtitle="For host: {{ data.hostName }}"
     width="72rem"
+    type="host"
+    [param]="{deviceId: '', hostName: data.hostName}"
     (onPermissionChange)="applyChangesDisabled.set(!$event.hasPermission)"
   >
     <main class="step-content">

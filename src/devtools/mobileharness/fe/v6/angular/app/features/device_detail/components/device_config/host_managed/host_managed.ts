@@ -5,10 +5,10 @@ import {
   inject,
   Input,
   OnInit,
+  signal,
 } from '@angular/core';
 import {MatDialogModule} from '@angular/material/dialog';
 import {RouterModule} from '@angular/router';
-import {DEFAULT_DEVICE_CONFIG} from '../../../../../core/constants/device_config_constants';
 import {DeviceConfig} from '../../../../../core/models/device_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
@@ -36,16 +36,17 @@ export class HostManaged implements OnInit {
   @Input() hostName = '';
   @Input() hostIp = '';
 
-  hostDefaultConfig: DeviceConfig = DEFAULT_DEVICE_CONFIG;
+  readonly hostDefaultConfig = signal<DeviceConfig>({});
+
   ngOnInit() {
     this.configService
       .getHostDefaultDeviceConfig(this.hostName)
-      .subscribe((defaultConfig) => {
-        if (!defaultConfig) {
+      .subscribe((result) => {
+        if (!result) {
           return;
         }
 
-        this.hostDefaultConfig = defaultConfig;
+        this.hostDefaultConfig.set(result);
       });
   }
 }

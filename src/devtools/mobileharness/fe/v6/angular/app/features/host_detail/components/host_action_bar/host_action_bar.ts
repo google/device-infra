@@ -4,7 +4,7 @@ import {
   Component,
   computed,
   inject,
-  Input,
+  input,
 } from '@angular/core';
 import {MatDialog} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
@@ -47,19 +47,17 @@ export class HostActionBar {
 
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
 
-  @Input({required: true}) pageData!: HostOverviewPageData;
+  readonly pageData = input.required<HostOverviewPageData>();
 
-  get actions(): HostActions | undefined {
-    return this.pageData?.headerInfo?.actions;
-  }
+  readonly actions = computed(() => this.pageData().headerInfo?.actions);
 
-  get hostName(): string {
-    return this.pageData?.overviewContent?.hostName || '';
-  }
+  readonly hostName = computed(
+    () => this.pageData().overviewContent?.hostName || '',
+  );
 
   readonly onConfiguration = () => {
     const dialogRef = this.dialog.open(HostConfig, {
-      data: {hostName: this.hostName},
+      data: {hostName: this.hostName()},
       autoFocus: false,
     });
 
@@ -73,13 +71,11 @@ export class HostActionBar {
         return;
       }
 
-      if (result.action === 'new' || result.action === 'copy') {
-        this.createOrCopyConfiguration(
-          result.action,
-          this.hostName,
-          result.config,
-        );
-      }
+      this.createOrCopyConfiguration(
+        result.action,
+        this.hostName(),
+        result.config,
+      );
     });
   };
 
@@ -110,33 +106,53 @@ export class HostActionBar {
   private createOrCopyConfiguration(
     action: string,
     hostName: string,
-    config: HostConfig,
+    config: HostConfig | null | undefined,
   ) {
-    if (this.environment.isGoogleInternal()) {
-      this.dialog.open(HostWizard, {
-        data: {hostName, source: action, config},
-        autoFocus: false,
-      });
-    } else {
-      const dialogRef = this.dialog.open(HostSettings, {
-        data: {hostName, config},
-        autoFocus: false,
-      });
-
-      dialogRef.afterClosed().subscribe((result) => {
-        if (!result) {
-          return;
-        }
-        if (result.action === 'reset') {
-          this.resetConfiguration(result.hostName);
-        }
-      });
+    if (
+      (this.environment.isGoogleInternal() && action === 'new') ||
+      action === 'copy'
+    ) {
+      this.openHostWizard(action, hostName, config);
     }
+
+    if (!this.environment.isGoogleInternal() && action === 'new') {
+      this.openHostSettings(hostName, config);
+    }
+  }
+
+  private openHostWizard(
+    action: string,
+    hostName: string,
+    config: HostConfig | null | undefined,
+  ) {
+    this.dialog.open(HostWizard, {
+      data: {hostName, source: action, config},
+      autoFocus: false,
+    });
+  }
+
+  private openHostSettings(
+    hostName: string,
+    config: HostConfig | null | undefined,
+  ) {
+    const dialogRef = this.dialog.open(HostSettings, {
+      data: {hostName, config},
+      autoFocus: false,
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result) {
+        return;
+      }
+      if (result.action === 'reset') {
+        this.resetConfiguration(result.hostName);
+      }
+    });
   }
 
   readonly onDebug = () => {
     this.dialog.open(HostDebugDialog, {
-      data: {hostName: this.hostName},
+      data: {hostName: this.hostName()},
       autoFocus: false,
       width: '90vw',
       height: '90vh',
@@ -147,7 +163,7 @@ export class HostActionBar {
 
   readonly onDecommission = () => {
     this.dialog.open(HostDecommissionDialog, {
-      data: {hostName: this.hostName},
+      data: {hostName: this.hostName()},
       autoFocus: false,
       disableClose: true,
     });
@@ -162,14 +178,14 @@ export class HostActionBar {
     const feature = featureMap[key];
     if (feature) {
       const hostLegacyUrl = this.legacyFeUrl
-        ? `${this.legacyFeUrl}/labdetailview/${this.hostName}/${this.pageData.overviewContent.ip}`
+        ? `${this.legacyFeUrl}/labdetailview/${this.hostName()}/${this.pageData().overviewContent.ip}`
         : undefined;
       this.comingSoonService.show(feature, 'default', hostLegacyUrl);
     }
   }
 
   getAction(key: keyof HostActions): ActionButtonState | undefined {
-    return (this.actions as unknown as Record<string, ActionButtonState>)?.[
+    return (this.actions() as unknown as Record<string, ActionButtonState>)?.[
       key
     ];
   }

@@ -16,7 +16,7 @@
       <div class="host-managed-config-list">
         <div>
           <strong>Owners:</strong>
-          @for (owner of hostDefaultConfig.permissions?.owners; track owner) {
+          @for (owner of hostDefaultConfig().permissions?.owners; track owner) {
             <div class="break-all">{{ owner }}</div>
           } @empty {
             <div class="break-all">N/A</div>
@@ -24,11 +24,11 @@
         </div>
         <div>
           <strong>Wi-Fi:</strong>
-          <div class="break-all">{{ hostDefaultConfig.wifi?.ssid || 'N/A' }}</div>
+          <div class="break-all">{{ hostDefaultConfig().wifi?.ssid || 'N/A' }}</div>
         </div>
         <div>
           <strong>Supported Dimensions:</strong>
-          @for (dimension of hostDefaultConfig.dimensions?.supported; track dimension) {
+          @for (dimension of hostDefaultConfig().dimensions?.supported; track dimension) {
             <div class="break-all">{{ dimension.name }}: {{ dimension.value }}</div>
           } @empty {
             <div class="break-all">N/A</div>
@@ -37,7 +37,7 @@
         <div>
           <strong>Max Consecutive Failures:</strong>
           <div class="break-all">
-            {{ hostDefaultConfig.settings?.maxConsecutiveFail || 'N/A' }}
+            {{ hostDefaultConfig().settings?.maxConsecutiveFail || 'N/A' }}
           </div>
         </div>
       </div>
@@ -59,3 +59,4 @@
     </mat-dialog-actions>
   </ng-template>
 </app-dialog>
+
