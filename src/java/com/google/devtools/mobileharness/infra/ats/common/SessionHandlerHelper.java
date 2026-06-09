@@ -22,6 +22,7 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteVersion;
+import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteVersionUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.io.File;
@@ -77,7 +78,8 @@ public class SessionHandlerHelper {
         // If the test suite version is not available, uses ATS retry.
         return false;
       }
-      return testSuiteVersion.compareTo(
+      return TestSuiteVersionUtil.compare(
+              testSuiteVersion,
               XTS_TYPES_SUPPORTING_ATS_RETRY_WITH_MIN_VERSION.get(Ascii.toLowerCase(xtsType)))
           < 0;
     }

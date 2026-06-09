@@ -54,4 +54,28 @@ public final class TestSuiteVersionUtilTest {
     assertThrows(NumberFormatException.class, () -> TestSuiteVersionUtil.parse("1.2_rX"));
     assertThrows(NumberFormatException.class, () -> TestSuiteVersionUtil.parse("16.1_r"));
   }
+
+  @Test
+  public void compare_success() {
+    TestSuiteVersion version10r1 = TestSuiteVersion.create(10, 0, 0, 1);
+    TestSuiteVersion version9r2 = TestSuiteVersion.create(9, 0, 0, 2);
+    TestSuiteVersion version10dot1r1 = TestSuiteVersion.create(10, 1, 0, 1);
+    TestSuiteVersion version10dot0dot1r1 = TestSuiteVersion.create(10, 0, 1, 1);
+    TestSuiteVersion version10r2 = TestSuiteVersion.create(10, 0, 0, 2);
+
+    assertThat(TestSuiteVersionUtil.compare(version10r1, version9r2)).isGreaterThan(0);
+    assertThat(TestSuiteVersionUtil.compare(version10dot1r1, version10r1)).isGreaterThan(0);
+    assertThat(TestSuiteVersionUtil.compare(version10dot0dot1r1, version10r1)).isGreaterThan(0);
+    assertThat(TestSuiteVersionUtil.compare(version10r2, version10r1)).isGreaterThan(0);
+    assertThat(TestSuiteVersionUtil.compare(version10r1, TestSuiteVersion.create(10, 0, 0, 1)))
+        .isEqualTo(0);
+    assertThat(TestSuiteVersionUtil.compare(version9r2, version10r1)).isLessThan(0);
+  }
+
+  @Test
+  public void compare_nullInputs_throwsException() {
+    TestSuiteVersion version = TestSuiteVersion.create(10, 0, 0, 1);
+    assertThrows(IllegalArgumentException.class, () -> TestSuiteVersionUtil.compare(null, version));
+    assertThrows(IllegalArgumentException.class, () -> TestSuiteVersionUtil.compare(version, null));
+  }
 }

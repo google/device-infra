@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.platform.android.xts.suite;
 
 import com.google.auto.value.AutoValue;
-import com.google.common.collect.ComparisonChain;
 
 /**
  * Version of a test suite.
@@ -26,7 +25,7 @@ import com.google.common.collect.ComparisonChain;
  * "16.1_r1", "16_r1", "8.0_r26", "4.0.3_r4", "15_sts-r46".
  */
 @AutoValue
-public abstract class TestSuiteVersion implements Comparable<TestSuiteVersion> {
+public abstract class TestSuiteVersion {
 
   public abstract int major();
 
@@ -38,15 +37,5 @@ public abstract class TestSuiteVersion implements Comparable<TestSuiteVersion> {
 
   public static TestSuiteVersion create(int major, int minor, int patch, int revision) {
     return new AutoValue_TestSuiteVersion(major, minor, patch, revision);
-  }
-
-  @Override
-  public int compareTo(TestSuiteVersion otherVersion) {
-    return ComparisonChain.start()
-        .compare(major(), otherVersion.major())
-        .compare(minor(), otherVersion.minor())
-        .compare(patch(), otherVersion.patch())
-        .compare(revision(), otherVersion.revision())
-        .result();
   }
 }

@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.platform.android.xts.suite;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.base.Splitter;
+import com.google.common.collect.ComparisonChain;
 import java.util.List;
 import java.util.Locale;
 
@@ -76,5 +77,22 @@ public final class TestSuiteVersionUtil {
       }
     }
     return TestSuiteVersion.create(major, minor, patch, revision);
+  }
+
+  /**
+   * Compares two test suite versions.
+   *
+   * @return a negative integer, zero, or a positive integer as the first version is less than,
+   *     equal to, or greater than the second.
+   */
+  public static int compare(TestSuiteVersion v1, TestSuiteVersion v2) {
+    checkArgument(v1 != null, "first version cannot be null");
+    checkArgument(v2 != null, "second version cannot be null");
+    return ComparisonChain.start()
+        .compare(v1.major(), v2.major())
+        .compare(v1.minor(), v2.minor())
+        .compare(v1.patch(), v2.patch())
+        .compare(v1.revision(), v2.revision())
+        .result();
   }
 }
