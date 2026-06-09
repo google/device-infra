@@ -25,6 +25,10 @@ package_group(
     includes = [
         "//:deviceinfra_all_pkg",
     ],
+    packages = [
+        "//java/com/google/devtools/mobileharness/service/gateway/...",
+        "//javatests/com/google/devtools/mobileharness/service/gateway/...",
+    ],
 )
 
 java_library(
