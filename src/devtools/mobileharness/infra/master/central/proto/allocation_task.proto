@@ -43,6 +43,9 @@ enum AllocationType {
   // A test that requires allocation from both Scheduke and the Omnilab
   // Scheduler.
   HYBRID_CHROME_OS = 2;
+
+  // A test that requires allocation of a test execution environment.
+  TEST_EXEC_ENV = 3;
 }
 
 // Defines the execution mode for tests that require multiple allocations.
