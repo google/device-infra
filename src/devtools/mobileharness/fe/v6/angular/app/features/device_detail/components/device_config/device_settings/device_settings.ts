@@ -426,9 +426,14 @@ export class DeviceSettings implements OnInit {
 
     this.saving.set(true);
 
+    const deviceConfig = {...this.newConfig()};
+    if (deviceConfig.wifi && deviceConfig.wifi.type === 'none') {
+      deviceConfig.wifi = undefined;
+    }
+
     const request: UpdateDeviceConfigRequest = {
       id: this.deviceId(),
-      config: this.newConfig(),
+      config: deviceConfig,
       section,
       options: {overrideSelfLockout: selfLockout},
       universe: this.universe(),

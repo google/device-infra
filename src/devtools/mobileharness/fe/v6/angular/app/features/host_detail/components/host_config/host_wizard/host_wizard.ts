@@ -20,7 +20,8 @@ import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {finalize} from 'rxjs/operators';
 
 import {DEFAULT_HOST_CONFIG} from '../../../../../core/constants/host_config_constants';
-import {HostConfig} from '../../../../../core/models/host_config_models';
+import {HostConfig, HostConfigSection} from '../../../../../core/models/host_config_models';
+import {ConfigSection as DeviceConfigSection} from '../../../../../core/models/device_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {Environment} from '../../../../../core/services/environment';
 import {normalizeHostConfig} from '../../../../../core/utils/host_config_utils';
@@ -406,7 +407,9 @@ export class HostWizard implements OnInit, AfterViewInit {
   }
 
   submit() {
-    this.hostConfig.set({
+    const wifi = this.hostConfig().deviceConfig?.wifi;
+    const finalWifi = (!wifi || wifi.type === 'none') ? undefined : wifi;
+    const requestConfig: HostConfig = {
       ...this.hostConfig(),
       deviceConfig: {
         permissions: {
@@ -414,11 +417,11 @@ export class HostWizard implements OnInit, AfterViewInit {
           executors:
             this.hostConfig().deviceConfig?.permissions?.executors || [],
         },
-        wifi: this.hostConfig().deviceConfig?.wifi!,
+        wifi: finalWifi,
         dimensions: this.hostConfig().deviceConfig?.dimensions!,
         settings: this.hostConfig().deviceConfig?.settings!,
       },
-    });
+    };
 
     if (this.data.source === 'copy') {
       this.verifying.set(true);
@@ -429,7 +432,11 @@ export class HostWizard implements OnInit, AfterViewInit {
     this.configService
       .updateHostConfig({
         hostName: this.data.hostName,
-        config: this.hostConfig(),
+        config: requestConfig,
+        scope: {
+          section: HostConfigSection.ALL,
+          deviceConfigSection: DeviceConfigSection.ALL,
+        },
       })
       .pipe(
         finalize(() => {

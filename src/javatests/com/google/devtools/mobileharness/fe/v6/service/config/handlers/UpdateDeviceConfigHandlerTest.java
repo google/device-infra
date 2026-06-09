@@ -194,6 +194,10 @@ public final class UpdateDeviceConfigHandlerTest {
         DeviceConfig.newBuilder()
             .setWifi(WifiConfig.newBuilder().setSsid("new_ssid").build())
             .setPermissions(PermissionInfo.newBuilder().addOwners("new_owner").build())
+            .setDimensions(
+                Dimensions.newBuilder()
+                    .addSupported(DeviceDimension.newBuilder().setName("n").setValue("v").build())
+                    .build())
             .build();
     UpdateDeviceConfigRequest request =
         UpdateDeviceConfigRequest.newBuilder()
@@ -237,6 +241,13 @@ public final class UpdateDeviceConfigHandlerTest {
     assertThat(updatedConfig.getBasicConfig().getOwnerList()).containsExactly("owner1");
     // Wifi SHOULD be updated
     assertThat(updatedConfig.getBasicConfig().getDefaultWifi().getSsid()).isEqualTo("new_ssid");
+    // Dimensions SHOULD be updated
+    assertThat(updatedConfig.getBasicConfig().getCompositeDimension().getSupportedDimensionList())
+        .containsExactly(
+            com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension.newBuilder()
+                .setName("n")
+                .setValue("v")
+                .build());
   }
 
   @Test
@@ -585,5 +596,63 @@ public final class UpdateDeviceConfigHandlerTest {
     assertThat(updatedConfig.getBasicConfig().getOwnerList()).containsExactly("new_owner");
     assertThat(updatedConfig.getBasicConfig().getDefaultWifi().getSsid()).isEqualTo("new_ssid");
     assertThat(updatedConfig.getBasicConfig().getMaxConsecutiveTest()).isEqualTo(Int32Value.of(20));
+  }
+
+  @Test
+  public void updateDeviceConfig_clearWifi_success() throws Exception {
+    String deviceId = "test_device";
+    String universe = "google_1p";
+    com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfig feConfig =
+        com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfig
+            .getDefaultInstance();
+    UpdateDeviceConfigRequest request =
+        UpdateDeviceConfigRequest.newBuilder()
+            .setId(deviceId)
+            .setUniverse(universe)
+            .setConfig(feConfig)
+            .setSection(DeviceConfigSection.WIFI)
+            .build();
+
+    com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig existingConfig =
+        com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig.newBuilder()
+            .setUuid(deviceId)
+            .setBasicConfig(
+                BasicDeviceConfig.newBuilder()
+                    .setDefaultWifi(
+                        com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig
+                            .newBuilder()
+                            .setSsid("old_ssid")
+                            .build())
+                    .build())
+            .build();
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
+        .thenReturn(
+            immediateFuture(
+                DeviceData.create(
+                    DeviceInfo.getDefaultInstance(),
+                    existingConfig,
+                    ManagementMode.PER_DEVICE,
+                    Optional.empty(),
+                    Optional.of(existingConfig))));
+    when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
+    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
+        .thenReturn(immediateVoidFuture());
+
+    UpdateDeviceConfigResponse response =
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.empty())
+            .get();
+
+    assertThat(response.getSuccess()).isTrue();
+    ArgumentCaptor<com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig>
+        captor =
+            ArgumentCaptor.forClass(
+                com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig.class);
+    verify(configurationProvider)
+        .updateDeviceConfig(eq(deviceId), captor.capture(), eq(SELF_UNIVERSE));
+    com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig updatedConfig =
+        captor.getValue();
+    assertThat(updatedConfig.getBasicConfig().hasDefaultWifi()).isFalse();
   }
 }

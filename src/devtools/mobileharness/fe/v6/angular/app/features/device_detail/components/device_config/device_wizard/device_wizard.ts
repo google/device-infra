@@ -260,9 +260,14 @@ export class DeviceWizard implements OnInit, AfterViewInit {
       this.stepper.verifying.set(true);
     }
 
+    const deviceConfig = {...this.config};
+    if (deviceConfig.wifi && deviceConfig.wifi.type === 'none') {
+      deviceConfig.wifi = undefined;
+    }
+
     const request: UpdateDeviceConfigRequest = {
       id: this.data.deviceId,
-      config: this.config,
+      config: deviceConfig,
       section: ConfigSection.ALL,
       options: {overrideSelfLockout},
       universe: this.data.universe,

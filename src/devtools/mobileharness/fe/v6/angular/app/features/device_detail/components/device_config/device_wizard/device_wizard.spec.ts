@@ -3,6 +3,7 @@ import {MatDialogModule} from '@angular/material/dialog';
 import {MatTestDialogOpener} from '@angular/material/dialog/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
+import {of} from 'rxjs';
 
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {FakeConfigService} from '../../../../../core/services/config/fake_config_service';
@@ -259,5 +260,37 @@ describe('Device Wizard Component', () => {
 
     component.covertToReviewTable();
     expect(component.dataSource.length).toBe(countFirstRun);
+  });
+
+  it('should clean up wifi settings when wifi type is none on submit', async () => {
+    const fixture = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(DeviceWizard, {
+        data: {
+          deviceId: 'test-id',
+          source: 'copy',
+          config: {
+            wifi: {type: 'none', ssid: 'dummy'},
+          },
+        },
+      }),
+    );
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const opener =
+      fixture.componentInstance as MatTestDialogOpener<DeviceWizard>;
+    const component = opener.dialogRef.componentInstance;
+
+    const configService = TestBed.inject(CONFIG_SERVICE);
+    const updateSpy = spyOn(
+      configService,
+      'updateDeviceConfig',
+    ).and.returnValue(of({success: true, deviceConfig: {}, uiStatus: {}}));
+
+    component.submit();
+
+    expect(updateSpy).toHaveBeenCalled();
+    const updateRequest = updateSpy.calls.mostRecent().args[0];
+    expect(updateRequest.config.wifi).toBeUndefined();
   });
 });

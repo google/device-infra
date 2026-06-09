@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDeviceConfig;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.DetectorSpecs;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -238,7 +239,8 @@ public final class UpdateHostConfigHandlerTest {
             .setConfig(incomingConfig)
             .setScope(
                 HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.HOST_CONFIG_SECTION_UNSPECIFIED)
+                    .setSection(HostConfigSection.HOST_CONFIG_SECTION_ALL)
+                    .setDeviceConfigSection(DeviceConfigSection.ALL)
                     .build())
             .build();
 
@@ -718,6 +720,48 @@ public final class UpdateHostConfigHandlerTest {
   }
 
   @Test
+  public void updateHostConfig_deviceDiscovery_clearManekiSpecs_success() throws Exception {
+    String hostName = "host";
+    LabConfig existingLabConfig =
+        LabConfig.newBuilder()
+            .setHostName(hostName)
+            .setDetectorSpecs(
+                DetectorSpecs.newBuilder()
+                    .setManekiDetectorSpecs(
+                        DetectorSpecs.ManekiDetectorSpecs.newBuilder()
+                            .addManekiAndroidDeviceDiscoverySpec(
+                                DetectorSpecs.ManekiDetectorSpecs.ManekiAndroidDeviceDiscoverySpec
+                                    .newBuilder()
+                                    .setMacAddress("00:11:22:33:44:55")
+                                    .build())
+                            .build())
+                    .build())
+            .build();
+    when(configurationProvider.getLabConfig(eq(hostName), any(UniverseScope.class)))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingLabConfig))));
+
+    DeviceDiscoverySettings discovery = DeviceDiscoverySettings.newBuilder().build();
+    HostConfig feConfig = HostConfig.newBuilder().setDeviceDiscovery(discovery).build();
+    UpdateHostConfigRequest request =
+        UpdateHostConfigRequest.newBuilder()
+            .setHostName(hostName)
+            .setConfig(feConfig)
+            .setScope(
+                HostConfigUpdateScope.newBuilder()
+                    .setSection(HostConfigSection.DEVICE_DISCOVERY)
+                    .build())
+            .build();
+
+    updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
+
+    ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
+    verify(configurationProvider)
+        .updateLabConfig(eq(hostName), captor.capture(), any(UniverseScope.class));
+    LabConfig result = captor.getValue();
+    assertThat(result.hasDetectorSpecs()).isFalse();
+  }
+
+  @Test
   public void updateHostConfig_isSelfLockout_nonPermissionSection_success() throws Exception {
     UpdateHostConfigRequest request =
         UpdateHostConfigRequest.newBuilder()
@@ -760,7 +804,7 @@ public final class UpdateHostConfigHandlerTest {
             .setHostName(hostName)
             .setScope(
                 HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.HOST_CONFIG_SECTION_UNSPECIFIED)
+                    .setSection(HostConfigSection.HOST_CONFIG_SECTION_ALL)
                     .build())
             .setConfig(
                 HostConfig.newBuilder()
@@ -975,5 +1019,96 @@ public final class UpdateHostConfigHandlerTest {
     verify(configurationProvider)
         .updateLabConfig(eq(hostName), captor.capture(), any(UniverseScope.class));
     assertThat(captor.getValue().getDefaultDeviceConfig().getOwnerList()).containsExactly("admin1");
+  }
+
+  @Test
+  public void updateHostConfig_sectionAll_success() throws Exception {
+    String hostName = "test_host";
+    String universe = "google_1p";
+    HostConfig feConfig =
+        HostConfig.newBuilder()
+            .setDeviceConfigMode(DeviceConfigMode.SHARED)
+            .addHostProperties(HostProperty.newBuilder().setKey("k").setValue("v").build())
+            .setDeviceConfig(
+                DeviceConfig.newBuilder()
+                    .setWifi(WifiConfig.newBuilder().setType("custom").setSsid("w").build())
+                    .build())
+            .build();
+    UpdateHostConfigRequest request =
+        UpdateHostConfigRequest.newBuilder()
+            .setHostName(hostName)
+            .setUniverse(universe)
+            .setConfig(feConfig)
+            .setScope(
+                HostConfigUpdateScope.newBuilder()
+                    .setSection(HostConfigSection.HOST_CONFIG_SECTION_ALL)
+                    .setDeviceConfigSection(DeviceConfigSection.ALL)
+                    .build())
+            .build();
+
+    when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
+        .thenReturn(
+            immediateFuture(
+                ConfigResult.available(
+                    Optional.of(LabConfig.newBuilder().setHostName(hostName).build()))));
+    when(configurationProvider.updateLabConfig(eq(hostName), any(), eq(SELF_UNIVERSE)))
+        .thenReturn(immediateVoidFuture());
+
+    UpdateHostConfigResponse response =
+        updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
+
+    assertThat(response.getSuccess()).isTrue();
+    ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
+    verify(configurationProvider)
+        .updateLabConfig(eq(hostName), captor.capture(), eq(SELF_UNIVERSE));
+    LabConfig updatedConfig = captor.getValue();
+    assertThat(updatedConfig.getDefaultDeviceConfig().getDefaultWifi().getSsid()).isEqualTo("w");
+  }
+
+  @Test
+  public void updateHostConfig_clearWifi_success() throws Exception {
+    String hostName = "test_host";
+    String universe = "google_1p";
+    HostConfig feConfig =
+        HostConfig.newBuilder().setDeviceConfig(DeviceConfig.getDefaultInstance()).build();
+    UpdateHostConfigRequest request =
+        UpdateHostConfigRequest.newBuilder()
+            .setHostName(hostName)
+            .setUniverse(universe)
+            .setConfig(feConfig)
+            .setScope(
+                HostConfigUpdateScope.newBuilder()
+                    .setSection(HostConfigSection.DEVICE_CONFIG)
+                    .setDeviceConfigSection(DeviceConfigSection.WIFI)
+                    .build())
+            .build();
+
+    LabConfig existingConfig =
+        LabConfig.newBuilder()
+            .setHostName(hostName)
+            .setDefaultDeviceConfig(
+                BasicDeviceConfig.newBuilder()
+                    .setDefaultWifi(
+                        com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig
+                            .newBuilder()
+                            .setSsid("old_ssid")
+                            .build())
+                    .build())
+            .build();
+
+    when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
+    when(configurationProvider.updateLabConfig(eq(hostName), any(), eq(SELF_UNIVERSE)))
+        .thenReturn(immediateVoidFuture());
+
+    UpdateHostConfigResponse response =
+        updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
+
+    assertThat(response.getSuccess()).isTrue();
+    ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
+    verify(configurationProvider)
+        .updateLabConfig(eq(hostName), captor.capture(), eq(SELF_UNIVERSE));
+    LabConfig updatedConfig = captor.getValue();
+    assertThat(updatedConfig.getDefaultDeviceConfig().hasDefaultWifi()).isFalse();
   }
 }

@@ -111,7 +111,7 @@ public final class UpdateHostConfigHandler {
 
     if (environment.isAts()) {
       switch (request.getScope().getSection()) {
-        case DEVICE_CONFIG_MODE, DEVICE_CONFIG -> {}
+        case DEVICE_CONFIG_MODE, DEVICE_CONFIG, HOST_CONFIG_SECTION_ALL -> {}
         default ->
             throw new IllegalArgumentException(
                 String.format(
@@ -192,7 +192,10 @@ public final class UpdateHostConfigHandler {
     }
 
     switch (request.getScope().getSection()) {
-      case HOST_PERMISSIONS, HOST_CONFIG_SECTION_UNSPECIFIED, UNRECOGNIZED -> {}
+      case HOST_PERMISSIONS,
+          HOST_CONFIG_SECTION_ALL,
+          HOST_CONFIG_SECTION_UNSPECIFIED,
+          UNRECOGNIZED -> {}
       default -> {
         return immediateFuture(false);
       }
@@ -217,7 +220,7 @@ public final class UpdateHostConfigHandler {
 
     LabConfig existingConfig = builder.build();
 
-    if (sectionToUpdate == HostConfigSection.HOST_CONFIG_SECTION_UNSPECIFIED) {
+    if (sectionToUpdate == HostConfigSection.HOST_CONFIG_SECTION_ALL) {
       // For full updates, we silently skip/ignore restricted sections to preserve their existing
       // values. This serves as a backend safeguard. The frontend is expected to block access to
       // the full edit page entirely if the host is managed by Config Pusher, preventing full
@@ -331,7 +334,9 @@ public final class UpdateHostConfigHandler {
                             .setSshDeviceType(d.getSshDeviceType())
                             .build())
                 .collect(toImmutableList()));
-    if (!discovery.getManekiSpecsList().isEmpty()) {
+    if (discovery.getManekiSpecsList().isEmpty()) {
+      builder.clearDetectorSpecs();
+    } else {
       builder.setDetectorSpecs(
           ConfigConverter.toInternalDetectorSpecs(discovery.getManekiSpecsList()));
     }
@@ -357,7 +362,7 @@ public final class UpdateHostConfigHandler {
             .clearExecutor()
             .addAllExecutor(incoming.getExecutorList());
       }
-      case WIFI -> builder.setDefaultWifi(incoming.getDefaultWifi());
+      case WIFI -> updateDefaultWifi(builder, incoming);
       case DIMENSIONS -> builder.setCompositeDimension(incoming.getCompositeDimension());
       case STABILITY -> {
         builder
@@ -366,9 +371,8 @@ public final class UpdateHostConfigHandler {
       }
       case ALL -> {
         if (environment.isAts()) {
-          builder
-              .setDefaultWifi(incoming.getDefaultWifi())
-              .setCompositeDimension(incoming.getCompositeDimension());
+          builder.setCompositeDimension(incoming.getCompositeDimension());
+          updateDefaultWifi(builder, incoming);
         } else {
           // Update everything in BasicDeviceConfig
           builder
@@ -376,14 +380,23 @@ public final class UpdateHostConfigHandler {
               .addAllOwner(incoming.getOwnerList())
               .clearExecutor()
               .addAllExecutor(incoming.getExecutorList())
-              .setDefaultWifi(incoming.getDefaultWifi())
               .setCompositeDimension(incoming.getCompositeDimension())
               .setMaxConsecutiveTest(incoming.getMaxConsecutiveTest())
               .setMaxConsecutiveFail(incoming.getMaxConsecutiveFail());
+          updateDefaultWifi(builder, incoming);
         }
       }
       default -> {}
     }
     return builder.build();
+  }
+
+  private static void updateDefaultWifi(
+      BasicDeviceConfig.Builder builder, BasicDeviceConfig incoming) {
+    if (incoming.hasDefaultWifi()) {
+      builder.setDefaultWifi(incoming.getDefaultWifi());
+    } else {
+      builder.clearDefaultWifi();
+    }
   }
 }

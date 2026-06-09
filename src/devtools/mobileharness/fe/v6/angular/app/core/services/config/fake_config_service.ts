@@ -277,11 +277,14 @@ export class FakeConfigService extends ConfigService {
       updatedConfig = deepCopy(updatedConfig);
     }
 
-    if (!request.scope) {
+    if (
+      !request.scope?.section ||
+      request.scope.section === HostConfigSection.ALL
+    ) {
       // Full update
       updatedConfig = deepCopy(request.config);
     } else {
-      switch (request.scope.section) {
+      switch (request.scope?.section) {
         case HostConfigSection.HOST_PERMISSIONS:
           if (
             !request.config.permissions.hostAdmins.includes(CURRENT_USER) &&

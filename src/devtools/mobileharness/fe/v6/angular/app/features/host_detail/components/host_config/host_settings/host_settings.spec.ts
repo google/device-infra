@@ -1552,4 +1552,81 @@ describe('HostSettings Component', () => {
     );
     expect(mockConfigService.getHostConfig).not.toHaveBeenCalled();
   });
+
+  it('save (wifi): should clear wifi settings if type is none on submit', () => {
+    setupDialogData({
+      config: {
+        deviceConfig: {
+          wifi: {type: 'custom', ssid: 'old_ssid', psk: '', scanSsid: false},
+        } as unknown as HostConfig['deviceConfig'],
+      },
+    });
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostSettings, {
+        data: dialogData,
+      }),
+    );
+    comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    dialogRef = dialogOpener.componentInstance.dialogRef;
+    spyOn(dialogRef, 'close');
+    TestBed.inject(ApplicationRef).tick();
+
+    comp.activeSection.set('wifi');
+    comp.updateDeviceWifi({type: 'none', ssid: '', psk: '', scanSsid: false});
+
+    const updateSpy = mockConfigService.updateHostConfig.and.returnValue(
+      of({success: true}),
+    );
+    const dialog = TestBed.inject(MatDialog);
+    const successDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    successDialogRefSpy.afterClosed.and.returnValue(of('primary'));
+    spyOn(dialog, 'open').and.returnValue(successDialogRefSpy);
+
+    comp.save();
+
+    expect(updateSpy).toHaveBeenCalled();
+    const updateRequest = updateSpy.calls.mostRecent().args[0];
+    expect(updateRequest.config.deviceConfig?.wifi).toBeUndefined();
+  });
+
+  it('save (wifi): should preserve wifi settings if type is not none on submit', () => {
+    setupDialogData({
+      config: {
+        deviceConfig: {
+          wifi: {type: 'custom', ssid: 'old_ssid', psk: '', scanSsid: false},
+        } as unknown as HostConfig['deviceConfig'],
+      },
+    });
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostSettings, {
+        data: dialogData,
+      }),
+    );
+    comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    dialogRef = dialogOpener.componentInstance.dialogRef;
+    spyOn(dialogRef, 'close');
+    TestBed.inject(ApplicationRef).tick();
+
+    comp.activeSection.set('wifi');
+    const validWifi: WifiConfig = {type: 'custom', ssid: 'NewSSID', psk: 'pass', scanSsid: true};
+    comp.updateDeviceWifi(validWifi);
+
+    const updateSpy = mockConfigService.updateHostConfig.and.returnValue(
+      of({success: true}),
+    );
+    const dialog = TestBed.inject(MatDialog);
+    const successDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    successDialogRefSpy.afterClosed.and.returnValue(of('primary'));
+    spyOn(dialog, 'open').and.returnValue(successDialogRefSpy);
+
+    comp.save();
+
+    expect(updateSpy).toHaveBeenCalled();
+    const updateRequest = updateSpy.calls.mostRecent().args[0];
+    expect(updateRequest.config.deviceConfig?.wifi).toEqual(validWifi);
+  });
 });

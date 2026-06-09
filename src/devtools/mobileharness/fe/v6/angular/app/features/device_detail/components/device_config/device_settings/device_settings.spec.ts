@@ -886,4 +886,71 @@ describe('Device Settings Component', () => {
       }),
     );
   });
+
+  it('save (wifi): should clear wifi settings if type is none on submit', () => {
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(DeviceSettings, {
+        data: {deviceId: 'test-device'},
+      }),
+    );
+    const component =
+      dialogOpener.componentInstance.dialogRef.componentInstance;
+    component.config = {
+      wifi: {type: 'custom', ssid: 'old_ssid', psk: '', scanSsid: false},
+    } as DeviceConfig;
+    TestBed.inject(ApplicationRef).tick();
+
+    component.activeSection.set(ConfigSection.WIFI);
+    component.updateWifi({type: 'none', ssid: '', psk: '', scanSsid: false});
+
+    const updateSpy = spyOn(fakeConfigService, 'updateDeviceConfig').and.returnValue(
+      of({success: true}),
+    );
+    const dialog = TestBed.inject(MatDialog);
+    const successDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    successDialogRefSpy.afterClosed.and.returnValue(of('primary'));
+    spyOn(dialog, 'open').and.returnValue(successDialogRefSpy);
+
+    component.save();
+
+    expect(updateSpy).toHaveBeenCalled();
+    const updateRequest = updateSpy.calls.mostRecent().args[0];
+    expect(updateRequest.config.wifi).toBeUndefined();
+  });
+
+  it('save (wifi): should preserve wifi settings if type is not none on submit', () => {
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(DeviceSettings, {
+        data: {deviceId: 'test-device'},
+      }),
+    );
+    const component =
+      dialogOpener.componentInstance.dialogRef.componentInstance;
+    component.config = {
+      wifi: {type: 'custom', ssid: 'old_ssid', psk: '', scanSsid: false},
+    } as DeviceConfig;
+    TestBed.inject(ApplicationRef).tick();
+
+    component.activeSection.set(ConfigSection.WIFI);
+    const validWifi: WifiConfig = {type: 'custom', ssid: 'NewSSID', psk: 'pass', scanSsid: true};
+    component.updateWifi(validWifi);
+
+    const updateSpy = spyOn(fakeConfigService, 'updateDeviceConfig').and.returnValue(
+      of({success: true}),
+    );
+    const dialog = TestBed.inject(MatDialog);
+    const successDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    successDialogRefSpy.afterClosed.and.returnValue(of('primary'));
+    spyOn(dialog, 'open').and.returnValue(successDialogRefSpy);
+
+    component.save();
+
+    expect(updateSpy).toHaveBeenCalled();
+    const updateRequest = updateSpy.calls.mostRecent().args[0];
+    expect(updateRequest.config.wifi).toEqual(validWifi);
+  });
 });

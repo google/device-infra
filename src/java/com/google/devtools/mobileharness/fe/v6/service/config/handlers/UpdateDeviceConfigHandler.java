@@ -196,7 +196,7 @@ public final class UpdateDeviceConfigHandler {
             .clearExecutor()
             .addAllExecutor(incoming.getExecutorList());
       }
-      case WIFI -> builder.setDefaultWifi(incoming.getDefaultWifi());
+      case WIFI -> updateDefaultWifi(builder, incoming);
       case DIMENSIONS -> builder.setCompositeDimension(incoming.getCompositeDimension());
       case STABILITY -> {
         builder
@@ -205,9 +205,8 @@ public final class UpdateDeviceConfigHandler {
       }
       case ALL -> {
         if (environment.isAts()) {
-          builder
-              .setDefaultWifi(incoming.getDefaultWifi())
-              .setCompositeDimension(incoming.getCompositeDimension());
+          builder.setCompositeDimension(incoming.getCompositeDimension());
+          updateDefaultWifi(builder, incoming);
         } else {
           // Update everything in BasicDeviceConfig
           builder
@@ -215,15 +214,24 @@ public final class UpdateDeviceConfigHandler {
               .addAllOwner(incoming.getOwnerList())
               .clearExecutor()
               .addAllExecutor(incoming.getExecutorList())
-              .setDefaultWifi(incoming.getDefaultWifi())
               .setCompositeDimension(incoming.getCompositeDimension())
               .setMaxConsecutiveTest(incoming.getMaxConsecutiveTest())
               .setMaxConsecutiveFail(incoming.getMaxConsecutiveFail());
+          updateDefaultWifi(builder, incoming);
         }
       }
       default -> {}
     }
     return builder.build();
+  }
+
+  private static void updateDefaultWifi(
+      BasicDeviceConfig.Builder builder, BasicDeviceConfig incoming) {
+    if (incoming.hasDefaultWifi()) {
+      builder.setDefaultWifi(incoming.getDefaultWifi());
+    } else {
+      builder.clearDefaultWifi();
+    }
   }
 
   private ListenableFuture<Boolean> isSelfLockout(

@@ -861,10 +861,17 @@ export class HostSettings implements OnInit {
         executors: this.deviceConfig().permissions?.executors || [],
       });
     }
-    this.hostConfig.update((c) => ({...c, deviceConfig: this.deviceConfig()}));
+    const deviceConfig = {...this.deviceConfig()};
+    if (deviceConfig.wifi && deviceConfig.wifi.type === 'none') {
+      deviceConfig.wifi = undefined;
+    }
+    const requestConfig: HostConfig = {
+      ...this.hostConfig(),
+      deviceConfig,
+    };
     const request: UpdateHostConfigRequest = {
       hostName: this.hostName,
-      config: this.hostConfig(),
+      config: requestConfig,
       scope: {
         section: requestSectionMap[section],
         deviceConfigSection: deviceConfigSectionMap[section],

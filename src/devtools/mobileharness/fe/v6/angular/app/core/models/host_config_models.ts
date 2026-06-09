@@ -183,6 +183,7 @@ export enum HostConfigSection {
   DEVICE_CONFIG = 'DEVICE_CONFIG',
   HOST_PROPERTIES = 'HOST_PROPERTIES',
   DEVICE_DISCOVERY = 'DEVICE_DISCOVERY',
+  ALL = 'HOST_CONFIG_SECTION_ALL',
 }
 
 /**
@@ -190,7 +191,7 @@ export enum HostConfigSection {
  */
 export declare interface HostConfigUpdateScope {
   section: HostConfigSection;
-  deviceConfigSection?: DeviceConfigSection; // Relevant only if section is DEVICE_CONFIG
+  deviceConfigSection?: DeviceConfigSection; // Relevant only if section is DEVICE_CONFIG or ALL
 }
 
 /**

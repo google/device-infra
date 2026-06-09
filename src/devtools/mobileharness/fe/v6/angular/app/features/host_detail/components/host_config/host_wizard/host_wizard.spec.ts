@@ -251,4 +251,33 @@ describe('HostWizard Component', () => {
     expect(maxFailuresRow).toBeTruthy();
     expect(maxTestsRow).toBeTruthy();
   });
+
+  it('should clean up wifi settings when wifi type is none on submit', async () => {
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostWizard, {
+        data: {
+          hostName: 'test-host',
+          source: 'copy',
+          config: {
+            permissions: {hostAdmins: ['admin']},
+            deviceConfig: {
+              wifi: {type: 'none', ssid: 'test'},
+            },
+          },
+        },
+      }),
+    ) as ComponentFixture<MatTestDialogOpener<HostWizard>>;
+    dialogOpener.detectChanges();
+    await dialogOpener.whenStable();
+
+    const comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    const configService = TestBed.inject(CONFIG_SERVICE);
+    const updateSpy = spyOn(configService, 'updateHostConfig').and.callThrough();
+
+    comp.submit();
+
+    expect(updateSpy).toHaveBeenCalled();
+    const updateRequest = updateSpy.calls.mostRecent().args[0];
+    expect(updateRequest.config.deviceConfig?.wifi).toBeUndefined();
+  });
 });
