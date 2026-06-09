@@ -14,13 +14,14 @@
 #
 
 load("@rules_go//go:def.bzl", "go_binary")
+load(":version.bzl", "VERSION")
 
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = ["//visibility:public"],
 )
 
-_VERSION = "2.0"
+_VERSION = VERSION
 
 # Default go_binary - may be dynamically linked
 go_binary(
