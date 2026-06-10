@@ -25,7 +25,11 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdb
 import com.google.devtools.mobileharness.platform.androiddesktop.device.AndroidDesktopDeviceHelper;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import javax.annotation.Nullable;
 
 /** A placeholder device for Android Desktop executor devices. */
@@ -103,6 +107,61 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
       String dutName =
           lastColonIndex == -1 ? deviceIdOverride : deviceIdOverride.substring(0, lastColonIndex);
       testInfo.properties().add("dut_name", dutName);
+      testInfo.properties().add("ants_dut_name", dutName);
+
+      // Extract and surface UFS device dimensions via shivas
+      try {
+        Map<String, String> dimensions = androidDesktopDeviceHelper.getDeviceDimensions(dutName);
+
+        if (dimensions != null && !dimensions.isEmpty()) {
+          testInfo
+              .log()
+              .atInfo()
+              .alsoTo(logger)
+              .log(
+                  "Extracted UFS device dimensions via shivas for hostname %s: %s",
+                  dutName, dimensions);
+
+          // Inject explicit "ants_" prefixed properties for dynamic uploader extraction
+          Set<String> allowlist =
+              new HashSet<>(
+                  Arrays.asList(
+                      "board",
+                      "model",
+                      "sku",
+                      "label-pool",
+                      "hwid",
+                      "label-phase",
+                      "label-board",
+                      "label-model",
+                      "label-sku"));
+
+          dimensions.forEach(
+              (key, value) -> {
+                if (allowlist.contains(key)
+                    && key != null
+                    && !key.isEmpty()
+                    && value != null
+                    && !value.isEmpty()) {
+                  testInfo.properties().add("ants_" + key, value);
+                }
+              });
+        } else {
+          testInfo
+              .log()
+              .atWarning()
+              .alsoTo(logger)
+              .log("shivas returned empty dimensions for hostname %s", dutName);
+        }
+      } catch (MobileHarnessException e) {
+        testInfo
+            .log()
+            .atWarning()
+            .withCause(e)
+            .alsoTo(logger)
+            .log("Failed to extract Android Desktop device dimensions for hostname %s", dutName);
+      }
+
       try {
         // TODO: Support multi-duts units in the future.
         adbInternalUtil.connect(deviceIdOverride);
