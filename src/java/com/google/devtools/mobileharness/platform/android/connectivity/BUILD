@@ -25,7 +25,9 @@ java_library(
         "//:omnilab_fusion",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/app/devicedaemon:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/networkconnector:__pkg__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/lightning/networkconnector:__pkg__",
     ],
     deps = [
         ":enums",
