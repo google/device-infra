@@ -10,7 +10,14 @@ import {MatDialog} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
 import {MatTooltipModule} from '@angular/material/tooltip';
-import {ActivatedRoute} from '@angular/router';
+import {ActivatedRoute, Router} from '@angular/router';
+import {UrlService} from '@deviceinfra/app/core/services/url_service';
+import {throwError} from 'rxjs';
+import {catchError, take, tap} from 'rxjs/operators';
+import {HOST_SERVICE} from '../../../../core/services/host/host_service';
+import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
+import {DecommissionContent} from '../../../../shared/components/decommission_content/decommission_content';
+import {SnackBarService} from '../../../../shared/services/snackbar_service';
 
 import {ActionBarAction} from '@deviceinfra/app/core/constants/action_bar_config';
 import {
@@ -46,6 +53,10 @@ export class DeviceActionBar {
   private readonly route = inject(ActivatedRoute);
   private readonly comingSoonService = inject(ComingSoonService);
   private readonly appData = inject(APP_DATA);
+  private readonly hostService = inject(HOST_SERVICE);
+  private readonly router = inject(Router);
+  private readonly snackBar = inject(SnackBarService);
+  private readonly urlService = inject(UrlService);
 
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
 
@@ -68,6 +79,55 @@ export class DeviceActionBar {
   get universe() {
     return this.route.snapshot.queryParamMap.get('universe') || '';
   }
+
+  readonly onDecommission = () => {
+    const dialogData = {
+      title: 'Decommission Device',
+      contentComponent: DecommissionContent,
+      contentComponentInputs: {'deviceIds': [this.deviceId()]},
+      type: 'error',
+      primaryButtonLabel: 'Decommission',
+      secondaryButtonLabel: 'Cancel',
+      onConfirm: () =>
+        this.hostService
+          .decommissionMissingDevices(this.hostName(), [this.deviceId()])
+          .pipe(
+            tap(() => {
+              this.snackBar.showSuccess(
+                `Device ${this.deviceId()} decommissioned successfully.\nIt may take a few minutes to take effect on the UI side.`,
+              );
+            }),
+            catchError((err) => {
+              this.snackBar.showError(
+                err.message || 'Failed to decommission device',
+              );
+              return throwError(() => err);
+            }),
+          ),
+    };
+
+    const dialogRef = this.dialog.open(ConfirmDialog, {
+      panelClass: 'confirm-dialog-panel',
+      data: dialogData,
+      disableClose: true,
+    });
+
+    dialogRef
+      .afterClosed()
+      .pipe(take(1))
+      .subscribe((result) => {
+        if (result === 'primary') {
+          const hostIp = this.pageData().overview.host.ip;
+          this.urlService.notifyNavigated('host_details', {
+            'host_name': this.hostName(),
+            'host_ip': hostIp,
+          });
+          this.router.navigate(['/hosts', this.hostName()], {
+            queryParamsHandling: 'merge',
+          });
+        }
+      });
+  };
 
   readonly onConfiguration = this.openConfiguration.bind(this);
 
@@ -130,7 +190,8 @@ export class DeviceActionBar {
     const visible =
       this.isActionVisible('flash') ||
       this.isActionVisible('logcat') ||
-      this.isActionVisible('quarantine');
+      this.isActionVisible('quarantine') ||
+      this.isActionVisible('decommission');
     console.log('hasXlMoreMenuItems executed, result:', visible);
     return visible;
   });
@@ -141,7 +202,8 @@ export class DeviceActionBar {
       this.isActionVisible('remoteControl') ||
       this.isActionVisible('flash') ||
       this.isActionVisible('logcat') ||
-      this.isActionVisible('quarantine');
+      this.isActionVisible('quarantine') ||
+      this.isActionVisible('decommission');
     console.log('hasSmActionMenuItems executed, result:', visible);
     return visible;
   });
@@ -156,28 +218,31 @@ export class DeviceActionBar {
       autoFocus: false,
     });
 
-    dialogRef.afterClosed().subscribe((result) => {
-      if (!result) {
-        return;
-      }
+    dialogRef
+      .afterClosed()
+      .pipe(take(1))
+      .subscribe((result) => {
+        if (!result) {
+          return;
+        }
 
-      if (result.action === 'reset') {
-        this.resetConfiguration(
+        if (result.action === 'reset') {
+          this.resetConfiguration(
+            result.deviceId,
+            hostName,
+            hostIp,
+            result.universe,
+          );
+          return;
+        }
+
+        this.createOrCopyConfiguration(
+          result.action,
           result.deviceId,
-          hostName,
-          hostIp,
+          result.config,
           result.universe,
         );
-        return;
-      }
-
-      this.createOrCopyConfiguration(
-        result.action,
-        result.deviceId,
-        result.config,
-        result.universe,
-      );
-    });
+      });
   }
 
   resetConfiguration(
@@ -199,6 +264,7 @@ export class DeviceActionBar {
         autoFocus: false,
       })
       .afterClosed()
+      .pipe(take(1))
       .subscribe((result) => {
         if (!result) {
           return;
@@ -257,19 +323,22 @@ export class DeviceActionBar {
       autoFocus: false,
     });
 
-    dialogRef.afterClosed().subscribe((result) => {
-      if (!result) {
-        return;
-      }
-      if (result.action === 'reset') {
-        this.resetConfiguration(
-          result.deviceId,
-          this.hostName(),
-          this.pageData().overview.host.ip,
-          result.universe,
-        );
-      }
-    });
+    dialogRef
+      .afterClosed()
+      .pipe(take(1))
+      .subscribe((result) => {
+        if (!result) {
+          return;
+        }
+        if (result.action === 'reset') {
+          this.resetConfiguration(
+            result.deviceId,
+            this.hostName(),
+            this.pageData().overview.host.ip,
+            result.universe,
+          );
+        }
+      });
   }
 
   showComingSoonPopup(key: string) {
@@ -280,6 +349,7 @@ export class DeviceActionBar {
       'flash': ActionBarAction.DEVICE_FLASH,
       'logcat': ActionBarAction.DEVICE_LOGCAT,
       'quarantine': ActionBarAction.DEVICE_QUARANTINE,
+      'decommission': ActionBarAction.DEVICE_DECOMMISSION,
     };
     const feature = featureMap[key];
     if (feature) {

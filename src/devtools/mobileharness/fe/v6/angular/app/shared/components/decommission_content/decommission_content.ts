@@ -1,7 +1,6 @@
 import {CommonModule} from '@angular/common';
 import {ChangeDetectionStrategy, Component, Input} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
-import {DeviceSummary} from '../../../../../core/models/host_overview';
 
 /**
  * Component to display decommission confirmation content.
@@ -15,5 +14,5 @@ import {DeviceSummary} from '../../../../../core/models/host_overview';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DecommissionContent {
-  @Input() devices: DeviceSummary[] = [];
+  @Input() deviceIds: string[] = [];
 }
