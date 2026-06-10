@@ -67,6 +67,7 @@ java_library(
     deps = [
         ":module_sharding_args_generator",
         ":xts_job_creator",
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
@@ -78,7 +79,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:previous_result_loader",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_args",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_generator",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_type",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:tradefed_test_spec",
@@ -98,6 +98,7 @@ java_library(
     deps = [
         ":module_sharding_args_generator",
         ":xts_job_creator",
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/infra/ats/server/proto:service_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",
@@ -111,7 +112,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:previous_result_loader",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_args",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_generator",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_type",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",

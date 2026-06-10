@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;

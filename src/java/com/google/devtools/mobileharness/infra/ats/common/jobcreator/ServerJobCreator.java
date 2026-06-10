@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.TradefedConfigGenerator;
@@ -41,7 +42,6 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.retry.Previo
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader.TradefedResultFilesBundle;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
-import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;

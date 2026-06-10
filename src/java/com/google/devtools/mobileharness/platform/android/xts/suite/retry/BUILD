@@ -57,7 +57,7 @@ java_library(
     deps = [
         ":previous_result_loader",
         ":retry_args",
-        ":retry_type",
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_test_filter",
@@ -65,19 +65,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan_helper",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
-    ],
-)
-
-java_library(
-    name = "retry_type",
-    srcs = ["RetryType.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
     ],
 )
 
@@ -90,7 +77,7 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
     ],
     deps = [
-        ":retry_type",
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_test_filter",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "@maven//:com_google_guava_guava",
@@ -123,7 +110,7 @@ java_library(
         ":previous_result_loader",
         ":retry_args",
         ":retry_generator",
-        ":retry_type",
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants",

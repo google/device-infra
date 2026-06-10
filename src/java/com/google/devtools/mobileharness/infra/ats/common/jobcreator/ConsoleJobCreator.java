@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
@@ -36,7 +37,6 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.retry.Previo
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader.TradefedResultFilesBundle;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
-import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;

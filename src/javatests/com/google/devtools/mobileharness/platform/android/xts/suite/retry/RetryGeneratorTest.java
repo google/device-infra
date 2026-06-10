@@ -22,6 +22,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;

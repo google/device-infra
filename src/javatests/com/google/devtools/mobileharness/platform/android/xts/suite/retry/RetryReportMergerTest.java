@@ -22,6 +22,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger.MergedResult;

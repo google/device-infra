@@ -35,6 +35,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:device_descriptor_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
@@ -75,7 +76,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/runtime:xts_tradefed_runtime_info_file_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:previous_result_loader",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_type",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
         "//src/java/com/google/devtools/mobileharness/shared/util/inject:common_module",

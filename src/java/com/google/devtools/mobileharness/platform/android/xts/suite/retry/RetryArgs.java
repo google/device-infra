@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.platform.android.xts.suite.retry;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import java.nio.file.Path;
 import java.util.Optional;

@@ -27,6 +27,11 @@ enum ShardingMode {
   RUNNER = 1;
   // Schedule each module as a separate command
   MODULE = 2;
+}  // Types of the tests that can be retried.
+enum RetryType {
+  RETRY_TYPE_UNSPECIFIED = 0;
+  FAILED = 1;
+  NOT_EXECUTED = 2;
 }
 
 // Device info used to load tests.

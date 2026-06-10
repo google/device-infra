@@ -33,6 +33,7 @@ import com.google.common.collect.SetMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.primitives.Longs;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Metric;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
