@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ComparisonChain;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.TestSuiteVersion;
 import java.util.List;
 import java.util.Locale;
 
@@ -76,7 +77,12 @@ public final class TestSuiteVersionUtil {
             String.format("Invalid revision in version string: %s", versionString));
       }
     }
-    return TestSuiteVersion.create(major, minor, patch, revision);
+    return TestSuiteVersion.newBuilder()
+        .setMajor(major)
+        .setMinor(minor)
+        .setPatch(patch)
+        .setRevision(revision)
+        .build();
   }
 
   /**
@@ -89,10 +95,10 @@ public final class TestSuiteVersionUtil {
     checkArgument(v1 != null, "first version cannot be null");
     checkArgument(v2 != null, "second version cannot be null");
     return ComparisonChain.start()
-        .compare(v1.major(), v2.major())
-        .compare(v1.minor(), v2.minor())
-        .compare(v1.patch(), v2.patch())
-        .compare(v1.revision(), v2.revision())
+        .compare(v1.getMajor(), v2.getMajor())
+        .compare(v1.getMinor(), v2.getMinor())
+        .compare(v1.getPatch(), v2.getPatch())
+        .compare(v1.getRevision(), v2.getRevision())
         .result();
   }
 }

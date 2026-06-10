@@ -59,7 +59,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:non_tradefed_report_generator_constants",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_constants",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_helper",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_version",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:previous_result_loader",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_report_merger",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan",

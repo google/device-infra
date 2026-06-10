@@ -35,3 +35,15 @@ message DeviceInfo {
   optional string supported_abi_list = 2;
   optional string supported_abi = 3;
 }
+
+// Version of a test suite.
+//
+// The format of the version for a test suite is
+// "<major>[.<minor>][.<patch>]_<revision>", e.g. "16.1_r1", "16_r1", "8.0_r26",
+// "4.0.3_r4", "15_sts-r46".
+message TestSuiteVersion {
+  int32 major = 1;
+  int32 minor = 2;
+  int32 patch = 3;
+  int32 revision = 4;
+}

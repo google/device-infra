@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.ats.common.plan.JarFileUtil;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.TestSuiteVersion;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import java.io.BufferedReader;
 import java.io.IOException;

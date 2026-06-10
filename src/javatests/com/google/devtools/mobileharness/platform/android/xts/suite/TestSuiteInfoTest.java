@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.google.devtools.mobileharness.infra.ats.common.plan.JarFileUtil;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.TestSuiteVersion;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -123,7 +124,7 @@ public final class TestSuiteInfoTest {
 
     TestSuiteInfo testSuiteInfo = new TestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
 
-    assertThat(testSuiteInfo.getTestSuiteVersion()).hasValue(TestSuiteVersion.create(14, 0, 0, 1));
+    assertThat(testSuiteInfo.getTestSuiteVersion()).hasValue(create(14, 0, 0, 1));
   }
 
   @Test
@@ -148,5 +149,14 @@ public final class TestSuiteInfoTest {
     TestSuiteInfo testSuiteInfo = new TestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
 
     assertThat(testSuiteInfo.getTestSuiteVersion()).isEmpty();
+  }
+
+  private static TestSuiteVersion create(int major, int minor, int patch, int revision) {
+    return TestSuiteVersion.newBuilder()
+        .setMajor(major)
+        .setMinor(minor)
+        .setPatch(patch)
+        .setRevision(revision)
+        .build();
   }
 }

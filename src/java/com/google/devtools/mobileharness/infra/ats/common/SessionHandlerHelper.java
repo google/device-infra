@@ -20,8 +20,8 @@ import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.TestSuiteVersion;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
-import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteVersion;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteVersionUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -52,11 +52,11 @@ public class SessionHandlerHelper {
       XTS_TYPES_SUPPORTING_ATS_RETRY_WITH_MIN_VERSION =
           ImmutableMap.of(
               "cts",
-              TestSuiteVersion.create(14, 0, 0, 7),
+              create(14, 0, 0, 7),
               "cts-v-host",
-              TestSuiteVersion.create(16, 0, 0, 1),
+              create(16, 0, 0, 1),
               "gts",
-              TestSuiteVersion.create(12, 0, 0, 1));
+              create(12, 0, 0, 1));
 
   /** Checks if the test plan is retry. */
   public static boolean isRunRetry(String testPlan) {
@@ -111,6 +111,15 @@ public class SessionHandlerHelper {
           e);
     }
     return subPlan;
+  }
+
+  private static TestSuiteVersion create(int major, int minor, int patch, int revision) {
+    return TestSuiteVersion.newBuilder()
+        .setMajor(major)
+        .setMinor(minor)
+        .setPatch(patch)
+        .setRevision(revision)
+        .build();
   }
 
   private SessionHandlerHelper() {}

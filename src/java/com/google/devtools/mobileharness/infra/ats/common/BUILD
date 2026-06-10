@@ -112,9 +112,9 @@ java_library(
     name = "session_handler_helper",
     srcs = ["SessionHandlerHelper.java"],
     deps = [
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_version",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_version_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",

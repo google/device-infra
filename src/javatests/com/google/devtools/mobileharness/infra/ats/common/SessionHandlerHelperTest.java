@@ -18,7 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.common;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteVersion;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.TestSuiteVersion;
 import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import org.junit.Rule;
 import org.junit.Test;
@@ -36,7 +36,7 @@ public final class SessionHandlerHelperTest {
 
     assertThat(
             SessionHandlerHelper.useTfRetry(
-                /* isAtsServerRequest= */ false, "cts", TestSuiteVersion.create(14, 0, 0, 1)))
+                /* isAtsServerRequest= */ false, "cts", create(14, 0, 0, 1)))
         .isTrue();
   }
 
@@ -46,7 +46,7 @@ public final class SessionHandlerHelperTest {
 
     assertThat(
             SessionHandlerHelper.useTfRetry(
-                /* isAtsServerRequest= */ false, "cts", TestSuiteVersion.create(14, 0, 0, 1)))
+                /* isAtsServerRequest= */ false, "cts", create(14, 0, 0, 1)))
         .isFalse();
   }
 
@@ -56,9 +56,7 @@ public final class SessionHandlerHelperTest {
 
     assertThat(
             SessionHandlerHelper.useTfRetry(
-                /* isAtsServerRequest= */ true,
-                "unknown-xts",
-                TestSuiteVersion.create(14, 0, 0, 1)))
+                /* isAtsServerRequest= */ true, "unknown-xts", create(14, 0, 0, 1)))
         .isTrue();
   }
 
@@ -76,7 +74,7 @@ public final class SessionHandlerHelperTest {
 
     assertThat(
             SessionHandlerHelper.useTfRetry(
-                /* isAtsServerRequest= */ true, "cts", TestSuiteVersion.create(13, 0, 0, 1)))
+                /* isAtsServerRequest= */ true, "cts", create(13, 0, 0, 1)))
         .isTrue();
   }
 
@@ -86,7 +84,7 @@ public final class SessionHandlerHelperTest {
 
     assertThat(
             SessionHandlerHelper.useTfRetry(
-                /* isAtsServerRequest= */ true, "cts", TestSuiteVersion.create(14, 0, 0, 7)))
+                /* isAtsServerRequest= */ true, "cts", create(14, 0, 0, 7)))
         .isFalse();
   }
 
@@ -96,7 +94,7 @@ public final class SessionHandlerHelperTest {
 
     assertThat(
             SessionHandlerHelper.useTfRetry(
-                /* isAtsServerRequest= */ true, "cts", TestSuiteVersion.create(15, 0, 0, 1)))
+                /* isAtsServerRequest= */ true, "cts", create(15, 0, 0, 1)))
         .isFalse();
   }
 
@@ -106,7 +104,7 @@ public final class SessionHandlerHelperTest {
 
     assertThat(
             SessionHandlerHelper.useTfRetry(
-                /* isAtsServerRequest= */ true, "cts-v-host", TestSuiteVersion.create(15, 0, 0, 1)))
+                /* isAtsServerRequest= */ true, "cts-v-host", create(15, 0, 0, 1)))
         .isTrue();
   }
 
@@ -116,7 +114,7 @@ public final class SessionHandlerHelperTest {
 
     assertThat(
             SessionHandlerHelper.useTfRetry(
-                /* isAtsServerRequest= */ true, "cts-v-host", TestSuiteVersion.create(16, 0, 0, 1)))
+                /* isAtsServerRequest= */ true, "cts-v-host", create(16, 0, 0, 1)))
         .isFalse();
   }
 
@@ -126,7 +124,7 @@ public final class SessionHandlerHelperTest {
 
     assertThat(
             SessionHandlerHelper.useTfRetry(
-                /* isAtsServerRequest= */ true, "gts", TestSuiteVersion.create(11, 0, 0, 1)))
+                /* isAtsServerRequest= */ true, "gts", create(11, 0, 0, 1)))
         .isTrue();
   }
 
@@ -136,7 +134,16 @@ public final class SessionHandlerHelperTest {
 
     assertThat(
             SessionHandlerHelper.useTfRetry(
-                /* isAtsServerRequest= */ true, "gts", TestSuiteVersion.create(12, 0, 0, 1)))
+                /* isAtsServerRequest= */ true, "gts", create(12, 0, 0, 1)))
         .isFalse();
+  }
+
+  private static TestSuiteVersion create(int major, int minor, int patch, int revision) {
+    return TestSuiteVersion.newBuilder()
+        .setMajor(major)
+        .setMinor(minor)
+        .setPatch(patch)
+        .setRevision(revision)
+        .build();
   }
 }
