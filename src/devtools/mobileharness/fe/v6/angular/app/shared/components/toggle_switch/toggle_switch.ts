@@ -40,7 +40,6 @@ export class ToggleSwitch implements OnInit, ControlValueAccessor {
   // ControlValueAccessor properties
   private onChange = (value: boolean) => {};
   private onTouched = () => {};
-  private isFormControl = false;
 
   ngOnInit() {
     // Component initialization logic
@@ -49,7 +48,6 @@ export class ToggleSwitch implements OnInit, ControlValueAccessor {
   // ControlValueAccessor implementation
   writeValue(value: boolean): void {
     this.checked = value;
-    this.isFormControl = true;
   }
 
   registerOnChange(fn: (value: boolean) => void): void {
@@ -71,11 +69,8 @@ export class ToggleSwitch implements OnInit, ControlValueAccessor {
 
     this.checked = !this.checked;
 
-    // 如果是表单控件，调用表单回调
-    if (this.isFormControl) {
-      this.onChange(this.checked);
-      this.onTouched();
-    }
+    this.onChange(this.checked);
+    this.onTouched();
 
     this.checkedChange.emit(this.checked);
     this.toggle.emit(this.checked);

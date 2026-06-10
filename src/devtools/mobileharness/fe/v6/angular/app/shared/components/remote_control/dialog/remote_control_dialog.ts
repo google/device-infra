@@ -39,6 +39,7 @@ import {MatSliderModule} from '@angular/material/slider';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {
   DeviceProxyType,
+  DeviceRemoteControlConfig,
   RemoteControlDevicesRequest,
   SubDeviceEligibilityResult,
 } from '@deviceinfra/app/core/models/host_overview';
@@ -54,6 +55,22 @@ import {
   PROXY_TYPE_LABELS,
   RemoteControlDialogData,
 } from '../remote_control.types';
+
+declare interface RemoteControlFormValue {
+  deviceConfigs: DeviceRemoteControlConfig[];
+  globalRunAs: string;
+  durationMinutes: number;
+  durationH: number;
+  durationM: number;
+  enableFlash: boolean;
+  flashSubDeviceId: string;
+  flashBranch: string;
+  flashBuildId: string;
+  flashTarget: string;
+  proxyType: DeviceProxyType;
+  videoResolution: string;
+  limitVideoSize: boolean;
+}
 
 /**
  * Dialog for configuring and starting a remote control session.
@@ -601,12 +618,10 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
     }
     this.startingSession.set(true);
 
-    const val = this.form.value;
+    const val = this.form.value as RemoteControlFormValue;
 
     // Construct request
-    const rawConfigs = val.deviceConfigs as
-      | Array<{deviceId: string; runAs: string}>
-      | undefined;
+    const rawConfigs = val.deviceConfigs;
     const deviceConfigs = (rawConfigs ?? [])
       .map((c) => {
         const deviceSummary = this.data.devices.find(

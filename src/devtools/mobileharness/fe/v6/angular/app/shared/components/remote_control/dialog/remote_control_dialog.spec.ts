@@ -420,4 +420,71 @@ describe('RemoteControlDialog', () => {
 
     expect(component.isControlInvalid('flashBranch')).toBeFalse();
   });
+
+  it('startSession with flash enabled should open ConfirmDialog with flashOptions', () => {
+    initComponent({
+      devices: [
+        {
+          id: 'device-1',
+          model: 'Pixel 9',
+          isTestbed: true,
+          subDevices: [{id: 'sub-1', model: 'Pixel 8', types: []}],
+        },
+      ],
+      eligibilityResults: [
+        {
+          deviceId: 'device-1',
+          isEligible: true,
+          runAsCandidates: ['user1'],
+          supportedProxyTypes: [],
+          subDeviceResults: [{deviceId: 'sub-1', isEligible: true}],
+        },
+      ],
+      sessionOptions: {
+        maxDurationHours: 3,
+        commonRunAsCandidates: ['user1'],
+        commonProxyTypes: [DeviceProxyType.ADB_ONLY],
+      },
+    });
+    tickAndDetectChanges();
+
+    component.deviceConfigs.at(0).get('runAs')?.setValue('user1');
+    component.form.get('durationMinutes')?.setValue(60);
+    component.form.get('proxyType')?.setValue(DeviceProxyType.ADB_ONLY);
+
+    component.form.get('enableFlash')?.setValue(true);
+    component.form.get('flashBranch')?.setValue('git_master');
+    component.form.get('flashBuildId')?.setValue('12345');
+    component.form.get('flashTarget')?.setValue('target');
+    component.form.get('flashSubDeviceId')?.setValue('sub-1');
+    tickAndDetectChanges();
+
+    expect(component.isFormValid()).toBeTrue();
+
+    const mockConfirmDialogRef = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    mockConfirmDialogRef.afterClosed.and.returnValue(of('primary'));
+    const dialogSpy = spyOn(
+      (component as unknown as {dialog: MatDialog}).dialog,
+      'open',
+    ).and.returnValue(mockConfirmDialogRef);
+
+    component.startSession();
+
+    expect(dialogSpy).toHaveBeenCalledWith(ConfirmDialog, jasmine.objectContaining({
+      data: jasmine.objectContaining({
+        contentComponentInputs: jasmine.objectContaining({
+          request: jasmine.objectContaining({
+            flashOptions: {
+              branch: 'git_master',
+              buildId: '12345',
+              target: 'target',
+              subDeviceId: 'sub-1',
+            }
+          })
+        })
+      })
+    }));
+  });
 });
