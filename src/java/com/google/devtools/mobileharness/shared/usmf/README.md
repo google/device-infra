@@ -162,12 +162,12 @@ The behavior of the mock binary is governed by rules defined in
             command arguments (for `"regex"`).
     *   **`BinaryStateCondition`** (`"type": "state"`): Filters based on active
         state variables (see
-        [Section 7 (State Repository)](#7-stateful-command-execution-state-repository)).
+        [Section 7 (State Repository and AST Expressions)](#7-stateful-command-execution-state-repository-and-ast-expressions)).
 *   **`CommandBehavior`**: Declares response outputs and state transitions:
     *   `"stdout"` / `"stderr"` / `"exit_code"` / `"sleep_ms"`.
     *   `"state_mutations"`: List of state mutations to execute upon rule
         activation (see
-        [Section 7 (State Repository)](#7-stateful-command-execution-state-repository)).
+        [Section 8 (State Mutations and Operators)](#8-state-mutations-and-operators)).
     *   `"side_effects"`: List of file and directory mutations performed on the
         host environment:
         *   `"type"`: `"file"`.
@@ -216,85 +216,192 @@ assertThat(invocations.stream().anyMatch(
 
 --------------------------------------------------------------------------------
 
-## 7. Stateful Command Execution & State Repository
+## 7. Stateful Command Execution, State Repository and AST Expressions
 
 USMF supports stateful CLI mockups. Rather than returning purely static
-responses, the mock binary reads and mutates a shared key-value state repository
-(`states.json`) internally scoped to the sandbox. This allows simulated commands
-to store environment/device states and make subsequent command behaviors
-dependent on those transitions.
+responses, simulated commands read and mutate a shared JSON state repository
+(`states/states.json`) internally scoped to the sandbox.
 
-### 7.1. Evaluating State Conditions
+Instead of simple regex string replacements, USMF utilizes a robust **Expression
+Evaluator** governed by an **Abstract Syntax Tree (AST)**. This allows complex,
+nested condition testing and state mutations.
 
-Rules can check state repository values using `BinaryStateCondition` (supporting
-comparison operators: `"eq"`, `"gt"`, `"gte"`, `"lt"`, `"lte"`, or
-`"contains"`). A rule can be configured to match only when a specific key in the
-state repository meets these criteria.
+### 7.1. Context Scopes
 
-### 7.2. Mutating States
+USMF evaluation evaluates expressions against three decoupled, typed context
+data environments (scopes):
 
-When a rule is matched, the mock binary executes `state_mutations` atomically to
-modify keys in the state repository.
+#### 1. State Context (rooted as `#S`, mutable)
 
-To prevent race conditions with concurrent commands under simulated hardware
-latency, all state mutations are performed *before* writing stdout/stderr
-outputs, execution sleep latency (`sleep_ms`), or executing host side-effects
-(`side_effects`).
+*   **Description**: Scoped state variables saved and reloaded dynamically
+    across subprocess mockup runs in `states/states.json` inside the sandbox
+    workspace.
+*   **Supported Types**: Structured nested tree values (`Map<String, Object>`),
+    primitive booleans (`Boolean`), numeric integers and doubles (`Number`),
+    strings (`String`), or collection sequences (`List`/`Set`).
+*   **Example**: `{"stats": {"device-abc": 10}}`. Target path
+    `#S['stats']['device-abc']` evaluates to number `10`.
 
-The supported mutation operators are:
+#### 2. Captures Context (rooted as `#C`, read-only)
 
-*   **`set`**: Replaces the key's value with the new value.
-*   **`plus`**: Increments/decrements a numeric key's value by the given amount.
-*   **`add_to_list`**: Appends the value to the end of a state list.
-*   **`add_to_set`**: Appends the value to a state list only if it does not
-    already exist (ensures uniqueness).
+*   **Description**: Read-only variables populated dynamically at command match
+    runtime using named capture groups from matching command regex rules.
+*   **Supported Types**: Flat string key-value attributes (`Map<String,
+    String>`).
+*   **Example**: Command `install app.apk` matching `.*install\s+(?P<apk>\S+)`
+    extracts `#C['apk']` evaluating to `"app.apk"`.
+
+#### 3. Variables Context (rooted as `#V`, read-only)
+
+*   **Description**: Global, read-only translation mapping variables injected
+    statically during deploy initialization (acting as key-value translation
+    constants).
+*   **Supported Types**: Static configurations mapping structures (`Map<String,
+    Map<String, String>>`) or flat lists.
+*   **Example**: Map settings like `{"pkg_map": {"foo.apk": "com.foo.app"}}`.
+    Target path `#V['pkg_map']['foo.apk']` evaluates to `"com.foo.app"`.
+*   **Java API Configuration**: Variables in the `#V` context are injected
+    statically upon mockup deployment via the Java client API
+    `UsmfBinary.Builder.setVariables(JsonObject)` (see the code example in
+    Section 9).
+
+### 7.2. Concept: ContextNodes in USMF Scopes
+
+A **`ContextNode`** represents any evaluated variable, value, or nested
+container in the USMF execution scopes. The ContextNode structure maps
+dynamically to three concrete derived entities depending on their namespace
+prefix root:
+
+*   **`StateNode`**: Represents a mutable variable or cell inside the `State
+    Context`. **Specifically, only StateNodes support read/write mutations
+    (e.g., `set`, `plus`, `add_to_list`)**.
+*   **`CaptureNode`**: Represents a read-only variable inside the `Captures
+    Context`.
+*   **`VariableNode`**: Represents a read-only variable inside the `Variables
+    Context`.
+
+### 7.3. Grammar Definition of Expressions
+
+USMF supports evaluation of expressions (`u-node-exp`) and template string
+substitutions (`u-string`):
+
+##### 1. u-node-exp (USMF Node Expression)
+
+An expression resolving to a dynamic `ContextNode` object representing a lookup
+path (where only `StateNode` is mutable): `u-node-exp := ContextVariable |
+u-node-exp[u-exp]`
+
+*   **ContextVariable** → `#S` (State reservoir), `#C` (Command captures), or
+    `#V` (Global configuration variables).
+*   **IndexAccess** → The `[u-exp]` construct extracts child members. It allows
+    infinite multi-dimensional nesting (e.g., `#S['stats'][#C['device_id']]`) or
+    array index lookup (e.g., `#S['stats_list']['0']`). For sequence data
+    containers (lists/tuples), USMF dynamically converts the index integer
+    parameter representation.
+
+##### 2. u-exp (USMF General Expression)
+
+The general expression representing a retrieval value or index: `u-exp :=
+StringLiteral | u-node-exp + ["?" + StringLiteral] + [":" + StringLiteral]`
+
+*   **StringLiteral** → Raw constant string enclosed in single or double quotes
+    (e.g., `'device-123'` or numeric index `'0'`). **Constant literals without
+    quotes are syntax errors.**
+
+##### 3. u-string (USMF String Interpolation)
+
+A text template that evaluates variables and outputs them as a flattened string:
+`u-string := StringLiteral | u-string + "${" + u-exp + "}" + u-string`
+
+*   The brace operator `${}` acts as a string fold operator, stringifying the
+    evaluated `u-exp` and concatenating the parts.
+
+### 7.4. Operational Resolution Rules
+
+USMF evaluation evaluates expressions based on their destination type
+requirements:
+
+#### 7.4.1. Resolving Expressions to Value Strings
+
+When evaluating `u-exp` inside a `u-string` (which is the required syntax type
+for `stdout`, `stderr`, mutation `value`, and all string fields inside side
+effects):
+
+*   **None-Value Propagation**: If any inner lookup term evaluates to `None`
+    (representing a missing key inside a Map container), the outer brackets
+    operator undergoes a logical short-circuit—propagating the `None` value up
+    to the root level.
+*   **Safety Defaulting (`?` Suffix)**: If the expression evaluates to `None`,
+    and suffix `?` is present, it returns the fallback `StringLiteral` constant
+    (e.g. `#C['device_id']?'unknown'`).
+*   **Value Formatting (`:` Suffix)**: If the final resolved value is not
+    `None`, and suffix `:` is present, the value is formatted using Python's
+    printf-style format operator `%` (e.g., `#C['device_id']:'device-%s'`). If
+    the value evaluates to `None` and no `?` is present, the formatting (`:`) is
+    skipped.
+*   **Evaluation Precedence (`?` before `:`)**: The coalescing operator `?`
+    evaluates first to resolve any `None` values, followed by the `:` formatter.
+    To force format an empty string (e.g., output `"device-"` when key is
+    missing), write `#C['device_id']?'':'device-%s'`.
+*   **Outermost Interpolation Boundary**: Under string interpolation (`${}`), if
+    the final evaluated `u-exp` is `None`, it resolves to an empty string
+    (`""`). For example, `${#C['device_id']:'device-%s'}` resolves to `""` if
+    the device ID is missing, because the inner expression evaluates to `None`
+    and formatting (`:`) is skipped (with the outermost `${}` final rendering
+    replacing the resulting `None` with `""`). To force formatting in this case,
+    explicitly coalesce to empty quotes first:
+    `${#C['device_id']?'':'device-%s'}`.
+
+#### 7.4.2. Resolving Expressions to ContextNodes
+
+When USMF evaluates a `u-node-exp` expression, it traverses the lookup paths
+recursively to resolve variables against the active contexts:
+
+*   **None Propagation**: If any inner lookup term evaluates to `None`
+    (representing a missing key or array out of bounds), the lookup
+    safety-aborts and propagates `None` upward.
+*   **Lazy Map Creation (Backfilling) during Mutation**: When locating a target
+    `state_node` for a state mutation (e.g., `set`, `plus`, `add_to_list`,
+    `add_to_set`), if any intermediate nested maps along the path are missing,
+    USMF automatically initializes them as empty mutable maps (`{}`). This
+    allows you to write nested states without having to pre-populate their
+    parent structures. Note that this backfilling behavior **only** occurs when
+    identifying the destination node for modifications (not for condition
+    matching, resolving mutation values, or generating stdout/stderr).
+*   **Syntactic Constraints**: Since condition and mutation targets strictly
+    require the raw `u-node-exp` syntax type representing a direct node
+    reference, appending null-coalescing (`?`) or formatting (`:`) operators in
+    these fields is syntactically invalid and triggers a validation
+    `SyntaxError`.
+
+For low-level AST resolution rules and the exact backfilling algorithm, see
+**[Section 13.4 (AST Resolution and Lazy Backfilling Algorithm)](#134-ast-resolution-and-lazy-backfilling-algorithm)**.
+
+### 7.5. Context Mapping Rules
+
+Rule Field                              | Syntax Type  | Evaluation Behavior                                                            | Code Sample
+:-------------------------------------- | :----------- | :----------------------------------------------------------------------------- | :----------
+**Condition Target (`state_node`)**     | `u-node-exp` | Evaluated under state and captures. Must be explicitly rooted in #S.           | `state_node: "#S['installed'][#C['device_id']]"`
+**Mutation Target (`state_node`)**      | `u-node-exp` | Auto-creates ancestor directories/maps if they are missing at target location. | `state_node: "#S['stats'][#C['device_id']]"`
+**Mutation Value (`value`)**            | `u-string`   | Template string substitution merged stream.                                    | `value: "${#V['pkg_map'][#C['apk']]}"`
+**Standard Output (`stdout`/`stderr`)** | `u-string`   | Formatted and merged into standard streams.                                    | `"stdout": "Got ${#C['val']}"`
 
 --------------------------------------------------------------------------------
 
-## 8. Dynamic Parameter Interpolation & Formatter Templates
+## 8. State Mutations and Operators
 
-USMF supports regex named capture groups and active state variables to
-dynamically format outputs, state mutations, and host side effects.
+When a rule matches, the mock binary executes a list of `state_mutations` in
+transaction lock. To mutate maps or items, target `state_node` expressions are
+evaluated in step to locate parent maps and index subscripts (e.g.
+`#S['stats'][#C['device_id']]` locates the parent map `#S['stats']` and the
+target index subscript matching the device ID).
 
-### 8.1. Interpolation Syntax (`${prefix:key[:'format']}`)
+The following mutation operators are supported at the location:
 
-Any attribute inside `CommandBehavior` (stdout, stderr, state mutations, and
-side effects) supports text substitution placeholders matching:
-
-*   `${@C:key}`: Variable from regex named capture groups.
-*   `${@S:key}`: Variable from shared state variables.
-*   `${prefix:key:'format_string'}`: Formats the value using standard C-style
-    print formats.
-
-#### Available Variables (Interpolation Context)
-
-The interpolation engine resolves placeholder keys (`${prefix:key}`) against:
-
-1.  **Regex Capture Groups (`@C:`)**: Named capture groups defined in the rule's
-    active command regex pattern (e.g., `(?P<pkg>\S+)` makes `${@C:pkg}`
-    available).
-2.  **Shared State Memory (`@S:`)**: Persistent state keys stored in
-    `states.json` (e.g., if the state has `"ratio": 3.14`, then `${@S:ratio}`
-    resolves to `3.14`).
-
-The type prefix (`@C:` or `@S:`) is strictly mandatory. Placeholders without a
-valid prefix are not resolved and will remain unmodified.
-
-#### Key System Attributes
-
-*   **Inline Formatting Templates**: Formatting formats (e.g., `%.2f` for float
-    precision or `%d` for integers) are specified directly within the tag, and
-    must be enclosed in single quotes `'` or double quotes `"`.
-*   **Collection Rendering (Auto-Detection)**: If the resolved key value is a
-    collection (like a list/set/tuple), the template is evaluated iteratively
-    for each item and concatenated. If it is a primitive single value, it is
-    formatted exactly once.
-*   **Nested Resolution**: Placeholders can be nested (up to 5 layers deep),
-    solving dynamic key lookups at runtime (e.g.,
-    `${@S:installed_packages_${@C:device_id}}` dynamically resolves the device
-    serial first before querying the package list).
-*   **Safety Fallback**: Any unresolved variable placeholder safely evaluates to
-    an empty string `""` at runtime.
+*   **`set`**: Sets/replaces the key's value with the new value.
+*   **`plus`**: Increments/decrements a numeric value.
+*   **`add_to_list`**: Appends the value to a list.
+*   **`add_to_set`**: Appends the value to a set ensuring uniqueness.
 
 --------------------------------------------------------------------------------
 
@@ -310,27 +417,35 @@ formats the list, and outputs the results to stdout:
 // Configure and deploy mock ADB with stateful rules to track installed packages per device:
 UsmfBinary mockAdb =
     UsmfBinary.builder("adb", tmpFolder.getRoot().toPath(), "adb_sandbox")
+        .setVariables(
+            JsonParser.parseString(
+                    """
+                    {
+                      "pkg_map": {
+                        "foo.apk": "com.foo.app"
+                      }
+                    }
+                    """)
+                .getAsJsonObject())
         .addRule(
             UsmfRule.builder()
                 .addCondition(
                     CommandCondition.regexMatch(
-                        ".*(?:-s\\s+(?P<device_id>\\S+))?.*install.*\\s+(?:.*/)?(?P<apk_name>[a-zA-Z0-9_]+)\\.apk"))
+                        ".*?(?:-s\\s+(?P<device_id>\\S+))?.*install.*\\s+(?:.*/)?(?P<apk_name>[a-zA-Z0-9_]+)\\.apk"))
                 .setBehavior(
                     CommandBehavior.stdout("Success\n")
                         .addStateMutation(
-                            // Regex capture and state variable interpolation
-                            BinaryStateMutation.key("installed_packages_${@C:device_id}")
-                                .addToSet("com.foo.${@C:apk_name}"))
+                            BinaryStateMutation.stateNode("#S['installed_packages'][#C['device_id']]")
+                                .addToSet("${#V['pkg_map'][#C['apk_name']]}"))
                         .build())
                 .build())
         .addRule(
             UsmfRule.builder()
                 .addCondition(
                     CommandCondition.regexMatch(
-                        ".*(?:-s\\s+(?P<device_id>\\S+))?.*shell.*pm\\s+list\\s+packages"))
+                        ".*?(?:-s\\s+(?P<device_id>\\S+))?.*shell.*pm\\s+list\\s+packages"))
                 .setBehavior(
-                    // Collection elements loop formatting rendering
-                    CommandBehavior.stdout("${@S:installed_packages_${@C:device_id}:'package:%s\n'}")
+                    CommandBehavior.stdout("${#S['installed_packages'][#C['device_id']]:'package:%s\n'}")
                         .build())
                 .build())
         .buildAndDeploy();
@@ -347,15 +462,15 @@ topology:
 
 ```
 <parent_dir>/<sandbox_dir>/      (Unique per-mock sandbox path)
-├── <mock_binary>                (Mock command execution shell wrapper proxy, e.g., "adb")
 ├── bin/
+│   ├── <mock_binary>            (Mock command execution shell wrapper proxy, e.g., "adb")
 │   └── usmf_stub.py             (The core mock rule execution stub)
 ├── rules/
 │   └── mock_rules.json          (Expected expectation declarations matching JSON)
 ├── logs/
 │   └── history_*.json           (Chronological transaction history trace logs)
 └── states/
-    └── states.json              (Active shared-memory key-value state database file)
+    └── states.json              (Active file-based key-value state database file)
 ```
 
 --------------------------------------------------------------------------------
@@ -410,9 +525,9 @@ paradigms, and structural justifications.
 USMF deploys a two-stage hijacking mechanism:
 
 1.  **Shell Wrapper**: A thin, platform-specific shell script representing the
-    mock binary name is placed in `/bin`. This shell wrapper exports the paths
-    of the rules file, state file, and logs path locally to the subprocess, then
-    delegating implementation to `usmf_stub.py`.
+    mock binary name is placed in the `bin/` subdirectory of the sandbox. This
+    shell wrapper exports the paths of the rules file, state file, and logs path
+    locally to the subprocess, then delegating implementation to `usmf_stub.py`.
 2.  **Generic python stub (`usmf_stub.py`)**: Intercepts the call, loads the
     JSON config, evaluates matching conditions concurrently, formats output
     fields, performs file writes (state/side effect), and atomically outputs
@@ -455,8 +570,74 @@ for rules and state tracking due to the following reasons:
     importing the `protobuf` library, which is highly prone to version conflicts
     with the test runner's Python environment and requires complex environment
     setup on the test agent. The JSON parser is built natively into Python.
-*   **Simplicity and Readability**: JSON is human-readable and writable
+*   **Simple and readable format**: JSON is human-readable and writable
     natively. Defining rules in JSON format (`mock_rules.json`) allows
     developers to manually inspect sandbox directories, write manual rules, or
     inspect the stub behavior immediately without needing Protobuf toolchains or
     schemas.
+
+### 13.4. AST Resolution and Lazy Backfilling Algorithm
+
+This section defines the internal logic used by the expression evaluator when
+resolving a `u-node-exp` to a `ContextNode` reference.
+
+When evaluating a `u-node-exp` expression node A, a boolean parameter
+`isPureLeftLeaf` is passed from its parent expression node to A. If A has no
+parent expression node (i.e., A is the root node of the expression),
+`isPureLeftLeaf` is `false`.
+
+Conceptually, `isPureLeftLeaf` represents whether every node along the path from
+A to the root node (excluding the root node itself) is the left-side
+`u-node-exp` component of a `u-node-exp[u-exp]` index access expression.
+
+During the process of evaluating A (which involves parsing its structure,
+recursively evaluating its child nodes, and computing A's value based on the
+child nodes' evaluation results):
+
+#### 1. Child Evaluation Context Propagation
+
+When recursively evaluating a child node B of A:
+
+*   `isPureLeftLeaf` for B is `true` if and only if **both** of the following
+    conditions are met:
+    *   **c1**: A's current `isPureLeftLeaf` is `true`, or A is the root node of
+        the expression.
+    *   **c2**: A is a `u-node-exp[u-exp]` expression, and the child node B is
+        the left-side `u-node-exp` component.
+*   Otherwise, `isPureLeftLeaf` for B is `false`.
+
+#### 2. Result Resolution and Lazy Backfilling
+
+When computing the value of A based on the evaluation results of its child
+nodes:
+
+*   If **all** of the following validation conditions are met:
+    *   **c1**: A is a `u-node-exp[u-exp]` index access expression.
+    *   **c2**: The left child node L and the right child node R of A both
+        evaluate to non-`None` values (where the left child's result VL is an
+        existing `ContextNode`, and the right child's result VR is a `string`).
+        *If either child evaluates to None, the evaluation of A immediately
+        short-circuits and propagates None upward.*
+    *   **c3**: VL is a mutable `StateNode` structure (rather than read-only
+        structures under #C or #V), and the entire expression is being evaluated
+        for the purpose of **locating a target `state_node` for state mutation**
+        (not for locating a `state_node` in a state condition match, resolving
+        the mutation `value` in a state mutation, or evaluating the expression
+        to a string such as for stdout, stderr, or side effects). *Otherwise,
+        immediately propagate None upward.*
+    *   **c4**: VL is a map container (e.g., dict) rather than a sequence
+        container (e.g., list). *Otherwise, immediately propagate None upward.*
+    *   **c5**: VL does not contain the key VR. *If VL contains key VR, it
+        directly returns the existing value VL[VR].*
+    *   **c6**: A's current `isPureLeftLeaf` is `true`. *Otherwise, immediately
+        propagate None upward.*
+*   Then, instead of propagating `None` upward, the resolver performs the
+    following actions:
+    *   **a1**: Modifies VL by adding a new entry with key VR and an empty
+        mutable map (e.g., `{}`) as its value (making the path VL[VR] a valid
+        existing `StateNode`).
+    *   **a2**: Returns the newly backfilled VL[VR] Map as the evaluation result
+        of A.
+*   If any of conditions **c1** through **c6** are violated, the resolver does
+    not perform backfilling and evaluates the node standardly (which propagates
+    `None` upward if the key VR is missing).

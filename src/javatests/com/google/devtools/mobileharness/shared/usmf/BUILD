@@ -30,6 +30,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
     ],

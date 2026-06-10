@@ -34,6 +34,9 @@ import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -62,6 +65,7 @@ public final class UsmfTest {
 
   private Path tempDir;
   private CommandExecutor executor;
+  private final Gson gson = new Gson();
 
   @Before
   public void setUp() {
@@ -179,8 +183,8 @@ public final class UsmfTest {
     // 1. Rule A: 'install' sets state and increments installment count
     RuleCondition installCond = CommandCondition.regexMatch(".*install.*target.apk.*");
 
-    BinaryStateMutation setInstalled = BinaryStateMutation.key("installed").set(true);
-    BinaryStateMutation incrCount = BinaryStateMutation.key("count").plus(1);
+    BinaryStateMutation setInstalled = BinaryStateMutation.stateNode("#S['installed']").set(true);
+    BinaryStateMutation incrCount = BinaryStateMutation.stateNode("#S['count']").plus(1);
 
     CommandBehavior installBehavior =
         CommandBehavior.builder("Install Complete\n", "", 0)
@@ -193,7 +197,7 @@ public final class UsmfTest {
 
     // 2. Rule B: 'query' only matches when 'installed' condition is exactly true
     RuleCondition queryCommandCond = CommandCondition.exactMatch("query");
-    RuleCondition queryStateCond = BinaryStateCondition.key("installed").equalTo(true);
+    RuleCondition queryStateCond = BinaryStateCondition.stateNode("#S['installed']").equalTo(true);
 
     CommandBehavior queryBehavior = CommandBehavior.builder("App is Active\n", "", 0).build();
 
@@ -220,8 +224,9 @@ public final class UsmfTest {
     assertThat(installStdout).isEqualTo("Install Complete\n");
 
     // Test Case Part 3: Assert mutated state directly on Java control API
-    assertThat(mockCmd.readState("installed", Boolean.class)).isTrue();
-    assertThat(mockCmd.readState("count", Integer.class)).isEqualTo(1);
+    JsonObject state = mockCmd.readStateJson();
+    assertThat(state.get("installed").getAsBoolean()).isTrue();
+    assertThat(state.get("count").getAsInt()).isEqualTo(1);
 
     // Test Case Part 4: Now query command matches as state is transited successfully!
     String postInstallStdout = executor.run(Command.of(mockCmd.getPath(), "query"));
@@ -259,12 +264,13 @@ public final class UsmfTest {
     // 2. Behavior outputs dynamically with ${pkg}, mutates state list, and creates manifest side
     // effect
     CommandBehavior installBehavior =
-        CommandBehavior.builder("Installed ${@C:pkg}\n", "", 0)
-            .addStateMutation(BinaryStateMutation.key("installed_packages").addToList("${@C:pkg}"))
+        CommandBehavior.builder("Installed ${#C['pkg']}\n", "", 0)
+            .addStateMutation(
+                BinaryStateMutation.stateNode("#S['installed_packages']").addToList("${#C['pkg']}"))
             .addSideEffect(
                 LocalFileSideEffect.createFile(
-                    tempDir.toAbsolutePath() + "/manifests/${@C:pkg}.txt",
-                    "Manifest for ${@C:pkg}"))
+                    tempDir.toAbsolutePath() + "/manifests/${#C['pkg']}.txt",
+                    "Manifest for ${#C['pkg']}"))
             .build();
 
     UsmfRule installRule =
@@ -273,7 +279,7 @@ public final class UsmfTest {
     // 3. Query command checks if com.example.app is active, only if it exists in the state
     RuleCondition queryCond = CommandCondition.exactMatch("query", "com.example.app");
     RuleCondition stateContainsCond =
-        BinaryStateCondition.key("installed_packages").contains("com.example.app");
+        BinaryStateCondition.stateNode("#S['installed_packages']").contains("com.example.app");
     CommandBehavior queryBehavior =
         CommandBehavior.builder("com.example.app is installed\n", "", 0).build();
 
@@ -318,9 +324,10 @@ public final class UsmfTest {
         UsmfRule.builder()
             .addCondition(CommandCondition.regexMatch(".*install\\s+(?P<pkg>[A-Za-z0-9_\\.]+).*"))
             .setBehavior(
-                CommandBehavior.stdout("Installed ${@C:pkg}\n")
+                CommandBehavior.stdout("Installed ${#C['pkg']}\n")
                     .addStateMutation(
-                        BinaryStateMutation.key("installed_packages").addToSet("${@C:pkg}"))
+                        BinaryStateMutation.stateNode("#S['installed_packages']")
+                            .addToSet("${#C['pkg']}"))
                     .build())
             .build();
 
@@ -332,15 +339,16 @@ public final class UsmfTest {
     executor.run(Command.of(mockCmd.getPath(), "install", "com.example.app"));
     executor.run(Command.of(mockCmd.getPath(), "install", "com.example.app"));
 
-    assertThat(mockCmd.readStateSet("installed_packages", String.class))
-        .containsExactly("com.example.app");
+    JsonObject state = mockCmd.readStateJson();
+    List<?> installedPackages = gson.fromJson(state.get("installed_packages"), List.class);
+    assertThat(installedPackages).containsExactly("com.example.app");
   }
 
   @Test
   public void compareStateContains_withDictionary_matchesKeySuccessfully() throws Exception {
     RuleCondition searchCond = CommandCondition.exactMatch("search");
     RuleCondition stateContainsCond =
-        BinaryStateCondition.key("installed_dict").contains("com.example.app");
+        BinaryStateCondition.stateNode("#S['installed_dict']").contains("com.example.app");
     CommandBehavior queryBehavior = CommandBehavior.builder("Key Found\n", "", 0).build();
 
     UsmfRule rule =
@@ -353,7 +361,16 @@ public final class UsmfTest {
     UsmfBinary mockCmd =
         UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
 
-    mockCmd.writeState("installed_dict", ImmutableMap.of("com.example.app", "v1.0"));
+    mockCmd.writeStateJson(
+        JsonParser.parseString(
+                """
+                {
+                  "installed_dict": {
+                    "com.example.app": "v1.0"
+                  }
+                }
+                """)
+            .getAsJsonObject());
 
     String stdout = executor.run(Command.of(mockCmd.getPath(), "search"));
     assertThat(stdout).isEqualTo("Key Found\n");
@@ -367,14 +384,15 @@ public final class UsmfTest {
             .setBehavior(
                 CommandBehavior.stdout("Success\n")
                     .addStateMutation(
-                        BinaryStateMutation.key("installed_packages").addToList("${@C:pkg}"))
+                        BinaryStateMutation.stateNode("#S['installed_packages']")
+                            .addToList("${#C['pkg']}"))
                     .build())
             .build();
 
     UsmfRule listRule =
         UsmfRule.builder()
             .addCondition(CommandCondition.exactMatch("list"))
-            .setBehavior(CommandBehavior.stdout("${@S:installed_packages:'item:[%s] '}").build())
+            .setBehavior(CommandBehavior.stdout("${#S['installed_packages']:'item:[%s] '}").build())
             .build();
 
     UsmfBinary mockCmd =
@@ -478,12 +496,19 @@ public final class UsmfTest {
     UsmfRule rule =
         UsmfRule.builder()
             .addCondition(CommandCondition.exactMatch("greet"))
-            .setBehavior(CommandBehavior.stdout("Hello, ${@S:user}!\n").build())
+            .setBehavior(CommandBehavior.stdout("Hello, ${#S['user']}!\n").build())
             .build();
 
     UsmfBinary mockCmd =
         UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
-    mockCmd.writeState("user", "Alice");
+    mockCmd.writeStateJson(
+        JsonParser.parseString(
+                """
+                {
+                  "user": "Alice"
+                }
+                """)
+            .getAsJsonObject());
 
     String stdout = executor.run(Command.of(mockCmd.getPath(), "greet"));
     assertThat(stdout).isEqualTo("Hello, Alice!\n");
@@ -495,12 +520,19 @@ public final class UsmfTest {
     UsmfRule rule =
         UsmfRule.builder()
             .addCondition(CommandCondition.exactMatch("ratio"))
-            .setBehavior(CommandBehavior.stdout("Ratio is: ${@S:ratio:'%.2f'}").build())
+            .setBehavior(CommandBehavior.stdout("Ratio is: ${#S['ratio']:'%.2f'}").build())
             .build();
 
     UsmfBinary mockCmd =
         UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
-    mockCmd.writeState("ratio", 3.14159);
+    mockCmd.writeStateJson(
+        JsonParser.parseString(
+                """
+                {
+                  "ratio": 3.14159
+                }
+                """)
+            .getAsJsonObject());
 
     String stdout = executor.run(Command.of(mockCmd.getPath(), "ratio"));
     assertThat(stdout).isEqualTo("Ratio is: 3.14");
@@ -513,15 +545,22 @@ public final class UsmfTest {
             .addCondition(CommandCondition.regexMatch("test\\s+(?P<suffix>\\d+)"))
             .setBehavior(
                 CommandBehavior.stdout(
-                        "Result1: ${@S:value_${@S:suffix_state}} Result2:"
-                            + " ${@S:value_${@C:suffix}}\n")
+                        "Result1: ${#S['value_${#S[\'suffix_state\']}']} Result2:"
+                            + " ${#S['value_${#C[\'suffix\']}']}\n")
                     .build())
             .build();
 
     UsmfBinary mockCmd =
         UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
-    mockCmd.writeState("suffix_state", "123");
-    mockCmd.writeState("value_123", "nested_success");
+    mockCmd.writeStateJson(
+        JsonParser.parseString(
+                """
+                {
+                  "suffix_state": "123",
+                  "value_123": "nested_success"
+                }
+                """)
+            .getAsJsonObject());
 
     String stdout = executor.run(Command.of(mockCmd.getPath(), "test", "123"));
     assertThat(stdout).isEqualTo("Result1: nested_success Result2: nested_success\n");
@@ -591,14 +630,14 @@ public final class UsmfTest {
     UsmfRule rule1 =
         UsmfRule.builder()
             .addCondition(CommandCondition.exactMatch("check"))
-            .addCondition(BinaryStateCondition.key("status").equalTo(true))
+            .addCondition(BinaryStateCondition.stateNode("#S['status']").equalTo(true))
             .setBehavior(CommandBehavior.stdout("boolean_matched\n").build())
             .build();
 
     UsmfRule rule2 =
         UsmfRule.builder()
             .addCondition(CommandCondition.exactMatch("count"))
-            .addCondition(BinaryStateCondition.key("val").greaterThan(1.5))
+            .addCondition(BinaryStateCondition.stateNode("#S['val']").greaterThan(1.5))
             .setBehavior(CommandBehavior.stdout("numeric_matched\n").build())
             .build();
 
@@ -609,12 +648,27 @@ public final class UsmfTest {
             .buildAndDeploy();
 
     // 1. Write the state value as a string "true" structure, check if boolean key matches true
-    mockCmd.writeState("status", "true");
+    mockCmd.writeStateJson(
+        JsonParser.parseString(
+                """
+                {
+                  "status": "true"
+                }
+                """)
+            .getAsJsonObject());
     String stdout1 = executor.run(Command.of(mockCmd.getPath(), "check"));
     assertThat(stdout1).isEqualTo("boolean_matched\n");
 
     // 2. Write the state value as string "2.5", check if greater than numeric 1.5 matches
-    mockCmd.writeState("val", "2.5");
+    mockCmd.writeStateJson(
+        JsonParser.parseString(
+                """
+                {
+                  "status": "true",
+                  "val": "2.5"
+                }
+                """)
+            .getAsJsonObject());
     String stdout2 = executor.run(Command.of(mockCmd.getPath(), "count"));
     assertThat(stdout2).isEqualTo("numeric_matched\n");
   }
@@ -654,11 +708,16 @@ public final class UsmfTest {
 
   @Test
   public void conditionInterpolation_resolvesPlaceholdersInConditions() throws Exception {
+    RuleCondition ruleCond = CommandCondition.regexMatch("check\\s+(?P<pkg>[A-Za-z0-9_\\.]+)");
+    RuleCondition stateCond =
+        BinaryStateCondition.stateNode("#S['status_${#C[\'pkg\']}']").equalTo("active");
+    CommandBehavior behavior = CommandBehavior.stdout("active_matched\n").build();
+
     UsmfRule rule =
         UsmfRule.builder()
-            .addCondition(CommandCondition.regexMatch("check\\s+(?P<pkg>[A-Za-z0-9_\\.]+)"))
-            .addCondition(BinaryStateCondition.key("status_${@C:pkg}").equalTo("active"))
-            .setBehavior(CommandBehavior.stdout("active_matched\n").build())
+            .addCondition(ruleCond)
+            .addCondition(stateCond)
+            .setBehavior(behavior)
             .build();
 
     UsmfBinary mockCmd =
@@ -669,7 +728,8 @@ public final class UsmfTest {
     assertThat(stdout1).isEmpty();
 
     // 2. Write state key status_com.foo.app = active, then run - should match!
-    mockCmd.writeState("status_com.foo.app", "active");
+    mockCmd.writeStateJson(
+        JsonParser.parseString("{\"status_com.foo.app\": \"active\"}").getAsJsonObject());
     String stdout2 = executor.run(Command.of(mockCmd.getPath(), "check", "com.foo.app"));
     assertThat(stdout2).isEqualTo("active_matched\n");
   }
@@ -680,14 +740,22 @@ public final class UsmfTest {
         UsmfRule.builder()
             .addCondition(CommandCondition.exactMatch("package-check"))
             .setBehavior(
-                CommandBehavior.stdout("Package listing: ${@S:installed_packages_${@S:device-id}}")
+                CommandBehavior.stdout(
+                        "Package listing: ${#S['installed_packages_${#S[\'device-id\']}']}")
                     .build())
             .build();
 
     UsmfBinary mockCmd =
         UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
-    mockCmd.writeState("device-id", "emulator-5554");
-    mockCmd.writeState("installed_packages_emulator-5554", "com.foo.bar");
+    mockCmd.writeStateJson(
+        JsonParser.parseString(
+                """
+                {
+                  "device-id": "emulator-5554",
+                  "installed_packages_emulator-5554": "com.foo.bar"
+                }
+                """)
+            .getAsJsonObject());
 
     String stdout = executor.run(Command.of(mockCmd.getPath(), "package-check"));
     assertThat(stdout).isEqualTo("Package listing: com.foo.bar");
@@ -698,13 +766,20 @@ public final class UsmfTest {
     UsmfRule rule =
         UsmfRule.builder()
             .addCondition(CommandCondition.exactMatch("format-check"))
-            .setBehavior(CommandBehavior.stdout("Result: ${@S:value:'${@S:format}'}").build())
+            .setBehavior(CommandBehavior.stdout("Result: ${#S['value']:'${#S['format']}'}").build())
             .build();
 
     UsmfBinary mockCmd =
         UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
-    mockCmd.writeState("format", "val:[%s]");
-    mockCmd.writeState("value", 123.456);
+    mockCmd.writeStateJson(
+        JsonParser.parseString(
+                """
+                {
+                  "format": "val:[%s]",
+                  "value": 123.456
+                }
+                """)
+            .getAsJsonObject());
 
     String stdout = executor.run(Command.of(mockCmd.getPath(), "format-check"));
     assertThat(stdout).isEqualTo("Result: val:[123.456]");
@@ -716,9 +791,10 @@ public final class UsmfTest {
         UsmfRule.builder()
             .addCondition(CommandCondition.regexMatch(".*install\\s+(?P<pkg>[A-Za-z0-9_\\.]+).*"))
             .setBehavior(
-                CommandBehavior.stdout("Installed ${@C:pkg}\n")
+                CommandBehavior.stdout("Installed ${#C['pkg']}\n")
                     .addStateMutation(
-                        BinaryStateMutation.key("installed_count").plus("${@S:step_size}"))
+                        BinaryStateMutation.stateNode("#S['installed_count']")
+                            .plus("${#S['step_size']}"))
                     .build())
             .build();
 
@@ -726,12 +802,20 @@ public final class UsmfTest {
         UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox")
             .addRule(installRule)
             .buildAndDeploy();
-    mockCmd.writeState("step_size", "2");
-    mockCmd.writeState("installed_count", 1);
+    mockCmd.writeStateJson(
+        JsonParser.parseString(
+                """
+                {
+                  "step_size": "2",
+                  "installed_count": 1
+                }
+                """)
+            .getAsJsonObject());
 
     executor.run(Command.of(mockCmd.getPath(), "install", "com.example.app"));
 
-    assertThat(mockCmd.readState("installed_count", Integer.class)).isEqualTo(3);
+    JsonObject state = mockCmd.readStateJson();
+    assertThat(state.get("installed_count").getAsInt()).isEqualTo(3);
   }
 
   @Test
@@ -769,13 +853,20 @@ public final class UsmfTest {
             .setBehavior(
                 CommandBehavior.stdout("incremented\n")
                     .sleep(Duration.ofMillis(300))
-                    .addStateMutation(BinaryStateMutation.key("counter").plus(1))
+                    .addStateMutation(BinaryStateMutation.stateNode("#S['counter']").plus(1))
                     .build())
             .build();
 
     UsmfBinary mockCmd =
         UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
-    mockCmd.writeState("counter", 0);
+    mockCmd.writeStateJson(
+        JsonParser.parseString(
+                """
+                {
+                  "counter": 0
+                }
+                """)
+            .getAsJsonObject());
 
     // Spawn 10 concurrent processes mutating the state
     List<CommandProcess> processes = new ArrayList<>();
@@ -787,7 +878,8 @@ public final class UsmfTest {
     }
 
     // Verify counter is exactly 10, meaning no updates were lost to race conditions
-    assertThat(mockCmd.readState("counter", Integer.class)).isEqualTo(10);
+    JsonObject state = mockCmd.readStateJson();
+    assertThat(state.get("counter").getAsInt()).isEqualTo(10);
   }
 
   @Test
@@ -796,14 +888,21 @@ public final class UsmfTest {
     UsmfRule rule =
         UsmfRule.builder()
             .addCondition(CommandCondition.exactMatch("check"))
-            .addCondition(BinaryStateCondition.key("val").contains(123))
+            .addCondition(BinaryStateCondition.stateNode("#S['val']").contains(123))
             .setBehavior(CommandBehavior.stdout("contains_matched\n").build())
             .build();
 
     UsmfBinary mockCmd =
         UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
 
-    mockCmd.writeState("val", "emu_123");
+    mockCmd.writeStateJson(
+        JsonParser.parseString(
+                """
+                {
+                  "val": "emu_123"
+                }
+                """)
+            .getAsJsonObject());
     String stdout = executor.run(Command.of(mockCmd.getPath(), "check"));
     assertThat(stdout).isEqualTo("contains_matched\n");
   }
@@ -813,7 +912,7 @@ public final class UsmfTest {
     UsmfRule rule =
         UsmfRule.builder()
             .addCondition(CommandCondition.exactMatch("check"))
-            .addCondition(BinaryStateCondition.key("missing_key").contains("None"))
+            .addCondition(BinaryStateCondition.stateNode("#S['missing_key']").contains("None"))
             .setBehavior(CommandBehavior.stdout("contains_matched\n").build())
             .build();
 
@@ -834,16 +933,24 @@ public final class UsmfTest {
             .addCondition(CommandCondition.exactMatch("add"))
             .setBehavior(
                 CommandBehavior.stdout("added\n")
-                    .addStateMutation(BinaryStateMutation.key("val").plus("1e2"))
+                    .addStateMutation(BinaryStateMutation.stateNode("#S['val']").plus("1e2"))
                     .build())
             .build();
 
     UsmfBinary mockCmd =
         UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
-    mockCmd.writeState("val", 10.0);
+    mockCmd.writeStateJson(
+        JsonParser.parseString(
+                """
+                {
+                  "val": 10.0
+                }
+                """)
+            .getAsJsonObject());
 
     executor.run(Command.of(mockCmd.getPath(), "add"));
-    assertThat(mockCmd.readState("val", Double.class)).isEqualTo(110.0);
+    JsonObject state = mockCmd.readStateJson();
+    assertThat(state.get("val").getAsDouble()).isEqualTo(110.0);
   }
 
   @Test
@@ -899,13 +1006,21 @@ public final class UsmfTest {
                 CommandCondition.regexMatch(".*install\\s+(?P<pkg>\\S+)\\s+(?P<device>\\S+).*"))
             .setBehavior(
                 CommandBehavior.stdout(
-                        "Installed ${@C:pkg} on ${@C:device} with count ${@S:installed_count}\n")
+                        "Installed ${#C['pkg']} on ${#C['device']} with count"
+                            + " ${#S['installed_count']}\n")
                     .build())
             .build();
 
     UsmfBinary mockCmd =
         UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
-    mockCmd.writeState("installed_count", 5);
+    mockCmd.writeStateJson(
+        JsonParser.parseString(
+                """
+                {
+                  "installed_count": 5
+                }
+                """)
+            .getAsJsonObject());
 
     String stdout = executor.run(Command.of(mockCmd.getPath(), "install", "foo", "bar"));
     assertThat(stdout).isEqualTo("Installed foo on bar with count 5\n");
@@ -921,7 +1036,14 @@ public final class UsmfTest {
 
     UsmfBinary mockCmd =
         UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
-    mockCmd.writeState("user", "Alice");
+    mockCmd.writeStateJson(
+        JsonParser.parseString(
+                """
+                {
+                  "user": "Alice"
+                }
+                """)
+            .getAsJsonObject());
 
     String stdout = executor.run(Command.of(mockCmd.getPath(), "greet"));
     assertThat(stdout).isEqualTo("Hello, ${user}!\n");
@@ -933,16 +1055,23 @@ public final class UsmfTest {
     UsmfRule rule =
         UsmfRule.builder()
             .addCondition(CommandCondition.prefixMatch("try_increment"))
-            .addCondition(BinaryStateCondition.key("counter").lessThan(2))
+            .addCondition(BinaryStateCondition.stateNode("#S['counter']").lessThan(2))
             .setBehavior(
                 CommandBehavior.stdout("success\n")
-                    .addStateMutation(BinaryStateMutation.key("counter").plus(1))
+                    .addStateMutation(BinaryStateMutation.stateNode("#S['counter']").plus(1))
                     .build())
             .build();
 
     UsmfBinary mockCmd =
         UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
-    mockCmd.writeState("counter", 0);
+    mockCmd.writeStateJson(
+        JsonParser.parseString(
+                """
+                {
+                  "counter": 0
+                }
+                """)
+            .getAsJsonObject());
 
     // Spawn 10 concurrent processes trying to increment the counter
     List<CommandProcess> processes = new ArrayList<>();
@@ -961,7 +1090,8 @@ public final class UsmfTest {
     // Since counter < 2 is checked under transactional state matching lock,
     // only exactly 2 invocations must match the rule and print success.
     assertThat(successCount).isEqualTo(2);
-    assertThat(mockCmd.readState("counter", Integer.class)).isEqualTo(2);
+    JsonObject state = mockCmd.readStateJson();
+    assertThat(state.get("counter").getAsInt()).isEqualTo(2);
   }
 
   @Test
@@ -972,8 +1102,8 @@ public final class UsmfTest {
             .setBehavior(
                 CommandBehavior.stdout("success\n")
                     .addStateMutation(
-                        BinaryStateMutation.key("devices_map")
-                            .set(ImmutableMap.of("status_${@C:device}", "online")))
+                        BinaryStateMutation.stateNode("#S['devices_map']")
+                            .set(ImmutableMap.of("status_${#C['device']}", "online")))
                     .build())
             .build();
 
@@ -983,8 +1113,10 @@ public final class UsmfTest {
     String stdout = executor.run(Command.of(mockCmd.getPath(), "register", "device-abc"));
     assertThat(stdout).isEqualTo("success\n");
 
-    // Read the map state, the nested key status_${@C:device} must be resolved to status_device-abc
-    Map<?, ?> map = mockCmd.readState("devices_map", Map.class);
+    // Read the map state, the nested key status_${#C['device']} must be resolved to
+    // status_device-abc
+    JsonObject state = mockCmd.readStateJson();
+    Map<?, ?> map = gson.fromJson(state.get("devices_map"), Map.class);
     assertThat(map).containsEntry("status_device-abc", "online");
   }
 
@@ -1018,14 +1150,14 @@ public final class UsmfTest {
     UsmfRule ruleGte =
         UsmfRule.builder()
             .addCondition(CommandCondition.exactMatch("check-gte"))
-            .addCondition(BinaryStateCondition.key("val").greaterThanOrEqualTo(5))
+            .addCondition(BinaryStateCondition.stateNode("#S['val']").greaterThanOrEqualTo(5))
             .setBehavior(CommandBehavior.stdout("gte_matched\n").build())
             .build();
 
     UsmfRule ruleLte =
         UsmfRule.builder()
             .addCondition(CommandCondition.exactMatch("check-lte"))
-            .addCondition(BinaryStateCondition.key("val").lessThanOrEqualTo(5))
+            .addCondition(BinaryStateCondition.stateNode("#S['val']").lessThanOrEqualTo(5))
             .setBehavior(CommandBehavior.stdout("lte_matched\n").build())
             .build();
 
@@ -1035,19 +1167,19 @@ public final class UsmfTest {
             .addRule(ruleLte)
             .buildAndDeploy();
 
-    mockCmd.writeState("val", 6);
+    mockCmd.writeStateJson(JsonParser.parseString("{\"val\": 6}").getAsJsonObject());
     String stdout1 = executor.run(Command.of(mockCmd.getPath(), "check-gte"));
     assertThat(stdout1).isEqualTo("gte_matched\n");
 
-    mockCmd.writeState("val", 5);
+    mockCmd.writeStateJson(JsonParser.parseString("{\"val\": 5}").getAsJsonObject());
     String stdout2 = executor.run(Command.of(mockCmd.getPath(), "check-gte"));
     assertThat(stdout2).isEqualTo("gte_matched\n");
 
-    mockCmd.writeState("val", 4);
+    mockCmd.writeStateJson(JsonParser.parseString("{\"val\": 4}").getAsJsonObject());
     String stdout3 = executor.run(Command.of(mockCmd.getPath(), "check-lte"));
     assertThat(stdout3).isEqualTo("lte_matched\n");
 
-    mockCmd.writeState("val", 5);
+    mockCmd.writeStateJson(JsonParser.parseString("{\"val\": 5}").getAsJsonObject());
     String stdout4 = executor.run(Command.of(mockCmd.getPath(), "check-lte"));
     assertThat(stdout4).isEqualTo("lte_matched\n");
   }
@@ -1062,20 +1194,544 @@ public final class UsmfTest {
   }
 
   @Test
-  public void
-      singleStateInterpolationWithDoubleQuotedFormatTemplate_formatsDecimalPlacesSuccessfully()
-          throws Exception {
+  public void singleStateInterpolationWithFormatTemplate_formatsStringDecimalsSuccessfully()
+      throws Exception {
     UsmfRule rule =
         UsmfRule.builder()
             .addCondition(CommandCondition.exactMatch("ratio"))
-            .setBehavior(CommandBehavior.stdout("Ratio is: ${@S:ratio:\"%.2f\"}").build())
+            .setBehavior(CommandBehavior.stdout("Ratio is: ${#S['ratio']:'%.2f'}").build())
             .build();
 
     UsmfBinary mockCmd =
         UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
-    mockCmd.writeState("ratio", 3.14159);
+    mockCmd.writeStateJson(JsonParser.parseString("{\"ratio\": \"3.14159\"}").getAsJsonObject());
 
     String stdout = executor.run(Command.of(mockCmd.getPath(), "ratio"));
     assertThat(stdout).isEqualTo("Ratio is: 3.14");
+  }
+
+  @Test
+  public void astExpressionEvaluator_nestedStateAndCaptures_resolvesSuccessfully()
+      throws Exception {
+    RuleCondition condRegex = CommandCondition.regexMatch("check-pkg\\s+(?P<device_id>\\S+)");
+    RuleCondition condState =
+        BinaryStateCondition.stateNode("#S['installed_packages'][#C['device_id']]")
+            .contains("com.foo.app");
+
+    CommandBehavior behavior =
+        CommandBehavior.stdout("Found com.foo.app on ${#C['device_id']}\n").build();
+
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(condRegex)
+            .addCondition(condState)
+            .setBehavior(behavior)
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+
+    // 1. Write nested state via Java API
+    mockCmd.writeStateJson(
+        JsonParser.parseString(
+                """
+                {
+                  "installed_packages": {
+                    "device-123": ["com.foo.app", "com.bar.app"]
+                  }
+                }
+                """)
+            .getAsJsonObject());
+
+    // 2. Execute command and verify
+    String stdout = executor.run(Command.of(mockCmd.getPath(), "check-pkg", "device-123"));
+    assertThat(stdout).isEqualTo("Found com.foo.app on device-123\n");
+  }
+
+  @Test
+  public void variablesMappingWithVContext_translatesApkTargetSuccessfully() throws Exception {
+    RuleCondition condInstall = CommandCondition.regexMatch("install\\s+(?P<apk>\\S+)");
+
+    // Mutation value using bare expression to translate apk name to package name via #V
+    BinaryStateMutation installMut =
+        BinaryStateMutation.stateNode("#S['installed_apk']").set("${#V['pkg_map'][#C['apk']]}");
+
+    CommandBehavior behavior =
+        CommandBehavior.stdout("Successfully installed ${#V['pkg_map'][#C['apk']]}\n")
+            .addStateMutation(installMut)
+            .build();
+
+    UsmfRule rule = UsmfRule.builder().addCondition(condInstall).setBehavior(behavior).build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox")
+            .setVariables(
+                JsonParser.parseString(
+                        """
+                        {
+                          "pkg_map": {
+                            "foo.apk": "com.foo.app",
+                            "bar.apk": "com.bar.app"
+                          }
+                        }
+                        """)
+                    .getAsJsonObject())
+            .addRule(rule)
+            .buildAndDeploy();
+
+    // 1. Run command
+    String stdout = executor.run(Command.of(mockCmd.getPath(), "install", "foo.apk"));
+    assertThat(stdout).isEqualTo("Successfully installed com.foo.app\n");
+
+    // 2. Read state verify
+    JsonObject state = mockCmd.readStateJson();
+    assertThat(state.get("installed_apk").getAsString()).isEqualTo("com.foo.app");
+  }
+
+  @Test
+  public void astExpressionMutation_autoCreatesIntermediateContainers() throws Exception {
+    RuleCondition condIncr = CommandCondition.exactMatch("incr-count");
+
+    // Target is recursively an IndexAccessExpr where intermediate map is missing
+    BinaryStateMutation plusMut =
+        BinaryStateMutation.stateNode("#S['stats_by_device']['device-456']").plus(1);
+
+    CommandBehavior behavior = CommandBehavior.stdout("done\n").addStateMutation(plusMut).build();
+
+    UsmfRule rule = UsmfRule.builder().addCondition(condIncr).setBehavior(behavior).build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+
+    // stats_by_device container is NOT set in state, verify it is auto-created as dict
+    String stdout = executor.run(Command.of(mockCmd.getPath(), "incr-count"));
+    assertThat(stdout).isEqualTo("done\n");
+
+    JsonObject state = mockCmd.readStateJson();
+    assertThat(state.getAsJsonObject("stats_by_device").get("device-456").getAsInt()).isEqualTo(1);
+  }
+
+  @Test
+  public void nullCoalescing_safetyDefaulting_resolvesPlaceholderSuccessful() throws Exception {
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.exactMatch("greet"))
+            .setBehavior(CommandBehavior.stdout("Hello, ${#S['user']?'DefaultUser'}!\n").build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+
+    // 1. Run without writing state, verify it falls back to the safety default
+    String stdoutDefault = executor.run(Command.of(mockCmd.getPath(), "greet"));
+    assertThat(stdoutDefault).isEqualTo("Hello, DefaultUser!\n");
+
+    // 2. Write state, verify it uses the state value instead of default
+    mockCmd.writeStateJson(JsonParser.parseString("{\"user\": \"Bob\"}").getAsJsonObject());
+    String stdoutBob = executor.run(Command.of(mockCmd.getPath(), "greet"));
+    assertThat(stdoutBob).isEqualTo("Hello, Bob!\n");
+  }
+
+  @Test
+  public void nullCoalescingAndFormat_resolvesInPriorityOrder() throws Exception {
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.regexMatch("get-ip(?:\\s+(?P<device>\\S+))?"))
+            .setBehavior(CommandBehavior.stdout("IP: ${#C['device']?'':'device-%s'}\n").build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+
+    // 1. Run without device capture (None), coalescing resolves to empty string, formatting runs
+    // resulting in 'device-'
+    String stdoutEmpty = executor.run(Command.of(mockCmd.getPath(), "get-ip"));
+    assertThat(stdoutEmpty).isEqualTo("IP: device-\n");
+
+    // 2. Run with device capture, coalescing skipped because it's not None, formatting formats the
+    // string
+    String stdoutDevice = executor.run(Command.of(mockCmd.getPath(), "get-ip", "phone1"));
+    assertThat(stdoutDevice).isEqualTo("IP: device-phone1\n");
+  }
+
+  @Test
+  public void invalidStateNodeSyntax_withSuffixOperators_registersAsError() throws Exception {
+    // Rule condition has normal matching, behavior uses stateNode with forbidden "?" operator for
+    // mutation
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.exactMatch("check"))
+            .setBehavior(
+                CommandBehavior.stdout("success\n")
+                    .addStateMutation(
+                        BinaryStateMutation.stateNode("#S['status']?'default'").set("active"))
+                    .build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+
+    executor.run(Command.of(mockCmd.getPath(), "check"));
+
+    ImmutableList<CommandInvocation> invocations = mockCmd.readCommandInvocations();
+    assertThat(invocations).hasSize(1);
+    CommandInvocation invocation = invocations.get(0);
+    assertThat(invocation.getErrors()).isNotEmpty();
+    assertThat(invocation.getErrors().get(0)).contains("SyntaxError");
+  }
+
+  @Test
+  public void sequentialMatching_firstMatchWin_runsFirstMatchedRuleOnly() throws Exception {
+    UsmfRule rule1 =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.exactMatch("greet"))
+            .setBehavior(CommandBehavior.stdout("first\n").build())
+            .build();
+    UsmfRule rule2 =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.exactMatch("greet"))
+            .setBehavior(CommandBehavior.stdout("second\n").build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox")
+            .addRule(rule1)
+            .addRule(rule2)
+            .buildAndDeploy();
+
+    String stdout = executor.run(Command.of(mockCmd.getPath(), "greet"));
+    assertThat(stdout).isEqualTo("first\n");
+  }
+
+  @Test
+  public void listIndexMutation_nonExistingListIndex_logsErrorAndFails() throws Exception {
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.exactMatch("mutate"))
+            .setBehavior(
+                CommandBehavior.stdout("mutated\n")
+                    .addStateMutation(BinaryStateMutation.stateNode("#S['items']['0']").set("val"))
+                    .build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+
+    // Initialize 'items' explicitly as empty list
+    mockCmd.writeStateJson(JsonParser.parseString("{\"items\": []}").getAsJsonObject());
+
+    executor.run(Command.of(mockCmd.getPath(), "mutate"));
+
+    ImmutableList<CommandInvocation> invocations = mockCmd.readCommandInvocations();
+    assertThat(invocations).hasSize(1);
+    CommandInvocation invocation = invocations.get(0);
+    assertThat(invocation.getErrors()).isNotEmpty();
+    assertThat(invocation.getErrors().get(0)).contains("target must be a mutable state node");
+  }
+
+  @Test
+  public void listIndexLookup_resolvesValueSuccessfully() throws Exception {
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.exactMatch("get-item"))
+            .setBehavior(CommandBehavior.stdout("Item: ${#S['items']['0']}\n").build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+    mockCmd.writeStateJson(
+        JsonParser.parseString("{\"items\": [\"first_element\"]}").getAsJsonObject());
+
+    String stdout = executor.run(Command.of(mockCmd.getPath(), "get-item"));
+    assertThat(stdout).isEqualTo("Item: first_element\n");
+  }
+
+  @Test
+  public void astMutation_indexAccessInRightChild_doesNotLazyBackfill() throws Exception {
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.exactMatch("mutate"))
+            .setBehavior(
+                CommandBehavior.stdout("done\n")
+                    .addStateMutation(
+                        BinaryStateMutation.stateNode(
+                                "#S['stats_by_device'][#S['missing_lookup']['key']]")
+                            .plus(1))
+                    .build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+
+    executor.run(Command.of(mockCmd.getPath(), "mutate"));
+
+    // Verify errors log contains mutation error
+    ImmutableList<CommandInvocation> invocations = mockCmd.readCommandInvocations();
+    assertThat(invocations).hasSize(1);
+    assertThat(invocations.get(0).getErrors()).isNotEmpty();
+    assertThat(invocations.get(0).getErrors().get(0))
+        .contains("target must be a mutable state node");
+
+    // Verify stats_by_device was backfilled on the left side path
+    JsonObject state = mockCmd.readStateJson();
+    assertThat(state.getAsJsonObject("stats_by_device").size()).isEqualTo(0);
+
+    // Verify missing_lookup on the right side index path was NOT backfilled
+    assertThat(state.get("missing_lookup")).isNull();
+  }
+
+  @Test
+  public void conditionStateNodeWithSuffixOperators_swallowsParsingExceptionAndUnmatches()
+      throws Exception {
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.exactMatch("check"))
+            .addCondition(
+                BinaryStateCondition.stateNode("#S['status']?'default'").equalTo("default"))
+            .setBehavior(CommandBehavior.stdout("matched\n").build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+    mockCmd.writeStateJson(JsonParser.parseString("{\"status\": \"active\"}").getAsJsonObject());
+
+    // It contains invalid suffix operator '?' inside condition's state_node.
+    // Exception is swallowed during matching, evaluating condition as false (unmatched).
+    String stdout = executor.run(Command.of(mockCmd.getPath(), "check"));
+    assertThat(stdout).isEmpty();
+  }
+
+  @Test
+  public void listIndexMutation_existingListIndex_updatesSuccessfully() throws Exception {
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.exactMatch("mutate"))
+            .setBehavior(
+                CommandBehavior.stdout("done\n")
+                    .addStateMutation(
+                        BinaryStateMutation.stateNode("#S['items']['0']").set("new_value"))
+                    .build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+    mockCmd.writeStateJson(
+        JsonParser.parseString("{\"items\": [\"old_value\"]}").getAsJsonObject());
+
+    String stdout = executor.run(Command.of(mockCmd.getPath(), "mutate"));
+    assertThat(stdout).isEqualTo("done\n");
+    JsonObject state = mockCmd.readStateJson();
+    List<?> items = gson.fromJson(state.get("items"), List.class);
+    assertThat(items).containsExactly("new_value");
+  }
+
+  @Test
+  public void listIndexMutation_existingListIndexWithPlus_incrementsSuccessfully()
+      throws Exception {
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.exactMatch("increment"))
+            .setBehavior(
+                CommandBehavior.stdout("done\n")
+                    .addStateMutation(BinaryStateMutation.stateNode("#S['counts']['1']").plus(5))
+                    .build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+    // Initialize 'counts' list with multiple items.
+    mockCmd.writeStateJson(JsonParser.parseString("{\"counts\": [10, 20]}").getAsJsonObject());
+
+    executor.run(Command.of(mockCmd.getPath(), "increment"));
+    JsonObject state = mockCmd.readStateJson();
+    List<?> counts = gson.fromJson(state.get("counts"), List.class);
+    assertThat(counts).containsExactly(10.0, 25.0).inOrder();
+  }
+
+  @Test
+  public void invalidStateNodeSyntax_unquotedIndexLiteral_registersAsError() throws Exception {
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.exactMatch("check"))
+            .setBehavior(
+                CommandBehavior.stdout("success\n")
+                    .addStateMutation(
+                        BinaryStateMutation.stateNode("#S['stats'][device-abc]").set("value"))
+                    .build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+
+    executor.run(Command.of(mockCmd.getPath(), "check"));
+
+    ImmutableList<CommandInvocation> invocations = mockCmd.readCommandInvocations();
+    assertThat(invocations).hasSize(1);
+    assertThat(invocations.get(0).getErrors()).isNotEmpty();
+    // Verify that the parser throws ValueError containing the quote constraint reminder.
+    assertThat(invocations.get(0).getErrors().get(0))
+        .contains("USMF Syntax Error: Literal strings must be quoted");
+  }
+
+  @Test
+  public void nestedLookup_withMissingParent_resolvesToEmptyOrCoalesced() throws Exception {
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.exactMatch("test"))
+            .setBehavior(
+                CommandBehavior.stdout(
+                        "val1: ${#S['missing_map']['key']} val2:"
+                            + " ${#S['missing_map']['key']?'default'}\n")
+                    .build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+
+    String stdout = executor.run(Command.of(mockCmd.getPath(), "test"));
+    assertThat(stdout).isEqualTo("val1:  val2: default\n");
+  }
+
+  @Test
+  public void invalidPlaceholderSyntax_fallsBackToOriginalPlaceholderString() throws Exception {
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.exactMatch("greet"))
+            .setBehavior(CommandBehavior.stdout("Ratio is: ${#S['unclosed_index").build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+
+    // Verify that syntactically invalid placeholder resolves to itself since the parsing fails.
+    String stdout = executor.run(Command.of(mockCmd.getPath(), "greet"));
+    assertThat(stdout).isEqualTo("Ratio is: ${#S['unclosed_index");
+  }
+
+  @Test
+  public void conditionEvaluation_withNestedMissingKeys_doesNotLazyBackfill() throws Exception {
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.exactMatch("check"))
+            .addCondition(
+                BinaryStateCondition.stateNode("#S['missing_parent']['child']").equalTo("active"))
+            .setBehavior(CommandBehavior.stdout("matched\n").build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+
+    // Verify condition matching fails, outputting empty fallback.
+    String stdout = executor.run(Command.of(mockCmd.getPath(), "check"));
+    assertThat(stdout).isEmpty();
+
+    // Verify missing_parent was NOT backfilled and remains null.
+    JsonObject state = mockCmd.readStateJson();
+    assertThat(state.get("missing_parent")).isNull();
+  }
+
+  @Test
+  public void stateCondition_withNullExpected_matchesCorrectly() throws Exception {
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.exactMatch("check"))
+            .addCondition(BinaryStateCondition.stateNode("#S['installed']").equalTo(null))
+            .setBehavior(CommandBehavior.stdout("matched_null\n").build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+
+    // 1. Initially, state 'installed' is missing (null). Verify it matches the null condition.
+    String stdoutNull = executor.run(Command.of(mockCmd.getPath(), "check"));
+    assertThat(stdoutNull).isEqualTo("matched_null\n");
+
+    // 2. Write non-null state, verify it no longer matches.
+    mockCmd.writeStateJson(JsonParser.parseString("{\"installed\": true}").getAsJsonObject());
+    String stdoutTrue = executor.run(Command.of(mockCmd.getPath(), "check"));
+    assertThat(stdoutTrue).isEmpty();
+
+    // 3. Write null state explicitly, verify it matches again.
+    mockCmd.writeStateJson(JsonParser.parseString("{\"installed\": null}").getAsJsonObject());
+    String stdoutExplicitNull = executor.run(Command.of(mockCmd.getPath(), "check"));
+    assertThat(stdoutExplicitNull).isEqualTo("matched_null\n");
+  }
+
+  @Test
+  public void uString_withQuotedLiteralPlaceholder_evaluatesAndFoldsCorrectly() throws Exception {
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.exactMatch("greet"))
+            .setBehavior(CommandBehavior.stdout("Result: ${'hello'}!\n").build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+
+    String stdout = executor.run(Command.of(mockCmd.getPath(), "greet"));
+    assertThat(stdout).isEqualTo("Result: hello!\n");
+  }
+
+  @Test
+  public void stateNode_withUnbalancedBracketInQuotedKey_resolvesAndMutatesSuccessfully()
+      throws Exception {
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.exactMatch("mutate"))
+            .setBehavior(
+                CommandBehavior.stdout("done\n")
+                    .addStateMutation(
+                        BinaryStateMutation.stateNode("#S['items']['file[1.txt']").set("val"))
+                    .build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+    mockCmd.writeStateJson(JsonParser.parseString("{\"items\": {}}").getAsJsonObject());
+
+    String stdout = executor.run(Command.of(mockCmd.getPath(), "mutate"));
+    assertThat(stdout).isEqualTo("done\n");
+
+    JsonObject state = mockCmd.readStateJson();
+    JsonObject items = state.getAsJsonObject("items");
+    assertThat(items.get("file[1.txt").getAsString()).isEqualTo("val");
+  }
+
+  @Test
+  public void stateNode_withoutHashPrefix_failsActionAndRegistersSyntaxError() throws Exception {
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.exactMatch("mutate"))
+            .setBehavior(
+                CommandBehavior.stdout("done\n")
+                    .addStateMutation(BinaryStateMutation.stateNode("S['items']").set("val"))
+                    .build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+
+    executor.run(Command.of(mockCmd.getPath(), "mutate"));
+
+    ImmutableList<CommandInvocation> invocations = mockCmd.readCommandInvocations();
+    assertThat(invocations).hasSize(1);
+    assertThat(invocations.get(0).getErrors()).isNotEmpty();
+    assertThat(invocations.get(0).getErrors().get(0)).contains("Literal strings must be quoted");
+  }
+
+  @Test
+  public void stdout_withoutHashPrefix_remainsUninterpolated() throws Exception {
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.exactMatch("greet"))
+            .setBehavior(CommandBehavior.stdout("Hello ${S['user']}!\n").build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+    mockCmd.writeStateJson(JsonParser.parseString("{\"user\": \"Bob\"}").getAsJsonObject());
+
+    String stdout = executor.run(Command.of(mockCmd.getPath(), "greet"));
+    assertThat(stdout).isEqualTo("Hello ${S['user']}!\n");
   }
 }

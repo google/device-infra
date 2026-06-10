@@ -45,33 +45,28 @@ import javax.annotation.Nullable;
  *
  * <h3>Variable &amp; Template Interpolation</h3>
  *
- * <p>USMF supports dynamic text substitution using {@code ${@C:name}} or {@code
- * ${@S:name:format_template}} placeholders within behavior attributes (such as {@code stdout},
- * {@code stderr}, {@code state_mutations}, and {@code side_effects}):
+ * <p>USMF supports dynamic evaluation of expressions ({@code u-exp}) and template string
+ * substitutions ({@code u-string}) inside rules.
+ *
+ * <p>Expression examples:
  *
  * <ul>
- *   <li><b>Context Keys &amp; Prefix Syntax (Variables &amp; State)</b>: The variable part must
- *       start with a type prefix to specify the source of the variable:
- *       <ul>
- *         <li>{@code @C:name} - targets a regex command capture group (e.g., {@code
- *             ${@C:apk_name}}).
- *         <li>{@code @S:name} - targets a shared state key (e.g., {@code
- *             ${@S:installed_packages}}).
- *       </ul>
- *   <li><b>Formatter Templates</b>: If a format template is appended after a colon (e.g., {@code
- *       ${@S:installed_packages:'package:%s\\n'}} or {@code ${@S:ratio:'%.2f'}}), the resolved
- *       context value is formatted. The {@code format_template} must be wrapped in single quotes
- *       ({@code '}) or double quotes ({@code "}), and standard placeholders (like {@code %s},
- *       {@code %d}, or {@code %.2f}) act as the printf-style value injectors.
- *   <li><b>Collection Rendering (Auto-Detection)</b>: If the resolved key value is a collection
- *       (like a list, set, or tuple), the formatter template is evaluated iteratively for each item
- *       and the results are concatenated. If the value is a single primitive, it is formatted
- *       exactly once.
- *   <li><b>Nested Resolution</b>: Placeholders can be nested (up to 5 layers deep), allowing
- *       dynamic key generation at runtime (e.g., {@code
- *       ${@S:install_packages_${@C:device_id}:'tmpl'}} will first resolve {@code ${@C:device_id}}
- *       to {@code emulator_5554} and then format {@code ${@S:install_packages_emulator_5554}}).
+ *   <li><b>Basic State Lookup</b>: {@code #S['rules_enabled']} (extracts boolean value).
+ *   <li><b>Nested Lookup</b>: {@code #S['installed_packages'][#C['device_id']]} (dynamic
+ *       device-specific lookup).
+ *   <li><b>Global Translation Variable Lookup</b>: {@code #V['pkg_map'][#C['apk_name']]} (maps APK
+ *       to package name).
+ *   <li><b>Safety Fallback ({@code ?} Operator)</b>: {@code #C['device_id']?'unknown'} (defaults to
+ *       'unknown' if missing).
+ *   <li><b>Output Formatting ({@code :} Operator)</b>: {@code #C['device_id']:'device-%s'} (formats
+ *       non-null value).
+ *   <li><b>Combined Coalescing and Formatting</b>: {@code #C['device_id']?'':'device-%s'} (resolves
+ *       priority order).
+ *   <li><b>String Interpolation</b>: stdout/stderr outputs can wrap expressions in {@code ${u-exp}}
+ *       blocks (e.g., {@code ${#S['installed_packages'][#C['device_id']]:'package:%s\\n'}}).
  * </ul>
+ *
+ * <p>For the complete expression grammar and resolution rules, see {@code README.md}.
  *
  * <p>If a rule is configured without any conditions, it acts as a wildcard that always matches
  * unconditionally. This is useful for declaring default or fallback behaviors (which should
@@ -219,8 +214,8 @@ public final class UsmfRule {
      * <p>Matches containing Python regex named capture groups (e.g., {@code (?P<pkg>\\S+)}, note
      * the Python 'P' prefix syntax which differs from Java's native regex naming format) can be
      * used for dynamic parameter interpolation. The captured values will be dynamically substituted
-     * into placeholders like {@code ${@C:group_name}} in {@link CommandBehavior} properties such as
-     * stdout/stderr, state mutations, and filesystem side effects.
+     * into placeholders like {@code ${#C['group_name']}} in {@link CommandBehavior} properties such
+     * as stdout/stderr, state mutations, and filesystem side effects.
      *
      * @param regex the Python regular expression pattern to match the CLI command arguments
      */
@@ -263,19 +258,19 @@ public final class UsmfRule {
    *
    * <pre>{@code
    * // 1. Boolean state equals check
-   * RuleCondition cond1 = BinaryStateCondition.key("installed").equalTo(true);
+   * RuleCondition cond1 = BinaryStateCondition.stateNode("#S['installed']").equalTo(true);
    *
    * // 2. Integer state comparison check
-   * RuleCondition cond2 = BinaryStateCondition.key("boot_count").greaterThan(2);
+   * RuleCondition cond2 = BinaryStateCondition.stateNode("#S['boot_count']").greaterThan(2);
    *
    * // 3. List state item containment check
-   * RuleCondition cond3 = BinaryStateCondition.key("installed_packages").contains("com.example.app");
+   * RuleCondition cond3 = BinaryStateCondition.stateNode("#S['installed_packages']").contains("com.example.app");
    * }</pre>
    */
   public static final class BinaryStateCondition extends RuleCondition {
 
-    @SerializedName("key")
-    private final String key;
+    @SerializedName("state_node")
+    private final String stateNode;
 
     @SerializedName("op")
     private final String op;
@@ -284,19 +279,19 @@ public final class UsmfRule {
     @Nullable
     private final Object expectedValue;
 
-    public static Builder key(String key) {
-      return new Builder(key);
+    public static Builder stateNode(String stateNode) {
+      return new Builder(stateNode);
     }
 
-    private BinaryStateCondition(String key, String op, @Nullable Object expectedValue) {
+    private BinaryStateCondition(String stateNode, String op, @Nullable Object expectedValue) {
       super("state");
-      this.key = checkNotNull(key);
+      this.stateNode = checkNotNull(stateNode);
       this.op = op;
       this.expectedValue = expectedValue;
     }
 
-    public String getKey() {
-      return key;
+    public String getStateNode() {
+      return stateNode;
     }
 
     public String getOp() {
@@ -311,34 +306,34 @@ public final class UsmfRule {
     /** Builder class to configure {@link BinaryStateCondition} rule conditions. */
     public static final class Builder {
 
-      private final String key;
+      private final String stateNode;
 
-      private Builder(String key) {
-        this.key = key;
+      private Builder(String stateNode) {
+        this.stateNode = stateNode;
       }
 
       public BinaryStateCondition equalTo(@Nullable Object value) {
-        return new BinaryStateCondition(key, "eq", value);
+        return new BinaryStateCondition(stateNode, "eq", value);
       }
 
       public BinaryStateCondition greaterThan(Object value) {
-        return new BinaryStateCondition(key, "gt", checkNotNull(value));
+        return new BinaryStateCondition(stateNode, "gt", checkNotNull(value));
       }
 
       public BinaryStateCondition greaterThanOrEqualTo(Object value) {
-        return new BinaryStateCondition(key, "gte", checkNotNull(value));
+        return new BinaryStateCondition(stateNode, "gte", checkNotNull(value));
       }
 
       public BinaryStateCondition lessThan(Object value) {
-        return new BinaryStateCondition(key, "lt", checkNotNull(value));
+        return new BinaryStateCondition(stateNode, "lt", checkNotNull(value));
       }
 
       public BinaryStateCondition lessThanOrEqualTo(Object value) {
-        return new BinaryStateCondition(key, "lte", checkNotNull(value));
+        return new BinaryStateCondition(stateNode, "lte", checkNotNull(value));
       }
 
       public BinaryStateCondition contains(Object value) {
-        return new BinaryStateCondition(key, "contains", checkNotNull(value));
+        return new BinaryStateCondition(stateNode, "contains", checkNotNull(value));
       }
     }
   }
@@ -351,7 +346,7 @@ public final class UsmfRule {
    * {@link CommandCondition} with Python named capture groups (e.g., {@code (?P<pkg>\\S+)}, note
    * the Python 'P' prefix syntax which differs from Java's native regex naming format), the
    * captured values will recursively substitute all placeholder occurrences of {@code
-   * ${group_name}} in behavior blocks.
+   * ${#C['group_name']}} in behavior blocks.
    *
    * <p>Note: When a rule is matched, the state mutations are executed first (atomically) before the
    * mock execution sleep latency (configured via {@link Builder#sleep(Duration)}) and host side
@@ -517,26 +512,26 @@ public final class UsmfRule {
    * <p>String values and keys support dynamic parameter interpolation using Python named regex
    * capture groups (e.g., {@code (?P<pkg>\\S+)}, note the Python 'P' prefix syntax) in matched rule
    * conditions. For example, {@code
-   * BinaryStateMutation.key("installed_packages").addToSet("${pkg}")} will add the captured package
-   * name dynamically.
+   * BinaryStateMutation.stateNode("#S['installed_packages']").addToSet("${pkg}")} will add the
+   * captured package name dynamically.
    *
    * <p>Example mutation operations on different value types:
    *
    * <pre>{@code
    * // 1. Set Boolean state value
-   * BinaryStateMutation mut1 = BinaryStateMutation.key("installed").set(true);
+   * BinaryStateMutation mut1 = BinaryStateMutation.stateNode("#S['installed']").set(true);
    *
    * // 2. Add numeric state value
-   * BinaryStateMutation mut2 = BinaryStateMutation.key("boot_count").plus(1);
+   * BinaryStateMutation mut2 = BinaryStateMutation.stateNode("#S['boot_count']").plus(1);
    *
    * // 3. Add String element to Set state value
-   * BinaryStateMutation mut3 = BinaryStateMutation.key("installed_packages").addToSet("com.example.app");
+   * BinaryStateMutation mut3 = BinaryStateMutation.stateNode("#S['installed_packages']").addToSet("com.example.app");
    * }</pre>
    */
   public static final class BinaryStateMutation {
 
-    @SerializedName("key")
-    private final String key;
+    @SerializedName("state_node")
+    private final String stateNode;
 
     @SerializedName("op")
     private final String op;
@@ -545,18 +540,18 @@ public final class UsmfRule {
     @Nullable
     private final Object value;
 
-    public static Builder key(String key) {
-      return new Builder(key);
+    public static Builder stateNode(String stateNode) {
+      return new Builder(stateNode);
     }
 
-    private BinaryStateMutation(String key, String op, @Nullable Object value) {
-      this.key = checkNotNull(key);
+    private BinaryStateMutation(String stateNode, String op, @Nullable Object value) {
+      this.stateNode = checkNotNull(stateNode);
       this.op = op;
       this.value = value;
     }
 
-    public String getKey() {
-      return key;
+    public String getStateNode() {
+      return stateNode;
     }
 
     public String getOp() {
@@ -571,26 +566,26 @@ public final class UsmfRule {
     /** Builder class to configure {@link BinaryStateMutation} actions. */
     public static final class Builder {
 
-      private final String key;
+      private final String stateNode;
 
-      private Builder(String key) {
-        this.key = key;
+      private Builder(String stateNode) {
+        this.stateNode = stateNode;
       }
 
       public BinaryStateMutation set(@Nullable Object value) {
-        return new BinaryStateMutation(key, "set", value);
+        return new BinaryStateMutation(stateNode, "set", value);
       }
 
       public BinaryStateMutation plus(Object value) {
-        return new BinaryStateMutation(key, "plus", checkNotNull(value));
+        return new BinaryStateMutation(stateNode, "plus", checkNotNull(value));
       }
 
       public BinaryStateMutation addToList(Object value) {
-        return new BinaryStateMutation(key, "add_to_list", checkNotNull(value));
+        return new BinaryStateMutation(stateNode, "add_to_list", checkNotNull(value));
       }
 
       public BinaryStateMutation addToSet(Object value) {
-        return new BinaryStateMutation(key, "add_to_set", checkNotNull(value));
+        return new BinaryStateMutation(stateNode, "add_to_set", checkNotNull(value));
       }
     }
   }

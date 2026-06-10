@@ -22,9 +22,10 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.annotations.SerializedName;
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,9 +38,7 @@ import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -86,6 +85,7 @@ public final class UsmfBinary {
   private final Path binaryFile;
   private final Path sandboxDir;
   private final ImmutableList<UsmfRule> rules;
+  private final JsonObject variables;
   private final Path logsDir;
   private final Path statesFile;
   private final Gson gson = new Gson();
@@ -127,11 +127,11 @@ public final class UsmfBinary {
     Files.createDirectories(statesDir);
 
     // 2. Initialize the default empty state repository.
-    writeStateInternal(ImmutableMap.of());
+    writeStateJson(new JsonObject());
 
     // 3. Serialize rule configurations to JSON and save it under the rules directory.
     Path rulesFile = rulesDir.resolve(RULES_FILE_NAME);
-    ImmutableMap<String, List<UsmfRule>> config = ImmutableMap.of("rules", rules);
+    ImmutableMap<String, Object> config = ImmutableMap.of("rules", rules, "variables", variables);
     Files.writeString(rulesFile, gson.toJson(config));
 
     // 4. Write the Python execution stub into the bin directory and make it executable.
@@ -207,68 +207,33 @@ public final class UsmfBinary {
   }
 
   /**
-   * Reads the state value associated with the specified key, cast to the given type.
+   * Reads the entire central state database JSON content inside the mock sandbox workspace.
    *
-   * @param key the state key
-   * @param type the expected class type of the value; supports {@link String}, {@link Integer},
-   *     {@link Long}, {@link Double}, and {@link Boolean}
-   * @return the cast state value, or null if the key is not present
-   * @throws IOException if fails to read state from the file
-   * @throws IllegalStateException if the stored state value is not compatible with the expected
-   *     type
+   * @return the raw JSON content of the active state database
+   * @throws IOException if fails to read state from the file system
    */
-  public <T> T readState(String key, Class<T> type) throws IOException {
-    Object value = readStateInternal().get(key);
-    return value == null ? null : convertTo(value, type);
+  public JsonObject readStateJson() throws IOException {
+    return JsonParser.parseString(Files.readString(statesFile)).getAsJsonObject();
   }
 
   /**
-   * Reads the state list associated with the specified key, with elements cast to the given type.
+   * Overwrites the entire central state database JSON content inside the mock sandbox workspace.
    *
-   * @param key the state key
-   * @param elementType the expected class type of the list elements; supports {@link String},
-   *     {@link Integer}, {@link Long}, {@link Double}, and {@link Boolean}
-   * @return the list of cast elements, or an empty list if the key is not present
-   * @throws IOException if fails to read state from the file
-   * @throws IllegalStateException if the stored state value is not a list, or if any element is not
-   *     compatible with the expected type
+   * @param json the raw JSON content to overwrite in the active state database
+   * @throws IOException if fails to write state to the file system
    */
-  public <T> ImmutableList<T> readStateList(String key, Class<T> elementType) throws IOException {
-    return ImmutableList.copyOf(readStateListInternal(key, elementType));
-  }
-
-  /**
-   * Reads the state set associated with the specified key, with elements cast to the given type.
-   *
-   * @param key the state key
-   * @param elementType the expected class type of the set elements; supports {@link String}, {@link
-   *     Integer}, {@link Long}, {@link Double}, and {@link Boolean}
-   * @return the set of cast elements, or an empty set if the key is not present
-   * @throws IOException if fails to read state from the file
-   * @throws IllegalStateException if the stored state value is not a list, or if any element is not
-   *     compatible with the expected type
-   */
-  public <T> ImmutableSet<T> readStateSet(String key, Class<T> elementType) throws IOException {
-    return ImmutableSet.copyOf(readStateListInternal(key, elementType));
-  }
-
-  /**
-   * Writes the state value associated with the specified key.
-   *
-   * @param key the state key
-   * @param value the value to associate with the key; supports {@link String}, {@link Integer},
-   *     {@link Long}, {@link Double}, {@link Boolean}, and {@link List} or {@link Set} of these
-   *     types
-   * @throws IOException if fails to read or write state from or to the file
-   */
-  public void writeState(String key, Object value) throws IOException {
+  public void writeStateJson(JsonObject json) throws IOException {
     Path lockFile = statesFile.resolveSibling(statesFile.getFileName() + ".lock");
     try (FileChannel channel =
             FileChannel.open(lockFile, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
         FileLock lock = channel.lock()) {
-      Map<String, Object> state = readStateInternal();
-      state.put(key, value);
-      writeStateInternal(state);
+      Path tempFile = statesFile.resolveSibling(statesFile.getFileName() + ".tmp");
+      Files.writeString(tempFile, gson.toJson(json));
+      Files.move(
+          tempFile,
+          statesFile,
+          StandardCopyOption.REPLACE_EXISTING,
+          StandardCopyOption.ATOMIC_MOVE);
     }
   }
 
@@ -276,88 +241,15 @@ public final class UsmfBinary {
       Path binaryFile,
       Path sandboxDir,
       ImmutableList<UsmfRule> rules,
+      JsonObject variables,
       Path logsDir,
       Path statesFile) {
     this.binaryFile = binaryFile;
     this.sandboxDir = sandboxDir;
     this.rules = rules;
+    this.variables = variables;
     this.logsDir = logsDir;
     this.statesFile = statesFile;
-  }
-
-  // Safe because the targetType is explicitly checked at runtime before performing the unchecked
-  // casts to generic type T.
-  @SuppressWarnings("unchecked")
-  private <T> T convertTo(Object element, Class<T> targetType) {
-    checkNotNull(element);
-    checkNotNull(targetType);
-    if (targetType == String.class) {
-      return (T) element.toString();
-    }
-    if (targetType == Integer.class || targetType == Long.class || targetType == Double.class) {
-      checkState(
-          element instanceof Number,
-          "State value is not a Number for %s cast: %s (%s)",
-          targetType.getSimpleName(),
-          element,
-          element.getClass().getName());
-      Number number = (Number) element;
-      if (targetType == Integer.class) {
-        return (T) Integer.valueOf(number.intValue());
-      }
-      if (targetType == Long.class) {
-        return (T) Long.valueOf(number.longValue());
-      }
-      if (targetType == Double.class) {
-        return (T) Double.valueOf(number.doubleValue());
-      }
-    }
-    if (targetType == Boolean.class) {
-      checkState(
-          element instanceof Boolean,
-          "State value is not a Boolean for Boolean cast: %s (%s)",
-          element,
-          element.getClass().getName());
-      return (T) element;
-    }
-    checkState(
-        targetType.isInstance(element),
-        "State value is not compatible with type %s: %s (%s)",
-        targetType.getName(),
-        element,
-        element.getClass().getName());
-    return targetType.cast(element);
-  }
-
-  private <T> List<T> readStateListInternal(String key, Class<T> elementType) throws IOException {
-    Object value = readStateInternal().get(key);
-    if (value == null) {
-      return new ArrayList<>();
-    }
-    checkState(
-        value instanceof List, "State key '%s' is not a List: %s", key, value.getClass().getName());
-    List<?> rawList = (List<?>) value;
-    List<T> result = new ArrayList<>(rawList.size());
-    for (Object element : rawList) {
-      result.add(convertTo(element, elementType));
-    }
-    return result;
-  }
-
-  private Map<String, Object> readStateInternal() throws IOException {
-    String content = Files.readString(statesFile);
-    // Safe because states.json is serialized and mutated strictly using UsmfBinary state helpers,
-    // which enforce String keys and Gson-compatible primitive/object values.
-    @SuppressWarnings("unchecked")
-    Map<String, Object> state = gson.fromJson(content, Map.class);
-    return state != null ? state : new HashMap<>();
-  }
-
-  private void writeStateInternal(Map<String, Object> state) throws IOException {
-    Path tempFile = statesFile.resolveSibling(statesFile.getFileName() + ".tmp");
-    Files.writeString(tempFile, gson.toJson(state));
-    Files.move(
-        tempFile, statesFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
   }
 
   /** Builder class to configure {@link UsmfBinary} instances. */
@@ -367,11 +259,24 @@ public final class UsmfBinary {
     private final String sandboxDirName;
     @Nullable private Path binaryFileParentDir;
     private final List<UsmfRule> rules = new ArrayList<>();
+    private JsonObject variables = new JsonObject();
 
     private Builder(String binaryFileName, Path sandboxDirParentDir, String sandboxDirName) {
       this.binaryFileName = checkNotNull(binaryFileName);
       this.sandboxDirParentDir = checkNotNull(sandboxDirParentDir);
       this.sandboxDirName = checkNotNull(sandboxDirName);
+    }
+
+    /**
+     * Sets global mapping variables configuration.
+     *
+     * @param variables the predefined mappings of rule variables
+     * @return this builder instance
+     */
+    @CanIgnoreReturnValue
+    public Builder setVariables(JsonObject variables) {
+      this.variables = checkNotNull(variables);
+      return this;
     }
 
     /**
@@ -415,7 +320,7 @@ public final class UsmfBinary {
       Path binaryFile = targetDir.resolve(binaryFileName);
 
       return new UsmfBinary(
-          binaryFile, sandboxDir, ImmutableList.copyOf(rules), logsDir, statesFile);
+          binaryFile, sandboxDir, ImmutableList.copyOf(rules), variables, logsDir, statesFile);
     }
 
     /**

@@ -34,6 +34,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:aapt",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
     ],

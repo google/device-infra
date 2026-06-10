@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.shared.usmf.UsmfRule.BinaryStateMutatio
 import com.google.devtools.mobileharness.shared.usmf.UsmfRule.CommandBehavior;
 import com.google.devtools.mobileharness.shared.usmf.UsmfRule.CommandCondition;
 import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
+import com.google.gson.JsonParser;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import java.util.Map;
 import org.junit.Before;
@@ -98,26 +99,37 @@ public final class UsmfExampleTest {
     //    - When "shell pm list packages" is called, print installed_packages.
     UsmfBinary localMockAdb =
         UsmfBinary.builder("adb", tmpFolder.getRoot().toPath(), "adb_sandbox")
+            .setVariables(
+                JsonParser.parseString(
+                        """
+                        {
+                          "pkg_map": {
+                            "my_app": "com.foo.my_app"
+                          }
+                        }
+                        """)
+                    .getAsJsonObject())
             .addRule(
                 UsmfRule.builder()
                     .addCondition(
                         CommandCondition.regexMatch(
-                            ".*(?:-s\\s+(?P<device_id>\\S+))?.*install.*\\s+(?:.*/)?(?P<apk_name>[a-zA-Z0-9_]+)\\.apk"))
+                            ".*?(?:-s\\s+(?P<device_id>\\S+))?.*install.*\\s+(?:.*/)?(?P<apk_name>[a-zA-Z0-9_]+)\\.apk"))
                     .setBehavior(
                         CommandBehavior.stdout("Success\n")
                             .addStateMutation(
-                                BinaryStateMutation.key("installed_packages_${@C:device_id}")
-                                    .addToSet("com.foo.${@C:apk_name}"))
+                                BinaryStateMutation.stateNode(
+                                        "#S['installed_packages'][#C['device_id']]")
+                                    .addToSet("${#V['pkg_map'][#C['apk_name']]}"))
                             .build())
                     .build())
             .addRule(
                 UsmfRule.builder()
                     .addCondition(
                         CommandCondition.regexMatch(
-                            ".*(?:-s\\s+(?P<device_id>\\S+))?.*shell.*pm\\s+list\\s+packages"))
+                            ".*?(?:-s\\s+(?P<device_id>\\S+))?.*shell.*pm\\s+list\\s+packages"))
                     .setBehavior(
                         CommandBehavior.stdout(
-                                "${@S:installed_packages_${@C:device_id}:'package:%s\n'}")
+                                "${#S['installed_packages'][#C['device_id']]:'package:%s\n'}")
                             .build())
                     .build())
             .buildAndDeploy();
