@@ -205,8 +205,8 @@ java_library(
     ],
     deps = [
         ":certification_suite_info",
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_common",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_info",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_info_provider",
     ],
 )

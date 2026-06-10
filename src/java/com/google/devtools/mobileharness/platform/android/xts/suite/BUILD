@@ -78,30 +78,14 @@ java_library(
 )
 
 java_library(
-    name = "test_suite_info",
-    srcs = ["TestSuiteInfo.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/version:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
-    ],
-    deps = [
-        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
-        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
     name = "test_suite_info_util",
     srcs = ["TestSuiteInfoUtil.java"],
     visibility = [
+        "//javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
     ],
     deps = [
-        ":test_suite_info",
         ":test_suite_version_util",
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:jar_file_util",
@@ -215,8 +199,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
     ],
     deps = [
-        ":test_suite_info",
         ":test_suite_info_util",
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:jar_file_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

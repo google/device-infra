@@ -199,7 +199,11 @@ public abstract class XtsJobCreator {
             xtsType,
             sessionRequestInfo
                 .testSuiteInfo()
-                .map(testSuiteInfo -> testSuiteInfo.getTestSuiteVersion().orElse(null))
+                .map(
+                    testSuiteInfo ->
+                        testSuiteInfo.hasTestSuiteVersion()
+                            ? testSuiteInfo.getTestSuiteVersion()
+                            : null)
                 .orElse(null));
     if (SessionRequestHandlerUtil.isRunRetry(testPlan)) {
       extraJobProperties.put(Job.IS_RUN_RETRY, "true");

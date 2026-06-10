@@ -20,6 +20,7 @@ load("@protobuf//bazel:py_proto_library.bzl", "py_proto_library")
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
+        "//javatests/com/google/devtools/mobileharness/platform/android/xts:__subpackages__",
         "//src/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts:__subpackages__",

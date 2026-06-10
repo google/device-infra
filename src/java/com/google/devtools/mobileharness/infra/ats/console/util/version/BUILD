@@ -25,10 +25,10 @@ java_library(
     ],
     deps = [
         ":version_parser",
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/shared/version/proto:version_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:command_helper",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_info",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_info_provider",
         "//src/java/com/google/devtools/mobileharness/shared/version",
         "//src/java/com/google/devtools/mobileharness/shared/version:version_util",
@@ -41,9 +41,9 @@ java_library(
     name = "version_parser",
     srcs = ["VersionParser.java"],
     deps = [
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_info",
         "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

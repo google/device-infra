@@ -22,6 +22,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.ats.common.plan.JarFileUtil;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.TestSuiteInfo;
 import java.util.concurrent.ExecutionException;
 
 /** A provider for {@link TestSuiteInfo}. */

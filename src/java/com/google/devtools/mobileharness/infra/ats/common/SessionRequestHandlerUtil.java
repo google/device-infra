@@ -543,7 +543,11 @@ public class SessionRequestHandlerUtil {
                 sessionRequestInfo.xtsType(),
                 sessionRequestInfo
                     .testSuiteInfo()
-                    .map(testSuiteInfo -> testSuiteInfo.getTestSuiteVersion().orElse(null))
+                    .map(
+                        testSuiteInfo ->
+                            testSuiteInfo.hasTestSuiteVersion()
+                                ? testSuiteInfo.getTestSuiteVersion()
+                                : null)
                     .orElse(null))
             && !sessionRequestInfo.moduleNames().isEmpty();
 

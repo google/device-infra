@@ -221,7 +221,7 @@ public class TestSuiteHelper {
   public Set<String> getAbisForBuildTargetArchFromSuite() {
     Set<String> abis = new LinkedHashSet<>();
     for (String arch :
-        TestSuiteInfoProvider.getTestSuiteInfo(xtsRootDir, xtsType).getTargetArchs()) {
+        TestSuiteInfoProvider.getTestSuiteInfo(xtsRootDir, xtsType).getTargetArchsList()) {
       abis.addAll(AbiUtil.getAbisForArch(arch));
     }
     return abis;

@@ -19,10 +19,12 @@ package com.google.devtools.mobileharness.platform.android.xts.suite;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.ats.common.plan.JarFileUtil;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.TestSuiteInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.TestSuiteVersion;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import java.io.BufferedReader;
@@ -63,7 +65,22 @@ public final class TestSuiteInfoUtil {
       String xtsRootDir, String xtsType, JarFileUtil jarFileUtil) {
     ImmutableMap<String, String> properties = loadSuiteInfo(xtsRootDir, xtsType, jarFileUtil);
     Optional<TestSuiteVersion> version = parseTestSuiteVersion(properties);
-    return TestSuiteInfo.create(xtsRootDir, xtsType, properties, version);
+    TestSuiteInfo.Builder builder =
+        TestSuiteInfo.newBuilder()
+            .setXtsRootDir(xtsRootDir)
+            .setXtsType(xtsType)
+            .setBuildNumber(properties.getOrDefault(BUILD_NUMBER, ""))
+            .setName(properties.getOrDefault(NAME, ""))
+            .setFullname(properties.getOrDefault(FULLNAME, ""))
+            .setVersion(properties.getOrDefault(VERSION, ""))
+            .putAllSuiteProperties(properties);
+    String targetArch = properties.get(TARGET_ARCH);
+    if (targetArch != null) {
+      builder.addAllTargetArchs(
+          Splitter.on(",").trimResults().omitEmptyStrings().splitToList(targetArch));
+    }
+    version.ifPresent(builder::setTestSuiteVersion);
+    return builder.build();
   }
 
   private static ImmutableMap<String, String> loadSuiteInfo(

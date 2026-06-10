@@ -47,3 +47,25 @@ message TestSuiteVersion {
   int32 patch = 3;
   int32 revision = 4;
 }
+
+// Info of a test suite.
+//
+// To properly expose related info, a test suite must include a
+// `test-suite-info.properties` file in its jar resources.
+message TestSuiteInfo {
+  string xts_root_dir = 1;
+  // The type of the test suite, e.g., "cts".
+  string xts_type = 2;
+  // The build number of the test suite, e.g., "12345".
+  string build_number = 3;
+  // The target archs supported by the test suite, e.g., ["arm64", "x86_64"].
+  repeated string target_archs = 4;
+  // The short name of the test suite, e.g., "CTS".
+  string name = 5;
+  // The full name of the test suite, e.g., "Compatibility Test Suite".
+  string fullname = 6;
+  // The version name of the test suite, e.g., "16.1_r1".
+  string version = 7;
+  optional TestSuiteVersion test_suite_version = 8;
+  map<string, string> suite_properties = 9;
+}

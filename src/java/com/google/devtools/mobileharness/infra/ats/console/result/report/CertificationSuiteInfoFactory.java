@@ -16,8 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.result.report;
 
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.TestSuiteInfo;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
-import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfo;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfoProvider;
 import java.util.HashMap;
 import java.util.Map;

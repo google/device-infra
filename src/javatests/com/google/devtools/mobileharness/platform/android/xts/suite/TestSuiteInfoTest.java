@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.google.devtools.mobileharness.infra.ats.common.plan.JarFileUtil;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.TestSuiteInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.TestSuiteVersion;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -72,9 +73,9 @@ public final class TestSuiteInfoTest {
         TestSuiteInfoUtil.loadTestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
 
     assertThat(testSuiteInfo.getBuildNumber()).isEqualTo("12345");
-    assertThat(testSuiteInfo.getTargetArchs()).containsExactly("arm64");
+    assertThat(testSuiteInfo.getTargetArchsList()).containsExactly("arm64");
     assertThat(testSuiteInfo.getName()).isEqualTo("CTS");
-    assertThat(testSuiteInfo.getFullName()).isEqualTo("Compatibility Test Suite");
+    assertThat(testSuiteInfo.getFullname()).isEqualTo("Compatibility Test Suite");
     assertThat(testSuiteInfo.getVersion()).isEqualTo("14_r1");
   }
 
@@ -94,7 +95,7 @@ public final class TestSuiteInfoTest {
         TestSuiteInfoUtil.loadTestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
 
     assertThat(testSuiteInfo.getBuildNumber()).isEqualTo("67890");
-    assertThat(testSuiteInfo.getTargetArchs()).containsExactly("arm64");
+    assertThat(testSuiteInfo.getTargetArchsList()).containsExactly("arm64");
     assertThat(testSuiteInfo.getName()).isEqualTo("CTS");
   }
 
@@ -128,7 +129,8 @@ public final class TestSuiteInfoTest {
     TestSuiteInfo testSuiteInfo =
         TestSuiteInfoUtil.loadTestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
 
-    assertThat(testSuiteInfo.getTestSuiteVersion()).hasValue(create(14, 0, 0, 1));
+    assertThat(testSuiteInfo.hasTestSuiteVersion()).isTrue();
+    assertThat(testSuiteInfo.getTestSuiteVersion()).isEqualTo(create(14, 0, 0, 1));
   }
 
   @Test
@@ -143,7 +145,7 @@ public final class TestSuiteInfoTest {
     TestSuiteInfo testSuiteInfo =
         TestSuiteInfoUtil.loadTestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
 
-    assertThat(testSuiteInfo.getTestSuiteVersion()).isEmpty();
+    assertThat(testSuiteInfo.hasTestSuiteVersion()).isFalse();
   }
 
   @Test
@@ -154,7 +156,7 @@ public final class TestSuiteInfoTest {
     TestSuiteInfo testSuiteInfo =
         TestSuiteInfoUtil.loadTestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
 
-    assertThat(testSuiteInfo.getTestSuiteVersion()).isEmpty();
+    assertThat(testSuiteInfo.hasTestSuiteVersion()).isFalse();
   }
 
   private static TestSuiteVersion create(int major, int minor, int patch, int revision) {

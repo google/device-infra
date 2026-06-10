@@ -17,9 +17,9 @@
 package com.google.devtools.mobileharness.infra.ats.console.util.version;
 
 import com.google.common.base.Strings;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.TestSuiteInfo;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
-import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfo;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfoProvider;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.VersionUtil;
@@ -63,7 +63,7 @@ public class VersionMessageUtil {
     Optional<BuildVersion> buildVersion = VersionUtil.getBuildVersion();
     return String.format(
         "Android %s %s (%s)\nOmniLab lab-%s%s%s%s%s",
-        testSuiteInfo.getFullName(),
+        testSuiteInfo.getFullname(),
         testSuiteInfo.getVersion(),
         buildNumber,
         labVersion,
