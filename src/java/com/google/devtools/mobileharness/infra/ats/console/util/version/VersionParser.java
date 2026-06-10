@@ -21,6 +21,7 @@ import static com.google.devtools.mobileharness.shared.constant.LogRecordImporta
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfo;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.nio.file.Path;
@@ -51,7 +52,8 @@ class VersionParser {
       }
     }
 
-    Path toolsDir = testSuiteInfo.getToolsDir();
+    Path toolsDir =
+        XtsDirUtil.getXtsToolsDir(Path.of(testSuiteInfo.xtsRootDir()), testSuiteInfo.xtsType());
     Path versionFile = toolsDir.resolve(VERSION_FILE);
     if (localFileUtil.isFileExist(versionFile)) {
       try {

@@ -50,7 +50,8 @@ public final class TestSuiteInfoProvider {
                   logger.atFine().log(
                       "Creating %s instance with params [xts root dir: %s, xts type: %s]",
                       TestSuiteInfo.class.getSimpleName(), key.xtsRootDir(), key.xtsType());
-                  return new TestSuiteInfo(key.xtsRootDir(), key.xtsType(), new JarFileUtil());
+                  return TestSuiteInfoUtil.loadTestSuiteInfo(
+                      key.xtsRootDir(), key.xtsType(), new JarFileUtil());
                 }
               });
 

@@ -68,7 +68,8 @@ public final class TestSuiteInfoTest {
     when(jarFileUtil.getZipEntryInputStream(any(Path.class), eq(SUITE_INFO_PROPERTY)))
         .thenReturn(Optional.of(inputStream));
 
-    TestSuiteInfo testSuiteInfo = new TestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
+    TestSuiteInfo testSuiteInfo =
+        TestSuiteInfoUtil.loadTestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
 
     assertThat(testSuiteInfo.getBuildNumber()).isEqualTo("12345");
     assertThat(testSuiteInfo.getTargetArchs()).containsExactly("arm64");
@@ -89,7 +90,8 @@ public final class TestSuiteInfoTest {
     Path versionFile = toolsDir.resolve("version.txt");
     Files.writeString(versionFile, "67890\n");
 
-    TestSuiteInfo testSuiteInfo = new TestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
+    TestSuiteInfo testSuiteInfo =
+        TestSuiteInfoUtil.loadTestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
 
     assertThat(testSuiteInfo.getBuildNumber()).isEqualTo("67890");
     assertThat(testSuiteInfo.getTargetArchs()).containsExactly("arm64");
@@ -108,7 +110,8 @@ public final class TestSuiteInfoTest {
     Path versionFile = toolsDir.resolve("version.txt");
     Files.writeString(versionFile, "");
 
-    TestSuiteInfo testSuiteInfo = new TestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
+    TestSuiteInfo testSuiteInfo =
+        TestSuiteInfoUtil.loadTestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
 
     assertThat(testSuiteInfo.getBuildNumber()).isEqualTo("12345");
   }
@@ -122,7 +125,8 @@ public final class TestSuiteInfoTest {
     when(jarFileUtil.getZipEntryInputStream(any(Path.class), eq(SUITE_INFO_PROPERTY)))
         .thenReturn(Optional.of(inputStream));
 
-    TestSuiteInfo testSuiteInfo = new TestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
+    TestSuiteInfo testSuiteInfo =
+        TestSuiteInfoUtil.loadTestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
 
     assertThat(testSuiteInfo.getTestSuiteVersion()).hasValue(create(14, 0, 0, 1));
   }
@@ -136,7 +140,8 @@ public final class TestSuiteInfoTest {
     when(jarFileUtil.getZipEntryInputStream(any(Path.class), eq(SUITE_INFO_PROPERTY)))
         .thenReturn(Optional.of(inputStream));
 
-    TestSuiteInfo testSuiteInfo = new TestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
+    TestSuiteInfo testSuiteInfo =
+        TestSuiteInfoUtil.loadTestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
 
     assertThat(testSuiteInfo.getTestSuiteVersion()).isEmpty();
   }
@@ -146,7 +151,8 @@ public final class TestSuiteInfoTest {
     when(jarFileUtil.getZipEntryInputStream(any(Path.class), eq(SUITE_INFO_PROPERTY)))
         .thenReturn(Optional.empty());
 
-    TestSuiteInfo testSuiteInfo = new TestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
+    TestSuiteInfo testSuiteInfo =
+        TestSuiteInfoUtil.loadTestSuiteInfo(xtsRootDir, XTS_TYPE, jarFileUtil);
 
     assertThat(testSuiteInfo.getTestSuiteVersion()).isEmpty();
   }

@@ -16,176 +16,69 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.suite;
 
-import static com.google.common.base.Strings.isNullOrEmpty;
-import static java.nio.charset.StandardCharsets.UTF_8;
-
+import com.google.auto.value.AutoValue;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
-import com.google.common.flogger.FluentLogger;
-import com.google.devtools.mobileharness.infra.ats.common.plan.JarFileUtil;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.TestSuiteVersion;
-import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
-import java.util.Properties;
 
-/**
- * A class that resolves loading of build related metadata for test suite.
- *
- * <p>To properly expose related info, a test suite must include a <code>test-suite-info.properties
- * </code> file in its jar resources
- */
-public class TestSuiteInfo {
+/** A class that resolves build related metadata for test suite. */
+@AutoValue
+public abstract class TestSuiteInfo {
 
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  /** Expected property filename in jar resource. */
-  private static final String SUITE_INFO_PROPERTY = "test-suite-info.properties";
-
-  private static final String VERSION_FILE_NAME = "version.txt";
-
-  private static final String STUB_BUILD_NUMBER = "[stub build number]";
-  private static final String STUB_TARGET_ARCH = "[stub target arch]";
-  private static final String STUB_NAME = "[stub name]";
-  private static final String STUB_FULLNAME = "[stub fullname]";
-  private static final String STUB_VERSION = "[stub version]";
-
-  // Suite info keys
   private static final String BUILD_NUMBER = "build_number";
   private static final String TARGET_ARCH = "target_arch";
   private static final String NAME = "name";
   private static final String FULLNAME = "fullname";
   private static final String VERSION = "version";
 
-  private final Optional<TestSuiteVersion> testSuiteVersion;
-  private final ImmutableMap<String, String> testSuiteInfoProps;
-  private final JarFileUtil jarFileUtil;
-  private final String xtsRootDir;
-  private final String xtsTypeStr;
+  public abstract String xtsRootDir();
 
-  TestSuiteInfo(String xtsRootDir, String xtsType, JarFileUtil jarFileUtil) {
-    this.jarFileUtil = jarFileUtil;
-    this.xtsRootDir = xtsRootDir;
-    this.xtsTypeStr = xtsType;
-    this.testSuiteInfoProps = loadSuiteInfo();
-    this.testSuiteVersion = parseTestSuiteVersion();
-  }
+  public abstract String xtsType();
 
-  private ImmutableMap<String, String> loadSuiteInfo() {
-    Properties propsValue;
-    Path xtsTfJar = getToolsDir().resolve(String.format("%s-tradefed.jar", xtsTypeStr));
-    try {
-      Optional<InputStream> testSuiteInfoPropsInputStream =
-          jarFileUtil.getZipEntryInputStream(xtsTfJar, SUITE_INFO_PROPERTY);
-      if (testSuiteInfoPropsInputStream.isEmpty()) {
-        logger.atWarning().log(
-            "Unable to load suite info from jar resource %s, using stub info instead",
-            SUITE_INFO_PROPERTY);
-        propsValue = new Properties();
-        propsValue.setProperty(BUILD_NUMBER, STUB_BUILD_NUMBER);
-        propsValue.setProperty(TARGET_ARCH, STUB_TARGET_ARCH);
-        propsValue.setProperty(NAME, STUB_NAME);
-        propsValue.setProperty(FULLNAME, STUB_FULLNAME);
-        propsValue.setProperty(VERSION, STUB_VERSION);
-      } else {
-        propsValue = loadSuiteInfoFromInputStream(testSuiteInfoPropsInputStream.get());
-      }
-    } catch (IOException e) {
-      throw new IllegalStateException(
-          String.format(
-              "Error loading jar resource file \"%s\" for test suite info from the jar \"%s\"",
-              SUITE_INFO_PROPERTY, xtsTfJar),
-          e);
-    }
+  public abstract ImmutableMap<String, String> testSuiteInfoProps();
 
-    loadBuildNumberFromVersionFile()
-        .ifPresent(buildNumber -> propsValue.setProperty(BUILD_NUMBER, buildNumber));
-    return Maps.fromProperties(propsValue);
-  }
+  public abstract Optional<TestSuiteVersion> getTestSuiteVersion();
 
-  private Properties loadSuiteInfoFromInputStream(InputStream testSuiteInfoPropsInputStream)
-      throws IOException {
-    Properties props = new Properties();
-    props.load(testSuiteInfoPropsInputStream);
-    return props;
-  }
-
-  private Optional<String> loadBuildNumberFromVersionFile() {
-    Path versionFile = getToolsDir().resolve(VERSION_FILE_NAME);
-    try (BufferedReader reader = Files.newBufferedReader(versionFile, UTF_8)) {
-      String buildNumber = reader.readLine();
-      if (buildNumber != null) {
-        buildNumber = buildNumber.trim();
-        if (!buildNumber.isEmpty()) {
-          return Optional.of(buildNumber);
-        }
-      }
-    } catch (IOException e) {
-      logger.atWarning().withCause(e).log(
-          "Failed to read build number from %s", versionFile.toAbsolutePath());
-    }
-    return Optional.empty();
+  public static TestSuiteInfo create(
+      String xtsRootDir,
+      String xtsType,
+      ImmutableMap<String, String> testSuiteInfoProps,
+      Optional<TestSuiteVersion> testSuiteVersion) {
+    return new AutoValue_TestSuiteInfo(xtsRootDir, xtsType, testSuiteInfoProps, testSuiteVersion);
   }
 
   /** Gets the build number of the test suite. */
   public String getBuildNumber() {
-    return testSuiteInfoProps.get(BUILD_NUMBER);
+    return testSuiteInfoProps().get(BUILD_NUMBER);
   }
 
   /** Gets the target archs supported by the test suite. */
   public List<String> getTargetArchs() {
-    String testSuiteInfoArch = testSuiteInfoProps.get(TARGET_ARCH);
+    String testSuiteInfoArch = testSuiteInfoProps().get(TARGET_ARCH);
     return Splitter.on(",").trimResults().omitEmptyStrings().splitToList(testSuiteInfoArch);
   }
 
   /** Gets the short name of the test suite. */
   public String getName() {
-    return testSuiteInfoProps.get(NAME);
+    return testSuiteInfoProps().get(NAME);
   }
 
   /** Gets the full name of the test suite. */
   public String getFullName() {
-    return testSuiteInfoProps.get(FULLNAME);
+    return testSuiteInfoProps().get(FULLNAME);
   }
 
   /** Gets the version name of the test suite. */
   public String getVersion() {
-    return testSuiteInfoProps.get(VERSION);
-  }
-
-  public Optional<TestSuiteVersion> getTestSuiteVersion() {
-    return testSuiteVersion;
+    return testSuiteInfoProps().get(VERSION);
   }
 
   /**
    * Retrieves test information keyed with the provided name. Or null if not property associated.
    */
   public String get(String name) {
-    return testSuiteInfoProps.get(name);
-  }
-
-  public Path getToolsDir() {
-    return XtsDirUtil.getXtsToolsDir(Path.of(xtsRootDir), xtsTypeStr);
-  }
-
-  private Optional<TestSuiteVersion> parseTestSuiteVersion() {
-    try {
-      String version = getVersion();
-      if (isNullOrEmpty(version) || version.trim().isEmpty() || version.equals(STUB_VERSION)) {
-        return Optional.empty();
-      } else {
-        return Optional.of(TestSuiteVersionUtil.parse(version.trim()));
-      }
-    } catch (IllegalArgumentException e) {
-      logger.atWarning().withCause(e).log(
-          "Failed to parse test suite version \"%s\"", getVersion());
-      return Optional.empty();
-    }
+    return testSuiteInfoProps().get(name);
   }
 }
