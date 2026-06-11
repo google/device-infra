@@ -90,6 +90,19 @@ message Communication {
     ADBOverUSB adb_over_usb = 4;
     // For video device.
     VIDEO video = 5;
+    // New communication type for goldfish emulator control
+    GoldfishEmulatorControl goldfish_emulator_control = 6;
+  }
+}
+
+// New message to support goldfish emulator control
+message GoldfishEmulatorControl {
+  oneof port {
+    // The name of the port, originating from LHP's port registry.
+    string port_name = 1;
+
+    // The direct port number if available.
+    int32 port_number = 2;
   }
 }
 
