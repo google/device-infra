@@ -38,6 +38,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/instrumentation:android_instrumentation_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/bundletool",
+        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/networkconnector",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemstate",
         "//src/java/com/google/devtools/mobileharness/platform/android/logcat",
         "//src/java/com/google/devtools/mobileharness/platform/android/media:android_media_util",
@@ -66,6 +67,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_logcat_monitoring_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_runtime_stats_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_screenshot_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_set_wifi_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:apk_precondition_check_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:cros_base_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:cros_dut_topology_decorator",
@@ -76,6 +78,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/util:step_skippable_lifecycle_decorator_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_real_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_dump_sys_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:cros_decorator_spec",
@@ -105,6 +108,7 @@ junit_test_suites(
     name = "gen_tests",
     sizes = [
         "small",
+        "medium",
     ],
     deps = [":tests"],
 )

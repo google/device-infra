@@ -260,6 +260,18 @@ java_library(
 )
 
 java_library(
+    name = "android_set_wifi_decorator_job_validator",
+    srcs = ["AndroidSetWifiDecoratorJobValidator.java"],
+    deps = [
+        ":job_validator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_set_wifi_decorator_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "android_start_apps_decorator_job_validator",
     srcs = ["AndroidStartAppsDecoratorJobValidator.java"],
     deps = [
