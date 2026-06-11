@@ -43,6 +43,7 @@ java_library(
         "@grpc-java//protobuf",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_protobuf_protobuf_java",
         "@protobuf//:protobuf_java",
     ],
 )

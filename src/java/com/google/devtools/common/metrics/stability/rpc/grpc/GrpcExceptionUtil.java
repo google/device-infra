@@ -86,7 +86,10 @@ public class GrpcExceptionUtil {
    * GrpcExceptionWithErrorId#getApplicationError()} of the result.
    *
    * <p>Note that you need to provide an additional client side {@link ErrorId} and a message which
-   * describe the context of the rpc failure.
+   * describe the context of the rpc failure. If the exception is an RPC framework error (i.e., no
+   * application error is found), the root cause extracted from the {@code DebugInfo} trailer will
+   * be appended to the end of the message in the format "[RootCause: <cause>]" to help diagnose
+   * infrastructure-level errors.
    *
    * @see GrpcExceptionWithErrorId
    */
@@ -99,10 +102,13 @@ public class GrpcExceptionUtil {
     } catch (IOException e) {
       deserializingError = e;
     }
+
+    String detailedMessage = message;
+
     GrpcExceptionWithErrorId result =
         new GrpcExceptionWithErrorId(
             errorId,
-            message,
+            detailedMessage,
             grpcException.getStatus().getCode().value(),
             applicationError,
             grpcException);
@@ -169,7 +175,6 @@ public class GrpcExceptionUtil {
     try {
       return Optional.of(
           RpcErrorPayload.parseFrom(bytes, ProtoExtensionRegistry.getGeneratedRegistry()));
-
     } catch (InvalidProtocolBufferException e) {
       logger.atWarning().withCause(cause).log(
           "Failed to parse payload from %s trailers: %s",
