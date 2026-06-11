@@ -25,12 +25,12 @@ java_library(
     name = "parser",
     srcs = glob(["*.java"]),
     deps = [
+        "//src/devtools/mobileharness/infra/ats/common/proto:session_request_info_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/parser:command_line_parser",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
     ],
 )

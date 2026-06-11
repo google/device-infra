@@ -22,7 +22,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfoUtil;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.console.command.parser.CommandLineParser;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
@@ -210,25 +211,25 @@ public class PreviousResultLoader {
     // Generates the SessionRequestInfo from the command line args. Inserted empty values for
     // xts_root_dir, xts_type and command_line_args to avoid error.
     CommandLineParser parser = CommandLineParser.getInstance();
-    SessionRequestInfo info =
+    SessionRequestInfo.Builder infoBuilder =
         parser
             .parseCommandLine(commandLineArgsStr)
             .setCommandLineArgs("")
             .setXtsRootDir("")
-            .setXtsType("")
-            .build();
+            .setXtsType("");
+    SessionRequestInfo info = SessionRequestInfoUtil.buildAndValidate(infoBuilder);
     Result.Builder resultBuilder = result.toBuilder();
-    if (info.testName().isPresent()) {
-      resultBuilder.setTestFilter(info.testName().get());
+    if (info.hasTestName()) {
+      resultBuilder.setTestFilter(info.getTestName());
     }
-    if (!info.moduleNames().isEmpty()) {
-      resultBuilder.addAllModuleFilter(info.moduleNames());
+    if (!info.getModuleNamesList().isEmpty()) {
+      resultBuilder.addAllModuleFilter(info.getModuleNamesList());
     }
-    if (!info.includeFilters().isEmpty()) {
-      resultBuilder.addAllIncludeFilter(info.includeFilters());
+    if (!info.getIncludeFiltersList().isEmpty()) {
+      resultBuilder.addAllIncludeFilter(info.getIncludeFiltersList());
     }
-    if (!info.excludeFilters().isEmpty()) {
-      resultBuilder.addAllExcludeFilter(info.excludeFilters());
+    if (!info.getExcludeFiltersList().isEmpty()) {
+      resultBuilder.addAllExcludeFilter(info.getExcludeFiltersList());
     }
     return resultBuilder.build();
   }

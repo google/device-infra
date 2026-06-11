@@ -52,7 +52,7 @@ java_library(
     srcs = ["DeviceDetailsRetriever.java"],
     deps = [
         ":device_details",
-        ":session_request_info",
+        "//src/devtools/mobileharness/infra/ats/common/proto:session_request_info_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_management_filter",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
@@ -128,7 +128,7 @@ java_library(
     srcs = ["LocalDeviceUtil.java"],
     deps = [
         ":device_details",
-        ":session_request_info",
+        "//src/devtools/mobileharness/infra/ats/common/proto:session_request_info_java_proto",
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "@maven//:com_google_guava_guava",
@@ -144,7 +144,7 @@ java_library(
         ":device_selection",
         ":device_selection_options",
         ":local_device_util",
-        ":session_request_info",
+        "//src/devtools/mobileharness/infra/ats/common/proto:session_request_info_java_proto",
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",
@@ -170,10 +170,11 @@ java_library(
         ":device_details",
         ":local_device_util",
         ":session_handler_helper",
-        ":session_request_info",
+        ":session_request_info_util",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
+        "//src/devtools/mobileharness/infra/ats/common/proto:session_request_info_java_proto",
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:device_configuration_java_proto",
@@ -224,13 +225,10 @@ java_library(
 )
 
 java_library(
-    name = "session_request_info",
-    srcs = ["SessionRequestInfo.java"],
+    name = "session_request_info_util",
+    srcs = ["SessionRequestInfoUtil.java"],
     deps = [
-        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
-        "//src/devtools/mobileharness/infra/ats/server/proto:service_java_proto",
-        "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
-        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/devtools/mobileharness/infra/ats/common/proto:session_request_info_java_proto",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -240,8 +238,8 @@ java_library(
     srcs = ["SessionResultHandlerUtil.java"],
     deps = [
         ":session_handler_helper",
-        ":session_request_info",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
+        "//src/devtools/mobileharness/infra/ats/common/proto:session_request_info_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_creator",

@@ -34,8 +34,9 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.TradefedJobInfo;
-import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfoUtil;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.DeviceInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject;
@@ -133,15 +134,15 @@ public final class ServerJobCreatorTest {
 
   @Test
   public void createXtsTradefedTestJob_missingTestEnvironment_throwException() throws Exception {
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir)
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
-            .setModuleNames(ImmutableList.of("mock_module"))
-            .build();
+            .addAllModuleNames(ImmutableList.of("mock_module"));
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
     MobileHarnessException thrown =
@@ -156,16 +157,16 @@ public final class ServerJobCreatorTest {
 
   @Test
   public void createXtsTradefedTestJob_moduleSharding() throws Exception {
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir)
             .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
-            .setShardingMode(ShardingMode.MODULE)
-            .build();
+            .setShardingMode(ShardingMode.MODULE);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
 
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
@@ -184,8 +185,8 @@ public final class ServerJobCreatorTest {
   public void createXtsTradefedTestJob() throws Exception {
     String xtsRootDir = publicDir + "/session_session_id/file";
     realLocalFileUtil.prepareParentDir(xtsRootDir);
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
@@ -193,14 +194,13 @@ public final class ServerJobCreatorTest {
             .setXtsRootDir(xtsRootDir)
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
             .setRemoteRunnerFilePathPrefix("ats-file-server::")
-            .setModuleNames(ImmutableList.of("mock_module"))
+            .addAllModuleNames(ImmutableList.of("mock_module"))
             .setDeviceInfo(
-                Optional.of(
-                    DeviceInfo.newBuilder()
-                        .setDeviceId("mock_device_id")
-                        .setSupportedAbiList("arm64-v8a,armeabi-v7a")
-                        .build()))
-            .build();
+                DeviceInfo.newBuilder()
+                    .setDeviceId("mock_device_id")
+                    .setSupportedAbiList("arm64-v8a,armeabi-v7a")
+                    .build());
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
@@ -245,16 +245,16 @@ public final class ServerJobCreatorTest {
   public void createXtsTradefedTestJob_hasTestPlanFileAndLocalMode() throws Exception {
     String xtsRootDir = publicDir + "/session_session_id/file";
     realLocalFileUtil.prepareParentDir(xtsRootDir);
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
             .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setXtsRootDir(xtsRootDir)
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
-            .setModuleNames(ImmutableList.of("mock_module"))
-            .build();
+            .addAllModuleNames(ImmutableList.of("mock_module"));
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
@@ -300,17 +300,17 @@ public final class ServerJobCreatorTest {
     String xtsRootDir = publicDir + "/session_session_id/file";
     realLocalFileUtil.prepareParentDir(xtsRootDir);
     TestEnvironment testEnvironment = TestEnvironment.getDefaultInstance();
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
             .setAtsServerTestEnvironment(testEnvironment)
             .setXtsRootDir(xtsRootDir)
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
-            .setModuleNames(ImmutableList.of("mock_module"))
-            .setEnableDefaultLogs(true)
-            .build();
+            .addAllModuleNames(ImmutableList.of("mock_module"))
+            .setEnableDefaultLogs(true);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
@@ -336,8 +336,8 @@ public final class ServerJobCreatorTest {
     subPlan.addIncludeFilter("armeabi-v7a ModuleA android.test.Foo#test1");
     File xtsZipPath = folder.newFile("xts_zip.zip");
     File retryResultDir = folder.newFolder("retry_result_dir");
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("retry")
             .setCommandLineArgs("retry --retry 0")
             .setXtsType("cts")
@@ -346,8 +346,8 @@ public final class ServerJobCreatorTest {
             .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setRemoteRunnerFilePathPrefix("ats-file-server::")
             .setRetrySessionId("0")
-            .setRetryResultDir(retryResultDir.getAbsolutePath())
-            .build();
+            .setRetryResultDir(retryResultDir.getAbsolutePath());
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
@@ -389,8 +389,8 @@ public final class ServerJobCreatorTest {
     subPlan.addIncludeFilter("armeabi-v7a ModuleA android.test.Foo#test1");
     subPlan.addExcludeFilter("armeabi-v7a ModuleB android.test.Foo#test1");
     File xtsZipPath = folder.newFile("xts_zip.zip");
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("retry")
             .setCommandLineArgs("retry --retry 0")
             .setXtsType("cts")
@@ -399,9 +399,9 @@ public final class ServerJobCreatorTest {
             .setAndroidXtsZip(xtsZipPath.getAbsolutePath())
             .setRetrySessionId("previous_session_id")
             .setRetryResultDir("/retry/result/dir")
-            .setIncludeFilters(ImmutableList.of("armeabi-v7a ModuleA android.test.Foo#test1"))
-            .setExcludeFilters(ImmutableList.of("armeabi-v7a ModuleB android.test.Foo#test1"))
-            .build();
+            .addAllIncludeFilters(ImmutableList.of("armeabi-v7a ModuleA android.test.Foo#test1"))
+            .addAllExcludeFilters(ImmutableList.of("armeabi-v7a ModuleB android.test.Foo#test1"));
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
     ArgumentCaptor<RetryArgs> retryArgsCaptor = ArgumentCaptor.forClass(RetryArgs.class);
 
@@ -452,8 +452,8 @@ public final class ServerJobCreatorTest {
     subPlan.setPreviousSessionDeviceBuildFingerprint("[fake device build fingerprint]");
     subPlan.addIncludeFilter("armeabi-v7a ModuleA android.test.Foo#test1");
     File xtsZipPath = folder.newFile("xts_zip.zip");
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("retry")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
@@ -461,8 +461,8 @@ public final class ServerJobCreatorTest {
             .setAndroidXtsZip(xtsZipPath.getAbsolutePath())
             .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setRetrySessionId("previous_session_id")
-            .setRetryResultDir("/retry/result/dir")
-            .build();
+            .setRetryResultDir("/retry/result/dir");
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
     ArgumentCaptor<RetryArgs> retryArgsCaptor = ArgumentCaptor.forClass(RetryArgs.class);
 
@@ -511,8 +511,8 @@ public final class ServerJobCreatorTest {
     Path subPlansDir = xtsRootDir.toPath().resolve("android-cts/subplans");
     realLocalFileUtil.prepareDir(subPlansDir);
     realLocalFileUtil.copyFileOrDir(SUBPLAN1_XML, subPlansDir.toAbsolutePath().toString());
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts --subplan subplan1")
             .setXtsType("cts")
@@ -520,14 +520,13 @@ public final class ServerJobCreatorTest {
             .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setAndroidXtsZip(xtsZipPath.getAbsolutePath())
             .setSubPlanName("subplan1")
-            .setModuleNames(ImmutableList.of("CtsAccelerationTestCases", "OtherTestModule"))
+            .addAllModuleNames(ImmutableList.of("CtsAccelerationTestCases", "OtherTestModule"))
             .setDeviceInfo(
-                Optional.of(
-                    DeviceInfo.newBuilder()
-                        .setDeviceId("mock_device_id")
-                        .setSupportedAbiList("arm64-v8a,armeabi-v7a")
-                        .build()))
-            .build();
+                DeviceInfo.newBuilder()
+                    .setDeviceId("mock_device_id")
+                    .setSupportedAbiList("arm64-v8a,armeabi-v7a")
+                    .build());
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
     doCallRealMethod().when(localFileUtil).isFileExist(any(Path.class));
@@ -576,8 +575,8 @@ public final class ServerJobCreatorTest {
     Path subPlansDir = xtsRootDir.toPath().resolve("android-cts/subplans");
     realLocalFileUtil.prepareDir(subPlansDir);
     realLocalFileUtil.copyFileOrDir(SUBPLAN2_XML, subPlansDir.toAbsolutePath().toString());
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts --subplan subplan2")
             .setXtsType("cts")
@@ -585,8 +584,8 @@ public final class ServerJobCreatorTest {
             .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setAndroidXtsZip(xtsZipPath.getAbsolutePath())
             .setSubPlanName("subplan2")
-            .setModuleNames(ImmutableList.of("mock_module"))
-            .build();
+            .addAllModuleNames(ImmutableList.of("mock_module"));
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
     doCallRealMethod().when(localFileUtil).isFileExist(any(Path.class));
@@ -619,15 +618,15 @@ public final class ServerJobCreatorTest {
 
   @Test
   public void createXtsNonTradefedJobs_retryAtsServerSession_nonTfFailedTests() throws Exception {
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("retry")
             .setCommandLineArgs("retry")
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir)
             .setRetrySessionId("previous_session_id")
-            .setRetryResultDir("/retry/result/dir")
-            .build();
+            .setRetryResultDir("/retry/result/dir");
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
 
     when(previousResultLoader.getPrevSessionTestReportProperties(any(Path.class)))
         .thenReturn(Optional.empty());
@@ -655,14 +654,14 @@ public final class ServerJobCreatorTest {
     Path subPlansDir = xtsRootDir.toPath().resolve("android-cts/subplans");
     realLocalFileUtil.prepareDir(subPlansDir);
     realLocalFileUtil.copyFileOrDir(SUBPLAN1_XML, subPlansDir.toAbsolutePath().toString());
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts --subplan subplan1")
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir.getAbsolutePath())
-            .setSubPlanName("subplan1")
-            .build();
+            .setSubPlanName("subplan1");
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     ArgumentCaptor<SubPlan> subPlanCaptor = ArgumentCaptor.forClass(SubPlan.class);
     SubPlan subPlan = SessionHandlerHelper.loadSubPlan(Path.of(SUBPLAN1_XML).toFile());
 
@@ -690,14 +689,14 @@ public final class ServerJobCreatorTest {
     Path subPlansDir = xtsRootDir.toPath().resolve("android-cts/subplans");
     realLocalFileUtil.prepareDir(subPlansDir);
     realLocalFileUtil.copyFileOrDir(SUBPLAN3_XML, subPlansDir.toAbsolutePath().toString());
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts --subplan subplan3")
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir.getAbsolutePath())
-            .setSubPlanName("subplan3")
-            .build();
+            .setSubPlanName("subplan3");
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     ArgumentCaptor<SubPlan> subPlanCaptor = ArgumentCaptor.forClass(SubPlan.class);
     SubPlan subPlan = SessionHandlerHelper.loadSubPlan(Path.of(SUBPLAN3_XML).toFile());
 
@@ -726,14 +725,14 @@ public final class ServerJobCreatorTest {
     Path subPlansDir = xtsRootDir.toPath().resolve("android-cts/subplans");
     realLocalFileUtil.prepareDir(subPlansDir);
     realLocalFileUtil.copyFileOrDir(SUBPLAN2_XML, subPlansDir.toAbsolutePath().toString());
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts --subplan subplan2")
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir.getAbsolutePath())
-            .setSubPlanName("subplan2")
-            .build();
+            .setSubPlanName("subplan2");
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
 
     doCallRealMethod().when(localFileUtil).isFileExist(any(Path.class));
     doCallRealMethod().when(localFileUtil).isDirExist(any(Path.class));
@@ -751,13 +750,13 @@ public final class ServerJobCreatorTest {
 
   @Test
   public void reviseRequestInfoForDynamicJob_withoutTestEnvironment_doNothing() throws Exception {
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
-            .setXtsRootDir(xtsRootDir)
-            .build();
+            .setXtsRootDir(xtsRootDir);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     assertThat(jobCreator.reviseRequestInfoForDynamicJob(sessionRequestInfo))
         .isEqualTo(sessionRequestInfo);
   }
@@ -779,16 +778,16 @@ public final class ServerJobCreatorTest {
                     .build())
             .addDeviceActionConfigObjects(resultReporter)
             .build();
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
             .setAtsServerTestEnvironment(testEnvironment)
             .setXtsRootDir(xtsRootDir)
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
-            .setIsXtsDynamicDownloadEnabled(true)
-            .build();
+            .setIsXtsDynamicDownloadEnabled(true);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     when(sessionRequestHandlerUtil.getStaticMctsModules())
         .thenReturn(ImmutableSet.of("mcts-module"));
     when(sessionRequestHandlerUtil.initializeJobConfig(any(), any(), any(), any()))
@@ -814,11 +813,9 @@ public final class ServerJobCreatorTest {
     assertThat(jobInfos.get(1).properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
         .isEqualTo(XtsConstants.DYNAMIC_MCTS_JOB_NAME);
     List<SessionRequestInfo> capturedSrIs = sessionRequestInfoCaptor.getAllValues();
-    assertThat(
-            capturedSrIs.get(0).atsServerTestEnvironment().get().getDeviceActionConfigObjectsList())
+    assertThat(capturedSrIs.get(0).getAtsServerTestEnvironment().getDeviceActionConfigObjectsList())
         .hasSize(2);
-    assertThat(
-            capturedSrIs.get(1).atsServerTestEnvironment().get().getDeviceActionConfigObjectsList())
+    assertThat(capturedSrIs.get(1).getAtsServerTestEnvironment().getDeviceActionConfigObjectsList())
         .containsExactly(resultReporter);
   }
 
@@ -826,16 +823,16 @@ public final class ServerJobCreatorTest {
   public void createXtsTradefedTestJob_dynamicDownloadDisabled_createsOneJob() throws Exception {
     String xtsRootDir = publicDir + "/session_session_id/file";
     realLocalFileUtil.prepareParentDir(xtsRootDir);
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
             .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
             .setXtsRootDir(xtsRootDir)
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
-            .setIsXtsDynamicDownloadEnabled(false) // disabled
-            .build();
+            .setIsXtsDynamicDownloadEnabled(false);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     when(sessionRequestHandlerUtil.getStaticMctsModules())
         .thenReturn(ImmutableSet.of("mcts-module"));
     when(sessionRequestHandlerUtil.initializeJobConfig(any(), any(), any(), any()))
@@ -871,22 +868,21 @@ public final class ServerJobCreatorTest {
                     .build())
             .addDeviceActionConfigObjects(resultReporter)
             .build();
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir)
-            .setAtsServerTestEnvironment(testEnvironment)
-            .build();
+            .setAtsServerTestEnvironment(testEnvironment);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
 
     SessionRequestInfo updatedSessionRequestInfo =
         jobCreator.reviseRequestInfoForDynamicJob(sessionRequestInfo);
-    assertThat(updatedSessionRequestInfo.atsServerTestEnvironment()).isPresent();
+    assertThat(updatedSessionRequestInfo.hasAtsServerTestEnvironment()).isTrue();
     assertThat(
             updatedSessionRequestInfo
-                .atsServerTestEnvironment()
-                .get()
+                .getAtsServerTestEnvironment()
                 .getDeviceActionConfigObjectsList())
         .containsExactly(resultReporter);
   }

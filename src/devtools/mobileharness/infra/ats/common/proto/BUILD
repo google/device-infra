@@ -44,3 +44,19 @@ py_proto_library(
     name = "xts_common_py_proto",
     deps = [":xts_common_proto"],
 )
+
+proto_library(
+    name = "session_request_info_proto",
+    srcs = ["session_request_info.proto"],
+    deps = [
+        ":xts_common_proto",
+        "//src/devtools/mobileharness/infra/ats/server/proto:service_proto",
+        "//src/devtools/mobileharness/platform/android/xts/proto:configuration_proto",
+        "@protobuf//:duration_proto",
+    ],
+)
+
+java_proto_library(
+    name = "session_request_info_java_proto",
+    deps = [":session_request_info_proto"],
+)

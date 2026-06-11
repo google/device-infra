@@ -26,8 +26,8 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/command/parser:__pkg__",
     ],
     deps = [
+        "//src/devtools/mobileharness/infra/ats/common/proto:session_request_info_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:guice_factory",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:run_command_parser",

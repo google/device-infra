@@ -17,24 +17,27 @@
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
 import static com.google.common.base.Ascii.toUpperCase;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static java.util.Arrays.stream;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
-import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfoUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
+import com.google.devtools.mobileharness.infra.ats.common.proto.FilterValues;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.DeviceInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
@@ -60,6 +63,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.inject.Inject;
@@ -225,10 +229,10 @@ class RunCommandHandler {
       }
     } finally {
       sessionResultHandlerUtil.cleanUpJobGenDirs(allJobs);
-      if (sessionRequestInfo.subPlanNameBackup().isPresent()) {
+      if (sessionRequestInfo.hasSubPlanNameBackup()) {
         Path subPlanBackupPath =
             SessionHandlerHelper.getSubPlanFilePath(
-                xtsRootDir, xtsType, sessionRequestInfo.subPlanNameBackup().get());
+                xtsRootDir, xtsType, sessionRequestInfo.getSubPlanNameBackup());
         logger.atInfo().log("Deleting subplan backup file %s", subPlanBackupPath);
         localFileUtil.removeFileOrDir(subPlanBackupPath);
       }
@@ -287,43 +291,54 @@ class RunCommandHandler {
   SessionRequestInfo generateSessionRequestInfo(RunCommand runCommand)
       throws MobileHarnessException, InterruptedException {
     SessionRequestInfo.Builder builder =
-        SessionRequestInfo.builder()
+        SessionRequestInfo.newBuilder()
             .setTestPlan(runCommand.getTestPlan())
             .setXtsRootDir(runCommand.getXtsRootDir())
             .setXtsType(runCommand.getXtsType())
             .setEnableModuleParameter(true)
             .setEnableModuleOptionalParameter(false)
             .setCommandLineArgs(runCommand.getInitialState().getCommandLineArgs())
-            .setDeviceSerials(runCommand.getDeviceSerialList())
-            .setExcludeDeviceSerials(runCommand.getExcludeDeviceSerialList())
-            .setProductTypes(runCommand.getProductTypeList())
-            .setDeviceProperties(ImmutableMap.copyOf(runCommand.getDevicePropertyMap()))
-            .setModuleNames(runCommand.getModuleNameList())
+            .addAllDeviceSerials(runCommand.getDeviceSerialList())
+            .addAllExcludeDeviceSerials(runCommand.getExcludeDeviceSerialList())
+            .addAllProductTypes(runCommand.getProductTypeList())
+            .putAllDeviceProperties(runCommand.getDevicePropertyMap())
+            .addAllModuleNames(runCommand.getModuleNameList())
             .setHtmlInZip(runCommand.getHtmlInZip())
             .setReportSystemCheckers(runCommand.getReportSystemCheckers())
-            .setIncludeFilters(runCommand.getIncludeFilterList())
-            .setExcludeFilters(runCommand.getExcludeFilterList())
-            .setStrictIncludeFilters(runCommand.getStrictIncludeFilterList())
-            .setModuleArgs(runCommand.getModuleArgList())
-            .setExtraArgs(runCommand.getExtraArgList())
-            .setXtsSuiteInfo(ImmutableMap.copyOf(runCommand.getXtsSuiteInfoMap()))
+            .addAllIncludeFilters(runCommand.getIncludeFilterList())
+            .addAllExcludeFilters(runCommand.getExcludeFilterList())
+            .addAllStrictIncludeFilters(runCommand.getStrictIncludeFilterList())
+            .addAllModuleArgs(runCommand.getModuleArgList())
+            .addAllExtraArgs(runCommand.getExtraArgList())
+            .putAllXtsSuiteInfo(runCommand.getXtsSuiteInfoMap())
             .setTestSuiteInfo(
                 TestSuiteInfoProvider.getTestSuiteInfo(
                     runCommand.getXtsRootDir(), runCommand.getXtsType()))
-            .setExcludeRunners(ImmutableSet.copyOf(runCommand.getExcludeRunnerList()))
-            .setStartTimeout(TimeUtils.toJavaDuration(runCommand.getJobStartTimeout()));
+            .addAllExcludeRunners(runCommand.getExcludeRunnerList())
+            .setStartTimeout(
+                toProtoDuration(TimeUtils.toJavaDuration(runCommand.getJobStartTimeout())));
     ImmutableMultimap.Builder<String, String> moduleMetadataIncludeFilters =
         ImmutableMultimap.builder();
     runCommand
         .getModuleMetadataIncludeFilterList()
         .forEach(entry -> moduleMetadataIncludeFilters.put(entry.getKey(), entry.getValue()));
-    builder.setModuleMetadataIncludeFilters(moduleMetadataIncludeFilters.build());
+    builder.putAllModuleMetadataIncludeFilters(
+        moduleMetadataIncludeFilters.build().asMap().entrySet().stream()
+            .collect(
+                toImmutableMap(
+                    Entry::getKey,
+                    e -> FilterValues.newBuilder().addAllValues(e.getValue()).build())));
     ImmutableMultimap.Builder<String, String> moduleMetadataExcludeFilters =
         ImmutableMultimap.builder();
     runCommand
         .getModuleMetadataExcludeFilterList()
         .forEach(entry -> moduleMetadataExcludeFilters.put(entry.getKey(), entry.getValue()));
-    builder.setModuleMetadataExcludeFilters(moduleMetadataExcludeFilters.build());
+    builder.putAllModuleMetadataExcludeFilters(
+        moduleMetadataExcludeFilters.build().asMap().entrySet().stream()
+            .collect(
+                toImmutableMap(
+                    Entry::getKey,
+                    e -> FilterValues.newBuilder().addAllValues(e.getValue()).build())));
     if (runCommand.hasSkipDeviceInfo()) {
       builder.setSkipDeviceInfo(runCommand.getSkipDeviceInfo());
     }
@@ -346,9 +361,11 @@ class RunCommandHandler {
       builder.setRetryType(RetryType.valueOf(toUpperCase(runCommand.getRetryType())));
     }
     if (runCommand.hasSubPlanName()) {
-      builder.setSubPlanName(runCommand.getSubPlanName());
-      builder.setSubPlanNameBackup(
-          String.format("%s_backup_%s", runCommand.getSubPlanName(), Instant.now().toEpochMilli()));
+      builder
+          .setSubPlanName(runCommand.getSubPlanName())
+          .setSubPlanNameBackup(
+              String.format(
+                  "%s_backup_%s", runCommand.getSubPlanName(), Instant.now().toEpochMilli()));
     }
     if (runCommand.getDeviceType() != DeviceType.DEVICE_TYPE_UNSPECIFIED) {
       builder.setDeviceType(
@@ -377,8 +394,9 @@ class RunCommandHandler {
     if (runCommand.getEnableMoblyResultstoreUpload()) {
       builder.setIsMoblyResultstoreUploadEnabled(true);
     }
-    builder.setEnableDefaultLogs(runCommand.getEnableDefaultLogs());
-    builder.setEnableTokenSharding(runCommand.getEnableTokenSharding());
+    builder
+        .setEnableDefaultLogs(runCommand.getEnableDefaultLogs())
+        .setEnableTokenSharding(runCommand.getEnableTokenSharding());
     if (runCommand.hasBusinessLogicUrl()) {
       builder.setBusinessLogicUrl(runCommand.getBusinessLogicUrl());
     }
@@ -388,8 +406,10 @@ class RunCommandHandler {
         .getSessionProperty(SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID)
         .ifPresent(builder::setSessionClientId);
 
-    Optional<DeviceInfo> deviceInfo = sessionRequestHandlerUtil.getDeviceInfo(builder.build());
-    builder.setDeviceInfo(deviceInfo);
-    return sessionRequestHandlerUtil.addXtsModuleInfo(builder.build());
+    Optional<DeviceInfo> deviceInfo =
+        sessionRequestHandlerUtil.getDeviceInfo(SessionRequestInfoUtil.buildAndValidate(builder));
+    deviceInfo.ifPresent(builder::setDeviceInfo);
+    return sessionRequestHandlerUtil.addXtsModuleInfo(
+        SessionRequestInfoUtil.buildAndValidate(builder));
   }
 }

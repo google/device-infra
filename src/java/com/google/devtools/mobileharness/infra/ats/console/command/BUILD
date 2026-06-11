@@ -141,9 +141,9 @@ java_library(
     visibility = ["//src/java/com/google/devtools/mobileharness/infra/ats/console/command/parser:__pkg__"],
     deps = [
         ":run_command_options",
+        "//src/devtools/mobileharness/infra/ats/common/proto:session_request_info_java_proto",
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:info_picocli_picocli",

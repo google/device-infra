@@ -18,13 +18,13 @@ package com.google.devtools.mobileharness.infra.ats.common;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.devtools.mobileharness.platform.android.xts.constant.NonTradefedReportGeneratorConstants.PARAM_XTS_SUITE_INFO;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Job.AllocationExitStrategy;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser.TestPlanFilter;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
@@ -84,6 +85,7 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
@@ -165,7 +167,7 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   private SessionRequestInfo.Builder defaultSessionRequestInfoBuilder() {
-    return SessionRequestInfo.builder()
+    return SessionRequestInfo.newBuilder()
         .setTestPlan("cts")
         .setCommandLineArgs("cts")
         .setXtsType("cts")
@@ -196,10 +198,10 @@ public final class SessionRequestHandlerUtilTest {
     setUpForCreateXtsNonTradefedJobs();
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setEnableTokenSharding(true)
-                .setModuleNames(ImmutableList.of("module1", "module2"))
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .setEnableTokenSharding(true)
+                    .addAllModuleNames(ImmutableList.of("module1", "module2"))));
 
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
@@ -216,10 +218,10 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void initializeJobConfig_calculateTimeout() throws Exception {
     SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder()
-            .setJobTimeout(Duration.ofSeconds(3000L))
-            .setStartTimeout(Duration.ofSeconds(1000L))
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .setJobTimeout(toProtoDuration(Duration.ofSeconds(3000L)))
+                .setStartTimeout(toProtoDuration(Duration.ofSeconds(1000L))));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
@@ -236,7 +238,8 @@ public final class SessionRequestHandlerUtilTest {
     ImmutableMap<String, String> driverParams =
         ImmutableMap.of(
             "xts_type", "cts", "xts_root_dir", XTS_ROOT_DIR_PATH, "xts_test_plan", "cts");
-    SessionRequestInfo sessionRequestInfo = defaultSessionRequestInfoBuilder().build();
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(defaultSessionRequestInfoBuilder());
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
@@ -256,7 +259,8 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void initializeJobConfig_atsServerNoDeviceRequirement_throwsException() throws Exception {
     SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder().setIsAtsServerRequest(true).build();
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder().setIsAtsServerRequest(true));
 
     assertThrows(
         MobileHarnessException.class,
@@ -267,10 +271,10 @@ public final class SessionRequestHandlerUtilTest {
   public void initializeJobConfig_atsServerSpecifyOneDevice_createJobWithThatDevice()
       throws Exception {
     SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder()
-            .setIsAtsServerRequest(true)
-            .setDeviceSerials(ImmutableList.of("device_id_1"))
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .setIsAtsServerRequest(true)
+                .addAllDeviceSerials(ImmutableList.of("device_id_1")));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
@@ -293,11 +297,11 @@ public final class SessionRequestHandlerUtilTest {
                     .setStatus("IDLE")
                     .build()));
     SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder()
-            .setIsAtsServerRequest(true)
-            .setAllowPartialDeviceMatch(true)
-            .setDeviceSerials(ImmutableList.of("device_id_1", "device_id_2"))
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .setIsAtsServerRequest(true)
+                .setAllowPartialDeviceMatch(true)
+                .addAllDeviceSerials(ImmutableList.of("device_id_1", "device_id_2")));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
@@ -326,10 +330,10 @@ public final class SessionRequestHandlerUtilTest {
                     .build())); // Third call, one device
 
     SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder()
-            .setIsAtsServerRequest(true)
-            .setDeviceSerials(ImmutableList.of("device_id_1"))
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .setIsAtsServerRequest(true)
+                .addAllDeviceSerials(ImmutableList.of("device_id_1")));
 
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
@@ -370,10 +374,10 @@ public final class SessionRequestHandlerUtilTest {
                     .build())); // Third call, All devices are found
 
     SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder()
-            .setIsAtsServerRequest(true)
-            .setDeviceSerials(ImmutableList.of("device_id_1"))
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .setIsAtsServerRequest(true)
+                .addAllDeviceSerials(ImmutableList.of("device_id_1")));
 
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
@@ -390,11 +394,11 @@ public final class SessionRequestHandlerUtilTest {
     when(atsMasterUtil.queryAndroidDevicesFromMaster()).thenReturn(ImmutableList.of());
 
     SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder()
-            .setIsAtsServerRequest(true)
-            .setAllowPartialDeviceMatch(true)
-            .setDeviceSerials(ImmutableList.of("device_id_1"))
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .setIsAtsServerRequest(true)
+                .setAllowPartialDeviceMatch(true)
+                .addAllDeviceSerials(ImmutableList.of("device_id_1")));
 
     MobileHarnessException exception =
         assertThrows(
@@ -420,11 +424,11 @@ public final class SessionRequestHandlerUtilTest {
                     .build()));
 
     SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder()
-            .setIsAtsServerRequest(true)
-            .setAllowPartialDeviceMatch(true)
-            .setDeviceSerials(ImmutableList.of("device_id_1", "device_id_2"))
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .setIsAtsServerRequest(true)
+                .setAllowPartialDeviceMatch(true)
+                .addAllDeviceSerials(ImmutableList.of("device_id_1", "device_id_2")));
 
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
@@ -449,11 +453,11 @@ public final class SessionRequestHandlerUtilTest {
                     .build()));
 
     SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder()
-            .setIsAtsServerRequest(true)
-            .setAllowPartialDeviceMatch(false)
-            .setDeviceSerials(ImmutableList.of("device_id_1", "device_id_2"))
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .setIsAtsServerRequest(true)
+                .setAllowPartialDeviceMatch(false)
+                .addAllDeviceSerials(ImmutableList.of("device_id_1", "device_id_2")));
 
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
@@ -471,9 +475,9 @@ public final class SessionRequestHandlerUtilTest {
         ImmutableMap.of(
             "xts_type", "cts", "xts_root_dir", XTS_ROOT_DIR_PATH, "xts_test_plan", "cts");
     SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder()
-            .setDeviceType(SessionRequestHandlerUtil.ANDROID_REAL_DEVICE_TYPE)
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .setDeviceType(SessionRequestHandlerUtil.ANDROID_REAL_DEVICE_TYPE));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
@@ -499,9 +503,9 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void initializeJobConfig_excludeDevice() throws Exception {
     SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder()
-            .setExcludeDeviceSerials(ImmutableList.of("device_id_1"))
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .addAllExcludeDeviceSerials(ImmutableList.of("device_id_1")));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
@@ -515,7 +519,8 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void initializeJobConfig_multiDevice_pick2Devices() throws Exception {
     SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder().setTestPlan("cts-multidevice").build();
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder().setTestPlan("cts-multidevice"));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
@@ -530,10 +535,10 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void initializeJobConfig_multiDevice_pick2Emulators() throws Exception {
     SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder()
-            .setTestPlan("cts-multidevice")
-            .setDeviceType(SessionRequestHandlerUtil.ANDROID_LOCAL_EMULATOR_TYPE)
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .setTestPlan("cts-multidevice")
+                .setDeviceType(SessionRequestHandlerUtil.ANDROID_LOCAL_EMULATOR_TYPE));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
@@ -559,7 +564,8 @@ public final class SessionRequestHandlerUtilTest {
                 "device_id_1",
                 DeviceDetails.builder().setId("device_id_1").setUuid("device_id_1").build()));
     SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder().setTestPlan("cts-multi-device").build();
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder().setTestPlan("cts-multi-device"));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     assertThrows(
@@ -573,10 +579,10 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void initializeJobConfig_shardCount2_pick2Devices() throws Exception {
     SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder()
-            .setCommandLineArgs("cts --shard-count 2")
-            .setShardCount(2)
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .setCommandLineArgs("cts --shard-count 2")
+                .setShardCount(2));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
@@ -592,10 +598,10 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void initializeJobConfig_shardCount3_only2OnlineDevices_pick2Devices() throws Exception {
     SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder()
-            .setCommandLineArgs("cts --shard-count 3")
-            .setShardCount(3)
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .setCommandLineArgs("cts --shard-count 3")
+                .setShardCount(3));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
@@ -612,7 +618,8 @@ public final class SessionRequestHandlerUtilTest {
   public void initializeJobConfig_noOnlineDevices_noJobConfig() throws Exception {
     when(deviceDetailsRetriever.getAllLocalAndroidDevicesWithNeededDetails(any()))
         .thenReturn(ImmutableMap.of());
-    SessionRequestInfo sessionRequestInfo = defaultSessionRequestInfoBuilder().build();
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(defaultSessionRequestInfoBuilder());
     assertThrows(
         MobileHarnessException.class,
         () -> sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo));
@@ -621,13 +628,13 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void initializeJobConfig_withGivenSerial() throws Exception {
     SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder()
-            .setEnvVars(ImmutableMap.of("env_key1", "env_value1"))
-            .setDeviceSerials(ImmutableList.of("device_id_1"))
-            .setModuleNames(ImmutableList.of("module1"))
-            .setShardCount(2)
-            .setExtraArgs(ImmutableList.of("--logcat-on-failure"))
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .putAllEnvVars(ImmutableMap.of("env_key1", "env_value1"))
+                .addAllDeviceSerials(ImmutableList.of("device_id_1"))
+                .addAllModuleNames(ImmutableList.of("module1"))
+                .setShardCount(2)
+                .addAllExtraArgs(ImmutableList.of("--logcat-on-failure")));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
@@ -642,9 +649,10 @@ public final class SessionRequestHandlerUtilTest {
   public void initializeJobConfig_someGivenSerialsNotExist_pickExistingDevicesOnly()
       throws Exception {
     SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder()
-            .setDeviceSerials(ImmutableList.of("device_id_1", "not_exist_device", "device_id_2"))
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .addAllDeviceSerials(
+                    ImmutableList.of("device_id_1", "not_exist_device", "device_id_2")));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
         sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
     JobConfig jobConfig =
@@ -661,9 +669,9 @@ public final class SessionRequestHandlerUtilTest {
   public void getSubDeviceSpecListForTradefed_allGivenSerialsNotExist_noJobConfig()
       throws Exception {
     SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder()
-            .setDeviceSerials(ImmutableList.of("device_id_4", "device_id_5"))
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .addAllDeviceSerials(ImmutableList.of("device_id_4", "device_id_5")));
     assertThrows(
         MobileHarnessException.class,
         () -> sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo));
@@ -689,67 +697,68 @@ public final class SessionRequestHandlerUtilTest {
         MobileHarnessException.class,
         () ->
             sessionRequestHandlerUtil.getFilteredTradefedModules(
-                defaultSessionRequestInfoBuilder()
-                    .setIncludeFilters(ImmutableList.of("module3 TestClass#TestCase"))
-                    .build()));
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder()
+                        .addAllIncludeFilters(ImmutableList.of("module3 TestClass#TestCase")))));
     assertThrows(
         MobileHarnessException.class,
         () ->
             sessionRequestHandlerUtil.getFilteredTradefedModules(
-                defaultSessionRequestInfoBuilder()
-                    .setExcludeFilters(ImmutableList.of("module1", "module2"))
-                    .build()));
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder()
+                        .addAllExcludeFilters(ImmutableList.of("module1", "module2")))));
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
-                defaultSessionRequestInfoBuilder()
-                    .setIncludeFilters(ImmutableList.of("module1"))
-                    .setExcludeFilters(ImmutableList.of("module2"))
-                    .build()))
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder()
+                        .addAllIncludeFilters(ImmutableList.of("module1"))
+                        .addAllExcludeFilters(ImmutableList.of("module2")))))
         .containsExactly("module1");
 
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
-                defaultSessionRequestInfoBuilder()
-                    .setIncludeFilters(ImmutableList.of("arm64-v8a module1 TestClass#TestCase"))
-                    .build()))
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder()
+                        .addAllIncludeFilters(
+                            ImmutableList.of("arm64-v8a module1 TestClass#TestCase")))))
         .containsExactly("module1");
 
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
-                defaultSessionRequestInfoBuilder()
-                    .setExcludeFilters(ImmutableList.of("module1", "arm64-v8a module2"))
-                    .build()))
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder()
+                        .addAllExcludeFilters(ImmutableList.of("module1", "arm64-v8a module2")))))
         .containsExactly("module2");
 
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
-                defaultSessionRequestInfoBuilder()
-                    .setIncludeFilters(
-                        ImmutableList.of("arm64-v8a module1[instant] TestClass#TestCase"))
-                    .build()))
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder()
+                        .addAllIncludeFilters(
+                            ImmutableList.of("arm64-v8a module1[instant] TestClass#TestCase")))))
         .containsExactly("module1");
 
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
-                defaultSessionRequestInfoBuilder()
-                    .setModuleNames(ImmutableList.of("module1"))
-                    .build()))
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder()
+                        .addAllModuleNames(ImmutableList.of("module1")))))
         .hasSize(1);
 
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
-                defaultSessionRequestInfoBuilder()
-                    .setModuleNames(ImmutableList.of("module1", "module2", "module3"))
-                    .build()))
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder()
+                        .addAllModuleNames(ImmutableList.of("module1", "module2", "module3")))))
         .hasSize(2);
 
     assertThrows(
         MobileHarnessException.class,
         () ->
             sessionRequestHandlerUtil.getFilteredTradefedModules(
-                defaultSessionRequestInfoBuilder()
-                    .setModuleNames(ImmutableList.of("module3"))
-                    .build()));
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder()
+                        .addAllModuleNames(ImmutableList.of("module3")))));
   }
 
   @Test
@@ -771,29 +780,29 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
-                defaultSessionRequestInfoBuilder()
-                    .setTestPlan("retry")
-                    .setRetrySessionIndex(0)
-                    .setModuleNames(ImmutableList.of("module1"))
-                    .build()))
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder()
+                        .setTestPlan("retry")
+                        .setRetrySessionIndex(0)
+                        .addAllModuleNames(ImmutableList.of("module1")))))
         .hasSize(1);
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
-                defaultSessionRequestInfoBuilder()
-                    .setTestPlan("retry")
-                    .setRetrySessionIndex(0)
-                    .setModuleNames(ImmutableList.of("module2[instant]"))
-                    .build()))
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder()
+                        .setTestPlan("retry")
+                        .setRetrySessionIndex(0)
+                        .addAllModuleNames(ImmutableList.of("module2[instant]")))))
         .hasSize(1);
     assertThrows(
         MobileHarnessException.class,
         () ->
             sessionRequestHandlerUtil.getFilteredTradefedModules(
-                defaultSessionRequestInfoBuilder()
-                    .setTestPlan("retry")
-                    .setRetrySessionIndex(0)
-                    .setModuleNames(ImmutableList.of("module"))
-                    .build()));
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder()
+                        .setTestPlan("retry")
+                        .setRetrySessionIndex(0)
+                        .addAllModuleNames(ImmutableList.of("module")))));
   }
 
   /** Common setUp for createXtsNonTradefedJobs... tests */
@@ -819,7 +828,7 @@ public final class SessionRequestHandlerUtilTest {
     when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(ImmutableMap.of("/path/to/config1", config1, "/path/to/config2", config2));
 
-    sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
+    sessionRequestHandlerUtil = Mockito.spy(sessionRequestHandlerUtil);
     doReturn(testSuiteHelper)
         .when(sessionRequestHandlerUtil)
         .getTestSuiteHelper(any(), any(), any());
@@ -835,7 +844,8 @@ public final class SessionRequestHandlerUtilTest {
   public void createXtsNonTradefedJobs() throws Exception {
     setUpForCreateXtsNonTradefedJobs();
     SessionRequestInfo sessionRequestInfo =
-        sessionRequestHandlerUtil.addXtsModuleInfo(defaultSessionRequestInfoBuilder().build());
+        sessionRequestHandlerUtil.addXtsModuleInfo(
+            SessionRequestInfoUtil.buildAndValidate(defaultSessionRequestInfoBuilder()));
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
@@ -854,9 +864,9 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(
             sessionRequestHandlerUtil.canCreateNonTradefedJobs(
                 sessionRequestHandlerUtil.addXtsModuleInfo(
-                    defaultSessionRequestInfoBuilder()
-                        .setModuleNames(ImmutableList.of("TfModule1"))
-                        .build())))
+                    SessionRequestInfoUtil.buildAndValidate(
+                        defaultSessionRequestInfoBuilder()
+                            .addAllModuleNames(ImmutableList.of("TfModule1"))))))
         .isFalse();
   }
 
@@ -865,9 +875,9 @@ public final class SessionRequestHandlerUtilTest {
     setUpForCreateXtsNonTradefedJobs();
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setModuleNames(ImmutableList.of("TfModule1", "module2"))
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .addAllModuleNames(ImmutableList.of("TfModule1", "module2"))));
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
@@ -891,9 +901,9 @@ public final class SessionRequestHandlerUtilTest {
                 DeviceDetails.builder().setId("device_id_4").setUuid("device_id_4").build()));
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setDeviceSerials(ImmutableList.of("device_id_2", "device_id_3"))
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .addAllDeviceSerials(ImmutableList.of("device_id_2", "device_id_3"))));
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
@@ -906,9 +916,9 @@ public final class SessionRequestHandlerUtilTest {
 
     sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setExcludeDeviceSerials(ImmutableList.of("device_id_2"))
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .addAllExcludeDeviceSerials(ImmutableList.of("device_id_2"))));
     jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
@@ -1000,17 +1010,17 @@ public final class SessionRequestHandlerUtilTest {
                 "test_class2.test3"));
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setIncludeFilters(
-                    ImmutableList.of(
-                        "module1",
-                        "module2 test_class1",
-                        "module2 test_class2#test2",
-                        "module2 test_class2#test3",
-                        "module3"))
-                .setExcludeFilters(
-                    ImmutableList.of("module3 test_class1", "module3 test_class2#test2"))
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .addAllIncludeFilters(
+                        ImmutableList.of(
+                            "module1",
+                            "module2 test_class1",
+                            "module2 test_class2#test2",
+                            "module2 test_class2#test3",
+                            "module3"))
+                    .addAllExcludeFilters(
+                        ImmutableList.of("module3 test_class1", "module3 test_class2#test2"))));
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
@@ -1043,7 +1053,8 @@ public final class SessionRequestHandlerUtilTest {
         .thenReturn(ImmutableSetMultimap.of("test_class1", "test_class1.test1"));
 
     SessionRequestInfo sessionRequestInfo =
-        sessionRequestHandlerUtil.addXtsModuleInfo(defaultSessionRequestInfoBuilder().build());
+        sessionRequestHandlerUtil.addXtsModuleInfo(
+            SessionRequestInfoUtil.buildAndValidate(defaultSessionRequestInfoBuilder()));
 
     assertThat(
             assertThrows(
@@ -1079,13 +1090,13 @@ public final class SessionRequestHandlerUtilTest {
     // When include filters for test cases are specified, test class filters are ignored.
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setIncludeFilters(
-                    ImmutableList.of(
-                        "module1 test_class1#test1",
-                        "module1 test_class2",
-                        "module1 test_class2#test3"))
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .addAllIncludeFilters(
+                        ImmutableList.of(
+                            "module1 test_class1#test1",
+                            "module1 test_class2",
+                            "module1 test_class2#test3"))));
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
@@ -1097,13 +1108,13 @@ public final class SessionRequestHandlerUtilTest {
     // When exclude filters for test classes are specified, test case filters are ignored
     sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setExcludeFilters(
-                    ImmutableList.of(
-                        "module1 test_class1#test1",
-                        "module1 test_class2",
-                        "module1 test_class2#test3"))
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .addAllExcludeFilters(
+                        ImmutableList.of(
+                            "module1 test_class1#test1",
+                            "module1 test_class2",
+                            "module1 test_class2#test3"))));
     jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
@@ -1112,12 +1123,12 @@ public final class SessionRequestHandlerUtilTest {
     // Exclude filters have higher priority than include filters
     sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setIncludeFilters(
-                    ImmutableList.of("module1 test_class1#test1", "module1 test_class2#test2"))
-                .setExcludeFilters(
-                    ImmutableList.of("module1 test_class1#test1", "module1 test_class2"))
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .addAllIncludeFilters(
+                        ImmutableList.of("module1 test_class1#test1", "module1 test_class2#test2"))
+                    .addAllExcludeFilters(
+                        ImmutableList.of("module1 test_class1#test1", "module1 test_class2"))));
     jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
@@ -1140,10 +1151,10 @@ public final class SessionRequestHandlerUtilTest {
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setModuleNames(ImmutableList.of("module1"))
-                .setTestName("test_class1#test1")
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .addAllModuleNames(ImmutableList.of("module1"))
+                    .setTestName("test_class1#test1")));
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
@@ -1154,10 +1165,10 @@ public final class SessionRequestHandlerUtilTest {
     // Test invalid class name
     sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setModuleNames(ImmutableList.of("module1"))
-                .setTestName("test_class2")
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .addAllModuleNames(ImmutableList.of("module1"))
+                    .setTestName("test_class2")));
     jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
@@ -1184,12 +1195,12 @@ public final class SessionRequestHandlerUtilTest {
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setTestPlan("retry")
-                .setCommandLineArgs("retry")
-                .setRetrySessionId("previous_session_id")
-                .setRetryResultDir("/retry/result/dir")
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .setTestPlan("retry")
+                    .setCommandLineArgs("retry")
+                    .setRetrySessionId("previous_session_id")
+                    .setRetryResultDir("/retry/result/dir")));
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, subPlan, ImmutableMap.of());
@@ -1204,11 +1215,11 @@ public final class SessionRequestHandlerUtilTest {
     // Same result as above
     sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setTestPlan("retry")
-                .setCommandLineArgs("retry")
-                .setRetrySessionIndex(0)
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .setTestPlan("retry")
+                    .setCommandLineArgs("retry")
+                    .setRetrySessionIndex(0)));
     jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, subPlan, ImmutableMap.of());
@@ -1245,10 +1256,10 @@ public final class SessionRequestHandlerUtilTest {
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setCommandLineArgs("cts --subplan subplan1")
-                .setSubPlanName("subplan1")
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .setCommandLineArgs("cts --subplan subplan1")
+                    .setSubPlanName("subplan1")));
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, subPlan, ImmutableMap.of());
@@ -1283,10 +1294,10 @@ public final class SessionRequestHandlerUtilTest {
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setCommandLineArgs("cts --subplan subplan3")
-                .setSubPlanName("subplan3")
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .setCommandLineArgs("cts --subplan subplan3")
+                    .setSubPlanName("subplan3")));
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, subPlan, ImmutableMap.of());
@@ -1320,10 +1331,10 @@ public final class SessionRequestHandlerUtilTest {
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setExcludeFilters(ImmutableList.of("module1 test_class2#test2"))
-                .setSubPlanName("subplan3")
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .addAllExcludeFilters(ImmutableList.of("module1 test_class2#test2"))
+                    .setSubPlanName("subplan3")));
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, subPlan, ImmutableMap.of());
@@ -1340,13 +1351,13 @@ public final class SessionRequestHandlerUtilTest {
     String file2 = folder.newFile().getAbsolutePath();
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setModuleArgs(
-                    ImmutableList.of(
-                        "module1:option:value",
-                        "module1:config:file:=" + file1,
-                        "arm64-v8a module1:config:file:=" + file2))
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .addAllModuleArgs(
+                        ImmutableList.of(
+                            "module1:option:value",
+                            "module1:config:file:=" + file1,
+                            "arm64-v8a module1:config:file:=" + file2))));
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
@@ -1374,10 +1385,10 @@ public final class SessionRequestHandlerUtilTest {
     // With include filters for one test class and one test case.
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setIncludeFilters(
-                    ImmutableList.of("module1 test_class1", "module1 test_class2#test2"))
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .addAllIncludeFilters(
+                        ImmutableList.of("module1 test_class1", "module1 test_class2#test2"))));
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
@@ -1390,11 +1401,11 @@ public final class SessionRequestHandlerUtilTest {
     // With exclude filters, they should be ignored, result should be same.
     sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setIncludeFilters(
-                    ImmutableList.of("module1 test_class1", "module1 test_class2#test2"))
-                .setExcludeFilters(ImmutableList.of("module1 test_class1"))
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .addAllIncludeFilters(
+                        ImmutableList.of("module1 test_class1", "module1 test_class2#test2"))
+                    .addAllExcludeFilters(ImmutableList.of("module1 test_class1"))));
     jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
@@ -1407,9 +1418,9 @@ public final class SessionRequestHandlerUtilTest {
     // Without include filters, MoblyTestSpec.TEST_SELECTOR_KEY should not be set.
     sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setExcludeFilters(ImmutableList.of("module1 test_class1"))
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .addAllExcludeFilters(ImmutableList.of("module1 test_class1"))));
     jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
@@ -1421,7 +1432,8 @@ public final class SessionRequestHandlerUtilTest {
   public void createXtsNonTradefedJobs_noAvailableDevices() throws Exception {
     setUpForCreateXtsNonTradefedJobs();
     SessionRequestInfo sessionRequestInfo =
-        sessionRequestHandlerUtil.addXtsModuleInfo(defaultSessionRequestInfoBuilder().build());
+        sessionRequestHandlerUtil.addXtsModuleInfo(
+            SessionRequestInfoUtil.buildAndValidate(defaultSessionRequestInfoBuilder()));
     when(deviceDetailsRetriever.getAllLocalAndroidDevicesWithNeededDetails(any()))
         .thenReturn(ImmutableMap.of());
 
@@ -1467,11 +1479,11 @@ public final class SessionRequestHandlerUtilTest {
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setTestPlan("retry")
-                .setCommandLineArgs("retry")
-                .setRetrySessionIndex(0)
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .setTestPlan("retry")
+                    .setCommandLineArgs("retry")
+                    .setRetrySessionIndex(0)));
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, subPlan, ImmutableMap.of());
@@ -1491,9 +1503,9 @@ public final class SessionRequestHandlerUtilTest {
     setUpForCreateXtsNonTradefedJobs();
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setModuleArgs(ImmutableList.of("module1:venv_path:/path/to/custom/venv"))
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .addAllModuleArgs(ImmutableList.of("module1:venv_path:/path/to/custom/venv"))));
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
@@ -1510,7 +1522,8 @@ public final class SessionRequestHandlerUtilTest {
     setUpForCreateXtsNonTradefedJobs();
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder().setIsAtsServerRequest(true).build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder().setIsAtsServerRequest(true)));
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
@@ -1574,9 +1587,9 @@ public final class SessionRequestHandlerUtilTest {
     setUpForCreateXtsNonTradefedJobs();
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setExcludeRunners(ImmutableSet.of("Driver"))
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .addAllExcludeRunners(ImmutableSet.of("Driver"))));
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
@@ -1589,9 +1602,9 @@ public final class SessionRequestHandlerUtilTest {
     setUpForCreateXtsNonTradefedJobs();
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addXtsModuleInfo(
-            defaultSessionRequestInfoBuilder()
-                .setExcludeRunners(ImmutableSet.of("com.google.Driver"))
-                .build());
+            SessionRequestInfoUtil.buildAndValidate(
+                defaultSessionRequestInfoBuilder()
+                    .addAllExcludeRunners(ImmutableSet.of("com.google.Driver"))));
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
@@ -1611,7 +1624,8 @@ public final class SessionRequestHandlerUtilTest {
                 ImmutableSet.of()));
     setUpForCreateXtsNonTradefedJobs();
     SessionRequestInfo sessionRequestInfo =
-        sessionRequestHandlerUtil.addXtsModuleInfo(defaultSessionRequestInfoBuilder().build());
+        sessionRequestHandlerUtil.addXtsModuleInfo(
+            SessionRequestInfoUtil.buildAndValidate(defaultSessionRequestInfoBuilder()));
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, null, ImmutableMap.of());
@@ -1623,19 +1637,23 @@ public final class SessionRequestHandlerUtilTest {
   public void needTestHarnessPropertyFalse_expected() {
     assertThat(
             SessionRequestHandlerUtil.needTestHarnessPropertyFalse(
-                defaultSessionRequestInfoBuilder().setXtsType("cts").build()))
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder().setXtsType("cts"))))
         .isTrue();
     assertThat(
             SessionRequestHandlerUtil.needTestHarnessPropertyFalse(
-                defaultSessionRequestInfoBuilder().setXtsType("cts-on-gts-on-s").build()))
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder().setXtsType("cts-on-gts-on-s"))))
         .isTrue();
     assertThat(
             SessionRequestHandlerUtil.needTestHarnessPropertyFalse(
-                defaultSessionRequestInfoBuilder().setXtsType("mcts").build()))
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder().setXtsType("mcts"))))
         .isTrue();
     assertThat(
             SessionRequestHandlerUtil.needTestHarnessPropertyFalse(
-                defaultSessionRequestInfoBuilder().setXtsType("gts").build()))
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder().setXtsType("gts"))))
         .isFalse();
   }
 
@@ -1706,10 +1724,10 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void getDeviceInfo_atsServerRequest_waitForDevices() throws Exception {
     SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder()
-            .setIsAtsServerRequest(true)
-            .setDeviceSerials(ImmutableList.of("device_id_1"))
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .setIsAtsServerRequest(true)
+                .addAllDeviceSerials(ImmutableList.of("device_id_1")));
 
     when(atsMasterUtil.queryAndroidDevicesFromMaster())
         .thenReturn(ImmutableList.of()) // First call, no devices

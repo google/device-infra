@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
@@ -311,7 +312,7 @@ public class SessionResultHandlerUtil {
 
       callAndLogException(
           () -> {
-            copyTradefedTestLogFiles(test, logDir, sessionRequestInfo.isAtsServerRequest());
+            copyTradefedTestLogFiles(test, logDir, sessionRequestInfo.getIsAtsServerRequest());
             return null;
           },
           String.format(
@@ -421,11 +422,11 @@ public class SessionResultHandlerUtil {
     if (!tradefedResultBundles.isEmpty()) {
       ParseResult parseResult =
           compatibilityReportMerger.mergeResultBundles(
-              tradefedResultBundles, sessionRequestInfo.skipDeviceInfo().orElse(false));
+              tradefedResultBundles, sessionRequestInfo.getSkipDeviceInfo());
       mergedTradefedReport = parseResult.report();
     }
 
-    boolean skipDeviceInfo = sessionRequestInfo.skipDeviceInfo().orElse(false);
+    boolean skipDeviceInfo = sessionRequestInfo.getSkipDeviceInfo();
     Optional<Result> mergedNonTradefedReport = Optional.empty();
     if (!moblyReportInfos.isEmpty()) {
       mergedNonTradefedReport =
@@ -451,7 +452,7 @@ public class SessionResultHandlerUtil {
             String.valueOf(testReportHasNonTfModule))
         .put(SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE, String.valueOf(testReportHasTfModule));
 
-    boolean isRunRetry = SessionHandlerHelper.isRunRetry(sessionRequestInfo.testPlan());
+    boolean isRunRetry = SessionHandlerHelper.isRunRetry(sessionRequestInfo.getTestPlan());
     if (!isRunRetry && mergedReport.isPresent()) {
       Result.Builder finalReportBuilder = mergedReport.get().toBuilder();
       List<Attribute> attributes =
@@ -461,33 +462,32 @@ public class SessionResultHandlerUtil {
       attributes.add(
           Attribute.newBuilder()
               .setKey(XmlConstants.COMMAND_LINE_ARGS)
-              .setValue(sessionRequestInfo.commandLineArgs())
+              .setValue(sessionRequestInfo.getCommandLineArgs())
               .build());
       finalReportBuilder.clearAttribute().addAllAttribute(attributes);
-      if (!sessionRequestInfo.moduleNames().isEmpty()) {
-        finalReportBuilder.addAllModuleFilter(sessionRequestInfo.moduleNames());
+      if (!sessionRequestInfo.getModuleNamesList().isEmpty()) {
+        finalReportBuilder.addAllModuleFilter(sessionRequestInfo.getModuleNamesList());
       }
-      if (sessionRequestInfo.testName().isPresent()
-          && !sessionRequestInfo.testName().get().isEmpty()) {
-        finalReportBuilder.setTestFilter(sessionRequestInfo.testName().get());
+      if (sessionRequestInfo.hasTestName() && !sessionRequestInfo.getTestName().isEmpty()) {
+        finalReportBuilder.setTestFilter(sessionRequestInfo.getTestName());
       }
       ImmutableSet.Builder<String> includeFilters = ImmutableSet.builder();
       ImmutableSet.Builder<String> excludeFilters = ImmutableSet.builder();
-      if (!sessionRequestInfo.includeFilters().isEmpty()) {
-        includeFilters.addAll(sessionRequestInfo.includeFilters());
+      if (!sessionRequestInfo.getIncludeFiltersList().isEmpty()) {
+        includeFilters.addAll(sessionRequestInfo.getIncludeFiltersList());
       }
-      if (!sessionRequestInfo.excludeFilters().isEmpty()) {
-        excludeFilters.addAll(sessionRequestInfo.excludeFilters());
+      if (!sessionRequestInfo.getExcludeFiltersList().isEmpty()) {
+        excludeFilters.addAll(sessionRequestInfo.getExcludeFiltersList());
       }
-      if (sessionRequestInfo.subPlanName().isPresent()) {
+      if (sessionRequestInfo.hasSubPlanName()) {
         // Add all filters in the sub-plan so these filters are loaded in retry
         Path subPlanPath =
             SessionHandlerHelper.getSubPlanFilePath(
-                Path.of(sessionRequestInfo.xtsRootDir()),
-                sessionRequestInfo.xtsType(),
-                sessionRequestInfo.subPlanNameBackup().isPresent()
-                    ? sessionRequestInfo.subPlanNameBackup().get()
-                    : sessionRequestInfo.subPlanName().get());
+                Path.of(sessionRequestInfo.getXtsRootDir()),
+                sessionRequestInfo.getXtsType(),
+                sessionRequestInfo.hasSubPlanNameBackup()
+                    ? sessionRequestInfo.getSubPlanNameBackup()
+                    : sessionRequestInfo.getSubPlanName());
         logger.atInfo().log("Loading subplan file from %s", subPlanPath);
         SubPlan subPlan = SessionHandlerHelper.loadSubPlan(subPlanPath.toFile());
         includeFilters.addAll(subPlan.getAllIncludeFilters());
@@ -513,8 +513,8 @@ public class SessionResultHandlerUtil {
           userfacingReport,
           resultDir,
           /* testRecord= */ null,
-          /* includeHtmlInZip= */ sessionRequestInfo.htmlInZip(),
-          /* testPlan= */ sessionRequestInfo.testPlan(),
+          /* includeHtmlInZip= */ sessionRequestInfo.getHtmlInZip(),
+          /* testPlan= */ sessionRequestInfo.getTestPlan(),
           testReportProperties.buildOrThrow(),
           extraFilesOrDirsToZip);
     } else if (isRunRetry) {
@@ -522,18 +522,22 @@ public class SessionResultHandlerUtil {
         // If the test report will have TF module but the current session doesn't retry any TF
         // module, need to copy test-record.pb from previous session to the current session.
         ImmutableList<Path> testRecordProtoFiles = ImmutableList.of();
-        if (sessionRequestInfo.retrySessionIndex().isPresent()
-            || sessionRequestInfo.retrySessionResultDirName().isPresent()) {
+        if (sessionRequestInfo.hasRetrySessionIndex()
+            || sessionRequestInfo.hasRetrySessionResultDirName()) {
           testRecordProtoFiles =
               previousResultLoader.getPrevSessionTestRecordProtoFiles(
                   XtsDirUtil.getXtsResultsDir(
-                      Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
-                  sessionRequestInfo.retrySessionIndex().orElse(null),
-                  sessionRequestInfo.retrySessionResultDirName().orElse(null));
+                      Path.of(sessionRequestInfo.getXtsRootDir()), sessionRequestInfo.getXtsType()),
+                  sessionRequestInfo.hasRetrySessionIndex()
+                      ? sessionRequestInfo.getRetrySessionIndex()
+                      : null,
+                  sessionRequestInfo.hasRetrySessionResultDirName()
+                      ? sessionRequestInfo.getRetrySessionResultDirName()
+                      : null);
         } else {
           testRecordProtoFiles =
               previousResultLoader.getPrevSessionTestRecordProtoFiles(
-                  Path.of(sessionRequestInfo.retryResultDir().orElseThrow()));
+                  Path.of(sessionRequestInfo.getRetryResultDir()));
         }
         if (!testRecordProtoFiles.isEmpty()) {
           Path testRecordProtoDir = resultDir.resolve("proto");
@@ -547,32 +551,34 @@ public class SessionResultHandlerUtil {
       Result previousResult = null;
       if (testReportHasNonTfModule
           || !SessionHandlerHelper.useTfRetry(
-              sessionRequestInfo.isAtsServerRequest(),
-              sessionRequestInfo.xtsType(),
-              sessionRequestInfo
-                  .testSuiteInfo()
-                  .map(
-                      testSuiteInfo ->
-                          testSuiteInfo.hasTestSuiteVersion()
-                              ? testSuiteInfo.getTestSuiteVersion()
-                              : null)
-                  .orElse(null))) {
+              sessionRequestInfo.getIsAtsServerRequest(),
+              sessionRequestInfo.getXtsType(),
+              sessionRequestInfo.hasTestSuiteInfo()
+                  ? (sessionRequestInfo.getTestSuiteInfo().hasTestSuiteVersion()
+                      ? sessionRequestInfo.getTestSuiteInfo().getTestSuiteVersion()
+                      : null)
+                  : null)) {
         MergedResult mergedResult =
-            sessionRequestInfo.retrySessionId().isPresent()
+            sessionRequestInfo.hasRetrySessionId()
                 ? retryReportMerger.mergeReports(
-                    Path.of(sessionRequestInfo.retryResultDir().orElseThrow()),
-                    sessionRequestInfo.retrySessionId().get(),
-                    sessionRequestInfo.retryType().orElse(null),
+                    Path.of(sessionRequestInfo.getRetryResultDir()),
+                    sessionRequestInfo.getRetrySessionId(),
+                    sessionRequestInfo.hasRetryType() ? sessionRequestInfo.getRetryType() : null,
                     mergedReport.orElse(null),
-                    sessionRequestInfo.moduleNames())
+                    ImmutableList.copyOf(sessionRequestInfo.getModuleNamesList()))
                 : retryReportMerger.mergeReports(
                     XtsDirUtil.getXtsResultsDir(
-                        Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
-                    sessionRequestInfo.retrySessionIndex().orElse(null),
-                    sessionRequestInfo.retrySessionResultDirName().orElse(null),
-                    sessionRequestInfo.retryType().orElse(null),
+                        Path.of(sessionRequestInfo.getXtsRootDir()),
+                        sessionRequestInfo.getXtsType()),
+                    sessionRequestInfo.hasRetrySessionIndex()
+                        ? sessionRequestInfo.getRetrySessionIndex()
+                        : null,
+                    sessionRequestInfo.hasRetrySessionResultDirName()
+                        ? sessionRequestInfo.getRetrySessionResultDirName()
+                        : null,
+                    sessionRequestInfo.hasRetryType() ? sessionRequestInfo.getRetryType() : null,
                     mergedReport.orElse(null),
-                    sessionRequestInfo.moduleNames());
+                    ImmutableList.copyOf(sessionRequestInfo.getModuleNamesList()));
         finalReport = mergedResult.mergedResult();
         previousResult = mergedResult.previousResult();
       } else {
@@ -618,7 +624,7 @@ public class SessionResultHandlerUtil {
             userfacingReport,
             resultDir,
             /* testRecord= */ null,
-            /* includeHtmlInZip= */ sessionRequestInfo.htmlInZip(),
+            /* includeHtmlInZip= */ sessionRequestInfo.getHtmlInZip(),
             /* testPlan= */ previousTestPlanForRetry,
             testReportProperties.buildOrThrow(),
             extraFilesOrDirsToZip);
@@ -1227,9 +1233,13 @@ public class SessionResultHandlerUtil {
       Path prevResultDir =
           previousResultLoader.getPrevSessionResultDir(
               XtsDirUtil.getXtsResultsDir(
-                  Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
-              sessionRequestInfo.retrySessionIndex().orElse(null),
-              sessionRequestInfo.retrySessionResultDirName().orElse(null));
+                  Path.of(sessionRequestInfo.getXtsRootDir()), sessionRequestInfo.getXtsType()),
+              sessionRequestInfo.hasRetrySessionIndex()
+                  ? sessionRequestInfo.getRetrySessionIndex()
+                  : null,
+              sessionRequestInfo.hasRetrySessionResultDirName()
+                  ? sessionRequestInfo.getRetrySessionResultDirName()
+                  : null);
       try {
         copyRetryFiles(prevResultDir.toString(), resultDir.toString());
       } catch (MobileHarnessException e) {
@@ -1255,9 +1265,9 @@ public class SessionResultHandlerUtil {
   }
 
   private boolean isConsoleRetry(SessionRequestInfo sessionRequestInfo) {
-    return SessionHandlerHelper.isRunRetry(sessionRequestInfo.testPlan())
-        && (sessionRequestInfo.retrySessionIndex().isPresent()
-            || sessionRequestInfo.retrySessionResultDirName().isPresent());
+    return SessionHandlerHelper.isRunRetry(sessionRequestInfo.getTestPlan())
+        && (sessionRequestInfo.hasRetrySessionIndex()
+            || sessionRequestInfo.hasRetrySessionResultDirName());
   }
 
   private void addExtraFilesToResultDir(List<Path> extraFilesOrDirsToZip, TestInfo testInfo)
@@ -1295,16 +1305,13 @@ public class SessionResultHandlerUtil {
       return;
     }
     if (SessionHandlerHelper.useTfRetry(
-        sessionRequestInfo.isAtsServerRequest(),
-        sessionRequestInfo.xtsType(),
-        sessionRequestInfo
-            .testSuiteInfo()
-            .map(
-                testSuiteInfo ->
-                    testSuiteInfo.hasTestSuiteVersion()
-                        ? testSuiteInfo.getTestSuiteVersion()
-                        : null)
-            .orElse(null))) {
+        sessionRequestInfo.getIsAtsServerRequest(),
+        sessionRequestInfo.getXtsType(),
+        sessionRequestInfo.hasTestSuiteInfo()
+            ? (sessionRequestInfo.getTestSuiteInfo().hasTestSuiteVersion()
+                ? sessionRequestInfo.getTestSuiteInfo().getTestSuiteVersion()
+                : null)
+            : null)) {
       // For TF retry, the invocation summary file is generated by TF.
       return;
     }
@@ -1412,7 +1419,7 @@ public class SessionResultHandlerUtil {
   Result preprocessReport(Result report, SessionRequestInfo sessionRequestInfo) {
     Result.Builder resultBuilder = report.toBuilder();
     ImmutableMap<String, CompatibilityReportFormat> moduleReportFormat =
-        sessionRequestInfo.expandedModules().values().stream()
+        sessionRequestInfo.getExpandedModulesMap().values().stream()
             .distinct()
             .map(CompatibilityReportFormat::fromModuleConfig)
             .flatMap(Optional::stream)

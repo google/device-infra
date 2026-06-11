@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.ArgumentMatchers.any;
@@ -44,10 +45,10 @@ import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
-import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.XtsTypeLoader;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
@@ -334,20 +335,38 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
-    assertThat(sessionRequestInfo.testPlan()).isEqualTo("cts-plan");
-    assertThat(sessionRequestInfo.moduleNames()).containsExactly("module1");
-    assertThat(sessionRequestInfo.testName()).hasValue("test1");
+    assertThat(sessionRequestInfo.getTestPlan()).isEqualTo("cts-plan");
+    assertThat(sessionRequestInfo.getModuleNamesList()).containsExactly("module1");
+    assertThat(
+            sessionRequestInfo.hasTestName()
+                ? Optional.of(sessionRequestInfo.getTestName())
+                : Optional.empty())
+        .hasValue("test1");
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     String zipFile = "/path/to/xts/zip/file.zip";
-    assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
-    assertThat(sessionRequestInfo.xtsType()).isEqualTo("cts");
-    assertThat(sessionRequestInfo.androidXtsZip()).hasValue("ats-file-server::" + zipFile);
-    assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
-    assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
-    assertThat(sessionRequestInfo.deviceSerials()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
-    assertThat(sessionRequestInfo.shardCount()).hasValue(2);
-    assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
-    assertThat(sessionRequestInfo.remoteRunnerFilePathPrefix()).hasValue("ats-file-server::");
+    assertThat(sessionRequestInfo.getXtsRootDir()).isEqualTo(xtsRootDir);
+    assertThat(sessionRequestInfo.getXtsType()).isEqualTo("cts");
+    assertThat(
+            sessionRequestInfo.hasAndroidXtsZip()
+                ? Optional.of(sessionRequestInfo.getAndroidXtsZip())
+                : Optional.empty())
+        .hasValue("ats-file-server::" + zipFile);
+    assertThat(toJavaDuration(sessionRequestInfo.getStartTimeout()))
+        .isEqualTo(Duration.ofSeconds(1000));
+    assertThat(toJavaDuration(sessionRequestInfo.getJobTimeout()))
+        .isEqualTo(Duration.ofSeconds(2000));
+    assertThat(sessionRequestInfo.getDeviceSerialsList()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
+    assertThat(
+            sessionRequestInfo.hasShardCount()
+                ? Optional.of(sessionRequestInfo.getShardCount())
+                : Optional.empty())
+        .hasValue(2);
+    assertThat(sessionRequestInfo.getEnvVarsMap()).containsExactly("env_key1", "env_value1");
+    assertThat(
+            sessionRequestInfo.hasRemoteRunnerFilePathPrefix()
+                ? Optional.of(sessionRequestInfo.getRemoteRunnerFilePathPrefix())
+                : Optional.empty())
+        .hasValue("ats-file-server::");
 
     // Verify that handler has mounted the zip file.
     Command mountCommand =
@@ -400,9 +419,13 @@ public final class NewMultiCommandRequestHandlerTest {
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
     String zipFile = "/path/to/xts/zip/android-sts.zip_";
-    assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
-    assertThat(sessionRequestInfo.xtsType()).isEqualTo("sts");
-    assertThat(sessionRequestInfo.androidXtsZip()).hasValue("ats-file-server::" + zipFile);
+    assertThat(sessionRequestInfo.getXtsRootDir()).isEqualTo(xtsRootDir);
+    assertThat(sessionRequestInfo.getXtsType()).isEqualTo("sts");
+    assertThat(
+            sessionRequestInfo.hasAndroidXtsZip()
+                ? Optional.of(sessionRequestInfo.getAndroidXtsZip())
+                : Optional.empty())
+        .hasValue("ats-file-server::" + zipFile);
 
     // Verify that handler has mounted the zip file.
     Command mountCommand =
@@ -448,20 +471,38 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
-    assertThat(sessionRequestInfo.testPlan()).isEqualTo("cts-plan");
-    assertThat(sessionRequestInfo.moduleNames()).containsExactly("module1");
-    assertThat(sessionRequestInfo.testName()).hasValue("test1");
+    assertThat(sessionRequestInfo.getTestPlan()).isEqualTo("cts-plan");
+    assertThat(sessionRequestInfo.getModuleNamesList()).containsExactly("module1");
+    assertThat(
+            sessionRequestInfo.hasTestName()
+                ? Optional.of(sessionRequestInfo.getTestName())
+                : Optional.empty())
+        .hasValue("test1");
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     String zipFile = "/path/to/xts/zip/file.zip";
-    assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
-    assertThat(sessionRequestInfo.xtsType()).isEqualTo("cts");
-    assertThat(sessionRequestInfo.androidXtsZip()).hasValue("ats-file-server::" + zipFile);
-    assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
-    assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
-    assertThat(sessionRequestInfo.deviceSerials()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
-    assertThat(sessionRequestInfo.shardCount()).hasValue(2);
-    assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
-    assertThat(sessionRequestInfo.remoteRunnerFilePathPrefix()).hasValue("ats-file-server::");
+    assertThat(sessionRequestInfo.getXtsRootDir()).isEqualTo(xtsRootDir);
+    assertThat(sessionRequestInfo.getXtsType()).isEqualTo("cts");
+    assertThat(
+            sessionRequestInfo.hasAndroidXtsZip()
+                ? Optional.of(sessionRequestInfo.getAndroidXtsZip())
+                : Optional.empty())
+        .hasValue("ats-file-server::" + zipFile);
+    assertThat(toJavaDuration(sessionRequestInfo.getStartTimeout()))
+        .isEqualTo(Duration.ofSeconds(1000));
+    assertThat(toJavaDuration(sessionRequestInfo.getJobTimeout()))
+        .isEqualTo(Duration.ofSeconds(2000));
+    assertThat(sessionRequestInfo.getDeviceSerialsList()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
+    assertThat(
+            sessionRequestInfo.hasShardCount()
+                ? Optional.of(sessionRequestInfo.getShardCount())
+                : Optional.empty())
+        .hasValue(2);
+    assertThat(sessionRequestInfo.getEnvVarsMap()).containsExactly("env_key1", "env_value1");
+    assertThat(
+            sessionRequestInfo.hasRemoteRunnerFilePathPrefix()
+                ? Optional.of(sessionRequestInfo.getRemoteRunnerFilePathPrefix())
+                : Optional.empty())
+        .hasValue("ats-file-server::");
 
     // Verify that handler has mounted the zip file.
     Command mountCommand =
@@ -503,20 +544,38 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
-    assertThat(sessionRequestInfo.testPlan()).isEqualTo("cts-plan");
-    assertThat(sessionRequestInfo.moduleNames()).containsExactly("module1");
-    assertThat(sessionRequestInfo.testName()).hasValue("test1");
+    assertThat(sessionRequestInfo.getTestPlan()).isEqualTo("cts-plan");
+    assertThat(sessionRequestInfo.getModuleNamesList()).containsExactly("module1");
+    assertThat(
+            sessionRequestInfo.hasTestName()
+                ? Optional.of(sessionRequestInfo.getTestName())
+                : Optional.empty())
+        .hasValue("test1");
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     String zipFile = "/path/to/xts/zip/file.zip";
-    assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
-    assertThat(sessionRequestInfo.xtsType()).isEqualTo("cts");
-    assertThat(sessionRequestInfo.androidXtsZip()).hasValue("ats-file-server::" + zipFile);
-    assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
-    assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
-    assertThat(sessionRequestInfo.deviceSerials()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
-    assertThat(sessionRequestInfo.shardCount()).hasValue(2);
-    assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
-    assertThat(sessionRequestInfo.remoteRunnerFilePathPrefix()).hasValue("ats-file-server::");
+    assertThat(sessionRequestInfo.getXtsRootDir()).isEqualTo(xtsRootDir);
+    assertThat(sessionRequestInfo.getXtsType()).isEqualTo("cts");
+    assertThat(
+            sessionRequestInfo.hasAndroidXtsZip()
+                ? Optional.of(sessionRequestInfo.getAndroidXtsZip())
+                : Optional.empty())
+        .hasValue("ats-file-server::" + zipFile);
+    assertThat(toJavaDuration(sessionRequestInfo.getStartTimeout()))
+        .isEqualTo(Duration.ofSeconds(1000));
+    assertThat(toJavaDuration(sessionRequestInfo.getJobTimeout()))
+        .isEqualTo(Duration.ofSeconds(2000));
+    assertThat(sessionRequestInfo.getDeviceSerialsList()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
+    assertThat(
+            sessionRequestInfo.hasShardCount()
+                ? Optional.of(sessionRequestInfo.getShardCount())
+                : Optional.empty())
+        .hasValue(2);
+    assertThat(sessionRequestInfo.getEnvVarsMap()).containsExactly("env_key1", "env_value1");
+    assertThat(
+            sessionRequestInfo.hasRemoteRunnerFilePathPrefix()
+                ? Optional.of(sessionRequestInfo.getRemoteRunnerFilePathPrefix())
+                : Optional.empty())
+        .hasValue("ats-file-server::");
 
     // Verify that handler has unzipped the zip file.
     verify(localFileUtil).unzipFile(zipFile, xtsRootDir, Duration.ofHours(1), "");
@@ -608,20 +667,34 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
-    assertThat(sessionRequestInfo.testPlan()).isEqualTo("retry");
+    assertThat(sessionRequestInfo.getTestPlan()).isEqualTo("retry");
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     String zipFile = "/path/to/xts/zip/file.zip";
-    assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
-    assertThat(sessionRequestInfo.xtsType()).isEqualTo("cts");
-    assertThat(sessionRequestInfo.androidXtsZip()).hasValue("ats-file-server::" + zipFile);
-    assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
-    assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
-    assertThat(sessionRequestInfo.deviceSerials()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
-    assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
-    assertThat(sessionRequestInfo.retrySessionId()).hasValue(prevSessionId);
+    assertThat(sessionRequestInfo.getXtsRootDir()).isEqualTo(xtsRootDir);
+    assertThat(sessionRequestInfo.getXtsType()).isEqualTo("cts");
+    assertThat(
+            sessionRequestInfo.hasAndroidXtsZip()
+                ? Optional.of(sessionRequestInfo.getAndroidXtsZip())
+                : Optional.empty())
+        .hasValue("ats-file-server::" + zipFile);
+    assertThat(toJavaDuration(sessionRequestInfo.getStartTimeout()))
+        .isEqualTo(Duration.ofSeconds(1000));
+    assertThat(toJavaDuration(sessionRequestInfo.getJobTimeout()))
+        .isEqualTo(Duration.ofSeconds(2000));
+    assertThat(sessionRequestInfo.getDeviceSerialsList()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
+    assertThat(sessionRequestInfo.getEnvVarsMap()).containsExactly("env_key1", "env_value1");
+    assertThat(
+            sessionRequestInfo.hasRetrySessionId()
+                ? Optional.of(sessionRequestInfo.getRetrySessionId())
+                : Optional.empty())
+        .hasValue(prevSessionId);
     String retryResultDir =
         "/path/retry_previous_test_run_id/output/" + prevSessionId + "/" + expectedCommandId;
-    assertThat(sessionRequestInfo.retryResultDir()).hasValue(retryResultDir);
+    assertThat(
+            sessionRequestInfo.hasRetryResultDir()
+                ? Optional.of(sessionRequestInfo.getRetryResultDir())
+                : Optional.empty())
+        .hasValue(retryResultDir);
 
     // Verify that handler has mounted the zip file.
     Command mountCommand =
@@ -676,8 +749,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
-    assertThat(sessionRequestInfo.testPlan()).isEqualTo("retry");
-    assertThat(sessionRequestInfo.commandLineArgs()).isEqualTo(retryCommandLine);
+    assertThat(sessionRequestInfo.getTestPlan()).isEqualTo("retry");
+    assertThat(sessionRequestInfo.getCommandLineArgs()).isEqualTo(retryCommandLine);
   }
 
   @Test
@@ -729,21 +802,43 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
-    assertThat(sessionRequestInfo.testPlan()).isEqualTo("cts-plan");
-    assertThat(sessionRequestInfo.moduleNames()).containsExactly("module1");
-    assertThat(sessionRequestInfo.testName()).hasValue("test1");
+    assertThat(sessionRequestInfo.getTestPlan()).isEqualTo("cts-plan");
+    assertThat(sessionRequestInfo.getModuleNamesList()).containsExactly("module1");
+    assertThat(
+            sessionRequestInfo.hasTestName()
+                ? Optional.of(sessionRequestInfo.getTestName())
+                : Optional.empty())
+        .hasValue("test1");
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     String zipFile = "/path/to/xts/zip/file.zip";
-    assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
-    assertThat(sessionRequestInfo.xtsType()).isEqualTo("cts");
-    assertThat(sessionRequestInfo.androidXtsZip()).hasValue("ats-file-server::" + zipFile);
-    assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
-    assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
-    assertThat(sessionRequestInfo.deviceSerials()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
-    assertThat(sessionRequestInfo.shardCount()).hasValue(2);
-    assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
-    assertThat(sessionRequestInfo.retrySessionId()).isEmpty();
-    assertThat(sessionRequestInfo.retryResultDir()).isEmpty();
+    assertThat(sessionRequestInfo.getXtsRootDir()).isEqualTo(xtsRootDir);
+    assertThat(sessionRequestInfo.getXtsType()).isEqualTo("cts");
+    assertThat(
+            sessionRequestInfo.hasAndroidXtsZip()
+                ? Optional.of(sessionRequestInfo.getAndroidXtsZip())
+                : Optional.empty())
+        .hasValue("ats-file-server::" + zipFile);
+    assertThat(toJavaDuration(sessionRequestInfo.getStartTimeout()))
+        .isEqualTo(Duration.ofSeconds(1000));
+    assertThat(toJavaDuration(sessionRequestInfo.getJobTimeout()))
+        .isEqualTo(Duration.ofSeconds(2000));
+    assertThat(sessionRequestInfo.getDeviceSerialsList()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
+    assertThat(
+            sessionRequestInfo.hasShardCount()
+                ? Optional.of(sessionRequestInfo.getShardCount())
+                : Optional.empty())
+        .hasValue(2);
+    assertThat(sessionRequestInfo.getEnvVarsMap()).containsExactly("env_key1", "env_value1");
+    assertThat(
+            sessionRequestInfo.hasRetrySessionId()
+                ? Optional.of(sessionRequestInfo.getRetrySessionId())
+                : Optional.empty())
+        .isEmpty();
+    assertThat(
+            sessionRequestInfo.hasRetryResultDir()
+                ? Optional.of(sessionRequestInfo.getRetryResultDir())
+                : Optional.empty())
+        .isEmpty();
     // Verify that handler has mounted the zip file.
     Command mountCommand =
         Command.of("fuse-zip", "-r", zipFile, xtsRootDir).timeout(Duration.ofMinutes(10));
@@ -788,10 +883,22 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
-    assertThat(sessionRequestInfo.testPlan()).isEqualTo("retry");
-    assertThat(sessionRequestInfo.retrySessionId()).isPresent();
-    assertThat(sessionRequestInfo.retrySessionId().get()).isNotEmpty();
-    assertThat(sessionRequestInfo.retryResultDir()).isPresent();
+    assertThat(sessionRequestInfo.getTestPlan()).isEqualTo("retry");
+    assertThat(
+            sessionRequestInfo.hasRetrySessionId()
+                ? Optional.of(sessionRequestInfo.getRetrySessionId())
+                : Optional.empty())
+        .isPresent();
+    assertThat(
+            sessionRequestInfo.hasRetrySessionId()
+                ? Optional.of(sessionRequestInfo.getRetrySessionId())
+                : Optional.empty())
+        .hasValue(sessionRequestInfo.getRetrySessionId());
+    assertThat(
+            sessionRequestInfo.hasRetryResultDir()
+                ? Optional.of(sessionRequestInfo.getRetryResultDir())
+                : Optional.empty())
+        .isPresent();
     verify(localFileUtil).unzipFile(anyString(), anyString(), any(Duration.class));
   }
 
@@ -823,9 +930,17 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
-    assertThat(sessionRequestInfo.testPlan()).isEqualTo("cts-plan");
-    assertThat(sessionRequestInfo.retrySessionId()).isEmpty();
-    assertThat(sessionRequestInfo.retryResultDir()).isEmpty();
+    assertThat(sessionRequestInfo.getTestPlan()).isEqualTo("cts-plan");
+    assertThat(
+            sessionRequestInfo.hasRetrySessionId()
+                ? Optional.of(sessionRequestInfo.getRetrySessionId())
+                : Optional.empty())
+        .isEmpty();
+    assertThat(
+            sessionRequestInfo.hasRetryResultDir()
+                ? Optional.of(sessionRequestInfo.getRetryResultDir())
+                : Optional.empty())
+        .isEmpty();
   }
 
   @Test
@@ -869,10 +984,18 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Verify sessionRequestInfo indicates it's NOT a retry.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
-    assertThat(sessionRequestInfo.testPlan())
+    assertThat(sessionRequestInfo.getTestPlan())
         .isEqualTo("cts-plan"); // Should revert to original plan
-    assertThat(sessionRequestInfo.retrySessionId()).isEmpty();
-    assertThat(sessionRequestInfo.retryResultDir()).isEmpty();
+    assertThat(
+            sessionRequestInfo.hasRetrySessionId()
+                ? Optional.of(sessionRequestInfo.getRetrySessionId())
+                : Optional.empty())
+        .isEmpty();
+    assertThat(
+            sessionRequestInfo.hasRetryResultDir()
+                ? Optional.of(sessionRequestInfo.getRetryResultDir())
+                : Optional.empty())
+        .isEmpty();
 
     // Verify that unzip was called.
     verify(localFileUtil).unzipFile(anyString(), anyString(), any(Duration.class));
@@ -926,23 +1049,45 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
-    assertThat(sessionRequestInfo.testPlan()).isEqualTo("retry");
-    assertThat(sessionRequestInfo.moduleNames()).containsExactly("module1");
-    assertThat(sessionRequestInfo.testName()).hasValue("test1");
+    assertThat(sessionRequestInfo.getTestPlan()).isEqualTo("retry");
+    assertThat(sessionRequestInfo.getModuleNamesList()).containsExactly("module1");
+    assertThat(
+            sessionRequestInfo.hasTestName()
+                ? Optional.of(sessionRequestInfo.getTestName())
+                : Optional.empty())
+        .hasValue("test1");
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     String zipFile = "/path/to/xts/zip/file.zip";
-    assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
-    assertThat(sessionRequestInfo.xtsType()).isEqualTo("cts");
-    assertThat(sessionRequestInfo.androidXtsZip()).hasValue("ats-file-server::" + zipFile);
-    assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
-    assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
-    assertThat(sessionRequestInfo.deviceSerials()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
-    assertThat(sessionRequestInfo.shardCount()).hasValue(2);
-    assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
-    assertThat(sessionRequestInfo.retrySessionId()).hasValue(prevSessionId);
+    assertThat(sessionRequestInfo.getXtsRootDir()).isEqualTo(xtsRootDir);
+    assertThat(sessionRequestInfo.getXtsType()).isEqualTo("cts");
+    assertThat(
+            sessionRequestInfo.hasAndroidXtsZip()
+                ? Optional.of(sessionRequestInfo.getAndroidXtsZip())
+                : Optional.empty())
+        .hasValue("ats-file-server::" + zipFile);
+    assertThat(toJavaDuration(sessionRequestInfo.getStartTimeout()))
+        .isEqualTo(Duration.ofSeconds(1000));
+    assertThat(toJavaDuration(sessionRequestInfo.getJobTimeout()))
+        .isEqualTo(Duration.ofSeconds(2000));
+    assertThat(sessionRequestInfo.getDeviceSerialsList()).containsExactly(DEVICE_ID_1, DEVICE_ID_2);
+    assertThat(
+            sessionRequestInfo.hasShardCount()
+                ? Optional.of(sessionRequestInfo.getShardCount())
+                : Optional.empty())
+        .hasValue(2);
+    assertThat(sessionRequestInfo.getEnvVarsMap()).containsExactly("env_key1", "env_value1");
+    assertThat(
+            sessionRequestInfo.hasRetrySessionId()
+                ? Optional.of(sessionRequestInfo.getRetrySessionId())
+                : Optional.empty())
+        .hasValue(prevSessionId);
     String retryResultDir =
         "/path/retry_previous_test_run_id/output/" + prevSessionId + "/" + commandId;
-    assertThat(sessionRequestInfo.retryResultDir()).hasValue(retryResultDir);
+    assertThat(
+            sessionRequestInfo.hasRetryResultDir()
+                ? Optional.of(sessionRequestInfo.getRetryResultDir())
+                : Optional.empty())
+        .hasValue(retryResultDir);
 
     // Verify that handler has mounted the zip file.
     Command mountCommand =

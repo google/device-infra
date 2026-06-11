@@ -56,6 +56,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Job.AllocationExitStrategy;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser.TestPlanFilter;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.DeviceInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
@@ -222,18 +223,19 @@ public class SessionRequestHandlerUtil {
 
     // ATS UI solely rely on user handpicked devices, and don't need CLI param
     // to filter devices. In the future, will use MH native dimensions for advanced filtering.
-    if (sessionRequestInfo.isAtsServerRequest()) {
+    if (sessionRequestInfo.getIsAtsServerRequest()) {
       return getSubDeviceSpecListForAtsServerRequest(sessionRequestInfo);
     }
 
-    String testPlan = sessionRequestInfo.testPlan();
-    String xtsType = sessionRequestInfo.xtsType();
-    int requestedShardCount = sessionRequestInfo.shardCount().orElse(0);
+    String testPlan = sessionRequestInfo.getTestPlan();
+    String xtsType = sessionRequestInfo.getXtsType();
+    int requestedShardCount =
+        sessionRequestInfo.hasShardCount() ? sessionRequestInfo.getShardCount() : 0;
     int minDeviceCount = testPlan.matches(xtsType + "-multi-?device") ? 2 : 1;
     int shardCount = max(requestedShardCount, minDeviceCount);
     ImmutableSet<DeviceDetails> availableDevices =
         localDeviceUtil.getLocalAvailableDevices(sessionRequestInfo);
-    if (sessionRequestInfo.deviceSerials().isEmpty()) {
+    if (sessionRequestInfo.getDeviceSerialsList().isEmpty()) {
       return pickAndroidOnlineDevices(
           sessionRequestInfo,
           availableDevices.stream().map(DeviceDetails::id).collect(toImmutableSet()),
@@ -254,7 +256,7 @@ public class SessionRequestHandlerUtil {
 
   private ImmutableList<SubDeviceSpec> getSubDeviceSpecListForAtsServerRequest(
       SessionRequestInfo sessionRequestInfo) throws MobileHarnessException, InterruptedException {
-    if (sessionRequestInfo.deviceSerials().isEmpty()) {
+    if (sessionRequestInfo.getDeviceSerialsList().isEmpty()) {
       throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.OLCS_NO_AVAILABLE_DEVICE,
           "Device serials are required for ATS server requests.",
@@ -279,7 +281,8 @@ public class SessionRequestHandlerUtil {
                   Name.UUID.lowerCaseName(),
                   String.format(
                       "%s(%s)",
-                      Value.PREFIX_REGEX, Joiner.on('|').join(sessionRequestInfo.deviceSerials())))
+                      Value.PREFIX_REGEX,
+                      Joiner.on('|').join(sessionRequestInfo.getDeviceSerialsList())))
               .putAllContent(extraDimensions)
               .build();
       return ImmutableList.of(
@@ -289,10 +292,10 @@ public class SessionRequestHandlerUtil {
               .build());
     } else {
 
-      Stream<String> deviceSerials = sessionRequestInfo.deviceSerials().stream();
+      Stream<String> deviceSerials = sessionRequestInfo.getDeviceSerialsList().stream();
       // TODO: replace the allowPartialDeviceMatch with a enum for more device match
       // strategy.
-      if (sessionRequestInfo.allowPartialDeviceMatch()) {
+      if (sessionRequestInfo.getAllowPartialDeviceMatch()) {
         ImmutableList<
                 com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo>
             allOnlineAndroidDevices = atsMasterUtil.queryAndroidDevicesFromMaster();
@@ -360,7 +363,8 @@ public class SessionRequestHandlerUtil {
    */
   private void waitForRequestedDevicesToBeReady(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
-    ImmutableSet<String> requestedSerials = ImmutableSet.copyOf(sessionRequestInfo.deviceSerials());
+    ImmutableSet<String> requestedSerials =
+        ImmutableSet.copyOf(sessionRequestInfo.getDeviceSerialsList());
     Set<String> missingSerials = new HashSet<>(requestedSerials);
     int attempt = 0;
 
@@ -424,7 +428,7 @@ public class SessionRequestHandlerUtil {
     if (Flags.atsRunTfOnAndroidRealDevice.getNonNull()) {
       return ANDROID_REAL_DEVICE_TYPE;
     }
-    return info.deviceType().orElse(ANDROID_DEVICE_TYPE);
+    return info.hasDeviceType() ? info.getDeviceType() : ANDROID_DEVICE_TYPE;
   }
 
   public JobInfo createXtsTradefedTestJob(
@@ -452,12 +456,17 @@ public class SessionRequestHandlerUtil {
 
   public static Optional<String> urlForWorkerResolve(SessionRequestInfo sessionRequestInfo) {
     if (Flags.transferResourcesFromController.getNonNull()) {
-      return sessionRequestInfo.androidXtsZip(); // Local url in controller.
+      return sessionRequestInfo.hasAndroidXtsZip()
+          ? Optional.of(sessionRequestInfo.getAndroidXtsZip())
+          : Optional.empty(); // Local url in controller.
     } else {
-      return sessionRequestInfo
-          .androidXtsZipDownloadUrl() // Remote download url.
-          .filter(url -> isDownloadUrlSupported(url))
-          .or(() -> sessionRequestInfo.androidXtsZip());
+      if (sessionRequestInfo.hasAndroidXtsZipDownloadUrl()
+          && isDownloadUrlSupported(sessionRequestInfo.getAndroidXtsZipDownloadUrl())) {
+        return Optional.of(sessionRequestInfo.getAndroidXtsZipDownloadUrl());
+      }
+      return sessionRequestInfo.hasAndroidXtsZip()
+          ? Optional.of(sessionRequestInfo.getAndroidXtsZip())
+          : Optional.empty();
     }
   }
 
@@ -475,13 +484,13 @@ public class SessionRequestHandlerUtil {
 
   /** Gets all local tradefed modules which doesn't include the mcts modules. */
   public ImmutableSet<String> getAllLocalTradefedModules(SessionRequestInfo sessionRequestInfo) {
-    Path xtsRootDir = Path.of(sessionRequestInfo.xtsRootDir());
+    Path xtsRootDir = Path.of(sessionRequestInfo.getXtsRootDir());
     if (!localFileUtil.isDirExist(xtsRootDir)) {
       logger.atInfo().log(
           "xTS root dir [%s] doesn't exist, skip getting all TF modules.", xtsRootDir);
       return ImmutableSet.of();
     }
-    String xtsType = sessionRequestInfo.xtsType();
+    String xtsType = sessionRequestInfo.getXtsType();
     ImmutableMap<String, Configuration> configsMap =
         configurationUtil.getConfigsFromDirs(
             ImmutableList.of(XtsDirUtil.getXtsTestCasesDir(xtsRootDir, xtsType).toFile()));
@@ -522,7 +531,7 @@ public class SessionRequestHandlerUtil {
    */
   public ImmutableList<String> getFilteredTradefedModules(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException {
-    Path xtsRootDir = Path.of(sessionRequestInfo.xtsRootDir());
+    Path xtsRootDir = Path.of(sessionRequestInfo.getXtsRootDir());
     if (!localFileUtil.isDirExist(xtsRootDir)) {
       throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.OLCS_INEXISTENT_XTS_ROOT_DIR,
@@ -537,22 +546,20 @@ public class SessionRequestHandlerUtil {
 
     // For "run retry" command handled by TF, consider the module filter as include filter.
     boolean isTfRetryWithModules =
-        SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan())
+        SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.getTestPlan())
             && SessionHandlerHelper.useTfRetry(
-                sessionRequestInfo.isAtsServerRequest(),
-                sessionRequestInfo.xtsType(),
-                sessionRequestInfo
-                    .testSuiteInfo()
-                    .map(
-                        testSuiteInfo ->
-                            testSuiteInfo.hasTestSuiteVersion()
-                                ? testSuiteInfo.getTestSuiteVersion()
-                                : null)
-                    .orElse(null))
-            && !sessionRequestInfo.moduleNames().isEmpty();
+                sessionRequestInfo.getIsAtsServerRequest(),
+                sessionRequestInfo.getXtsType(),
+                sessionRequestInfo.hasTestSuiteInfo()
+                        && sessionRequestInfo.getTestSuiteInfo().hasTestSuiteVersion()
+                    ? sessionRequestInfo.getTestSuiteInfo().getTestSuiteVersion()
+                    : null)
+            && !sessionRequestInfo.getModuleNamesList().isEmpty();
 
     ImmutableList<String> modules =
-        isTfRetryWithModules ? ImmutableList.of() : sessionRequestInfo.moduleNames();
+        isTfRetryWithModules
+            ? ImmutableList.of()
+            : ImmutableList.copyOf(sessionRequestInfo.getModuleNamesList());
     ImmutableSet<String> givenMatchedTfModules =
         modules.isEmpty() ? allTfModules : matchModules(modules, allTfModules);
 
@@ -560,20 +567,20 @@ public class SessionRequestHandlerUtil {
     // For "run with strict include filters" (--strict-include-filter set), the include filters
     // and exclude filters will be ignored.
     ImmutableList<SuiteTestFilter> includeFilters =
-        sessionRequestInfo.strictIncludeFilters().isEmpty()
+        sessionRequestInfo.getStrictIncludeFiltersList().isEmpty()
             ? Stream.concat(
-                    sessionRequestInfo.includeFilters().stream(),
+                    sessionRequestInfo.getIncludeFiltersList().stream(),
                     isTfRetryWithModules
-                        ? sessionRequestInfo.moduleNames().stream()
+                        ? sessionRequestInfo.getModuleNamesList().stream()
                         : Stream.empty())
                 .map(SuiteTestFilter::create)
                 .collect(toImmutableList())
-            : sessionRequestInfo.strictIncludeFilters().stream()
+            : sessionRequestInfo.getStrictIncludeFiltersList().stream()
                 .map(SuiteTestFilter::create)
                 .collect(toImmutableList());
     ImmutableList<SuiteTestFilter> excludeFilters =
-        sessionRequestInfo.strictIncludeFilters().isEmpty()
-            ? sessionRequestInfo.excludeFilters().stream()
+        sessionRequestInfo.getStrictIncludeFiltersList().isEmpty()
+            ? sessionRequestInfo.getExcludeFiltersList().stream()
                 .map(SuiteTestFilter::create)
                 .collect(toImmutableList())
             : ImmutableList.of();
@@ -610,8 +617,8 @@ public class SessionRequestHandlerUtil {
       ImmutableList<SubDeviceSpec> subDeviceSpecList,
       ImmutableMultimap<String, String> jobFiles)
       throws InterruptedException, MobileHarnessException {
-    String testPlan = sessionRequestInfo.testPlan();
-    String xtsType = sessionRequestInfo.xtsType();
+    String testPlan = sessionRequestInfo.getTestPlan();
+    String xtsType = sessionRequestInfo.getXtsType();
 
     // TODO: migrate multi-device tests to non-TF
     int minDeviceCount = testPlan.matches(xtsType + "-multi-?device") ? 2 : 1;
@@ -623,14 +630,20 @@ public class SessionRequestHandlerUtil {
     }
 
     Duration jobTimeout =
-        sessionRequestInfo.jobTimeout().isZero()
+        (sessionRequestInfo.getJobTimeout().getSeconds() == 0
+                && sessionRequestInfo.getJobTimeout().getNanos() == 0)
             ? DEFAULT_TRADEFED_JOB_TIMEOUT
-            : sessionRequestInfo.jobTimeout();
+            : Duration.ofSeconds(
+                sessionRequestInfo.getJobTimeout().getSeconds(),
+                sessionRequestInfo.getJobTimeout().getNanos());
     Duration testTimeout = calculateTestTimeout(jobTimeout);
     Duration startTimeout =
-        sessionRequestInfo.startTimeout().isZero()
+        (sessionRequestInfo.getStartTimeout().getSeconds() == 0
+                && sessionRequestInfo.getStartTimeout().getNanos() == 0)
             ? DEFAULT_TRADEFED_START_TIMEOUT
-            : sessionRequestInfo.startTimeout();
+            : Duration.ofSeconds(
+                sessionRequestInfo.getStartTimeout().getSeconds(),
+                sessionRequestInfo.getStartTimeout().getNanos());
 
     String name = "xts-tradefed-test-job";
     Path jobGenDir = createJobGenDir(name);
@@ -679,42 +692,50 @@ public class SessionRequestHandlerUtil {
       throws MobileHarnessException, InterruptedException {
     SessionRequestInfo.Builder updatedSessionRequestInfo = sessionRequestInfo.toBuilder();
 
-    Path xtsRootDir = Path.of(sessionRequestInfo.xtsRootDir());
+    Path xtsRootDir = Path.of(sessionRequestInfo.getXtsRootDir());
     if (!localFileUtil.isDirExist(xtsRootDir)) {
       logger.atInfo().log(
           "xTS root dir [%s] doesn't exist, skip creating non-tradefed jobs.", xtsRootDir);
-      return updatedSessionRequestInfo.build();
+      return SessionRequestInfoUtil.buildAndValidate(updatedSessionRequestInfo);
     }
 
-    String xtsType = sessionRequestInfo.xtsType();
+    String xtsType = sessionRequestInfo.getXtsType();
     ImmutableMap<String, Configuration> configsMap =
         configurationUtil.getConfigsV2FromDirs(
             ImmutableList.of(XtsDirUtil.getXtsTestCasesDir(xtsRootDir, xtsType).toFile()));
-    updatedSessionRequestInfo.setV2ConfigsMap(configsMap);
+    updatedSessionRequestInfo.clearV2ConfigsMap().putAllV2ConfigsMap(configsMap);
 
     // Gets expanded modules with abi and module parameters (if any).
     TestSuiteHelper testSuiteHelper =
         getTestSuiteHelper(xtsRootDir.toString(), xtsType, sessionRequestInfo);
-    updatedSessionRequestInfo.setExpandedModules(
-        ImmutableMap.copyOf(
-            testSuiteHelper.loadTests(sessionRequestInfo.deviceInfo().orElse(null))));
+    updatedSessionRequestInfo
+        .clearExpandedModules()
+        .putAllExpandedModules(
+            ImmutableMap.copyOf(
+                testSuiteHelper.loadTests(
+                    sessionRequestInfo.hasDeviceInfo()
+                        ? sessionRequestInfo.getDeviceInfo()
+                        : null)));
 
-    ImmutableList<String> modules = sessionRequestInfo.moduleNames();
+    ImmutableList<String> modules = ImmutableList.copyOf(sessionRequestInfo.getModuleNamesList());
     ImmutableSet<String> allNonTfModules = getNonTfModules(configsMap);
-    updatedSessionRequestInfo.setGivenMatchedNonTfModules(matchModules(modules, allNonTfModules));
-    return updatedSessionRequestInfo.build();
+    updatedSessionRequestInfo
+        .clearGivenMatchedNonTfModules()
+        .addAllGivenMatchedNonTfModules(matchModules(modules, allNonTfModules));
+    return SessionRequestInfoUtil.buildAndValidate(updatedSessionRequestInfo);
   }
 
   public static boolean shouldEnableModuleSharding(SessionRequestInfo sessionRequestInfo) {
-    return sessionRequestInfo.shardingMode().equals(ShardingMode.MODULE)
-        && sessionRequestInfo.testName().isEmpty()
-        && !SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan());
+    return sessionRequestInfo.getShardingMode().equals(ShardingMode.MODULE)
+        && sessionRequestInfo.getTestName().isEmpty()
+        && !SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.getTestPlan());
   }
 
   public Optional<DeviceInfo> getDeviceInfo(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
     // TODO: Wait when session is just started.
-    if (sessionRequestInfo.isAtsServerRequest() && !sessionRequestInfo.deviceSerials().isEmpty()) {
+    if (sessionRequestInfo.getIsAtsServerRequest()
+        && !sessionRequestInfo.getDeviceSerialsList().isEmpty()) {
       waitForRequestedDevicesToBeReady(sessionRequestInfo);
     }
     Optional<DeviceInfo> deviceInfo =
@@ -739,10 +760,12 @@ public class SessionRequestHandlerUtil {
                                 DeviceStatus.IDLE.name())) // in healthy state.
                 .filter(
                     deviceInfo -> {
-                      if (sessionRequestInfo.deviceSerials().isEmpty()) {
+                      if (sessionRequestInfo.getDeviceSerialsList().isEmpty()) {
                         return true;
                       } else {
-                        return sessionRequestInfo.deviceSerials().contains(deviceInfo.getId());
+                        return sessionRequestInfo
+                            .getDeviceSerialsList()
+                            .contains(deviceInfo.getId());
                       }
                     })
                 .findFirst();
@@ -794,11 +817,11 @@ public class SessionRequestHandlerUtil {
    * @return true if non-tradefed jobs can be created.
    */
   public boolean canCreateNonTradefedJobs(SessionRequestInfo sessionRequestInfo) {
-    if (isRunRetry(sessionRequestInfo.testPlan())) {
+    if (isRunRetry(sessionRequestInfo.getTestPlan())) {
       return true;
     }
-    return sessionRequestInfo.moduleNames().isEmpty()
-        || !sessionRequestInfo.givenMatchedNonTfModules().isEmpty();
+    return sessionRequestInfo.getModuleNamesList().isEmpty()
+        || !sessionRequestInfo.getGivenMatchedNonTfModulesList().isEmpty();
   }
 
   /**
@@ -811,12 +834,14 @@ public class SessionRequestHandlerUtil {
       @Nullable SubPlan subPlan,
       Map<XtsPropertyName, String> extraJobProperties)
       throws MobileHarnessException, InterruptedException {
-    ImmutableSet<String> givenMatchedNonTfModules = sessionRequestInfo.givenMatchedNonTfModules();
+    ImmutableSet<String> givenMatchedNonTfModules =
+        ImmutableSet.copyOf(sessionRequestInfo.getGivenMatchedNonTfModulesList());
     ImmutableList.Builder<JobInfo> jobInfos = ImmutableList.builder();
 
     ImmutableSet<String> availableDeviceSerials;
-    if (sessionRequestInfo.isAtsServerRequest() && !sessionRequestInfo.deviceSerials().isEmpty()) {
-      availableDeviceSerials = ImmutableSet.copyOf(sessionRequestInfo.deviceSerials());
+    if (sessionRequestInfo.getIsAtsServerRequest()
+        && !sessionRequestInfo.getDeviceSerialsList().isEmpty()) {
+      availableDeviceSerials = ImmutableSet.copyOf(sessionRequestInfo.getDeviceSerialsList());
     } else {
       availableDeviceSerials =
           localDeviceUtil.getLocalAvailableDevices(sessionRequestInfo).stream()
@@ -830,16 +855,16 @@ public class SessionRequestHandlerUtil {
                 "%s(%s)", Value.PREFIX_REGEX, Joiner.on('|').join(availableDeviceSerials));
 
     ImmutableMap<String, String> moduleNameToConfigFilePathMap =
-        sessionRequestInfo.v2ConfigsMap().entrySet().stream()
+        sessionRequestInfo.getV2ConfigsMapMap().entrySet().stream()
             .collect(toImmutableMap(e -> e.getValue().getMetadata().getXtsModule(), Entry::getKey));
 
     String testPlan =
-        (SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan()) && subPlan != null)
+        (SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.getTestPlan()) && subPlan != null)
             ? subPlan.getPreviousSessionXtsTestPlan()
-            : sessionRequestInfo.testPlan();
+            : sessionRequestInfo.getTestPlan();
     TestPlanFilter testPlanFilter =
         testPlanParser.parseFilters(
-            Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType(), testPlan);
+            Path.of(sessionRequestInfo.getXtsRootDir()), sessionRequestInfo.getXtsType(), testPlan);
 
     if (!testPlanFilter.tests().contains(COMPATIBILITY_TEST_SUITE_CLASS_NAME)) {
       logger
@@ -855,13 +880,13 @@ public class SessionRequestHandlerUtil {
     ImmutableList<SuiteTestFilter> includeFilters;
     if (subPlan == null) {
       includeFilters =
-          sessionRequestInfo.strictIncludeFilters().isEmpty()
+          sessionRequestInfo.getStrictIncludeFiltersList().isEmpty()
               ? Stream.concat(
-                      sessionRequestInfo.includeFilters().stream(),
+                      sessionRequestInfo.getIncludeFiltersList().stream(),
                       testPlanFilter.includeFilters().stream())
                   .map(SuiteTestFilter::create)
                   .collect(toImmutableList())
-              : sessionRequestInfo.strictIncludeFilters().stream()
+              : sessionRequestInfo.getStrictIncludeFiltersList().stream()
                   .map(SuiteTestFilter::create)
                   .collect(toImmutableList());
     } else {
@@ -879,9 +904,9 @@ public class SessionRequestHandlerUtil {
     }
 
     ImmutableList<SuiteTestFilter> excludeFilters =
-        sessionRequestInfo.strictIncludeFilters().isEmpty()
+        sessionRequestInfo.getStrictIncludeFiltersList().isEmpty()
             ? Stream.concat(
-                    sessionRequestInfo.excludeFilters().stream(),
+                    sessionRequestInfo.getExcludeFiltersList().stream(),
                     testPlanFilter.excludeFilters().stream())
                 .map(SuiteTestFilter::create)
                 .collect(toImmutableList())
@@ -903,29 +928,48 @@ public class SessionRequestHandlerUtil {
     }
     logger.atInfo().log("Exclude filters for Non-TF run: %s", excludeFilters);
 
+    ImmutableMultimap.Builder<String, String> moduleMetadataIncludeFiltersBuilder =
+        ImmutableMultimap.builder();
+    sessionRequestInfo
+        .getModuleMetadataIncludeFiltersMap()
+        .forEach(
+            (key, filterValues) ->
+                moduleMetadataIncludeFiltersBuilder.putAll(key, filterValues.getValuesList()));
     ImmutableMultimap<String, String> moduleMetadataIncludeFilters =
-        ImmutableMultimap.<String, String>builder()
-            .putAll(sessionRequestInfo.moduleMetadataIncludeFilters())
+        moduleMetadataIncludeFiltersBuilder
             .putAll(testPlanFilter.moduleMetadataIncludeFilters())
             .build();
+
+    ImmutableMultimap.Builder<String, String> moduleMetadataExcludeFiltersBuilder =
+        ImmutableMultimap.builder();
+    sessionRequestInfo
+        .getModuleMetadataExcludeFiltersMap()
+        .forEach(
+            (key, filterValues) ->
+                moduleMetadataExcludeFiltersBuilder.putAll(key, filterValues.getValuesList()));
     ImmutableMultimap<String, String> moduleMetadataExcludeFilters =
-        ImmutableMultimap.<String, String>builder()
-            .putAll(sessionRequestInfo.moduleMetadataExcludeFilters())
+        moduleMetadataExcludeFiltersBuilder
             .putAll(testPlanFilter.moduleMetadataExcludeFilters())
             .build();
 
     Duration jobTimeout =
-        sessionRequestInfo.jobTimeout().isZero()
+        (sessionRequestInfo.getJobTimeout().getSeconds() == 0
+                && sessionRequestInfo.getJobTimeout().getNanos() == 0)
             ? DEFAULT_NON_TRADEFED_JOB_TIMEOUT
-            : sessionRequestInfo.jobTimeout();
+            : Duration.ofSeconds(
+                sessionRequestInfo.getJobTimeout().getSeconds(),
+                sessionRequestInfo.getJobTimeout().getNanos());
     Duration testTimeout = calculateTestTimeout(jobTimeout);
     Duration startTimeout =
-        sessionRequestInfo.startTimeout().isZero()
+        (sessionRequestInfo.getStartTimeout().getSeconds() == 0
+                && sessionRequestInfo.getStartTimeout().getNanos() == 0)
             ? DEFAULT_NON_TRADEFED_START_TIMEOUT
-            : sessionRequestInfo.startTimeout();
+            : Duration.ofSeconds(
+                sessionRequestInfo.getStartTimeout().getSeconds(),
+                sessionRequestInfo.getStartTimeout().getNanos());
 
-    Path xtsRootDir = Path.of(sessionRequestInfo.xtsRootDir());
-    String xtsType = sessionRequestInfo.xtsType();
+    Path xtsRootDir = Path.of(sessionRequestInfo.getXtsRootDir());
+    String xtsType = sessionRequestInfo.getXtsType();
     // Reads DeviceConfigurations text proto.
     Path xtsDeviceConfigFile = getXtsDeviceConfigFilePath(xtsRootDir, xtsType);
     DeviceConfigurations xtsDeviceConfig = readXtsDeviceConfigFile(xtsDeviceConfigFile);
@@ -933,18 +977,18 @@ public class SessionRequestHandlerUtil {
         groupXtsDeviceConfig(xtsDeviceConfig);
     ImmutableListMultimap.Builder<String, ModuleArg> moduleArgMapBuilder =
         ImmutableListMultimap.builder();
-    for (String moduleArgStr : sessionRequestInfo.moduleArgs()) {
+    for (String moduleArgStr : sessionRequestInfo.getModuleArgsList()) {
       ModuleArg moduleArg = ModuleArg.create(moduleArgStr);
       moduleArgMapBuilder.put(moduleArg.moduleName(), moduleArg);
     }
     ImmutableListMultimap<String, ModuleArg> moduleArgMap = moduleArgMapBuilder.build();
     ImmutableSet<String> simpleExcludeRunners =
-        sessionRequestInfo.excludeRunners().stream()
+        sessionRequestInfo.getExcludeRunnersList().stream()
             .map(ConfigurationUtil::getSimpleClassName)
             .collect(toImmutableSet());
 
     for (Entry<String, Configuration> entry :
-        sessionRequestInfo.expandedModules().entrySet().stream()
+        sessionRequestInfo.getExpandedModulesMap().entrySet().stream()
             .filter(e -> e.getValue().getMetadata().getIsConfigV2())
             .collect(toImmutableList())) {
       String originalModuleName = entry.getValue().getMetadata().getXtsModule();
@@ -1004,8 +1048,8 @@ public class SessionRequestHandlerUtil {
 
         // Handles include-filter.
         Map<String, Collection<String>> includeTestCaseMap = new HashMap<>();
-        if (sessionRequestInfo.testName().isPresent()) {
-          parseIncludeTestNames(sessionRequestInfo.testName().get(), includeTestCaseMap);
+        if (sessionRequestInfo.hasTestName()) {
+          parseIncludeTestNames(sessionRequestInfo.getTestName(), includeTestCaseMap);
         } else if (!includeFilters.isEmpty()) {
           boolean matched = false;
           for (SuiteTestFilter filter : includeFilters) {
@@ -1099,7 +1143,7 @@ public class SessionRequestHandlerUtil {
             createXtsNonTradefedJob(
                 xtsRootDir,
                 xtsType,
-                sessionRequestInfo.testPlan(),
+                sessionRequestInfo.getTestPlan(),
                 subPlan == null ? null : subPlan.getPreviousSessionXtsTestPlan(),
                 Path.of(requireNonNull(moduleNameToConfigFilePathMap.get(originalModuleName))),
                 entry.getValue(),
@@ -1115,12 +1159,14 @@ public class SessionRequestHandlerUtil {
                 testTimeout,
                 startTimeout,
                 isSkipDeviceInfo(sessionRequestInfo, subPlan),
-                sessionRequestInfo.xtsSuiteInfo(),
-                sessionRequestInfo.isAtsServerRequest(),
-                sessionRequestInfo.businessLogicUrl(),
-                sessionRequestInfo.ignoreBusinessLogicFailure());
+                ImmutableMap.copyOf(sessionRequestInfo.getXtsSuiteInfoMap()),
+                sessionRequestInfo.getIsAtsServerRequest(),
+                sessionRequestInfo.hasBusinessLogicUrl()
+                    ? Optional.of(sessionRequestInfo.getBusinessLogicUrl())
+                    : Optional.empty(),
+                sessionRequestInfo.getIgnoreBusinessLogicFailure());
 
-        if (sessionRequestInfo.enableTokenSharding()) {
+        if (sessionRequestInfo.getEnableTokenSharding()) {
           getSimCardTypeDimensionValue(moduleMetadata)
               .ifPresent(
                   simCardTypeDimensionValue ->
@@ -1148,7 +1194,9 @@ public class SessionRequestHandlerUtil {
         }
         addSessionClientIdToJobInfo(jobInfo, sessionRequestInfo);
         extraJobProperties.forEach((key, value) -> jobInfo.properties().add(key, value));
-        if (sessionRequestInfo.isMoblyResultstoreUploadEnabled().orElse(false)) {
+        if (sessionRequestInfo.hasIsMoblyResultstoreUploadEnabled()
+            ? sessionRequestInfo.getIsMoblyResultstoreUploadEnabled()
+            : false) {
           jobInfo.properties().add(XtsConstants.IS_MOBLY_RESULTSTORE_UPLOAD_ENABLED, "true");
         }
         printCreatedJobInfo(jobInfo, /* isTf= */ false);
@@ -1529,9 +1577,9 @@ public class SessionRequestHandlerUtil {
   TestSuiteHelper getTestSuiteHelper(
       String xtsRootDir, String xtsType, SessionRequestInfo sessionRequestInfo) {
     TestSuiteHelper testSuiteHelper = new TestSuiteHelper(xtsRootDir, xtsType);
-    testSuiteHelper.setParameterizedModules(sessionRequestInfo.enableModuleParameter());
+    testSuiteHelper.setParameterizedModules(sessionRequestInfo.getEnableModuleParameter());
     testSuiteHelper.setOptionalParameterizedModules(
-        sessionRequestInfo.enableModuleOptionalParameter());
+        sessionRequestInfo.getEnableModuleOptionalParameter());
     return testSuiteHelper;
   }
 
@@ -1593,10 +1641,9 @@ public class SessionRequestHandlerUtil {
 
   private static void addSessionClientIdToJobInfo(
       JobInfo jobInfo, SessionRequestInfo sessionRequestInfo) {
-    sessionRequestInfo
-        .sessionClientId()
-        .ifPresent(
-            sessionClientId -> jobInfo.params().add("olc_session_client_id", sessionClientId));
+    if (sessionRequestInfo.hasSessionClientId()) {
+      jobInfo.params().add("olc_session_client_id", sessionRequestInfo.getSessionClientId());
+    }
   }
 
   private static void printCreatedJobInfo(JobInfo jobInfo, boolean isTf) {
@@ -1617,8 +1664,8 @@ public class SessionRequestHandlerUtil {
 
   private static boolean isSkipDeviceInfo(
       SessionRequestInfo sessionRequestInfo, @Nullable SubPlan subPlan) {
-    return sessionRequestInfo.skipDeviceInfo().orElse(false)
-        || (isRunRetry(sessionRequestInfo.testPlan())
+    return (sessionRequestInfo.hasSkipDeviceInfo() ? sessionRequestInfo.getSkipDeviceInfo() : false)
+        || (isRunRetry(sessionRequestInfo.getTestPlan())
             && subPlan != null
             && subPlan.getPreviousSessionDeviceBuildFingerprint().orElse("").isEmpty());
   }
@@ -1640,6 +1687,6 @@ public class SessionRequestHandlerUtil {
   @VisibleForTesting
   static boolean needTestHarnessPropertyFalse(SessionRequestInfo sessionRequestInfo) {
     return XTS_TYPE_THAT_NEED_TEST_HARNESS_PROPERTY_FALSE.stream()
-        .anyMatch(xtsType -> sessionRequestInfo.xtsType().startsWith(xtsType));
+        .anyMatch(xtsType -> sessionRequestInfo.getXtsType().startsWith(xtsType));
   }
 }
