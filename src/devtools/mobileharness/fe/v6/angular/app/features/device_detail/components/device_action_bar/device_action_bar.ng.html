@@ -89,6 +89,15 @@
         }"></ng-container>
       }
     }
+
+    <ng-container *ngTemplateOutlet="actionItem; context: {
+      key: 'decommission',
+      icon: 'delete_sweep',
+      label: 'Decommission',
+      handler: onDecommission,
+      mode: 'button',
+      suffix: '2xl'
+    }"></ng-container>
   </div>
 
   <!-- xl view -->
@@ -185,6 +194,15 @@
             }"></ng-container>
           }
         }
+
+        <ng-container *ngTemplateOutlet="actionItem; context: {
+          key: 'decommission',
+          icon: 'delete_sweep',
+          label: 'Decommission',
+          handler: onDecommission,
+          mode: 'menu',
+          suffix: 'xl'
+        }"></ng-container>
       </mat-menu>
     }
   </div>
@@ -283,6 +301,15 @@
             }"></ng-container>
           }
         }
+
+        <ng-container *ngTemplateOutlet="actionItem; context: {
+          key: 'decommission',
+          icon: 'delete_sweep',
+          label: 'Decommission',
+          handler: onDecommission,
+          mode: 'menu',
+          suffix: 'sm'
+        }"></ng-container>
       </mat-menu>
     }
   </div>

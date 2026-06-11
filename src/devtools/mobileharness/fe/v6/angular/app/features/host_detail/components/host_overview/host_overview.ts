@@ -57,6 +57,7 @@ import {
 import {EnvUniverseService} from '../../../../core/services/env_universe_service';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
+import {DecommissionContent} from '../../../../shared/components/decommission_content/decommission_content';
 import {InfoCard} from '../../../../shared/components/info_card/info_card';
 import {
   MasterDetailLayout,
@@ -73,7 +74,6 @@ import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {dateUtils} from '../../../../shared/utils/date_utils';
 import {objectUtils} from '../../../../shared/utils/object_utils';
 import {ActionNoPermissionContent} from './action_no_permission_content/action_no_permission_content';
-import {DecommissionContent} from './decommission_content/decommission_content';
 import {FlagsDialog} from './flags_dialog/flags_dialog';
 import {NoValidVersionsContent} from './release_dialog/no_valid_versions_content/no_valid_versions_content';
 import {ReleaseDialog} from './release_dialog/release_dialog';
@@ -724,7 +724,9 @@ export class HostOverviewPage implements OnChanges {
     const dialogData = {
       title,
       contentComponent: DecommissionContent,
-      contentComponentInputs: {'devices': devicesToDecommission},
+      contentComponentInputs: {
+        'deviceIds': devicesToDecommission.map((d) => d.id),
+      },
       type: 'error',
       primaryButtonLabel: 'Decommission',
       secondaryButtonLabel: 'Cancel',
@@ -752,7 +754,7 @@ export class HostOverviewPage implements OnChanges {
           );
           this.selection.clear();
           this.snackBar.showSuccess(
-            `${devices.length} devices decommissioned successfully.`,
+            `${devices.length} devices decommissioned successfully.\nIt may take a few minutes to take effect on the UI side.`,
           );
         }),
       );

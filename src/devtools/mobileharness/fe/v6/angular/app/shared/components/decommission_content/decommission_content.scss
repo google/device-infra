@@ -1,5 +1,5 @@
 @use '@angular/material' as mat;
-@use '../../../../../shared/styles/common';
+@use '../../styles/common';
 
 .decommission-box {
   display: flex;
@@ -75,10 +75,30 @@
     }
   }
 
+  .notes-section {
+    background-color: #fffbeb; // amber-50
+    border: 1px solid #fef08a; // amber-200
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    .note-label {
+      font-weight: 700;
+      font-style: normal; // keep "Note:" label upright
+    }
+
+    .note-text {
+      color: #92400e; // amber-800
+      font-style: italic;
+    }
+  }
+
   .note-text {
     font-size: 0.75rem;
     line-height: 1rem;
-    text-align: center;
-    margin-top: 0;
+    text-align: left;
+    margin: 0;
   }
 }
