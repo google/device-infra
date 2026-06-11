@@ -40,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
@@ -72,7 +73,7 @@ import javax.annotation.Nullable;
 public final class UsmfBinary {
 
   private static final String BIN_DIR_NAME = "bin";
-  private static final String LOGS_DIR_NAME = "logs";
+  static final String LOGS_DIR_NAME = "logs";
   private static final String RULES_DIR_NAME = "rules";
   private static final String STATES_DIR_NAME = "states";
 
@@ -175,6 +176,11 @@ public final class UsmfBinary {
     return binaryFile.toAbsolutePath().toString();
   }
 
+  /** Returns the sandbox root directory path. */
+  public String getSandboxDir() {
+    return sandboxDir.toAbsolutePath().toString();
+  }
+
   /**
    * Reads the list of all captured command invocations on this mock sandbox, sorted chronologically
    * by their start time.
@@ -260,11 +266,18 @@ public final class UsmfBinary {
     @Nullable private Path binaryFileParentDir;
     private final List<UsmfRule> rules = new ArrayList<>();
     private JsonObject variables = new JsonObject();
+    @Nullable private Consumer<UsmfBinary> buildCallback;
 
     private Builder(String binaryFileName, Path sandboxDirParentDir, String sandboxDirName) {
       this.binaryFileName = checkNotNull(binaryFileName);
       this.sandboxDirParentDir = checkNotNull(sandboxDirParentDir);
       this.sandboxDirName = checkNotNull(sandboxDirName);
+    }
+
+    @CanIgnoreReturnValue
+    Builder setBuildCallback(Consumer<UsmfBinary> buildCallback) {
+      this.buildCallback = checkNotNull(buildCallback);
+      return this;
     }
 
     /**
@@ -319,8 +332,13 @@ public final class UsmfBinary {
       Path targetDir = binaryFileParentDir != null ? binaryFileParentDir : binDir;
       Path binaryFile = targetDir.resolve(binaryFileName);
 
-      return new UsmfBinary(
-          binaryFile, sandboxDir, ImmutableList.copyOf(rules), variables, logsDir, statesFile);
+      UsmfBinary binary =
+          new UsmfBinary(
+              binaryFile, sandboxDir, ImmutableList.copyOf(rules), variables, logsDir, statesFile);
+      if (buildCallback != null) {
+        buildCallback.accept(binary);
+      }
+      return binary;
     }
 
     /**

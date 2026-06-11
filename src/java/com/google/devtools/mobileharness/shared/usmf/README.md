@@ -214,6 +214,45 @@ assertThat(invocations.stream().anyMatch(
 )).isTrue();
 ```
 
+### Example: Command Management using `UsmfEnvironment` JUnit Rule
+
+For complex integration test suites, manual sandbox directory management and
+artifact archiving can be error-prone. USMF provides the `UsmfEnvironment`
+`@Rule` (JUnit 4) to automatically orchestrate the lifecycle of `UsmfBinary`
+instances. It automatically detects sandboxing output directories (such as
+`TEST_UNDECLARED_OUTPUTS_DIR` on TAP) and aggregates tool execution transaction
+histories into a single `summary.json` file in test sponge outputs upon test
+completion.
+
+```java
+public class LabServerIntegrationTest {
+  // 1. Declare the environment watcher rule.
+  @Rule
+  public final UsmfEnvironment usmfEnvironment = new UsmfEnvironment();
+
+  @Test
+  public void testAdbVersion() throws Exception {
+    // 2. Spawn a pre-configured UsmfBinary builder managed by the environment.
+    UsmfBinary mockAdb =
+        usmfEnvironment
+            .createBinary("adb")
+            .addRule(
+                UsmfRule.builder()
+                    .addCondition(CommandCondition.exactMatch("version"))
+                    .setBehavior(
+                        CommandBehavior.stdout("Android Debug Bridge version 1.0.41\n").build())
+                    .build())
+            .buildAndDeploy();
+
+    // 3. Command execution takes place ...
+    String adbPath = mockAdb.getPath();
+
+    // 4. Upon test completion, UsmfEnvironment automatically cleans up files
+    //    and leaves aggregated execution traces in Sandbox artifacts.
+  }
+}
+```
+
 --------------------------------------------------------------------------------
 
 ## 7. Stateful Command Execution, State Repository and AST Expressions

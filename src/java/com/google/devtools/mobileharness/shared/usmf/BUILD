@@ -42,3 +42,18 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+# For using USMF in unit tests.
+java_library(
+    name = "testing",
+    testonly = 1,
+    srcs = ["UsmfEnvironment.java"],
+    exports = [":usmf"],
+    deps = [
+        ":usmf",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_code_gson_gson",
+        "@maven//:com_google_guava_guava",
+        "@maven//:junit_junit",
+    ],
+)
