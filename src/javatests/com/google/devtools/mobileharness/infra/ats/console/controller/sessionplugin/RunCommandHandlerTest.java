@@ -32,9 +32,9 @@ import com.google.devtools.mobileharness.infra.ats.common.LocalDeviceUtil;
 import com.google.devtools.mobileharness.infra.ats.common.LocalDeviceUtilImpl;
 import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
-import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.DeviceType;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
@@ -200,36 +200,87 @@ public final class RunCommandHandlerTest {
 
     SessionRequestInfo sessionRequestInfo = runCommandHandler.generateSessionRequestInfo(command);
 
-    assertThat(sessionRequestInfo.testPlan()).isEqualTo("test");
-    assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo("xts_root_dir");
-    assertThat(sessionRequestInfo.xtsType()).isEqualTo("cts");
-    assertThat(sessionRequestInfo.enableModuleParameter()).isTrue();
-    assertThat(sessionRequestInfo.enableModuleOptionalParameter()).isFalse();
-    assertThat(sessionRequestInfo.commandLineArgs()).isEqualTo("run cts xxx");
-    assertThat(sessionRequestInfo.deviceSerials()).containsExactly("device_1", "device_2");
-    assertThat(sessionRequestInfo.moduleNames()).containsExactly("module_1", "module_2");
-    assertThat(sessionRequestInfo.htmlInZip()).isTrue();
-    assertThat(sessionRequestInfo.includeFilters()).containsExactly("filter_1", "filter_2");
-    assertThat(sessionRequestInfo.excludeFilters())
+    assertThat(sessionRequestInfo.getTestPlan()).isEqualTo("test");
+    assertThat(sessionRequestInfo.getXtsRootDir()).isEqualTo("xts_root_dir");
+    assertThat(sessionRequestInfo.getXtsType()).isEqualTo("cts");
+    assertThat(sessionRequestInfo.getEnableModuleParameter()).isTrue();
+    assertThat(sessionRequestInfo.getEnableModuleOptionalParameter()).isFalse();
+    assertThat(sessionRequestInfo.getCommandLineArgs()).isEqualTo("run cts xxx");
+    assertThat(sessionRequestInfo.getDeviceSerialsList()).containsExactly("device_1", "device_2");
+    assertThat(sessionRequestInfo.getModuleNamesList()).containsExactly("module_1", "module_2");
+    assertThat(sessionRequestInfo.getHtmlInZip()).isTrue();
+    assertThat(sessionRequestInfo.getIncludeFiltersList()).containsExactly("filter_1", "filter_2");
+    assertThat(sessionRequestInfo.getExcludeFiltersList())
         .containsExactly("exclude_filter_1", "exclude_filter_2");
-    assertThat(sessionRequestInfo.moduleArgs())
+    assertThat(sessionRequestInfo.getModuleArgsList())
         .containsExactly("module:arg_1:value_1", "module:arg_2:value_2");
-    assertThat(sessionRequestInfo.extraArgs()).containsExactly("arg1", "arg2");
-    assertThat(sessionRequestInfo.testName()).hasValue("test_name");
-    assertThat(sessionRequestInfo.shardCount()).hasValue(10);
-    assertThat(sessionRequestInfo.pythonPkgIndexUrl()).hasValue("python_pkg_index_url");
-    assertThat(sessionRequestInfo.retrySessionIndex()).hasValue(1);
-    assertThat(sessionRequestInfo.retryType()).hasValue(RetryType.FAILED);
-    assertThat(sessionRequestInfo.subPlanName()).hasValue("sub_plan_name");
-    assertThat(sessionRequestInfo.deviceType())
+    assertThat(sessionRequestInfo.getExtraArgsList()).containsExactly("arg1", "arg2");
+    assertThat(
+            sessionRequestInfo.hasTestName()
+                ? Optional.of(sessionRequestInfo.getTestName())
+                : Optional.empty())
+        .hasValue("test_name");
+    assertThat(
+            sessionRequestInfo.hasShardCount()
+                ? Optional.of(sessionRequestInfo.getShardCount())
+                : Optional.empty())
+        .hasValue(10);
+    assertThat(
+            sessionRequestInfo.hasPythonPkgIndexUrl()
+                ? Optional.of(sessionRequestInfo.getPythonPkgIndexUrl())
+                : Optional.empty())
+        .hasValue("python_pkg_index_url");
+    assertThat(
+            sessionRequestInfo.hasRetrySessionIndex()
+                ? Optional.of(sessionRequestInfo.getRetrySessionIndex())
+                : Optional.empty())
+        .hasValue(1);
+    assertThat(
+            sessionRequestInfo.hasRetryType()
+                ? Optional.of(sessionRequestInfo.getRetryType())
+                : Optional.empty())
+        .hasValue(RetryType.FAILED);
+    assertThat(
+            sessionRequestInfo.hasSubPlanName()
+                ? Optional.of(sessionRequestInfo.getSubPlanName())
+                : Optional.empty())
+        .hasValue("sub_plan_name");
+    assertThat(
+            sessionRequestInfo.hasDeviceType()
+                ? Optional.of(sessionRequestInfo.getDeviceType())
+                : Optional.empty())
         .hasValue(SessionRequestHandlerUtil.ANDROID_LOCAL_EMULATOR_TYPE);
-    assertThat(sessionRequestInfo.maxBatteryLevel()).hasValue(99);
-    assertThat(sessionRequestInfo.minBatteryLevel()).hasValue(1);
-    assertThat(sessionRequestInfo.maxBatteryTemperature()).hasValue(30);
-    assertThat(sessionRequestInfo.minSdkLevel()).hasValue(32);
-    assertThat(sessionRequestInfo.maxSdkLevel()).hasValue(35);
-    assertThat(sessionRequestInfo.enableTokenSharding()).isTrue();
-    assertThat(sessionRequestInfo.businessLogicUrl()).hasValue("business_logic_url");
+    assertThat(
+            sessionRequestInfo.hasMaxBatteryLevel()
+                ? Optional.of(sessionRequestInfo.getMaxBatteryLevel())
+                : Optional.empty())
+        .hasValue(99);
+    assertThat(
+            sessionRequestInfo.hasMinBatteryLevel()
+                ? Optional.of(sessionRequestInfo.getMinBatteryLevel())
+                : Optional.empty())
+        .hasValue(1);
+    assertThat(
+            sessionRequestInfo.hasMaxBatteryTemperature()
+                ? Optional.of(sessionRequestInfo.getMaxBatteryTemperature())
+                : Optional.empty())
+        .hasValue(30);
+    assertThat(
+            sessionRequestInfo.hasMinSdkLevel()
+                ? Optional.of(sessionRequestInfo.getMinSdkLevel())
+                : Optional.empty())
+        .hasValue(32);
+    assertThat(
+            sessionRequestInfo.hasMaxSdkLevel()
+                ? Optional.of(sessionRequestInfo.getMaxSdkLevel())
+                : Optional.empty())
+        .hasValue(35);
+    assertThat(sessionRequestInfo.getEnableTokenSharding()).isTrue();
+    assertThat(
+            sessionRequestInfo.hasBusinessLogicUrl()
+                ? Optional.of(sessionRequestInfo.getBusinessLogicUrl())
+                : Optional.empty())
+        .hasValue("business_logic_url");
   }
 
   @Test
@@ -243,7 +294,8 @@ public final class RunCommandHandlerTest {
 
     SessionRequestInfo sessionRequestInfo = runCommandHandler.generateSessionRequestInfo(command);
 
-    assertThat(sessionRequestInfo.strictIncludeFilters()).containsExactly("strict_1", "strict_2");
+    assertThat(sessionRequestInfo.getStrictIncludeFiltersList())
+        .containsExactly("strict_1", "strict_2");
   }
 
   private static ImmutableList<JobInfo> createJobInfos() throws MobileHarnessException {

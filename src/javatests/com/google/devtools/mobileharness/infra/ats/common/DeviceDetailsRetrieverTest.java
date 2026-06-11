@@ -21,6 +21,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceManagementFilter;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
@@ -69,12 +70,12 @@ public final class DeviceDetailsRetrieverTest {
     when(deviceManagementFilter.isAllowed("blocked_device")).thenReturn(false);
 
     SessionRequestInfo info =
-        SessionRequestInfo.builder()
-            .setTestPlan("cts")
-            .setCommandLineArgs("run cts")
-            .setXtsRootDir("/path/to/xts")
-            .setXtsType("cts")
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("run cts")
+                .setXtsRootDir("/path/to/xts")
+                .setXtsType("cts"));
     ImmutableMap<String, DeviceDetails> result =
         retriever.getAllLocalAndroidDevicesWithNeededDetails(info);
 

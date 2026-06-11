@@ -24,8 +24,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.ShardConstants;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import java.util.HashMap;
 import java.util.stream.Stream;
@@ -46,11 +46,11 @@ class ModuleShardingArgsGenerator {
     ImmutableSet<String> targetModules = ImmutableSet.copyOf(tfModules);
 
     ImmutableList<SuiteTestFilter> originalIncludeFilters =
-        sessionRequestInfo.includeFilters().stream()
+        sessionRequestInfo.getIncludeFiltersList().stream()
             .map(SuiteTestFilter::create)
             .collect(toImmutableList());
     ImmutableList<SuiteTestFilter> originalExcludeFilters =
-        sessionRequestInfo.excludeFilters().stream()
+        sessionRequestInfo.getExcludeFiltersList().stream()
             .map(SuiteTestFilter::create)
             .collect(toImmutableList());
 
@@ -106,7 +106,7 @@ class ModuleShardingArgsGenerator {
       ImmutableList<SuiteTestFilter> originalExcludeFilters,
       int shardCount) {
     ImmutableSet.Builder<String> shardingArgs = ImmutableSet.builder();
-    ImmutableList<String> extraArgs = sessionRequestInfo.extraArgs();
+    ImmutableList<String> extraArgs = ImmutableList.copyOf(sessionRequestInfo.getExtraArgsList());
 
     ImmutableList<SuiteTestFilter> matchedIncludeFilters =
         findMatchedFilters(module, originalIncludeFilters);

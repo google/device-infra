@@ -21,8 +21,10 @@ import static org.junit.Assert.assertThrows;
 
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfoUtil;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
+import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -48,16 +50,22 @@ public final class CommandLineParserTest {
 
     // Fill required fields in order to build the builder.
     SessionRequestInfo requestInfo1 =
-        requestInfoBuilder1
-            .setCommandLineArgs(tfCommand1)
-            .setXtsRootDir("xts_root_dir")
-            .setXtsType("cts")
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            requestInfoBuilder1
+                .setCommandLineArgs(tfCommand1)
+                .setXtsRootDir("xts_root_dir")
+                .setXtsType("cts"));
 
-    assertThat(requestInfo1.testPlan()).isEqualTo("cts");
-    assertThat(requestInfo1.moduleNames()).containsExactly("module1");
-    assertThat(requestInfo1.testName()).hasValue("testCase1");
-    assertThat(requestInfo1.shardCount()).hasValue(1);
+    assertThat(requestInfo1.getTestPlan()).isEqualTo("cts");
+    assertThat(requestInfo1.getModuleNamesList()).containsExactly("module1");
+    assertThat(
+            requestInfo1.hasTestName() ? Optional.of(requestInfo1.getTestName()) : Optional.empty())
+        .hasValue("testCase1");
+    assertThat(
+            requestInfo1.hasShardCount()
+                ? Optional.of(requestInfo1.getShardCount())
+                : Optional.empty())
+        .hasValue(1);
   }
 
   @Test
@@ -70,16 +78,22 @@ public final class CommandLineParserTest {
 
     // Fill required fields in order to build the builder.
     SessionRequestInfo requestInfo1 =
-        requestInfoBuilder1
-            .setCommandLineArgs(tfCommand1)
-            .setXtsRootDir("xts_root_dir")
-            .setXtsType("cts")
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            requestInfoBuilder1
+                .setCommandLineArgs(tfCommand1)
+                .setXtsRootDir("xts_root_dir")
+                .setXtsType("cts"));
 
-    assertThat(requestInfo1.testPlan()).isEqualTo("cts");
-    assertThat(requestInfo1.moduleNames()).containsExactly("module1");
-    assertThat(requestInfo1.testName()).hasValue("testCase1");
-    assertThat(requestInfo1.shardCount()).hasValue(1);
+    assertThat(requestInfo1.getTestPlan()).isEqualTo("cts");
+    assertThat(requestInfo1.getModuleNamesList()).containsExactly("module1");
+    assertThat(
+            requestInfo1.hasTestName() ? Optional.of(requestInfo1.getTestName()) : Optional.empty())
+        .hasValue("testCase1");
+    assertThat(
+            requestInfo1.hasShardCount()
+                ? Optional.of(requestInfo1.getShardCount())
+                : Optional.empty())
+        .hasValue(1);
   }
 
   @Test
@@ -91,16 +105,22 @@ public final class CommandLineParserTest {
 
     // Fill required fields in order to build the builder.
     SessionRequestInfo requestInfo1 =
-        requestInfoBuilder1
-            .setCommandLineArgs(tfCommand1)
-            .setXtsRootDir("xts_root_dir")
-            .setXtsType("cts")
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            requestInfoBuilder1
+                .setCommandLineArgs(tfCommand1)
+                .setXtsRootDir("xts_root_dir")
+                .setXtsType("cts"));
 
-    assertThat(requestInfo1.testPlan()).isEqualTo("cts");
-    assertThat(requestInfo1.includeFilters()).containsExactly("test_module_name1 test_name1");
-    assertThat(requestInfo1.excludeFilters()).containsExactly("test_module_name2 test_name2");
-    assertThat(requestInfo1.shardCount()).hasValue(1);
+    assertThat(requestInfo1.getTestPlan()).isEqualTo("cts");
+    assertThat(requestInfo1.getIncludeFiltersList())
+        .containsExactly("test_module_name1 test_name1");
+    assertThat(requestInfo1.getExcludeFiltersList())
+        .containsExactly("test_module_name2 test_name2");
+    assertThat(
+            requestInfo1.hasShardCount()
+                ? Optional.of(requestInfo1.getShardCount())
+                : Optional.empty())
+        .hasValue(1);
   }
 
   @Test
@@ -112,17 +132,18 @@ public final class CommandLineParserTest {
 
     // Fill required fields in order to build the builder.
     SessionRequestInfo requestInfo1 =
-        requestInfoBuilder1
-            .setCommandLineArgs(tfCommand1)
-            .setXtsRootDir("xts_root_dir")
-            .setXtsType("cts")
-            .setRetrySessionId("retry_session_id")
-            .setRetryResultDir("retry_result_dir")
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            requestInfoBuilder1
+                .setCommandLineArgs(tfCommand1)
+                .setXtsRootDir("xts_root_dir")
+                .setXtsType("cts")
+                .setRetrySessionId("retry_session_id")
+                .setRetryResultDir("retry_result_dir"));
 
-    assertThat(requestInfo1.testPlan()).isEqualTo("retry");
-    assertThat(requestInfo1.retryType().get().toString()).isEqualTo("NOT_EXECUTED");
-    assertThat(requestInfo1.excludeFilters()).containsExactly("test_module_name2 test_name2");
+    assertThat(requestInfo1.getTestPlan()).isEqualTo("retry");
+    assertThat(requestInfo1.getRetryType().toString()).isEqualTo("NOT_EXECUTED");
+    assertThat(requestInfo1.getExcludeFiltersList())
+        .containsExactly("test_module_name2 test_name2");
   }
 
   @Test
@@ -134,26 +155,38 @@ public final class CommandLineParserTest {
 
     // Fill required fields in order to build the builder.
     SessionRequestInfo requestInfo1 =
-        requestInfoBuilder1
-            .setTestPlan("cts")
-            .setCommandLineArgs(tfCommand1)
-            .setXtsRootDir("xts_root_dir")
-            .setXtsType("cts")
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            requestInfoBuilder1
+                .setTestPlan("cts")
+                .setCommandLineArgs(tfCommand1)
+                .setXtsRootDir("xts_root_dir")
+                .setXtsType("cts"));
     SessionRequestInfo requestInfo2 =
-        requestInfoBuilder2
-            .setTestPlan("cts")
-            .setCommandLineArgs(tfCommand2)
-            .setXtsRootDir("xts_root_dir")
-            .setXtsType("cts")
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            requestInfoBuilder2
+                .setTestPlan("cts")
+                .setCommandLineArgs(tfCommand2)
+                .setXtsRootDir("xts_root_dir")
+                .setXtsType("cts"));
 
-    assertThat(requestInfo1.moduleNames()).containsExactly("module1");
-    assertThat(requestInfo1.testName()).hasValue("testCase1");
-    assertThat(requestInfo1.shardCount()).hasValue(1);
-    assertThat(requestInfo2.moduleNames()).containsExactly("module2");
-    assertThat(requestInfo2.testName()).hasValue("testCase2");
-    assertThat(requestInfo2.shardCount()).hasValue(2);
+    assertThat(requestInfo1.getModuleNamesList()).containsExactly("module1");
+    assertThat(
+            requestInfo1.hasTestName() ? Optional.of(requestInfo1.getTestName()) : Optional.empty())
+        .hasValue("testCase1");
+    assertThat(
+            requestInfo1.hasShardCount()
+                ? Optional.of(requestInfo1.getShardCount())
+                : Optional.empty())
+        .hasValue(1);
+    assertThat(requestInfo2.getModuleNamesList()).containsExactly("module2");
+    assertThat(
+            requestInfo2.hasTestName() ? Optional.of(requestInfo2.getTestName()) : Optional.empty())
+        .hasValue("testCase2");
+    assertThat(
+            requestInfo2.hasShardCount()
+                ? Optional.of(requestInfo2.getShardCount())
+                : Optional.empty())
+        .hasValue(2);
   }
 
   @Test

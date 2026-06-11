@@ -35,6 +35,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
+        "//src/devtools/mobileharness/infra/ats/common/proto:session_request_info_java_proto",
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:device_descriptor_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
@@ -48,7 +49,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:local_device_util_impl",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_handler_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_result_handler_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:xts_job_creator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:ats_session_plugin",

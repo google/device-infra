@@ -29,7 +29,8 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
-import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfoUtil;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
@@ -84,25 +85,30 @@ public class ServerJobCreator extends XtsJobCreator {
       SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams, int jobDeviceCount)
       throws InterruptedException, MobileHarnessException {
     if (atsServerSessionUtil.isLocalMode()) {
-      driverParams.put("xts_root_dir", sessionRequestInfo.xtsRootDir());
+      driverParams.put("xts_root_dir", sessionRequestInfo.getXtsRootDir());
     } else {
       Optional<String> findAndroidXtsZip =
           Flags.enablePersistentCache.getNonNull()
               ? urlForWorkerResolve(sessionRequestInfo)
               : Optional.empty();
-      findAndroidXtsZip = findAndroidXtsZip.or(() -> sessionRequestInfo.androidXtsZip());
+      findAndroidXtsZip =
+          findAndroidXtsZip.or(
+              () ->
+                  sessionRequestInfo.hasAndroidXtsZip()
+                      ? Optional.of(sessionRequestInfo.getAndroidXtsZip())
+                      : Optional.empty());
       findAndroidXtsZip.ifPresent(url -> driverParams.put("android_xts_zip", url));
     }
-    if (sessionRequestInfo.remoteRunnerFilePathPrefix().isPresent()
+    if (sessionRequestInfo.hasRemoteRunnerFilePathPrefix()
         && driverParams.containsKey("subplan_xml")) {
       driverParams.put(
           "subplan_xml",
           PathUtil.join(
-              sessionRequestInfo.remoteRunnerFilePathPrefix().get(),
+              sessionRequestInfo.getRemoteRunnerFilePathPrefix(),
               PathUtil.makeRelative(
                   Flags.atsStoragePath.getNonNull(), driverParams.get("subplan_xml"))));
     }
-    if (sessionRequestInfo.atsServerTestEnvironment().isPresent()) {
+    if (sessionRequestInfo.hasAtsServerTestEnvironment()) {
       generateTradefedTestConfigFile(sessionRequestInfo, driverParams, jobDeviceCount);
     } else {
       throw MobileHarnessExceptionFactory.createUserFacingException(
@@ -117,12 +123,12 @@ public class ServerJobCreator extends XtsJobCreator {
       SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams, int jobDeviceCount)
       throws MobileHarnessException {
     // Generate XML test config template for ClusterCommandLauncher.
-    Path commandPath = Path.of(sessionRequestInfo.xtsRootDir()).resolveSibling("command.xml");
+    Path commandPath = Path.of(sessionRequestInfo.getXtsRootDir()).resolveSibling("command.xml");
     try (OutputStream outputStream = new FileOutputStream(commandPath.toFile())) {
       TradefedConfigGenerator.generateXml(
           outputStream,
-          sessionRequestInfo.atsServerTestEnvironment().get(),
-          sessionRequestInfo.atsServerTestResources(),
+          sessionRequestInfo.getAtsServerTestEnvironment(),
+          sessionRequestInfo.getAtsServerTestResourcesList(),
           SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)
               ? 1
               : jobDeviceCount);
@@ -133,11 +139,11 @@ public class ServerJobCreator extends XtsJobCreator {
           e);
     }
     logger.atInfo().log("Generate TF config:\n%s", localFileUtil.readFile(commandPath));
-    if (sessionRequestInfo.remoteRunnerFilePathPrefix().isPresent()) {
+    if (sessionRequestInfo.hasRemoteRunnerFilePathPrefix()) {
       driverParams.put(
           "xts_test_plan_file",
           PathUtil.join(
-              sessionRequestInfo.remoteRunnerFilePathPrefix().get(),
+              sessionRequestInfo.getRemoteRunnerFilePathPrefix(),
               PathUtil.makeRelative(Flags.atsStoragePath.getNonNull(), commandPath.toString())));
     } else {
       driverParams.put("xts_test_plan_file", commandPath.toString());
@@ -148,21 +154,34 @@ public class ServerJobCreator extends XtsJobCreator {
   protected Optional<Path> getPrevSessionTestReportProperties(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException {
     return previousResultLoader.getPrevSessionTestReportProperties(
-        Path.of(sessionRequestInfo.retryResultDir().orElseThrow()));
+        Path.of(
+            Optional.ofNullable(
+                    sessionRequestInfo.hasRetryResultDir()
+                        ? sessionRequestInfo.getRetryResultDir()
+                        : null)
+                .orElseThrow()));
   }
 
   @Override
   protected SubPlan prepareRunRetrySubPlan(SessionRequestInfo sessionRequestInfo, boolean forTf)
       throws MobileHarnessException {
     return prepareRunRetrySubPlan(
-        sessionRequestInfo.retryResultDir().orElseThrow(),
-        sessionRequestInfo.retrySessionId().orElseThrow(),
-        sessionRequestInfo.retryType().orElse(null),
-        sessionRequestInfo.includeFilters(),
-        sessionRequestInfo.excludeFilters(),
-        getNonTfModules(sessionRequestInfo.v2ConfigsMap()),
+        Optional.ofNullable(
+                sessionRequestInfo.hasRetryResultDir()
+                    ? sessionRequestInfo.getRetryResultDir()
+                    : null)
+            .orElseThrow(),
+        Optional.ofNullable(
+                sessionRequestInfo.hasRetrySessionId()
+                    ? sessionRequestInfo.getRetrySessionId()
+                    : null)
+            .orElseThrow(),
+        sessionRequestInfo.hasRetryType() ? sessionRequestInfo.getRetryType() : null,
+        ImmutableList.copyOf(sessionRequestInfo.getIncludeFiltersList()),
+        ImmutableList.copyOf(sessionRequestInfo.getExcludeFiltersList()),
+        getNonTfModules(ImmutableMap.copyOf(sessionRequestInfo.getV2ConfigsMapMap())),
         forTf,
-        sessionRequestInfo.moduleNames());
+        ImmutableList.copyOf(sessionRequestInfo.getModuleNamesList()));
   }
 
   private SubPlan prepareRunRetrySubPlan(
@@ -220,12 +239,20 @@ public class ServerJobCreator extends XtsJobCreator {
       }
     }
     TradefedResultFilesBundle tfRunRetryFilesBundle =
-        findTfRunRetryFilesBundle(Path.of(sessionRequestInfo.retryResultDir().orElseThrow()));
+        findTfRunRetryFilesBundle(
+            Path.of(
+                Optional.ofNullable(
+                        sessionRequestInfo.hasRetryResultDir()
+                            ? sessionRequestInfo.getRetryResultDir()
+                            : null)
+                    .orElseThrow()));
     driverParams.put(
         "prev_session_test_result_xml",
         toAtsServerPaths(
                 ImmutableList.of(tfRunRetryFilesBundle.testResultXml()),
-                sessionRequestInfo.remoteRunnerFilePathPrefix().orElse(null))
+                sessionRequestInfo.hasRemoteRunnerFilePathPrefix()
+                    ? sessionRequestInfo.getRemoteRunnerFilePathPrefix()
+                    : null)
             .get(0));
     // It uses jobFiles here instead of driverParams as driverParams doesn't work well with list of
     // files.
@@ -233,9 +260,11 @@ public class ServerJobCreator extends XtsJobCreator {
         TradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES,
         toAtsServerPaths(
             tfRunRetryFilesBundle.testRecordProtoFiles(),
-            sessionRequestInfo.remoteRunnerFilePathPrefix().orElse(null)));
-    if (sessionRequestInfo.retryType().isPresent()) {
-      driverParams.put("retry_type", sessionRequestInfo.retryType().get().toString());
+            sessionRequestInfo.hasRemoteRunnerFilePathPrefix()
+                ? sessionRequestInfo.getRemoteRunnerFilePathPrefix()
+                : null));
+    if (sessionRequestInfo.hasRetryType()) {
+      driverParams.put("retry_type", sessionRequestInfo.getRetryType().toString());
     }
   }
 
@@ -273,9 +302,15 @@ public class ServerJobCreator extends XtsJobCreator {
   @Override
   protected Path prepareRunRetryTfSubPlanXmlFile(
       SessionRequestInfo sessionRequestInfo, SubPlan subPlan) throws MobileHarnessException {
-    Path xtsSubPlansDir = Path.of(sessionRequestInfo.xtsRootDir()).getParent();
+    Path xtsSubPlansDir = Path.of(sessionRequestInfo.getXtsRootDir()).getParent();
     return serializeRetrySubPlan(
-        xtsSubPlansDir, subPlan, sessionRequestInfo.retrySessionId().orElseThrow());
+        xtsSubPlansDir,
+        subPlan,
+        Optional.ofNullable(
+                sessionRequestInfo.hasRetrySessionId()
+                    ? sessionRequestInfo.getRetrySessionId()
+                    : null)
+            .orElseThrow());
   }
 
   /**
@@ -287,10 +322,10 @@ public class ServerJobCreator extends XtsJobCreator {
   @Override
   protected SessionRequestInfo reviseRequestInfoForDynamicJob(
       SessionRequestInfo sessionRequestInfo) {
-    if (sessionRequestInfo.atsServerTestEnvironment().isPresent()) {
+    if (sessionRequestInfo.hasAtsServerTestEnvironment()) {
       // The dynamic download job's device action should be cleared, since those actions should
       // be executed in the static xts job that is triggered first.
-      TestEnvironment testEnvironment = sessionRequestInfo.atsServerTestEnvironment().get();
+      TestEnvironment testEnvironment = sessionRequestInfo.getAtsServerTestEnvironment();
       ImmutableList<DeviceActionConfigObject> resultReporters =
           testEnvironment.getDeviceActionConfigObjectsList().stream()
               .filter(
@@ -303,9 +338,9 @@ public class ServerJobCreator extends XtsJobCreator {
               .clearDeviceActionConfigObjects()
               .addAllDeviceActionConfigObjects(resultReporters)
               .build();
-      return sessionRequestInfo.toBuilder()
-          .setAtsServerTestEnvironment(updatedTestEnvironment)
-          .build();
+      SessionRequestInfo.Builder builder =
+          sessionRequestInfo.toBuilder().setAtsServerTestEnvironment(updatedTestEnvironment);
+      return SessionRequestInfoUtil.buildAndValidate(builder);
     }
     return sessionRequestInfo;
   }

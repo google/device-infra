@@ -22,6 +22,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.primitives.Ints.saturatedCast;
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.function.Predicate.not;
@@ -45,10 +46,12 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
-import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfoUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.XtsTypeLoader;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.DeviceInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.console.command.parser.CommandLineParser;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
@@ -300,14 +303,14 @@ final class NewMultiCommandRequestHandler {
     Optional<CommandDetail.Builder> commandDetail;
     String commandId = getCommandId(commandInfo, request);
     String hostIp = "";
-    if (!sessionRequestInfo.deviceSerials().isEmpty()) {
-      hostIp = sessionRequestHandlerUtil.getHostIp(sessionRequestInfo.deviceSerials().get(0));
+    if (!sessionRequestInfo.getDeviceSerialsList().isEmpty()) {
+      hostIp = sessionRequestHandlerUtil.getHostIp(sessionRequestInfo.getDeviceSerials(0));
     }
     if (!commandToJobsMap.containsKey(commandId)) {
       commandDetail =
           Optional.of(
               CommandDetail.newBuilder()
-                  .addAllDeviceSerials(sessionRequestInfo.deviceSerials())
+                  .addAllDeviceSerials(sessionRequestInfo.getDeviceSerialsList())
                   .setHostIp(hostIp)
                   .setCommandLine(commandInfo.getCommandLine())
                   .setOriginalCommandInfo(commandInfo)
@@ -372,13 +375,14 @@ final class NewMultiCommandRequestHandler {
       ImmutableMap.Builder<String, CommandDetail> commandDetailsBuilder)
       throws InterruptedException, MobileHarnessException {
     SessionRequestInfo sessionRequestInfo;
-    CommandDetail.Builder commandDetailBuilder = CommandDetail.newBuilder();
-    commandDetailBuilder.setCommandLine(commandInfo.getCommandLine());
-    commandDetailBuilder.setOriginalCommandInfo(commandInfo);
-    commandDetailBuilder.setCreateTime(Timestamps.fromMillis(clock.millis()));
-    commandDetailBuilder.setStartTime(Timestamps.fromMillis(clock.millis()));
-    commandDetailBuilder.setUpdateTime(Timestamps.fromMillis(clock.millis()));
-    commandDetailBuilder.setRequestId(sessionInfo.getSessionId());
+    CommandDetail.Builder commandDetailBuilder =
+        CommandDetail.newBuilder()
+            .setCommandLine(commandInfo.getCommandLine())
+            .setOriginalCommandInfo(commandInfo)
+            .setCreateTime(Timestamps.fromMillis(clock.millis()))
+            .setStartTime(Timestamps.fromMillis(clock.millis()))
+            .setUpdateTime(Timestamps.fromMillis(clock.millis()))
+            .setRequestId(sessionInfo.getSessionId());
     String commandId = getCommandId(commandInfo, request);
     commandDetailBuilder.setId(commandId);
     commandDetailBuilder.setCommandAttemptId(
@@ -395,10 +399,10 @@ final class NewMultiCommandRequestHandler {
       commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
       throw e;
     }
-    commandDetailBuilder.addAllDeviceSerials(sessionRequestInfo.deviceSerials());
-    if (!sessionRequestInfo.deviceSerials().isEmpty()) {
+    commandDetailBuilder.addAllDeviceSerials(sessionRequestInfo.getDeviceSerialsList());
+    if (!sessionRequestInfo.getDeviceSerialsList().isEmpty()) {
       commandDetailBuilder.setHostIp(
-          sessionRequestHandlerUtil.getHostIp(sessionRequestInfo.deviceSerials().get(0)));
+          sessionRequestHandlerUtil.getHostIp(sessionRequestInfo.getDeviceSerials(0)));
     }
     ImmutableList<JobInfo> jobInfoList;
     try {
@@ -742,13 +746,11 @@ final class NewMultiCommandRequestHandler {
     if (!androidXtsZipPassword.isEmpty()) {
       sessionRequestInfoBuilder.setAndroidXtsZipPassword(androidXtsZipPassword);
     }
-    sessionRequestInfoBuilder.setDeviceSerials(deviceSerials);
-    sessionRequestInfoBuilder.setEnvVars(
-        ImmutableMap.copyOf(request.getTestEnvironment().getEnvVarsMap()));
-    sessionRequestInfoBuilder.setRemoteRunnerFilePathPrefix(
-        RemoteFileType.ATS_FILE_SERVER.prefix());
-    sessionRequestInfoBuilder.setIsXtsDynamicDownloadEnabled(
-        commandInfo.getEnableXtsDynamicDownload());
+    sessionRequestInfoBuilder
+        .addAllDeviceSerials(deviceSerials)
+        .putAllEnvVars(ImmutableMap.copyOf(request.getTestEnvironment().getEnvVarsMap()))
+        .setRemoteRunnerFilePathPrefix(RemoteFileType.ATS_FILE_SERVER.prefix())
+        .setIsXtsDynamicDownloadEnabled(commandInfo.getEnableXtsDynamicDownload());
 
     if (request.hasPrevTestContext()) {
       processPrevTestContext(request, sessionInfo, sessionRequestInfoBuilder);
@@ -756,8 +758,9 @@ final class NewMultiCommandRequestHandler {
 
     // Insert timeout.
     sessionRequestInfoBuilder
-        .setJobTimeout(toJavaDuration(request.getTestEnvironment().getInvocationTimeout()))
-        .setStartTimeout(toJavaDuration(request.getQueueTimeout()))
+        .setJobTimeout(
+            toProtoDuration(toJavaDuration(request.getTestEnvironment().getInvocationTimeout())))
+        .setStartTimeout(toProtoDuration(toJavaDuration(request.getQueueTimeout())))
         .setIsAtsServerRequest(true)
         .setAllowPartialDeviceMatch(commandInfo.getAllowPartialDeviceMatch());
 
@@ -765,13 +768,15 @@ final class NewMultiCommandRequestHandler {
       sessionRequestInfoBuilder.setShardingMode(commandInfo.getShardingMode());
     }
 
+    SessionRequestInfo tempRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(sessionRequestInfoBuilder);
+    Optional<DeviceInfo> deviceInfo = sessionRequestHandlerUtil.getDeviceInfo(tempRequestInfo);
+    deviceInfo.ifPresent(sessionRequestInfoBuilder::setDeviceInfo);
+    sessionRequestInfoBuilder
+        .addAllAtsServerTestResources(fileTestResources.build())
+        .setAtsServerTestEnvironment(request.getTestEnvironment());
     return sessionRequestHandlerUtil.addXtsModuleInfo(
-        sessionRequestInfoBuilder
-            .setDeviceInfo(
-                sessionRequestHandlerUtil.getDeviceInfo(sessionRequestInfoBuilder.build()))
-            .setAtsServerTestResources(fileTestResources.build())
-            .setAtsServerTestEnvironment(request.getTestEnvironment())
-            .build());
+        SessionRequestInfoUtil.buildAndValidate(sessionRequestInfoBuilder));
   }
 
   private String getXtsType(String xtsRootDir, String androidXtsZipPath) {

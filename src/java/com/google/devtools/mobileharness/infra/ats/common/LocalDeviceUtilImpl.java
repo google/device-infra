@@ -20,12 +20,14 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.DeviceInfo;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
@@ -58,15 +60,26 @@ public class LocalDeviceUtilImpl implements LocalDeviceUtil {
 
     DeviceSelectionOptions.Builder optionsBuilder =
         DeviceSelectionOptions.builder()
-            .setSerials(sessionRequestInfo.deviceSerials())
-            .setExcludeSerials(sessionRequestInfo.excludeDeviceSerials())
-            .setProductTypes(sessionRequestInfo.productTypes())
-            .setDeviceProperties(sessionRequestInfo.deviceProperties());
-    sessionRequestInfo.maxBatteryLevel().ifPresent(optionsBuilder::setMaxBatteryLevel);
-    sessionRequestInfo.minBatteryLevel().ifPresent(optionsBuilder::setMinBatteryLevel);
-    sessionRequestInfo.maxBatteryTemperature().ifPresent(optionsBuilder::setMaxBatteryTemperature);
-    sessionRequestInfo.minSdkLevel().ifPresent(optionsBuilder::setMinSdkLevel);
-    sessionRequestInfo.maxSdkLevel().ifPresent(optionsBuilder::setMaxSdkLevel);
+            .setSerials(ImmutableList.copyOf(sessionRequestInfo.getDeviceSerialsList()))
+            .setExcludeSerials(
+                ImmutableList.copyOf(sessionRequestInfo.getExcludeDeviceSerialsList()))
+            .setProductTypes(ImmutableList.copyOf(sessionRequestInfo.getProductTypesList()))
+            .setDeviceProperties(ImmutableMap.copyOf(sessionRequestInfo.getDevicePropertiesMap()));
+    if (sessionRequestInfo.hasMaxBatteryLevel()) {
+      optionsBuilder.setMaxBatteryLevel(sessionRequestInfo.getMaxBatteryLevel());
+    }
+    if (sessionRequestInfo.hasMinBatteryLevel()) {
+      optionsBuilder.setMinBatteryLevel(sessionRequestInfo.getMinBatteryLevel());
+    }
+    if (sessionRequestInfo.hasMaxBatteryTemperature()) {
+      optionsBuilder.setMaxBatteryTemperature(sessionRequestInfo.getMaxBatteryTemperature());
+    }
+    if (sessionRequestInfo.hasMinSdkLevel()) {
+      optionsBuilder.setMinSdkLevel(sessionRequestInfo.getMinSdkLevel());
+    }
+    if (sessionRequestInfo.hasMaxSdkLevel()) {
+      optionsBuilder.setMaxSdkLevel(sessionRequestInfo.getMaxSdkLevel());
+    }
     DeviceSelectionOptions deviceSelectionOptions = optionsBuilder.build();
 
     ImmutableSet<DeviceDetails> availableDevices =
@@ -92,11 +105,11 @@ public class LocalDeviceUtilImpl implements LocalDeviceUtil {
             .keySet();
     if (!allLocalAndroidDevices.isEmpty()) {
       Optional<String> deviceSerial;
-      if (sessionRequestInfo.deviceSerials().isEmpty()) {
+      if (sessionRequestInfo.getDeviceSerialsList().isEmpty()) {
         deviceSerial = allLocalAndroidDevices.stream().findFirst();
       } else {
         deviceSerial =
-            sessionRequestInfo.deviceSerials().stream()
+            sessionRequestInfo.getDeviceSerialsList().stream()
                 .filter(allLocalAndroidDevices::contains)
                 .findFirst();
       }

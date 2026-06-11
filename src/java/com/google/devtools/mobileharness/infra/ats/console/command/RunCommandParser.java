@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
@@ -25,9 +26,11 @@ import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.proto.FilterValues;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.RunCommandParsingResultFuture;
+import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
 import javax.inject.Inject;
@@ -65,31 +68,46 @@ public class RunCommandParser implements Callable<Integer> {
   }
 
   private SessionRequestInfo.Builder createParseResult() throws MobileHarnessException {
-    SessionRequestInfo.Builder sessionRequestBuilder = SessionRequestInfo.builder();
+    SessionRequestInfo.Builder sessionRequestBuilder = SessionRequestInfo.newBuilder();
     options.validateCommandParameters();
     sessionRequestBuilder
         .setTestPlan(options.config)
-        .setModuleNames(options.getModules())
-        .setIncludeFilters(
+        .addAllModuleNames(options.getModules())
+        .addAllIncludeFilters(
             this.options.includeFilters == null
                 ? ImmutableList.of()
                 : ImmutableList.copyOf(this.options.includeFilters))
-        .setExcludeFilters(
+        .addAllExcludeFilters(
             this.options.excludeFilters == null
                 ? ImmutableList.of()
                 : ImmutableList.copyOf(this.options.excludeFilters))
-        .setStrictIncludeFilters(
+        .addAllStrictIncludeFilters(
             this.options.strictIncludeFilters == null
                 ? ImmutableList.of()
-                : ImmutableList.copyOf(this.options.strictIncludeFilters))
-        .setModuleMetadataIncludeFilters(
-            this.options.moduleMetadataIncludeFilters == null
-                ? ImmutableMultimap.of()
-                : ImmutableMultimap.copyOf(this.options.moduleMetadataIncludeFilters))
-        .setModuleMetadataExcludeFilters(
-            this.options.moduleMetadataExcludeFilters == null
-                ? ImmutableMultimap.of()
-                : ImmutableMultimap.copyOf(this.options.moduleMetadataExcludeFilters))
+                : ImmutableList.copyOf(this.options.strictIncludeFilters));
+
+    ImmutableMultimap<String, String> rawIncludeFilters =
+        this.options.moduleMetadataIncludeFilters == null
+            ? ImmutableMultimap.of()
+            : ImmutableMultimap.copyOf(this.options.moduleMetadataIncludeFilters);
+    sessionRequestBuilder.putAllModuleMetadataIncludeFilters(
+        rawIncludeFilters.asMap().entrySet().stream()
+            .collect(
+                toImmutableMap(
+                    Entry::getKey,
+                    e -> FilterValues.newBuilder().addAllValues(e.getValue()).build())));
+
+    ImmutableMultimap<String, String> rawExcludeFilters =
+        this.options.moduleMetadataExcludeFilters == null
+            ? ImmutableMultimap.of()
+            : ImmutableMultimap.copyOf(this.options.moduleMetadataExcludeFilters);
+    sessionRequestBuilder
+        .putAllModuleMetadataExcludeFilters(
+            rawExcludeFilters.asMap().entrySet().stream()
+                .collect(
+                    toImmutableMap(
+                        Entry::getKey,
+                        e -> FilterValues.newBuilder().addAllValues(e.getValue()).build())))
         .setHtmlInZip(options.htmlInZip);
     if (this.options.shardCount > 0) {
       sessionRequestBuilder.setShardCount(this.options.shardCount);
@@ -122,8 +140,8 @@ public class RunCommandParser implements Callable<Integer> {
     sessionRequestBuilder.setEnableTokenSharding(options.enableTokenSharding);
 
     return sessionRequestBuilder
-        .setModuleArgs(moduleArgs)
-        .setExtraArgs(extraArgs)
-        .setExcludeRunners(excludeRunners);
+        .addAllModuleArgs(moduleArgs)
+        .addAllExtraArgs(extraArgs)
+        .addAllExcludeRunners(excludeRunners);
   }
 }

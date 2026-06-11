@@ -27,7 +27,7 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
-import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName;
@@ -67,7 +67,7 @@ public class ConsoleJobCreator extends XtsJobCreator {
   @Override
   protected void injectEnvSpecificProperties(
       SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams, int jobDeviceCount) {
-    driverParams.put("xts_root_dir", sessionRequestInfo.xtsRootDir());
+    driverParams.put("xts_root_dir", sessionRequestInfo.getXtsRootDir());
   }
 
   @Override
@@ -75,25 +75,33 @@ public class ConsoleJobCreator extends XtsJobCreator {
       throws MobileHarnessException {
     return previousResultLoader.getPrevSessionTestReportProperties(
         XtsDirUtil.getXtsResultsDir(
-            Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
-        sessionRequestInfo.retrySessionIndex().orElse(null),
-        sessionRequestInfo.retrySessionResultDirName().orElse(null));
+            Path.of(sessionRequestInfo.getXtsRootDir()), sessionRequestInfo.getXtsType()),
+        sessionRequestInfo.hasRetrySessionIndex()
+            ? sessionRequestInfo.getRetrySessionIndex()
+            : null,
+        sessionRequestInfo.hasRetrySessionResultDirName()
+            ? sessionRequestInfo.getRetrySessionResultDirName()
+            : null);
   }
 
   @Override
   protected SubPlan prepareRunRetrySubPlan(SessionRequestInfo sessionRequestInfo, boolean forTf)
       throws MobileHarnessException {
     return prepareRunRetrySubPlan(
-        Path.of(sessionRequestInfo.xtsRootDir()),
-        sessionRequestInfo.xtsType(),
-        sessionRequestInfo.retrySessionIndex().orElse(null),
-        sessionRequestInfo.retrySessionResultDirName().orElse(null),
-        sessionRequestInfo.retryType().orElse(null),
-        sessionRequestInfo.includeFilters(),
-        sessionRequestInfo.excludeFilters(),
-        getNonTfModules(sessionRequestInfo.v2ConfigsMap()),
+        Path.of(sessionRequestInfo.getXtsRootDir()),
+        sessionRequestInfo.getXtsType(),
+        sessionRequestInfo.hasRetrySessionIndex()
+            ? sessionRequestInfo.getRetrySessionIndex()
+            : null,
+        sessionRequestInfo.hasRetrySessionResultDirName()
+            ? sessionRequestInfo.getRetrySessionResultDirName()
+            : null,
+        sessionRequestInfo.hasRetryType() ? sessionRequestInfo.getRetryType() : null,
+        ImmutableList.copyOf(sessionRequestInfo.getIncludeFiltersList()),
+        ImmutableList.copyOf(sessionRequestInfo.getExcludeFiltersList()),
+        getNonTfModules(ImmutableMap.copyOf(sessionRequestInfo.getV2ConfigsMapMap())),
         forTf,
-        sessionRequestInfo.moduleNames());
+        ImmutableList.copyOf(sessionRequestInfo.getModuleNamesList()));
   }
 
   private SubPlan prepareRunRetrySubPlan(
@@ -161,10 +169,14 @@ public class ConsoleJobCreator extends XtsJobCreator {
     }
     TradefedResultFilesBundle tfRunRetryFilesBundle =
         findTfRunRetryFilesBundle(
-            Path.of(sessionRequestInfo.xtsRootDir()),
-            sessionRequestInfo.xtsType(),
-            sessionRequestInfo.retrySessionIndex().orElse(null),
-            sessionRequestInfo.retrySessionResultDirName().orElse(null));
+            Path.of(sessionRequestInfo.getXtsRootDir()),
+            sessionRequestInfo.getXtsType(),
+            sessionRequestInfo.hasRetrySessionIndex()
+                ? sessionRequestInfo.getRetrySessionIndex()
+                : null,
+            sessionRequestInfo.hasRetrySessionResultDirName()
+                ? sessionRequestInfo.getRetrySessionResultDirName()
+                : null);
     driverParams.put(
         "prev_session_test_result_xml",
         tfRunRetryFilesBundle.testResultXml().toAbsolutePath().toString());
@@ -176,8 +188,8 @@ public class ConsoleJobCreator extends XtsJobCreator {
             .map(Path::toAbsolutePath)
             .map(Path::toString)
             .collect(toImmutableList()));
-    if (sessionRequestInfo.retryType().isPresent()) {
-      driverParams.put("retry_type", sessionRequestInfo.retryType().get().toString());
+    if (sessionRequestInfo.hasRetryType()) {
+      driverParams.put("retry_type", sessionRequestInfo.getRetryType().toString());
     }
   }
 
@@ -207,16 +219,20 @@ public class ConsoleJobCreator extends XtsJobCreator {
       SessionRequestInfo sessionRequestInfo, SubPlan subPlan) throws MobileHarnessException {
     Path xtsSubPlansDir =
         XtsDirUtil.getXtsSubPlansDir(
-            Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType());
+            Path.of(sessionRequestInfo.getXtsRootDir()), sessionRequestInfo.getXtsType());
 
     return serializeRetrySubPlan(
         xtsSubPlansDir,
         subPlan,
         String.format(
             "#%s",
-            sessionRequestInfo
-                .retrySessionResultDirName()
-                .orElseGet(
-                    () -> String.valueOf(sessionRequestInfo.retrySessionIndex().orElseThrow()))));
+            sessionRequestInfo.hasRetrySessionResultDirName()
+                ? sessionRequestInfo.getRetrySessionResultDirName()
+                : String.valueOf(
+                    Optional.ofNullable(
+                            sessionRequestInfo.hasRetrySessionIndex()
+                                ? sessionRequestInfo.getRetrySessionIndex()
+                                : null)
+                        .orElseThrow())));
   }
 }

@@ -24,6 +24,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.DeviceInfo;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
@@ -62,7 +63,8 @@ public final class LocalDeviceUtilImplTest {
     when(deviceDetailsRetriever.getAllLocalAndroidDevicesWithNeededDetails(any()))
         .thenReturn(ImmutableMap.of());
 
-    SessionRequestInfo sessionRequestInfo = defaultSessionRequestInfoBuilder().build();
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(defaultSessionRequestInfoBuilder());
 
     assertThrows(
         MobileHarnessException.class,
@@ -76,7 +78,8 @@ public final class LocalDeviceUtilImplTest {
         .thenReturn(ImmutableMap.of("device1", deviceDetails));
 
     SessionRequestInfo sessionRequestInfo =
-        defaultSessionRequestInfoBuilder().setDeviceSerials(ImmutableList.of("device1")).build();
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder().addAllDeviceSerials(ImmutableList.of("device1")));
 
     assertThat(localDeviceUtil.getLocalAvailableDevices(sessionRequestInfo))
         .containsExactly(deviceDetails);
@@ -87,7 +90,8 @@ public final class LocalDeviceUtilImplTest {
     when(deviceDetailsRetriever.getAllLocalAndroidDevicesWithNeededDetails(any()))
         .thenReturn(ImmutableMap.of());
 
-    SessionRequestInfo sessionRequestInfo = defaultSessionRequestInfoBuilder().build();
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(defaultSessionRequestInfoBuilder());
 
     assertThat(localDeviceUtil.getDeviceInfoFromLocal(sessionRequestInfo)).isEmpty();
   }
@@ -100,7 +104,8 @@ public final class LocalDeviceUtilImplTest {
     when(androidAdbUtil.getProperty("device1", AndroidProperty.ABILIST)).thenReturn("arm64-v8a");
     when(androidAdbUtil.getProperty("device1", AndroidProperty.ABI)).thenReturn("arm64-v8a");
 
-    SessionRequestInfo sessionRequestInfo = defaultSessionRequestInfoBuilder().build();
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(defaultSessionRequestInfoBuilder());
 
     Optional<DeviceInfo> deviceInfo = localDeviceUtil.getDeviceInfoFromLocal(sessionRequestInfo);
     assertThat(deviceInfo).isPresent();
@@ -112,7 +117,7 @@ public final class LocalDeviceUtilImplTest {
   }
 
   private SessionRequestInfo.Builder defaultSessionRequestInfoBuilder() {
-    return SessionRequestInfo.builder()
+    return SessionRequestInfo.newBuilder()
         .setTestPlan("cts")
         .setCommandLineArgs("cts")
         .setXtsType("cts")

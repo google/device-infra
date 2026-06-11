@@ -1,0 +1,120 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.infra.ats.common;
+
+import "google/protobuf/duration.proto";
+import "src/devtools/mobileharness/infra/ats/common/proto/xts_common.proto";
+import "src/devtools/mobileharness/infra/ats/server/proto/service.proto";
+import "src/devtools/mobileharness/platform/android/xts/proto/configuration.proto";
+
+option java_package = "com.google.devtools.mobileharness.infra.ats.common.proto";
+option java_multiple_files = true;
+option java_outer_classname = "SessionRequestInfoProto";
+
+message FilterValues {
+  repeated string values = 1;
+}
+
+// Data holder used to create jobInfo. Data comes from session request handlers,
+// like RunCommandHandler.
+message SessionRequestInfo {
+  string test_plan = 1;
+  string command_line_args = 2;
+  string xts_root_dir = 3;
+  optional string android_xts_zip = 4;
+  optional string android_xts_zip_download_url = 5;
+  optional string android_xts_zip_password = 6;
+  repeated string device_serials = 7;
+  optional DeviceInfo device_info = 8;
+  repeated string exclude_device_serials = 9;
+  repeated string product_types = 10;
+  map<string, string> device_properties = 11;
+  repeated string module_names = 12;
+  optional string test_name = 13;
+  optional int32 shard_count = 14;
+  repeated string include_filters = 15;
+  repeated string exclude_filters = 16;
+  repeated string strict_include_filters = 17;
+  map<string, FilterValues> module_metadata_include_filters = 18;
+  map<string, FilterValues> module_metadata_exclude_filters = 19;
+  // When testPlan is "retry", at least one of retrySessionId,
+  // retrySessionResultDirName or retrySessionIndex should be set before calling
+  // build().
+  optional int32 retry_session_index = 20;
+  // When testPlan is "retry", at least one of retrySessionId,
+  // retrySessionResultDirName or retrySessionIndex should be set before calling
+  // build().
+  optional string retry_session_result_dir_name = 21;
+  // When testPlan is "retry", at least one of retrySessionId,
+  // retrySessionResultDirName or retrySessionIndex should be set before calling
+  // build().
+  optional string retry_session_id = 22;
+  optional RetryType retry_type = 23;
+  // Must be set if retrySessionId is set. This is for ATS Server retry.
+  optional string retry_result_dir = 24;
+  repeated string module_args = 25;
+  repeated string extra_args = 26;
+  string xts_type = 27;
+  optional string python_pkg_index_url = 28;
+  repeated string given_matched_non_tf_modules = 29;
+  // Key is config file absolute path.
+  map<string, xts.config.Configuration> v2_configs_map = 30;
+  // Key is expanded module name (e.g. `arm64-v8a CtsBatteryHealthTestCases`).
+  map<string, xts.config.Configuration> expanded_modules = 31;
+  bool enable_module_parameter = 32;
+  bool enable_module_optional_parameter = 33;
+  google.protobuf.Duration job_timeout = 34;
+  google.protobuf.Duration start_timeout = 35;
+  map<string, string> env_vars = 36;
+  optional string sub_plan_name = 37;
+  // The backup subplan name for subPlanName in case the subplan file is
+  // modified during test run.
+  optional string sub_plan_name_backup = 38;
+  bool html_in_zip = 39;
+  optional string session_client_id = 40;
+  optional string device_type = 41;
+  optional int32 max_battery_level = 42;
+  optional int32 min_battery_level = 43;
+  optional int32 max_battery_temperature = 44;
+  optional int32 min_sdk_level = 45;
+  optional int32 max_sdk_level = 46;
+  bool is_ats_server_request = 47;
+  optional string remote_runner_file_path_prefix = 48;
+  bool report_system_checkers = 49;
+  optional ShardingMode sharding_mode = 50;
+  optional bool skip_device_info = 51;
+  optional bool is_xts_dynamic_download_enabled = 52;
+  optional bool is_mobly_resultstore_upload_enabled = 53;
+  map<string, string> xts_suite_info = 54;
+  optional TestSuiteInfo test_suite_info = 55;
+  repeated string exclude_runners = 56;
+  // The test resources passed in from ATS server. Used for building command.xml
+  // file.
+  repeated mobileharness.infra.ats.server.TestResource
+      ats_server_test_resources = 57;
+  // The test environment passed in from ATS server. Used for building
+  // command.xml file.
+  optional mobileharness.infra.ats.server.TestEnvironment
+      ats_server_test_environment = 58;
+  bool allow_partial_device_match = 59;
+  optional bool enable_default_logs = 60;
+  bool enable_token_sharding = 61;
+  optional string business_logic_url = 62;
+  bool ignore_business_logic_failure = 63;
+}

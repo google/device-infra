@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceManagementFilter;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
@@ -72,30 +73,29 @@ public class DeviceDetailsRetriever {
           .map(
               deviceId -> {
                 DeviceDetails.Builder deviceDetails = DeviceDetails.builder().setId(deviceId);
-                if (!sessionRequestInfo.productTypes().isEmpty()) {
+                if (!sessionRequestInfo.getProductTypesList().isEmpty()) {
                   Optional<String> productType = getDeviceProductType(deviceId);
                   productType.ifPresent(deviceDetails::setProductType);
                   Optional<String> productVariant = getDeviceProductVariant(deviceId);
                   productVariant.ifPresent(deviceDetails::setProductVariant);
                 }
-                if (sessionRequestInfo.maxSdkLevel().isPresent()
-                    || sessionRequestInfo.minSdkLevel().isPresent()) {
+                if (sessionRequestInfo.hasMaxSdkLevel() || sessionRequestInfo.hasMinSdkLevel()) {
                   Optional<Integer> sdkVersion = getDeviceSdkVersion(deviceId);
                   sdkVersion.ifPresent(deviceDetails::setSdkVersion);
                 }
-                if (sessionRequestInfo.maxBatteryLevel().isPresent()
-                    || sessionRequestInfo.minBatteryLevel().isPresent()) {
+                if (sessionRequestInfo.hasMaxBatteryLevel()
+                    || sessionRequestInfo.hasMinBatteryLevel()) {
                   Optional<Integer> batteryLevel = getDeviceBatteryLevel(deviceId);
                   batteryLevel.ifPresent(deviceDetails::setBatteryLevel);
                 }
-                if (sessionRequestInfo.maxBatteryTemperature().isPresent()) {
+                if (sessionRequestInfo.hasMaxBatteryTemperature()) {
                   Optional<Integer> batteryTemperature = getDeviceBatteryTemperature(deviceId);
                   batteryTemperature.ifPresent(deviceDetails::setBatteryTemperature);
                 }
                 ImmutableMap.Builder<String, String> collectedDeviceProperties =
                     ImmutableMap.builder();
                 sessionRequestInfo
-                    .deviceProperties()
+                    .getDevicePropertiesMap()
                     .keySet()
                     .forEach(
                         propName -> {

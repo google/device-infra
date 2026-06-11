@@ -23,6 +23,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
@@ -190,24 +191,24 @@ public final class SessionResultHandlerUtilTest {
     Configuration module5Config =
         createModuleConfigWithFailureLevel("module5", Optional.of("IGNORED"));
     SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
-            .setTestPlan("testPlan")
-            .setCommandLineArgs("commandLineArgs")
-            .setXtsRootDir("xtsRootDir")
-            .setXtsType("xtsType")
-            .setExpandedModules(
-                ImmutableMap.of(
-                    "module1",
-                    module1Config,
-                    "module2",
-                    module2Config,
-                    "module3",
-                    module3Config,
-                    "module4",
-                    module4Config,
-                    "module5",
-                    module5Config))
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("testPlan")
+                .setCommandLineArgs("commandLineArgs")
+                .setXtsRootDir("xtsRootDir")
+                .setXtsType("xtsType")
+                .putAllExpandedModules(
+                    ImmutableMap.of(
+                        "module1",
+                        module1Config,
+                        "module2",
+                        module2Config,
+                        "module3",
+                        module3Config,
+                        "module4",
+                        module4Config,
+                        "module5",
+                        module5Config)));
 
     Module.Builder defaultModuleBuilder =
         Module.newBuilder()

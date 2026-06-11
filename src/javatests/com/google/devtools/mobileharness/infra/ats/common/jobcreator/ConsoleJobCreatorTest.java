@@ -32,8 +32,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.TradefedJobInfo;
-import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfoUtil;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.DeviceInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
@@ -98,21 +99,20 @@ public final class ConsoleJobCreatorTest {
 
   @Test
   public void createXtsTradefedTestJob() throws Exception {
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
-            .setModuleNames(ImmutableList.of("mock_module"))
+            .addAllModuleNames(ImmutableList.of("mock_module"))
             .setDeviceInfo(
-                Optional.of(
-                    DeviceInfo.newBuilder()
-                        .setDeviceId("mock_device_id")
-                        .setSupportedAbiList("arm64-v8a,armeabi-v7a")
-                        .build()))
-            .setEnableDefaultLogs(false)
-            .build();
+                DeviceInfo.newBuilder()
+                    .setDeviceId("mock_device_id")
+                    .setSupportedAbiList("arm64-v8a,armeabi-v7a")
+                    .build())
+            .setEnableDefaultLogs(false);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     @SuppressWarnings("unchecked") // safe by specification
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
@@ -160,21 +160,20 @@ public final class ConsoleJobCreatorTest {
         </subPlan>
         """);
 
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir.getAbsolutePath())
             .setSubPlanName("sub_plan_name")
             .setDeviceInfo(
-                Optional.of(
-                    DeviceInfo.newBuilder()
-                        .setDeviceId("mock_device_id")
-                        .setSupportedAbiList("arm64-v8a,armeabi-v7a")
-                        .build()))
-            .setEnableDefaultLogs(false)
-            .build();
+                DeviceInfo.newBuilder()
+                    .setDeviceId("mock_device_id")
+                    .setSupportedAbiList("arm64-v8a,armeabi-v7a")
+                    .build())
+            .setEnableDefaultLogs(false);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     @SuppressWarnings("unchecked") // safe by specification
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
@@ -206,14 +205,14 @@ public final class ConsoleJobCreatorTest {
 
   @Test
   public void createXtsTradefedTestJob_withModuleSharding() throws Exception {
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
-            .setShardingMode(ShardingMode.MODULE)
-            .build();
+            .setShardingMode(ShardingMode.MODULE);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
 
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
@@ -229,19 +228,19 @@ public final class ConsoleJobCreatorTest {
 
   @Test
   public void createXtsTradefedTestJob_withTfModules() throws Exception {
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
-            .setEnvVars(ImmutableMap.of("env_key1", "env_value1"))
-            .setDeviceSerials(ImmutableList.of("device_id_1"))
-            .setModuleNames(ImmutableList.of("module1"))
+            .putAllEnvVars(ImmutableMap.of("env_key1", "env_value1"))
+            .addAllDeviceSerials(ImmutableList.of("device_id_1"))
+            .addAllModuleNames(ImmutableList.of("module1"))
             .setShardCount(2)
-            .setExtraArgs(ImmutableList.of("--logcat-on-failure"))
-            .setEnableDefaultLogs(false)
-            .build();
+            .addAllExtraArgs(ImmutableList.of("--logcat-on-failure"))
+            .setEnableDefaultLogs(false);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     @SuppressWarnings("unchecked") // safe by specification
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
@@ -278,16 +277,16 @@ public final class ConsoleJobCreatorTest {
 
   @Test
   public void createXtsTradefedTestJob_strictIncludeFilters() throws Exception {
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
-            .setModuleNames(ImmutableList.of("mock_module"))
-            .setStrictIncludeFilters(ImmutableList.of("strict_filter_1", "strict_filter_2"))
-            .setEnableDefaultLogs(false)
-            .build();
+            .addAllModuleNames(ImmutableList.of("mock_module"))
+            .addAllStrictIncludeFilters(ImmutableList.of("strict_filter_1", "strict_filter_2"))
+            .setEnableDefaultLogs(false);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     @SuppressWarnings("unchecked") // safe by specification
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
@@ -310,18 +309,18 @@ public final class ConsoleJobCreatorTest {
 
   @Test
   public void createXtsTradefedTestJob_strictIncludeFilters_ignoreOtherFilters() throws Exception {
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
-            .setModuleNames(ImmutableList.of("mock_module"))
-            .setStrictIncludeFilters(ImmutableList.of("strict_filter"))
-            .setIncludeFilters(ImmutableList.of("include_filter"))
-            .setExcludeFilters(ImmutableList.of("exclude_filter"))
-            .setEnableDefaultLogs(false)
-            .build();
+            .addAllModuleNames(ImmutableList.of("mock_module"))
+            .addAllStrictIncludeFilters(ImmutableList.of("strict_filter"))
+            .addAllIncludeFilters(ImmutableList.of("include_filter"))
+            .addAllExcludeFilters(ImmutableList.of("exclude_filter"))
+            .setEnableDefaultLogs(false);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     @SuppressWarnings("unchecked") // safe by specification
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
@@ -343,19 +342,19 @@ public final class ConsoleJobCreatorTest {
 
   @Test
   public void createXtsTradefedTestJob_withGivenTest() throws Exception {
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
-            .setEnvVars(ImmutableMap.of("env_key1", "env_value1"))
-            .setModuleNames(ImmutableList.of("module1"))
+            .putAllEnvVars(ImmutableMap.of("env_key1", "env_value1"))
+            .addAllModuleNames(ImmutableList.of("module1"))
             .setTestName("test1")
             .setShardCount(2)
-            .setExtraArgs(ImmutableList.of("--logcat-on-failure"))
-            .setEnableDefaultLogs(false)
-            .build();
+            .addAllExtraArgs(ImmutableList.of("--logcat-on-failure"))
+            .setEnableDefaultLogs(false);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     @SuppressWarnings("unchecked") // safe by specification
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
@@ -393,15 +392,15 @@ public final class ConsoleJobCreatorTest {
 
   @Test
   public void createXtsTradefedTestJob_enableDefaultLogsTrue() throws Exception {
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
             .setCommandLineArgs("cts")
             .setXtsType("cts")
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
-            .setModuleNames(ImmutableList.of("module1"))
-            .setEnableDefaultLogs(true)
-            .build();
+            .addAllModuleNames(ImmutableList.of("module1"))
+            .setEnableDefaultLogs(true);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     @SuppressWarnings("unchecked") // safe by specification
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
@@ -425,15 +424,15 @@ public final class ConsoleJobCreatorTest {
     subPlan.setPreviousSessionDeviceBuildFingerprint("[fake device build fingerprint]");
     subPlan.addIncludeFilter("armeabi-v7a ModuleA android.test.Foo#test1");
     File xtsRootDir = folder.newFolder("xts_root_dir");
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("retry")
             .setCommandLineArgs("retry --retry 0")
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir.getAbsolutePath())
             .setRetrySessionIndex(0)
-            .setEnableDefaultLogs(false)
-            .build();
+            .setEnableDefaultLogs(false);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     @SuppressWarnings("unchecked") // safe by specification
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
 
@@ -475,17 +474,17 @@ public final class ConsoleJobCreatorTest {
     subPlan.addIncludeFilter("armeabi-v7a ModuleA android.test.Foo#test1");
     subPlan.addExcludeFilter("armeabi-v7a ModuleB android.test.Foo#test1");
     File xtsRootDir = folder.newFolder("xts_root_dir");
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("retry")
             .setCommandLineArgs("retry --retry 0")
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir.getAbsolutePath())
             .setRetrySessionIndex(0)
-            .setIncludeFilters(ImmutableList.of("armeabi-v7a ModuleA android.test.Foo#test1"))
-            .setExcludeFilters(ImmutableList.of("armeabi-v7a ModuleB android.test.Foo#test1"))
-            .setEnableDefaultLogs(false)
-            .build();
+            .addAllIncludeFilters(ImmutableList.of("armeabi-v7a ModuleA android.test.Foo#test1"))
+            .addAllExcludeFilters(ImmutableList.of("armeabi-v7a ModuleB android.test.Foo#test1"))
+            .setEnableDefaultLogs(false);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     @SuppressWarnings("unchecked") // safe by specification
     ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
     ArgumentCaptor<RetryArgs> retryArgsCaptor = ArgumentCaptor.forClass(RetryArgs.class);
@@ -539,14 +538,14 @@ public final class ConsoleJobCreatorTest {
     when(previousResultLoader.getPrevSessionTestReportProperties(any(Path.class), anyInt(), any()))
         .thenReturn(Optional.empty());
 
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("retry")
             .setCommandLineArgs("retry")
             .setXtsType("cts")
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
-            .setRetrySessionIndex(0)
-            .build();
+            .setRetrySessionIndex(0);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     assertThrows(
         MobileHarnessException.class,
         () -> jobCreator.createXtsNonTradefedJobs(sessionRequestInfo));
@@ -555,16 +554,16 @@ public final class ConsoleJobCreatorTest {
   @Test
   public void createXtsTradefedTestJob_tfRetryWithModules() throws Exception {
     flags.setAll(ImmutableMap.of("enable_ats_mode", "true", "use_tf_retry", "true"));
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
             .setTestPlan("retry")
             .setCommandLineArgs("retry --retry 0")
             .setXtsType("cts")
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
             .setRetrySessionIndex(0)
-            .setModuleNames(ImmutableList.of("mock_module[instant]"))
-            .setEnableDefaultLogs(false)
-            .build();
+            .addAllModuleNames(ImmutableList.of("mock_module[instant]"))
+            .setEnableDefaultLogs(false);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     when(previousResultLoader.getPrevSessionTestReportProperties(any(Path.class), anyInt(), any()))
         .thenReturn(Optional.empty());
     Path testResultPath = folder.newFile("test_result.xml").toPath();

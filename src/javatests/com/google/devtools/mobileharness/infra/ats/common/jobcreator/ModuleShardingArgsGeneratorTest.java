@@ -25,8 +25,9 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
-import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfoUtil;
 import com.google.devtools.mobileharness.infra.ats.common.ShardConstants;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import org.junit.Before;
@@ -58,15 +59,15 @@ public final class ModuleShardingArgsGeneratorTest {
   public void generateShardingArgs_noModulesForSharding() throws Exception {
     ImmutableSet<String> shardingArgs =
         moduleShardingArgsGenerator.generateShardingArgs(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .setShardingMode(ShardingMode.MODULE)
-                .setIncludeFilters(ImmutableList.of("mock_module1[instant]", "mock_module2"))
-                .setExcludeFilters(ImmutableList.of("mock_module1[instant] class#test"))
-                .build(),
+            SessionRequestInfoUtil.buildAndValidate(
+                SessionRequestInfo.newBuilder()
+                    .setTestPlan("cts")
+                    .setCommandLineArgs("cts")
+                    .setXtsType("cts")
+                    .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                    .setShardingMode(ShardingMode.MODULE)
+                    .addAllIncludeFilters(ImmutableList.of("mock_module1[instant]", "mock_module2"))
+                    .addAllExcludeFilters(ImmutableList.of("mock_module1[instant] class#test"))),
             ImmutableList.of("mock_module1", "mock_module2"));
 
     assertThat(shardingArgs)
@@ -80,13 +81,13 @@ public final class ModuleShardingArgsGeneratorTest {
   public void generateShardingArgs_withLargeModules() throws Exception {
     ImmutableSet<String> shardingArgs =
         moduleShardingArgsGenerator.generateShardingArgs(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .setShardingMode(ShardingMode.MODULE)
-                .build(),
+            SessionRequestInfoUtil.buildAndValidate(
+                SessionRequestInfo.newBuilder()
+                    .setTestPlan("cts")
+                    .setCommandLineArgs("cts")
+                    .setXtsType("cts")
+                    .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                    .setShardingMode(ShardingMode.MODULE)),
             ShardConstants.LARGE_MODULES.asList());
 
     assertThat(shardingArgs).hasSize(ShardConstants.LARGE_MODULES.size() * LARGE_MODULE_SHARDS);
@@ -96,13 +97,13 @@ public final class ModuleShardingArgsGeneratorTest {
   public void generateShardingArgs_withShardModules() throws Exception {
     ImmutableSet<String> shardingArgs =
         moduleShardingArgsGenerator.generateShardingArgs(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .setShardingMode(ShardingMode.MODULE)
-                .build(),
+            SessionRequestInfoUtil.buildAndValidate(
+                SessionRequestInfo.newBuilder()
+                    .setTestPlan("cts")
+                    .setCommandLineArgs("cts")
+                    .setXtsType("cts")
+                    .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                    .setShardingMode(ShardingMode.MODULE)),
             ShardConstants.SHARD_MODULES.asList());
 
     assertThat(shardingArgs).hasSize(ShardConstants.SHARD_MODULES.size() * SHARD_MODULE_SHARDS);
@@ -118,13 +119,13 @@ public final class ModuleShardingArgsGeneratorTest {
 
     ImmutableSet<String> shardingArgs =
         moduleShardingArgsGenerator.generateShardingArgs(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .setShardingMode(ShardingMode.MODULE)
-                .build(),
+            SessionRequestInfoUtil.buildAndValidate(
+                SessionRequestInfo.newBuilder()
+                    .setTestPlan("cts")
+                    .setCommandLineArgs("cts")
+                    .setXtsType("cts")
+                    .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                    .setShardingMode(ShardingMode.MODULE)),
             modules.build());
     String nonShardingArgs =
         shardingArgs.stream().filter(arg -> arg.contains("mock_module")).findFirst().get();
@@ -146,13 +147,13 @@ public final class ModuleShardingArgsGeneratorTest {
     allLocalModulesBuilder.add(shardModule).add(largeModule).add("local_module");
 
     SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.builder()
-            .setTestPlan("cts")
-            .setCommandLineArgs("cts")
-            .setXtsType("cts")
-            .setXtsRootDir(XTS_ROOT_DIR_PATH)
-            .setShardingMode(ShardingMode.MODULE)
-            .build();
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts")
+                .setXtsType("cts")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setShardingMode(ShardingMode.MODULE));
 
     when(sessionRequestHandlerUtil.getStaticMctsModules())
         .thenReturn(ImmutableSet.of("mcts_module"));
