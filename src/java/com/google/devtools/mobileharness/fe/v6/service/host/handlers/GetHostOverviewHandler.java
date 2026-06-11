@@ -111,8 +111,12 @@ public final class GetHostOverviewHandler {
                     hostName, hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType), universe),
             executor);
 
+    // Only fetch the latest version for the self universe, as the routed universe(like vivo) is not
+    // supported.
     ListenableFuture<Optional<String>> latestVersionFuture =
-        hostLatestVersionProvider.getLatestVersion(hostName, universe);
+        universe instanceof UniverseScope.SelfUniverse
+            ? hostLatestVersionProvider.getLatestVersion(hostName, universe)
+            : Futures.immediateFuture(Optional.empty());
 
     return Futures.whenAllSucceed(
             labInfoFuture,
@@ -145,7 +149,8 @@ public final class GetHostOverviewHandler {
                       universe);
 
               boolean canUpgrade =
-                  calculateCanUpgrade(currentVersionOpt, latestVersionOpt, labServerInfo);
+                  (universe instanceof UniverseScope.SelfUniverse)
+                      && calculateCanUpgrade(currentVersionOpt, latestVersionOpt, labServerInfo);
 
               HostOverview overview =
                   buildHostOverview(

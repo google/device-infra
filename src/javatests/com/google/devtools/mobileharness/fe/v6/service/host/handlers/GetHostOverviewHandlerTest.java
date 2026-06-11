@@ -22,6 +22,8 @@ import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorS
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
@@ -563,6 +565,19 @@ public final class GetHostOverviewHandlerTest {
             .getOverviewContent();
 
     assertThat(overview.getCanUpgrade()).isFalse();
+  }
+
+  @Test
+  public void getHostOverview_routedUniverse_canUpgradeIsFalseAndNoLatestVersionFetch()
+      throws Exception {
+    UniverseScope routedUniverse = new UniverseScope.RoutedUniverse("vivo");
+
+    HostOverview overview =
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, routedUniverse))
+            .getOverviewContent();
+
+    assertThat(overview.getCanUpgrade()).isFalse();
+    verify(hostLatestVersionProvider, never()).getLatestVersion(any(), any());
   }
 
   private void mockLabInfoWithProperty(String key, String value) {
