@@ -1,0 +1,129 @@
+<app-master-detail-layout [navList]="overviewNavList()">
+  <!-- Conditional Error Card -->
+  @if (test().error; as error) {
+    <app-info-card id="overview-error" title="Error Details" icon="error_outline" [collapsible]="true" [expanded]="true" class="error-info-card">
+      <div class="info-card-content">
+        <p class="error-msg-text">{{ error.message }}</p>
+        @if (error.trace) {
+          <pre class="trace-pre">{{ error.trace }}</pre>
+        }
+      </div>
+    </app-info-card>
+  }
+
+  <!-- Conditional Warning Card -->
+  @if (test().warnings; as warnings) {
+    @if (warnings.length > 0) {
+      <app-info-card id="overview-warning" title="Warning Details" icon="warning" [collapsible]="true" [expanded]="true" class="warning-info-card">
+        <div class="info-card-content">
+          <p class="warning-msg-text">{{ warningTitle() }}</p>
+          @if (warningDetailsText()) {
+            <pre class="trace-pre">{{ warningDetailsText() }}</pre>
+          }
+        </div>
+      </app-info-card>
+    }
+  }
+
+  <!-- Execution Details -->
+  <app-info-card id="overview-execution" class="execution-card" title="Execution Details" [collapsible]="false">
+    <div class="info-card-content">
+      <dl class="detail-list-grid">
+        @if (test().user) {
+          <dt class="label-with-help">
+            <span>Run As</span>
+            <mat-icon matTooltip="The identity under which the test actually executed (Run As)." class="help-icon">info_outline</mat-icon>
+          </dt>
+          <dd>{{ test().user }}</dd>
+        }
+        @if (test().actualUser) {
+          <dt class="label-with-help">
+            <span>Actual User</span>
+            <mat-icon matTooltip="The credentialed person or system who actually submitted the test." class="help-icon">info_outline</mat-icon>
+          </dt>
+          <dd>{{ test().actualUser }}</dd>
+        }
+        @for (item of timestampKeys; track item.key) {
+          @let info = timestampInfoMap()[item.key];
+          <dt>{{ item.label }}</dt>
+          <dd class="timestamp-value-row">
+            @if (info.displayValue === 'N/A') {
+              <span class="timestamp-display-val text-gray-400 italic">N/A</span>
+            } @else {
+              <div class="timestamp-interactive-container">
+                <span class="timestamp-display-val">
+                  {{ info.displayValue }}
+                </span>
+                <div class="timezone-details-panel">
+                  <div class="panel-header-title">Time Zone Details</div>
+                  <div class="panel-grid">
+                    <span class="grid-label">Local</span>
+                    <span class="grid-value">{{ info.localStr }}</span>
+
+                    <span class="grid-label">UTC</span>
+                    <span class="grid-value">{{ info.utcStr }}</span>
+
+                    @if (info.elapsedHtml) {
+                      <span class="grid-label">Elapsed</span>
+                      <span class="grid-value">{{ info.elapsedHtml }}</span>
+                    }
+                  </div>
+                  <div class="panel-arrow"></div>
+                </div>
+              </div>
+              @if (info.durationText) {
+                <span class="timestamp-duration-text">{{ info.durationText }}</span>
+              }
+            }
+          </dd>
+        }
+      </dl>
+    </div>
+  </app-info-card>
+
+  <!-- Test Properties -->
+  <app-info-card id="overview-properties" title="Test Properties" [collapsible]="true" [expanded]="true" class="properties-card">
+    <div class="info-card-content text-sm">
+      @if (hasProperties()) {
+        <mat-form-field
+          appearance="outline"
+          class="overview-search-field"
+          subscriptSizing="dynamic"
+        >
+          <input
+            matInput
+            id="properties-search"
+            class="filter-input"
+            placeholder="Filter properties by key or value..."
+            [ngModel]="propertiesSearchTerm()"
+            (ngModelChange)="propertiesSearchTerm.set($event)"
+            aria-label="Search properties"
+          />
+          @if (propertiesSearchTerm()) {
+            <button matSuffix mat-icon-button aria-label="Clear" (click)="propertiesSearchTerm.set('')">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+
+        @let filteredProps = filteredProperties();
+        @if (filteredProps.length === 0) {
+          <div id="properties-no-results" class="no-search-results">No properties match your filter.</div>
+        } @else {
+          <div class="data-block">
+            <dl class="data-block-grid">
+              @for (prop of filteredProps; track prop.key) {
+                <div class="data-block-row contents">
+                  <dt class="font-mono">{{ prop.key }}</dt>
+                  <dd>{{ prop.value }}</dd>
+                </div>
+              }
+            </dl>
+          </div>
+        }
+      } @else {
+        <p class="no-data">None</p>
+      }
+    </div>
+  </app-info-card>
+</app-master-detail-layout>

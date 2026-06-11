@@ -1,14 +1,17 @@
 import {CommonModule} from '@angular/common';
-import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
+import {MatIconModule} from '@angular/material/icon';
 import {RouterLink} from '@angular/router';
 import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
 import {
   MOCK_DEVICE_SCENARIOS,
   MOCK_HOST_SCENARIOS,
+  MOCK_TEST_SCENARIOS,
 } from '../../core/services/mock_data';
 import {
   MockDeviceScenario,
   MockHostScenario,
+  MockTestScenario,
 } from '../../core/services/mock_data/models';
 
 /**
@@ -18,7 +21,7 @@ import {
 @Component({
   selector: 'app-dev-harness-page',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, MatIconModule],
   templateUrl: './dev_harness_page.ng.html',
   styleUrl: './dev_harness_page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -26,6 +29,12 @@ import {
 export class DevHarnessPage {
   readonly deviceScenarios: MockDeviceScenario[];
   readonly hostScenarios: MockHostScenario[];
+  readonly testScenarios: MockTestScenario[];
+
+  readonly deviceCollapsed = signal(false);
+  readonly hostCollapsed = signal(false);
+  readonly testCollapsed = signal(false);
+
   private readonly loadingService = inject(LoadingService);
 
   constructor() {
@@ -42,6 +51,27 @@ export class DevHarnessPage {
       if (aName > bName) return 1;
       return 0;
     });
+
+    this.testScenarios = [...MOCK_TEST_SCENARIOS].sort((a, b) => {
+      const aName = a.scenarioName;
+      const bName = b.scenarioName;
+      if (aName < bName) return -1;
+      if (aName > bName) return 1;
+      return 0;
+    });
+
     this.loadingService.hide();
+  }
+
+  toggleDeviceScenarios() {
+    this.deviceCollapsed.update((v) => !v);
+  }
+
+  toggleHostScenarios() {
+    this.hostCollapsed.update((v) => !v);
+  }
+
+  toggleTestScenarios() {
+    this.testCollapsed.update((v) => !v);
   }
 }

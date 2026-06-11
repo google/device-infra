@@ -12,6 +12,83 @@ export interface GoogleDate {
  */
 export const dateUtils = {
   /**
+   * Parses a PDT timestamp string (which may have Z suffix but represents PDT)
+   * into a correct timezone-aligned Date object.
+   */
+  parsePdtTimestamp: (val: string | null): Date => {
+    if (!val) return new Date(NaN);
+    let cleanVal = val;
+    if (cleanVal.endsWith('Z')) {
+      cleanVal = cleanVal.slice(0, -1);
+    }
+    cleanVal = cleanVal.replace(' ', 'T');
+    const tempUtc = new Date(cleanVal + 'Z');
+    if (isNaN(tempUtc.getTime())) return tempUtc;
+    const laLoc = tempUtc.toLocaleString('en-US', {
+      timeZone: 'America/Los_Angeles',
+    });
+    const utcLoc = tempUtc.toLocaleString('en-US', {timeZone: 'UTC'});
+    const laTime = new Date(laLoc).getTime();
+    const utcTime = new Date(utcLoc).getTime();
+    const offset = laTime - utcTime;
+    return new Date(tempUtc.getTime() - offset);
+  },
+
+  /**
+   * Formats a date object to PDT format: e.g. Jul 9, 2025, 10:11:15 AM PDT.
+   */
+  formatPdt: (date: Date): string => {
+    const pdtFormatter = new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+      timeZone: 'America/Los_Angeles',
+      timeZoneName: 'short',
+    });
+    return pdtFormatter.format(date);
+  },
+
+  /**
+   * Calculates the difference between two Dates and formats it for presentation as elapsed duration.
+   */
+  getElapsedTimeText: (
+    date: Date,
+    baseDate: Date | null,
+    baseLabel: string,
+  ): {durationText: string; elapsedHtml: string} => {
+    if (!baseDate || isNaN(baseDate.getTime()) || isNaN(date.getTime())) {
+      return {durationText: '', elapsedHtml: ''};
+    }
+
+    const diffMs = date.getTime() - baseDate.getTime();
+    const diffSec = Math.round(diffMs / 1000);
+
+    let durationText = '';
+    let elapsedHtml = '';
+
+    if (diffSec >= 0 && diffSec < 60) {
+      durationText = `(+${diffSec}s)`;
+      elapsedHtml = `${diffSec}s after ${baseLabel}`;
+    } else if (diffSec >= 60 && diffSec < 3600) {
+      const m = Math.floor(diffSec / 60);
+      const s = diffSec % 60;
+      durationText = `(+${m}m ${s}s)`;
+      elapsedHtml = `${m}m ${s}s after ${baseLabel}`;
+    } else if (diffSec >= 3600) {
+      const h = Math.floor(diffSec / 3600);
+      const m = Math.floor((diffSec % 3600) / 60);
+      durationText = `(+${h}h ${m}m)`;
+      elapsedHtml = `${h}h ${m}m after ${baseLabel}`;
+    }
+
+    return {durationText, elapsedHtml};
+  },
+
+  /**
    * Formats a date object to a string.
    *
    * @param date The date object to format.
