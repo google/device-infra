@@ -17,6 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ascii;
 import com.google.common.base.Strings;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
@@ -156,11 +157,38 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
 
     spec = testInfo.jobInfo().combinedSpec(this, deviceId);
 
-    int sdkVersion = systemSettingManager.getDeviceSdkVersion(device);
     final String language = spec.getLanguage();
     final String country = spec.getCountry();
+
+    int sdkVersion = systemSettingManager.getDeviceSdkVersion(device);
     final String originalLanguage = adbUtil.getProperty(deviceId, AndroidProperty.LANGUAGE);
     final String originalCountry = adbUtil.getProperty(deviceId, AndroidProperty.REGION);
+
+    boolean skipSwitch =
+        Ascii.equalsIgnoreCase(language, Strings.nullToEmpty(originalLanguage))
+            && (Strings.isNullOrEmpty(country)
+                || Ascii.equalsIgnoreCase(country, Strings.nullToEmpty(originalCountry)));
+
+    if (skipSwitch) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "Device language is already %s_%s. Skipping language switch setup.",
+              language, country);
+      getDecorated().run(testInfo);
+      return;
+    }
+
+    testInfo
+        .log()
+        .atInfo()
+        .alsoTo(logger)
+        .log(
+            "Device locale is [%s_%s]. Target is [%s_%s]. Switching language...",
+            originalLanguage, originalCountry, language, country);
+
     final boolean switchRegion = !Strings.isNullOrEmpty(country);
     final Duration logSignalTimeout = Duration.ofSeconds(spec.getLogSignalTimeoutSec());
 
@@ -168,11 +196,6 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
     String apkPath = resUtil.getResourceFile(getClass(), SWITCH_LANGUAGE_APK_RES_PATH);
     installApkAndGrantPermission(testInfo, device, sdkVersion, apkPath);
 
-    testInfo
-        .log()
-        .atInfo()
-        .alsoTo(logger)
-        .log("Switch language and country: [%s, %s]", language, country);
     // Switch the language and country.
     try {
       switchLocale(
