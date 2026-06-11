@@ -149,19 +149,19 @@ public class GcsFileResolver extends AbstractFileResolver {
   }
 
   private static GcsUtil.CredentialType getCredentialType(@Nullable String serviceAccount) {
-    String credentialFile = getCredentialFile();
-    if (credentialFile != null) {
-      return GcsUtil.CredentialType.ofCredentialFile(credentialFile);
+    Optional<String> credentialFile = getCredentialFile();
+    if (credentialFile.isPresent()) {
+      return GcsUtil.CredentialType.ofCredentialFile(credentialFile.get());
     }
     return GcsUtil.CredentialType.ofAppDefault();
   }
 
-  @Nullable
-  private static String getCredentialFile() {
+  private static Optional<String> getCredentialFile() {
     if (Flags.gcsResolverCredentialFile.get() != null) {
-      return Flags.gcsResolverCredentialFile.get();
+      return Optional.of(Flags.gcsResolverCredentialFile.get());
     }
-    return null;
+
+    return Optional.empty();
   }
 
   private GcsUtil getGcsUtil(GcsKey gcsKey) throws MobileHarnessException {

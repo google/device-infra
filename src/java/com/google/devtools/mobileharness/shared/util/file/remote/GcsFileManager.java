@@ -25,6 +25,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
+import com.google.devtools.mobileharness.shared.util.auth.CredentialFileUtil;
 import com.google.devtools.mobileharness.shared.util.command.Timeout;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsApiObject;
@@ -101,7 +102,9 @@ public class GcsFileManager {
         DEFAULT_CACHE_TTL,
         Optional.empty(),
         Optional.empty(),
-        GcsUtil.CredentialType.ofCredentialFile(getCredentialFile().get()));
+        getCredentialFile().isPresent()
+            ? GcsUtil.CredentialType.ofCredentialFile(getCredentialFile().get())
+            : GcsUtil.CredentialType.ofAppDefault());
   }
 
   @SuppressWarnings("GoodTime") // TODO: fix GoodTime violation
@@ -195,25 +198,8 @@ public class GcsFileManager {
    * <p>It will first try to get the credential file from the {@code --file_transfer_cred_file}
    * flag, then from the {@code --internal_service_credential_file} flag.
    */
-  @VisibleForTesting
   static Optional<String> getCredentialFile() {
-    LocalFileUtil localFileUtil = new LocalFileUtil();
-    String fileTransferCredFile = Flags.fileTransferCredFile.get();
-    if (fileTransferCredFile != null && localFileUtil.isFileExist(fileTransferCredFile)) {
-      logger.atInfo().log(
-          "Using local file from --file_transfer_cred_file as credential: %s",
-          fileTransferCredFile);
-      return Optional.of(fileTransferCredFile);
-    }
-
-    String internalServiceCredFile = Flags.internalServiceCredentialFile.get();
-    if (internalServiceCredFile != null && localFileUtil.isFileExist(internalServiceCredFile)) {
-      logger.atInfo().log(
-          "Using local file from --internal_service_credential_file as credential: %s",
-          internalServiceCredFile);
-      return Optional.of(internalServiceCredFile);
-    }
-    return Optional.empty();
+    return CredentialFileUtil.getDefaultCredentialFile();
   }
 
   /** Information of an execution (uploading/downloading). */
