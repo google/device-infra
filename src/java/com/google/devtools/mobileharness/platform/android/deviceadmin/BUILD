@@ -21,7 +21,6 @@ java_library(
     name = "device_admin_util",
     srcs = ["DeviceAdminUtil.java"],
     visibility = [
-        "//:omnilab_fusion",
         "//java/com/google/devtools/mobileharness/platform/android/delegator:__subpackages__",
         "//javatests/com/google/devtools/mobileharness/platform/android/delegator:__subpackages__",
         "//javatests/com/google/wireless/qa/mobileharness/shared/api/device:__subpackages__",
