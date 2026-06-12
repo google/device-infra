@@ -55,10 +55,10 @@ import com.google.devtools.mobileharness.shared.util.command.Timeout;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.remote.CacheInfo;
+import com.google.devtools.mobileharness.shared.util.file.remote.GcsCredentialUtil;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsFileManager;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsFileManager.ExecutionInfo;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil;
-import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.Any;
@@ -147,7 +147,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
             FileTransferConstant.getLocalCacheTtl(),
             Optional.of(params.uploadShardSize()),
             Optional.of(params.downloadShardSize()),
-            GcsFileManager.getCredentialType(params.cloudFileTransferBucket(), new SystemUtil())),
+            GcsCredentialUtil.getCredentialType(params.cloudFileTransferBucket())),
         params.homeDir().resolve("tmp"),
         params,
         new LocalFileUtil(),

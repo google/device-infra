@@ -73,10 +73,25 @@ java_library(
 )
 
 java_library(
+    name = "gcs_credential_util",
+    srcs = ["GcsCredentialUtil.java"],
+    deps = [
+        ":gcs_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auth:credential_file_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "gcs_file_manager",
-    srcs = ["GcsFileManager.java"],
+    srcs = [
+        "GcsFileManager.java",
+    ],
     deps = [
         ":dataclass",
+        ":gcs_credential_util",
         ":gcs_util",
         ":gcs_util_factory",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -84,9 +99,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],

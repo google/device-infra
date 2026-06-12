@@ -31,8 +31,6 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsApiObject;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsParams;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsParams.Scope;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
-import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -102,8 +100,9 @@ public class GcsFileManager {
         DEFAULT_CACHE_TTL,
         Optional.empty(),
         Optional.empty(),
-        getCredentialFile().isPresent()
-            ? GcsUtil.CredentialType.ofCredentialFile(getCredentialFile().get())
+        CredentialFileUtil.getDefaultCredentialFile().isPresent()
+            ? GcsUtil.CredentialType.ofCredentialFile(
+                CredentialFileUtil.getDefaultCredentialFile().get())
             : GcsUtil.CredentialType.ofAppDefault());
   }
 
@@ -172,34 +171,6 @@ public class GcsFileManager {
             .expireAfterAccess(localCacheTtl)
             .removalListener(this::onLocalCacheRemoval)
             .build();
-  }
-
-  /**
-   * Gets the credential type for GCS access.
-   *
-   * @param bucketName name of bucket to manage
-   */
-  public static GcsUtil.CredentialType getCredentialType(String bucketName, SystemUtil systemUtil) {
-
-    Optional<String> credentialFile = getCredentialFile();
-    if (bucketName.equals(Flags.fileTransferBucket.get()) && credentialFile.isPresent()) {
-      // If the bucket is the file transfer bucket and the credential file is provided, use the
-      // credential file.
-      return GcsUtil.CredentialType.ofCredentialFile(credentialFile.get());
-    }
-
-    // Otherwise, use app default credential.
-    return GcsUtil.CredentialType.ofAppDefault();
-  }
-
-  /**
-   * Gets the credential file path.
-   *
-   * <p>It will first try to get the credential file from the {@code --file_transfer_cred_file}
-   * flag, then from the {@code --internal_service_credential_file} flag.
-   */
-  static Optional<String> getCredentialFile() {
-    return CredentialFileUtil.getDefaultCredentialFile();
   }
 
   /** Information of an execution (uploading/downloading). */

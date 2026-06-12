@@ -55,9 +55,9 @@ import com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.pr
 import com.google.devtools.mobileharness.shared.util.command.Timeout;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.file.remote.GcsCredentialUtil;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsFileManager;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil;
-import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.Any;
 import com.google.protobuf.ByteString;
@@ -254,7 +254,7 @@ public class CloudFileTransferServiceImpl {
           localCacheTtl,
           uploadShardSize,
           downloadShardSize,
-          GcsFileManager.getCredentialType(bucketName, new SystemUtil()));
+          GcsCredentialUtil.getCredentialType(bucketName));
     } catch (MobileHarnessException e) {
       logger.atWarning().withCause(e).log(
           "Failed to create GcsFileManager for bucket: %s", bucketName);
