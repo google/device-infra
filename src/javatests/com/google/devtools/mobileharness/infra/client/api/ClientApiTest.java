@@ -140,7 +140,7 @@ public class ClientApiTest {
 
   @Test
   public void startJob() throws Exception {
-    JobInfo jobInfo = createJobInfo(/* sleepTimeSec= */ 5);
+    JobInfo jobInfo = createJobInfo(/* sleepTimeSec= */ 1);
     List<String> jobStartResults = new ArrayList<>();
 
     try (var ignored =
@@ -186,13 +186,13 @@ public class ClientApiTest {
 
       TestInfo testInfo = jobInfo.tests().getOnly();
       assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
-      assertThat(testInfo.log().get(0)).contains("Sleep for 5 seconds");
+      assertThat(testInfo.log().get(0)).contains("Sleep for 1 seconds");
 
       String logs = captureLogs.getLogs();
 
       assertThat(Splitter.on('\n').splitToList(logs))
           .comparingElementsUsing(containsAll())
-          .contains(ImmutableList.of("Sleep for 5 seconds", "{olc_client_id=fake_client_id}"));
+          .contains(ImmutableList.of("Sleep for 1 seconds", "{olc_client_id=fake_client_id}"));
 
       assertWithMessage(
               "Log of a passed MH job should not contain exception stack traces, which will"
@@ -214,7 +214,7 @@ public class ClientApiTest {
     clientApi.startJob(jobInfo, new LocalMode(), ImmutableList.of(this));
 
     clientApi.waitForJob(jobInfo.locator().getId());
-    Sleeper.defaultSleeper().sleep(Duration.ofSeconds(10L));
+    Sleeper.defaultSleeper().sleep(Duration.ofSeconds(2L));
 
     TestInfo testInfo = jobInfo.tests().getOnly();
     assertThat(testInfo.log().get(0)).contains("Interrupted from sleep");
