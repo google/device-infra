@@ -1383,6 +1383,11 @@ public class SessionRequestHandlerUtil {
       getModuleArgs(expandedModuleName, moduleArgMap, params, files);
     }
     jobInfo.params().addAll(params);
+    for (Map.Entry<String, String> entry : params.entrySet()) {
+      jobInfo
+          .params()
+          .add(MoblyTestSpec.CLI_ARG_OVERRIDE_KEY_PREFIX + entry.getKey(), entry.getValue());
+    }
     for (Entry<String, Collection<String>> file : files.asMap().entrySet()) {
       jobInfo.files().replaceAll(file.getKey(), file.getValue());
     }

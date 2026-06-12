@@ -318,7 +318,8 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
     JSONObject jobParamsExcludedPrivateParams = new JSONObject();
     ImmutableSet<String> privateParams = getPrivateParamNames(testInfo);
     for (Map.Entry<String, String> entry : testInfo.jobInfo().params().getAll().entrySet()) {
-      if (!privateParams.contains(entry.getKey())) {
+      if (!privateParams.contains(entry.getKey())
+          && !entry.getKey().startsWith(CLI_ARG_OVERRIDE_KEY_PREFIX)) {
         jobParamsExcludedPrivateParams.put(entry.getKey(), entry.getValue());
       }
     }
@@ -339,6 +340,15 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
       for (String key : JSONObject.getNames(jobParamsExcludedPrivateParams)) {
         if (testParams.isNull(key)) {
           testParams.put(key, jobParamsExcludedPrivateParams.get(key));
+        }
+      }
+    }
+    // Parse and apply command-line overrides with highest precedence.
+    for (Map.Entry<String, String> entry : testInfo.jobInfo().params().getAll().entrySet()) {
+      if (entry.getKey().startsWith(CLI_ARG_OVERRIDE_KEY_PREFIX)) {
+        String realKey = entry.getKey().substring(CLI_ARG_OVERRIDE_KEY_PREFIX.length());
+        if (!privateParams.contains(realKey)) {
+          testParams.put(realKey, entry.getValue());
         }
       }
     }

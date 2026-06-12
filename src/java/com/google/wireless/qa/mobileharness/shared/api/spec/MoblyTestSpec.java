@@ -45,4 +45,6 @@ public interface MoblyTestSpec {
 
   @ParamAnnotation(required = false, help = "Whether to use none for the secure wrapper user.")
   public static final String SECURE_WRAPPER_USER_NONE = "secure_wrapper_user_none";
+
+  public static final String CLI_ARG_OVERRIDE_KEY_PREFIX = "cli_arg_override_";
 }
