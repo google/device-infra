@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:defs.bzl", "java_binary", "java_library")
 load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
 package(
@@ -23,7 +23,10 @@ package(
 
 java_library(
     name = "usmf",
-    srcs = glob(["*.java"]),
+    srcs = glob(
+        ["*.java"],
+        exclude = ["UsmfBenchmark.java"],
+    ),
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/usmf",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
@@ -33,6 +36,19 @@ java_library(
         "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
+    ],
+)
+
+java_binary(
+    name = "UsmfBenchmark",
+    srcs = ["UsmfBenchmark.java"],
+    main_class = "com.google.devtools.mobileharness.shared.usmf.UsmfBenchmark",
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/usmf",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:flags_manager",
+        "@maven//:com_google_guava_guava",
     ],
 )
 

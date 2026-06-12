@@ -1561,6 +1561,11 @@ public class Flags {
   public static final Flag<Boolean> useTfRetry = Flag.value(false);
 
   @FlagSpec(
+      name = "usmf_benchmark_iterations",
+      help = "The number of iterations to run the USMF Benchmark. Default is 50.")
+  public static final Flag<Integer> usmfBenchmarkIterations = Flag.positiveValue(50);
+
+  @FlagSpec(
       name = "virtual_device_server_ip",
       help = "The IP address of the remote virtual device server.")
   public static final Flag<String> virtualDeviceServerIp = Flag.value("");
