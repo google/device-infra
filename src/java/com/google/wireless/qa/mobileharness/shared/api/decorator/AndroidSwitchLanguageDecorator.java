@@ -156,11 +156,42 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
 
     spec = testInfo.jobInfo().combinedSpec(this, deviceId);
 
-    int sdkVersion = systemSettingManager.getDeviceSdkVersion(device);
     final String language = spec.getLanguage();
     final String country = spec.getCountry();
+
+    if (StrUtil.isEmptyOrWhitespace(language)) {
+      getDecorated().run(testInfo);
+      return;
+    }
+
+    int sdkVersion = systemSettingManager.getDeviceSdkVersion(device);
     final String originalLanguage = adbUtil.getProperty(deviceId, AndroidProperty.LANGUAGE);
     final String originalCountry = adbUtil.getProperty(deviceId, AndroidProperty.REGION);
+
+    boolean skipSwitch =
+        language.equalsIgnoreCase(originalLanguage)
+            && (Strings.isNullOrEmpty(country) || country.equalsIgnoreCase(originalCountry));
+
+    if (skipSwitch) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "Device language is already %s_%s. Skipping language switch setup.",
+              language, country);
+      getDecorated().run(testInfo);
+      return;
+    }
+
+    testInfo
+        .log()
+        .atInfo()
+        .alsoTo(logger)
+        .log(
+            "Device locale is [%s_%s]. Target is [%s_%s]. Switching language...",
+            originalLanguage, originalCountry, language, country);
+
     final boolean switchRegion = !Strings.isNullOrEmpty(country);
     final Duration logSignalTimeout = Duration.ofSeconds(spec.getLogSignalTimeoutSec());
 
