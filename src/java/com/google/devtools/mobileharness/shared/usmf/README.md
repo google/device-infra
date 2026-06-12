@@ -158,8 +158,10 @@ The behavior of the mock binary is governed by rules defined in
         *   `"match_type"`: Must be one of `"exact"`, `"prefix"`, or `"regex"`.
         *   `"expected"`: List of string parameters literally matched (for
             `"exact"` and `"prefix"`).
-        *   `"regex"`: Python RE2 regular expression pattern matching the
-            command arguments (for `"regex"`).
+        *   `"regex"`: A regular expression pattern matching the command
+            arguments (for `"regex"`). Note that only the RE2 regular expression
+            syntax is supported (e.g., lookaround assertions or backreferences
+            are not supported).
     *   **`BinaryStateCondition`** (`"type": "state"`): Filters based on active
         state variables (see
         [Section 7 (State Repository and AST Expressions)](#7-stateful-command-execution-state-repository-and-ast-expressions)).
@@ -374,7 +376,7 @@ effects):
     and suffix `?` is present, it returns the fallback `StringLiteral` constant
     (e.g. `#C['device_id']?'unknown'`).
 *   **Value Formatting (`:` Suffix)**: If the final resolved value is not
-    `None`, and suffix `:` is present, the value is formatted using Python's
+    `None`, and suffix `:` is present, the value is formatted using the
     printf-style format operator `%` (e.g., `#C['device_id']:'device-%s'`). If
     the value evaluates to `None` and no `?` is present, the formatting (`:`) is
     skipped.
@@ -503,7 +505,7 @@ topology:
 <parent_dir>/<sandbox_dir>/      (Unique per-mock sandbox path)
 ├── bin/
 │   ├── <mock_binary>            (Mock command execution shell wrapper proxy, e.g., "adb")
-│   └── usmf_stub.py             (The core mock rule execution stub)
+│   └── usmf_stub                (The core mock rule execution stub)
 ├── rules/
 │   └── mock_rules.json          (Expected expectation declarations matching JSON)
 ├── logs/
@@ -559,30 +561,35 @@ to mimic real CLI commands without physical infrastructure nodes.
 This section outlines internal implementation designs, evaluations of alternate
 paradigms, and structural justifications.
 
-### 13.1. Redirection Architecture: Thin Wrapper + Python Stub
+### 13.1. Redirection Architecture: Thin Wrapper + Execution Stub
 
 USMF deploys a two-stage hijacking mechanism:
 
 1.  **Shell Wrapper**: A thin, platform-specific shell script representing the
     mock binary name is placed in the `bin/` subdirectory of the sandbox. This
     shell wrapper exports the paths of the rules file, state file, and logs path
-    locally to the subprocess, then delegating implementation to `usmf_stub.py`.
-2.  **Generic python stub (`usmf_stub.py`)**: Intercepts the call, loads the
+    locally to the subprocess, then delegating implementation to the execution
+    stub.
+2.  **Generic execution stub (`usmf_stub`)**: Intercepts the call, loads the
     JSON config, evaluates matching conditions concurrently, formats output
     fields, performs file writes (state/side effect), and atomically outputs
-    results. Using Python ensures zero compilation requirements and instant
-    execution across any Linux/Mac test agent.
+    results.
 
-#### Drawbacks of Alternatives:
+#### Stub Language Choice and Performance:
 
-*   **Compiled Binaries (C++/Go/Rust)**: Cross-compiling and maintaining
-    architecture-specific binaries (e.g., x86_64 vs. arm64 for Linux/macOS) in
-    the repository introduces significant build system complexity and packaging
-    overhead.
-*   **Java-based Wrapper**: Spawning a JVM instance for every hijacked CLI
-    command adds hundreds of milliseconds of startup latency. This is
-    unacceptable, as host-level tests often execute CLI tools hundreds of times
-    in loops.
+To closely emulate the execution latency of mocked CLI binaries (such as `adb`),
+the choice of stub implementation language is critical. Spawning process
+latencies were benchmarked (via `UsmfBenchmark` under typical test
+environments):
+
+*   **Go-based execution stub**: ~7 ms
+*   **Java-based execution stub**: ~50 ms (due to JVM startup latency)
+*   **Python-based execution stub**: ~140 ms (due to interpreter startup
+    overhead and imports)
+
+To closely match the low-latency execution behavior of mocked command-line
+tools, Go was selected as the implementation language for the USMF execution
+stub.
 
 ### 13.2. Rationale for File-Based IPC
 
@@ -604,11 +611,12 @@ Rather than using binary Protocol Buffers (Protos) or TextProto, USMF uses JSON
 for rules and state tracking due to the following reasons:
 
 *   **Protobuf Dependency Issues**: To keep USMF as a zero-dependency utility
-    across diverse host environments, we avoid dependencies on Python Protobuf
-    runtimes. Using Protobuf would require compiling Python Proto classes and
-    importing the `protobuf` library, which is highly prone to version conflicts
-    with the test runner's Python environment and requires complex environment
-    setup on the test agent. The JSON parser is built natively into Python.
+    across diverse host environments, we avoid dependencies on Protobuf
+    runtimes. Using Protobuf would require compiling Proto classes and importing
+    the `protobuf` library, which is highly prone to version conflicts with
+    diverse client language environments and requires complex environment setup
+    on the test agent. Almost all modern execution environments support parsing
+    JSON natively without external libraries.
 *   **Simple and readable format**: JSON is human-readable and writable
     natively. Defining rules in JSON format (`mock_rules.json`) allows
     developers to manually inspect sandbox directories, write manual rules, or

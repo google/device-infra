@@ -605,6 +605,20 @@ public final class UsmfTest {
   }
 
   @Test
+  public void regexMatching_nonRe2Syntax_fails() throws Exception {
+    RuleCondition invalidRegexCond = CommandCondition.regexMatch(".*install\\s+(?=com.example).*");
+    CommandBehavior behavior = CommandBehavior.builder("Matched\n", "", 0).build();
+    UsmfRule rule = UsmfRule.builder().addCondition(invalidRegexCond).setBehavior(behavior).build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+
+    Command command = Command.of(mockCmd.getPath(), "install", "com.example.app");
+    Exception exception = assertThrows(Exception.class, () -> executor.run(command));
+    assertThat(exception).hasMessageThat().contains("Regex compile error");
+  }
+
+  @Test
   public void exactArgsWithCoercion_matchesCorrectly() throws Exception {
     UsmfBinary mockCmd =
         UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox")
@@ -1590,6 +1604,9 @@ public final class UsmfTest {
 
     String stdout = executor.run(Command.of(mockCmd.getPath(), "test"));
     assertThat(stdout).isEqualTo("val1:  val2: default\n");
+    ImmutableList<CommandInvocation> invocations = mockCmd.readCommandInvocations();
+    assertThat(invocations).hasSize(1);
+    assertThat(invocations.get(0).getErrors()).isEmpty();
   }
 
   @Test
@@ -1733,5 +1750,58 @@ public final class UsmfTest {
 
     String stdout = executor.run(Command.of(mockCmd.getPath(), "greet"));
     assertThat(stdout).isEqualTo("Hello ${S['user']}!\n");
+  }
+
+  @Test
+  public void regexCommandMatching_withSpaceArguments_quotesCorrectly() throws Exception {
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.regexMatch(".*install\\s+'a b'.*"))
+            .setBehavior(CommandBehavior.stdout("matched\n").build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+
+    String stdout = executor.run(Command.of(mockCmd.getPath(), "install", "a b"));
+    assertThat(stdout).isEqualTo("matched\n");
+  }
+
+  @Test
+  public void regexCommandMatching_startsAtZeroOnly_anchoredCorrectly() throws Exception {
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.regexMatch("install"))
+            .setBehavior(CommandBehavior.stdout("matched\n").build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+
+    // Starts with install - should match
+    String stdout1 = executor.run(Command.of(mockCmd.getPath(), "install"));
+    assertThat(stdout1).isEqualTo("matched\n");
+
+    // Does not start with install - should not match
+    String stdout2 = executor.run(Command.of(mockCmd.getPath(), "adb", "install"));
+    assertThat(stdout2).isEmpty();
+  }
+
+  @Test
+  public void singleStateInterpolationWithFormatTemplate_withNewlineFormat_resolvesSuccessfully()
+      throws Exception {
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.exactMatch("list"))
+            .setBehavior(CommandBehavior.stdout("${#S['val']:'prefix:%s\n'}").build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+
+    mockCmd.writeStateJson(JsonParser.parseString("{\"val\": \"my_value\"}").getAsJsonObject());
+
+    String stdout = executor.run(Command.of(mockCmd.getPath(), "list"));
+    assertThat(stdout).isEqualTo("prefix:my_value\n");
   }
 }

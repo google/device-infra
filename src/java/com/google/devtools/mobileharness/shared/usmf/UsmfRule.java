@@ -205,19 +205,22 @@ public final class UsmfRule {
     }
 
     /**
-     * Creates a {@link CommandCondition} that matches the CLI command arguments using a Python
-     * regular expression pattern (evaluated by Python inside the USMF sandbox).
+     * Creates a {@link CommandCondition} that matches the CLI command arguments using a regular
+     * expression pattern.
+     *
+     * <p>Note: Only the RE2 regular expression syntax is supported. Complex features such as
+     * lookaround assertions or backreferences are not supported.
      *
      * <p>The regular expression is matched against the command arguments (excluding the binary name
      * itself) joined by spaces, with shell-quoting applied (e.g., "devices -l").
      *
-     * <p>Matches containing Python regex named capture groups (e.g., {@code (?P<pkg>\\S+)}, note
-     * the Python 'P' prefix syntax which differs from Java's native regex naming format) can be
-     * used for dynamic parameter interpolation. The captured values will be dynamically substituted
-     * into placeholders like {@code ${#C['group_name']}} in {@link CommandBehavior} properties such
-     * as stdout/stderr, state mutations, and filesystem side effects.
+     * <p>Matches containing RE2 regex named capture groups (e.g., {@code (?P<pkg>\\S+)}, note that
+     * Java's native {@code (?<name>...)} format is not supported) can be used for dynamic parameter
+     * interpolation. The captured values will be dynamically substituted into placeholders like
+     * {@code ${#C['group_name']}} in {@link CommandBehavior} properties such as stdout/stderr,
+     * state mutations, and filesystem side effects.
      *
-     * @param regex the Python regular expression pattern to match the CLI command arguments
+     * @param regex the RE2 regular expression pattern to match the CLI command arguments
      */
     public static CommandCondition regexMatch(String regex) {
       return new CommandCondition("regex", null, checkNotNull(regex));
@@ -343,10 +346,10 @@ public final class UsmfRule {
    *
    * <p>Properties such as {@code stdout}, {@code stderr}, {@code stateMutations}, and {@code
    * sideEffects} support dynamic parameter interpolation. If a rule match is triggered by a regex
-   * {@link CommandCondition} with Python named capture groups (e.g., {@code (?P<pkg>\\S+)}, note
-   * the Python 'P' prefix syntax which differs from Java's native regex naming format), the
-   * captured values will recursively substitute all placeholder occurrences of {@code
-   * ${#C['group_name']}} in behavior blocks.
+   * {@link CommandCondition} with RE2 named capture groups (e.g., {@code (?P<pkg>\\S+)}, note the
+   * RE2 'P' prefix syntax which differs from Java's native regex naming format), the captured
+   * values will recursively substitute all placeholder occurrences of {@code ${#C['group_name']}}
+   * in behavior blocks.
    *
    * <p>Note: When a rule is matched, the state mutations are executed first (atomically) before the
    * mock execution sleep latency (configured via {@link Builder#sleep(Duration)}) and host side
@@ -509,8 +512,8 @@ public final class UsmfRule {
    * be of types such as {@link Boolean}, {@link Number} (e.g., integer or double), {@link String},
    * or {@link List} of these types.
    *
-   * <p>String values and keys support dynamic parameter interpolation using Python named regex
-   * capture groups (e.g., {@code (?P<pkg>\\S+)}, note the Python 'P' prefix syntax) in matched rule
+   * <p>String values and keys support dynamic parameter interpolation using RE2 named regex capture
+   * groups (e.g., {@code (?P<pkg>\\S+)}, note the RE2 'P' prefix syntax) in matched rule
    * conditions. For example, {@code
    * BinaryStateMutation.stateNode("#S['installed_packages']").addToSet("${pkg}")} will add the
    * captured package name dynamically.

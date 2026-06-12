@@ -49,7 +49,7 @@ import javax.annotation.Nullable;
  * hermetic sandbox directory.
  *
  * <p>A {@code UsmfBinary} intercepts CLI process invocations and delegates them to an embedded
- * Python stub. Its core execution lifecycle operates as follows:
+ * execution stub. Its core execution lifecycle operates as follows:
  *
  * <ul>
  *   <li><b>Rule Matching</b>: The stub evaluates incoming arguments and state variables
@@ -77,7 +77,8 @@ public final class UsmfBinary {
   private static final String RULES_DIR_NAME = "rules";
   private static final String STATES_DIR_NAME = "states";
 
-  private static final String STUB_FILE_NAME = "usmf_stub.py";
+  private static final String STUB_FILE_NAME = "usmf_stub";
+  private static final String STUB_RESOURCE_PATH = "usmf_stub_/usmf_stub";
   private static final String RULES_FILE_NAME = "mock_rules.json";
   private static final String STATES_FILE_NAME = "states.json";
   private static final String HISTORY_FILE_PREFIX = "history_";
@@ -106,7 +107,7 @@ public final class UsmfBinary {
   /**
    * Deploys the mock binary sandbox environment and initializes all associated files.
    *
-   * <p>This method creates the sandbox directories, writes configuration rules, deploys the Python
+   * <p>This method creates the sandbox directories, writes configuration rules, deploys the mock
    * execution stub, and generates the wrapper shell script under the target executable path.
    *
    * @throws IllegalStateException if the configured sandbox directory already exists
@@ -135,20 +136,18 @@ public final class UsmfBinary {
     ImmutableMap<String, Object> config = ImmutableMap.of("rules", rules, "variables", variables);
     Files.writeString(rulesFile, gson.toJson(config));
 
-    // 4. Write the Python execution stub into the bin directory and make it executable.
+    // 4. Write the Go execution stub into the bin directory and make it executable.
     Path stubPath = binDir.resolve(STUB_FILE_NAME);
     try (InputStream inputStream =
         checkNotNull(
-            UsmfBinary.class.getResourceAsStream(STUB_FILE_NAME),
+            UsmfBinary.class.getResourceAsStream(STUB_RESOURCE_PATH),
             "Resource %s not found in classpath",
-            STUB_FILE_NAME)) {
+            STUB_RESOURCE_PATH)) {
       Files.copy(inputStream, stubPath);
     }
     stubPath.toFile().setExecutable(true);
 
     // 5. Write the wrapper script at the target binary path and make it executable.
-    String execCommand = String.format("exec python3 \"%s\" \"$@\"", stubPath.toAbsolutePath());
-
     String shellWrapper =
         String.format(
             """
@@ -156,12 +155,12 @@ public final class UsmfBinary {
             export USMF_RULES_FILE="%s"
             export USMF_LOGS_DIR="%s"
             export USMF_STATES_FILE="%s"
-            %s
+            exec "%s" "$@"
             """,
             rulesFile.toAbsolutePath(),
             logsDir.toAbsolutePath(),
             statesFile.toAbsolutePath(),
-            execCommand);
+            stubPath.toAbsolutePath());
     Files.writeString(binaryFile, shellWrapper);
     binaryFile.toFile().setExecutable(true);
   }

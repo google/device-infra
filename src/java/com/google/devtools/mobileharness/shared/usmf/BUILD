@@ -13,17 +13,17 @@
 # limitations under the License.
 #
 
+load("@rules_go//go:def.bzl", "go_binary")
 load("@rules_java//java:defs.bzl", "java_library")
-load("@rules_python//python:py_binary.bzl", "py_binary")
 
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = ["//:deviceinfra_all_pkg"],
 )
 
-py_binary(
+go_binary(
     name = "usmf_stub",
-    srcs = ["usmf_stub.py"],
+    srcs = ["usmf_stub.go"],
 )
 
 java_library(
@@ -33,7 +33,7 @@ java_library(
         "UsmfRule.java",
     ],
     resources = [
-        ":usmf_stub.py",
+        ":usmf_stub",
     ],
     deps = [
         "@maven//:com_google_code_findbugs_jsr305",
