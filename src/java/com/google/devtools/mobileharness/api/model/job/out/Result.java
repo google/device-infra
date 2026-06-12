@@ -404,7 +404,7 @@ public class Result {
     if (cause == null) {
       return result.name();
     } else {
-      return result.name() + "[" + cause.getSummary().getErrorId().getName() + "]";
+      return result.name() + "\n" + cause;
     }
   }
 
