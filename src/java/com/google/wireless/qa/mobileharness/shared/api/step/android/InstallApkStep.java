@@ -21,7 +21,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.io.Files;
@@ -204,23 +203,6 @@ public class InstallApkStep implements InstallApkStepConstants {
             ? Optional.of(Duration.ofSeconds(spec.getInstallApkTimeoutSec()))
             : Optional.empty();
     int deviceSdkVersion = systemSettingManager.getDeviceSdkVersion(device);
-
-    if (deviceSdkVersion < AndroidVersion.LOLLIPOP.getStartSdkVersion()) {
-      ImmutableList<String> splits =
-          coordinator.getAllPackages().stream()
-              .filter(PackageToInstall::isSplitApk)
-              .map(pkg -> pkg.packageName)
-              .collect(toImmutableList());
-      if (!splits.isEmpty()) {
-        throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_INSTALL_APK_STEP_INSTALL_NOT_SUPPORTED,
-            String.format(
-                "The packages %s contain multiple apks with the same package name."
-                    + "If it is your intention to install split apks, please make"
-                    + " sure the device SDK version is >= 21.",
-                splits));
-      }
-    }
 
     for (PackageToInstall pkg : coordinator.getAllPackages()) {
       installPackage(
@@ -550,10 +532,6 @@ public class InstallApkStep implements InstallApkStepConstants {
 
     PackageToInstall(String packageName) {
       this.packageName = packageName;
-    }
-
-    boolean isSplitApk() {
-      return apkPaths.size() > 1;
     }
 
     boolean isApkSet() throws MobileHarnessException {
