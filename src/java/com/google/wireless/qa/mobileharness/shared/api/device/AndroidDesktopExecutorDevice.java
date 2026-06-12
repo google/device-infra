@@ -78,7 +78,9 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
     this.addSupportedDecorator("AndroidPerfettoDecorator");
     this.addSupportedDecorator("AndroidSwitchLanguageDecorator");
     this.addSupportedDecorator("CrosLsNexusDecorator");
-    this.addSupportedDecorator("CrossOverAndroidDesktopProvisionDecorator");
+    if (Flags.crossoverUseCommandLineFlasher.getNonNull()) {
+      this.addSupportedDecorator("CrossOverAndroidDesktopProvisionDecorator");
+    }
     this.addSupportedDecorator("CrosDutTopologyDecorator");
     if (getDimension("network_zone").isEmpty()) {
       addDimension("network_zone", "unspecified");

@@ -17,7 +17,11 @@
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.util.command.Command;
+import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -28,20 +32,34 @@ import javax.inject.Inject;
 public class CrossOverAndroidDesktopProvisionDecorator extends CrosBaseDecorator {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private final CommandExecutor commandExecutor;
+
   @Inject
-  CrossOverAndroidDesktopProvisionDecorator(Driver driver, TestInfo testInfo) {
+  CrossOverAndroidDesktopProvisionDecorator(
+      Driver driver, TestInfo testInfo, CommandExecutor commandExecutor) {
     super(driver, testInfo);
+    this.commandExecutor = commandExecutor;
   }
 
   @Override
   public void prepare(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
-    testInfo
-        .log()
-        .atInfo()
-        .alsoTo(logger)
-        .log(
-            "CrossOverAndroidDesktopProvisionDecorator is not ready yet and will be implemented as"
-                + " part of b/487343637. It will use foil-provision CIPD from CTP.");
+    if (Flags.crossoverUseCommandLineFlasher.getNonNull()) {
+      testInfo.log().atInfo().alsoTo(logger).log("Running command line based flash...");
+      try {
+        commandExecutor.run(Command.of("true"));
+      } catch (MobileHarnessException e) {
+        throw new MobileHarnessException(
+            BasicErrorId.COMMAND_EXEC_FAIL, "Failed to run command line flash.", e);
+      }
+    } else {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "CrossOverAndroidDesktopProvisionDecorator is not ready yet and will be implemented"
+                  + " as part of b/487343637. It will use foil-provision CIPD from CTP.");
+    }
   }
 
   @Override

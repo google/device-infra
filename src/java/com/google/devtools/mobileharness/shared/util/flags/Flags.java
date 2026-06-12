@@ -473,6 +473,11 @@ public class Flags {
               + " IP. Need connect_to_lab_server_using_ip to be true. Default is false.")
   public static final Flag<Boolean> connectToLabServerUsingMasterDetectedIp = Flag.value(false);
 
+  @FlagSpec(
+      name = "crossover_use_command_line_flasher",
+      help = "Whether to use command line based flasher for CrossOver provision.")
+  public static final Flag<Boolean> crossoverUseCommandLineFlasher = Flag.value(false);
+
   @FlagSpec(name = "da_bundletool", help = "Path of bundletool jar for device action")
   public static final Flag<String> daBundletool = Flag.nullString();
 
