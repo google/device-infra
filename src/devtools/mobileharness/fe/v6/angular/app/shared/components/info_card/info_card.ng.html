@@ -1,6 +1,11 @@
 
 <header (click)="toggle()" class="panel-header" [class.collapsed]="collapsible && !expanded" [class.collapsible]="collapsible">
-  <span>{{ title }}</span>
+  <span class="title-container">
+    @if (icon) {
+      <mat-icon class="header-icon">{{ icon }}</mat-icon>
+    }
+    <span>{{ title }}</span>
+  </span>
   <div class="header-right">
     <ng-content select="[operations]"></ng-content>
     @if(collapsible) {

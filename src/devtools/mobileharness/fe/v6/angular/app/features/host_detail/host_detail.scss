@@ -30,7 +30,9 @@ $labconsole-font: Roboto, sans-serif;
 }
 
 .card-header {
-  padding: 1rem 1.5rem; // p-4 sm:p-6
+  padding: 0 1.5rem; // p-4 sm:p-6
+  min-height: 64px;
+  box-sizing: border-box;
   border-bottom: 1px solid #e5e7eb; // border-gray-200
   display: flex;
   align-items: center;
