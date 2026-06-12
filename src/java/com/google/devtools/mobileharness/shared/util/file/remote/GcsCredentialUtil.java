@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.shared.util.file.remote;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.shared.util.auth.CredentialFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
@@ -24,6 +25,9 @@ import java.util.Optional;
 
 /** Utility for getting GCS credential type. */
 public final class GcsCredentialUtil {
+
+  private static final ImmutableSet<String> BUCKETS_ACCESSIBLE_BY_DEFAULT_CREDENTIAL_FILE =
+      ImmutableSet.of("tradefed_host_resources");
 
   private GcsCredentialUtil() {}
 
@@ -40,9 +44,12 @@ public final class GcsCredentialUtil {
   static GcsUtil.CredentialType getCredentialType(String bucketName, SystemUtil systemUtil) {
 
     Optional<String> credentialFile = CredentialFileUtil.getDefaultCredentialFile();
-    if (bucketName.equals(Flags.fileTransferBucket.get()) && credentialFile.isPresent()) {
-      // If the bucket is the file transfer bucket and the credential file is provided, use the
-      // credential file.
+
+    if ((bucketName.equals(Flags.fileTransferBucket.get())
+            || BUCKETS_ACCESSIBLE_BY_DEFAULT_CREDENTIAL_FILE.contains(bucketName))
+        && credentialFile.isPresent()) {
+      // If the bucket is in the allowlist and the credential file is
+      // provided, use the credential file.
       return GcsUtil.CredentialType.ofCredentialFile(credentialFile.get());
     }
 
