@@ -41,6 +41,11 @@ import com.google.devtools.mobileharness.infra.client.api.controller.allocation.
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsModeModule;
+import com.google.devtools.mobileharness.shared.usmf.UsmfBinary;
+import com.google.devtools.mobileharness.shared.usmf.UsmfEnvironment;
+import com.google.devtools.mobileharness.shared.usmf.UsmfRule;
+import com.google.devtools.mobileharness.shared.usmf.UsmfRule.CommandBehavior;
+import com.google.devtools.mobileharness.shared.usmf.UsmfRule.CommandCondition;
 import com.google.devtools.mobileharness.shared.util.base.StackTraceExtractor;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.command.Command;
@@ -88,6 +93,7 @@ public class LabServerIntegrationTest {
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
   @Rule public final PrintTestName printTestName = new PrintTestName();
   @Rule public final MonitoredStringBuilders stringBuilders = new MonitoredStringBuilders();
+  @Rule public final UsmfEnvironment usmfEnvironment = new UsmfEnvironment();
 
   private static final String LAB_SERVER_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
@@ -106,6 +112,7 @@ public class LabServerIntegrationTest {
 
   private CommandProcess labServerProcess;
   private ManagedChannel labServerChannel;
+  private UsmfBinary mockAdb;
 
   @Inject private ListeningExecutorService threadPool;
   @Inject private AtsMode atsMode;
@@ -130,6 +137,73 @@ public class LabServerIntegrationTest {
 
     labServerFoundDevice = new CountDownLatch(1);
 
+    mockAdb =
+        usmfEnvironment
+            .createBinary("adb")
+            .addRule(
+                UsmfRule.builder()
+                    .addCondition(CommandCondition.prefixMatch("devices"))
+                    .setBehavior(
+                        CommandBehavior.stdout(
+                                """
+                                List of devices attached
+                                HT8420M00155\tdevice\tproduct:real_device_model
+                                """)
+                            .build())
+                    .build())
+            .addRule(
+                UsmfRule.builder()
+                    .addCondition(CommandCondition.prefixMatch("version"))
+                    .setBehavior(
+                        CommandBehavior.stdout("Android Debug Bridge version 1.0.41\n").build())
+                    .build())
+            .addRule(
+                UsmfRule.builder()
+                    .addCondition(CommandCondition.regexMatch(".*?get-state"))
+                    .setBehavior(CommandBehavior.stdout("device\n").build())
+                    .build())
+            .addRule(
+                UsmfRule.builder()
+                    .addCondition(CommandCondition.regexMatch(".*?wait-for-device"))
+                    .setBehavior(CommandBehavior.exitCode(0).build())
+                    .build())
+            .addRule(
+                UsmfRule.builder()
+                    .addCondition(CommandCondition.regexMatch(".*?am\\s+get-current-user"))
+                    .setBehavior(CommandBehavior.stdout("0\n").build())
+                    .build())
+            .addRule(
+                UsmfRule.builder()
+                    .addCondition(CommandCondition.regexMatch(".*?install.*"))
+                    .setBehavior(CommandBehavior.stdout("Success\n").build())
+                    .build())
+            .addRule(
+                UsmfRule.builder()
+                    .addCondition(CommandCondition.regexMatch(".*?uninstall.*"))
+                    .setBehavior(CommandBehavior.stdout("Success\n").build())
+                    .build())
+            .addRule(
+                UsmfRule.builder()
+                    .addCondition(CommandCondition.regexMatch(".*?getprop.*ro\\.product\\.model"))
+                    .setBehavior(CommandBehavior.stdout("real_device_model\n").build())
+                    .build())
+            .addRule(
+                UsmfRule.builder()
+                    .addCondition(
+                        CommandCondition.regexMatch(".*?getprop.*ro\\.build\\.version\\.sdk"))
+                    .setBehavior(CommandBehavior.stdout("29\n").build())
+                    .build())
+            .addRule(
+                UsmfRule.builder()
+                    .addCondition(
+                        CommandCondition.regexMatch(
+                            ".*?cat\\s+/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq"))
+                    .setBehavior(CommandBehavior.stdout("2400000\n").build())
+                    .build())
+            .buildAndDeploy();
+
+    UsmfBinary mockAapt = usmfEnvironment.createBinary("aapt").buildAndDeploy();
+
     labServerCommand =
         Command.of(
                 new SystemUtil()
@@ -137,18 +211,20 @@ public class LabServerIntegrationTest {
                     .createJavaCommand(
                         LAB_SERVER_FILE_PATH,
                         ImmutableList.of(
+                            "--aapt=" + mockAapt.getPath(),
+                            "--adb=" + mockAdb.getPath(),
                             "--api_config=" + API_CONFIG_FILE_PATH,
-                            "--detect_adb_device=false",
+                            "--detect_adb_device=true",
                             "--enable_control_service=false",
                             "--enable_file_cleaner=false",
                             "--enable_stubby_rpc_server=false",
                             "--enable_wrangler_device_syncer=true",
                             "--external_adb_initializer_template=true",
-                            "--publish_device_await_startup=true",
                             "--grpc_port=" + labServerGrpcPort,
                             "--master_grpc_target=localhost:" + masterPort,
-                            "--no_op_device_num=1",
+                            "--no_op_device_num=0",
                             "--public_dir=" + labServerPublicDirPath,
+                            "--publish_device_await_startup=true",
                             "--rpc_port=" + labServerRpcPort,
                             "--socket_port=" + labServerSocketPort,
                             "--tmp_dir_root=" + labServerTmpDirPath),
@@ -166,7 +242,7 @@ public class LabServerIntegrationTest {
                       System.err.printf("lab_server_stderr %s\n", stderr);
                       labServerStderr.append(stderr).append('\n');
 
-                      if (stderr.contains("New device NoOpDevice-0")) {
+                      if (stderr.contains("New device HT8420M00155")) {
                         labServerFoundDevice.countDown();
                       }
                     }))
@@ -227,7 +303,7 @@ public class LabServerIntegrationTest {
             .setLocator(new JobLocator("fake_job_id", "fake_job_name"))
             .setType(
                 JobType.newBuilder()
-                    .setDevice("NoOpDevice")
+                    .setDevice("AndroidRealDevice")
                     .setDriver("NoOpDriver")
                     .addDecorator("NoOpDecorator")
                     .build())
@@ -266,7 +342,7 @@ public class LabServerIntegrationTest {
                         .id()
                         .endsWith(requireNonNull(uuidSuffix)),
                 "has a device UUID ending with"))
-        .containsExactly("NoOpDevice-0");
+        .containsExactly("HT8420M00155");
     assertThat(allocations.get(0).allocation().getDevice().labLocator().ports().getAll())
         .containsExactly(
             PortType.LAB_SERVER_RPC,

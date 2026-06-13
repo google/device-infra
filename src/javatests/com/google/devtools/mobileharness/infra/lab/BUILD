@@ -40,6 +40,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/allocator",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:ats_mode",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:module",
+        "//src/java/com/google/devtools/mobileharness/shared/usmf:testing",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:stack_trace_extractor",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
