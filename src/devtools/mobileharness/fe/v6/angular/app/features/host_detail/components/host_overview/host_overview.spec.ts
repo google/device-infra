@@ -26,6 +26,8 @@ import {RemoteControlService} from '../../../../shared/services/remote_control_s
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {HostOverviewPage} from './host_overview';
 import {ReleaseDialog} from './release_dialog/release_dialog';
+import {AdvancedOpsDialog} from './advanced_ops_dialog/advanced_ops_dialog';
+import {EnvUniverseService} from '../../../../core/services/env_universe_service';
 
 describe('HostOverview Component', () => {
   const mockHost: HostOverview = {
@@ -84,6 +86,7 @@ describe('HostOverview Component', () => {
   let dialogSpy: jasmine.SpyObj<MatDialog>;
   let snackBarSpy: jasmine.SpyObj<SnackBarService>;
   let comingSoonServiceSpy: jasmine.SpyObj<ComingSoonService>;
+  let envUniverseServiceSpy: jasmine.SpyObj<EnvUniverseService>;
   let hostService: FakeHostService;
 
   beforeEach(async () => {
@@ -93,6 +96,14 @@ describe('HostOverview Component', () => {
       'showSuccess',
     ]);
     comingSoonServiceSpy = jasmine.createSpyObj('ComingSoonService', ['show']);
+    envUniverseServiceSpy = jasmine.createSpyObj('EnvUniverseService', [
+      'getUniverseString',
+      'isGoogleInternal',
+      'isGoogle1P',
+    ]);
+    envUniverseServiceSpy.getUniverseString.and.returnValue('google_1p');
+    envUniverseServiceSpy.isGoogleInternal.and.returnValue(true);
+    envUniverseServiceSpy.isGoogle1P.and.returnValue(true);
 
     await TestBed.configureTestingModule({
       imports: [HostOverviewPage, NoopAnimationsModule],
@@ -117,6 +128,7 @@ describe('HostOverview Component', () => {
             'quarantineDevice',
           ]),
         },
+        {provide: EnvUniverseService, useValue: envUniverseServiceSpy},
       ],
     })
       .overrideComponent(HostOverviewPage, {
@@ -186,6 +198,7 @@ describe('HostOverview Component', () => {
     expect(actionTexts).toContain('release');
     expect(actionTexts).toContain('restart');
     expect(actionTexts).toContain('stop');
+    expect(actionTexts).toContain('advanced operations');
     expect(actionTexts).not.toContain('start');
 
     const buttons = compiled.querySelectorAll(
@@ -563,5 +576,19 @@ describe('HostOverview Component', () => {
     options.onSuccess();
 
     expect(component.loadDevices).toHaveBeenCalled();
+  });
+
+  it('openAdvancedOpsDialog should open AdvancedOpsDialog', () => {
+    component.openAdvancedOpsDialog();
+
+    expect(dialogSpy.open).toHaveBeenCalledWith(
+      AdvancedOpsDialog,
+      jasmine.objectContaining({
+        data: {
+          hostName: component.host.hostName,
+          universe: 'google_1p',
+        },
+      }),
+    );
   });
 });
