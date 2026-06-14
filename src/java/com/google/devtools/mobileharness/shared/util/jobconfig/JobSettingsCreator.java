@@ -21,6 +21,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Job.Repeat;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
@@ -34,25 +35,9 @@ public final class JobSettingsCreator {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   public static JobSetting createJobSetting(
-      String jobId, JobConfig jobConfig, @Nullable String tmpFileDir) throws InterruptedException {
-    Timeout.Builder timeout = JobConfigHelper.finalizeTimeout(jobConfig);
-
-    // Finalizes job retry setting.
-    Retry.Builder retry = Retry.newBuilder();
-    retry.setTestAttempts(jobConfig.getTestAttempts());
-    retry.setRetryLevel(jobConfig.getRetryLevel());
-
-    // Finalizes job repeat setting.
-    Repeat.Builder repeat = Repeat.newBuilder();
-    repeat.setRepeatRuns(jobConfig.getRepeatRuns());
-
-    JobSetting.Builder setting =
-        JobSetting.newBuilder()
-            .setTimeout(timeout.build())
-            .setRetry(retry.build())
-            .setPriority(jobConfig.getPriority())
-            .setAllocationExitStrategy(jobConfig.getAllocationExitStrategy())
-            .setRepeat(repeat.build());
+      String jobId, JobConfig jobConfig, @Nullable String tmpFileDir, SystemUtil systemUtil)
+      throws InterruptedException {
+    JobSetting.Builder setting = createCommonJobSettingBuilder(jobConfig, systemUtil);
     if (!jobConfig.getRemoteFileDir().isEmpty()) {
       setting.setRemoteFileDir(jobConfig.getRemoteFileDir());
     }
@@ -62,19 +47,18 @@ public final class JobSettingsCreator {
     String genFileDir;
     if (!jobConfig.getGenFileDir().isEmpty()) {
       genFileDir = jobConfig.getGenFileDir();
-    } else if (new SystemUtil().getTestUndeclaredOutputDir() != null) {
-      genFileDir = new SystemUtil().getTestUndeclaredOutputDir();
+    } else if (systemUtil.getTestUndeclaredOutputDir() != null) {
+      genFileDir = systemUtil.getTestUndeclaredOutputDir();
     } else {
       genFileDir = getDefaultTmpDir() + "/" + jobId + "_gen";
     }
     try {
       fileUtil.removeFileOrDir(genFileDir);
     } catch (MobileHarnessException e) {
-      new SystemUtil()
-          .exit(
-              ExitCode.Shared.FILE_OPERATION_ERROR,
-              "Failed to clean up GEN_FILE dir: " + genFileDir,
-              e);
+      systemUtil.exit(
+          ExitCode.Shared.FILE_OPERATION_ERROR,
+          "Failed to clean up GEN_FILE dir: " + genFileDir,
+          e);
     }
     logger.atInfo().log("Gen file dir: %s", genFileDir);
     setting.setGenFileDir(genFileDir);
@@ -85,7 +69,52 @@ public final class JobSettingsCreator {
     }
     logger.atInfo().log("Tmp file dir: %s", tmpFileDir);
     setting.setTmpFileDir(tmpFileDir);
+
     return setting.build();
+  }
+
+  /** Creates the settings builder from a JobConfig with custom sandboxed paths. */
+  public static JobSetting.Builder createJobSetting(
+      String jobId,
+      JobConfig jobConfig,
+      String sessionTmpDir,
+      String sessionRemoteDir,
+      SystemUtil systemUtil) {
+    String jobDir = PathUtil.join(sessionTmpDir, "j_" + jobId);
+
+    return createCommonJobSettingBuilder(jobConfig, systemUtil)
+        .setRemoteFileDir(sessionRemoteDir)
+        .setTmpFileDir(PathUtil.join(jobDir, "tmp"))
+        .setRunFileDir(PathUtil.join(jobDir, "run"))
+        .setGenFileDir(PathUtil.join(jobDir, "gen"));
+  }
+
+  private static JobSetting.Builder createCommonJobSettingBuilder(
+      JobConfig jobConfig, SystemUtil systemUtil) {
+    Timeout.Builder timeout = JobConfigHelper.finalizeTimeout(jobConfig, systemUtil);
+
+    // Finalizes job retry setting.
+    Retry.Builder retry =
+        Retry.newBuilder()
+            .setTestAttempts(
+                jobConfig.hasTestAttempts() && jobConfig.getTestAttempts() > 0
+                    ? jobConfig.getTestAttempts()
+                    : JobSetting.getDefaultRetryInstance().getTestAttempts())
+            .setRetryLevel(
+                jobConfig.hasRetryLevel()
+                    ? jobConfig.getRetryLevel()
+                    : JobSetting.getDefaultRetryInstance().getRetryLevel());
+
+    // Finalizes job repeat setting.
+    Repeat.Builder repeat = Repeat.newBuilder();
+    repeat.setRepeatRuns(jobConfig.getRepeatRuns());
+
+    return JobSetting.newBuilder()
+        .setTimeout(timeout.build())
+        .setRetry(retry.build())
+        .setPriority(jobConfig.getPriority())
+        .setAllocationExitStrategy(jobConfig.getAllocationExitStrategy())
+        .setRepeat(repeat.build());
   }
 
   private static String getDefaultTmpDir() {

@@ -34,8 +34,6 @@ import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
-import com.google.devtools.mobileharness.api.model.proto.Job.Repeat;
-import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.api.proto.Device.DeviceSpec;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
@@ -62,7 +60,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelp
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecWalker;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.DeviceList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.Driver;
@@ -137,15 +134,42 @@ public final class JobInfoCreator {
       String sessionRemoteDir,
       @Nullable Timing timing)
       throws MobileHarnessException, InterruptedException {
+    return createJobInfo(
+        jobId,
+        actualUser,
+        jobAccessAccount,
+        originalSubmitTimestamp,
+        jobConfig,
+        properties,
+        nonstandardFlags,
+        genDirPath,
+        sessionTmpDir,
+        sessionRemoteDir,
+        timing,
+        new SystemUtil());
+  }
+
+  /** Creates JobInfo from Gateway parsed details. */
+  public static JobInfo createJobInfo(
+      String jobId,
+      String actualUser,
+      String jobAccessAccount,
+      @Nullable Timestamp originalSubmitTimestamp,
+      JobConfig jobConfig,
+      Map<String, String> properties,
+      List<String> nonstandardFlags,
+      @Nullable String genDirPath,
+      String sessionTmpDir,
+      String sessionRemoteDir,
+      @Nullable Timing timing,
+      SystemUtil systemUtil)
+      throws MobileHarnessException, InterruptedException {
     Preconditions.checkNotNull(jobConfig);
-    jobId = jobId == null ? UUID.randomUUID().toString() : jobId;
-    String jobDir = PathUtil.join(sessionTmpDir, "j_" + jobId);
+    Preconditions.checkNotNull(jobId);
+
     JobSetting.Builder jobSettingBuilder =
-        JobSetting.newBuilder()
-            .setRemoteFileDir(sessionRemoteDir)
-            .setTmpFileDir(PathUtil.join(jobDir, "tmp"))
-            .setRunFileDir(PathUtil.join(jobDir, "run"))
-            .setGenFileDir(PathUtil.join(jobDir, "gen"));
+        JobSettingsCreator.createJobSetting(
+            jobId, jobConfig, sessionTmpDir, sessionRemoteDir, systemUtil);
 
     if (originalSubmitTimestamp != null) {
       if (ORIGINAL_SUBMIT_TIMESTAMP_ALLOWLIST_USERS.contains(actualUser)) {
@@ -154,45 +178,6 @@ public final class JobInfoCreator {
         logger.atWarning().log(
             "Cannot set original submit time for user not in allowlist: %s", actualUser);
       }
-    }
-
-    long jobTimeoutMs = jobConfig.getJobTimeoutSec() * 1000L;
-    long testTimeoutMs = jobConfig.getTestTimeoutSec() * 1000L;
-    long startTimeoutMs = jobConfig.getStartTimeoutSec() * 1000L;
-
-    Timeout.Builder timeoutBuilder = Timeout.newBuilder();
-    if (jobTimeoutMs > 0) {
-      timeoutBuilder.setJobTimeoutMs(jobTimeoutMs);
-    }
-    if (testTimeoutMs > 0) {
-      timeoutBuilder.setTestTimeoutMs(testTimeoutMs);
-    }
-    if (startTimeoutMs > 0) {
-      timeoutBuilder.setStartTimeoutMs(startTimeoutMs);
-    }
-    Timeout timeout = timeoutBuilder.build();
-    timeout = SharedPoolJobUtil.maybeExtendStartTimeout(timeout, jobConfig);
-    jobSettingBuilder.setTimeout(timeout);
-
-    if (jobConfig.hasRepeatRuns()) {
-      jobSettingBuilder.setRepeat(
-          Repeat.newBuilder().setRepeatRuns(jobConfig.getRepeatRuns()).build());
-    }
-
-    jobSettingBuilder.setRetry(
-        Retry.newBuilder()
-            .setTestAttempts(
-                jobConfig.hasTestAttempts() && jobConfig.getTestAttempts() > 0
-                    ? jobConfig.getTestAttempts()
-                    : JobSetting.getDefaultRetryInstance().getTestAttempts())
-            .setRetryLevel(
-                jobConfig.hasRetryLevel()
-                    ? jobConfig.getRetryLevel()
-                    : JobSetting.getDefaultRetryInstance().getRetryLevel())
-            .build());
-
-    if (jobConfig.hasPriority()) {
-      jobSettingBuilder.setPriority(jobConfig.getPriority());
     }
 
     JobSetting jobSetting = jobSettingBuilder.build();
@@ -212,7 +197,8 @@ public final class JobInfoCreator {
             sessionTmpDir,
             genDirPath,
             false,
-            timing);
+            timing,
+            systemUtil);
     properties.forEach((key, value) -> jobInfo.properties().add(key, value));
 
     return jobInfo;
@@ -220,19 +206,39 @@ public final class JobInfoCreator {
 
   /** Creates JobInfo from MH JobConfig. */
   public static JobInfo createJobInfo(
-      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig,
-      List<String> nonstandardFlags,
-      @Nullable String genFileDir)
+      JobConfig mhJobConfig, List<String> nonstandardFlags, @Nullable String genFileDir)
       throws MobileHarnessException, InterruptedException {
-    return createJobInfo(mhJobConfig, nonstandardFlags, genFileDir, /* tmpFileDir= */ null);
+    return createJobInfo(mhJobConfig, nonstandardFlags, genFileDir, new SystemUtil());
   }
 
   /** Creates JobInfo from MH JobConfig. */
   public static JobInfo createJobInfo(
-      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig,
+      JobConfig mhJobConfig,
+      List<String> nonstandardFlags,
+      @Nullable String genFileDir,
+      SystemUtil systemUtil)
+      throws MobileHarnessException, InterruptedException {
+    return createJobInfo(
+        mhJobConfig, nonstandardFlags, genFileDir, /* tmpFileDir= */ null, systemUtil);
+  }
+
+  /** Creates JobInfo from MH JobConfig. */
+  public static JobInfo createJobInfo(
+      JobConfig mhJobConfig,
       List<String> nonstandardFlags,
       @Nullable String genFileDir,
       @Nullable String tmpFileDir)
+      throws MobileHarnessException, InterruptedException {
+    return createJobInfo(mhJobConfig, nonstandardFlags, genFileDir, tmpFileDir, new SystemUtil());
+  }
+
+  /** Creates JobInfo from MH JobConfig. */
+  public static JobInfo createJobInfo(
+      JobConfig mhJobConfig,
+      List<String> nonstandardFlags,
+      @Nullable String genFileDir,
+      @Nullable String tmpFileDir,
+      SystemUtil systemUtil)
       throws MobileHarnessException, InterruptedException {
     // Generates the job id.
     String jobId = UUID.randomUUID().toString();
@@ -240,25 +246,26 @@ public final class JobInfoCreator {
         jobId,
         mhJobConfig,
         nonstandardFlags,
-        JobSettingsCreator.createJobSetting(jobId, mhJobConfig, tmpFileDir),
-        JobConfigHelper.finalizeUser(mhJobConfig),
+        JobSettingsCreator.createJobSetting(jobId, mhJobConfig, tmpFileDir, systemUtil),
+        JobConfigHelper.finalizeUser(mhJobConfig, systemUtil),
         tmpFileDir,
         genFileDir,
         true,
-        /* timing= */ null);
+        /* timing= */ null,
+        systemUtil);
   }
 
-  @VisibleForTesting
   static JobInfo createJobInfo(
       String jobId,
-      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig,
+      JobConfig mhJobConfig,
       List<String> nonstandardFlags,
       JobSetting setting,
       JobUser jobUser,
       @Nullable String tmpRunDirPath,
       @Nullable String genDirPath,
       boolean removeGenFileDirBeforePrepare,
-      @Nullable Timing timing)
+      @Nullable Timing timing,
+      SystemUtil systemUtil)
       throws MobileHarnessException, InterruptedException {
     // Finalizes the job name.
     String jobName = mhJobConfig.getName();
@@ -359,7 +366,15 @@ public final class JobInfoCreator {
     finalizeJobScopedSpecs(mhJobConfig, jobInfo, genDirPath);
 
     // Finalizes the files.
-    finalizeFiles(mhJobConfig, jobInfo, setting, overridingFiles, tmpRunDirPath, genDirPath);
+    finalizeFiles(
+        mhJobConfig,
+        jobInfo,
+        setting,
+        overridingFiles,
+        tmpRunDirPath,
+        genDirPath,
+        new LocalFileUtil(),
+        systemUtil);
 
     // Finalizes the tests.
     for (String test : mhJobConfig.getTests().getContentList()) {
@@ -374,29 +389,8 @@ public final class JobInfoCreator {
     return jobInfo;
   }
 
-  @VisibleForTesting
   static void finalizeFiles(
-      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig,
-      JobInfo jobInfo,
-      @Nullable JobSetting jobSetting,
-      Map<String, List<String>> overridingFiles,
-      @Nullable String tmpRunDirPath,
-      String genDirPath)
-      throws MobileHarnessException, InterruptedException {
-    finalizeFiles(
-        mhJobConfig,
-        jobInfo,
-        jobSetting,
-        overridingFiles,
-        tmpRunDirPath,
-        genDirPath,
-        new LocalFileUtil(),
-        new SystemUtil());
-  }
-
-  @VisibleForTesting
-  static void finalizeFiles(
-      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig,
+      JobConfig mhJobConfig,
       JobInfo jobInfo,
       @Nullable JobSetting jobSetting,
       Map<String, List<String>> overridingFiles,
@@ -472,9 +466,7 @@ public final class JobInfoCreator {
 
   /** Returns {@code true} if need to check the built files. */
   private static boolean checkBuiltFiles(
-      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig,
-      JobInfo jobInfo,
-      @Nullable String fileTag) {
+      JobConfig mhJobConfig, JobInfo jobInfo, @Nullable String fileTag) {
     return mhJobConfig.getNeedCheckBuiltFiles();
   }
 
@@ -519,9 +511,7 @@ public final class JobInfoCreator {
   }
 
   @VisibleForTesting
-  static JobType finalizeJobType(
-      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig)
-      throws MobileHarnessException {
+  static JobType finalizeJobType(JobConfig mhJobConfig) throws MobileHarnessException {
     JobType type;
     // It is possible for mhJobConfig to have both a non-empty type and device fields. We should
     // check
@@ -554,8 +544,7 @@ public final class JobInfoCreator {
     return mayAppendDecorator(type, mhJobConfig);
   }
 
-  private static JobType mayAppendDecorator(
-      JobType type, com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig) {
+  private static JobType mayAppendDecorator(JobType type, JobConfig mhJobConfig) {
     JobType newType =
         SharedPoolJobUtil.isUsingSharedDefaultPerformancePool(mhJobConfig)
             ? mayAppendPerformanceLockDecorator(type)
@@ -621,8 +610,7 @@ public final class JobInfoCreator {
    * Updates the DeviceList according to the {@code TAG_DEVICE_SPEC} file in the files and returns
    * the updated JobConfig.
    */
-  private static com.google.wireless.qa.mobileharness.shared.proto.JobConfig updateDeviceList(
-      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig, String genDirPath)
+  private static JobConfig updateDeviceList(JobConfig mhJobConfig, String genDirPath)
       throws MobileHarnessException, InterruptedException {
     for (FileConfig fileConfig : mhJobConfig.getFiles().getContentList()) {
       if (TAG_DEVICE_SPEC.equals(fileConfig.getTag())) {
@@ -754,9 +742,7 @@ public final class JobInfoCreator {
   /** Finalizes scoped specs in {@code jobInfo}. */
   @VisibleForTesting
   static void finalizeJobScopedSpecs(
-      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig,
-      JobInfo jobInfo,
-      @Nullable String genDirPath)
+      JobConfig mhJobConfig, JobInfo jobInfo, @Nullable String genDirPath)
       throws MobileHarnessException, InterruptedException {
     // TODO: Decorator ScopedSpecs should moved from JobInfo-level to individual
     // SubDeviceSpec entries of the job and only Driver scoped specs should remain at the job level
