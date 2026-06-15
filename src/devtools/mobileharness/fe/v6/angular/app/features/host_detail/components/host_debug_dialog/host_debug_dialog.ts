@@ -29,9 +29,11 @@ import {
 } from '@angular/material/dialog';
 import {MatExpansionModule} from '@angular/material/expansion';
 import {MatIconModule} from '@angular/material/icon';
+import {MatTooltipModule} from '@angular/material/tooltip';
 import {GetHostDebugInfoResponse} from '@deviceinfra/app/core/models/host_action';
 import {HOST_SERVICE} from '@deviceinfra/app/core/services/host/host_service';
 import {DatetimeTrigger} from '@deviceinfra/app/shared/components/datetime_trigger/datetime_trigger';
+import {TooltipIfTruncatedDirective} from '@deviceinfra/app/shared/directives/tooltip_if_truncated/tooltip_if_truncated';
 import {ClipboardService} from '@deviceinfra/app/shared/services/clipboard_service';
 import {SnackBarService} from '@deviceinfra/app/shared/services/snackbar_service';
 import {take} from 'rxjs/operators';
@@ -56,12 +58,16 @@ export interface HostDebugDialogData {
     MatExpansionModule,
     MatIconModule,
     MatDialogModule,
+    MatTooltipModule,
     DatetimeTrigger,
+    TooltipIfTruncatedDirective,
   ],
 })
 export class HostDebugDialog implements OnInit {
   @ViewChild('mainContent') mainContent?: ElementRef<HTMLElement>;
-  @ViewChildren('commandPanel', {read: ElementRef}) commandPanels!: QueryList<ElementRef<HTMLElement>>;
+  @ViewChildren('commandPanel', {read: ElementRef}) commandPanels!: QueryList<
+    ElementRef<HTMLElement>
+  >;
 
   readonly data = inject<HostDebugDialogData>(MAT_DIALOG_DATA);
   private readonly dialogRef = inject(MatDialogRef<HostDebugDialog>);

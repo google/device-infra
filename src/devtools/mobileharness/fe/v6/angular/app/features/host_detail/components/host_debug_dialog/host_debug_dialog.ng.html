@@ -51,7 +51,14 @@
                 @if (result.stderr) {
                   <mat-icon class="host-debug-dialog__sidebar-error-icon">error_outline</mat-icon>
                 }
-                <span class="host-debug-dialog__sidebar-command-name">{{ result.command }}</span>
+                <span
+                  class="host-debug-dialog__sidebar-command-name"
+                  [matTooltip]="result.command"
+                  matTooltipPosition="right"
+                  matTooltipPositionAtOrigin="true"
+                  matTooltipShowDelay="500"
+                  tooltipIfTruncated
+                >{{ result.command }}</span>
               </div>
             }
           </nav>

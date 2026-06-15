@@ -69,6 +69,7 @@ import {
   SearchableListOverlayData,
 } from '../../../../shared/components/searchable_list_overlay/searchable_list_overlay';
 import {useDeviceActions} from '../../../../shared/composables/device_actions';
+import {TooltipIfTruncatedDirective} from '../../../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
 import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {dateUtils} from '../../../../shared/utils/date_utils';
@@ -167,6 +168,7 @@ const STATUS_SEMANTIC_MAP: Record<string, {icon: string; colorClass: string}> =
     SearchableListOverlayComponent,
     OverflowList,
     ActionButton,
+    TooltipIfTruncatedDirective,
   ],
 })
 export class HostOverviewPage implements OnChanges {

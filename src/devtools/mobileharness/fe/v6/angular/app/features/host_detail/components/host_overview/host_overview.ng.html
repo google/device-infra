@@ -286,9 +286,11 @@
                     [config]="{type: 'device', hostName: host.hostName, hostIp: host.ip, deviceId: element.id}"
                     queryParamsHandling="merge"
                     class="id-link truncate-text"
-                    title="{{element.id}}"
                     matTooltip="{{element.id}}"
-                    matTooltipPositionAtOrigin="true">
+                    matTooltipPosition="right"
+                    matTooltipPositionAtOrigin="true"
+                    matTooltipShowDelay="500"
+                    tooltipIfTruncated>
                     {{element.id}}
                   </a>
                 </td>
