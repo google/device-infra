@@ -49,6 +49,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.Description;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
@@ -1803,5 +1804,39 @@ public final class UsmfTest {
 
     String stdout = executor.run(Command.of(mockCmd.getPath(), "list"));
     assertThat(stdout).isEqualTo("prefix:my_value\n");
+  }
+
+  @Test
+  public void usmfEnvironment_withCustomParentDir_outputsSummary() throws Exception {
+    Path customParent = tempDir.resolve("custom_parent_dir");
+    Files.createDirectories(customParent);
+
+    UsmfEnvironment environment = new UsmfEnvironment(customParent);
+    Description description =
+        Description.createTestDescription(
+            UsmfTest.class, "usmfEnvironment_withCustomParentDir_outputsSummary");
+
+    UsmfBinary mockCmd;
+    environment.starting(description);
+    try {
+      UsmfRule rule =
+          UsmfRule.builder()
+              .addCondition(CommandCondition.exactMatch("run"))
+              .setBehavior(CommandBehavior.stdout("Done\n").build())
+              .build();
+
+      mockCmd = environment.createBinary("mock_cmd").addRule(rule).buildAndDeploy();
+
+      executor.run(Command.of(mockCmd.getPath(), "run"));
+    } finally {
+      environment.finished(description);
+    }
+
+    // Verify the summary.json is generated because we are not using a temporary folder.
+    Path summaryFile =
+        Path.of(mockCmd.getSandboxDir()).resolve(UsmfBinary.LOGS_DIR_NAME).resolve("summary.json");
+    assertThat(Files.exists(summaryFile)).isTrue();
+    String summaryContent = Files.readString(summaryFile);
+    assertThat(summaryContent).contains("run");
   }
 }

@@ -29,6 +29,7 @@ java_library(
     ),
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/usmf",
+        "//src/java/com/google/devtools/mobileharness/shared/usmf:testing",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
