@@ -44,32 +44,38 @@ public class CredentialFileUtil {
   private CredentialFileUtil() {}
 
   /** Returns the credential file. */
-  public static Optional<String> getDefaultCredentialFile() {
-    Optional<String> explicitCredentialFile = getCredentialFileFromFlags();
-    if (explicitCredentialFile.isPresent()) {
-      return explicitCredentialFile;
+  public static Optional<String> getInternalServiceCredentialFile() {
+    Optional<String> internalServiceCredentialFile = getInternalServiceCredentialFileFromFlag();
+    if (internalServiceCredentialFile.isPresent()) {
+      return internalServiceCredentialFile;
     }
     return Optional.empty();
   }
 
   /** Returns the credential file specified by explicit flags. */
-  public static Optional<String> getCredentialFileFromFlags() {
+  public static Optional<String> getInternalServiceCredentialFileFromFlag() {
+    LocalFileUtil localFileUtil = new LocalFileUtil();
+
+    String internalServiceCredFile = Flags.internalServiceCredentialFile.get();
+    if (internalServiceCredFile != null && localFileUtil.isFileExist(internalServiceCredFile)) {
+      logger.atInfo().log(
+          "Using local file from --internal_service_cred_file as internal service credential: %s",
+          internalServiceCredFile);
+      return Optional.of(internalServiceCredFile);
+    }
+    return Optional.empty();
+  }
+
+  /** Returns the credential file for file transfer. */
+  public static Optional<String> getFileTransferCredentialFile() {
     LocalFileUtil localFileUtil = new LocalFileUtil();
 
     String fileTransferCredFile = Flags.fileTransferCredFile.get();
     if (fileTransferCredFile != null && localFileUtil.isFileExist(fileTransferCredFile)) {
       logger.atInfo().log(
-          "Using local file from --file_transfer_cred_file as credential: %s",
+          "Using local file from --file_transfer_cred_file as file transfer credential: %s",
           fileTransferCredFile);
       return Optional.of(fileTransferCredFile);
-    }
-
-    String internalServiceCredFile = Flags.internalServiceCredentialFile.get();
-    if (internalServiceCredFile != null && localFileUtil.isFileExist(internalServiceCredFile)) {
-      logger.atInfo().log(
-          "Using local file from --internal_service_credential_file as credential: %s",
-          internalServiceCredFile);
-      return Optional.of(internalServiceCredFile);
     }
     return Optional.empty();
   }

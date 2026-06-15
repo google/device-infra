@@ -39,7 +39,7 @@ public final class GcsCredentialUtil {
   @VisibleForTesting
   static GcsUtil.CredentialType getCredentialType(String bucketName, SystemUtil systemUtil) {
 
-    Optional<String> credentialFile = CredentialFileUtil.getDefaultCredentialFile();
+    Optional<String> credentialFile = CredentialFileUtil.getFileTransferCredentialFile();
     if (bucketName.equals(Flags.fileTransferBucket.get()) && credentialFile.isPresent()) {
       // If the bucket is the file transfer bucket and the credential file is provided, use the
       // credential file.

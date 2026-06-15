@@ -100,9 +100,9 @@ public class GcsFileManager {
         DEFAULT_CACHE_TTL,
         Optional.empty(),
         Optional.empty(),
-        CredentialFileUtil.getDefaultCredentialFile().isPresent()
+        CredentialFileUtil.getFileTransferCredentialFile().isPresent()
             ? GcsUtil.CredentialType.ofCredentialFile(
-                CredentialFileUtil.getDefaultCredentialFile().get())
+                CredentialFileUtil.getFileTransferCredentialFile().get())
             : GcsUtil.CredentialType.ofAppDefault());
   }
 
