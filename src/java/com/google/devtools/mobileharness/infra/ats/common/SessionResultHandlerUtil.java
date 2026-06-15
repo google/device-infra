@@ -90,7 +90,7 @@ public class SessionResultHandlerUtil {
 
   // Mobly result directories that are copied to the root result dir.
   private static final ImmutableSet<String> MOBLY_ROOT_TEST_RESULT_DIR_NAMES =
-      ImmutableSet.of("report-log-files");
+      ImmutableSet.of("report-log-files", "device-info-files");
 
   private static final ImmutableSet<String> EXCLUDED_TF_GEN_RESULT_FILES =
       ImmutableSet.of(
@@ -863,6 +863,13 @@ public class SessionResultHandlerUtil {
                 id ->
                     TradefedResultBundle.ModuleInfo.of(/* abi= */ id.get(0), /* name= */ id.get(1)))
             .collect(toImmutableList());
+    Path deviceInfoDir = Path.of(tradefedTestInfo.getGenFileDir(), "device-info-files");
+    if (localFileUtil.isDirExist(deviceInfoDir)) {
+      Path destDir = resultDirInZip.resolve("device-info-files");
+      logger.atInfo().log("Copying device-info-files [%s] into dir [%s]", deviceInfoDir, destDir);
+      localFileUtil.copyFileOrDir(deviceInfoDir, destDir);
+    }
+
     return Optional.ofNullable(testResultXmlFile)
         .map(
             resultXmlFile ->

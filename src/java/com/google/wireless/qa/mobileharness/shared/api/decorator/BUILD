@@ -768,6 +768,34 @@ java_library(
 )
 
 java_library(
+    name = "device_info_collector_decorator",
+    srcs = ["DeviceInfoCollectorDecorator.java"],
+    deps = [
+        "//src/devtools/mobileharness/platform/android/instrumentation/result/proto:test_suite_result_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/instrumentation:android_instrumentation_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/instrumentation/parser",
+        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:device_property_info",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:step_skippable_lifecycle_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:device_info_collector_decorator_spec_java_proto",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "composite_device_decorator",
     srcs = [
         "CompositeDeviceAdapterBase.java",
