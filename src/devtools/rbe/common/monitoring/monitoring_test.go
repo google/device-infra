@@ -9,6 +9,11 @@ func TestMonitoringWorkflows(t *testing.T) {
 	// Initialize monitoring with a mock/test client name
 	Init("test-client")
 
+	expectedEnabled := isBorg || isMurdockdPresent()
+	if enabled != expectedEnabled {
+		t.Errorf("enabled = %v, expected %v (isBorg = %v, isMurdockdPresent = %v)", enabled, expectedEnabled, isBorg, isMurdockdPresent())
+	}
+
 	t.Logf("isBorg: %v", isBorg)
 	t.Logf("binaryName: %s", binaryName)
 	t.Logf("arch: %s", arch)

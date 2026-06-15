@@ -59,9 +59,10 @@ var (
 	printVersion = flag.Bool("version", false, "Print version information")
 
 	// Flags for download jobs
-	rootDigest = flag.String("digest", "", `Digest of root directory proto "<digest hash>/<size bytes>".`)
-	dir        = flag.String("dir", "", "Directory to download the tree. Files in this directory will be overwritten and will not be restored on errors.")
-	dumpJSON   = flag.String("dump-json", "", "Dump download stats to json file.")
+	rootDigest    = flag.String("digest", "", `Digest of root directory proto "<digest hash>/<size bytes>".`)
+	dir           = flag.String("dir", "", "Directory to download the tree. Files in this directory will be overwritten and will not be restored on errors.")
+	dumpJSON      = flag.String("dump-json", "", "Dump download stats to json file.")
+	enableStreamz = flag.Bool("enable-streamz", false, "Enable direct Streamz metrics collection via murdockd.")
 
 	// Flags for local cache
 	disableCache    = flag.Bool("disable-cache", false, "Disable local cache.")
@@ -207,8 +208,10 @@ func runMain() int {
 	}
 
 	// Initialize unified metrics collection.
-	monitoring.Init("casdownloader")
-	defer monitoring.Shutdown()
+	if *enableStreamz {
+		monitoring.Init("casdownloader")
+		defer monitoring.Shutdown()
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -222,7 +225,9 @@ func runMain() int {
 	var success bool
 	var exitCode int
 	defer func() {
-		monitoring.RecordUsage(success, exitCode)
+		if *enableStreamz {
+			monitoring.RecordUsage(success, exitCode)
+		}
 	}()
 
 	if err := run(ctx); err != nil {
@@ -292,45 +297,9 @@ func run(ctx context.Context) error {
 		rbeStatusStr = status.Code(err).String()
 	}
 
-	// Record download latency.
-	monitoring.RecordLatency(downloadSuccess, rbeStatusStr, duration)
-
-	// Record download cold payload size.
-	if downloadSuccess {
-		monitoring.RecordBytes(true, d.ColdSize())
-	} else {
-		monitoring.RecordBytes(false, 0)
+	if *enableStreamz {
+		recordDownloadMetrics(downloadSuccess, rbeStatusStr, duration, &d, err)
 	}
-
-	// Record detailed download stats.
-	stats := d.Stats()
-	if stats == nil {
-		stats = &download.Stats{
-			DownloadError: "unknown error (stats nil)",
-		}
-		if err != nil {
-			stats.DownloadError = err.Error()
-		}
-	}
-	caller, bid, branch, flavor := parseInvocationID(*invocationID)
-	mStats := &monitoring.DownloadStats{
-		SizeCold:           stats.SizeCold,
-		SizeHot:            stats.SizeHot,
-		CountCold:          stats.CountCold,
-		CountHot:           stats.CountHot,
-		E2ETimeMS:          stats.E2ETimeMS,
-		DirRetrieveTimeMS:  stats.DirRetrieveTimeMS,
-		DirPrepareTimeMS:   stats.DirPrepareTimeMS,
-		FileDownloadTimeMS: stats.FileDownloadTimeMS,
-		ChunkRestoreTimeMS: stats.ChunkRestoreTimeMS,
-		DownloadError:      stats.DownloadError,
-		Caller:             caller,
-		Version:            version,
-		BuildID:            bid,
-		Branch:             branch,
-		Flavor:             flavor,
-	}
-	monitoring.RecordDownloadStats(mStats, *casInstance, !*disableCache, *chunksOnly)
 
 	reportMemoryStats()
 	return err
@@ -415,4 +384,46 @@ func parseInvocationID(invocationID string) (string, string, string, string) {
 		}
 	}
 	return caller, bid, branch, flavor
+}
+
+func recordDownloadMetrics(success bool, rbeStatus string, duration time.Duration, d *download.DownloadJob, err error) {
+	// Record download latency.
+	monitoring.RecordLatency(success, rbeStatus, duration)
+
+	// Record download cold payload size.
+	if success {
+		monitoring.RecordBytes(true, d.ColdSize())
+	} else {
+		monitoring.RecordBytes(false, 0)
+	}
+
+	// Record detailed download stats.
+	stats := d.Stats()
+	if stats == nil {
+		stats = &download.Stats{
+			DownloadError: "unknown error (stats nil)",
+		}
+		if err != nil {
+			stats.DownloadError = err.Error()
+		}
+	}
+	caller, bid, branch, flavor := parseInvocationID(*invocationID)
+	mStats := &monitoring.DownloadStats{
+		SizeCold:           stats.SizeCold,
+		SizeHot:            stats.SizeHot,
+		CountCold:          stats.CountCold,
+		CountHot:           stats.CountHot,
+		E2ETimeMS:          stats.E2ETimeMS,
+		DirRetrieveTimeMS:  stats.DirRetrieveTimeMS,
+		DirPrepareTimeMS:   stats.DirPrepareTimeMS,
+		FileDownloadTimeMS: stats.FileDownloadTimeMS,
+		ChunkRestoreTimeMS: stats.ChunkRestoreTimeMS,
+		DownloadError:      stats.DownloadError,
+		Caller:             caller,
+		Version:            version,
+		BuildID:            bid,
+		Branch:             branch,
+		Flavor:             flavor,
+	}
+	monitoring.RecordDownloadStats(mStats, *casInstance, !*disableCache, *chunksOnly)
 }

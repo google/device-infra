@@ -1,7 +1,6 @@
 
 package monitoring
 
-
 import (
 	"time"
 )
@@ -12,7 +11,10 @@ var (
 	isBorg     bool
 	binaryName string
 	arch       string
+	enabled    bool
 )
+
+func isMurdockdPresent() bool { return false }
 
 func recordLatency(success bool, rbeStatus string, duration time.Duration) {}
 
@@ -20,6 +22,7 @@ func recordBytes(success bool, bytes int64) {}
 
 func recordUsage(success bool, exitCode int) {}
 
-func recordDownloadStats(stats *DownloadStats, casInstance string, localCacheEnabled bool, chunksOnly bool) {}
+func recordDownloadStats(stats *DownloadStats, casInstance string, localCacheEnabled bool, chunksOnly bool) {
+}
 
 func shutdown() {}
