@@ -98,3 +98,16 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
     ],
 )
+
+java_library(
+    name = "device_property_info",
+    srcs = ["DevicePropertyInfo.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__subpackages__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@maven//:com_google_code_findbugs_jsr305",
+    ],
+)
