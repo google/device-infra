@@ -62,6 +62,12 @@ public abstract class AndroidUserInfo {
    */
   public static final int FLAG_EPHEMERAL = 0x00000100;
 
+  /** User with administrative privileges. Such a user can create and delete users. */
+  public static final int FLAG_ADMIN = 0x00000002;
+
+  /** Indicates that this user is a non-profile human user. */
+  public static final int FLAG_FULL = 0x00000400;
+
   /** Refer to UserHandle.USER_SYSTEM. */
   public static final int USER_SYSTEM = 0;
 
@@ -75,6 +81,14 @@ public abstract class AndroidUserInfo {
 
   public boolean isSystem() {
     return userId() == USER_SYSTEM;
+  }
+
+  public boolean isAdmin() {
+    return (flag() & FLAG_ADMIN) == FLAG_ADMIN;
+  }
+
+  public boolean isFull() {
+    return (flag() & FLAG_FULL) == FLAG_FULL;
   }
 
   public static Builder builder() {
