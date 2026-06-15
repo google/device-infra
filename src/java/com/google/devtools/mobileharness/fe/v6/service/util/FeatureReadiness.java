@@ -94,4 +94,8 @@ public class FeatureReadiness {
   public boolean isDeviceConfigurationReady() {
     return !environment.isGoogleInternal();
   }
+
+  public boolean isAdvancedOperationsReady() {
+    return false;
+  }
 }

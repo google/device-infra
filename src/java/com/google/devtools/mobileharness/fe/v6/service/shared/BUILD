@@ -62,6 +62,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/handlers",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/handlers:logcat_action_helper",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/handlers:screenshot_action_helper",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/builder",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/handlers",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/provider",
