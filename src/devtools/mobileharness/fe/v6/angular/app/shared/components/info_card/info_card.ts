@@ -17,7 +17,7 @@ import {MatIconModule} from '@angular/material/icon';
 })
 export class InfoCard implements OnInit {
   @Input() expanded = true;
-  @Input() title = '';
+  @Input() cardTitle = '';
   @Input() collapsible = true;
 
   ngOnInit() {}

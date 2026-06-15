@@ -1,4 +1,4 @@
-<app-info-card [id]="id" [title]="title" [collapsible]="false">
+<app-info-card [id]="id" [cardTitle]="title" [collapsible]="false">
   <ng-container operations>
     <app-date-range-picker (dateRangeChange)="dateRangeChange.emit($event)"></app-date-range-picker>
   </ng-container>

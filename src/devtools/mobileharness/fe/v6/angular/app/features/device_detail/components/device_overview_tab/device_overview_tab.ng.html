@@ -4,7 +4,7 @@
     <app-info-card
       #overviewSection
       id="overview-health"
-      title="Health & Activity"
+      cardTitle="Health & Activity"
       [collapsible]="false"
     >
       <!-- Stack Driver Log Button (only visible to Google internal users) -->
@@ -136,7 +136,7 @@
     <app-info-card
       #overviewSection
       id="overview-system"
-      title="Basic Information"
+      cardTitle="Basic Information"
       [collapsible]="false"
     >
       <div class="info-card-content">
@@ -230,7 +230,7 @@
       <app-info-card
         #overviewSection
         id="overview-subdevices"
-        title="Sub-Devices ({{device.subDevices.length}})">
+        cardTitle="Sub-Devices ({{device.subDevices.length}})">
 
         <div
           operations
@@ -246,7 +246,7 @@
         <div class="info-card-content no-padding">
           <div class="sub-device-cards-wrapper">
             @for (sub of device.subDevices; track sub.id) {
-              <app-info-card [title]="sub.id" [collapsible]="isSubDeviceCollapsible()" class="sub-device-card">
+              <app-info-card [cardTitle]="sub.id" [collapsible]="isSubDeviceCollapsible()" class="sub-device-card">
                 <div class="overview-card-content">
                   <dl class="sub-device-details-grid">
                     <dt>Types</dt>
@@ -306,7 +306,7 @@
     }
 
     <!-- Capabilities Card -->
-    <app-info-card #overviewSection id="overview-capabilities" title="Capabilities">
+    <app-info-card #overviewSection id="overview-capabilities" cardTitle="Capabilities">
       <div id="capabilities-content" class="info-card-content capabilities-content">
         <!-- Supported Drivers Section -->
         <div class="capability-section">
@@ -385,7 +385,7 @@
     </app-info-card>
 
     <!-- Dimensions Card -->
-    <app-info-card #overviewSection id="overview-dimensions" title="Dimensions" [expanded]="true">
+    <app-info-card #overviewSection id="overview-dimensions" cardTitle="Dimensions" [expanded]="true">
       <div id="dimensions-content" class="info-card-content text-sm">
         @if (device.dimensions) {
           <mat-form-field
@@ -478,7 +478,7 @@
     </app-info-card>
 
     <!-- Properties Card -->
-    <app-info-card #overviewSection id="overview-properties" title="Properties">
+    <app-info-card #overviewSection id="overview-properties" cardTitle="Properties">
       <div id="properties-content" class="info-card-content">
         @if (device.properties && objectUtils.objectKeys(device.properties).length > 0) {
           <div class="data-block">

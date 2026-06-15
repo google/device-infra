@@ -26,6 +26,20 @@ describe('InfoCard Component', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should render the card title', () => {
+    fixture.componentRef.setInput('cardTitle', 'Test Card Title');
+    fixture.detectChanges();
+    const headerEl =
+      fixture.debugElement.nativeElement.querySelector('.panel-header span');
+    expect(headerEl.textContent).toContain('Test Card Title');
+  });
+
+  it('should not set title attribute on host element', () => {
+    fixture.componentRef.setInput('cardTitle', 'Test Card Title');
+    fixture.detectChanges();
+    expect(fixture.debugElement.nativeElement.getAttribute('title')).toBeNull();
+  });
+
   it('should expand the panel by default', () => {
     expect(component.expanded).toBeTrue();
   });

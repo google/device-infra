@@ -1,5 +1,5 @@
 <app-master-detail-layout [navList]="navList()">
-  <app-info-card #overviewSection id="overview" title="Overview" [collapsible]="false">
+  <app-info-card #overviewSection id="overview" cardTitle="Overview" [collapsible]="false">
     @for (link of getDiagnosticLinks('OVERVIEW'); track link.label) {
       <div operations class="operation-button">
         <a [href]="link.url" target="_blank">
@@ -43,7 +43,7 @@
       </div>
     </div>
   </app-info-card>
-  <app-info-card #overviewSection id="lab-server" title="Lab Server" [collapsible]="false">
+  <app-info-card #overviewSection id="lab-server" cardTitle="Lab Server" [collapsible]="false">
     <div operations class="operation-button">
       @if (host.labServer.actions; as actions) {
         <app-action-button
@@ -188,7 +188,7 @@
       </dl>
     </div>
   </app-info-card>
-  <app-info-card #overviewSection id="device-list" title="Devices" [collapsible]="false">
+  <app-info-card #overviewSection id="device-list" cardTitle="Devices" [collapsible]="false">
     @if(isDeviceLoading()) {
       <mat-progress-bar mode="indeterminate" class="device-loading-bar"></mat-progress-bar>
     } @else if(deviceDataSource.data.length > 0) {
@@ -610,7 +610,7 @@
       </div>
     }
   </app-info-card>
-  <app-info-card #overviewSection id="host-properties" title="Host Properties">
+  <app-info-card #overviewSection id="host-properties" cardTitle="Host Properties">
     <div id="properties-content" class="info-card-content">
       @if (host.properties && objectUtils.objectKeys(host.properties).length > 0) {
         <div class="data-block">
