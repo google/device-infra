@@ -622,20 +622,28 @@ public final class UsmfTest {
 
   @Test
   public void exactArgsWithCoercion_matchesCorrectly() throws Exception {
+    JsonObject ruleJson =
+        JsonParser.parseString(
+                """
+                {
+                  "conditions": [
+                    {
+                      "type": "command",
+                      "match_type": "exact",
+                      "expected": ["count", 1]
+                    }
+                  ],
+                  "behavior": {
+                    "stdout": "matched\\n"
+                  }
+                }
+                """)
+            .getAsJsonObject();
+
     UsmfBinary mockCmd =
         UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox")
-            .addRule(
-                UsmfRule.builder()
-                    .addCondition(CommandCondition.exactMatch("count", "1"))
-                    .setBehavior(CommandBehavior.stdout("matched\n").build())
-                    .build())
+            .addRule(ruleJson)
             .buildAndDeploy();
-
-    // Manually edit rules/mock_rules.json to have numeric type (1 instead of "1")
-    Path rulesFile = tempDir.resolve("mock_cmd_sandbox/rules/mock_rules.json");
-    String configContent = Files.readString(rulesFile);
-    configContent = configContent.replace("\"1\"", "1");
-    Files.writeString(rulesFile, configContent);
 
     String stdout = executor.run(Command.of(mockCmd.getPath(), "count", "1"));
     assertThat(stdout).isEqualTo("matched\n");
@@ -691,27 +699,30 @@ public final class UsmfTest {
 
   @Test
   public void sleepMsAndExitCodeCoercion_coercesSuccessfully() throws Exception {
-    UsmfRule rule =
-        UsmfRule.builder()
-            .addCondition(CommandCondition.exactMatch("run"))
-            .setBehavior(CommandBehavior.stdout("coerced\n").build())
-            .build();
+    JsonObject ruleJson =
+        JsonParser.parseString(
+                """
+                {
+                  "conditions": [
+                    {
+                      "type": "command",
+                      "match_type": "exact",
+                      "expected": ["run"]
+                    }
+                  ],
+                  "behavior": {
+                    "stdout": "coerced\\n",
+                    "exit_code": "42",
+                    "sleep_ms": "120.5"
+                  }
+                }
+                """)
+            .getAsJsonObject();
 
     UsmfBinary mockCmd =
-        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
-
-    // Manually edit mock_rules.json to turn exit_code and sleep_ms into string representations
-    Path rulesFile = tempDir.resolve("mock_cmd_sandbox/rules/mock_rules.json");
-    String configContent = Files.readString(rulesFile);
-    configContent =
-        configContent
-            .replace("\"exit_code\": 0", "\"exit_code\": \"42\"")
-            .replace("\"exit_code\":0", "\"exit_code\":\"42\"");
-    configContent =
-        configContent
-            .replace("\"sleep_ms\": 0", "\"sleep_ms\": \"120.5\"")
-            .replace("\"sleep_ms\":0", "\"sleep_ms\":\"120.5\"");
-    Files.writeString(rulesFile, configContent);
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox")
+            .addRule(ruleJson)
+            .buildAndDeploy();
 
     long startTime = InstantSource.system().instant().toEpochMilli();
     Command command = Command.of(mockCmd.getPath(), "run");
@@ -971,20 +982,28 @@ public final class UsmfTest {
 
   @Test
   public void unknownConditionType_rejectsAndDoesNotMatchRule() throws Exception {
-    UsmfRule rule =
-        UsmfRule.builder()
-            .addCondition(CommandCondition.exactMatch("test"))
-            .setBehavior(CommandBehavior.stdout("matched\n").build())
-            .build();
+    JsonObject ruleJson =
+        JsonParser.parseString(
+                """
+                {
+                  "conditions": [
+                    {
+                      "type": "stat",
+                      "match_type": "exact",
+                      "expected": ["test"]
+                    }
+                  ],
+                  "behavior": {
+                    "stdout": "matched\\n"
+                  }
+                }
+                """)
+            .getAsJsonObject();
 
     UsmfBinary mockCmd =
-        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
-
-    // Manually edit mock_rules.json to inject an unknown condition type (e.g. "type":"stat")
-    Path rulesFile = tempDir.resolve("mock_cmd_sandbox/rules/mock_rules.json");
-    String configContent = Files.readString(rulesFile);
-    configContent = configContent.replace("\"command\"", "\"stat\"");
-    Files.writeString(rulesFile, configContent);
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox")
+            .addRule(ruleJson)
+            .buildAndDeploy();
 
     // Running should not match, since unknown condition type returns false. Output should be empty.
     String stdout = executor.run(Command.of(mockCmd.getPath(), "test"));
@@ -1966,5 +1985,75 @@ public final class UsmfTest {
         \\]\
         """;
     assertThat(summaryContent).matches(expectedSummaryPattern);
+  }
+
+  @Test
+  public void addRule_fromJsonObject_loadsRuleSuccessfully() throws Exception {
+    JsonObject ruleJson =
+        JsonParser.parseString(
+                """
+                {
+                  "conditions": [
+                    {
+                      "match_type": "exact",
+                      "expected": ["run"],
+                      "type": "command"
+                    }
+                  ],
+                  "behavior": {
+                    "stdout": "LoadedFromJson\\n",
+                    "stderr": "",
+                    "exit_code": 0,
+                    "sleep_ms": 0,
+                    "state_mutations": [],
+                    "side_effects": []
+                  }
+                }
+                """)
+            .getAsJsonObject();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox")
+            .addRule(ruleJson)
+            .buildAndDeploy();
+
+    String stdout = executor.run(Command.of(mockCmd.getPath(), "run"));
+    assertThat(stdout).isEqualTo("LoadedFromJson\n");
+  }
+
+  @Test
+  public void addRules_fromPath_loadsRulesSuccessfully() throws Exception {
+    Path jsonFile = tempDir.resolve("preload_rules.json");
+    Files.writeString(
+        jsonFile,
+        """
+        [
+          {
+            "conditions": [
+              {
+                "match_type": "exact",
+                "expected": ["run"],
+                "type": "command"
+              }
+            ],
+            "behavior": {
+              "stdout": "LoadedFromPath\\n",
+              "stderr": "",
+              "exit_code": 0,
+              "sleep_ms": 0,
+              "state_mutations": [],
+              "side_effects": []
+            }
+          }
+        ]
+        """);
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox")
+            .addRules(jsonFile)
+            .buildAndDeploy();
+
+    String stdout = executor.run(Command.of(mockCmd.getPath(), "run"));
+    assertThat(stdout).isEqualTo("LoadedFromPath\n");
   }
 }

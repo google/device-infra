@@ -25,7 +25,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.google.gson.annotations.SerializedName;
 import java.io.IOException;
@@ -85,13 +88,14 @@ public final class UsmfBinary {
   private static final String HISTORY_FILE_PREFIX = "history_";
   private static final String JSON_FILE_EXTENSION = ".json";
 
+  private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+
   private final Path binaryFile;
   private final Path sandboxDir;
-  private final ImmutableList<UsmfRule> rules;
+  private final ImmutableList<JsonObject> rules;
   private final JsonObject variables;
   private final Path logsDir;
   private final Path statesFile;
-  private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
   /**
    * Creates a {@link Builder} to configure a mock binary sandbox.
@@ -246,7 +250,7 @@ public final class UsmfBinary {
   private UsmfBinary(
       Path binaryFile,
       Path sandboxDir,
-      ImmutableList<UsmfRule> rules,
+      ImmutableList<JsonObject> rules,
       JsonObject variables,
       Path logsDir,
       Path statesFile) {
@@ -264,7 +268,7 @@ public final class UsmfBinary {
     private final Path sandboxDirParentDir;
     private final String sandboxDirName;
     @Nullable private Path binaryFileParentDir;
-    private final List<UsmfRule> rules = new ArrayList<>();
+    private final List<JsonObject> rules = new ArrayList<>();
     private JsonObject variables = new JsonObject();
     @Nullable private Consumer<UsmfBinary> buildCallback;
 
@@ -301,8 +305,47 @@ public final class UsmfBinary {
      */
     @CanIgnoreReturnValue
     public Builder addRule(UsmfRule rule) {
-      this.rules.add(checkNotNull(rule));
+      checkNotNull(rule);
+      return addRule(gson.toJsonTree(rule).getAsJsonObject());
+    }
+
+    /**
+     * Adds an execution rule from a JSON object. The JSON object must satisfy the format and
+     * serialization structure of {@link UsmfRule}. Rules are evaluated sequentially at runtime in
+     * the order they are added. The evaluation halts immediately at the first matching rule.
+     *
+     * @param jsonRule the JSON rule object satisfying the {@link UsmfRule} format to be added
+     * @return this builder instance
+     */
+    @CanIgnoreReturnValue
+    public Builder addRule(JsonObject jsonRule) {
+      this.rules.add(checkNotNull(jsonRule));
       return this;
+    }
+
+    /**
+     * Adds execution rules from a JSON rules file. The file must contain a JSON array (list) of
+     * rules, where each rule is a JSON object satisfying the format and serialization structure of
+     * {@link UsmfRule}. Rules are evaluated sequentially at runtime in the order they are added.
+     * The evaluation halts immediately at the first matching rule.
+     *
+     * @param jsonRulesFile the path to the JSON rules file (containing a JSON array of rules
+     *     satisfying the {@link UsmfRule} format) to be added
+     * @return this builder instance
+     * @throws IOException if any I/O error occurs while reading the rule file
+     */
+    @CanIgnoreReturnValue
+    public Builder addRules(Path jsonRulesFile) throws IOException {
+      String content = Files.readString(checkNotNull(jsonRulesFile));
+      JsonElement json = JsonParser.parseString(content);
+      if (json.isJsonArray()) {
+        JsonArray array = json.getAsJsonArray();
+        for (JsonElement element : array) {
+          addRule(element.getAsJsonObject());
+        }
+        return this;
+      }
+      throw new JsonParseException("Expected a JSON array of rules in the file: " + jsonRulesFile);
     }
 
     /**
