@@ -48,6 +48,7 @@ import com.google.devtools.mobileharness.platform.android.instrumentation.Androi
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
 import com.google.devtools.mobileharness.platform.android.lightning.systemsetting.SystemSettingManager;
+import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
@@ -95,6 +96,7 @@ public class AndroidInstrumentationTest {
   @Mock private Aapt aapt;
   @Mock private ApkInstaller apkInstaller;
   @Mock private SystemSettingManager systemSettingManager;
+  @Mock private SystemStateManager systemStateManager;
   @Mock private AndroidInstrumentationUtil androidInstrumentationUtil;
   @Mock private LocalFileUtil fileUtil;
   @Mock private TestMessageUtil testMessageUtil;
@@ -147,6 +149,7 @@ public class AndroidInstrumentationTest {
             aapt,
             apkInstaller,
             systemSettingManager,
+            systemStateManager,
             fileUtil,
             testMessageUtil,
             androidInstrumentationUtil,
@@ -501,6 +504,37 @@ public class AndroidInstrumentationTest {
     driver.run(testInfo);
 
     assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.ERROR);
+    verify(fileUtil)
+        .writeToFile(
+            PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
+            instrumentationLog);
+  }
+
+  @Test
+  public void runError_device_disconnected() throws Exception {
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
+    String instrumentationLog = "Other error message";
+    AndroidInstrumentationSetting setting =
+        mockInstrumentSetting(
+            TEST_NAME,
+            OPTION_MAP,
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ false,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ true);
+    when(androidInstrumentationUtil.instrument(
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
+        .thenReturn(instrumentationLog);
+    when(systemStateManager.isOnline(DEVICE_ID)).thenReturn(false);
+
+    driver.run(testInfo);
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.ERROR);
+    assertThat(testInfo.resultWithCause().get().causeException().get())
+        .isInstanceOf(MobileHarnessException.class);
+    assertThat(testInfo.resultWithCause().get().causeException().get().getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_DEVICE_OFFLINE);
     verify(fileUtil)
         .writeToFile(
             PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
