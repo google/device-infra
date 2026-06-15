@@ -21,6 +21,7 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -40,6 +41,7 @@ import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.Dev
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.ProcessCategory;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatLineProxy;
 import com.google.devtools.mobileharness.platform.android.logcat.proto.LogcatMonitoringReport;
+import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.shared.util.base.ProtoExtensionRegistry;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -83,6 +85,7 @@ public class AndroidLogcatMonitoringDecoratorTest {
   @Mock DropboxExtractor dropboxExtractor;
   @Mock AndroidFileUtil androidFileUtil;
   @Mock CrashDialogDetector crashDialogDetector;
+  @Mock AndroidSystemSettingUtil androidSystemSettingUtil;
 
   private LocalFileUtil localFileUtil;
   private Path decoratorOutputDir;
@@ -103,6 +106,7 @@ public class AndroidLogcatMonitoringDecoratorTest {
     doNothing().when(decoratedDriver).run(testInfo);
     when(adb.runShell(any(), any())).thenReturn("2025-01-30 10:15:20.000");
     when(adb.runShellAsync(any(), anyString(), any(), any())).thenReturn(commandProcess);
+    when(androidSystemSettingUtil.getDeviceSdkVersion(anyString())).thenReturn(31);
   }
 
   @Test
@@ -124,7 +128,8 @@ public class AndroidLogcatMonitoringDecoratorTest {
             localFileUtil,
             androidFileUtil,
             dropboxExtractor,
-            crashDialogDetector);
+            crashDialogDetector,
+            androidSystemSettingUtil);
 
     decorator.run(testInfo);
 
@@ -161,7 +166,8 @@ public class AndroidLogcatMonitoringDecoratorTest {
             localFileUtil,
             androidFileUtil,
             dropboxExtractor,
-            crashDialogDetector);
+            crashDialogDetector,
+            androidSystemSettingUtil);
 
     decorator.run(testInfo);
 
@@ -222,7 +228,8 @@ public class AndroidLogcatMonitoringDecoratorTest {
             localFileUtil,
             androidFileUtil,
             dropboxExtractor,
-            crashDialogDetector);
+            crashDialogDetector,
+            androidSystemSettingUtil);
 
     decorator.run(testInfo);
     verify(dropboxExtractor)
@@ -267,7 +274,8 @@ public class AndroidLogcatMonitoringDecoratorTest {
             localFileUtil,
             androidFileUtil,
             dropboxExtractor,
-            crashDialogDetector);
+            crashDialogDetector,
+            androidSystemSettingUtil);
 
     decorator.run(testInfo);
 
@@ -313,7 +321,8 @@ public class AndroidLogcatMonitoringDecoratorTest {
             localFileUtil,
             androidFileUtil,
             dropboxExtractor,
-            crashDialogDetector);
+            crashDialogDetector,
+            androidSystemSettingUtil);
 
     MobileHarnessException thrown =
         assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
@@ -346,7 +355,8 @@ public class AndroidLogcatMonitoringDecoratorTest {
             localFileUtil,
             androidFileUtil,
             dropboxExtractor,
-            crashDialogDetector);
+            crashDialogDetector,
+            androidSystemSettingUtil);
 
     decorator.run(testInfo);
   }
@@ -380,7 +390,8 @@ public class AndroidLogcatMonitoringDecoratorTest {
             localFileUtil,
             androidFileUtil,
             dropboxExtractor,
-            crashDialogDetector);
+            crashDialogDetector,
+            androidSystemSettingUtil);
 
     MobileHarnessException thrown =
         assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
@@ -420,7 +431,8 @@ public class AndroidLogcatMonitoringDecoratorTest {
             localFileUtil,
             androidFileUtil,
             dropboxExtractor,
-            crashDialogDetector);
+            crashDialogDetector,
+            androidSystemSettingUtil);
 
     MobileHarnessException thrown =
         assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
@@ -466,7 +478,8 @@ public class AndroidLogcatMonitoringDecoratorTest {
             localFileUtil,
             androidFileUtil,
             dropboxExtractor,
-            crashDialogDetector);
+            crashDialogDetector,
+            androidSystemSettingUtil);
 
     decorator.run(testInfo);
     verify(androidFileUtil)
@@ -476,5 +489,139 @@ public class AndroidLogcatMonitoringDecoratorTest {
         LogcatMonitoringReport.parseFrom(
             Files.readAllBytes(reportPath), ProtoExtensionRegistry.getGeneratedRegistry());
     assertThat(report.getCrashDialogPackage()).isEqualTo("com.test.infra");
+  }
+
+  @Test
+  public void run_wifiDisabled_addsEventToReport() throws Exception {
+    AndroidLogcatMonitoringDecoratorSpec spec =
+        AndroidLogcatMonitoringDecoratorSpec.getDefaultInstance();
+    when(jobInfo.combinedSpec(any())).thenReturn(spec);
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getLogcatEventsFromProcessors()).thenReturn(ImmutableList.of());
+
+    when(adb.runShell("deviceId", "date +%Y-%m-%d\\ %H:%M:%S.000"))
+        .thenReturn("2025-01-30 10:15:20.000");
+    when(adb.runShell("deviceId", "cmd wifi status")).thenReturn("Wifi is disabled");
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector,
+            androidSystemSettingUtil);
+
+    decorator.run(testInfo);
+
+    Path reportPath = decoratorOutputDir.resolve("logcat_monitoring_report.proto");
+    assertThat(Files.exists(reportPath)).isTrue();
+    LogcatMonitoringReport report =
+        LogcatMonitoringReport.parseFrom(
+            Files.readAllBytes(reportPath), ProtoExtensionRegistry.getGeneratedRegistry());
+    assertThat(report.getDeviceEventsList()).hasSize(1);
+    assertThat(report.getDeviceEvents(0).getEventName()).isEqualTo("WIFI_DISABLED");
+    assertThat(report.getDeviceEvents(0).getTag()).isEqualTo("ADBWifi");
+    assertThat(report.getDeviceEvents(0).getLogLines()).isEqualTo("Wifi is disabled");
+  }
+
+  @Test
+  public void run_wifiNotConnected_addsEventToReport() throws Exception {
+    AndroidLogcatMonitoringDecoratorSpec spec =
+        AndroidLogcatMonitoringDecoratorSpec.getDefaultInstance();
+    when(jobInfo.combinedSpec(any())).thenReturn(spec);
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getLogcatEventsFromProcessors()).thenReturn(ImmutableList.of());
+
+    when(adb.runShell("deviceId", "date +%Y-%m-%d\\ %H:%M:%S.000"))
+        .thenReturn("2025-01-30 10:15:20.000");
+    when(adb.runShell("deviceId", "cmd wifi status")).thenReturn("Wifi is not connected");
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector,
+            androidSystemSettingUtil);
+
+    decorator.run(testInfo);
+
+    Path reportPath = decoratorOutputDir.resolve("logcat_monitoring_report.proto");
+    assertThat(Files.exists(reportPath)).isTrue();
+    LogcatMonitoringReport report =
+        LogcatMonitoringReport.parseFrom(
+            Files.readAllBytes(reportPath), ProtoExtensionRegistry.getGeneratedRegistry());
+    assertThat(report.getDeviceEventsList()).hasSize(1);
+    assertThat(report.getDeviceEvents(0).getEventName()).isEqualTo("WIFI_NOT_CONNECTED");
+    assertThat(report.getDeviceEvents(0).getTag()).isEqualTo("ADBWifi");
+    assertThat(report.getDeviceEvents(0).getLogLines()).isEqualTo("Wifi is not connected");
+  }
+
+  @Test
+  public void run_sdkLessThan30_doesNotCheckWifi() throws Exception {
+    when(androidSystemSettingUtil.getDeviceSdkVersion("deviceId")).thenReturn(29);
+
+    AndroidLogcatMonitoringDecoratorSpec spec =
+        AndroidLogcatMonitoringDecoratorSpec.getDefaultInstance();
+    when(jobInfo.combinedSpec(any())).thenReturn(spec);
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getLogcatEventsFromProcessors()).thenReturn(ImmutableList.of());
+
+    when(adb.runShell("deviceId", "date +%Y-%m-%d\\ %H:%M:%S.000"))
+        .thenReturn("2025-01-30 10:15:20.000");
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector,
+            androidSystemSettingUtil);
+
+    decorator.run(testInfo);
+
+    verify(adb, never()).runShell("deviceId", "cmd wifi status");
+  }
+
+  @Test
+  public void run_wifiConnected_doesNotAddEventToReport() throws Exception {
+    AndroidLogcatMonitoringDecoratorSpec spec =
+        AndroidLogcatMonitoringDecoratorSpec.getDefaultInstance();
+    when(jobInfo.combinedSpec(any())).thenReturn(spec);
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getLogcatEventsFromProcessors()).thenReturn(ImmutableList.of());
+
+    when(adb.runShell("deviceId", "date +%Y-%m-%d\\ %H:%M:%S.000"))
+        .thenReturn("2025-01-30 10:15:20.000");
+    when(adb.runShell("deviceId", "cmd wifi status")).thenReturn("Wifi is connected to network X");
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector,
+            androidSystemSettingUtil);
+
+    decorator.run(testInfo);
+
+    Path reportPath = decoratorOutputDir.resolve("logcat_monitoring_report.proto");
+    assertThat(Files.exists(reportPath)).isFalse();
   }
 }

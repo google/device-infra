@@ -51,6 +51,7 @@ import com.google.devtools.mobileharness.platform.android.logcat.NativeCrashDete
 import com.google.devtools.mobileharness.platform.android.logcat.proto.LogcatMonitoringReport;
 import com.google.devtools.mobileharness.platform.android.logcat.proto.LogcatMonitoringReport.Category;
 import com.google.devtools.mobileharness.platform.android.logcat.proto.LogcatMonitoringReport.CrashType;
+import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
@@ -92,7 +93,11 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
   private final AndroidFileUtil androidFileUtil;
   private final DropboxExtractor dropboxExtractor;
   private final CrashDialogDetector crashDialogDetector;
+
+  private final AndroidSystemSettingUtil androidSystemSettingUtil;
   private LocalDateTime deviceTimeOnStart = null;
+
+  private ImmutableList<DeviceEvent> initialWifiChecks = ImmutableList.of();
 
   @Inject
   AndroidLogcatMonitoringDecorator(
@@ -103,7 +108,8 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
       LocalFileUtil localFileUtil,
       AndroidFileUtil androidFileUtil,
       DropboxExtractor dropboxExtractor,
-      CrashDialogDetector crashDialogDetector) {
+      CrashDialogDetector crashDialogDetector,
+      AndroidSystemSettingUtil androidSystemSettingUtil) {
     super(decorated, testInfo);
     this.adb = adb;
     this.logcatLineProxy = logcatLineProxy;
@@ -111,6 +117,7 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
     this.androidFileUtil = androidFileUtil;
     this.dropboxExtractor = dropboxExtractor;
     this.crashDialogDetector = crashDialogDetector;
+    this.androidSystemSettingUtil = androidSystemSettingUtil;
   }
 
   @Override
@@ -125,6 +132,8 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
     String deviceId = getDevice().getDeviceId();
 
     ExecutorService executorService = Executors.newFixedThreadPool(3);
+
+    checkWifiStatus(deviceId);
 
     var monitoringConfig =
         new MonitoringConfig(
@@ -174,10 +183,12 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
 
   private void writeMonitoringReport(TestInfo testInfo) throws MobileHarnessException {
     ImmutableList<LogcatEvent> logcatEvents = logcatLineProxy.getLogcatEventsFromProcessors();
-    if (logcatEvents.isEmpty()) {
+    var allEvents =
+        ImmutableList.<LogcatEvent>builder().addAll(initialWifiChecks).addAll(logcatEvents).build();
+    if (allEvents.isEmpty()) {
       return;
     }
-    var report = createReport(logcatEvents, crashDialogDetector.crashDialogPackageName());
+    var report = createReport(allEvents, crashDialogDetector.crashDialogPackageName());
     testInfo.log().atInfo().alsoTo(logger).log("\n#### Logcat Monitoring Report ####\n%s", report);
     Path reportPath = getDecoratorOutputsDir(testInfo).resolve(LOGCAT_MONITORING_REPORT_PROTO);
     localFileUtil.writeToFile(reportPath.toString(), report.toByteArray());
@@ -341,5 +352,21 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
               eventConfig.getEventName(), eventConfig.getTag(), eventConfig.getLineRegex()));
     }
     return builder.build();
+  }
+
+  private void checkWifiStatus(String deviceId)
+      throws InterruptedException, MobileHarnessException {
+    var sdkVersion = androidSystemSettingUtil.getDeviceSdkVersion(deviceId);
+    if (sdkVersion < 30) {
+      return;
+    }
+    var wifiCheckEvents = ImmutableList.<DeviceEvent>builder();
+    var output = adb.runShell(deviceId, "cmd wifi status");
+    if (output.contains("Wifi is disabled")) {
+      wifiCheckEvents.add(new DeviceEvent("WIFI_DISABLED", "ADBWifi", output));
+    } else if (output.contains("Wifi is not connected")) {
+      wifiCheckEvents.add(new DeviceEvent("WIFI_NOT_CONNECTED", "ADBWifi", output));
+    }
+    initialWifiChecks = wifiCheckEvents.build();
   }
 }
