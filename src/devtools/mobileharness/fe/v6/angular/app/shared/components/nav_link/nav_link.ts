@@ -34,6 +34,9 @@ export class NavLink implements OnInit, OnDestroy {
   /** Standard target attribute for the 'a' element (e.g., '_blank'). */
   @Input() target?: string;
 
+  /** Custom query parameters to append to the navigation. */
+  @Input() customQueryParams: Record<string, string> = {};
+
   /**
    * Standard Angular router option for handling query parameters during
    * client-side navigation.
@@ -58,9 +61,17 @@ export class NavLink implements OnInit, OnDestroy {
   ngOnInit() {
     this.routerLink = this.getRouterLink();
     const search = this.document.defaultView?.location.search || '';
+
+    // Merge custom query parameters
+    const urlParams = new URLSearchParams(search);
+    for (const [key, value] of Object.entries(this.customQueryParams)) {
+      urlParams.set(key, value);
+    }
+    const newSearch = urlParams.toString();
+
     // Set the fullPageLink to the routerLink by default, and update it to the
     // full page link from the parent window if available.
-    this.fullPageLink = `${this.routerLink}${search}`;
+    this.fullPageLink = `${this.routerLink}${newSearch ? '?' + newSearch : ''}`;
     this.fetchFullPageLink();
   }
 
@@ -148,6 +159,9 @@ export class NavLink implements OnInit, OnDestroy {
     this.urlService.notifyNavigated(page, params);
 
     this.router.navigate([this.routerLink], {
+      ...(Object.keys(this.customQueryParams).length > 0
+        ? {queryParams: this.customQueryParams}
+        : {}),
       queryParamsHandling: this.queryParamsHandling,
     });
   }
@@ -161,6 +175,7 @@ export class NavLink implements OnInit, OnDestroy {
     const params: Record<string, string> = {
       'host_name': this.config.hostName,
       'host_ip': this.config.hostIp,
+      ...this.customQueryParams,
     };
     return {page, params};
   }

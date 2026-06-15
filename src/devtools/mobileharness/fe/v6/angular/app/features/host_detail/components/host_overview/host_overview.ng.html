@@ -45,45 +45,27 @@
   </app-info-card>
   <app-info-card #overviewSection id="lab-server" cardTitle="Lab Server" [collapsible]="false">
     <div operations class="operation-button">
+      <!--
+        NOTE: Lab Server Actions were refactored to be data-driven. Instead of hardcoding
+        buttons for Release, Restart, etc., we iterate over labServerActionsLayout.
+        This simplifies the template and centralizes configuration.
+      -->
       @if (host.labServer.actions; as actions) {
-        <app-action-button
-          [action]="actions.release"
-          label="Release"
-          icon="upgrade"
-          mode="operation"
-          [disabled]="isOpeningReleaseDialog()"
-          [loading]="isOpeningRelease()"
-          (actionClick)="onRelease()"
-          (comingSoonClick)="showComingSoonPopup('Release')"
-        ></app-action-button>
-
-        <app-action-button
-          [action]="actions.restart"
-          label="Restart"
-          icon="restart_alt"
-          mode="operation"
-          (actionClick)="onRestart()"
-          (comingSoonClick)="showComingSoonPopup('Restart')"
-        ></app-action-button>
-
-        <app-action-button
-          [action]="actions.start"
-          label="Start"
-          icon="play_arrow"
-          mode="operation"
-          (actionClick)="onStart()"
-          (comingSoonClick)="showComingSoonPopup('Start')"
-        ></app-action-button>
-
-        <app-action-button
-          [action]="actions.stop"
-          label="Stop"
-          icon="stop_circle"
-          mode="operation"
-          (actionClick)="onStop()"
-          (comingSoonClick)="showComingSoonPopup('Stop')"
-        ></app-action-button>
+        @for (actionId of labServerActionsLayout; track actionId) {
+          @let config = labServerActionUiConfig[actionId];
+          <app-action-button
+            [action]="actions[actionId]"
+            [label]="config.label"
+            [icon]="config.icon"
+            mode="operation"
+            [disabled]="actionId === 'release' && isOpeningReleaseDialog()"
+            [loading]="actionId === 'release' ? isOpeningRelease() : false"
+            (actionClick)="onLabServerAction(actionId)"
+            (comingSoonClick)="showComingSoonPopup(actionId)"
+          ></app-action-button>
+        }
       }
+
 
       @for (link of getDiagnosticLinks('LAB_SERVER'); track link.label) {
         <a href="{{ link.url }}" target="_blank">
@@ -409,7 +391,7 @@
                 </td>
               </ng-container>
 
-              <!-- Actions Column -->
+              <!-- Actions Column of Device Summary Table -->
               <!-- TODO: remove the hide-action-column class when action buttons are implemented. -->
               <!-- TODO: add real logic for the action buttons. -->
               <ng-container matColumnDef="actions" stickyEnd>
@@ -419,69 +401,54 @@
                   </button> -->
                 </th>
                 <td mat-cell *matCellDef="let element" class="sticky-end-cell" [class.hide-action-column]="!isGoogleInternal">
-                  <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Device actions" (click)="$event.stopPropagation()">
-                    <mat-icon>more_vert</mat-icon>
-                  </button>
-                  <mat-menu #menu="matMenu">
-                    @if (element.actions; as elementActions) {
-                      <app-action-button
-                        [action]="elementActions.screenshot"
-                        label="Screenshot"
-                        icon="screenshot"
-                        mode="menu-item"
-                        (actionClick)="takeScreenshot(element)"
-                        (comingSoonClick)="showComingSoonPopup('Screenshot', element)"
-                      ></app-action-button>
+                  @if (element.actions; as elementActions) {
+                    @let visibleActions = getVisibleDeviceActions(elementActions);
 
+                    @if (visibleActions.length === 1) {
+                      <!-- CASE 1: Exactly 1 visible action -> Put button directly -->
+                      @let actionId = visibleActions[0];
+                      @let config = actionUiConfig[actionId];
                       <app-action-button
-                        [action]="elementActions.logcat"
-                        label="Get Logcat"
-                        icon="description"
-                        mode="menu-item"
-                        (actionClick)="getLogcat(element)"
-                        (comingSoonClick)="showComingSoonPopup('Logcat', element)"
+                        [action]="getAction(elementActions, actionId)"
+                        [label]="config.label"
+                        [icon]="config.icon"
+                        mode="button"
+                        [loading]="deviceActions.isRunning(actionId)()"
+                        [loadingLabel]="config.loadingLabel"
+                        (actionClick)="onAction(actionId, element)"
+                        (comingSoonClick)="showComingSoonPopup(actionId, element)"
                       ></app-action-button>
-
-                      <app-action-button
-                        [action]="elementActions.remoteControl"
-                        label="Remote Control"
-                        icon="important_devices"
-                        mode="menu-item"
-                        (actionClick)="startRemoteControl([element])"
-                        (comingSoonClick)="showComingSoonPopup('Remote Control', element)"
-                      ></app-action-button>
-
-                      <app-action-button
-                        [action]="elementActions.flash?.state"
-                        label="Flash"
-                        icon="flash_on"
-                        mode="menu-item"
-                        (actionClick)="flashDevice(element)"
-                        (comingSoonClick)="showComingSoonPopup('Flash', element)"
-                      ></app-action-button>
-
-                      <app-action-button
-                        [action]="elementActions.quarantine"
-                        label="Quarantine"
-                        icon="block"
-                        mode="menu-item"
-                        (actionClick)="quarantineDevice(element)"
-                        (comingSoonClick)="showComingSoonPopup('Quarantine', element)"
-                      ></app-action-button>
-
-                      <app-action-button
-                        [action]="elementActions.decommission"
-                        label="Decommission"
-                        icon="delete_sweep"
-                        mode="menu-item"
-                        (actionClick)="decommission(element)"
-                        (comingSoonClick)="showComingSoonPopup('Decommission', element)"
-                      ></app-action-button>
+                    } @else if (visibleActions.length > 1) {
+                      <!-- CASE 2: Multiple visible actions -> Keep the menu -->
+                      <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Device actions" (click)="$event.stopPropagation()">
+                        <mat-icon>more_vert</mat-icon>
+                      </button>
+                      <mat-menu #menu="matMenu">
+                        <!--
+                          NOTE: Device actions in this menu are driven by deviceActionsLayout
+                          and actionUiConfig. This ensures consistent rendering with the
+                          DeviceActionBar and reduces boilerplate.
+                        -->
+                        @for (actionId of visibleActions; track actionId) {
+                          @let config = actionUiConfig[actionId];
+                          <app-action-button
+                            [action]="getAction(elementActions, actionId)"
+                            [label]="config.label"
+                            [icon]="config.icon"
+                            mode="menu-item"
+                            [loading]="deviceActions.isRunning(actionId)()"
+                            [loadingLabel]="config.loadingLabel"
+                            (actionClick)="onAction(actionId, element)"
+                            (comingSoonClick)="showComingSoonPopup(actionId, element)"
+                          ></app-action-button>
+                        }
+                      </mat-menu>
                     }
-                  </mat-menu>
+                  }
                 </td>
               </ng-container>
 
+              <!-- Expanded Detail Column, this is for the devices under Testbed -->
               <ng-container matColumnDef="expandedDetail">
                 <td mat-cell *matCellDef="let element" [attr.colspan]="displayedColumns.length">
                   <div class="element-detail"

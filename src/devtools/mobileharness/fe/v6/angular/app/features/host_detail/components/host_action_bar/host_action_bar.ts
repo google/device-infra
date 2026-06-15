@@ -3,15 +3,19 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   inject,
   input,
+  OnInit,
 } from '@angular/core';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {MatDialog} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
 import {MatTooltipModule} from '@angular/material/tooltip';
+import {ActivatedRoute, Router} from '@angular/router';
 
-import {ActionBarAction} from '@deviceinfra/app/core/constants/action_bar_config';
+import {HOST_ACTION_UI_CONFIG} from '@deviceinfra/app/core/constants/action_bar_config';
 import {
   APP_DATA,
   getLegacyFeUrl,
@@ -20,6 +24,7 @@ import {ActionButtonState} from '../../../../core/models/action_common';
 import {HostActions} from '../../../../core/models/host_action';
 import type {HostOverviewPageData} from '../../../../core/models/host_overview';
 import {Environment} from '../../../../core/services/environment';
+import {ActionButton} from '../../../../shared/components/action_button/action_button';
 import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
 import {HostConfig} from '../host_config/host_config';
 import {HostEmpty} from '../host_config/host_empty/host_empty';
@@ -34,18 +39,100 @@ import {HostDecommissionDialog} from '../host_decommission_dialog/host_decommiss
 @Component({
   selector: 'app-host-action-bar',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatMenuModule, MatTooltipModule],
+  imports: [
+    CommonModule,
+    MatIconModule,
+    MatMenuModule,
+    MatTooltipModule,
+    ActionButton,
+  ],
   templateUrl: './host_action_bar.ng.html',
   styleUrl: './host_action_bar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HostActionBar {
+export class HostActionBar implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly environment = inject(Environment);
   private readonly comingSoonService = inject(ComingSoonService);
   private readonly appData = inject(APP_DATA);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
+
+  /**
+   * Configuration driving the UI for host actions.
+   *
+   * NOTE: This follows the "next-level" refactoring pattern of separating data/configuration
+   * from logic and UI. By using HOST_ACTION_UI_CONFIG, we avoid hardcoding button labels,
+   * icons, and test IDs in the template. This makes the component highly maintainable and
+   * reusable.
+   */
+  protected readonly actionUiConfig = HOST_ACTION_UI_CONFIG;
+
+  /**
+   * Layout configurations for different screen sizes.
+   * These arrays define WHICH actions appear and WHERE (direct button vs menu),
+   * while actionUiConfig defines HOW they look. This separation was key to
+   * optimizing the template and reducing code duplication.
+   */
+
+  protected readonly layout2xl: Array<keyof HostActions> = [
+    'configuration',
+    'decommission',
+    'debug',
+  ];
+
+  protected readonly layoutXlDirect: Array<keyof HostActions> = [
+    'configuration',
+  ];
+
+  protected readonly layoutXlMenu: Array<keyof HostActions> = [
+    'debug',
+    'decommission',
+  ];
+
+  protected readonly layoutSmDirect: Array<keyof HostActions> = [
+    'configuration',
+  ];
+
+  protected readonly layoutSmMenu: Array<keyof HostActions> = [
+    'debug',
+    'decommission',
+  ];
+
+  onAction(actionId: keyof HostActions) {
+    switch (actionId) {
+      case 'configuration':
+        this.onConfiguration();
+        break;
+      case 'debug':
+        this.onDebug();
+        break;
+      case 'decommission':
+        this.onDecommission();
+        break;
+      default:
+        break;
+    }
+  }
+
+  ngOnInit() {
+    this.route.queryParams
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        if (params['openHostConfig'] === 'true') {
+          this.onConfiguration();
+          this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: {'openHostConfig': null},
+            queryParamsHandling: 'merge',
+            replaceUrl: true,
+          });
+        }
+      });
+  }
 
   readonly pageData = input.required<HostOverviewPageData>();
 
@@ -169,25 +256,30 @@ export class HostActionBar {
     });
   };
 
-  showComingSoonPopup(key: string) {
-    const featureMap: Record<string, ActionBarAction> = {
-      'configuration': ActionBarAction.HOST_CONFIGURATION,
-      'debug': ActionBarAction.HOST_DEBUG,
-      'decommission': ActionBarAction.HOST_DECOMMISSION,
-    };
-    const feature = featureMap[key];
+  /**
+   * Shows the "Coming Soon" popup for the given action.
+   *
+   * NOTE: This method was optimized during "next-level" refactoring to use the
+   * centralized HOST_ACTION_UI_CONFIG. It automatically retrieves the correct
+   * feature flag associated with the action, driving the "Coming Soon" dialog
+   * without needing component-level switch cases or mappings.
+   */
+  showComingSoonPopup(key: keyof HostActions) {
+    const feature = this.actionUiConfig[key]?.feature;
     if (feature) {
-      const hostLegacyUrl = this.legacyFeUrl
-        ? `${this.legacyFeUrl}/labdetailview/${this.hostName()}/${this.pageData().overviewContent.ip}`
-        : undefined;
-      this.comingSoonService.show(feature, 'default', hostLegacyUrl);
+      this.comingSoonService.showForHost(
+        feature,
+        this.legacyFeUrl,
+        this.hostName(),
+        this.pageData().overviewContent.ip,
+      );
     }
   }
 
   getAction(key: keyof HostActions): ActionButtonState | undefined {
-    return (this.actions() as unknown as Record<string, ActionButtonState>)?.[
-      key
-    ];
+    return (
+      this.actions() as unknown as Record<string, ActionButtonState | undefined>
+    )?.[key];
   }
 
   isActionVisible(key: keyof HostActions): boolean {
@@ -195,14 +287,10 @@ export class HostActionBar {
   }
 
   readonly hasXlMoreMenuItems = computed(() => {
-    return (
-      this.isActionVisible('debug') || this.isActionVisible('decommission')
-    );
+    return this.layoutXlMenu.some((actionId) => this.isActionVisible(actionId));
   });
 
   readonly hasSmActionMenuItems = computed(() => {
-    return (
-      this.isActionVisible('debug') || this.isActionVisible('decommission')
-    );
+    return this.layoutSmMenu.some((actionId) => this.isActionVisible(actionId));
   });
 }

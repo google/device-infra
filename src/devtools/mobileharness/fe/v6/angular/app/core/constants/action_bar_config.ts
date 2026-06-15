@@ -1,4 +1,6 @@
 import {InjectionToken} from '@angular/core';
+import {DeviceActions} from '../models/device_action';
+import {HostActions, LabServerActions} from '../models/host_action';
 
 /**
  * Enum representing all unimplemented features that will show a "Coming Soon" dialog.
@@ -13,6 +15,7 @@ export enum ActionBarAction {
   HOST_DECOMMISSION = 'HOST_DECOMMISSION',
 
   HOST_RELEASE = 'HOST_RELEASE',
+  HOST_ADVANCED_OPERATIONS = 'HOST_ADVANCED_OPERATIONS',
 
   // Device Actions
   DEVICE_CONFIGURATION = 'DEVICE_CONFIGURATION',
@@ -69,6 +72,9 @@ export const ACTION_BAR_CONFIG: Record<ActionBarAction, ActionMetadata> = {
   [ActionBarAction.HOST_RELEASE]: {
     displayName: 'Release',
   },
+  [ActionBarAction.HOST_ADVANCED_OPERATIONS]: {
+    displayName: 'Advanced Operations',
+  },
 
   // Device Features
   [ActionBarAction.DEVICE_CONFIGURATION]: {
@@ -103,3 +109,159 @@ export const ACTION_BAR_CONFIG_TOKEN = new InjectionToken<
   providedIn: 'root',
   factory: () => ACTION_BAR_CONFIG,
 });
+
+/**
+ * UI Configuration for Device Actions.
+ *
+ * NOTE: This interface was enriched with the 'feature' field to support a
+ * "next-level" data-driven refactoring. By mapping each action to its
+ * corresponding ActionBarAction (used for the "Coming Soon" popup), we eliminate
+ * the need for redundant 'featureMap' dictionaries across different components
+ * (like DeviceActionBar and HostOverview). This separation of data and logic
+ * was a key requirement to optimize code reuse and maintenance.
+ */
+export interface DeviceActionUiConfig {
+  readonly label: string;
+  readonly icon: string;
+  readonly testIdPrefix: string;
+  readonly loadingLabel?: string;
+  /** The corresponding feature flag for the "Coming Soon" popup. */
+  readonly feature: ActionBarAction;
+}
+
+/**
+ * UI configuration metadata for device actions.
+ * Maps each device action to its label, icon, test ID prefix, and corresponding feature/permission.
+ * This is used to render device actions consistently across different views (ActionBar, Menus).
+ */
+export const DEVICE_ACTION_UI_CONFIG: Record<
+  keyof DeviceActions,
+  DeviceActionUiConfig
+> = {
+  'configuration': {
+    label: 'Configuration',
+    icon: 'settings',
+    testIdPrefix: 'configuration',
+    feature: ActionBarAction.DEVICE_CONFIGURATION,
+  },
+  'screenshot': {
+    label: 'Screenshot',
+    icon: 'screenshot',
+    testIdPrefix: 'screenshot',
+    loadingLabel: 'Taking...',
+    feature: ActionBarAction.DEVICE_SCREENSHOT,
+  },
+  'remoteControl': {
+    label: 'Remote Control',
+    icon: 'important_devices',
+    testIdPrefix: 'remoteControl',
+    feature: ActionBarAction.DEVICE_REMOTE_CONTROL,
+  },
+  'flash': {
+    label: 'Flash',
+    icon: 'flash_on',
+    testIdPrefix: 'flash',
+    feature: ActionBarAction.DEVICE_FLASH,
+  },
+  'logcat': {
+    label: 'Get Logcat',
+    icon: 'description',
+    testIdPrefix: 'logcat',
+    loadingLabel: 'Fetching...',
+    feature: ActionBarAction.DEVICE_LOGCAT,
+  },
+  'quarantine': {
+    label: 'Quarantine',
+    icon: 'block',
+    testIdPrefix: 'quarantine',
+    loadingLabel: 'Working...',
+    feature: ActionBarAction.DEVICE_QUARANTINE,
+  },
+  'decommission': {
+    label: 'Decommission',
+    icon: 'delete_sweep',
+    testIdPrefix: 'decommission',
+    feature: ActionBarAction.DEVICE_DECOMMISSION,
+  },
+};
+
+/**
+ * Interface defining the UI configuration for a host or lab server action.
+ * Includes properties for displaying the action button/menu item.
+ */
+export interface HostActionUiConfig {
+  readonly label: string;
+  readonly icon: string;
+  readonly testIdPrefix: string;
+  readonly feature: ActionBarAction;
+  readonly customClass?: string;
+}
+
+/**
+ * UI configuration metadata for host actions.
+ * Maps each host action to its display properties.
+ */
+export const HOST_ACTION_UI_CONFIG: Record<
+  keyof HostActions,
+  HostActionUiConfig
+> = {
+  'configuration': {
+    label: 'Configuration',
+    icon: 'settings',
+    testIdPrefix: 'configuration',
+    feature: ActionBarAction.HOST_CONFIGURATION,
+  },
+  'decommission': {
+    label: 'Decommission',
+    icon: 'delete_sweep',
+    testIdPrefix: 'decommission',
+    feature: ActionBarAction.HOST_DECOMMISSION,
+    customClass: 'decommission-btn',
+  },
+  'debug': {
+    label: 'Debug',
+    icon: 'bug_report',
+    testIdPrefix: 'debug',
+    feature: ActionBarAction.HOST_DEBUG,
+  },
+};
+
+/**
+ * UI configuration metadata for lab server actions.
+ * Maps each lab server action to its display properties.
+ */
+export const LAB_SERVER_ACTION_UI_CONFIG: Record<
+  keyof LabServerActions,
+  HostActionUiConfig
+> = {
+  'release': {
+    label: 'Release',
+    icon: 'upgrade',
+    testIdPrefix: 'release',
+    feature: ActionBarAction.HOST_RELEASE,
+  },
+  'restart': {
+    label: 'Restart',
+    icon: 'restart_alt',
+    testIdPrefix: 'restart',
+    feature: ActionBarAction.HOST_RESTART,
+  },
+  'start': {
+    label: 'Start',
+    icon: 'play_arrow',
+    testIdPrefix: 'start',
+    feature: ActionBarAction.HOST_START,
+  },
+  'stop': {
+    label: 'Stop',
+    icon: 'stop_circle',
+    testIdPrefix: 'stop',
+    feature: ActionBarAction.HOST_STOP,
+  },
+  'advancedOperations': {
+    label: 'Advanced Operations',
+    icon: 'more_vert',
+    testIdPrefix: 'advancedOperations',
+    feature: ActionBarAction.HOST_ADVANCED_OPERATIONS,
+  },
+};

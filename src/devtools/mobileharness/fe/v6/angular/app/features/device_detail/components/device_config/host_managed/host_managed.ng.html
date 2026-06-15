@@ -51,6 +51,7 @@
       <!-- Link for configuring host, uses app-nav-link component -->
       <a app-nav-link
         [config]="{type: 'host', hostName: hostName, hostIp: hostIp}"
+        [customQueryParams]="{openHostConfig: 'true'}"
         queryParamsHandling="merge"
         mat-dialog-close
         class="go-to-host-button"

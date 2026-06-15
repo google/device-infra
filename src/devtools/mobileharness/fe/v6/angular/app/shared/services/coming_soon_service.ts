@@ -56,4 +56,44 @@ export class ComingSoonService {
       autoFocus: false,
     });
   }
+
+  /**
+   * Shows the "Coming Soon" dialog for a device feature, generating the device legacy URL.
+   *
+   * NOTE: This method was added to centralize the logic for generating device-specific
+   * legacy URLs. Previously, this logic was duplicated in components like DeviceActionBar.
+   * By moving it here, we reduce boilerplate in components and ensure consistency.
+   */
+  showForDevice(
+    feature: ActionBarAction,
+    legacyFeUrl: string | undefined,
+    hostName: string,
+    hostIp: string,
+    deviceId: string,
+    context: ActionContext = 'default',
+  ) {
+    const deviceLegacyUrl = legacyFeUrl
+      ? `${legacyFeUrl}/devicedetailview/${hostName}/${hostIp}/${deviceId}`
+      : undefined;
+    this.show(feature, context, deviceLegacyUrl);
+  }
+
+  /**
+   * Shows the "Coming Soon" dialog for a host feature, generating the host legacy URL.
+   *
+   * NOTE: Similar to showForDevice, this method centralizes host-specific legacy URL
+   * generation, eliminating duplicate logic in HostActionBar and HostOverview.
+   */
+  showForHost(
+    feature: ActionBarAction,
+    legacyFeUrl: string | undefined,
+    hostName: string,
+    hostIp: string,
+    context: ActionContext = 'default',
+  ) {
+    const hostLegacyUrl = legacyFeUrl
+      ? `${legacyFeUrl}/labdetailview/${hostName}/${hostIp}`
+      : undefined;
+    this.show(feature, context, hostLegacyUrl);
+  }
 }

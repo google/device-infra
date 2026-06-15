@@ -19,7 +19,7 @@ import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confir
 import {DecommissionContent} from '../../../../shared/components/decommission_content/decommission_content';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 
-import {ActionBarAction} from '@deviceinfra/app/core/constants/action_bar_config';
+import {DEVICE_ACTION_UI_CONFIG} from '@deviceinfra/app/core/constants/action_bar_config';
 import {
   APP_DATA,
   getLegacyFeUrl,
@@ -27,13 +27,10 @@ import {
 import {ActionButtonState} from '../../../../core/models/action_common';
 import {DeviceActions} from '../../../../core/models/device_action';
 import type {DeviceOverviewPageData} from '../../../../core/models/device_overview';
-import {Environment} from '../../../../core/services/environment';
+
+import {ActionButton} from '../../../../shared/components/action_button/action_button';
 import {useDeviceActions} from '../../../../shared/composables/device_actions';
 import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
-import {DeviceConfig} from '../device_config/device_config';
-import {DeviceEmpty} from '../device_config/device_empty/device_empty';
-import {DeviceSettings} from '../device_config/device_settings/device_settings';
-import {DeviceWizard} from '../device_config/device_wizard/device_wizard';
 
 /**
  * Component for the action bar in the device detail page header.
@@ -41,15 +38,101 @@ import {DeviceWizard} from '../device_config/device_wizard/device_wizard';
 @Component({
   selector: 'app-device-action-bar',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatMenuModule, MatTooltipModule],
+  imports: [
+    CommonModule,
+    MatIconModule,
+    MatMenuModule,
+    MatTooltipModule,
+    ActionButton,
+  ],
   templateUrl: './device_action_bar.ng.html',
   styleUrl: './device_action_bar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DeviceActionBar {
   protected readonly deviceActions = useDeviceActions();
+
+  /**
+   * Configuration driving the UI for device actions.
+   *
+   * NOTE: This follows the "next-level" refactoring pattern of separating data/configuration
+   * from logic and UI. By using DEVICE_ACTION_UI_CONFIG, we avoid hardcoding button labels,
+   * icons, and test IDs in the template. This makes the component highly maintainable and
+   * reusable across different views (like DeviceActionBar and HostOverview).
+   */
+  protected readonly actionUiConfig = DEVICE_ACTION_UI_CONFIG;
+
+  /**
+   * Layout configurations for different screen sizes.
+   * These arrays define WHICH actions appear and WHERE (direct button vs menu),
+   * while actionUiConfig defines HOW they look. This separation was key to
+   * optimizing the template and reducing code duplication.
+   */
+
+  protected readonly layout2xl: Array<keyof DeviceActions> = [
+    'configuration',
+    'screenshot',
+    'remoteControl',
+    'flash',
+    'logcat',
+    'quarantine',
+    'decommission',
+  ];
+
+  protected readonly layoutXlDirect: Array<keyof DeviceActions> = [
+    'configuration',
+    'screenshot',
+    'remoteControl',
+  ];
+
+  protected readonly layoutXlMenu: Array<keyof DeviceActions> = [
+    'flash',
+    'logcat',
+    'quarantine',
+    'decommission',
+  ];
+
+  protected readonly layoutSmDirect: Array<keyof DeviceActions> = [
+    'configuration',
+  ];
+
+  protected readonly layoutSmMenu: Array<keyof DeviceActions> = [
+    'screenshot',
+    'remoteControl',
+    'flash',
+    'logcat',
+    'quarantine',
+    'decommission',
+  ];
+
+  onAction(actionId: keyof DeviceActions) {
+    switch (actionId) {
+      case 'configuration':
+        this.onConfiguration();
+        break;
+      case 'screenshot':
+        this.onScreenshot();
+        break;
+      case 'remoteControl':
+        this.onRemoteControl();
+        break;
+      case 'flash':
+        this.onFlash();
+        break;
+      case 'logcat':
+        this.onLogcat();
+        break;
+      case 'quarantine':
+        this.onQuarantine();
+        break;
+      case 'decommission':
+        this.onDecommission();
+        break;
+      default:
+        break;
+    }
+  }
   private readonly dialog = inject(MatDialog);
-  private readonly environment = inject(Environment);
   private readonly route = inject(ActivatedRoute);
   private readonly comingSoonService = inject(ComingSoonService);
   private readonly appData = inject(APP_DATA);
@@ -129,7 +212,14 @@ export class DeviceActionBar {
       });
   };
 
-  readonly onConfiguration = this.openConfiguration.bind(this);
+  readonly onConfiguration = () => {
+    this.deviceActions.configureDevice(
+      this.deviceId(),
+      this.hostName(),
+      this.pageData().overview.host.ip,
+      this.universe,
+    );
+  };
 
   readonly onScreenshot = () => {
     this.deviceActions.takeScreenshot(this.deviceId());
@@ -187,176 +277,40 @@ export class DeviceActionBar {
   }
 
   readonly hasXlMoreMenuItems = computed(() => {
-    const visible =
-      this.isActionVisible('flash') ||
-      this.isActionVisible('logcat') ||
-      this.isActionVisible('quarantine') ||
-      this.isActionVisible('decommission');
+    const visible = this.layoutXlMenu.some((actionId) =>
+      this.isActionVisible(actionId),
+    );
     console.log('hasXlMoreMenuItems executed, result:', visible);
     return visible;
   });
 
   readonly hasSmActionMenuItems = computed(() => {
-    const visible =
-      this.isActionVisible('screenshot') ||
-      this.isActionVisible('remoteControl') ||
-      this.isActionVisible('flash') ||
-      this.isActionVisible('logcat') ||
-      this.isActionVisible('quarantine') ||
-      this.isActionVisible('decommission');
+    const visible = this.layoutSmMenu.some((actionId) =>
+      this.isActionVisible(actionId),
+    );
     console.log('hasSmActionMenuItems executed, result:', visible);
     return visible;
   });
 
-  openConfiguration(): void {
-    const deviceId = this.deviceId();
-    const hostName = this.hostName();
-    const hostIp = this.pageData().overview.host.ip;
-    const universe = this.universe;
-    const dialogRef = this.dialog.open(DeviceConfig, {
-      data: {deviceId, hostName, hostIp, universe},
-      autoFocus: false,
-    });
-
-    dialogRef
-      .afterClosed()
-      .pipe(take(1))
-      .subscribe((result) => {
-        if (!result) {
-          return;
-        }
-
-        if (result.action === 'reset') {
-          this.resetConfiguration(
-            result.deviceId,
-            hostName,
-            hostIp,
-            result.universe,
-          );
-          return;
-        }
-
-        this.createOrCopyConfiguration(
-          result.action,
-          result.deviceId,
-          result.config,
-          result.universe,
-        );
-      });
-  }
-
-  resetConfiguration(
-    deviceId: string,
-    hostName: string,
-    hostIp: string,
-    universe?: string,
-  ) {
-    this.dialog
-      .open(DeviceEmpty, {
-        data: {
-          deviceId,
-          hostName,
-          hostIp,
-          universe,
-          title:
-            'You are about to clear the existing configuration for this device. Your current settings will be discarded. Please choose how you want to proceed.',
-        },
-        autoFocus: false,
-      })
-      .afterClosed()
-      .pipe(take(1))
-      .subscribe((result) => {
-        if (!result) {
-          return;
-        }
-
-        this.createOrCopyConfiguration(
-          result.action,
-          result.deviceId,
-          result.config,
-          result.universe,
-        );
-      });
-  }
-
-  createOrCopyConfiguration(
-    action: string,
-    deviceId: string,
-    config: DeviceConfig | null,
-    universe?: string,
-  ) {
-    // For google internal, the configuration UI has more features when create a new configuration,
-    // thus we need a Wizard to guide the user to complete the configuration.
-    // While for OSS, the configuration UI is simpler
-    // thus we can directly use the HostSettings component.
-    if (
-      (this.environment.isGoogleInternal() && action === 'new') ||
-      action === 'copy'
-    ) {
-      this.openDeviceWizard(action, deviceId, config, universe);
-    }
-
-    if (!this.environment.isGoogleInternal() && action === 'new') {
-      this.openDeviceSettings(deviceId, config, universe);
-    }
-  }
-
-  openDeviceWizard(
-    action: string,
-    deviceId: string,
-    config: DeviceConfig | null,
-    universe?: string,
-  ) {
-    this.dialog.open(DeviceWizard, {
-      data: {source: action, deviceId, config, universe},
-      autoFocus: false,
-    });
-  }
-
-  openDeviceSettings(
-    deviceId: string,
-    config: DeviceConfig | null,
-    universe?: string,
-  ) {
-    const dialogRef = this.dialog.open(DeviceSettings, {
-      data: {deviceId, config, universe},
-      autoFocus: false,
-    });
-
-    dialogRef
-      .afterClosed()
-      .pipe(take(1))
-      .subscribe((result) => {
-        if (!result) {
-          return;
-        }
-        if (result.action === 'reset') {
-          this.resetConfiguration(
-            result.deviceId,
-            this.hostName(),
-            this.pageData().overview.host.ip,
-            result.universe,
-          );
-        }
-      });
-  }
-
-  showComingSoonPopup(key: string) {
-    const featureMap: Record<string, ActionBarAction> = {
-      'configuration': ActionBarAction.DEVICE_CONFIGURATION,
-      'screenshot': ActionBarAction.DEVICE_SCREENSHOT,
-      'remoteControl': ActionBarAction.DEVICE_REMOTE_CONTROL,
-      'flash': ActionBarAction.DEVICE_FLASH,
-      'logcat': ActionBarAction.DEVICE_LOGCAT,
-      'quarantine': ActionBarAction.DEVICE_QUARANTINE,
-      'decommission': ActionBarAction.DEVICE_DECOMMISSION,
-    };
-    const feature = featureMap[key];
+  /**
+   * Shows the "Coming Soon" popup for the given action.
+   *
+   * NOTE: This method was optimized during "next-level" refactoring to use the
+   * centralized DEVICE_ACTION_UI_CONFIG. The hardcoded 'featureMap' was removed,
+   * separating data (Action mappings) from logic. This ensures that new actions
+   * added to the config automatically inherit "Coming Soon" support without
+   * needing to modify this function.
+   */
+  showComingSoonPopup(key: keyof DeviceActions) {
+    const feature = this.actionUiConfig[key]?.feature;
     if (feature) {
-      const deviceLegacyUrl = this.legacyFeUrl
-        ? `${this.legacyFeUrl}/devicedetailview/${this.hostName()}/${this.pageData().overview.host.ip}/${this.deviceId()}`
-        : undefined;
-      this.comingSoonService.show(feature, 'default', deviceLegacyUrl);
+      this.comingSoonService.showForDevice(
+        feature,
+        this.legacyFeUrl,
+        this.hostName(),
+        this.pageData().overview.host.ip,
+        this.deviceId(),
+      );
     }
   }
 }

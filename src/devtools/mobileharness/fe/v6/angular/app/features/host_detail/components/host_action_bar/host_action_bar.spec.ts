@@ -3,6 +3,7 @@ import {MatDialog} from '@angular/material/dialog';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {By} from '@angular/platform-browser';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
+import {ActivatedRoute, provideRouter} from '@angular/router';
 import {APP_DATA} from '@deviceinfra/app/core/models/app_data';
 import {of} from 'rxjs';
 import {ActionBarAction} from '../../../../core/constants/action_bar_config';
@@ -59,7 +60,12 @@ describe('HostActionBar', () => {
 
   beforeEach(async () => {
     dialog = jasmine.createSpyObj('MatDialog', ['open']);
-    comingSoonService = jasmine.createSpyObj('ComingSoonService', ['show']);
+    comingSoonService = jasmine.createSpyObj('ComingSoonService', [
+      'show',
+      'showForDevice',
+      'showForHost',
+    ]);
+
     mockEnvironment = jasmine.createSpyObj('Environment', ['isGoogleInternal']);
     mockEnvironment.isGoogleInternal.and.returnValue(true);
 
@@ -70,6 +76,13 @@ describe('HostActionBar', () => {
         {provide: ComingSoonService, useValue: comingSoonService},
         {provide: APP_DATA, useValue: {applicationId: 'test-app'}},
         {provide: Environment, useValue: mockEnvironment},
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            queryParams: of({}),
+          },
+        },
+        provideRouter([]),
       ],
     }).compileComponents();
 
@@ -117,10 +130,11 @@ describe('HostActionBar', () => {
       By.css('[data-testid="configuration-button-2xl"]'),
     );
     configButton.nativeElement.click();
-    expect(comingSoonService.show).toHaveBeenCalledWith(
+    expect(comingSoonService.showForHost).toHaveBeenCalledWith(
       ActionBarAction.HOST_CONFIGURATION,
-      'default',
-      component.legacyFeUrl ? jasmine.anything() : undefined,
+      component.legacyFeUrl,
+      component.pageData().headerInfo.hostName,
+      component.pageData().overviewContent.ip,
     );
   });
 
@@ -225,5 +239,21 @@ describe('HostActionBar', () => {
       HostSettings,
       jasmine.any(Object),
     );
+  });
+
+  it('getAction should return correct action state', () => {
+    expect(component.getAction('configuration')).toEqual({
+      enabled: true,
+      visible: true,
+      tooltip: 'Config tooltip',
+      isReady: false,
+    });
+
+    expect(component.getAction('debug')).toEqual({
+      enabled: true,
+      visible: true,
+      tooltip: 'Debug tooltip',
+      isReady: true,
+    });
   });
 });

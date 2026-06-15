@@ -35,7 +35,12 @@ import {map, tap} from 'rxjs/operators';
 import {ActionButton} from '../../../../shared/components/action_button/action_button';
 import {NavLink} from '../../../../shared/components/nav_link/nav_link';
 
-import {ActionBarAction} from '../../../../core/constants/action_bar_config';
+import {
+  ActionBarAction,
+  DEVICE_ACTION_UI_CONFIG,
+  LAB_SERVER_ACTION_UI_CONFIG,
+} from '../../../../core/constants/action_bar_config';
+import {ActionButtonState} from '../../../../core/models/action_common';
 import {APP_DATA, getLegacyFeUrl} from '../../../../core/models/app_data';
 import {DeviceActions} from '../../../../core/models/device_action';
 import {
@@ -43,7 +48,11 @@ import {
   type DeviceDimension,
   type SubDeviceInfo,
 } from '../../../../core/models/device_overview';
-import type {HostActions} from '../../../../core/models/host_action';
+import type {
+  HostActions,
+  LabServerActions,
+} from '../../../../core/models/host_action';
+
 import {
   DaemonServerStatus,
   DeviceSummary,
@@ -190,6 +199,36 @@ export class HostOverviewPage implements OnChanges {
   readonly isGoogle1p = this.envUniverseService.isGoogle1P();
 
   readonly ActionBarAction = ActionBarAction;
+  /**
+   * Configurations driving the UI for Device Actions and Lab Server Actions.
+   *
+   * NOTE: Following the "next-level" refactoring, these configurations separate
+   * UI metadata (labels, icons) from component logic. This allows us to use
+   * data-driven templates (using @for loops) instead of hardcoding buttons,
+   * significantly improving maintainability and reducing HTML duplication.
+   */
+  protected readonly actionUiConfig = DEVICE_ACTION_UI_CONFIG;
+  /**
+   * Layout configuration for device actions available in the device list menu.
+   * These correspond to actions that can be performed on individual devices.
+   */
+  protected readonly deviceActionsLayout: Array<keyof DeviceActions> = [
+    'configuration',
+    'screenshot',
+    'logcat',
+    'remoteControl',
+    'flash',
+    'quarantine',
+    'decommission',
+  ];
+
+  protected readonly labServerActionUiConfig = LAB_SERVER_ACTION_UI_CONFIG;
+  protected readonly labServerActionsLayout: Array<keyof LabServerActions> = [
+    'release',
+    'restart',
+    'start',
+    'stop',
+  ];
 
   @Input({required: true}) host!: HostOverview;
   @Input() actions?: HostActions;
@@ -440,6 +479,25 @@ export class HostOverviewPage implements OnChanges {
       });
     } else {
       this.showComingSoonPopup('Release');
+    }
+  }
+
+  onLabServerAction(actionId: keyof LabServerActions) {
+    switch (actionId) {
+      case 'release':
+        this.onRelease();
+        break;
+      case 'start':
+        this.onStart();
+        break;
+      case 'restart':
+        this.onRestart();
+        break;
+      case 'stop':
+        this.onStop();
+        break;
+      default:
+        break;
     }
   }
 
@@ -762,31 +820,54 @@ export class HostOverviewPage implements OnChanges {
       );
   }
 
-  showComingSoonPopup(actionName: string, element?: DeviceSummary) {
-    const featureMap: Record<string, ActionBarAction> = {
-      'Configure': ActionBarAction.DEVICE_CONFIGURATION,
-      'Remote Control': ActionBarAction.DEVICE_REMOTE_CONTROL,
-      'Decommission': ActionBarAction.DEVICE_DECOMMISSION,
-      'Screenshot': ActionBarAction.DEVICE_SCREENSHOT,
-      'Flash': ActionBarAction.DEVICE_FLASH,
-      'Logcat': ActionBarAction.DEVICE_LOGCAT,
-      'Quarantine': ActionBarAction.DEVICE_QUARANTINE,
-      'Release': ActionBarAction.HOST_RELEASE,
-      'Start': ActionBarAction.HOST_START,
-      'Restart': ActionBarAction.HOST_RESTART,
-      'Stop': ActionBarAction.HOST_STOP,
-    };
-    const feature = featureMap[actionName];
+  /**
+   * Shows the "Coming Soon" popup for a given action.
+   *
+   * NOTE: This method was unified during refactoring to handle device actions,
+   * lab server actions, and legacy inline actions consistently. It uses the
+   * centralized configurations to derive the correct feature flag, and delegates
+   * to ComingSoonService.showForHost with custom contexts ('hostDevicesItem' for
+   * row-level device actions, 'hostDevices' for bulk actions or others) to display
+   * context-aware messaging and legacy links.
+   */
+  showComingSoonPopup(actionId: string, element?: DeviceSummary) {
+    let feature: ActionBarAction | undefined;
 
-    const hostLegacyUrl = this.legacyFeUrl
-      ? `${this.legacyFeUrl}/labdetailview/${this.host.hostName}/${this.host.ip}`
-      : undefined;
+    if (actionId in this.actionUiConfig) {
+      feature = this.actionUiConfig[actionId as keyof DeviceActions]?.feature;
+    } else if (actionId in this.labServerActionUiConfig) {
+      feature =
+        this.labServerActionUiConfig[actionId as keyof LabServerActions]
+          ?.feature;
+    } else {
+      const legacyMap: Record<string, ActionBarAction> = {
+        'Configure': ActionBarAction.DEVICE_CONFIGURATION,
+        'Remote Control': ActionBarAction.DEVICE_REMOTE_CONTROL,
+        'Decommission': ActionBarAction.DEVICE_DECOMMISSION,
+        'Screenshot': ActionBarAction.DEVICE_SCREENSHOT,
+        'Flash': ActionBarAction.DEVICE_FLASH,
+        'Logcat': ActionBarAction.DEVICE_LOGCAT,
+        'Quarantine': ActionBarAction.DEVICE_QUARANTINE,
+        'Release': ActionBarAction.HOST_RELEASE,
+        'Start': ActionBarAction.HOST_START,
+        'Restart': ActionBarAction.HOST_RESTART,
+        'Stop': ActionBarAction.HOST_STOP,
+      };
+      feature = legacyMap[actionId];
+    }
 
     if (feature) {
-      this.comingSoonService.show(
+      this.comingSoonService.showForHost(
         feature,
+        this.legacyFeUrl,
+        this.host.hostName,
+        this.host.ip,
         element ? 'hostDevicesItem' : 'hostDevices',
-        hostLegacyUrl,
+      );
+    } else {
+      console.error(
+        'showComingSoonPopup - feature is undefined for actionId:',
+        actionId,
       );
     }
   }
@@ -959,6 +1040,54 @@ export class HostOverviewPage implements OnChanges {
     }
   }
 
+  getVisibleDeviceActions(
+    elementActions: DeviceActions,
+  ): Array<keyof DeviceActions> {
+    return this.deviceActionsLayout.filter(
+      (actionId) => this.getAction(elementActions, actionId)?.visible,
+    );
+  }
+
+  getAction(
+    elementActions: DeviceActions,
+    key: keyof DeviceActions,
+  ): ActionButtonState | undefined {
+    if (key === 'flash') {
+      return elementActions.flash?.state;
+    }
+    return (
+      elementActions as unknown as Record<string, ActionButtonState | undefined>
+    )[key];
+  }
+
+  onAction(actionId: keyof DeviceActions, element: DeviceSummary) {
+    switch (actionId) {
+      case 'configuration':
+        this.configureDevice(element);
+        break;
+      case 'screenshot':
+        this.takeScreenshot(element);
+        break;
+      case 'logcat':
+        this.getLogcat(element);
+        break;
+      case 'remoteControl':
+        this.startRemoteControl([element]);
+        break;
+      case 'flash':
+        this.flashDevice(element);
+        break;
+      case 'quarantine':
+        this.quarantineDevice(element);
+        break;
+      case 'decommission':
+        this.decommission(element);
+        break;
+      default:
+        break;
+    }
+  }
+
   takeScreenshot(element: DeviceSummary): void {
     this.deviceActions.takeScreenshot(element.id);
   }
@@ -981,5 +1110,13 @@ export class HostOverviewPage implements OnChanges {
         this.loadDevices();
       },
     });
+  }
+
+  configureDevice(element: DeviceSummary): void {
+    this.deviceActions.configureDevice(
+      element.id,
+      this.host.hostName,
+      this.host.ip,
+    );
   }
 }

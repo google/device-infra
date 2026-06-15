@@ -1,46 +1,43 @@
 <div class="header-actions">
+  <!--
+    NOTE: The action bars were refactored to be data-driven. Instead of hardcoding
+    individual <app-action-button> tags for each action, we now iterate over layout
+    arrays using Angular's @for loop. This drastically reduces template duplication
+    and ensures that adding or removing actions only requires changing the layout array
+    in the component class, not editing the HTML.
+  -->
   <!-- 2xl view -->
   <div class="header-actions-2xl">
-    <ng-container *ngTemplateOutlet="actionItem; context: {
-      key: 'configuration',
-      icon: 'settings',
-      label: 'Configuration',
-      handler: onConfiguration,
-      mode: 'button',
-      suffix: '2xl'
-    }"></ng-container>
-
-    <ng-container *ngTemplateOutlet="actionItem; context: {
-      key: 'decommission',
-      icon: 'delete_sweep',
-      label: 'Decommission',
-      handler: onDecommission,
-      mode: 'button',
-      suffix: '2xl',
-      customClass: 'decommission-btn'
-    }"></ng-container>
-
-    <ng-container *ngTemplateOutlet="actionItem; context: {
-      key: 'debug',
-      icon: 'bug_report',
-      label: 'Debug',
-      handler: onDebug,
-      mode: 'button',
-      suffix: '2xl'
-    }"></ng-container>
+    @for (actionId of layout2xl; track actionId) {
+      @let config = actionUiConfig[actionId];
+      <app-action-button
+        [action]="getAction(actionId)"
+        [label]="config.label"
+        [icon]="config.icon"
+        mode="button"
+        [testId]="config.testIdPrefix + '-button-2xl'"
+        (actionClick)="onAction(actionId)"
+        (comingSoonClick)="showComingSoonPopup(actionId)"
+        [customClass]="config.customClass || ''"
+      ></app-action-button>
+    }
   </div>
 
   <!-- xl view -->
   <div class="header-actions-xl">
-    <ng-container *ngTemplateOutlet="actionItem; context: {
-      key: 'configuration',
-      icon: 'settings',
-      label: 'Configuration',
-      handler: onConfiguration,
-      mode: 'button',
-      suffix: 'xl'
-    }"></ng-container>
-
+    @for (actionId of layoutXlDirect; track actionId) {
+      @let config = actionUiConfig[actionId];
+      <app-action-button
+        [action]="getAction(actionId)"
+        [label]="config.label"
+        [icon]="config.icon"
+        mode="button"
+        [testId]="config.testIdPrefix + '-button-xl'"
+        (actionClick)="onAction(actionId)"
+        (comingSoonClick)="showComingSoonPopup(actionId)"
+        [customClass]="config.customClass || ''"
+      ></app-action-button>
+    }
 
     @if (hasXlMoreMenuItems()) {
       <button
@@ -53,38 +50,37 @@
         <mat-icon>expand_more</mat-icon>
       </button>
       <mat-menu #moreMenu="matMenu">
-
-        <ng-container *ngTemplateOutlet="actionItem; context: {
-          key: 'debug',
-          icon: 'bug_report',
-          label: 'Debug',
-          handler: onDebug,
-          mode: 'menu',
-          suffix: 'xl'
-        }"></ng-container>
-
-        <ng-container *ngTemplateOutlet="actionItem; context: {
-          key: 'decommission',
-          icon: 'delete_sweep',
-          label: 'Decommission',
-          handler: onDecommission,
-          mode: 'menu',
-          suffix: 'xl'
-        }"></ng-container>
+        @for (actionId of layoutXlMenu; track actionId) {
+          @let config = actionUiConfig[actionId];
+          <app-action-button
+            [action]="getAction(actionId)"
+            [label]="config.label"
+            [icon]="config.icon"
+            mode="menu-item"
+            [testId]="config.testIdPrefix + '-menu-item-xl'"
+            (actionClick)="onAction(actionId)"
+            (comingSoonClick)="showComingSoonPopup(actionId)"
+          ></app-action-button>
+        }
       </mat-menu>
     }
   </div>
 
   <!-- small view -->
   <div class="header-actions-sm">
-    <ng-container *ngTemplateOutlet="actionItem; context: {
-      key: 'configuration',
-      icon: 'settings',
-      label: 'Configuration',
-      handler: onConfiguration,
-      mode: 'button',
-      suffix: 'sm'
-    }"></ng-container>
+    @for (actionId of layoutSmDirect; track actionId) {
+      @let config = actionUiConfig[actionId];
+      <app-action-button
+        [action]="getAction(actionId)"
+        [label]="config.label"
+        [icon]="config.icon"
+        mode="button"
+        [testId]="config.testIdPrefix + '-button-sm'"
+        (actionClick)="onAction(actionId)"
+        (comingSoonClick)="showComingSoonPopup(actionId)"
+        [customClass]="config.customClass || ''"
+      ></app-action-button>
+    }
 
     @if (hasSmActionMenuItems()) {
       <button
@@ -97,64 +93,20 @@
         <mat-icon>expand_more</mat-icon>
       </button>
       <mat-menu #actionsMenu="matMenu">
-
-        <ng-container *ngTemplateOutlet="actionItem; context: {
-          key: 'debug',
-          icon: 'bug_report',
-          label: 'Debug',
-          handler: onDebug,
-          mode: 'menu',
-          suffix: 'sm'
-        }"></ng-container>
-
-        <ng-container *ngTemplateOutlet="actionItem; context: {
-          key: 'decommission',
-          icon: 'delete_sweep',
-          label: 'Decommission',
-          handler: onDecommission,
-          mode: 'menu',
-          suffix: 'sm'
-        }"></ng-container>
+        @for (actionId of layoutSmMenu; track actionId) {
+          @let config = actionUiConfig[actionId];
+          <app-action-button
+            [action]="getAction(actionId)"
+            [label]="config.label"
+            [icon]="config.icon"
+            mode="menu-item"
+            [testId]="config.testIdPrefix + '-menu-item-sm'"
+            (actionClick)="onAction(actionId)"
+            (comingSoonClick)="showComingSoonPopup(actionId)"
+          ></app-action-button>
+        }
       </mat-menu>
     }
   </div>
 </div>
 
-<ng-template #actionItem
-  let-key="key"
-  let-icon="icon"
-  let-label="label"
-  let-handler="handler"
-  let-mode="mode"
-  let-suffix="suffix"
-  let-customClass="customClass"
->
-  @let action = getAction(key);
-  @if (action?.visible) {
-    @if (mode === 'button') {
-      <span [matTooltip]="action?.tooltip || ''" class="tooltip-wrapper" matTooltipShowDelay="1000">
-        <button
-          class="m3-action-button filled"
-          [class]="customClass"
-          (click)="action?.isReady ? handler() : showComingSoonPopup(key)"
-          [disabled]="!action?.enabled"
-          [attr.data-testid]="key + '-button-' + suffix"
-        >
-          <mat-icon>{{icon}}</mat-icon>{{label}}
-        </button>
-      </span>
-    } @else {
-      <span [matTooltip]="action?.tooltip || ''" class="tooltip-wrapper-menu" matTooltipShowDelay="1000">
-        <button
-          mat-menu-item
-          (click)="action?.isReady ? handler() : showComingSoonPopup(key)"
-          [disabled]="!action?.enabled"
-          [attr.data-testid]="key + '-menu-item-' + suffix"
-        >
-          <mat-icon class="dropdown-mat-icon">{{icon}}</mat-icon>
-          <span>{{label}}</span>
-        </button>
-      </span>
-    }
-  }
-</ng-template>

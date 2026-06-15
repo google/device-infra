@@ -32,6 +32,7 @@ export class ActionButton {
   @Input() disabled = false;
   @Input() customClass = '';
   @Input() tooltipDelay = 500;
+  @Input() testId = '';
 
   @Output() readonly actionClick = new EventEmitter<void>();
   @Output() readonly comingSoonClick = new EventEmitter<void>();

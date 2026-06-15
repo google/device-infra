@@ -6,6 +6,7 @@
         [class]="customClass"
         (click)="onButtonClick()"
         [disabled]="!action?.enabled || loading || disabled"
+        [attr.data-testid]="testId || null"
       >
         @if (loading) {
           <mat-icon class="spin-animation">sync</mat-icon>{{loadingLabel || label}}
@@ -20,6 +21,7 @@
         mat-menu-item
         (click)="onButtonClick()"
         [disabled]="!action?.enabled || loading || disabled"
+        [attr.data-testid]="testId || null"
       >
         @if (loading) {
           <span>
@@ -40,6 +42,7 @@
         [class]="'operation-btn ' + customClass"
         (click)="onButtonClick()"
         [disabled]="!action?.enabled || loading || disabled"
+        [attr.data-testid]="testId || null"
       >
         @if (loading) {
           <mat-progress-spinner mode="indeterminate" diameter="18" class="operation-spinner"></mat-progress-spinner>

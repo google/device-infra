@@ -175,5 +175,14 @@ export function useDeviceActions() {
           error: () => {},
         });
     },
+
+    configureDevice: (
+      deviceId: string,
+      hostName: string,
+      hostIp: string,
+      universe?: string,
+    ) => {
+      actionService.configureDevice(deviceId, hostName, hostIp, universe);
+    },
   };
 }

@@ -1,135 +1,80 @@
 <div class="header-actions">
   <!-- 2xl view -->
   <div class="header-actions-2xl">
-    <ng-container *ngTemplateOutlet="actionItem; context: {
-      key: 'configuration',
-      icon: 'settings',
-      label: 'Configuration',
-      handler: onConfiguration,
-      mode: 'button',
-      suffix: '2xl'
-    }"></ng-container>
-
-    <ng-container *ngTemplateOutlet="actionItem; context: {
-      key: 'screenshot',
-      icon: 'screenshot',
-      label: 'Screenshot',
-      handler: onScreenshot,
-      mode: 'button',
-      loading: deviceActions.isRunning('screenshot')(),
-      loadingLabel: 'Taking...',
-      suffix: '2xl'
-    }"></ng-container>
-
-    <ng-container *ngTemplateOutlet="actionItem; context: {
-      key: 'remoteControl',
-      icon: 'important_devices',
-      label: 'Remote Control',
-      handler: onRemoteControl,
-      mode: 'button',
-      suffix: '2xl'
-    }"></ng-container>
-
-    <ng-container *ngTemplateOutlet="actionItem; context: {
-      key: 'flash',
-      icon: 'flash_on',
-      label: 'Flash',
-      handler: onFlash,
-      mode: 'button',
-      suffix: '2xl'
-    }"></ng-container>
-
-    <ng-container *ngTemplateOutlet="actionItem; context: {
-      key: 'logcat',
-      icon: 'description',
-      label: 'Get Logcat',
-      handler: onLogcat,
-      mode: 'button',
-      loading: deviceActions.isRunning('logcat')(),
-      loadingLabel: 'Fetching...',
-      suffix: '2xl'
-    }"></ng-container>
-
-    @if (actions()?.quarantine?.visible) {
-      @if (quarantineInfo()?.isQuarantined) {
-        <div class="m3-split-button-group" data-testid="quarantine-group-2xl">
-          <span [matTooltip]="actions()?.quarantine?.tooltip || ''" class="tooltip-wrapper" matTooltipShowDelay="1000">
-            <button class="m3-split-button main-action" (click)="actions()?.quarantine?.isReady ? onQuarantine() : showComingSoonPopup('quarantine')" [disabled]="!actions()?.quarantine?.enabled || deviceActions.isRunning('quarantine')()">
-              @if (deviceActions.isRunning('quarantine')()) {
-                <mat-icon class="spin-animation">sync</mat-icon>Working...
-              } @else {
-                <mat-icon>play_circle_outline</mat-icon>Unquarantine
-              }
-            </button>
-          </span>
-          <span matTooltip="Quarantine options" class="tooltip-wrapper" matTooltipShowDelay="1000">
-            <button class="m3-split-button dropdown-action" [matMenuTriggerFor]="quarantineMenu2xl" [disabled]="!actions()?.quarantine?.enabled || deviceActions.isRunning('quarantine')()">
-              <mat-icon>arrow_drop_down</mat-icon>
-            </button>
-          </span>
-          <mat-menu #quarantineMenu2xl="matMenu">
-            <ng-container *ngTemplateOutlet="actionItem; context: {
-              key: 'quarantine',
-              icon: 'edit_calendar',
-              label: 'Change Duration',
-              handler: onChangeQuarantine,
-              mode: 'menu',
-              suffix: '2xl'
-            }"></ng-container>
-          </mat-menu>
-        </div>
-      } @else {
-        <ng-container *ngTemplateOutlet="actionItem; context: {
-          key: 'quarantine',
-          icon: 'block',
-          label: 'Quarantine',
-          handler: onQuarantine,
-          mode: 'button',
-          suffix: '2xl'
-        }"></ng-container>
+    @for (actionId of layout2xl; track actionId) {
+      @let config = actionUiConfig[actionId];
+      @if (actionId === 'quarantine' && actions()?.quarantine?.visible) {
+        @if (quarantineInfo()?.isQuarantined) {
+          <div class="m3-split-button-group" data-testid="quarantine-group-2xl">
+            <span [matTooltip]="actions()?.quarantine?.tooltip || ''" class="tooltip-wrapper" matTooltipShowDelay="1000">
+              <button class="m3-split-button main-action" (click)="actions()?.quarantine?.isReady ? onQuarantine() : showComingSoonPopup('quarantine')" [disabled]="!actions()?.quarantine?.enabled || deviceActions.isRunning('quarantine')()">
+                @if (deviceActions.isRunning('quarantine')()) {
+                  <mat-icon class="spin-animation">sync</mat-icon>Working...
+                } @else {
+                  <mat-icon>play_circle_outline</mat-icon>Unquarantine
+                }
+              </button>
+            </span>
+            <span matTooltip="Quarantine options" class="tooltip-wrapper" matTooltipShowDelay="1000">
+              <button class="m3-split-button dropdown-action" [matMenuTriggerFor]="quarantineMenu2xl" [disabled]="!actions()?.quarantine?.enabled || deviceActions.isRunning('quarantine')()">
+                <mat-icon>arrow_drop_down</mat-icon>
+              </button>
+            </span>
+            <mat-menu #quarantineMenu2xl="matMenu">
+              <app-action-button
+                [action]="getAction('quarantine')"
+                label="Change Duration"
+                icon="edit_calendar"
+                mode="menu-item"
+                testId="quarantine-menu-item-2xl"
+                (actionClick)="onChangeQuarantine()"
+                (comingSoonClick)="showComingSoonPopup('quarantine')"
+              ></app-action-button>
+            </mat-menu>
+          </div>
+        } @else {
+          <app-action-button
+            [action]="getAction('quarantine')"
+            [label]="config.label"
+            [icon]="config.icon"
+            mode="button"
+            [testId]="config.testIdPrefix + '-button-2xl'"
+            (actionClick)="onAction('quarantine')"
+            (comingSoonClick)="showComingSoonPopup('quarantine')"
+          ></app-action-button>
+        }
+      } @else if (actionId !== 'quarantine') {
+        <app-action-button
+          [action]="getAction(actionId)"
+          [label]="config.label"
+          [icon]="config.icon"
+          mode="button"
+          [testId]="config.testIdPrefix + '-button-2xl'"
+          [loading]="deviceActions.isRunning(actionId)()"
+          [loadingLabel]="config.loadingLabel"
+          (actionClick)="onAction(actionId)"
+          (comingSoonClick)="showComingSoonPopup(actionId)"
+        ></app-action-button>
       }
     }
-
-    <ng-container *ngTemplateOutlet="actionItem; context: {
-      key: 'decommission',
-      icon: 'delete_sweep',
-      label: 'Decommission',
-      handler: onDecommission,
-      mode: 'button',
-      suffix: '2xl'
-    }"></ng-container>
   </div>
 
   <!-- xl view -->
   <div class="header-actions-xl">
-    <ng-container *ngTemplateOutlet="actionItem; context: {
-      key: 'configuration',
-      icon: 'settings',
-      label: 'Configuration',
-      handler: onConfiguration,
-      mode: 'button',
-      suffix: 'xl'
-    }"></ng-container>
-
-    <ng-container *ngTemplateOutlet="actionItem; context: {
-      key: 'screenshot',
-      icon: 'screenshot',
-      label: 'Screenshot',
-      handler: onScreenshot,
-      mode: 'button',
-      loading: deviceActions.isRunning('screenshot')(),
-      loadingLabel: 'Taking...',
-      suffix: 'xl'
-    }"></ng-container>
-
-    <ng-container *ngTemplateOutlet="actionItem; context: {
-      key: 'remoteControl',
-      icon: 'important_devices',
-      label: 'Remote Control',
-      handler: onRemoteControl,
-      mode: 'button',
-      suffix: 'xl'
-    }"></ng-container>
+    @for (actionId of layoutXlDirect; track actionId) {
+      @let config = actionUiConfig[actionId];
+      <app-action-button
+        [action]="getAction(actionId)"
+        [label]="config.label"
+        [icon]="config.icon"
+        mode="button"
+        [testId]="config.testIdPrefix + '-button-xl'"
+        [loading]="deviceActions.isRunning(actionId)()"
+        [loadingLabel]="config.loadingLabel"
+        (actionClick)="onAction(actionId)"
+        (comingSoonClick)="showComingSoonPopup(actionId)"
+      ></app-action-button>
+    }
 
     @if (hasXlMoreMenuItems()) {
       <button
@@ -142,81 +87,76 @@
         <mat-icon>expand_more</mat-icon>
       </button>
       <mat-menu #moreMenu="matMenu">
-        <ng-container *ngTemplateOutlet="actionItem; context: {
-          key: 'flash',
-          icon: 'flash_on',
-          label: 'Flash',
-          handler: onFlash,
-          mode: 'menu',
-          suffix: 'xl'
-        }"></ng-container>
+        @for (actionId of layoutXlMenu; track actionId) {
+          @let config = actionUiConfig[actionId];
+          @if (actionId === 'quarantine' && actions()?.quarantine?.visible) {
+            @if (quarantineInfo()?.isQuarantined) {
+              <app-action-button
+                [action]="getAction('quarantine')"
+                label="Unquarantine"
+                icon="play_circle_outline"
+                mode="menu-item"
+                testId="quarantine-menu-item-xl"
+                [loading]="deviceActions.isRunning('quarantine')()"
+                loadingLabel="Working..."
+                (actionClick)="onAction('quarantine')"
+                (comingSoonClick)="showComingSoonPopup('quarantine')"
+              ></app-action-button>
 
-        <ng-container *ngTemplateOutlet="actionItem; context: {
-          key: 'logcat',
-          icon: 'description',
-          label: 'Get Logcat',
-          handler: onLogcat,
-          mode: 'menu',
-          loading: deviceActions.isRunning('logcat')(),
-          loadingLabel: 'Fetching...',
-          suffix: 'xl'
-        }"></ng-container>
-
-        @if (actions()?.quarantine?.visible) {
-          @if (quarantineInfo()?.isQuarantined) {
-            <ng-container *ngTemplateOutlet="actionItem; context: {
-              key: 'quarantine',
-              icon: 'play_circle_outline',
-              label: 'Unquarantine',
-              handler: onQuarantine,
-              mode: 'menu',
-              loading: deviceActions.isRunning('quarantine')(),
-              loadingLabel: 'Working...',
-              suffix: 'xl'
-            }"></ng-container>
-
-            <ng-container *ngTemplateOutlet="actionItem; context: {
-              key: 'quarantine',
-              icon: 'edit_calendar',
-              label: 'Change Duration',
-              handler: onChangeQuarantine,
-              mode: 'menu',
-              suffix: 'xl'
-            }"></ng-container>
-          } @else {
-            <ng-container *ngTemplateOutlet="actionItem; context: {
-              key: 'quarantine',
-              icon: 'block',
-              label: 'Quarantine',
-              handler: onQuarantine,
-              mode: 'menu',
-              suffix: 'xl'
-            }"></ng-container>
+              <app-action-button
+                [action]="getAction('quarantine')"
+                label="Change Duration"
+                icon="edit_calendar"
+                mode="menu-item"
+                testId="quarantine-menu-item-xl"
+                (actionClick)="onChangeQuarantine()"
+                (comingSoonClick)="showComingSoonPopup('quarantine')"
+              ></app-action-button>
+            } @else {
+              <app-action-button
+                [action]="getAction('quarantine')"
+                [label]="config.label"
+                [icon]="config.icon"
+                mode="menu-item"
+                [testId]="config.testIdPrefix + '-menu-item-xl'"
+                (actionClick)="onAction('quarantine')"
+                (comingSoonClick)="showComingSoonPopup('quarantine')"
+              ></app-action-button>
+            }
+          } @else if (actionId !== 'quarantine') {
+            <app-action-button
+              [action]="getAction(actionId)"
+              [label]="config.label"
+              [icon]="config.icon"
+              mode="menu-item"
+              [testId]="config.testIdPrefix + '-menu-item-xl'"
+              [loading]="deviceActions.isRunning(actionId)()"
+              [loadingLabel]="config.loadingLabel"
+              (actionClick)="onAction(actionId)"
+              (comingSoonClick)="showComingSoonPopup(actionId)"
+            ></app-action-button>
           }
         }
-
-        <ng-container *ngTemplateOutlet="actionItem; context: {
-          key: 'decommission',
-          icon: 'delete_sweep',
-          label: 'Decommission',
-          handler: onDecommission,
-          mode: 'menu',
-          suffix: 'xl'
-        }"></ng-container>
       </mat-menu>
     }
   </div>
 
   <!-- small view -->
   <div class="header-actions-sm">
-    <ng-container *ngTemplateOutlet="actionItem; context: {
-      key: 'configuration',
-      icon: 'settings',
-      label: 'Configuration',
-      handler: onConfiguration,
-      mode: 'button',
-      suffix: 'sm'
-    }"></ng-container>
+    @for (actionId of layoutSmDirect; track actionId) {
+      @let config = actionUiConfig[actionId];
+      <app-action-button
+        [action]="getAction(actionId)"
+        [label]="config.label"
+        [icon]="config.icon"
+        mode="button"
+        [testId]="config.testIdPrefix + '-button-sm'"
+        [loading]="deviceActions.isRunning(actionId)()"
+        [loadingLabel]="config.loadingLabel"
+        (actionClick)="onAction(actionId)"
+        (comingSoonClick)="showComingSoonPopup(actionId)"
+      ></app-action-button>
+    }
 
     @if (hasSmActionMenuItems()) {
       <button
@@ -229,140 +169,57 @@
         <mat-icon>expand_more</mat-icon>
       </button>
       <mat-menu #actionsMenu="matMenu">
-        <ng-container *ngTemplateOutlet="actionItem; context: {
-          key: 'screenshot',
-          icon: 'screenshot',
-          label: 'Screenshot',
-          handler: onScreenshot,
-          mode: 'menu',
-          loading: deviceActions.isRunning('screenshot')(),
-          loadingLabel: 'Taking...',
-          suffix: 'sm'
-        }"></ng-container>
+        @for (actionId of layoutSmMenu; track actionId) {
+          @let config = actionUiConfig[actionId];
+          @if (actionId === 'quarantine' && actions()?.quarantine?.visible) {
+            @if (quarantineInfo()?.isQuarantined) {
+              <app-action-button
+                [action]="getAction('quarantine')"
+                label="Unquarantine"
+                icon="play_circle_outline"
+                mode="menu-item"
+                testId="quarantine-menu-item-sm"
+                [loading]="deviceActions.isRunning('quarantine')()"
+                loadingLabel="Working..."
+                (actionClick)="onAction('quarantine')"
+                (comingSoonClick)="showComingSoonPopup('quarantine')"
+              ></app-action-button>
 
-        <ng-container *ngTemplateOutlet="actionItem; context: {
-          key: 'remoteControl',
-          icon: 'important_devices',
-          label: 'Remote Control',
-          handler: onRemoteControl,
-          mode: 'menu',
-          suffix: 'sm'
-        }"></ng-container>
-
-        <ng-container *ngTemplateOutlet="actionItem; context: {
-          key: 'flash',
-          icon: 'flash_on',
-          label: 'Flash',
-          handler: onFlash,
-          mode: 'menu',
-          suffix: 'sm'
-        }"></ng-container>
-
-        <ng-container *ngTemplateOutlet="actionItem; context: {
-          key: 'logcat',
-          icon: 'description',
-          label: 'Get Logcat',
-          handler: onLogcat,
-          mode: 'menu',
-          loading: deviceActions.isRunning('logcat')(),
-          loadingLabel: 'Fetching...',
-          suffix: 'sm'
-        }"></ng-container>
-
-        @if (actions()?.quarantine?.visible) {
-          @if (quarantineInfo()?.isQuarantined) {
-            <ng-container *ngTemplateOutlet="actionItem; context: {
-              key: 'quarantine',
-              icon: 'play_circle_outline',
-              label: 'Unquarantine',
-              handler: onQuarantine,
-              mode: 'menu',
-              loading: deviceActions.isRunning('quarantine')(),
-              loadingLabel: 'Working...',
-              suffix: 'sm'
-            }"></ng-container>
-
-            <ng-container *ngTemplateOutlet="actionItem; context: {
-              key: 'quarantine',
-              icon: 'edit_calendar',
-              label: 'Change Duration',
-              handler: onChangeQuarantine,
-              mode: 'menu',
-              suffix: 'sm'
-            }"></ng-container>
-          } @else {
-            <ng-container *ngTemplateOutlet="actionItem; context: {
-              key: 'quarantine',
-              icon: 'block',
-              label: 'Quarantine',
-              handler: onQuarantine,
-              mode: 'menu',
-              suffix: 'sm'
-            }"></ng-container>
+              <app-action-button
+                [action]="getAction('quarantine')"
+                label="Change Duration"
+                icon="edit_calendar"
+                mode="menu-item"
+                testId="quarantine-menu-item-sm"
+                (actionClick)="onChangeQuarantine()"
+                (comingSoonClick)="showComingSoonPopup('quarantine')"
+              ></app-action-button>
+            } @else {
+              <app-action-button
+                [action]="getAction('quarantine')"
+                [label]="config.label"
+                [icon]="config.icon"
+                mode="menu-item"
+                [testId]="config.testIdPrefix + '-menu-item-sm'"
+                (actionClick)="onAction('quarantine')"
+                (comingSoonClick)="showComingSoonPopup('quarantine')"
+              ></app-action-button>
+            }
+          } @else if (actionId !== 'quarantine') {
+            <app-action-button
+              [action]="getAction(actionId)"
+              [label]="config.label"
+              [icon]="config.icon"
+              mode="menu-item"
+              [testId]="config.testIdPrefix + '-menu-item-sm'"
+              [loading]="deviceActions.isRunning(actionId)()"
+              [loadingLabel]="config.loadingLabel"
+              (actionClick)="onAction(actionId)"
+              (comingSoonClick)="showComingSoonPopup(actionId)"
+            ></app-action-button>
           }
         }
-
-        <ng-container *ngTemplateOutlet="actionItem; context: {
-          key: 'decommission',
-          icon: 'delete_sweep',
-          label: 'Decommission',
-          handler: onDecommission,
-          mode: 'menu',
-          suffix: 'sm'
-        }"></ng-container>
       </mat-menu>
     }
   </div>
 </div>
-
-<ng-template #actionItem
-  let-key="key"
-  let-icon="icon"
-  let-label="label"
-  let-handler="handler"
-  let-mode="mode"
-  let-loading="loading"
-  let-loadingLabel="loadingLabel"
-  let-suffix="suffix"
->
-  @let action = getAction(key);
-  @if (action?.visible) {
-    @if (mode === 'button') {
-      <span [matTooltip]="action?.tooltip || ''" class="tooltip-wrapper" matTooltipShowDelay="1000">
-        <button
-          class="m3-action-button filled"
-          (click)="action?.isReady ? handler() : showComingSoonPopup(key)"
-          [disabled]="!action?.enabled || (loading ?? false)"
-          [attr.data-testid]="key + '-button-' + suffix"
-        >
-          @if (loading) {
-            <mat-icon class="spin-animation">sync</mat-icon>{{loadingLabel}}
-          } @else {
-            <mat-icon>{{icon}}</mat-icon>{{label}}
-          }
-        </button>
-      </span>
-    } @else {
-      <span [matTooltip]="action?.tooltip || ''" class="tooltip-wrapper-menu" matTooltipShowDelay="1000">
-        <button
-          mat-menu-item
-          (click)="action?.isReady ? handler() : showComingSoonPopup(key)"
-          [disabled]="!action?.enabled || (loading ?? false)"
-          [attr.data-testid]="key + '-menu-item-' + suffix"
-        >
-          @if (loading) {
-             <span>
-               <mat-icon class="spin-animation dropdown-mat-icon">sync</mat-icon>
-               <span>{{loadingLabel}}</span>
-             </span>
-          } @else {
-            <ng-container>
-              <mat-icon class="dropdown-mat-icon">{{icon}}</mat-icon>
-              <span>{{label}}</span>
-            </ng-container>
-          }
-        </button>
-      </span>
-    }
-  }
-</ng-template>

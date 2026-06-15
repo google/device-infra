@@ -8,6 +8,7 @@ import {Observable, of, Subject, throwError} from 'rxjs';
 import {ActionBarAction} from '../../../../core/constants/action_bar_config';
 import {APP_DATA} from '../../../../core/models/app_data';
 import {
+  DeviceActions,
   GetLogcatResponse,
   TakeScreenshotResponse,
 } from '../../../../core/models/device_action';
@@ -92,7 +93,11 @@ describe('HostOverview Component', () => {
       'showError',
       'showSuccess',
     ]);
-    comingSoonServiceSpy = jasmine.createSpyObj('ComingSoonService', ['show']);
+    comingSoonServiceSpy = jasmine.createSpyObj('ComingSoonService', [
+      'show',
+      'showForHost',
+      'showForDevice',
+    ]);
 
     await TestBed.configureTestingModule({
       imports: [HostOverviewPage, NoopAnimationsModule],
@@ -259,14 +264,12 @@ describe('HostOverview Component', () => {
 
     component.onUpgrade();
 
-    const expectedUrl = component.legacyFeUrl
-      ? `${component.legacyFeUrl}/labdetailview/${component.host.hostName}/${component.host.ip}`
-      : undefined;
-
-    expect(comingSoonServiceSpy.show).toHaveBeenCalledWith(
+    expect(comingSoonServiceSpy.showForHost).toHaveBeenCalledWith(
       ActionBarAction.HOST_RELEASE,
+      component.legacyFeUrl,
+      component.host.hostName,
+      component.host.ip,
       'hostDevices',
-      expectedUrl,
     );
   });
 
@@ -563,5 +566,41 @@ describe('HostOverview Component', () => {
     options.onSuccess();
 
     expect(component.loadDevices).toHaveBeenCalled();
+  });
+
+  it('getAction should return correct action state', () => {
+    const mockActions = {
+      flash: {
+        state: {
+          visible: true,
+          enabled: true,
+          isReady: true,
+          tooltip: 'Flash IT',
+        },
+        params: {},
+      },
+      screenshot: {
+        visible: true,
+        enabled: true,
+        isReady: true,
+        tooltip: 'Screenshot IT',
+      },
+    } as unknown as DeviceActions;
+
+    // Test 'flash' specially
+    expect(component.getAction(mockActions, 'flash')).toEqual({
+      visible: true,
+      enabled: true,
+      isReady: true,
+      tooltip: 'Flash IT',
+    });
+
+    // Test other actions
+    expect(component.getAction(mockActions, 'screenshot')).toEqual({
+      visible: true,
+      enabled: true,
+      isReady: true,
+      tooltip: 'Screenshot IT',
+    });
   });
 });

@@ -1,16 +1,8 @@
 @use '../../styles/typography';
+@use '../../styles/action_bar';
 
 :host {
   display: contents;
-}
-
-.tooltip-wrapper {
-  display: inline-flex;
-}
-
-.tooltip-wrapper-menu {
-  display: block;
-  width: 100%;
 }
 
 .spin-animation {
@@ -42,7 +34,9 @@
   height: 36px;
   border-radius: 18px;
   font-weight: 500;
-  transition: background-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
   border: 1px solid transparent;
   white-space: nowrap;
   cursor: pointer;
@@ -73,9 +67,3 @@
     font-family: typography.$labconsole-font;
   }
 }
-
-.dropdown-mat-icon {
-  margin-right: 12px;
-  vertical-align: middle;
-}
-

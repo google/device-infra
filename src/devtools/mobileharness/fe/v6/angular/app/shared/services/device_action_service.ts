@@ -1,7 +1,7 @@
 import {Injectable, inject} from '@angular/core';
 import {MatDialog} from '@angular/material/dialog';
 import {Observable, throwError} from 'rxjs';
-import {catchError, filter, switchMap, tap} from 'rxjs/operators';
+import {catchError, filter, switchMap, take, tap} from 'rxjs/operators';
 
 import {
   GetLogcatResponse,
@@ -9,7 +9,13 @@ import {
   ScreenshotDialogData,
   TakeScreenshotResponse,
 } from '../../core/models/device_action';
+import {DeviceConfig as DeviceConfigModel} from '../../core/models/device_config_models';
 import {DEVICE_SERVICE} from '../../core/services/device/device_service';
+import {Environment} from '../../core/services/environment';
+import {DeviceConfig} from '../../features/device_detail/components/device_config/device_config';
+import {DeviceEmpty} from '../../features/device_detail/components/device_config/device_empty/device_empty';
+import {DeviceSettings} from '../../features/device_detail/components/device_config/device_settings/device_settings';
+import {DeviceWizard} from '../../features/device_detail/components/device_config/device_wizard/device_wizard';
 import {FlashDialog} from '../../features/device_detail/components/flash_dialog/flash_dialog';
 import {LogcatLinkDialog} from '../../features/device_detail/components/logcat_link_dialog/logcat_link_dialog';
 import {QuarantineDialog} from '../../features/device_detail/components/quarantine_dialog/quarantine_dialog';
@@ -27,6 +33,7 @@ export class DeviceActionService {
   private readonly deviceService = inject(DEVICE_SERVICE);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(SnackBarService);
+  private readonly environment = inject(Environment);
 
   takeScreenshot(deviceId: string): Observable<TakeScreenshotResponse> {
     this.snackBar.showInfo('Taking screenshot...');
@@ -174,5 +181,143 @@ export class DeviceActionService {
       } as QuarantineDialogData,
     });
     return dialogRef.afterClosed();
+  }
+
+  configureDevice(
+    deviceId: string,
+    hostName: string,
+    hostIp: string,
+    universe?: string,
+  ): void {
+    const dialogRef = this.dialog.open(DeviceConfig, {
+      data: {deviceId, hostName, hostIp, universe},
+      autoFocus: false,
+    });
+
+    dialogRef
+      .afterClosed()
+      .pipe(take(1))
+      .subscribe((result) => {
+        if (!result) {
+          return;
+        }
+
+        if (result.action === 'reset') {
+          this.resetConfiguration(
+            result.deviceId,
+            hostName,
+            hostIp,
+            result.universe,
+          );
+          return;
+        }
+
+        this.createOrCopyConfiguration(
+          result.action,
+          result.deviceId,
+          result.config,
+          hostName,
+          hostIp,
+          result.universe,
+        );
+      });
+  }
+
+  resetConfiguration(
+    deviceId: string,
+    hostName: string,
+    hostIp: string,
+    universe?: string,
+  ) {
+    this.dialog
+      .open(DeviceEmpty, {
+        data: {
+          deviceId,
+          hostName,
+          hostIp,
+          universe,
+          title:
+            'You are about to clear the existing configuration for this device. Your current settings will be discarded. Please choose how you want to proceed.',
+        },
+        autoFocus: false,
+      })
+      .afterClosed()
+      .pipe(take(1))
+      .subscribe((result) => {
+        if (!result) {
+          return;
+        }
+
+        this.createOrCopyConfiguration(
+          result.action,
+          result.deviceId,
+          result.config,
+          hostName,
+          hostIp,
+          result.universe,
+        );
+      });
+  }
+
+  createOrCopyConfiguration(
+    action: string,
+    deviceId: string,
+    config: DeviceConfigModel | null,
+    hostName: string,
+    hostIp: string,
+    universe?: string,
+  ) {
+    if (
+      (this.environment.isGoogleInternal() && action === 'new') ||
+      action === 'copy'
+    ) {
+      this.openDeviceWizard(action, deviceId, config, universe);
+    }
+
+    if (!this.environment.isGoogleInternal() && action === 'new') {
+      this.openDeviceSettings(deviceId, config, hostName, hostIp, universe);
+    }
+  }
+
+  openDeviceWizard(
+    action: string,
+    deviceId: string,
+    config: DeviceConfigModel | null,
+    universe?: string,
+  ) {
+    this.dialog.open(DeviceWizard, {
+      data: {source: action, deviceId, config, universe},
+      autoFocus: false,
+    });
+  }
+
+  openDeviceSettings(
+    deviceId: string,
+    config: DeviceConfigModel | null,
+    hostName: string,
+    hostIp: string,
+    universe?: string,
+  ) {
+    const dialogRef = this.dialog.open(DeviceSettings, {
+      data: {deviceId, config, universe},
+      autoFocus: false,
+    });
+
+    dialogRef
+      .afterClosed()
+      .pipe(take(1))
+      .subscribe((result) => {
+        if (!result) {
+          return;
+        }
+        if (result.action === 'reset') {
+          this.resetConfiguration(
+            result.deviceId,
+            hostName,
+            hostIp,
+            result.universe,
+          );
+        }
+      });
   }
 }
