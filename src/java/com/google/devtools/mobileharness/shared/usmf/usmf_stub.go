@@ -782,7 +782,7 @@ func writeJSONAtomic(file string, data any) {
 	}
 	tmpFile := file + ".tmp"
 	_ = os.MkdirAll(filepath.Dir(file), 0755)
-	payload, err := json.Marshal(data)
+	payload, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return
 	}

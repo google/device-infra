@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.annotations.SerializedName;
@@ -90,7 +91,7 @@ public final class UsmfBinary {
   private final JsonObject variables;
   private final Path logsDir;
   private final Path statesFile;
-  private final Gson gson = new Gson();
+  private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
   /**
    * Creates a {@link Builder} to configure a mock binary sandbox.

@@ -45,6 +45,7 @@ import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -982,7 +983,7 @@ public final class UsmfTest {
     // Manually edit mock_rules.json to inject an unknown condition type (e.g. "type":"stat")
     Path rulesFile = tempDir.resolve("mock_cmd_sandbox/rules/mock_rules.json");
     String configContent = Files.readString(rulesFile);
-    configContent = configContent.replace("\"type\":\"command\"", "\"type\":\"stat\"");
+    configContent = configContent.replace("\"command\"", "\"stat\"");
     Files.writeString(rulesFile, configContent);
 
     // Running should not match, since unknown condition type returns false. Output should be empty.
@@ -1838,5 +1839,132 @@ public final class UsmfTest {
     assertThat(Files.exists(summaryFile)).isTrue();
     String summaryContent = Files.readString(summaryFile);
     assertThat(summaryContent).contains("run");
+  }
+
+  @Test
+  public void executeStub_outputsHistoryWithNewlinesAndIndentation() throws Exception {
+    UsmfRule rule =
+        UsmfRule.builder()
+            .addCondition(CommandCondition.exactMatch("run"))
+            .setBehavior(CommandBehavior.stdout("Done\n").build())
+            .build();
+
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox").addRule(rule).buildAndDeploy();
+
+    // Verify rules file format (Java Gson pretty print)
+    Path rulesFile = tempDir.resolve("mock_cmd_sandbox/rules/mock_rules.json");
+    String rulesContent = Files.readString(rulesFile);
+    String expectedRules =
+        """
+        {
+          "rules": [
+            {
+              "conditions": [
+                {
+                  "match_type": "exact",
+                  "expected": [
+                    "run"
+                  ],
+                  "type": "command"
+                }
+              ],
+              "behavior": {
+                "stdout": "Done\\n",
+                "stderr": "",
+                "exit_code": 0,
+                "sleep_ms": 0,
+                "state_mutations": [],
+                "side_effects": []
+              }
+            }
+          ],
+          "variables": {}
+        }\
+        """;
+    assertThat(rulesContent).isEqualTo(expectedRules);
+
+    executor.run(Command.of(mockCmd.getPath(), "run"));
+
+    // Verify history file format (Go json.MarshalIndent)
+    Path logsDir = tempDir.resolve("mock_cmd_sandbox/logs");
+    try (Stream<Path> stream = Files.list(logsDir)) {
+      Path historyFile =
+          stream
+              .filter(path -> path.getFileName().toString().startsWith("history_"))
+              .findFirst()
+              .orElseThrow(() -> new AssertionError("History file not found"));
+
+      String content = Files.readString(historyFile);
+      String expectedHistoryPattern =
+          """
+          \\{
+            "args": \\[
+              "run"
+            \\],
+            "errors": \\[\\],
+            "result": \\{
+              "end_time_ms": \\d+,
+              "exit_code": 0,
+              "stderr": "",
+              "stdout": "Done\\\\n"
+            \\},
+            "start_time_ms": \\d+,
+            "status": "FINISHED"
+          \\}\
+          """;
+      assertThat(content).matches(expectedHistoryPattern);
+    }
+  }
+
+  @Test
+  public void usmfEnvironment_outputsSummaryWithNewlinesAndIndentation() throws Exception {
+    UsmfEnvironment environment = new UsmfEnvironment(tempDir);
+    Description description =
+        Description.createTestDescription(
+            UsmfTest.class, "usmfEnvironment_outputsSummaryWithNewlinesAndIndentation");
+
+    UsmfBinary mockCmd;
+    environment.starting(description);
+    try {
+      UsmfRule rule =
+          UsmfRule.builder()
+              .addCondition(CommandCondition.exactMatch("run"))
+              .setBehavior(CommandBehavior.stdout("Done\n").build())
+              .build();
+
+      mockCmd = environment.createBinary("mock_cmd").addRule(rule).buildAndDeploy();
+
+      executor.run(Command.of(mockCmd.getPath(), "run"));
+    } finally {
+      // Clean up in case finished wasn't called or exited early
+      environment.finished(description);
+    }
+
+    // Verify the generated summary.json format
+    Path summaryFile =
+        Path.of(mockCmd.getSandboxDir()).resolve(UsmfBinary.LOGS_DIR_NAME).resolve("summary.json");
+    String summaryContent = Files.readString(summaryFile);
+
+    String expectedSummaryPattern =
+        """
+        \\[
+          \\{
+            "args": \\[
+              "run"
+            \\],
+            "status": "FINISHED",
+            "start_time_ms": \\d+,
+            "result": \\{
+              "exit_code": 0,
+              "stdout": "Done\\\\n",
+              "stderr": "",
+              "end_time_ms": \\d+
+            \\},
+            "errors": \\[\\]
+          \\}
+        \\]\
+        """;
+    assertThat(summaryContent).matches(expectedSummaryPattern);
   }
 }

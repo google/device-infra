@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkState;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -60,6 +61,7 @@ public final class UsmfEnvironment extends TestWatcher {
   private final TemporaryFolder temporaryFolder = new TemporaryFolder();
   @Nullable private final Path sandboxParentDir;
   private final boolean isUsingTemporaryFolder;
+  private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
   private Description currentDescription;
 
@@ -138,7 +140,6 @@ public final class UsmfEnvironment extends TestWatcher {
   protected void finished(Description description) {
     try {
       if (!isUsingTemporaryFolder) {
-        Gson gson = new Gson();
         // Aggregate logs for all registered binaries.
         for (UsmfBinary binary : registeredBinaries) {
           try {
