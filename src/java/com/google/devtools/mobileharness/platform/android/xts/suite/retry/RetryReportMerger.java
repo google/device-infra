@@ -397,6 +397,9 @@ public class RetryReportMerger {
             && matchedRetryExcludeTestFilters.isEmpty())
         || moduleFromRetry.getSkipped()) {
       // Try best to determine if the entire module was retried or skipped.
+      if (moduleFromRetry.getSkipped() && !moduleFromPrevSession.getSkipped()) {
+        return moduleFromRetry.toBuilder().setSkipped(false).build();
+      }
       return moduleFromRetry;
     }
     Module.Builder mergedModuleBuilder =
