@@ -25,7 +25,6 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
-import com.google.devtools.mobileharness.shared.util.auth.CredentialFileUtil;
 import com.google.devtools.mobileharness.shared.util.command.Timeout;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsApiObject;
@@ -100,10 +99,7 @@ public class GcsFileManager {
         DEFAULT_CACHE_TTL,
         Optional.empty(),
         Optional.empty(),
-        CredentialFileUtil.getFileTransferCredentialFile().isPresent()
-            ? GcsUtil.CredentialType.ofCredentialFile(
-                CredentialFileUtil.getFileTransferCredentialFile().get())
-            : GcsUtil.CredentialType.ofAppDefault());
+        GcsCredentialUtil.getCredentialType(bucket));
   }
 
   @SuppressWarnings("GoodTime") // TODO: fix GoodTime violation
