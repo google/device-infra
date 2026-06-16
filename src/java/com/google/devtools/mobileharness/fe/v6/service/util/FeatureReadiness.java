@@ -32,11 +32,11 @@ public class FeatureReadiness {
   }
 
   public boolean isDeviceFlashingReady() {
-    return false;
+    return true;
   }
 
   public boolean isDeviceLogcatReady() {
-    return false;
+    return true;
   }
 
   public boolean isDeviceQuarantineReady() {

@@ -43,13 +43,13 @@ public final class FeatureReadinessTest {
   }
 
   @Test
-  public void isDeviceFlashingReady_returnsFalse() {
-    assertThat(featureReadiness.isDeviceFlashingReady()).isFalse();
+  public void isDeviceFlashingReady_returnsTrue() {
+    assertThat(featureReadiness.isDeviceFlashingReady()).isTrue();
   }
 
   @Test
-  public void isDeviceLogcatReady_returnsFalse() {
-    assertThat(featureReadiness.isDeviceLogcatReady()).isFalse();
+  public void isDeviceLogcatReady_returnsTrue() {
+    assertThat(featureReadiness.isDeviceLogcatReady()).isTrue();
   }
 
   @Test
