@@ -596,6 +596,8 @@ public abstract class AndroidRealDeviceDelegate {
     addAdbCommunication(deviceId);
     // Adds real device specific dimensions.
     device.addDimension(Dimension.Name.DEVICE_FORM, Dimension.Value.PHYSICAL);
+    // Required by Wrangler/DDA to schedule and allocate physical devices. See b/513108724.
+    device.addDimension(Dimension.Name.MACHINE_TYPE, Dimension.Value.PHYSICAL_DEVICE);
     try {
       device.addDimension(
           Name.MACHINE_HARDWARE_NAME, systemSpecUtil.getMachineHardwareName(deviceId));

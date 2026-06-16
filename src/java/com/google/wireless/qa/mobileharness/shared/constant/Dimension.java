@@ -110,6 +110,11 @@ public final class Dimension {
     LABEL,
     /** The machine hardware name, as given by {@code uname -m}. */
     MACHINE_HARDWARE_NAME,
+    /**
+     * The machine type of the device, e.g. {@code physical_device}. Used by Wrangler/DDA for
+     * scheduling and allocation.
+     */
+    MACHINE_TYPE,
     /** Network connection stability. */
     MAC_ADDRESS,
     /** Network provider of the SIM card. */
@@ -535,6 +540,9 @@ public final class Dimension {
 
     /** Dimension value for physical device. */
     public static final String PHYSICAL = "physical";
+
+    /** Dimension value for the {@link Name#MACHINE_TYPE} dimension of a physical device. */
+    public static final String PHYSICAL_DEVICE = "physical_device";
 
     /** Dimension value for iOS device. */
     public static final String IOS = "ios";
