@@ -41,6 +41,7 @@ import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -412,5 +413,58 @@ public class AndroidDesktopDeviceHelper {
       logger.atWarning().log("PARIS command failed with exit code: %s", r.exitCode());
     }
     return false;
+  }
+
+  /** Propagates allowlisted dimensions to sub-tests recursively. */
+  public void propagateDimensionsToSubLeafTests(TestInfo testInfo, Map<String, String> dimensions) {
+    if (dimensions == null || dimensions.isEmpty()) {
+      return;
+    }
+    Map<String, String> propertiesToPropagate = new HashMap<>();
+    Set<String> allowlist =
+        new HashSet<>(
+            Arrays.asList(
+                "board",
+                "model",
+                "sku",
+                "label-pool",
+                "hwid",
+                "label-phase",
+                "label-board",
+                "label-model",
+                "label-sku"));
+    dimensions.forEach(
+        (key, value) -> {
+          if (allowlist.contains(key)
+              && key != null
+              && !key.isEmpty()
+              && value != null
+              && !value.isEmpty()) {
+            propertiesToPropagate.put(key, value);
+          }
+        });
+    // Propagate "dut_name" property explicitly if provided
+    String dutName = dimensions.get("dut_name");
+    if (dutName != null && !dutName.isEmpty()) {
+      propertiesToPropagate.put("dut_name", dutName);
+    }
+    if (!propertiesToPropagate.isEmpty()) {
+      propagatePropertiesToSubLeafTests(testInfo, propertiesToPropagate);
+    }
+  }
+
+  private void propagatePropertiesToSubLeafTests(
+      TestInfo testInfo, Map<String, String> properties) {
+    if (testInfo.subTests() != null && testInfo.subTests().getAll() != null) {
+      for (TestInfo subTest : testInfo.subTests().getAll().values()) {
+        if (subTest.subTests() == null || subTest.subTests().isEmpty()) {
+          if (subTest.properties() != null) {
+            properties.forEach((k, v) -> subTest.properties().add(k, v));
+          }
+        } else {
+          propagatePropertiesToSubLeafTests(subTest, properties);
+        }
+      }
+    }
   }
 }
