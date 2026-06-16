@@ -31,7 +31,7 @@ public final class NoOpLogcatActionHelper implements LogcatActionHelper {
       GetLogcatRequest request, UniverseScope universe) {
     return immediateFuture(
         GetLogcatResponse.newBuilder()
-            .setErrorMsg("Getting logcat is not supported in the current environment.")
+            .setErrorMessage("Getting logcat is not supported in the current environment.")
             .build());
   }
 }

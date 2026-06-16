@@ -1,0 +1,36 @@
+<div class="action-error-dialog-container">
+  <div class="dialog-header">
+    <mat-icon>error</mat-icon>
+    <h3 class="dialog-title">Action Failed</h3>
+  </div>
+
+  <mat-dialog-content class="dialog-content">
+    <div class="error-message-container">
+      <span class="message-label">Message:</span>
+      <div class="error-message">{{ errorMessage }}</div>
+    </div>
+
+    @if (errorDetails) {
+      <div class="error-details-container">
+        <span class="details-label">Details:</span>
+        <pre class="error-details">{{ errorDetails }}</pre>
+      </div>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions class="dialog-actions">
+    <div class="left-actions">
+      <button mat-stroked-button (click)="copyError()">
+        <mat-icon>content_copy</mat-icon>
+        Copy Error
+      </button>
+      <button mat-stroked-button (click)="reportBug()">
+        <mat-icon>bug_report</mat-icon>
+        Report Bug
+      </button>
+    </div>
+    <button class="close-button" [mat-dialog-close]="'close'">
+      Close
+    </button>
+  </mat-dialog-actions>
+</div>

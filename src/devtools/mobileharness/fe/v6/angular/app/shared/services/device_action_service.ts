@@ -1,7 +1,15 @@
 import {Injectable, inject} from '@angular/core';
 import {MatDialog} from '@angular/material/dialog';
 import {Observable, throwError} from 'rxjs';
-import {catchError, filter, switchMap, take, tap} from 'rxjs/operators';
+import {
+  catchError,
+  filter,
+  finalize,
+  map,
+  switchMap,
+  take,
+  tap,
+} from 'rxjs/operators';
 
 import {
   GetLogcatResponse,
@@ -20,7 +28,9 @@ import {FlashDialog} from '../../features/device_detail/components/flash_dialog/
 import {LogcatLinkDialog} from '../../features/device_detail/components/logcat_link_dialog/logcat_link_dialog';
 import {QuarantineDialog} from '../../features/device_detail/components/quarantine_dialog/quarantine_dialog';
 import {ScreenshotDialog} from '../../features/device_detail/components/screenshot_dialog/screenshot_dialog';
+import {ActionErrorContent} from '../components/action_error_content/action_error_content';
 import {ConfirmDialog} from '../components/confirm_dialog/confirm_dialog';
+import {AccessDeniedContent} from '../components/remote_control/feedback/access_denied_content';
 import {openInNewTab} from '../utils/safe_dom';
 import {SnackBarService} from './snackbar_service';
 
@@ -36,8 +46,9 @@ export class DeviceActionService {
   private readonly environment = inject(Environment);
 
   takeScreenshot(deviceId: string): Observable<TakeScreenshotResponse> {
-    this.snackBar.showInfo('Taking screenshot...');
+    const snackBarRef = this.snackBar.showInProgress('Taking screenshot...');
     return this.deviceService.takeScreenshot(deviceId).pipe(
+      map(throwBackendErrorIfPresent),
       tap((response) => {
         this.snackBar.showSuccess('Screenshot taken successfully.');
         this.dialog.open(ScreenshotDialog, {
@@ -48,17 +59,24 @@ export class DeviceActionService {
           } as ScreenshotDialogData,
         });
       }),
-      catchError((err) => {
-        this.snackBar.showError('Failed to take screenshot.');
-        console.error(err);
-        return throwError(() => err);
+      catchError((err) =>
+        this.handleActionError(
+          err,
+          deviceId,
+          'take screenshot of',
+          'Failed to take screenshot',
+        ),
+      ),
+      finalize(() => {
+        snackBarRef.dismiss();
       }),
     );
   }
 
   getLogcat(deviceId: string): Observable<GetLogcatResponse> {
-    this.snackBar.showInfo('Getting logcat...');
+    const snackBarRef = this.snackBar.showInProgress('Getting logcat...');
     return this.deviceService.getLogcat(deviceId).pipe(
+      map(throwBackendErrorIfPresent),
       tap((response) => {
         this.snackBar.showSuccess(
           'Logcat retrieved successfully. And opened in a new browser tab.',
@@ -72,10 +90,16 @@ export class DeviceActionService {
           },
         });
       }),
-      catchError((err) => {
-        this.snackBar.showError('Failed to get logcat.');
-        console.error(err);
-        return throwError(() => err);
+      catchError((err) =>
+        this.handleActionError(
+          err,
+          deviceId,
+          'get logcat of',
+          'Failed to get logcat',
+        ),
+      ),
+      finalize(() => {
+        snackBarRef.dismiss();
       }),
     );
   }
@@ -319,5 +343,98 @@ export class DeviceActionService {
           );
         }
       });
+  }
+
+  private handleActionError(
+    err: unknown,
+    deviceId: string,
+    actionDesc: string,
+    failedActionMsg: string,
+  ): Observable<never> {
+    if (err && typeof err === 'object' && 'errorType' in err) {
+      // Logical error from backend
+      const logicalErr = err as {
+        errorType: string;
+        errorMessage?: string;
+      };
+      if (logicalErr.errorType === 'PERMISSION_DENIED') {
+        this.dialog.open(ConfirmDialog, {
+          data: {
+            title: 'Access Denied',
+            contentComponent: AccessDeniedContent,
+            contentComponentInputs: {
+              devices: [{id: deviceId}],
+              action: actionDesc,
+            },
+            type: 'error',
+            primaryButtonLabel: 'Close',
+          },
+        });
+      } else {
+        this.dialog.open(ActionErrorContent, {
+          data: {
+            errorMessage: logicalErr.errorMessage || 'Unknown error',
+            errorDetails: `Error Type: ${logicalErr.errorType}`,
+          },
+        });
+      }
+    } else {
+      // RPC or other unexpected error
+      this.snackBar.showError(`${failedActionMsg}.`);
+      console.error(err);
+      this.dialog.open(ActionErrorContent, {
+        data: {
+          errorMessage: (err as {message?: string})?.message || failedActionMsg,
+          errorDetails: formatErrorDetails(err),
+        },
+      });
+    }
+    return throwError(() => err);
+  }
+}
+
+interface BackendError extends Error {
+  errorType: string;
+  errorMessage?: string;
+}
+
+function throwBackendErrorIfPresent<
+  T extends {errorType?: string; errorMessage?: string},
+>(response: T): T {
+  if (response.errorType) {
+    const error = new Error(
+      response.errorMessage || 'Unknown error',
+    ) as BackendError;
+    error.errorType = response.errorType;
+    error.errorMessage = response.errorMessage;
+    throw error;
+  }
+  return response;
+}
+
+function formatErrorDetails(err: unknown): string {
+  if (!err) {
+    return '';
+  }
+  if (err instanceof Error && err.stack) {
+    return err.stack;
+  }
+  if (typeof err === 'object' && err !== null) {
+    const errObj = err as Record<string, unknown>;
+    if ('error' in errObj && errObj['error']) {
+      return typeof errObj['error'] === 'object'
+        ? safeJsonStringify(errObj['error'])
+        : String(errObj['error']);
+    }
+    return safeJsonStringify(err);
+  }
+  return String(err);
+}
+
+function safeJsonStringify(obj: unknown): string {
+  try {
+    return JSON.stringify(obj, null, 2);
+  } catch (e) {
+    return String(obj);
   }
 }

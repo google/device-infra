@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.DeviceData;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.ManagementMode;
 import com.google.devtools.mobileharness.fe.v6.service.shared.SubDeviceInfoListFactory;
+import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
@@ -84,6 +85,7 @@ public final class DeviceServiceLogicImplTest {
   @Bind @Mock private InstantSource instantSource;
   @Bind @Mock private UniverseFactory universeFactory;
   @Bind @Mock private JobSyncStub jobSyncStub;
+  @Bind @Mock private GroupMembershipProvider groupMembershipProvider;
   @Bind private final ListeningExecutorService executor = newDirectExecutorService();
 
   private DeviceServiceLogicImpl deviceServiceLogicImpl;

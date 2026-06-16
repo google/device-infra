@@ -6,6 +6,7 @@ import {GoogleDate} from '../../../shared/utils/date_utils';
 import {
   DeviceHeaderInfo,
   GetLogcatResponse,
+  IneligibilityReasonCode,
   QuarantineDeviceRequest,
   QuarantineDeviceResponse,
   QuarantineInfo,
@@ -150,6 +151,28 @@ export class FakeDeviceService extends DeviceService {
 
   override takeScreenshot(id: string): Observable<TakeScreenshotResponse> {
     console.log(`FakeService: Taking screenshot for ${id}`);
+    if (id.includes('permission-denied')) {
+      return of({
+        screenshotUrl: '',
+        capturedAt: '',
+        errorType: 'PERMISSION_DENIED' as IneligibilityReasonCode,
+        errorMessage: 'Lacks permission to take screenshot',
+      }).pipe(delay(1000));
+    }
+    if (id.includes('logical-error')) {
+      return of({
+        screenshotUrl: '',
+        capturedAt: '',
+        errorType: 'DEVICE_NOT_FOUND' as IneligibilityReasonCode,
+        errorMessage: 'Device was disconnected during screenshot',
+      }).pipe(delay(1000));
+    }
+    if (id.includes('rpc-error')) {
+      return throwError(
+        () => new Error('RPC Failure: Connection reset by peer'),
+      ).pipe(delay(1000));
+    }
+
     return of({
       screenshotUrl:
         'http://0.0.0.0:8000/device_detail/action_bar/resource/screenshot-demo.png',
@@ -159,6 +182,28 @@ export class FakeDeviceService extends DeviceService {
 
   override getLogcat(id: string): Observable<GetLogcatResponse> {
     console.log(`FakeService: Getting logcat for ${id}`);
+    if (id.includes('permission-denied')) {
+      return of({
+        logUrl: '',
+        capturedAt: '',
+        errorType: 'PERMISSION_DENIED' as IneligibilityReasonCode,
+        errorMessage: 'Lacks permission to get logcat',
+      }).pipe(delay(1000));
+    }
+    if (id.includes('logical-error')) {
+      return of({
+        logUrl: '',
+        capturedAt: '',
+        errorType: 'DEVICE_NOT_FOUND' as IneligibilityReasonCode,
+        errorMessage: 'Device was disconnected while retrieving logcat',
+      }).pipe(delay(1000));
+    }
+    if (id.includes('rpc-error')) {
+      return throwError(
+        () => new Error('RPC Failure: Connection timed out'),
+      ).pipe(delay(1000));
+    }
+
     return of({
       logUrl:
         'http://0.0.0.0:8000/device_detail/action_bar/resource/logcat-demo.log',
@@ -244,6 +289,7 @@ export class FakeDeviceService extends DeviceService {
     const remoteControlVisible =
       scenario.actionVisibility?.remoteControl ?? true;
     const quarantineVisible = scenario.actionVisibility?.quarantine ?? true;
+    const decommissionVisible = isMissing;
 
     return {
       id: overview.id,
@@ -312,7 +358,7 @@ export class FakeDeviceService extends DeviceService {
         },
         decommission: {
           enabled: true,
-          visible: true,
+          visible: decommissionVisible,
           tooltip: 'Decommission device',
           isReady: !scenario.allActionsNotReady,
         },

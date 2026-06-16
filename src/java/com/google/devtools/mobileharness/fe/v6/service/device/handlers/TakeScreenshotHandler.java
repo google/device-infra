@@ -20,6 +20,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.TakeScreenshotRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.TakeScreenshotResponse;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
+import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -28,14 +29,27 @@ import javax.inject.Singleton;
 public final class TakeScreenshotHandler {
 
   private final ScreenshotActionHelper screenshotActionHelper;
+  private final DeviceActionAuthenticator authenticator;
 
   @Inject
-  TakeScreenshotHandler(ScreenshotActionHelper screenshotActionHelper) {
+  TakeScreenshotHandler(
+      ScreenshotActionHelper screenshotActionHelper, DeviceActionAuthenticator authenticator) {
     this.screenshotActionHelper = screenshotActionHelper;
+    this.authenticator = authenticator;
   }
 
   public ListenableFuture<TakeScreenshotResponse> takeScreenshot(
-      TakeScreenshotRequest request, UniverseScope universe) {
-    return screenshotActionHelper.takeScreenshot(request, universe);
+      TakeScreenshotRequest request, UniverseScope universe, Optional<String> username) {
+    return authenticator.authenticateAndRun(
+        request.getId(),
+        username,
+        universe,
+        "take screenshot",
+        () -> screenshotActionHelper.takeScreenshot(request, universe),
+        (code, message) ->
+            TakeScreenshotResponse.newBuilder()
+                .setErrorType(code)
+                .setErrorMessage(message)
+                .build());
   }
 }

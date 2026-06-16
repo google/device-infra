@@ -14,18 +14,29 @@
 #
 
 load("@rules_java//java:java_library.bzl", "java_library")
+load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = ["//src/devtools/mobileharness/fe/v6:visibility"],
 )
 
 java_library(
-    name = "auth",
+    name = "tests",
+    testonly = 1,
     srcs = glob(["*.java"]),
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/auth",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
-        "@maven//:javax_inject_jsr330_api",
+        "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
+)
+
+junit_test_suites(
+    name = "gen_tests",
+    sizes = ["small"],
+    deps = [":tests"],
 )
