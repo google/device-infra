@@ -18,6 +18,7 @@ package com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.and
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.util.Comparator.comparingInt;
 
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
@@ -83,6 +84,7 @@ import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidS
 import com.google.devtools.mobileharness.platform.android.systemsetting.PostSettingDeviceOp;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
+import com.google.devtools.mobileharness.platform.android.user.AndroidUserInfo;
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
@@ -2577,13 +2579,11 @@ public abstract class AndroidRealDeviceDelegate {
   @VisibleForTesting
   void setUpAndroidDesktopUser(String serial, int sdkVersion)
       throws MobileHarnessException, InterruptedException {
-    Optional<Integer> firstNonZeroUser =
-        androidUserUtil.listUsers(serial, sdkVersion).stream()
-            .filter(user -> user != AndroidRealDeviceConstants.DEFAULT_SYSTEM_USER)
-            .min(Integer::compareTo);
+    List<AndroidUserInfo> userInfoList = androidUserUtil.listUsersInfo(serial, sdkVersion);
+    Optional<AndroidUserInfo> desktopUser = findFullAndPreferablyAdminUser(userInfoList);
 
-    if (firstNonZeroUser.isPresent()) {
-      int userId = firstNonZeroUser.get();
+    if (desktopUser.isPresent()) {
+      int userId = desktopUser.get().userId();
       int currentUser = androidUserUtil.getCurrentUser(serial, sdkVersion);
       if (currentUser != userId) {
         logger.atInfo().log(
@@ -2592,8 +2592,22 @@ public abstract class AndroidRealDeviceDelegate {
         androidUserUtil.waitForUserReady(serial, sdkVersion, userId);
       }
     } else {
-      logger.atInfo().log("Android desktop device %s has no non-zero user found.", serial);
+      logger.atInfo().log("Android desktop device %s has no full user found.", serial);
     }
+  }
+
+  private Optional<AndroidUserInfo> findFullAndPreferablyAdminUser(
+      List<AndroidUserInfo> userInfoList) {
+    Optional<AndroidUserInfo> desktopUser =
+        userInfoList.stream()
+            .filter(u -> u.isFull() && u.isAdmin())
+            .min(comparingInt(AndroidUserInfo::userId));
+    if (desktopUser.isEmpty()) {
+      logger.atInfo().log("No full and admin user found, fallback to full user.");
+      desktopUser =
+          userInfoList.stream().filter(u -> u.isFull()).min(comparingInt(AndroidUserInfo::userId));
+    }
+    return desktopUser;
   }
 
   /** Returns {@code true} if skip clearing multi users on the device. */
