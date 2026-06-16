@@ -32,6 +32,7 @@ proto_library(
     name = "spec",
     deps = [
         ":android_adb_shell_decorator_spec_proto",
+        ":android_aflags_decorator_spec_proto",
         ":android_business_logic_skip_module_decorator_spec_proto",
         ":android_device_features_check_decorator_spec_proto",
         ":android_device_setting_decorator_spec_proto",
@@ -142,6 +143,17 @@ cc_proto_library(
 java_proto_library(
     name = "android_adb_shell_decorator_spec_java_proto",
     deps = [":android_adb_shell_decorator_spec_proto"],
+)
+
+proto_library(
+    name = "android_aflags_decorator_spec_proto",
+    srcs = ["decorator/android_aflags_decorator_spec.proto"],
+    deps = [":base_spec_proto"],
+)
+
+java_proto_library(
+    name = "android_aflags_decorator_spec_java_proto",
+    deps = [":android_aflags_decorator_spec_proto"],
 )
 
 proto_library(
