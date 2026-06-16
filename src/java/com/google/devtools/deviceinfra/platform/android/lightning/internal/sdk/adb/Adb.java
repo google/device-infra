@@ -52,6 +52,8 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -97,6 +99,8 @@ public class Adb {
 
   /** The directory to store the temporary script file on the device. */
   private static final String DEVICE_TEMP_DIR = "/data/local/tmp/";
+
+  private static final Pattern ADB_VERSION_PATTERN = Pattern.compile("Version\\s+([^\\s]+)");
 
   private final Supplier<AdbParam> adbParamSupplier;
 
@@ -166,6 +170,32 @@ public class Adb {
    */
   public void enableCommandOutputLogging() {
     defaultOutputCallback = new OutputCallbackImpl();
+  }
+
+  /**
+   * Gets the adb version.
+   *
+   * @throws InterruptedException if the thread execution is interrupted
+   */
+  public Optional<String> getVersion() throws InterruptedException {
+    try {
+      String output = run(new String[] {"version"});
+      // Example output 1:
+      // Android Debug Bridge version 1.0.41
+      // Version 34.0.4-10411341
+      // Installed as /usr/bin/adb
+      // Example output 2:
+      // Command 'adb' not found, but can be installed with:
+      // sudo apt install adb
+      Matcher matcher = ADB_VERSION_PATTERN.matcher(output);
+      if (matcher.find()) {
+        return Optional.of(matcher.group(1));
+      }
+      return Optional.empty();
+    } catch (MobileHarnessException e) {
+      logger.atWarning().log("Failed to get adb version: %s", e.getMessage());
+      return Optional.empty();
+    }
   }
 
   /**

@@ -23,10 +23,12 @@ public final class HostPropertyConstants {
   public enum HostPropertyKey {
     /** The DeviceManager type of the host, whose value should be "fusion", "mh", "mtaas". */
     DM_TYPE,
-    /** The host name of the host. */
-    HOST_NAME,
+    /** The GitHub commit ID from which the ATS Lab Server was built. */
+    GITHUB_VERSION,
     /** The IP address of the host. */
     HOST_IP,
+    /** The host name of the host. */
+    HOST_NAME,
     /** The OS type of the host. */
     HOST_OS,
     /** The OS version of the host. */
@@ -41,12 +43,10 @@ public final class HostPropertyConstants {
     LAB_TYPE,
     /** The type of the location of the host. */
     LOCATION_TYPE,
-    /** The total memory of the host. */
-    TOTAL_MEM,
     /** The total disk space of the host. */
     ROOT_DISK_SPACE,
-    /** The GitHub commit ID from which the ATS Lab Server was built. */
-    GITHUB_VERSION,
+    /** The total memory of the host. */
+    TOTAL_MEM,
   }
 
   private HostPropertyConstants() {}
