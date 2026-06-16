@@ -161,10 +161,10 @@ public abstract class GcsUtil {
       }
     }
 
-    @VisibleForTesting final String applicationName;
-    @VisibleForTesting final String bucketName;
-    @VisibleForTesting final CredentialType credentialType;
-    @VisibleForTesting final Scope scope;
+    final String applicationName;
+    final String bucketName;
+    final CredentialType credentialType;
+    final Scope scope;
 
     /**
      * Constructs CloudStorage Params given parameters about the storage.
@@ -428,7 +428,22 @@ public abstract class GcsUtil {
       results.add(
           Holder.copyFileToLocalThreadpool.submit(
               () -> {
-                copyFileToLocal(gcsFile, localFileShard, from, size);
+                try {
+                  copyFileToLocal(gcsFile, localFileShard, from, size);
+                } catch (InterruptedException e) {
+                  // Restore the interrupt flag because throwing InterruptedException clears it,
+                  // which would cause the cleanup check in the finally block to fail.
+                  Thread.currentThread().interrupt();
+                  throw e;
+                } finally {
+                  // Even if the blocking I/O in copyFileToLocal ignores the interrupt and finishes
+                  // the download, the thread's interrupt flag will still be set by
+                  // future.cancel(true).
+                  // We check the flag here to delete the orphaned shard if the task was cancelled.
+                  if (Thread.currentThread().isInterrupted()) {
+                    tryRemoveFile(localFileShard);
+                  }
+                }
                 return null;
               }));
     }
@@ -488,13 +503,23 @@ public abstract class GcsUtil {
   }
 
   /** Remove {@code file} without throwing an exception. */
-  private void tryRemoveFile(Path file) throws InterruptedException {
+  private void tryRemoveFile(Path file) {
+    // Clear the interrupt flag so that removeFileOrDir can execute without immediately
+    // throwing an InterruptedException. We restore the interrupt flag in the finally block.
+    boolean interrupted = Thread.interrupted();
     try {
       if (localFileUtil.isFileOrDirExist(file)) {
         localFileUtil.removeFileOrDir(file);
       }
     } catch (MobileHarnessException e) {
       logger.atWarning().withCause(e).log("Failed to remove temporary file: %s", file);
+    } catch (InterruptedException e) {
+      logger.atWarning().withCause(e).log("Interrupted when removing temporary file: %s", file);
+      interrupted = true;
+    } finally {
+      if (interrupted) {
+        Thread.currentThread().interrupt();
+      }
     }
   }
 
@@ -984,7 +1009,6 @@ public abstract class GcsUtil {
     }
   }
 
-  @VisibleForTesting
   interface GcsMethod<R> {
     R call() throws MobileHarnessException;
   }
