@@ -42,6 +42,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_result_handler_util",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_preconditions_mapper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:test_plan_parser",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info_factory",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_creator",
@@ -72,6 +73,12 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_config_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_adb_shell_decorator_spec_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_ats_dynamic_config_pusher_decorator_spec_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_device_setting_decorator_spec_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_file_puller_decorator_spec_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:apk_precondition_check_decorator_spec_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:device_info_collector_decorator_spec_java_proto",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_guava_guava",
@@ -80,6 +87,7 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
+        "@protobuf//:protobuf_java_util",
     ],
 )
 

@@ -113,6 +113,9 @@ public class ConfigurationXmlParser {
         case TEST:
           configuration.setTest(parseTest(node));
           break;
+        case TARGET_PREPARER:
+          configuration.addTargetPreparers(parseTargetPreparer(node));
+          break;
         default:
           break;
       }

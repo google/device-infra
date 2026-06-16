@@ -21,12 +21,13 @@ import static org.junit.Assert.assertThrows;
 
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Option;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.TargetPreparer;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.protobuf.TextFormat;
 import java.io.File;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -74,10 +75,34 @@ public class ConfigurationXmlParserTest {
 
   @Test
   public void parse_emptyConfigurationXml_throwsException() throws Exception {
-    Path testcasesDir = Paths.get(temporaryDirectroryPath.toString(), "testcases");
+    Path testcasesDir = Path.of(temporaryDirectroryPath.toString(), "testcases");
     Path file = testcasesDir.resolve("config_file.xml");
     localFileUtil.writeToFile(file.toString(), "");
 
     assertThrows(MobileHarnessException.class, () -> ConfigurationXmlParser.parse(file.toFile()));
+  }
+
+  @Test
+  public void parse_rootLevelTargetPreparer_returnsConfiguration() throws Exception {
+    Path file = Path.of(temporaryDirectroryPath.toString(), "cts-preconditions.xml");
+    String xmlContent =
+        "<configuration description=\"Preconditions config\">\n"
+            + "    <target_preparer"
+            + " class=\"com.android.compatibility.common.tradefed.targetprep.SettingsPreparer\">\n"
+            + "        <option name=\"device-setting\" value=\"screen-always-on\" />\n"
+            + "    </target_preparer>\n"
+            + "</configuration>";
+    localFileUtil.writeToFile(file.toString(), xmlContent);
+
+    Configuration configuration = ConfigurationXmlParser.parse(file.toFile());
+
+    TargetPreparer expectedTargetPreparer =
+        TargetPreparer.newBuilder()
+            .setClazz("com.android.compatibility.common.tradefed.targetprep.SettingsPreparer")
+            .addOptions(
+                Option.newBuilder().setName("device-setting").setValue("screen-always-on").build())
+            .build();
+
+    assertThat(configuration.getTargetPreparersList()).containsExactly(expectedTargetPreparer);
   }
 }
