@@ -99,6 +99,11 @@ go_deps.module(
     sum = "h1:/G9QYbddjL25KvtKTv3an9lx6VBE2cnb8wp1vEGNYGI=",
     version = "v0.1.0",
 )
+go_deps.module(
+    path = "go.starlark.net",
+    sum = "h1:+eC0F/k4aBLC4szgOcjd7bDTEnpxADJyWJE0yowgM3E=",
+    version = "v0.0.0-20231101134539-556fd59b42f6",
+)
 go_deps.module_override(
     patch_strip = 1,
     patches = [
@@ -164,6 +169,7 @@ use_repo(
     "com_github_rsocket_rsocket_go",
     "dev_cel_expr",
     "in_gopkg_natefinch_lumberjack_v2",
+    "net_starlark_go",
     "org_chromium_go_luci",
     "org_golang_google_grpc",
     "org_golang_google_protobuf",
