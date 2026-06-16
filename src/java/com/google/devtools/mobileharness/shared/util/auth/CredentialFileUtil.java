@@ -79,4 +79,13 @@ public class CredentialFileUtil {
     }
     return Optional.empty();
   }
+
+  /** Returns the credential file for GCS file resolver. */
+  public static Optional<String> getGcsResolverCredentialFile(String bucket) {
+    if (Flags.gcsResolverCredentialFile.get() != null) {
+      return Optional.of(Flags.gcsResolverCredentialFile.get());
+    }
+
+    return Optional.empty();
+  }
 }

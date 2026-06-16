@@ -30,13 +30,14 @@ import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveResult;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveSource;
+import com.google.devtools.mobileharness.shared.util.auth.CredentialFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Algorithm;
 import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Checksum;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsParams;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtilFactory;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
@@ -56,6 +57,7 @@ public class GcsFileResolver extends AbstractFileResolver {
       Pattern.compile("^gs://(?<bucket>[^/]+)/(?<path>.+)$");
 
   private final LoadingCache<GcsKey, GcsUtil> gcsUtilCache;
+  private final SystemUtil systemUtil;
 
   @AutoValue
   abstract static class GcsKey {
@@ -81,8 +83,10 @@ public class GcsFileResolver extends AbstractFileResolver {
   }
 
   @Inject
-  public GcsFileResolver(@Nullable ListeningExecutorService executorService) {
+  public GcsFileResolver(
+      @Nullable ListeningExecutorService executorService, SystemUtil systemUtil) {
     super(executorService);
+    this.systemUtil = systemUtil;
     CacheLoader<GcsKey, GcsUtil> cacheLoader =
         new CacheLoader<>() {
           @Override
@@ -130,8 +134,7 @@ public class GcsFileResolver extends AbstractFileResolver {
                 Checksum.newBuilder().setAlgorithm(Algorithm.GCS_CRC32C).setData(crc32c).build());
   }
 
-  private static ParseResult parseGcsPath(ResolveSource resolveSource)
-      throws MobileHarnessException {
+  private ParseResult parseGcsPath(ResolveSource resolveSource) throws MobileHarnessException {
     String fileOrDirPath = resolveSource.path();
     Matcher matcher = GCS_PATH_PATTERN.matcher(fileOrDirPath);
     if (!matcher.matches()) {
@@ -143,25 +146,17 @@ public class GcsFileResolver extends AbstractFileResolver {
     String bucket = matcher.group("bucket");
     String filePath = matcher.group("path");
     GcsUtil.CredentialType credentialType =
-        getCredentialType(resolveSource.parameters().get(PARAM_GCS_SERVICE_ACCOUNT));
+        getCredentialType(resolveSource.parameters().get(PARAM_GCS_SERVICE_ACCOUNT), bucket);
 
     return ParseResult.create(GcsKey.create(bucket, credentialType), filePath);
   }
 
-  private static GcsUtil.CredentialType getCredentialType(@Nullable String serviceAccount) {
-    Optional<String> credentialFile = getCredentialFile();
+  private GcsUtil.CredentialType getCredentialType(@Nullable String serviceAccount, String bucket) {
+    Optional<String> credentialFile = CredentialFileUtil.getGcsResolverCredentialFile(bucket);
     if (credentialFile.isPresent()) {
       return GcsUtil.CredentialType.ofCredentialFile(credentialFile.get());
     }
     return GcsUtil.CredentialType.ofAppDefault();
-  }
-
-  private static Optional<String> getCredentialFile() {
-    if (Flags.gcsResolverCredentialFile.get() != null) {
-      return Optional.of(Flags.gcsResolverCredentialFile.get());
-    }
-
-    return Optional.empty();
   }
 
   private GcsUtil getGcsUtil(GcsKey gcsKey) throws MobileHarnessException {

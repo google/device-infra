@@ -166,6 +166,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/file/resolver:local_file_resolver",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message:test_message_manager",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_extensions_guice_assistedinject",

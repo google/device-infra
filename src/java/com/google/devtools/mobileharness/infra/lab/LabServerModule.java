@@ -157,6 +157,7 @@ public class LabServerModule extends AbstractModule {
   FileResolver provideFileResolver(
       ListeningExecutorService threadPool,
       LocalFileUtil localFileUtil,
+      SystemUtil systemUtil,
       InstantSource instantSource) {
     // LocalFileResolver.
     AbstractFileResolver localFileResolver = new LocalFileResolver(threadPool, localFileUtil);
@@ -172,7 +173,7 @@ public class LabServerModule extends AbstractModule {
     cacheFileResolver.setSuccessor(atsFileServerFileResolver);
 
     // GcsFileResolver.
-    AbstractFileResolver gcsFileResolver = new GcsFileResolver(threadPool);
+    AbstractFileResolver gcsFileResolver = new GcsFileResolver(threadPool, systemUtil);
     atsFileServerFileResolver.setSuccessor(gcsFileResolver);
 
     return localFileResolver;
