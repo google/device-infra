@@ -395,12 +395,12 @@
               <!-- TODO: remove the hide-action-column class when action buttons are implemented. -->
               <!-- TODO: add real logic for the action buttons. -->
               <ng-container matColumnDef="actions" stickyEnd>
-                <th mat-header-cell *matHeaderCellDef class="sticky-end-header" [class.hide-action-column]="!isGoogleInternal">
+                <th mat-header-cell *matHeaderCellDef class="sticky-end-header">
                   <!-- <button mat-icon-button>
                     <mat-icon class="material-symbols-outlined">settings</mat-icon>
                   </button> -->
                 </th>
-                <td mat-cell *matCellDef="let element" class="sticky-end-cell" [class.hide-action-column]="!isGoogleInternal">
+                <td mat-cell *matCellDef="let element" class="sticky-end-cell">
                   @if (element.actions; as elementActions) {
                     @let visibleActions = getVisibleDeviceActions(elementActions);
 
@@ -410,11 +410,11 @@
                       @let config = actionUiConfig[actionId];
                       <app-action-button
                         [action]="getAction(elementActions, actionId)"
-                        [label]="config.label"
+                        [label]="''"
                         [icon]="config.icon"
                         mode="button"
                         [loading]="deviceActions.isRunning(actionId)()"
-                        [loadingLabel]="config.loadingLabel"
+                        [loadingLabel]="''"
                         (actionClick)="onAction(actionId, element)"
                         (comingSoonClick)="showComingSoonPopup(actionId, element)"
                       ></app-action-button>
@@ -562,6 +562,7 @@
               <tr mat-row *matRowDef="let element; columns: displayedColumns;"
                   class="element-row"
                   [class.expanded-row]="expandedElement() === element"
+                  [class.testbed-row]="isTestbed(element)"
                   (click)="isTestbed(element) ? toggleRow(element) : null">
               </tr>
               <tr mat-row *matRowDef="let row; columns: ['expandedDetail']" class="detail-row"></tr>

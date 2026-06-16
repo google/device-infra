@@ -555,6 +555,9 @@
 
   .element-row td {
     border-bottom-width: 0;
+  }
+
+  .element-row.testbed-row td {
     cursor: pointer;
   }
 

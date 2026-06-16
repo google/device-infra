@@ -126,6 +126,21 @@
     }
   }
 
+  &.icon-only {
+    padding: 0;
+    width: 36px;
+    border-radius: 50%;
+    background-color: transparent;
+
+    mat-icon {
+      margin-right: 0;
+    }
+
+    &:hover {
+      background-color: rgba(0, 69, 143, 0.08);
+    }
+  }
+
   &:disabled {
     background-color: #f1f3f4;
     color: #bdc1c6;

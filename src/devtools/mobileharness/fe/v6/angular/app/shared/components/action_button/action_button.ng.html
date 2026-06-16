@@ -1,19 +1,34 @@
 @if (action?.visible) {
   @if (mode === 'button') {
     <span [matTooltip]="action?.tooltip || ''" class="tooltip-wrapper" [matTooltipShowDelay]="tooltipDelay">
-      <button
-        class="m3-action-button filled"
-        [class]="customClass"
-        (click)="onButtonClick()"
-        [disabled]="!action?.enabled || loading || disabled"
-        [attr.data-testid]="testId || null"
-      >
-        @if (loading) {
-          <mat-icon class="spin-animation">sync</mat-icon>{{loadingLabel || label}}
-        } @else {
-          <mat-icon>{{icon}}</mat-icon>{{label}}
-        }
-      </button>
+      @if (!label) {
+        <button
+          mat-icon-button
+          [class]="customClass"
+          (click)="onButtonClick()"
+          [disabled]="!action?.enabled || loading || disabled"
+          [attr.data-testid]="testId || null"
+        >
+          @if (loading) {
+            <mat-icon class="spin-animation">sync</mat-icon>
+          } @else {
+            <mat-icon>{{icon}}</mat-icon>
+          }
+        </button>
+      } @else {
+        <button
+          [class]="'m3-action-button filled ' + customClass"
+          (click)="onButtonClick()"
+          [disabled]="!action?.enabled || loading || disabled"
+          [attr.data-testid]="testId || null"
+        >
+          @if (loading) {
+            <mat-icon class="spin-animation">sync</mat-icon>{{loadingLabel || label}}
+          } @else {
+            <mat-icon>{{icon}}</mat-icon>{{label}}
+          }
+        </button>
+      }
     </span>
   } @else if (mode === 'menu-item') {
     <span [matTooltip]="action?.tooltip || ''" class="tooltip-wrapper-menu" [matTooltipShowDelay]="tooltipDelay">
