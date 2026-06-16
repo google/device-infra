@@ -346,6 +346,17 @@ java_proto_library(
 )
 
 proto_library(
+    name = "device_info_collector_decorator_spec_proto",
+    srcs = ["decorator/device_info_collector_decorator_spec.proto"],
+    deps = [":base_spec_proto"],
+)
+
+java_proto_library(
+    name = "device_info_collector_decorator_spec_java_proto",
+    deps = [":device_info_collector_decorator_spec_proto"],
+)
+
+proto_library(
     name = "install_apk_step_spec_proto",
     srcs = ["decorator/install_apk_step_spec.proto"],
     deps = [":base_spec_proto"],
