@@ -194,6 +194,35 @@ public class AndroidInstrumentationTest {
   }
 
   @Test
+  public void runUniformShard_pass() throws Exception {
+    String uniformShardName = "shard_1_of_3";
+    mockRunTestBasicSteps(uniformShardName, OPTIONS, false, false);
+
+    // We expect optionMap to be updated with shardIndex and numShard
+    HashMap<String, String> expectedOptionMap = new HashMap<>(OPTION_MAP);
+    expectedOptionMap.put("shardIndex", "1");
+    expectedOptionMap.put("numShard", "3");
+
+    AndroidInstrumentationSetting setting =
+        mockInstrumentSetting(
+            /* className= */ null, // testTarget should be null
+            expectedOptionMap,
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ false,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ true);
+
+    when(androidInstrumentationUtil.instrument(
+            eq(DEVICE_ID), eq(DEFAULT_SDK_VERSION), eq(setting), eq(TEST_TIMEOUT), any()))
+        .thenReturn("OK (1 test)");
+
+    driver.run(testInfo);
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+  }
+
+  @Test
   public void run_enableMockLocation_pass() throws Exception {
     mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
     jobInfo.params().add(AndroidInstrumentationDriverSpec.PARAM_MOCK_LOCATION, "true");
