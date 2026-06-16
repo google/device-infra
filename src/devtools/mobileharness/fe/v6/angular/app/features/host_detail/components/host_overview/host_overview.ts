@@ -65,6 +65,7 @@ import {
 
 import {EnvUniverseService} from '../../../../core/services/env_universe_service';
 import {HOST_SERVICE} from '../../../../core/services/host/host_service';
+import {ComingSoonDialog} from '../../../../shared/components/coming_soon_dialog/coming_soon_dialog';
 import {ConfirmDialog} from '../../../../shared/components/confirm_dialog/confirm_dialog';
 import {DecommissionContent} from '../../../../shared/components/decommission_content/decommission_content';
 import {InfoCard} from '../../../../shared/components/info_card/info_card';
@@ -84,6 +85,8 @@ import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {dateUtils} from '../../../../shared/utils/date_utils';
 import {objectUtils} from '../../../../shared/utils/object_utils';
 import {ActionNoPermissionContent} from './action_no_permission_content/action_no_permission_content';
+import {AdvancedOpsDialog} from './advanced_ops_dialog/advanced_ops_dialog';
+
 import {FlagsDialog} from './flags_dialog/flags_dialog';
 import {NoValidVersionsContent} from './release_dialog/no_valid_versions_content/no_valid_versions_content';
 import {ReleaseDialog} from './release_dialog/release_dialog';
@@ -177,6 +180,7 @@ const STATUS_SEMANTIC_MAP: Record<string, {icon: string; colorClass: string}> =
     SearchableListOverlayComponent,
     OverflowList,
     ActionButton,
+    AdvancedOpsDialog,
     TooltipIfTruncatedDirective,
   ],
 })
@@ -546,6 +550,31 @@ export class HostOverviewPage implements OnChanges {
           this.showReleaseConfirmDialog();
         }
       });
+  }
+
+  openAdvancedOpsDialog() {
+    this.dialog.open(AdvancedOpsDialog, {
+      data: {
+        hostName: this.host.hostName,
+        universe: this.envUniverseService.getUniverseString(),
+      },
+      width: '64rem',
+      maxHeight: '90vh',
+      autoFocus: false,
+    });
+  }
+
+  showAdvancedOpsComingSoon() {
+    this.dialog.open(ComingSoonDialog, {
+      data: {
+        title: 'Coming soon',
+        message:
+          'The <b>Advanced Operations</b> feature is under development and will be available soon.',
+        icon: 'construction',
+      },
+      panelClass: 'coming-soon-dialog-panel',
+      autoFocus: false,
+    });
   }
 
   showReleaseConfirmDialog() {
