@@ -376,6 +376,25 @@ public class FileCleaner implements Runnable {
           removeFileOrDir(fileOrDir);
           removedFileOrDirCount++;
         }
+      } else if (fileOrDir.isDirectory()) {
+        // The directory itself is not expired, but it might contain orphaned GCS shard files
+        // (e.g., .file.*.part or .*.\d+) that have leaked and are older than the threshold.
+        try {
+          for (File child : fileUtil.listFilesOrDirs(fileOrDirPath)) {
+            if (child.isFile() && child.lastModified() < threshold) {
+              String name = child.getName();
+              if (name.startsWith(".file.")
+                  || name.endsWith(".part")
+                  || name.matches("^\\..*\\.\\d+$")) {
+                removeFileOrDir(child);
+                removedFileOrDirCount++;
+              }
+            }
+          }
+        } catch (MobileHarnessException e) {
+          logger.atWarning().withCause(e).log(
+              "Failed to clean orphaned shard files in %s", fileOrDirPath);
+        }
       }
     }
     if (removedFileOrDirCount == 0) {
