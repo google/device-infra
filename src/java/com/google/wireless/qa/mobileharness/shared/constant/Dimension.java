@@ -441,7 +441,13 @@ public final class Dimension {
     /** The drivers that the device supports. */
     DRIVER,
     /** The decorators that the device supports. */
-    DECORATOR;
+    DECORATOR,
+
+    // tvOS
+    /** The product type of the device. */
+    PRODUCT_TYPE,
+    /** The OS version of the device. */
+    OS_VERSION_NUMBER;
 
     public String lowerCaseName() {
       return Ascii.toLowerCase(name());
