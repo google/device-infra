@@ -1532,6 +1532,11 @@ public class Flags {
   public static final Flag<String> tradefedHostConfig = Flag.value("");
 
   @FlagSpec(
+      name = "tradefed_service_account_key_file",
+      help = "The service account key file for tradefed to use in NonXtsRunStrategy.")
+  public static final Flag<String> tradefedServiceAccountKeyFile = Flag.value("");
+
+  @FlagSpec(
       name = "transfer_resources_from_controller",
       help =
           "Whether to transfer all resources from the controller to workers. The default is true."

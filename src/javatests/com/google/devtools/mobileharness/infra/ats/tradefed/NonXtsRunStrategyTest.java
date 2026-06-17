@@ -129,6 +129,24 @@ public final class NonXtsRunStrategyTest {
   }
 
   @Test
+  public void getEnvironment_withTfServiceAccountKeyFile() throws Exception {
+    flags.set("tradefed_service_account_key_file", "/path/to/key.json");
+
+    ImmutableMap<String, String> env =
+        nonXtsRunStrategy.getEnvironment(
+            WORK_DIR, TradefedTestDriverSpec.getDefaultInstance(), device, "/path/to/env");
+
+    assertThat(env)
+        .containsExactly(
+            "PATH",
+            "/path/to/env",
+            "TF_WORK_DIR",
+            WORK_DIR.toString(),
+            "GOOGLE_APPLICATION_CREDENTIALS",
+            "/path/to/key.json");
+  }
+
+  @Test
   public void getEnvironment_withEnvVars() throws Exception {
     when(localFileUtil.isDirExist(Path.of(TRADEFED_DIR))).thenReturn(true);
     when(localFileUtil.listFilePaths(any(Path.class), anyBoolean(), any()))

@@ -93,6 +93,10 @@ public final class NonXtsRunStrategy implements TradefedRunStrategy {
       environmentToTradefedConsole.put(
           "TF_GLOBAL_CONFIG", AndroidJitEmulatorUtil.getHostConfigPath());
     }
+    if (!Flags.tradefedServiceAccountKeyFile.getNonNull().isEmpty()) {
+      environmentToTradefedConsole.put(
+          "GOOGLE_APPLICATION_CREDENTIALS", Flags.tradefedServiceAccountKeyFile.getNonNull());
+    }
     if (!spec.getEnvVars().isEmpty()) {
       String envVarJson = spec.getEnvVars();
       Map<String, String> envVar =
