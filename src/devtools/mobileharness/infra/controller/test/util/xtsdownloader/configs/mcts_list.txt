@@ -47,6 +47,7 @@ CtsAppThatRequestsLocationAndBackgroundPermission31
 CtsAutoRevokeQApp
 CtsAutoRevokeRApp
 CtsAutoRevokeSApp
+CtsBluetoothTestCases
 CtsClasspathsTestCases
 CtsDeviceInfo
 CtsDeviceOwnerApp
@@ -67,13 +68,17 @@ CtsIkeTestCases
 CtsMediaProviderTestCases
 CtsMediaProviderTranscodeTests
 CtsModernMediaProviderTests
+CtsMultiDeviceGenericRangingTests
 CtsNativeNetDnsTestCases
+CtsNdefTestCases
 CtsNearbyFastPairTestCases
 CtsNetHttpTestCases
 CtsNetTestCases
+CtsNetTestCasesLocalNetNoPermissions
 CtsNetTestCasesMaxTargetSdk30
 CtsNetTestCasesMaxTargetSdk31
 CtsNetTestCasesMaxTargetSdk33
+CtsNfcTestCases
 CtsNNAPIBenchmarkTestCases
 CtsNNAPIStatsdAtomHostTestCases
 CtsNNAPITestCases
@@ -85,6 +90,8 @@ CtsPermissionMultiDeviceTestCases
 CtsPermissionMultiUserTestCases
 CtsPermissionUiTestCases
 CtsPhotoPickerTest
+CtsPowerManagerPccTestCases
+CtsProfilingModuleTests
 CtsRebootReadinessTestCases
 CtsRoleMultiUserTestCases
 CtsRoleTestCases
@@ -121,8 +128,11 @@ CtsTestAppWithQueryAllPackagesPermission
 CtsTetheringTest
 CtsTfliteNnapiDelegateTestCases
 CtsThreadNetworkTestCases
+CtsUprobeStatsTest
+CtsUwbMultiDeviceFiraRangingTests
 CtsUwbMultiDeviceTestCase_FiraRangingTests
 CtsUwbMultiDeviceTestCase_UwbManagerTests
+CtsUwbMultiDeviceUwbManagerTests
 CtsUwbTestCases
 CtsVcnTestCases
 CtsWifiTestCases
@@ -139,6 +149,7 @@ MctsMediaSessionTestCases
 MctsMediaTranscodingTestCases
 MctsMediaV2TestCases
 MctsTextClassifierTestCases
+MctsVideoTestCases
 MultiDeviceRangingTestCases
 net-tests-utils-host-common
 SdkSandboxManagerDisabledTests
