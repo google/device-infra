@@ -38,9 +38,6 @@ package(
 java_library(
     name = "base_device_status_provider",
     srcs = ["BaseDeviceStatusProvider.java"],
-    visibility = [
-        "//java/com/google/devtools/mobileharness/infra/dmintegration/tragent:__pkg__",  # deviceinfra:google-only(internal)
-    ],
     deps = [
         ":device_status_info",
         ":device_status_provider",
