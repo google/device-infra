@@ -24,6 +24,10 @@ package(
 proto_library(
     name = "common_resources_proto",
     srcs = ["common_resources.proto"],
+    deps = [
+        "@protobuf//:duration_proto",
+        "@protobuf//:timestamp_proto",
+    ],
 )
 
 java_proto_library(

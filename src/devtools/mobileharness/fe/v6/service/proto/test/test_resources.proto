@@ -1,0 +1,77 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package devtools.mobileharness.fe.v6.service.proto.test;
+
+import "google/protobuf/timestamp.proto";
+import "src/devtools/mobileharness/api/model/proto/test.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/common/common_resources.proto";
+
+option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.test";
+option java_multiple_files = true;
+option java_outer_classname = "TestResourcesProto";
+
+message TestError {
+  string message = 1;
+  string trace = 2;
+}
+
+message TestSummary {
+  string id = 1;
+  string name = 2;
+  .mobileharness.api.model.TestStatus status = 3;
+  .mobileharness.api.model.TestResult result = 4;
+  google.protobuf.Timestamp start_time = 5;
+  google.protobuf.Timestamp end_time = 6;
+}
+
+message TestDetail {
+  string id = 1;
+  string name = 2;
+  .mobileharness.api.model.TestStatus status = 3;
+  .mobileharness.api.model.TestResult result = 4;
+
+  // Parent Job Info
+  string job_id = 5;
+  string job_name = 6;
+
+  // Executed On
+  string device_id = 7;
+  string device_type = 8;
+
+  // Execution Details
+  string sponge_link = 9;
+  google.protobuf.Timestamp create_time = 10;
+  google.protobuf.Timestamp start_time = 11;
+  google.protobuf.Timestamp end_time = 12;
+
+  // Configuration
+  map<string, string> params = 13;
+  map<string, string> dimensions = 14;
+
+  // Properties
+  map<string, string> properties = 15;
+
+  // Troubleshooting
+  repeated string warnings = 17;
+  TestError error = 18;
+
+  // Detailed execution phase timelines
+  .devtools.mobileharness.fe.v6.service.proto.common.TimeBreakdown
+      timing_breakdown = 19;
+}
