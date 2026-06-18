@@ -21,16 +21,23 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.command.testing.FakeCommandResult;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
+import java.util.HashMap;
 import java.util.Map;
 import org.junit.Before;
 import org.junit.Rule;
@@ -38,6 +45,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
@@ -363,5 +371,102 @@ public class AndroidDesktopDeviceHelperTest {
                     /* usbkey= */ false,
                     /* clearRepairRequests= */ true));
     assertThat(e).hasMessageThat().contains("Cannot set repair requests with clearRepairRequests");
+  }
+
+  @Test
+  public void propagateDimensionsToSubLeafTests_success_propagatesAllowlistedDimensions() {
+    // Setup dimensions map
+    Map<String, String> dimensions = new HashMap<>();
+    dimensions.put("board", "my_board");
+    dimensions.put("model", "my_model");
+    dimensions.put("sku", "my_sku");
+    dimensions.put("ignored-dim", "ignored_val");
+    dimensions.put("", "empty_key_ignored");
+    dimensions.put("hwid", null);
+    dimensions.put("dut_name", "my_dut");
+
+    // Setup sub-test structure
+    TestInfo parentTestInfo = Mockito.mock(TestInfo.class);
+    TestInfos subtests = Mockito.mock(TestInfos.class);
+    when(parentTestInfo.subTests()).thenReturn(subtests);
+
+    ListMultimap<String, TestInfo> subTestMap = ArrayListMultimap.create();
+    TestInfo subTest1 = Mockito.mock(TestInfo.class);
+    subTestMap.put("sub_test_1", subTest1);
+    when(subtests.getAll()).thenReturn(subTestMap);
+
+    // subTest1 has no sub-tests (it's a leaf node)
+    when(subTest1.subTests()).thenReturn(null);
+    Properties subTest1Properties = Mockito.mock(Properties.class);
+    when(subTest1.properties()).thenReturn(subTest1Properties);
+
+    androidDesktopDeviceHelper.propagateDimensionsToSubLeafTests(parentTestInfo, dimensions);
+
+    verify(subTest1Properties).add("dut_name", "my_dut");
+    verify(subTest1Properties).add("board", "my_board");
+    verify(subTest1Properties).add("model", "my_model");
+    verify(subTest1Properties).add("sku", "my_sku");
+    verify(subTest1Properties, never()).add(eq("ignored-dim"), anyString());
+    verify(subTest1Properties, never()).add(eq(""), anyString());
+    verify(subTest1Properties, never()).add(eq("hwid"), anyString());
+  }
+
+  @Test
+  public void propagateDimensionsToSubLeafTests_noSubTests_doesNothing() {
+    Map<String, String> dimensions = new HashMap<>();
+    dimensions.put("board", "my_board");
+
+    TestInfo parentTestInfo = Mockito.mock(TestInfo.class);
+    when(parentTestInfo.subTests()).thenReturn(null); // No sub-tests at all
+
+    // Should not crash and do nothing
+    androidDesktopDeviceHelper.propagateDimensionsToSubLeafTests(parentTestInfo, dimensions);
+
+    verify(parentTestInfo, never()).properties();
+  }
+
+  @Test
+  public void propagateDimensionsToSubLeafTests_recursive_propagatesToLeafSubTestsOnly() {
+    // Setup dimensions map
+    Map<String, String> dimensions = new HashMap<>();
+    dimensions.put("board", "my_board");
+    dimensions.put("dut_name", "my_dut");
+
+    // Setup sub-test structure: Parent -> Child -> Grandchild (leaf)
+    TestInfo parentTestInfo = Mockito.mock(TestInfo.class);
+    TestInfos parentSubtests = Mockito.mock(TestInfos.class);
+    when(parentTestInfo.subTests()).thenReturn(parentSubtests);
+
+    ListMultimap<String, TestInfo> parentSubTestMap = ArrayListMultimap.create();
+    TestInfo childTestInfo = Mockito.mock(TestInfo.class);
+    parentSubTestMap.put("child_test", childTestInfo);
+    when(parentSubtests.getAll()).thenReturn(parentSubTestMap);
+
+    // Child has sub-tests (Grandchild)
+    TestInfos childSubtests = Mockito.mock(TestInfos.class);
+    when(childTestInfo.subTests()).thenReturn(childSubtests);
+    when(childSubtests.isEmpty()).thenReturn(false);
+
+    ListMultimap<String, TestInfo> childSubTestMap = ArrayListMultimap.create();
+    TestInfo grandchildTestInfo = Mockito.mock(TestInfo.class);
+    childSubTestMap.put("grandchild_test", grandchildTestInfo);
+    when(childSubtests.getAll()).thenReturn(childSubTestMap);
+
+    // Grandchild has no sub-tests (it's a leaf node)
+    when(grandchildTestInfo.subTests()).thenReturn(null);
+    Properties grandchildProperties = Mockito.mock(Properties.class);
+    when(grandchildTestInfo.properties()).thenReturn(grandchildProperties);
+
+    Properties childProperties = Mockito.mock(Properties.class);
+    when(childTestInfo.properties()).thenReturn(childProperties);
+
+    androidDesktopDeviceHelper.propagateDimensionsToSubLeafTests(parentTestInfo, dimensions);
+
+    // Grandchild should get properties
+    verify(grandchildProperties).add("dut_name", "my_dut");
+    verify(grandchildProperties).add("board", "my_board");
+
+    // Child should NOT get properties (because it is not a leaf)
+    verify(childProperties, never()).add(anyString(), anyString());
   }
 }
