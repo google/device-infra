@@ -16,6 +16,9 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_SHARD_COUNT;
+import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_SHARD_INDEX;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_END_EPOCH_MS;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_START_EPOCH_MS;
 import static java.lang.String.format;
@@ -217,11 +220,13 @@ public class AndroidInstrumentation extends BaseDriver
     prepareTestArgs(testInfo, externalStoragePath.orElse(null));
 
     // Finalizes the test target.
-    String testTarget = getTestTarget(testInfo, optionMaps);
+    @Nullable String testTarget = getTestTarget(testInfo, optionMaps);
 
     // Sets the test properties.
     testInfo.properties().add(AndroidInstrumentationDriverSpec.PROPERTY_PACKAGE, testPackageName);
     testInfo.properties().add(AndroidInstrumentationDriverSpec.PROPERTY_RUNNER, runnerName);
+
+    populateOptionMapsForUniformSharding(testInfo, optionMaps);
 
     if (optionMaps.size() == 1
         && job.params().get(AndroidInstrumentationDriverSpec.PARAM_OPTIONS + "_0") == null) {
@@ -861,6 +866,13 @@ public class AndroidInstrumentation extends BaseDriver
     if (Ascii.equalsIgnoreCase(testName, AndroidInstrumentationDriverSpec.TEST_NAME_ALL)) {
       testTarget = null;
       testInfo.log().atInfo().alsoTo(logger).log("Running all tests");
+    } else if (isUniformSharding(testInfo)) {
+      testTarget = null;
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("Running %s tests with uniform sharding", testName);
     } else if (Ascii.equalsIgnoreCase(testName, AndroidInstrumentationDriverSpec.TEST_NAME_SMALL)
         || Ascii.equalsIgnoreCase(testName, AndroidInstrumentationDriverSpec.TEST_NAME_MEDIUM)
         || Ascii.equalsIgnoreCase(testName, AndroidInstrumentationDriverSpec.TEST_NAME_LARGE)) {
@@ -874,6 +886,11 @@ public class AndroidInstrumentation extends BaseDriver
       testTarget = testName;
     }
     return testTarget;
+  }
+
+  private boolean isUniformSharding(TestInfo testInfo) {
+    return testInfo.properties().has(ANDROID_INSTRUMENTATION_SHARD_INDEX)
+        && testInfo.properties().has(ANDROID_INSTRUMENTATION_SHARD_COUNT);
   }
 
   private void postAppInstallFinishEvent(TestInfo testInfo, String packageName) {
@@ -939,6 +956,21 @@ public class AndroidInstrumentation extends BaseDriver
                             .PARAM_SKIP_CLEAR_MEDIA_PROVIDER_FOR_MULTI_USER_CASE,
                         false))
             .build());
+  }
+
+  @SuppressWarnings("ReferenceEquality")
+  private void populateOptionMapsForUniformSharding(
+      TestInfo testInfo, List<Map<String, String>> optionMaps) {
+    String shardIndex = testInfo.properties().get(ANDROID_INSTRUMENTATION_SHARD_INDEX);
+    String shardCount = testInfo.properties().get(ANDROID_INSTRUMENTATION_SHARD_COUNT);
+    if (!isNullOrEmpty(shardIndex) && !isNullOrEmpty(shardCount)) {
+      for (Map<String, String> optionMap : optionMaps) {
+        if (optionMap != SKIPPED_OPTION_MAP) {
+          optionMap.put("shardIndex", shardIndex);
+          optionMap.put("numShards", shardCount);
+        }
+      }
+    }
   }
 
   protected ImmutableSet<String> getBuildApks(TestInfo testInfo)

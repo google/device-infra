@@ -17,6 +17,8 @@
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_SHARD_COUNT;
+import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_SHARD_INDEX;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_END_EPOCH_MS;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_START_EPOCH_MS;
 import static org.junit.Assert.assertThrows;
@@ -734,6 +736,35 @@ public class AndroidInstrumentationTest {
             eq(setting),
             eq(TEST_TIMEOUT),
             ArgumentMatchers.isNull());
+  }
+
+  @Test
+  public void run_uniformSharding_pass() throws Exception {
+    mockRunTestBasicSteps("all_shard_2", OPTIONS, false, false);
+    testInfo.properties().add(ANDROID_INSTRUMENTATION_SHARD_INDEX, "2");
+    testInfo.properties().add(ANDROID_INSTRUMENTATION_SHARD_COUNT, "10");
+
+    HashMap<String, String> expectedOptions = new HashMap<>(OPTION_MAP);
+    expectedOptions.put("shardIndex", "2");
+    expectedOptions.put("numShards", "10");
+
+    String instrumentationLog = "OK (1 test)";
+    AndroidInstrumentationSetting setting =
+        mockInstrumentSetting(
+            /* className= */ null,
+            expectedOptions,
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ false,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ true);
+    when(androidInstrumentationUtil.instrument(
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
+        .thenReturn(instrumentationLog);
+
+    driver.run(testInfo);
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
   }
 
   private AndroidInstrumentationSetting mockInstrumentSetting(

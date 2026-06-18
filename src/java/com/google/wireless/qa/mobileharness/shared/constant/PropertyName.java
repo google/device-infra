@@ -551,6 +551,12 @@ public interface PropertyName {
 
       /** The epoch time when the Android instrumentation test execution starts. */
       ANDROID_INSTRUMENTATION_TEST_START_EPOCH_MS,
+
+      /** Android instrumentation shard index for uniform sharding. */
+      ANDROID_INSTRUMENTATION_SHARD_INDEX,
+
+      /** Android instrumentation shard count for uniform sharding. */
+      ANDROID_INSTRUMENTATION_SHARD_COUNT,
     }
 
     /** AndroidFlashstationDecorator property name constants. */
