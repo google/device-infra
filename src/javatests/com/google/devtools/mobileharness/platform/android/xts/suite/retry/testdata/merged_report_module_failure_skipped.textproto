@@ -52,8 +52,8 @@ summary {
   passed: 0
   failed: 0
   warning: 0
-  modules_done: 0
-  modules_total: 0
+  modules_done: 1
+  modules_total: 1
 }
 module_info {
   name: "CtsVcnTestCases"
@@ -67,7 +67,7 @@ module_info {
   }
   failed_tests: 0
   warning_tests: 0
-  skipped: true
+  skipped: false
 }
 attribute {
   key: "start"
