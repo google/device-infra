@@ -33,12 +33,14 @@ import com.google.devtools.mobileharness.fe.v6.service.device.provider.DeviceOps
 import com.google.devtools.mobileharness.fe.v6.service.device.provider.NoOpDeviceOpsStubProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.builder.NoOpRemoteControlUrlBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.host.builder.RemoteControlUrlBuilder;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.NoOpPreflightLabServerLifecycleActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.NoOpPreflightLabServerReleaseActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.NoOpReleaseLabServerActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.NoOpRestartLabServerActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.NoOpStartLabServerActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.NoOpStopLabServerActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.NoOpUpdatePassThroughFlagsActionHelper;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLabServerLifecycleActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLabServerReleaseActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.ReleaseLabServerActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.RestartLabServerActionHelper;
@@ -119,6 +121,9 @@ public final class OssStubsModule extends AbstractModule {
     bind(HostAuxiliaryInfoProvider.class).to(OssHostAuxiliaryInfoProviderImpl.class);
     bind(HostLatestVersionProvider.class)
         .to(NoOpHostLatestVersionProviderImpl.class)
+        .in(Singleton.class);
+    bind(PreflightLabServerLifecycleActionHelper.class)
+        .to(NoOpPreflightLabServerLifecycleActionHelper.class)
         .in(Singleton.class);
     bind(PreflightLabServerReleaseActionHelper.class)
         .to(NoOpPreflightLabServerReleaseActionHelper.class)

@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.fe.v6.service.host.handlers.Decommissio
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostDeviceSummariesHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostHeaderInfoHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostOverviewHandler;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLabServerLifecycleHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLabServerReleaseHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.ReleaseLabServerHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.RemoteControlDevicesHandler;
@@ -51,6 +52,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ListTroubleshootScriptsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ListTroubleshootScriptsResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerLifecycleRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerLifecycleResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ReleaseLabServerRequest;
@@ -83,6 +86,7 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   private final RemoteControlDevicesHandler remoteControlDevicesHandler;
   private final GetHostHeaderInfoHandler getHostHeaderInfoHandler;
   private final DecommissionMissingDevicesHandler decommissionMissingDevicesHandler;
+  private final PreflightLabServerLifecycleHandler preflightLabServerLifecycleHandler;
   private final PreflightLabServerReleaseHandler preflightLabServerReleaseHandler;
   private final ReleaseLabServerHandler releaseLabServerHandler;
   private final StartLabServerHandler startLabServerHandler;
@@ -100,6 +104,7 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
       RemoteControlDevicesHandler remoteControlDevicesHandler,
       GetHostHeaderInfoHandler getHostHeaderInfoHandler,
       DecommissionMissingDevicesHandler decommissionMissingDevicesHandler,
+      PreflightLabServerLifecycleHandler preflightLabServerLifecycleHandler,
       PreflightLabServerReleaseHandler preflightLabServerReleaseHandler,
       ReleaseLabServerHandler releaseLabServerHandler,
       StartLabServerHandler startLabServerHandler,
@@ -114,6 +119,7 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
     this.remoteControlDevicesHandler = remoteControlDevicesHandler;
     this.getHostHeaderInfoHandler = getHostHeaderInfoHandler;
     this.decommissionMissingDevicesHandler = decommissionMissingDevicesHandler;
+    this.preflightLabServerLifecycleHandler = preflightLabServerLifecycleHandler;
     this.preflightLabServerReleaseHandler = preflightLabServerReleaseHandler;
     this.releaseLabServerHandler = releaseLabServerHandler;
     this.startLabServerHandler = startLabServerHandler;
@@ -199,6 +205,19 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
       return immediateFailedFuture(e);
     }
     return preflightLabServerReleaseHandler.preflightLabServerRelease(request, universe, username);
+  }
+
+  @Override
+  public ListenableFuture<PreflightLabServerLifecycleResponse> preflightLabServerLifecycle(
+      PreflightLabServerLifecycleRequest request, Optional<String> username) {
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return preflightLabServerLifecycleHandler.preflightLabServerLifecycle(
+        request, universe, username);
   }
 
   @Override

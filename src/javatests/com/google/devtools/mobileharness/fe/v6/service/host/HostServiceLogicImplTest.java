@@ -26,6 +26,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.fe.v6.service.host.builder.RemoteControlUrlBuilder;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLabServerLifecycleActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLabServerReleaseActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.ReleaseLabServerActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.RestartLabServerActionHelper;
@@ -84,6 +85,10 @@ public final class HostServiceLogicImplTest {
   @Bind @Mock private InstantSource instantSource;
   @Bind @Mock private FeatureManagerFactory featureManagerFactory;
   @Bind @Mock private LabSyncStub labSyncStub;
+
+  @Bind @Mock
+  private PreflightLabServerLifecycleActionHelper preflightLabServerLifecycleActionHelper;
+
   @Bind @Mock private PreflightLabServerReleaseActionHelper preflightLabServerReleaseActionHelper;
   @Bind @Mock private ReleaseLabServerActionHelper releaseLabServerActionHelper;
   @Bind @Mock private RestartLabServerActionHelper restartLabServerActionHelper;
