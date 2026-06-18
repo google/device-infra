@@ -500,6 +500,7 @@ public abstract class AndroidDeviceDelegate {
     // Advanced device settings. This decorator is only full tested on AndroidRealDevice. Some
     // settings may not be supported for emulators.
     device.addSupportedDecorator("AndroidDeviceSettingsDecorator");
+    device.addSupportedDecorator("AndroidDisplayDeviceInfoDecorator");
     device.addSupportedDecorator("AndroidFilePullerDecorator");
     device.addSupportedDecorator("AndroidFilePusherDecorator");
     device.addSupportedDecorator("AndroidInstallAppsDecorator");
