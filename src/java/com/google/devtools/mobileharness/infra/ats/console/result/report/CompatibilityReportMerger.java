@@ -601,9 +601,12 @@ public class CompatibilityReportMerger {
   private static boolean shouldInsertUnexecutedModulesIntoResult(
       Result report, TestRecord testRecord) {
     String testRecordDebugTrace = testRecord.getDebugInfo().getTrace();
+    String testRecordErrorMessage = testRecord.getDebugInfo().getErrorMessage();
     return report.getModuleInfoCount() == 0
         && (testRecordDebugTrace.contains("DeviceNotAvailableException")
-            || testRecordDebugTrace.contains("TargetSetupError"));
+            || testRecordDebugTrace.contains("TargetSetupError")
+            || testRecordErrorMessage.contains("DeviceNotAvailableException")
+            || testRecordErrorMessage.contains("TargetSetupError"));
   }
 
   @VisibleForTesting
