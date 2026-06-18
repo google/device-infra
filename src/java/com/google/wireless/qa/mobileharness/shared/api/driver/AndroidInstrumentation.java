@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.platform.android.instrumentation.result
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
 import com.google.devtools.mobileharness.platform.android.lightning.systemsetting.SystemSettingManager;
+import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
@@ -119,6 +120,8 @@ public class AndroidInstrumentation extends BaseDriver
 
   private final SystemSettingManager systemSettingManager;
 
+  private final SystemStateManager systemStateManager;
+
   /** Util for host side file operations. */
   private final LocalFileUtil fileUtil;
 
@@ -136,6 +139,7 @@ public class AndroidInstrumentation extends BaseDriver
       Aapt aapt,
       ApkInstaller apkInstaller,
       SystemSettingManager systemSettingManager,
+      SystemStateManager systemStateManager,
       LocalFileUtil fileUtil,
       TestMessageUtil testMessageUtil,
       AndroidInstrumentationUtil androidInstrumentationUtil,
@@ -147,6 +151,7 @@ public class AndroidInstrumentation extends BaseDriver
     this.aapt = aapt;
     this.apkInstaller = apkInstaller;
     this.systemSettingManager = systemSettingManager;
+    this.systemStateManager = systemStateManager;
     this.fileUtil = fileUtil;
     this.testMessageUtil = testMessageUtil;
     this.androidInstrumentationUtil = androidInstrumentationUtil;
@@ -647,11 +652,20 @@ public class AndroidInstrumentation extends BaseDriver
           break;
         case ERROR:
           hasError = true;
-          errorResultCause =
-              new MobileHarnessException(
-                  AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_ERROR,
-                  "Instrumentation start/finish unexpectedly: " + errorMsg,
-                  mhException);
+          if (systemStateManager.isOnline(deviceId)) {
+            errorResultCause =
+                new MobileHarnessException(
+                    AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_ERROR,
+                    "Instrumentation start/finish unexpectedly: " + errorMsg,
+                    mhException);
+          } else {
+            errorResultCause =
+                new MobileHarnessException(
+                    AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_DEVICE_OFFLINE,
+                    "Device is offline, instrumentation start/finish unexpectedly: " + errorMsg,
+                    mhException);
+          }
+
           break;
         case TIMEOUT:
           MobileHarnessException timeoutCause =
