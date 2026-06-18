@@ -26,6 +26,7 @@ public final class XMLConstants {
 
   //// xml element names
   public static final String ELEMENT_TESTSUITES = "testsuites";
+
   public static final String ELEMENT_TESTSUITE = "testsuite";
   public static final String ELEMENT_TESTCASE = "testcase";
   public static final String ELEMENT_TESTDECORATOR = "testdecorator";
@@ -99,6 +100,7 @@ public final class XMLConstants {
    * or timed out.
    */
   public static final String RESULT_CANCELLED = "cancelled";
+
   /*
    * Test case was run and completed (possibly failing or throwing an exception, but not
    * interrupted).
