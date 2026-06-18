@@ -44,6 +44,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:host_types",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:host_version_util",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:lab_activities",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:lab_server_action_availabilities",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/remotecontrol",
