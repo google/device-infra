@@ -65,6 +65,11 @@ import {OVERVIEW_11} from './hosts/overview_11';
 import {OVERVIEW_12} from './hosts/overview_12';
 import {OVERVIEW_13} from './hosts/overview_13';
 import {OVERVIEW_14} from './hosts/overview_14';
+import {
+  SCENARIO_ERROR_LOGICAL,
+  SCENARIO_ERROR_PERMISSION_DENIED,
+  SCENARIO_ERROR_RPC,
+} from './devices/27_error_scenarios';
 import {SCENARIO_RC_PERMISSIONS_ALL} from './hosts/remote_control_permissions';
 import {MockDeviceScenario, MockHostScenario} from './models';
 
@@ -99,6 +104,9 @@ export const MOCK_DEVICE_SCENARIOS: MockDeviceScenario[] = [
   SCENARIO_TESTBED_SINGLE_ELIGIBLE,
   SCENARIO_TESTBED_MIXED_ELIGIBILITY,
   SCENARIO_COMING_SOON,
+  SCENARIO_ERROR_PERMISSION_DENIED,
+  SCENARIO_ERROR_LOGICAL,
+  SCENARIO_ERROR_RPC,
 ];
 
 /**

@@ -16,9 +16,7 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.shared.remotecontrol;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
-import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
@@ -31,7 +29,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DeviceProxyType;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.IneligibilityReasonCode;
-import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
+import com.google.devtools.mobileharness.fe.v6.service.shared.auth.DevicePermissionChecker;
 import java.util.EnumSet;
 import java.util.Locale;
 import java.util.Map;
@@ -48,13 +46,13 @@ import javax.inject.Singleton;
 @Singleton
 public class RemoteControlEligibilityChecker {
 
-  private final GroupMembershipProvider groupMembershipProvider;
+  private final DevicePermissionChecker devicePermissionChecker;
   private final ListeningExecutorService executor;
 
   @Inject
   RemoteControlEligibilityChecker(
-      GroupMembershipProvider groupMembershipProvider, ListeningExecutorService executor) {
-    this.groupMembershipProvider = groupMembershipProvider;
+      DevicePermissionChecker devicePermissionChecker, ListeningExecutorService executor) {
+    this.devicePermissionChecker = devicePermissionChecker;
     this.executor = executor;
   }
 
@@ -276,34 +274,7 @@ public class RemoteControlEligibilityChecker {
 
   private ListenableFuture<ImmutableList<String>> calculateRunAsCandidates(
       RemoteControlEligibilityContext context) {
-    String username = context.username();
-    ImmutableList<String> ownersAndExecutors = context.ownersAndExecutors();
-
-    if (username.isEmpty()) {
-      return immediateFuture(ImmutableList.of());
-    }
-
-    if (ownersAndExecutors.isEmpty()) {
-      return immediateFuture(ImmutableList.of(username));
-    }
-
-    // Deduplicate candidates to minimize RPC calls.
-    ImmutableSet<String> uniqueCandidates = ImmutableSet.copyOf(ownersAndExecutors);
-
-    return Futures.transform(
-        Futures.allAsList(
-            uniqueCandidates.stream()
-                .map(
-                    candidate ->
-                        candidate.equals(username)
-                            ? immediateFuture(username)
-                            : Futures.transform(
-                                groupMembershipProvider.isMemberOfAny(
-                                    username, ImmutableList.of(candidate)),
-                                isMember -> isMember ? candidate : null,
-                                directExecutor()))
-                .collect(toImmutableList())),
-        results -> results.stream().filter(Objects::nonNull).collect(toImmutableList()),
-        executor);
+    return devicePermissionChecker.calculateRunAsCandidates(
+        context.username(), context.ownersAndExecutors());
   }
 }

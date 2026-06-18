@@ -23,6 +23,7 @@ import "google/protobuf/timestamp.proto";
 import "google/type/date.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/device/device_resources.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/device/device_stats.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/host/host_resources.proto";
 
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.device";
 option java_multiple_files = true;
@@ -210,6 +211,11 @@ message TakeScreenshotResponse {
   string screenshot_url = 1;
   // The time when the screenshot was captured.
   google.protobuf.Timestamp captured_at = 2;
+  // The error type if any.
+  devtools.mobileharness.fe.v6.service.proto.host.IneligibilityReasonCode
+      error_type = 3;
+  // The error message if any.
+  string error_message = 4;
 }
 
 // Request for GetLogcat.
@@ -228,7 +234,12 @@ message GetLogcatResponse {
   // The time when the logcat was captured.
   google.protobuf.Timestamp captured_at = 2;
   // The error message if any.
-  string error_msg = 3;
+  string error_msg = 3 [deprecated = true];
+  // The error type if any.
+  devtools.mobileharness.fe.v6.service.proto.host.IneligibilityReasonCode
+      error_type = 4;
+  // The error message if any.
+  string error_message = 5;
 }
 
 // Request for QuarantineDevice.

@@ -6,7 +6,7 @@
  * uses this data to render the UI, including icons, colors, and layouts.
  */
 
-import {DeviceActions} from './device_action';
+import {DeviceActions, IneligibilityReasonCode} from './device_action';
 import {HealthState, SubDeviceInfo} from './device_overview';
 import {HostHeaderInfo, LabServerActions} from './host_action';
 
@@ -280,16 +280,7 @@ export enum DeviceProxyType {
   VIDEO = 5,
 }
 
-/**
- * Reason code for a device being ineligible for remote control.
- */
-export type IneligibilityReasonCode =
-  | 'PERMISSION_DENIED' // User lacks permission for the device
-  | 'DEVICE_NOT_IDLE' // Device state is not IDLE (e.g., BUSY, MISSING)
-  | 'DEVICE_TYPE_NOT_SUPPORTED' // Device type is not supported (e.g., FailedDevice, AbnormalTestbedDevice, or non-AndroidRealDevice in multi-selection mode)
-  | 'HOST_OS_NOT_SUPPORTED' // Host OS is MacOS
-  | 'ACID_NOT_SUPPORTED' // Device does not support AcidRemoteDriver
-  | 'DEVICE_NOT_FOUND'; // Device or sub-device not found in lab info
+
 
 /**
  * The eligibility result for a sub-device.

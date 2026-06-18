@@ -1,4 +1,15 @@
 import {ActionButtonState} from './action_common';
+/**
+ * Reason code for a device being ineligible for remote control.
+ */
+export type IneligibilityReasonCode =
+  | 'PERMISSION_DENIED' // User lacks permission for the device
+  | 'DEVICE_NOT_IDLE' // Device state is not IDLE (e.g., BUSY, MISSING)
+  | 'DEVICE_TYPE_NOT_SUPPORTED' // Device type is not supported (e.g., FailedDevice, AbnormalTestbedDevice, or non-AndroidRealDevice in multi-selection mode)
+  | 'HOST_OS_NOT_SUPPORTED' // Host OS is MacOS
+  | 'ACID_NOT_SUPPORTED' // Device does not support AcidRemoteDriver
+  | 'DEVICE_NOT_FOUND'; // Device or sub-device not found in lab info
+
 
 /**
  * Information about the host machine.
@@ -66,6 +77,8 @@ export declare interface DeviceHeaderInfo {
 export declare interface TakeScreenshotResponse {
   screenshotUrl: string;
   capturedAt: string;
+  errorType?: IneligibilityReasonCode;
+  errorMessage?: string;
 }
 
 /**
@@ -74,6 +87,8 @@ export declare interface TakeScreenshotResponse {
 export declare interface GetLogcatResponse {
   logUrl: string;
   capturedAt: string;
+  errorType?: IneligibilityReasonCode;
+  errorMessage?: string;
 }
 
 /**

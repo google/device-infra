@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.TestbedConfi
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.UnquarantineDeviceRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.UnquarantineDeviceResponse;
 import io.grpc.stub.StreamObserver;
+import java.util.Optional;
 import javax.inject.Inject;
 
 /** Implementation of the gRPC DeviceService. */
@@ -107,7 +108,7 @@ public final class DeviceServiceGrpcImpl extends DeviceServiceGrpc.DeviceService
     GrpcServiceUtil.invokeAsync(
         request,
         responseObserver,
-        logic::takeScreenshot,
+        req -> logic.takeScreenshot(req, Optional.empty()),
         executor,
         DeviceServiceGrpc.getServiceDescriptor(),
         DeviceServiceGrpc.getTakeScreenshotMethod());
@@ -119,7 +120,7 @@ public final class DeviceServiceGrpcImpl extends DeviceServiceGrpc.DeviceService
     GrpcServiceUtil.invokeAsync(
         request,
         responseObserver,
-        logic::getLogcat,
+        req -> logic.getLogcat(req, Optional.empty()),
         executor,
         DeviceServiceGrpc.getServiceDescriptor(),
         DeviceServiceGrpc.getGetLogcatMethod());

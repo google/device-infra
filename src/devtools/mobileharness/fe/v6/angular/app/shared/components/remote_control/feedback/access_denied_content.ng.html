@@ -1,11 +1,11 @@
 <div class="access-denied-box">
   @if (devices.length === 1) {
     <p class="message">
-      You do not have permission to remote control device <code class="device-id">{{ devices[0].id }}</code>.
+      You do not have permission to {{action}} device <code class="device-id">{{ devices[0].id }}</code>.
     </p>
   } @else {
     <p class="message">
-      You lack the requisite permissions to control any of the <strong>{{ devices.length }}</strong> selected devices.
+      You lack the requisite permissions to {{action}} any of the <strong>{{ devices.length }}</strong> selected devices.
     </p>
   }
 

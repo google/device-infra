@@ -20,6 +20,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatResponse;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
+import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -28,14 +29,23 @@ import javax.inject.Singleton;
 public class GetLogcatHandler {
 
   private final LogcatActionHelper logcatActionHelper;
+  private final DeviceActionAuthenticator authenticator;
 
   @Inject
-  GetLogcatHandler(LogcatActionHelper logcatActionHelper) {
+  GetLogcatHandler(LogcatActionHelper logcatActionHelper, DeviceActionAuthenticator authenticator) {
     this.logcatActionHelper = logcatActionHelper;
+    this.authenticator = authenticator;
   }
 
   public ListenableFuture<GetLogcatResponse> getLogcat(
-      GetLogcatRequest request, UniverseScope universe) {
-    return logcatActionHelper.getLogcat(request, universe);
+      GetLogcatRequest request, UniverseScope universe, Optional<String> username) {
+    return authenticator.authenticateAndRun(
+        request.getId(),
+        username,
+        universe,
+        "get logcat",
+        () -> logcatActionHelper.getLogcat(request, universe),
+        (code, message) ->
+            GetLogcatResponse.newBuilder().setErrorType(code).setErrorMessage(message).build());
   }
 }
