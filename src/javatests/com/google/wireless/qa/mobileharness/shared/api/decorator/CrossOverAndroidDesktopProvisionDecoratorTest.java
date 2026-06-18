@@ -19,15 +19,20 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.shared.util.command.Command;
+import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log.Api;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -41,8 +46,11 @@ public class CrossOverAndroidDesktopProvisionDecoratorTest {
   private Device device;
   private Log testLogger;
   private Api atInfo;
+  private CommandExecutor commandExecutor;
 
   private CrossOverAndroidDesktopProvisionDecorator decorator;
+
+  @Rule public final SetFlags flags = new SetFlags();
 
   @Before
   public void setUp() {
@@ -51,22 +59,37 @@ public class CrossOverAndroidDesktopProvisionDecoratorTest {
     device = mock(Device.class);
     testLogger = mock(Log.class);
     atInfo = mock(Api.class);
+    commandExecutor = mock(CommandExecutor.class);
 
     when(decoratedDriver.getDevice()).thenReturn(device);
     when(testInfo.log()).thenReturn(testLogger);
     when(testLogger.atInfo()).thenReturn(atInfo);
     when(atInfo.alsoTo(any(FluentLogger.class))).thenReturn(atInfo);
 
-    decorator = new CrossOverAndroidDesktopProvisionDecorator(decoratedDriver, testInfo);
+    decorator =
+        new CrossOverAndroidDesktopProvisionDecorator(decoratedDriver, testInfo, commandExecutor);
   }
 
   @Test
-  public void prepare_success_logsMessage() throws Exception {
+  public void prepare_useCommandLineFlasherFalse_logsMessage() throws Exception {
+    flags.set("crossover_use_command_line_flasher", "false");
+
     decorator.prepare(testInfo);
 
     verify(atInfo)
         .log(
             "CrossOverAndroidDesktopProvisionDecorator is not ready yet and will be implemented as"
                 + " part of b/487343637. It will use foil-provision CIPD from CTP.");
+    verifyNoInteractions(commandExecutor);
+  }
+
+  @Test
+  public void prepare_useCommandLineFlasherTrue_runsCommandLineFlash() throws Exception {
+    flags.set("crossover_use_command_line_flasher", "true");
+
+    decorator.prepare(testInfo);
+
+    verify(atInfo).log("Running command line based flash...");
+    verify(commandExecutor).run(Command.of("true"));
   }
 }
