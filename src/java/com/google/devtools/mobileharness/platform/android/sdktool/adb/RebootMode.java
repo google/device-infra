@@ -22,6 +22,8 @@ public enum RebootMode {
   SYSTEM_IMAGE("", DeviceConnectionState.DEVICE),
   /** Reboots to bootloader/fastboot mode. */
   BOOTLOADER("bootloader", DeviceConnectionState.DISCONNECT),
+  /** Reboots to fastbootd mode. */
+  FASTBOOT("fastboot", DeviceConnectionState.DISCONNECT),
   /** Reboots to recovery mode. */
   RECOVERY("recovery", DeviceConnectionState.RECOVERY),
   /** Reboots into recovery and automatically starts sideload mode. */

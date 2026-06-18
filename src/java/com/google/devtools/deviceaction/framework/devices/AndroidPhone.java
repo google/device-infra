@@ -364,6 +364,7 @@ public class AndroidPhone implements Device {
       switch (mode) {
         // Handle bootloader case using fastboot.
         case BOOTLOADER:
+        case FASTBOOT:
           return;
         case RECOVERY:
         case SIDELOAD:
