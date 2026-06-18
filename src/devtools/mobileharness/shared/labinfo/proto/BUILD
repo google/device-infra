@@ -31,7 +31,9 @@ proto_library(
     name = "lab_info_service_proto",
     srcs = ["lab_info_service.proto"],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:job_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_proto",
+        "@protobuf//:duration_proto",
     ],
 )
 

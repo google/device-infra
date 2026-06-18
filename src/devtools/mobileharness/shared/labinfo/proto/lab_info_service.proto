@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package mobileharness.shared.labinfo;
 
+import "google/protobuf/duration.proto";
+import "src/devtools/mobileharness/api/model/proto/job.proto";
 import "src/devtools/mobileharness/api/query/proto/lab_query.proto";
 
 option java_package = "com.google.devtools.mobileharness.shared.labinfo.proto";
@@ -26,6 +28,9 @@ option java_outer_classname = "LabInfoServiceProto";
 service LabInfoService {
   // Gets lab and device information.
   rpc GetLabInfo(GetLabInfoRequest) returns (GetLabInfoResponse);
+
+  // Diagnoses job allocation failure.
+  rpc DiagnoseJob(DiagnoseJobRequest) returns (DiagnoseJobResponse) {}
 }
 
 message GetLabInfoRequest {
@@ -44,4 +49,43 @@ message GetLabInfoRequest {
 message GetLabInfoResponse {
   // Required.
   mobileharness.api.query.LabQueryResult lab_query_result = 1;
+}
+
+message DiagnoseJobRequest {
+  // Required. The ID of the job to diagnose (for logging/tracing).
+  string job_id = 1;
+
+  // Required. The allocation requirements to diagnose.
+  DiagnoseJobSpec spec = 2;
+}
+
+// The allocation requirements to diagnose. Contains only the fields needed by
+// the diagnosis (a subset of JobFeature), populated by the client which already
+// holds this data for the running job.
+message DiagnoseJobSpec {
+  // Required. The user running the job (for device access/owner checks).
+  mobileharness.api.model.JobUser user = 1;
+
+  // Required. The driver name.
+  string driver = 2;
+
+  // Required. The device requirements to diagnose against.
+  mobileharness.api.model.DeviceRequirements device_requirements = 3;
+
+  // Optional. The start timeout of the job, used to assess timeout-related
+  // allocation failures.
+  google.protobuf.Duration start_timeout = 4;
+}
+
+message DiagnoseJobResponse {
+  // Required. The human-readable diagnostic report.
+  string readable_report = 1;
+
+  enum ErrorType {
+    UNKNOWN = 0;
+    INFRA_ERROR = 1;
+    USER_CONFIG_ERROR = 2;
+  }
+  // Required. The error type of the allocation failure.
+  ErrorType error_type = 2;
 }
