@@ -241,10 +241,15 @@ export declare interface RunTroubleshootScriptResponse {
 }
 
 /**
+ * Troubleshoot script types.
+ */
+export type TroubleshootScript = 'UNKNOWN' | 'RESET_USB_HUB';
+
+/**
  * Represents an individual dynamic troubleshoot action model.
  */
 export declare interface TroubleshootScriptAction {
-  readonly script: string;
+  readonly script: TroubleshootScript;
   readonly displayName: string;
   readonly description: string;
   readonly enabled: boolean;

@@ -23,6 +23,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButton
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostConnectivityStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo;
+import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.Optional;
 import org.junit.Before;
@@ -43,6 +44,8 @@ public final class LabServerActionsBuilderTest {
   @Mock private LabServerStartButtonBuilder mockStartButtonBuilder;
   @Mock private LabServerRestartButtonBuilder mockRestartButtonBuilder;
   @Mock private LabServerStopButtonBuilder mockStopButtonBuilder;
+  @Mock private FeatureReadiness mockFeatureReadiness;
+  private LabServerAdvancedOperationsButtonBuilder advancedOperationsButtonBuilder;
 
   private LabServerActionsBuilder labServerActionsBuilder;
   private static final UniverseScope UNIVERSE = new UniverseScope.SelfUniverse();
@@ -55,12 +58,15 @@ public final class LabServerActionsBuilderTest {
 
   @Before
   public void setUp() {
+    advancedOperationsButtonBuilder =
+        new LabServerAdvancedOperationsButtonBuilder(mockFeatureReadiness);
     labServerActionsBuilder =
         new LabServerActionsBuilder(
             mockReleaseButtonBuilder,
             mockStartButtonBuilder,
             mockRestartButtonBuilder,
-            mockStopButtonBuilder);
+            mockStopButtonBuilder,
+            advancedOperationsButtonBuilder);
   }
 
   @Test

@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.fe.v6.service.host.handlers.ReleaseLabS
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.RestartLabServerActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.StartLabServerActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.StopLabServerActionHelper;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.TroubleshootScriptHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.UpdatePassThroughFlagsActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostLatestVersionProvider;
@@ -38,6 +39,9 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostHeaderI
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.RunTroubleshootScriptRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.RunTroubleshootScriptRequest.TroubleshootScript;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.RunTroubleshootScriptResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.SubDeviceInfoListFactory;
@@ -86,6 +90,7 @@ public final class HostServiceLogicImplTest {
   @Bind @Mock private StartLabServerActionHelper startLabServerActionHelper;
   @Bind @Mock private StopLabServerActionHelper stopLabServerActionHelper;
   @Bind @Mock private UpdatePassThroughFlagsActionHelper updatePassThroughFlagsActionHelper;
+  @Bind @Mock private TroubleshootScriptHandler troubleshootScriptHandler;
   @Mock private FeatureManager featureManager;
 
   private HostServiceLogicImpl hostServiceLogicImpl;
@@ -185,6 +190,40 @@ public final class HostServiceLogicImplTest {
         assertThrows(
             ExecutionException.class,
             () -> hostServiceLogicImpl.updatePassThroughFlags(request).get());
+    assertThat(e).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void runTroubleshootScript_delegatesToHandler() throws Exception {
+    RunTroubleshootScriptRequest request =
+        RunTroubleshootScriptRequest.newBuilder()
+            .setUniverse("universe")
+            .setHostName("host")
+            .setScript(TroubleshootScript.RESET_USB_HUB)
+            .build();
+
+    RunTroubleshootScriptResponse expected =
+        RunTroubleshootScriptResponse.newBuilder().setExitCode(0).build();
+    when(troubleshootScriptHandler.runTroubleshootScript(any(), any()))
+        .thenReturn(immediateFuture(expected));
+
+    RunTroubleshootScriptResponse response =
+        hostServiceLogicImpl.runTroubleshootScript(request).get();
+
+    assertThat(response.getExitCode()).isEqualTo(0);
+  }
+
+  @Test
+  public void runTroubleshootScript_invalidUniverse_fails() throws Exception {
+    RunTroubleshootScriptRequest request =
+        RunTroubleshootScriptRequest.newBuilder().setUniverse("invalid").build();
+
+    when(universeFactory.create("invalid")).thenThrow(new IllegalArgumentException("invalid"));
+
+    ExecutionException e =
+        assertThrows(
+            ExecutionException.class,
+            () -> hostServiceLogicImpl.runTroubleshootScript(request).get());
     assertThat(e).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
   }
 }

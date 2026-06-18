@@ -130,4 +130,9 @@ public final class FeatureReadinessTest {
   public void isDeviceDecommissionReady_returnsFalse() {
     assertThat(featureReadiness.isDeviceDecommissionReady()).isFalse();
   }
+
+  @Test
+  public void isAdvancedOperationsReady_returnsFalse() {
+    assertThat(featureReadiness.isAdvancedOperationsReady()).isFalse();
+  }
 }

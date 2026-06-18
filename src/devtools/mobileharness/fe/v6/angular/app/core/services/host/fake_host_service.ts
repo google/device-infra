@@ -649,21 +649,16 @@ TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0`,
     hostName: string,
     universe: string,
   ): Observable<ListTroubleshootScriptsResponse> {
-    const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
-    const isDrained =
-      scenario?.overview?.labServer?.activity?.state === 'DRAINED';
-
     return of({
       actions: [
         {
-          script: 'RESET_USB_HUB',
+          script: 'RESET_USB_HUB' as const,
           displayName: 'Reset USB Hub',
           description:
             'Power cycle smart USB hub ports to recover missing devices.',
-          enabled: isDrained,
-          constraintTooltip: isDrained
-            ? 'Power cycle smart USB hub ports'
-            : 'Reset USB hub is only supported on DRAINED hosts to avoid disrupting tests.',
+          enabled: true,
+          constraintTooltip:
+            'Power cycle smart USB hub ports to recover missing devices.',
         },
       ],
     }).pipe(delay(1000));

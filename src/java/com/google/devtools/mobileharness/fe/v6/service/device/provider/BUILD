@@ -27,6 +27,7 @@ java_library(
     srcs = [
         "CloudFileTransferStubProvider.java",
         "DeviceOpsStubProvider.java",
+        "NoOpDeviceOpsStubProvider.java",
     ],
     visibility = [
         "//java/com/google/devtools/mobileharness/fe/v6/service:__subpackages__",
