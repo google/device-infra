@@ -21,6 +21,7 @@ import com.google.common.base.Joiner;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.reflection.ClientClassUtil;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.validator.job.JobValidator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
@@ -43,8 +44,16 @@ public class JobChecker {
     this.validatorFactory = validatorFactory;
   }
 
-  /** Validates the job information. */
-  public void validateJob(JobInfo jobInfo) throws MobileHarnessException, InterruptedException {
+  /**
+   * Validates the job input. It will auto create the job validators for the job type using
+   * reflection.
+   *
+   * @return the job validators for the job type, which should be used in the {@link
+   *     #validateJobAfterFileResolving(List, JobInfo)} for the same job after file resolving.
+   */
+  @CanIgnoreReturnValue
+  public List<JobValidator> validateJobBeforeFileResolving(JobInfo jobInfo)
+      throws MobileHarnessException, InterruptedException {
     JobType jobType = jobInfo.type();
     List<Class<? extends JobValidator>> jobValidatorClasses = new ArrayList<>();
 
@@ -66,14 +75,37 @@ public class JobChecker {
 
     // Runs the job validators.
     List<String> errors = new ArrayList<>();
+    List<JobValidator> jobValidators = new ArrayList<>();
     for (JobValidator jobValidator : validatorFactory.createJobValidators(jobValidatorClasses)) {
-      errors.addAll(jobValidator.validate(jobInfo));
+      jobValidators.add(jobValidator);
+      errors.addAll(jobValidator.validateBeforeFileResolving(jobInfo));
     }
 
     if (!errors.isEmpty()) {
       throw new MobileHarnessException(
           BasicErrorId.JOB_CONFIG_GENERIC_ERROR,
-          "Job configuration error:\n - " + Joiner.on("\n - ").join(errors));
+          "Job configuration error found before file resolving:\n - "
+              + Joiner.on("\n - ").join(errors));
+    }
+    return jobValidators;
+  }
+
+  /**
+   * Validates the job input after job files are resolved. This method will use the given job
+   * validators, which should be the return value of the {@link
+   * #validateJobBeforeFileResolving(JobInfo)} for the same job.
+   */
+  public void validateJobAfterFileResolving(List<JobValidator> jobValidators, JobInfo jobInfo)
+      throws MobileHarnessException, InterruptedException {
+    List<String> errors = new ArrayList<>();
+    for (JobValidator jobValidator : jobValidators) {
+      errors.addAll(jobValidator.validateAfterFileResolving(jobInfo));
+    }
+    if (!errors.isEmpty()) {
+      throw new MobileHarnessException(
+          BasicErrorId.JOB_CONFIG_GENERIC_ERROR,
+          "Job configuration error found after file resolving:\n - "
+              + Joiner.on("\n - ").join(errors));
     }
   }
 }

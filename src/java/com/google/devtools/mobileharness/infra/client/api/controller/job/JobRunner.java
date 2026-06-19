@@ -90,6 +90,7 @@ import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
 import com.google.wireless.qa.mobileharness.client.api.event.internal.JobFirstAllocationEvent;
 import com.google.wireless.qa.mobileharness.shared.api.validator.JobChecker;
+import com.google.wireless.qa.mobileharness.shared.api.validator.job.JobValidator;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
@@ -717,9 +718,10 @@ public class JobRunner implements Runnable {
       // TODO: Not do validation check for ait-triggered test to reduce binary size.
       // Explicitly disable job validation for ACID jobs as we don't want to introduce driver deps
       // in the acid frontend binary.
+      List<JobValidator> jobValidators = null;
       if (!Objects.equals(jobInfo.properties().get("client"), "ait")
           && !jobInfo.params().has("acid_id")) {
-        jobChecker.validateJob(jobInfo);
+        jobValidators = jobChecker.validateJobBeforeFileResolving(jobInfo);
       }
 
       if (isResumedJob(jobInfo)) {
@@ -740,6 +742,13 @@ public class JobRunner implements Runnable {
         prepareJobFilesFuture = immediateFuture(null);
       }
 
+      // TODO: Not do validation check for ait-triggered test to reduce binary size.
+      // Explicitly disable job validation for ACID jobs as we don't want to introduce driver deps
+      // in the acid frontend binary.
+      if (!Objects.equals(jobInfo.properties().get("client"), "ait")
+          && !jobInfo.params().has("acid_id")) {
+        jobChecker.validateJobAfterFileResolving(jobValidators, jobInfo);
+      }
       long preRunJobTimeMs = stopwatch.stop().elapsed().toMillis();
       jobInfo
           .properties()

@@ -83,6 +83,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/client/api/event:job",
         "//src/java/com/google/wireless/qa/mobileharness/client/api/event/internal",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:job_checker",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:scoped_bus",

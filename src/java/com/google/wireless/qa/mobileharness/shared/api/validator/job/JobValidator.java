@@ -25,17 +25,38 @@ import java.util.List;
  * class is associated with one driver/decorator class.
  */
 public interface JobValidator {
+
   /**
-   * Validates the job and tests information.
+   * @deprecated override {@link #validateBeforeFileResolving(JobInfo)} instead.
+   */
+  @Deprecated
+  default List<String> validate(JobInfo job) throws InterruptedException {
+    return ImmutableList.of();
+  }
+
+  /**
+   * Validates the job and tests information before job files are resolved.
    *
-   * <p>NOTE: the decorator list in JobInfo has reverse order with the list in mobile_test config.
-   * Use "before" or "after" from the perspective of mobile_test, so that user won't get confused
-   * with error messages.
+   * <p>NOTE: The job validator of the driver will be invoked first, then the job validators of the
+   * decorators in the order of the decorator list.
    *
    * @param job the {@code JobInfo} to be validated
    * @return a list of error messages, or an <b>empty</b> list if no error found
    */
-  default List<String> validate(JobInfo job) throws InterruptedException {
+  default List<String> validateBeforeFileResolving(JobInfo job) throws InterruptedException {
+    return validate(job);
+  }
+
+  /**
+   * Validates the job and tests information after job files are resolved.
+   *
+   * <p>NOTE: The job validator of the driver will be invoked first, then the job validators of the
+   * decorators in the order of the decorator list.
+   *
+   * @param job the {@code JobInfo} to be validated
+   * @return a list of error messages, or an <b>empty</b> list if no error found
+   */
+  default List<String> validateAfterFileResolving(JobInfo job) throws InterruptedException {
     // Does nothing.
     return ImmutableList.of();
   }
