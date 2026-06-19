@@ -414,7 +414,6 @@ public final class JobInfoCreator {
       if (tag.equals(TAG_DEVICE_SPEC)) {
         continue;
       }
-
       if (!overridingFiles.containsKey(tag)) {
         List<String> files = new ArrayList<>(fileConfig.getPathList());
         if (tag.equals(TAG_BUILD_APK)) {
