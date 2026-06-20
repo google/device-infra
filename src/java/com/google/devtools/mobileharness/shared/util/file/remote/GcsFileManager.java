@@ -90,8 +90,29 @@ public class GcsFileManager {
    *
    * @param homeDir directory of local cache
    * @param bucket name of bucket to manage
+   * @deprecated Please use the 3-parameter constructor {@link #GcsFileManager(Path, String,
+   *     GcsUtil.CredentialType)} instead.
    */
+  @Deprecated
   public GcsFileManager(Path homeDir, String bucket)
+      throws MobileHarnessException, InterruptedException {
+    this(
+        homeDir,
+        bucket,
+        CredentialFileUtil.getFileTransferCredentialFile().isPresent()
+            ? GcsUtil.CredentialType.ofCredentialFile(
+                CredentialFileUtil.getFileTransferCredentialFile().get())
+            : GcsUtil.CredentialType.ofAppDefault());
+  }
+
+  /**
+   * Creates an instance to manage a specified bucket with the specified credential type.
+   *
+   * @param homeDir directory of local cache
+   * @param bucket name of bucket to manage
+   * @param credentialType credential type for GCS
+   */
+  public GcsFileManager(Path homeDir, String bucket, GcsUtil.CredentialType credentialType)
       throws MobileHarnessException, InterruptedException {
     this(
         homeDir,
@@ -100,13 +121,9 @@ public class GcsFileManager {
         DEFAULT_CACHE_TTL,
         Optional.empty(),
         Optional.empty(),
-        CredentialFileUtil.getFileTransferCredentialFile().isPresent()
-            ? GcsUtil.CredentialType.ofCredentialFile(
-                CredentialFileUtil.getFileTransferCredentialFile().get())
-            : GcsUtil.CredentialType.ofAppDefault());
+        credentialType);
   }
 
-  @SuppressWarnings("GoodTime") // TODO: fix GoodTime violation
   public GcsFileManager(
       Path homeDir,
       String bucket,
@@ -126,8 +143,8 @@ public class GcsFileManager {
         downloadShardSize);
   }
 
-  @SuppressWarnings("GoodTime") // TODO: fix GoodTime violation
-  public GcsFileManager(
+  @VisibleForTesting
+  GcsFileManager(
       Path homeDir,
       GcsUtil gcsUtil,
       LocalFileUtil localFileUtil,
