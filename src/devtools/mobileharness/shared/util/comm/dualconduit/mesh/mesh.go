@@ -36,6 +36,7 @@ import (
 	listenerpb "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routepb "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	routerpb "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
+	tlsinspectorpb "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
 	hcmpb "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tcppb "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
 	httppb "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
@@ -370,6 +371,10 @@ func (s *Server) generateSnapshot(version string) (*cache.Snapshot, error) {
 
 	// Add the base listener if we have TCP services
 	if len(filterChains) > 0 {
+		tlsInspectorConfig, err := anypb.New(&tlsinspectorpb.TlsInspector{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal TlsInspector config: %w", err)
+		}
 		listeners = append(listeners, &listenerpb.Listener{
 			Name: fmt.Sprintf("base_listener_%d", s.tcpPort),
 			Address: &corepb.Address{
@@ -385,6 +390,9 @@ func (s *Server) generateSnapshot(version string) (*cache.Snapshot, error) {
 			},
 			ListenerFilters: []*listenerpb.ListenerFilter{{
 				Name: "envoy.filters.listener.tls_inspector",
+				ConfigType: &listenerpb.ListenerFilter_TypedConfig{
+					TypedConfig: tlsInspectorConfig,
+				},
 			}},
 			FilterChains: filterChains,
 		})

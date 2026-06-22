@@ -101,6 +101,7 @@ dcon_go_imports_map = {
     "google3/third_party/envoy/src/api/envoy/config/core/v3/pkg_go_proto": "github.com/envoyproxy/go-control-plane/envoy/config/core/v3",
     "google3/third_party/envoy/src/api/envoy/config/endpoint/v3/pkg_go_proto": "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3",
     "google3/third_party/envoy/src/api/envoy/config/listener/v3/pkg_go_proto": "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3",
+    "google3/third_party/envoy/src/api/envoy/extensions/filters/listener/tls_inspector/v3/pkg_go_proto": "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3",
     "google3/third_party/envoy/src/api/envoy/config/route/v3/pkg_go_proto": "github.com/envoyproxy/go-control-plane/envoy/config/route/v3",
     "google3/third_party/envoy/src/api/envoy/extensions/filters/network/http_connection_manager/v3/pkg_go_proto": "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3",
     "google3/third_party/envoy/src/api/envoy/extensions/filters/network/tcp_proxy/v3/pkg_go_proto": "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3",
