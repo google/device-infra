@@ -19,6 +19,7 @@ package com.google.wireless.qa.mobileharness.shared.api.driver;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_SHARD_COUNT;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_SHARD_INDEX;
+import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_END_EPOCH_MS;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_START_EPOCH_MS;
 import static java.lang.String.format;
@@ -873,6 +874,8 @@ public class AndroidInstrumentation extends BaseDriver
           .atInfo()
           .alsoTo(logger)
           .log("Running %s tests with uniform sharding", testName);
+    } else if (testInfo.properties().has(ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES)) {
+      testTarget = testInfo.properties().get(ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES);
     } else if (Ascii.equalsIgnoreCase(testName, AndroidInstrumentationDriverSpec.TEST_NAME_SMALL)
         || Ascii.equalsIgnoreCase(testName, AndroidInstrumentationDriverSpec.TEST_NAME_MEDIUM)
         || Ascii.equalsIgnoreCase(testName, AndroidInstrumentationDriverSpec.TEST_NAME_LARGE)) {

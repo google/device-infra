@@ -557,6 +557,13 @@ public interface PropertyName {
 
       /** Android instrumentation shard count for uniform sharding. */
       ANDROID_INSTRUMENTATION_SHARD_COUNT,
+
+      /**
+       * A fully-qualified test case class name, or className#methodName to specify only one method
+       * of the class, or a comma separated list of them, which is used for one shard in Android
+       * Instrumentation smart sharding.
+       */
+      ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES,
     }
 
     /** AndroidFlashstationDecorator property name constants. */

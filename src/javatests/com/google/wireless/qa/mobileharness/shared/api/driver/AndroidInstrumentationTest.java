@@ -19,6 +19,7 @@ package com.google.wireless.qa.mobileharness.shared.api.driver;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_SHARD_COUNT;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_SHARD_INDEX;
+import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_END_EPOCH_MS;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_START_EPOCH_MS;
 import static org.junit.Assert.assertThrows;
@@ -765,6 +766,39 @@ public class AndroidInstrumentationTest {
     driver.run(testInfo);
 
     assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+  }
+
+  @Test
+  public void run_shardTestNames_pass() throws Exception {
+    mockRunTestBasicSteps("shard_locator_name", OPTIONS, false, false);
+    String shardTestNames =
+        "com.google.spinner.test.SpinnerTest#testText,com.google.spinner.test.SpinnerTest#testText2";
+    testInfo.properties().add(ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES, shardTestNames);
+
+    String instrumentationLog = "OK (2 tests)";
+    AndroidInstrumentationSetting setting =
+        mockInstrumentSetting(
+            shardTestNames,
+            OPTION_MAP,
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ false,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ true);
+    when(androidInstrumentationUtil.instrument(
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
+        .thenReturn(instrumentationLog);
+
+    driver.run(testInfo);
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+    verify(androidInstrumentationUtil)
+        .instrument(
+            eq(DEVICE_ID),
+            eq(DEFAULT_SDK_VERSION),
+            eq(setting),
+            eq(TEST_TIMEOUT),
+            ArgumentMatchers.isNull());
   }
 
   private AndroidInstrumentationSetting mockInstrumentSetting(
