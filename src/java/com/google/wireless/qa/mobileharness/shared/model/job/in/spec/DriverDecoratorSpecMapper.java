@@ -72,6 +72,7 @@ public final class DriverDecoratorSpecMapper {
      */
     // keep-sorted start
     builder.put("AndroidAdbShellDecorator", "AndroidAdbShellDecoratorSpec");
+    builder.put("AndroidAflagsDecorator", "AndroidAflagsDecoratorSpec");
     builder.put(
         "AndroidAtsDynamicConfigPusherDecorator", "AndroidAtsDynamicConfigPusherDecoratorSpec");
     builder.put(

@@ -40,6 +40,17 @@ java_library(
 ################################################################################
 
 java_library(
+    name = "android_aflags_decorator_env_validator",
+    srcs = ["AndroidAflagsDecoratorEnvValidator.java"],
+    deps = [
+        ":android_device_version_env_validator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "android_device_settings_decorator_env_validator",
     srcs = ["AndroidDeviceSettingsDecoratorEnvValidator.java"],
     deps = [
