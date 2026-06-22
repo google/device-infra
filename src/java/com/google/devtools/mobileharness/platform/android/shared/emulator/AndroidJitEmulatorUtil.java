@@ -37,7 +37,8 @@ public final class AndroidJitEmulatorUtil {
   public static final int EMULATOR_INSTANCE_ID_BASE = 1;
   public static final Pattern LOCAL_NOOP_EMULATOR_ID_PATTERN =
       Pattern.compile("^([\\w\\.]+):local-virtual-device-(\\d+)$");
-  public static final String TF_GLOBAL_CONFIG_PATH = "/mtt/scripts/host-config.xml";
+  // This is the default path for the TF global config file defined in init.sh.
+  public static final String TF_GLOBAL_CONFIG_PATH = "/tradefed/configs/host-config.xml";
 
   public static String getVirtualDeviceNameInTradefed(String deviceId) {
     Matcher matcher = LOCAL_NOOP_EMULATOR_ID_PATTERN.matcher(deviceId);
@@ -125,6 +126,9 @@ public final class AndroidJitEmulatorUtil {
   }
 
   public static String getHostConfigPath() {
+    if (!Flags.tradefedHostConfig.getNonNull().isEmpty()) {
+      return Flags.tradefedHostConfig.getNonNull();
+    }
     return TF_GLOBAL_CONFIG_PATH;
   }
 }

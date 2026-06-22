@@ -157,4 +157,18 @@ public final class AndroidJitEmulatorUtilTest {
         MobileHarnessException.class,
         () -> AndroidJitEmulatorUtil.getPortFromDeviceId("127.0.0.1:-1"));
   }
+
+  @Test
+  public void getHostConfigPath_default_returnsTfGlobalConfigPath() {
+    assertThat(AndroidJitEmulatorUtil.getHostConfigPath())
+        .isEqualTo(AndroidJitEmulatorUtil.TF_GLOBAL_CONFIG_PATH);
+  }
+
+  @Test
+  public void getHostConfigPath_flagSet_returnsFlagValue() {
+    flags.set("tradefed_host_config", "/custom/path/host-config.xml");
+
+    assertThat(AndroidJitEmulatorUtil.getHostConfigPath())
+        .isEqualTo("/custom/path/host-config.xml");
+  }
 }

@@ -1518,7 +1518,7 @@ public class Flags {
   }
 
   @FlagSpec(name = "tradefed_binary_dir", help = "The directory of tradefed binaries.")
-  public static final Flag<String> tradefedBinaryDir = Flag.value("/bin/tradefed");
+  public static final Flag<String> tradefedBinaryDir = Flag.value("/tradefed");
 
   @FlagSpec(
       name = "tradefed_curl_download_limit_rate",
