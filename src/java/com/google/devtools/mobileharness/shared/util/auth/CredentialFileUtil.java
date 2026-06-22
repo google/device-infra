@@ -45,15 +45,6 @@ public class CredentialFileUtil {
 
   /** Returns the credential file. */
   public static Optional<String> getInternalServiceCredentialFile() {
-    Optional<String> internalServiceCredentialFile = getInternalServiceCredentialFileFromFlag();
-    if (internalServiceCredentialFile.isPresent()) {
-      return internalServiceCredentialFile;
-    }
-    return Optional.empty();
-  }
-
-  /** Returns the credential file specified by explicit flags. */
-  public static Optional<String> getInternalServiceCredentialFileFromFlag() {
     LocalFileUtil localFileUtil = new LocalFileUtil();
 
     String internalServiceCredFile = Flags.internalServiceCredentialFile.get();
