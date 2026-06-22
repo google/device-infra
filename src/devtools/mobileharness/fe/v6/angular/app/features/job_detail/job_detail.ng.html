@@ -1,0 +1,362 @@
+<div class="job-detail-container">
+  @if (jobPageData(); as data) {
+    @if (data.error) {
+      <div class="error-message">
+        <mat-icon class="error-icon">error_outline</mat-icon>
+        <p>{{ data.error }}</p>
+        <a routerLink="/dev/device-harness" class="m3-button">Back to Harness</a>
+      </div>
+    } @else if (data.jobOverviewData; as job) {
+      <div class="main-card">
+        <!-- Breadcrumb Navigation & Top Action Bar -->
+        <header class="card-header">
+          <div class="header-breadcrumbs">
+            <div class="breadcrumbs-list">
+              @if (job.sessionId) {
+                <!-- Session Link would navigate to session detail page in the future -->
+                <span class="breadcrumb-item-link" title="Session: {{ job.sessionTitle || job.sessionId }}">
+                  {{ job.sessionTitle || 'Session' }}
+                </span>
+                <mat-icon class="chevron-icon">chevron_right</mat-icon>
+              }
+              <span class="breadcrumb-item-text monospaced-text" title="Job ID: {{ job.id }}">{{ job.id }}</span>
+            </div>
+          </div>
+
+          <div class="header-actions">
+            <!-- Kill Job Button -->
+            @if (isKillable(job)) {
+              <button
+                class="kill-job-btn"
+                [disabled]="!isOwner(job)"
+                [matTooltip]="getKillTooltip(job)"
+                (click)="showKillModal.set(true)"
+                [class.kill-enabled]="isOwner(job)"
+                [class.kill-disabled]="!isOwner(job)"
+              >
+                <mat-icon>cancel</mat-icon>
+                <span>Kill Job</span>
+              </button>
+            }
+
+            <!-- Sponge Button -->
+            @if (job.spongeLink) {
+              <a [href]="job.spongeLink" target="_blank" class="sponge-link-btn" title="Open Sponge Results">
+                <span>View in Sponge</span>
+                <mat-icon>open_in_new</mat-icon>
+              </a>
+            }
+          </div>
+        </header>
+
+        <div class="card-body">
+          <!-- Job Title Bar / Identity Area -->
+          <div class="job-title-bar">
+            <div class="title-bar-content-wrapper">
+              <div class="title-left-section">
+                <div class="title-text-wrapper">
+                  <div class="title-label">Job Name</div>
+                  <h1 class="job-title" [matTooltip]="job.title">{{ job.title }}</h1>
+
+                  <div class="metadata-grid">
+                    <!-- Row 1: Job ID -->
+                    <span class="metadata-label">Job ID:</span>
+                    <div class="metadata-value font-mono bg-gray-box">
+                      <span class="value-text" [matTooltip]="job.id">{{ job.id }}</span>
+                      <button (click)="copyToClipboard(job.id)" class="inline-copy-button" matTooltip="Copy Job ID">
+                        <mat-icon>content_copy</mat-icon>
+                      </button>
+                    </div>
+
+                    <div class="vertical-separator"></div>
+
+                    <div class="status-indicator">
+                      <!-- Status Badge / Icon -->
+                      <mat-icon
+                        [class.status-green-icon]="getResultPillLabel(job) === 'PASS'"
+                        [class.status-red-icon]="getResultPillLabel(job) === 'FAIL' || getResultPillLabel(job) === 'ERROR' || getResultPillLabel(job) === 'TIMEOUT'"
+                        [class.status-blue-icon]="getStatusPillLabel(job) === 'RUNNING'"
+                        [class.status-gray-icon]="getResultPillLabel(job) === 'ABORT' || getResultPillLabel(job) === 'SKIP' || getStatusPillLabel(job) === 'NEW'"
+                        [class.status-yellow-icon]="getStatusPillLabel(job) === 'SUSPENDED'"
+                        [class.spin-animation]="getStatusPillLabel(job) === 'RUNNING'"
+                      >
+                        {{
+                          getResultPillLabel(job) === 'PASS' ? 'check_circle' :
+                          getResultPillLabel(job) === 'FAIL' || getResultPillLabel(job) === 'ERROR' ? 'error' :
+                          getResultPillLabel(job) === 'TIMEOUT' ? 'access_time' :
+                          getResultPillLabel(job) === 'SKIP' ? 'block' :
+                          getResultPillLabel(job) === 'ABORT' ? 'do_not_disturb_on' :
+                          getStatusPillLabel(job) === 'RUNNING' ? 'sync' :
+                          getStatusPillLabel(job) === 'NEW' ? 'schedule' :
+                          getStatusPillLabel(job) === 'SUSPENDED' ? 'pause_circle_filled' :
+                          'watch_later'
+                        }}
+                      </mat-icon>
+
+                      <span class="status-pill"
+                        [class.status-blue-pill]="getStatusPillLabel(job) === 'RUNNING'"
+                        [class.status-yellow-pill]="getStatusPillLabel(job) === 'SUSPENDED'"
+                        [class.status-gray-pill]="getStatusPillLabel(job) === 'DONE'"
+                        [class.status-new-pill]="getStatusPillLabel(job) === 'NEW'"
+                      >Status: {{ getStatusPillLabel(job) }}</span>
+
+                      @if (getResultPillLabel(job); as result) {
+                        @if (result !== 'UNKNOWN') {
+                          <span class="status-pill"
+                            [class.result-green-pill]="result === 'PASS'"
+                            [class.result-red-pill]="result === 'FAIL' || result === 'ERROR' || result === 'TIMEOUT'"
+                            [class.result-gray-pill]="result === 'ABORT' || result === 'SKIP'"
+                          >Result: {{ result }}</span>
+                        }
+                      }
+                    </div>
+
+                    <!-- Row 2: Part of Session (if any) -->
+                    @if (job.sessionId) {
+                      <span class="metadata-label">Part of Session:</span>
+                      <div class="metadata-value font-mono bg-gray-box">
+                        <div class="session-hover-container">
+                          <span class="session-link-value">
+                            {{ job.sessionId }}
+                          </span>
+                          <div class="session-details-panel">
+                            <div class="panel-section-title">Session Name</div>
+                            <div class="panel-section-value font-sans">{{ job.sessionTitle || 'N/A' }}</div>
+
+                            @if (job.sessionStatus) {
+                              <div class="panel-row-grid margin-top-small">
+                                <div class="panel-grid-item">
+                                  <div class="panel-section-title">Status</div>
+                                  <div class="panel-section-value text-sans"
+                                    [class.text-success]="job.sessionStatus === 'DONE'"
+                                    [class.text-primary]="job.sessionStatus === 'RUNNING'"
+                                  >{{ job.sessionStatus }}</div>
+                                </div>
+                                @if (job.sessionResult) {
+                                  <div class="panel-grid-item">
+                                    <div class="panel-section-title">Result</div>
+                                    <div class="panel-section-value text-sans"
+                                      [class.text-success]="job.sessionResult === 'PASS'"
+                                      [class.text-danger]="job.sessionResult === 'FAIL' || job.sessionResult === 'ERROR'"
+                                    >{{ job.sessionResult }}</div>
+                                  </div>
+                                }
+                              </div>
+                            }
+                            <div class="panel-arrow"></div>
+                          </div>
+                        </div>
+                        <button (click)="copyToClipboard(job.sessionId)" class="inline-copy-button" matTooltip="Copy Session ID">
+                          <mat-icon>content_copy</mat-icon>
+                        </button>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <!-- Device Requirements Summary Card (Right Column) -->
+              <div class="device-req-summary-card">
+                <div class="summary-card-header">
+                  <div class="card-title">Device Requirements</div>
+                  <a href="#" (click)="scrollToJobConfig($event)" class="anchor-link-config">
+                    <span>Job Config Details</span>
+                    <mat-icon>arrow_downward</mat-icon>
+                  </a>
+                </div>
+                <div class="summary-grid">
+                  <!-- Driver -->
+                  <span class="grid-label">Driver</span>
+                  <span class="grid-value text-monospace text-truncate" [title]="job.config.core['Driver'] || 'N/A'">
+                    {{ job.config.core['Driver'] || 'N/A' }}
+                  </span>
+
+                  <!-- Device / Devices summary -->
+                  @if (isMultiDevice(job)) {
+                    <span class="grid-label">Devices</span>
+                    <div class="grid-value-stack">
+                      @for (dev of job.config.devices; track $index) {
+                        <div class="device-requirement-hover-item">
+                          <span class="dev-type-link hover-link">
+                            {{ dev['Device Type'] }}
+                          </span>
+
+                          <!-- Device requirement hover details panel -->
+                          <div class="device-requirement-hover-panel">
+                            <div class="panel-title-upper">Device {{ $index + 1 }} Requirements</div>
+                            <div class="hover-grid">
+                              <span class="lbl">Device Type</span>
+                              <span class="val text-truncate">{{ dev['Device Type'] }}</span>
+
+                              <span class="lbl">Driver</span>
+                              <span class="val text-truncate">{{ job.config.core['Driver'] || 'N/A' }}</span>
+
+                              <span class="lbl">Dimensions</span>
+                              <div class="val value-stack-container">
+                                @if (dev.dimensions && (dev.dimensions | keyvalue).length > 0) {
+                                  @for (dim of dev.dimensions | keyvalue; track dim.key) {
+                                    <div class="text-truncate"><span class="dimension-key text-monospace">{{ dim.key }}</span>: <span class="text-monospace">{{ dim.value }}</span></div>
+                                  }
+                                } @else {
+                                  <div class="empty-fallback-text">None</div>
+                                }
+                              </div>
+
+                              <span class="lbl">Decorators</span>
+                              <div class="val value-stack-container">
+                                @if (dev.decorators) {
+                                  @let devDecs = dev.decorators.split(',');
+                                  <div class="text-success value-stack-container">
+                                    @for (dec of devDecs; track dec) {
+                                      <div class="text-truncate">{{ dec.trim() }}</div>
+                                    }
+                                  </div>
+                                } @else {
+                                  <div class="empty-fallback-text">None</div>
+                                }
+                              </div>
+                            </div>
+                            <div class="panel-arrow"></div>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <!-- Device Type -->
+                    <span class="grid-label">Device Type</span>
+                    <span class="grid-value text-monospace text-truncate" [title]="job.config.core['Device Type'] || 'N/A'">
+                      {{ job.config.core['Device Type'] || 'N/A' }}
+                    </span>
+
+                    <!-- Dimensions -->
+                    <span class="grid-label">Dimensions</span>
+                    <div class="grid-value relative-hover-item">
+                      @let dimCount = job.config.dimensions ? (job.config.dimensions | keyvalue).length : 0;
+                      <span class="dev-type-link hover-link">
+                        {{ dimCount === 1 ? '1 Dimension' : dimCount + ' Dimensions' }}
+                      </span>
+                      <!-- Dimensions hover panel -->
+                      <div class="device-requirement-hover-panel">
+                        <div class="panel-title-upper">Configured Dimensions</div>
+                        <div class="hover-dimensions-stack">
+                          @if (dimCount > 0) {
+                            @for (dim of job.config.dimensions | keyvalue; track dim.key) {
+                              <div class="text-truncate"><span class="dimension-key text-monospace">{{ dim.key }}</span>: <span class="text-monospace">{{ dim.value }}</span></div>
+                            }
+                          } @else {
+                            <div class="empty-fallback-text">None</div>
+                          }
+                        </div>
+                        <div class="panel-arrow"></div>
+                      </div>
+                    </div>
+
+                    <!-- Decorators -->
+                    <span class="grid-label">Decorators</span>
+                    <div class="grid-value relative-hover-item">
+                      @let decsStr = job.config.core['Decorator(s)'] || '';
+                      @let decsList = decsStr ? decsStr.split(',') : [];
+                      <span class="dev-type-link hover-link">
+                        {{ decsList.length === 1 ? '1 Decorator' : decsList.length + ' Decorators' }}
+                      </span>
+                      <!-- Decorators hover panel -->
+                      <div class="device-requirement-hover-panel">
+                        <div class="panel-title-upper">Active Decorators</div>
+                        <div class="hover-dimensions-stack">
+                          @if (decsList.length > 0) {
+                            <div class="text-success value-stack-container">
+                              @for (dec of decsList; track dec) {
+                                <div class="text-truncate">{{ dec.trim() }}</div>
+                              }
+                            </div>
+                          } @else {
+                            <div class="empty-fallback-text">None</div>
+                          }
+                        </div>
+                        <div class="panel-arrow"></div>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab Navigation Headers -->
+          <div class="tabs-container">
+            <nav class="tabs-nav">
+              <button (click)="setActiveTab('overview')" [class.active]="activeTab() === 'overview'" class="tab-link">Overview</button>
+              <button (click)="setActiveTab('timeline')" [class.active]="activeTab() === 'timeline'" class="tab-link">Timeline</button>
+              <button (click)="setActiveTab('log')" [class.active]="activeTab() === 'log'" class="tab-link">
+                <span class="tab-link-content">
+                  <span>Job Log</span>
+                  @if (job.status === 'RUNNING') {
+                    <span class="live-badge">
+                      <span class="live-dot"></span>
+                      <span>LIVE</span>
+                    </span>
+                  }
+                </span>
+              </button>
+            </nav>
+          </div>
+
+          <!-- Tab Content Panes -->
+          <div class="tab-content-container">
+            <!-- Overview Tab -->
+            @if (activeTab() === 'overview') {
+              <div class="tab-content">
+                <app-job-overview-tab [job]="job"></app-job-overview-tab>
+              </div>
+            }
+
+            <!-- Timeline Tab -->
+            @if (activeTab() === 'timeline') {
+              <div class="tab-content">
+                <app-job-timeline-tab [timingBreakdown]="job.timingBreakdown"></app-job-timeline-tab>
+              </div>
+            }
+
+            <!-- Job Log Tab -->
+            @if (activeTab() === 'log') {
+              <div class="tab-content">
+                <app-job-log-tab [jobId]="job.id"></app-job-log-tab>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Confirmation Kill Modal Dialog -->
+      @if (showKillModal()) {
+        <div class="modal-backdrop">
+          <div class="modal-card">
+            <div class="modal-header">
+              <div class="modal-icon-wrapper">
+                <mat-icon>error_outline</mat-icon>
+              </div>
+              <div class="modal-title-wrapper">
+                <h3 class="modal-title">Kill Job?</h3>
+                <p class="modal-description">
+                  Are you sure you want to terminate job <span class="font-mono font-bold text-gray-700">{{ job.id.substring(0, 8) }}...</span>? This action will abort all running child tests immediately and cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn-secondary" (click)="showKillModal.set(false)">
+                Cancel
+              </button>
+              <button class="btn-danger" (click)="confirmKillJob(job)">
+                Kill Job
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    } @else {
+      <div class="loading-message">
+        <p>Loading job details...</p>
+      </div>
+    }
+  }
+</div>

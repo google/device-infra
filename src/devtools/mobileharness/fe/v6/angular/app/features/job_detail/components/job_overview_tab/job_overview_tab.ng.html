@@ -1,0 +1,347 @@
+<app-master-detail-layout [navList]="overviewNavList()">
+  <!-- Conditional Error Card -->
+  @if (job().error; as error) {
+    <app-info-card id="overview-error" cardTitle="Error Details" icon="error_outline" [collapsible]="true" [expanded]="true" class="error-info-card">
+      <div class="info-card-content">
+        <p class="error-msg-text">{{ error.message }}</p>
+        @if (error.trace) {
+          <pre class="trace-pre">{{ error.trace }}</pre>
+        }
+      </div>
+    </app-info-card>
+  }
+
+  <!-- Conditional Warning Card -->
+  @if (job().warnings; as warnings) {
+    <app-info-card id="overview-warning" cardTitle="Warning Details" icon="warning" [collapsible]="true" [expanded]="true" class="warning-info-card">
+      <div class="info-card-content">
+        <p class="warning-msg-text">{{ warnings.message }}</p>
+        @if (warnings.trace) {
+          <pre class="trace-pre">{{ warnings.trace }}</pre>
+        }
+      </div>
+    </app-info-card>
+  }
+
+  <!-- Child Tests List Card -->
+  @if (job().tests && job().tests.length > 0) {
+    <app-info-card id="job-tests" [cardTitle]="'Child Tests (' + job().tests.length + ')'" [collapsible]="true" [expanded]="true" class="tests-list-card">
+      <div class="info-card-content zero-padding">
+        <div class="table-container">
+          <table mat-table [dataSource]="job().tests" class="data-table">
+
+            <!-- Test ID Column -->
+            <ng-container matColumnDef="id">
+              <th mat-header-cell *matHeaderCellDef class="py-2 px-4">Test ID</th>
+              <td mat-cell *matCellDef="let test" class="py-3 px-4 font-mono text-xs">
+                <div class="test-id-container">
+                  <a [routerLink]="['/tests', test.id]" class="test-id-link" [matTooltip]="'View Test Details: ' + test.id">
+                    {{ test.id }}
+                  </a>
+                  <button (click)="copyToClipboard(test.id)" class="copy-button" matTooltip="Copy Full Test ID">
+                    <mat-icon class="copy-icon">content_copy</mat-icon>
+                  </button>
+                </div>
+              </td>
+            </ng-container>
+
+            <!-- Test Name Column -->
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef class="py-2 px-4">Test Name</th>
+              <td mat-cell *matCellDef="let test" class="py-3 px-4 min-w-0">
+                <div class="truncate max-w-[300px] font-medium text-gray-900" [title]="test.title">
+                  {{ test.title }}
+                </div>
+              </td>
+            </ng-container>
+
+            <!-- Status Column -->
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef class="py-2 px-4">Status</th>
+              <td mat-cell *matCellDef="let test" class="py-3 px-4">
+                <span class="status-pill-decoupled" [class]="getTestStatusPillClass(test.status)">
+                  <mat-icon [class.spin-animation]="isTestRunning(test.status)">{{ getTestStatusIcon(test.status) }}</mat-icon>
+                  <span>{{ getTestStatusDisplayText(test.status) }}</span>
+                </span>
+              </td>
+            </ng-container>
+
+            <!-- Duration Column -->
+            <ng-container matColumnDef="duration">
+              <th mat-header-cell *matHeaderCellDef class="py-2 px-4">Duration</th>
+              <td mat-cell *matCellDef="let test" class="py-3 px-4 text-gray-500 text-xs">
+                {{ test.duration || 'N/A' }}
+              </td>
+            </ng-container>
+
+            <!-- Device Column -->
+            <ng-container matColumnDef="device">
+              <th mat-header-cell *matHeaderCellDef class="py-2 px-4">Device</th>
+              <td mat-cell *matCellDef="let test" class="py-3 px-4 font-mono text-xs text-gray-600 max-w-[120px] truncate" [title]="test.device || 'N/A'">
+                {{ test.device || 'N/A' }}
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns" class="table-header-row"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="table-body-row"></tr>
+          </table>
+        </div>
+      </div>
+    </app-info-card>
+  }
+
+  <!-- Execution Details Card -->
+  <app-info-card id="overview-execution" cardTitle="Execution Details" [collapsible]="false">
+    <div class="info-card-content">
+      <dl class="detail-list-grid">
+        <dt class="label-with-help">
+          <span>Run As</span>
+          <mat-icon matTooltip="The identity under which the job actually executed (Run As)." class="help-icon">info_outline</mat-icon>
+        </dt>
+        <dd>{{ job().user }}</dd>
+        <dt class="label-with-help">
+          <span>Actual User</span>
+          <mat-icon matTooltip="The credentialed person who actually submitted the job." class="help-icon">info_outline</mat-icon>
+        </dt>
+        <dd>{{ job().actualUser || 'N/A' }}</dd>
+        @for (item of timestampKeys; track item.key) {
+          @let info = timestampInfoMap()[item.key];
+          <dt>{{ item.label }}</dt>
+          <dd class="timestamp-value-row">
+            @if (info.displayValue === 'N/A') {
+              <span class="timestamp-display-val text-gray-400 italic">N/A</span>
+            } @else {
+              <div class="timestamp-interactive-container">
+                <span class="timestamp-display-val">
+                  {{ info.displayValue }}
+                </span>
+                <div class="timezone-details-panel">
+                  <div class="panel-header-title">Time Zone Details</div>
+                  <div class="panel-grid">
+                    <span class="grid-label">Local</span>
+                    <span class="grid-value">{{ info.localStr }}</span>
+
+                    <span class="grid-label">UTC</span>
+                    <span class="grid-value">{{ info.utcStr }}</span>
+
+                    @if (info.elapsedHtml) {
+                      <span class="grid-label">Elapsed</span>
+                      <span class="grid-value">{{ info.elapsedHtml }}</span>
+                    }
+                  </div>
+                  <div class="panel-arrow"></div>
+                </div>
+              </div>
+              @if (info.durationText) {
+                <span class="timestamp-duration-text">{{ info.durationText }}</span>
+              }
+            }
+          </dd>
+        }
+      </dl>
+    </div>
+  </app-info-card>
+
+  <!-- Job Configuration Card -->
+  <app-info-card id="overview-config" cardTitle="Job Configuration" [collapsible]="false">
+    <div class="info-card-content">
+      <div class="config-grid-layout">
+        <!-- Device Requirements (Full width section) -->
+        <div id="device-requirements-section" class="device-req-section">
+          <div class="section-header">
+            <h4 class="section-title">Device Requirements</h4>
+            @if (!isMultiDevice()) {
+              <a [href]="getDeviceSearchLink(job().config.core['Device Type'] || '', job().config.dimensions)" target="_blank" class="block-search-link">
+                <span>View Matching Devices</span>
+                <mat-icon>open_in_new</mat-icon>
+              </a>
+            }
+          </div>
+
+          @if (isMultiDevice()) {
+            <div class="devices-req-stack">
+              @for (dev of job().config.devices; track $index) {
+                @let index = $index;
+                <div class="device-req-block">
+                  <div class="block-header">
+                    <h5 class="block-title">
+                      <mat-icon>devices</mat-icon>
+                      <span>Device {{ index + 1 }}</span>
+                    </h5>
+                    <a [href]="getDeviceSearchLink(dev['Device Type'], dev.dimensions)" target="_blank" class="block-search-link">
+                      <span>View Matching Devices</span>
+                      <mat-icon>open_in_new</mat-icon>
+                    </a>
+                  </div>
+
+                  <div class="block-grid">
+                    <div>
+                      <div class="block-label">Basic Requirements</div>
+                      <dl class="monospace-list">
+                        @if (dev['Device Type']) {
+                          <div class="monospace-list-row contents">
+                            <dt>Device Type</dt>
+                            <dd class="truncate-value">{{ dev['Device Type'] }}</dd>
+                          </div>
+                        }
+                        @if (dev.decorators) {
+                          @let devDecs = dev.decorators.split(',');
+                          <div class="monospace-list-row contents">
+                            <dt>Decorator(s)</dt>
+                            <dd class="value-stack-container">
+                              @for (dec of devDecs; track dec) {
+                                <div class="text-truncate" [matTooltip]="dec.trim()">{{ dec.trim() }}</div>
+                              }
+                            </dd>
+                          </div>
+                        }
+                      </dl>
+                    </div>
+                    @if (dev.dimensions && (dev.dimensions | keyvalue).length > 0) {
+                      <div>
+                        <div class="block-label">Dimensions</div>
+                        <dl class="monospace-list">
+                          @for (dim of dev.dimensions | keyvalue; track dim.key) {
+                            <div class="monospace-list-row contents">
+                              <dt>{{ dim.key }}</dt>
+                              <dd class="truncate-value">{{ dim.value }}</dd>
+                            </div>
+                          }
+                        </dl>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="device-req-single">
+              <dl class="monospace-list">
+                @let basic = deviceRequirementsBasic();
+                @if (basic['Device Type']) {
+                  <div class="monospace-list-row contents">
+                    <dt>Device Type</dt>
+                    <dd class="truncate-value" [matTooltip]="basic['Device Type']">{{ basic['Device Type'] }}</dd>
+                  </div>
+                }
+                @if (basic['Driver']) {
+                  <div class="monospace-list-row contents">
+                    <dt>Driver</dt>
+                    <dd class="truncate-value" [matTooltip]="basic['Driver']">{{ basic['Driver'] }}</dd>
+                  </div>
+                }
+                @if (basic['Decorator(s)']) {
+                  @let decsList = basic['Decorator(s)'].split(',');
+                  <div class="monospace-list-row contents">
+                    <dt>Decorator(s)</dt>
+                    <dd class="value-stack-container">
+                      @for (dec of decsList; track dec) {
+                        <div class="text-truncate" [matTooltip]="dec.trim()">{{ dec.trim() }}</div>
+                      }
+                    </dd>
+                  </div>
+                }
+              </dl>
+              @if (hasDimensions()) {
+                <div class="dimensions-inner-section">
+                  <h5 class="inner-title">Job Dimensions</h5>
+                  <dl class="monospace-list">
+                    @for (dim of job().config.dimensions | keyvalue; track dim.key) {
+                      <div class="monospace-list-row contents">
+                        <dt>{{ dim.key }}</dt>
+                        <dd class="truncate-value">{{ dim.value }}</dd>
+                      </div>
+                    }
+                  </dl>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- Job Settings & Job Parameters -->
+        <div class="config-two-col-layout">
+          <!-- Job Settings -->
+          <div class="config-col">
+            <h4 class="section-title">Job Settings</h4>
+            <div class="device-req-single">
+              @if (hasJobSettings()) {
+                <dl class="monospace-list">
+                  @for (item of jobSettingsMap() | keyvalue; track item.key) {
+                    <div class="monospace-list-row contents">
+                      <dt>{{ item.key }}</dt>
+                      <dd class="truncate-value" [matTooltip]="item.value">{{ item.value }}</dd>
+                    </div>
+                  }
+                </dl>
+              } @else {
+                <span class="no-config-text">None specified.</span>
+              }
+            </div>
+          </div>
+
+          <!-- Job Parameters -->
+          <div class="config-col">
+            <h4 class="section-title">Job Parameters</h4>
+            <div class="device-req-single scrollable">
+              @if (hasJobParams()) {
+                <dl class="monospace-list">
+                  @for (param of job().config.params | keyvalue; track param.key) {
+                    <div class="monospace-list-row contents">
+                      <dt>{{ param.key }}</dt>
+                      <dd class="truncate-value" [matTooltip]="param.value">{{ param.value }}</dd>
+                    </div>
+                  }
+                </dl>
+              } @else {
+                <span class="no-config-text">None specified.</span>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </app-info-card>
+
+  <!-- Job Properties -->
+  <app-info-card id="overview-properties" cardTitle="Job Properties" [collapsible]="true" [expanded]="false" class="properties-card">
+    <div class="info-card-content text-sm">
+      @if (hasProperties()) {
+        <mat-form-field appearance="outline" class="overview-search-field" subscriptSizing="dynamic">
+          <input
+            matInput
+            id="properties-search"
+            class="filter-input"
+            placeholder="Filter properties by key or value..."
+            [ngModel]="propertiesSearchTerm()"
+            (ngModelChange)="propertiesSearchTerm.set($event)"
+            aria-label="Search properties"
+          />
+          @if (propertiesSearchTerm()) {
+            <button matSuffix mat-icon-button aria-label="Clear" (click)="propertiesSearchTerm.set('')">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+
+        @let filteredProps = filteredProperties();
+        @if (filteredProps.length === 0) {
+          <div id="properties-no-results" class="no-search-results">No properties match your filter.</div>
+        } @else {
+          <div class="data-block scrollable">
+            <dl class="data-block-grid">
+              @for (prop of filteredProps; track prop.key) {
+                <div class="data-block-row contents">
+                  <dt>{{ prop.key }}</dt>
+                  <dd>{{ prop.value }}</dd>
+                </div>
+              }
+            </dl>
+          </div>
+        }
+      } @else {
+        <p class="no-data">None</p>
+      }
+    </div>
+  </app-info-card>
+</app-master-detail-layout>

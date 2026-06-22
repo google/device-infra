@@ -22,6 +22,10 @@ import {InterceptedFakeDeviceService} from './core/services/device/intercepted_f
 import {HOST_SERVICE} from './core/services/host/host_service';
 import {HttpHostService} from './core/services/host/http_host_service';
 import {InterceptedFakeHostService} from './core/services/host/intercepted_fake_host_service';
+import {TEST_SERVICE} from './core/services/test/test_service';
+import {FakeTestService} from './core/services/test/fake_test_service';
+import {JOB_SERVICE} from './core/services/job/job_service';
+import {FakeJobService} from './core/services/job/fake_job_service';
 
 /**
  * The application configuration.
@@ -66,6 +70,14 @@ export const appConfig: ApplicationConfig = {
       },
       deps: [ActivatedRoute],
     },
+    {
+      provide: TEST_SERVICE,
+      useFactory: () => new FakeTestService(),
+    },
+    {
+      provide: JOB_SERVICE,
+      useFactory: () => new FakeJobService(),
+    },
     provideAnimations(),
     {
       provide: APP_DATA,
@@ -74,3 +86,4 @@ export const appConfig: ApplicationConfig = {
     },
   ],
 };
+

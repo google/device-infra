@@ -21,6 +21,12 @@
     cursor: pointer;
   }
 
+  .title-container {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
   .header-right {
     display: flex;
     align-items: center;

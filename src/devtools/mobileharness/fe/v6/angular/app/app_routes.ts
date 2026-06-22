@@ -2,6 +2,8 @@ import {Routes} from '@angular/router';
 import {DevHarnessPage} from './features/dev_harness/dev_harness_page';
 import {DeviceDetailPage} from './features/device_detail/device_detail_page';
 import {HostDetail} from './features/host_detail/host_detail';
+import {TestDetail} from './features/test_detail/test_detail';
+import {JobDetail} from './features/job_detail/job_detail';
 
 /**
  * The application routes.
@@ -20,8 +22,17 @@ export const routes: Routes = [
     component: HostDetail,
   },
   {
+    path: 'tests/:id',
+    component: TestDetail,
+  },
+  {
+    path: 'jobs/:id',
+    component: JobDetail,
+  },
+  {
     path: '',
     redirectTo: 'dev/device-harness',
     pathMatch: 'full',
   },
 ];
+

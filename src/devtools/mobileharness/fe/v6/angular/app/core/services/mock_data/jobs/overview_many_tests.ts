@@ -1,0 +1,111 @@
+import {MockJobScenario} from '../models';
+
+/** A mock job scenario representing a job with many tests. */
+export const SCENARIO_JOB_MANY_TESTS: MockJobScenario = {
+  id: 'job-many-tests',
+  scenarioName: 'Job with Many Tests',
+  overview: {
+    id: 'beef-cafe-d00d-face-feed',
+    title: 'Full Regression Suite',
+    status: 'DONE',
+    result: 'PASS',
+    user: 'test-runner-service',
+    actualUser: 'g3-ci-system',
+    spongeLink: '#',
+    sessionId: 'a1b2c3d4-e5f6-7890-abcd-ef0123456789',
+    sessionTitle: 'Nightly Pixel 8 Pro Tests',
+    sessionStatus: 'DONE',
+    sessionResult: 'PASS',
+    tests: [
+      {
+        id: 'test-001',
+        title: 'Test #1',
+        status: 'Passed',
+        duration: '15s',
+        device: 'Pixel8-A',
+      },
+      {
+        id: 'test-002',
+        title: 'Test #2',
+        status: 'Passed',
+        duration: '25s',
+        device: 'Pixel8-A',
+      },
+      {
+        id: 'test-003',
+        title: 'Test #3',
+        status: 'Passed',
+        duration: '15s',
+        device: 'Pixel8-A',
+      },
+      {
+        id: 'test-004',
+        title: 'Test #4',
+        status: 'Passed',
+        duration: '25s',
+        device: 'Pixel8-A',
+      },
+      {
+        id: 'test-005',
+        title: 'Test #5',
+        status: 'Passed',
+        duration: '5s',
+        device: 'Pixel8-B',
+      },
+      {
+        id: 'test-006',
+        title: 'Test #6',
+        status: 'Passed',
+        duration: '18s',
+        device: 'Pixel8-B',
+      },
+      {
+        id: 'test-007',
+        title: 'Test #7',
+        status: 'Passed',
+        duration: '30s',
+        device: 'Pixel8-C',
+      },
+      {
+        id: 'test-008',
+        title: 'Test #8',
+        status: 'Passed',
+        duration: '22s',
+        device: 'Pixel8-C',
+      },
+    ],
+    createTime: '2025-07-10T02:00:00Z',
+    startTime: '2025-07-10T02:00:05Z',
+    endTime: '2025-07-10T02:30:10Z',
+    config: {
+      core: {
+        'Device Type': 'AndroidRealDevice',
+        'Driver': 'AndroidInstrumentation',
+        'Total Test Count': 8,
+      },
+      retry: {},
+      dimensions: {},
+      params: {},
+    },
+    properties: {},
+    timingBreakdown: {
+      createTime: '2025-07-10T02:00:00Z',
+      startTime: '2025-07-10T02:00:05Z',
+      endTime: '2025-07-10T02:30:10Z',
+      stages: [
+        {
+          name: 'Allocation',
+          startTime: '2025-07-10T02:00:00Z',
+          endTime: '2025-07-10T02:00:05Z',
+        },
+        {
+          name: 'Running 8 Tests',
+          startTime: '2025-07-10T02:00:05Z',
+          endTime: '2025-07-10T02:30:10Z',
+        },
+      ],
+    },
+  },
+  log: 'Completed all 8 tests successfully.',
+  cloudLogLink: '#',
+};

@@ -1,0 +1,74 @@
+@use '../../../../shared/styles/overview';
+
+// Test Log Tab
+.log-tab-card {
+  background-color: #f0f4f9;
+  border-radius: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.log-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+}
+
+.log-card-title {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #202124;
+  margin: 0;
+  font-family: overview.$labconsole-font;
+}
+
+.cloud-log-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  color: #1a73e8;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.log-divider {
+  border-top: 1px solid #e0e0e0;
+}
+
+.log-viewer-container {
+  background-color: #202124;
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+  box-sizing: border-box;
+}
+
+.log-viewer-viewport {
+  color: #e8eaed;
+  overflow-y: auto;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.8125rem;
+}
+
+.log-line {
+  height: 20px;
+  line-height: 20px;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  white-space: pre;
+  box-sizing: border-box;
+}
+

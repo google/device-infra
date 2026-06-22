@@ -1,0 +1,221 @@
+<div class="test-detail-container">
+  @if (testPageData(); as data) {
+    @if (data.error) {
+      <div class="error-message">
+        <mat-icon class="error-icon">error_outline</mat-icon>
+        <p>{{ data.error }}</p>
+        <a routerLink="/dev/device-harness" class="m3-button">Back to Harness</a>
+      </div>
+    } @else if (data.testOverviewData; as test) {
+      <div class="main-card">
+        <!-- Breadcrumb Navigation -->
+        <header class="card-header">
+          <div class="header-device-id">
+            <a app-nav-link
+              [config]="{type: 'job', jobId: test.jobId}"
+              queryParamsHandling="merge"
+              class="host-link"
+              title="Navigate to job: {{ test.jobId }}"
+            >
+              {{ test.jobId }}
+            </a>
+            <mat-icon class="chevron-icon">chevron_right</mat-icon>
+            <span class="device-id-text monospaced-text" title="Test ID: {{ test.id }}">{{ test.id }}</span>
+          </div>
+        </header>
+
+        <div class="card-body">
+          <!-- Test Title Bar -->
+          <div class="device-title-bar">
+            <div class="title-bar-content-wrapper">
+              <div class="title-left-section">
+                <div class="title-text-wrapper">
+                  <div class="title-label">Test Name</div>
+                  <h1 class="device-title" [matTooltip]="test.name">{{ test.name }}</h1>
+
+                  <div class="metadata-grid">
+                    <!-- Row 1: Test ID -->
+                    <span class="metadata-label">Test ID:</span>
+                    <div class="metadata-value font-mono bg-gray-box">
+                      <span class="value-text" [matTooltip]="test.id">{{ test.id }}</span>
+                      <button (click)="copyToClipboard(test.id)" class="inline-copy-button" matTooltip="Copy Test ID">
+                        <mat-icon>content_copy</mat-icon>
+                      </button>
+                    </div>
+
+                    <div class="vertical-separator"></div>
+
+                    <div class="status-indicator">
+                      <mat-icon
+                        [class.status-green-icon]="getResultPillLabel(test) === 'PASS'"
+                        [class.status-red-icon]="getResultPillLabel(test) === 'FAIL' || getResultPillLabel(test) === 'ERROR' || getResultPillLabel(test) === 'TIMEOUT'"
+                        [class.status-blue-icon]="getStatusPillLabel(test) === 'RUNNING'"
+                        [class.status-gray-icon]="getResultPillLabel(test) === 'SKIP'"
+                        [class.status-yellow-icon]="getStatusPillLabel(test) === 'SUSPENDED'"
+                        [class.spin-animation]="getStatusPillLabel(test) === 'RUNNING'"
+                      >
+                        {{
+                          getResultPillLabel(test) === 'PASS' ? 'check_circle' :
+                          getResultPillLabel(test) === 'FAIL' || getResultPillLabel(test) === 'ERROR' ? 'error' :
+                          getResultPillLabel(test) === 'TIMEOUT' ? 'access_time' :
+                          getResultPillLabel(test) === 'SKIP' ? 'block' :
+                          getStatusPillLabel(test) === 'RUNNING' ? 'sync' :
+                          getStatusPillLabel(test) === 'SUSPENDED' ? 'pause_circle_filled' :
+                          'watch_later'
+                        }}
+                      </mat-icon>
+
+                      <span class="status-pill"
+                        [class.status-blue-pill]="getStatusPillLabel(test) === 'RUNNING'"
+                        [class.status-yellow-pill]="getStatusPillLabel(test) === 'SUSPENDED'"
+                        [class.status-gray-pill]="getStatusPillLabel(test) === 'DONE'"
+                      >Status: {{ getStatusPillLabel(test) }}</span>
+
+                      @if (getResultPillLabel(test); as result) {
+                        <span class="status-pill"
+                          [class.result-green-pill]="result === 'PASS'"
+                          [class.result-red-pill]="result === 'FAIL' || result === 'ERROR' || result === 'TIMEOUT'"
+                          [class.result-gray-pill]="result === 'SKIP'"
+                        >Result: {{ result }}</span>
+                      }
+                    </div>
+
+                    <!-- Row 2: Part of Job -->
+                    <span class="metadata-label">Part of Job:</span>
+                    <div class="metadata-value font-mono bg-gray-box">
+                      <div class="job-hover-container">
+                        <a app-nav-link
+                          [config]="{type: 'job', jobId: test.jobId}"
+                          queryParamsHandling="merge"
+                          class="job-link-value"
+                        >
+                          {{ test.jobId }}
+                        </a>
+                        <div class="job-details-panel">
+                          <div class="panel-section-title">Job Name</div>
+                          <div class="panel-section-value font-sans">{{ test.jobName }}</div>
+
+                          @if (test.jobStatus) {
+                            <div class="panel-row-grid mt-2">
+                              <div class="panel-grid-item">
+                                <div class="panel-section-title">Status</div>
+                                <div class="panel-section-value font-sans"
+                                  [class.text-green]="test.jobStatus === 'Done'"
+                                  [class.text-blue]="test.jobStatus === 'Running'"
+                                >{{ test.jobStatus }}</div>
+                              </div>
+                              @if (test.jobResult) {
+                                <div class="panel-grid-item">
+                                  <div class="panel-section-title">Result</div>
+                                  <div class="panel-section-value font-sans"
+                                    [class.text-green]="test.jobResult === 'PASS'"
+                                    [class.text-red]="test.jobResult === 'FAIL' || test.jobResult === 'ERROR'"
+                                  >{{ test.jobResult }}</div>
+                                </div>
+                              }
+                            </div>
+                          }
+                          <div class="panel-footer-links mt-2">
+                            <a [href]="test.spongeLink || 'http://sponge/mock-job-link'" target="_blank" class="sponge-link">
+                              <span>View on Sponge</span>
+                              <mat-icon>open_in_new</mat-icon>
+                            </a>
+                          </div>
+                          <div class="panel-arrow"></div>
+                        </div>
+                      </div>
+                      <button (click)="copyToClipboard(test.jobId)" class="inline-copy-button" matTooltip="Copy Job ID">
+                        <mat-icon>content_copy</mat-icon>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+               <div class="executed-on-card">
+                <div class="executed-on-title">Executed on</div>
+                <div class="executed-on-grid">
+                  <span class="grid-label">Device</span>
+                  @if (test.hostName && test.hostIp) {
+                    <a app-nav-link
+                      [config]="{type: 'device', hostName: test.hostName, hostIp: test.hostIp, deviceId: test.deviceId}"
+                      queryParamsHandling="merge"
+                      class="grid-link-value font-mono"
+                      [matTooltip]="'View Device Details: ' + test.deviceId"
+                      >{{ test.deviceId }}</a
+                    >
+                  } @else {
+                    <span class="grid-value font-mono">{{ test.deviceId }}</span>
+                  }
+
+                  @if (test.hostName && test.hostIp) {
+                    <div class="grid-divider"></div>
+
+                    <span class="grid-label">Host</span>
+                    <div class="grid-value font-mono">
+                      <a app-nav-link
+                        [config]="{type: 'host', hostName: test.hostName, hostIp: test.hostIp}"
+                        queryParamsHandling="merge"
+                        class="grid-link-value"
+                        [matTooltip]="test.hostName"
+                        >{{ test.hostName }}</a
+                      >
+                      <div class="host-ip-text">{{ test.hostIp }}</div>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabs -->
+          <div class="tabs-container">
+            <nav class="tabs-nav">
+              <button (click)="setActiveTab('overview')" [class.active]="activeTab() === 'overview'" class="tab-link">Overview</button>
+              <button (click)="setActiveTab('timeline')" [class.active]="activeTab() === 'timeline'" class="tab-link">Timeline</button>
+              <button (click)="setActiveTab('log')" [class.active]="activeTab() === 'log'" class="tab-link">
+                <span class="tab-link-content">
+                  <span>Test Log</span>
+                  @if (getStatusPillLabel(test) === 'RUNNING') {
+                    <span class="live-badge">
+                      <span class="live-dot"></span>
+                      <span>LIVE</span>
+                    </span>
+                  }
+                </span>
+              </button>
+            </nav>
+          </div>
+
+          <!-- Tab Content -->
+          <div class="tab-content-container">
+            <!-- Overview Tab -->
+            @if (activeTab() === 'overview') {
+              <div class="tab-content">
+                <app-test-overview-tab [test]="test"></app-test-overview-tab>
+              </div>
+            }
+
+            <!-- Timeline Tab -->
+            @if (activeTab() === 'timeline') {
+              <div class="tab-content">
+                <app-test-timeline-tab [timingBreakdown]="test.timingBreakdown"></app-test-timeline-tab>
+              </div>
+            }
+
+            <!-- Test Log Tab -->
+            @if (activeTab() === 'log') {
+              <div class="tab-content">
+                <app-test-log-tab [testId]="test.id"></app-test-log-tab>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="loading-message">
+        <p>Loading test details...</p>
+      </div>
+    }
+  }
+</div>
