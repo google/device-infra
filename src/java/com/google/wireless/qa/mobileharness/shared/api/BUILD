@@ -47,6 +47,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:android_jit_emulator_detector",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:android_jit_emulator_dispatcher",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_adb_shell_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_aflags_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_ats_dynamic_config_pusher_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_business_logic_skip_module_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_clean_apps_decorator",
@@ -74,6 +75,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:slate_driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:tradefed_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/module:tradefed_test_module",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_aflags_decorator_env_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_device_settings_decorator_env_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_switch_user_decorator_env_validator",
     ],
@@ -196,6 +198,7 @@ java_library(
     testonly = 1,
     runtime_deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_adb_shell_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_aflags_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_ats_dynamic_config_pusher_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_bugreport_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_business_logic_skip_module_decorator",

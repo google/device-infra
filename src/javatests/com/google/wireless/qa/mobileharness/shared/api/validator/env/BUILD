@@ -27,9 +27,13 @@ java_library(
     visibility = ["//javatests/com/google/wireless/qa/mobileharness/shared/api/validator/env:__pkg__"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_real_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_aflags_decorator_env_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_screenshot_decorator_env_validator",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
     ],
