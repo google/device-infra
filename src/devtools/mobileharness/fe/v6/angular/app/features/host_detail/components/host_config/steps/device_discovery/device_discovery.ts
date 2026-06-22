@@ -8,7 +8,10 @@ import {
   Output,
 } from '@angular/core';
 
-import {MANEKI_DEVICE_TYPE_OPTIONS} from '@deviceinfra/app/core/constants/host_config_constants';
+import {
+  MANEKI_DEVICE_TYPE_OPTIONS,
+  SSH_DEVICE_TYPE_OPTIONS,
+} from '@deviceinfra/app/core/constants/host_config_constants';
 import type {
   DeviceDiscoverySettings,
   ManekiSpec,
@@ -137,8 +140,8 @@ export class DeviceDiscovery {
             columnDef: 'sshDeviceType',
             header: 'Device Type',
             cell: 'sshDeviceType',
-            type: 'input',
-            inputType: 'text',
+            type: 'select',
+            options: SSH_DEVICE_TYPE_OPTIONS,
             required: true,
           },
         ] as MetadataColumn[],

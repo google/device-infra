@@ -15,6 +15,19 @@ export const MANEKI_DEVICE_TYPE_OPTIONS: SelectOption[] = [
 ];
 
 /**
+ * SSH device type options.
+ */
+export const SSH_DEVICE_TYPE_OPTIONS: SelectOption[] = [
+  {label: 'N/A', value: ''},
+  {label: 'AaosHypervisorDevice', value: 'AaosHypervisorDevice'},
+  {label: 'ChromeOsDevice', value: 'ChromeOsDevice'},
+  {label: 'EmbeddedLinuxDevice', value: 'EmbeddedLinuxDevice'},
+  {label: 'OpenWrtDevice', value: 'OpenWrtDevice'},
+  {label: 'StargateDevice', value: 'StargateDevice'},
+  {label: 'WindowsDevice', value: 'WindowsDevice'},
+];
+
+/**
  * Default values for the Host Configuration.
  */
 export const DEFAULT_HOST_CONFIG: HostConfig = {
