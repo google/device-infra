@@ -184,7 +184,7 @@ public final class DeviceInfoCollectorDecoratorTest {
                     /* async= */ false,
                     /* showRawResults= */ true,
                     /* prefixAndroidTest= */ false,
-                    /* noIsolatedStorage= */ false,
+                    /* noIsolatedStorage= */ true,
                     /* useTestStorageService= */ false,
                     /* enableCoverage= */ false)),
             any(Duration.class),

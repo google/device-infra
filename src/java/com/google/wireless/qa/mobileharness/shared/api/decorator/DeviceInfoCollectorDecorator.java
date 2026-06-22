@@ -134,7 +134,13 @@ public class DeviceInfoCollectorDecorator extends StepSkippableLifecycleDecorato
     // Install the APK.
     testInfo.log().atInfo().alsoTo(logger).log("Installing APK: %s", apkPath);
     apkInstaller.installApk(
-        getDevice(), ApkInstallArgs.builder().addApkPaths(apkPath).build(), testInfo.log());
+        getDevice(),
+        ApkInstallArgs.builder()
+            .addApkPaths(apkPath)
+            .setGrantPermissions(true)
+            .setForceQueryable(true)
+            .build(),
+        testInfo.log());
     setState(testInfo.jobInfo(), deviceId, STATE_INSTALLED, "true");
 
     runCollectDeviceInfoTests(testInfo, deviceId, packageName, apkPath);
@@ -314,7 +320,7 @@ public class DeviceInfoCollectorDecorator extends StepSkippableLifecycleDecorato
             /* async= */ false,
             /* showRawResults= */ true,
             /* prefixAndroidTest= */ false,
-            /* noIsolatedStorage= */ false,
+            /* noIsolatedStorage= */ true,
             /* useTestStorageService= */ false,
             /* enableCoverage= */ false);
 
@@ -341,9 +347,11 @@ public class DeviceInfoCollectorDecorator extends StepSkippableLifecycleDecorato
                 failedTest.getTestCase().getTestMethod(),
                 failedTest.hasError() ? failedTest.getError().getErrorMessage() : "unknown"));
       }
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_DEVICE_INFO_COLLECTOR_DECORATOR_TEST_FAILURE,
-          "Device info collection tests failed:\n" + failureDetails);
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .log("Device info collection tests failed:\n%s", failureDetails);
     }
   }
 }
