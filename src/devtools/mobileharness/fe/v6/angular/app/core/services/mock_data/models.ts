@@ -16,6 +16,7 @@ import {
 } from '../../models/host_action';
 import {GetHostConfigResult} from '../../models/host_config_models';
 import {DeviceSummary, HostOverview} from '../../models/host_overview';
+import {JobActions, JobOverviewData} from '../../models/job_overview';
 import {TestOverviewData} from '../../models/test_overview';
 
 /**
@@ -73,4 +74,15 @@ export interface MockTestScenario extends BaseMockScenario {
   readonly overview: TestOverviewData;
   readonly log?: string;
   readonly cloudLogLink?: string;
+}
+
+/**
+ * Defines the data set for a mock job scenario.
+ */
+export interface MockJobScenario extends BaseMockScenario {
+  readonly id: string;
+  readonly overview: JobOverviewData;
+  readonly log?: string;
+  readonly cloudLogLink?: string;
+  readonly actions?: JobActions;
 }

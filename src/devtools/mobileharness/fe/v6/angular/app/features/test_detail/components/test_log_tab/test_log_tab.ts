@@ -37,6 +37,7 @@ const CHUNK_SIZE = 100000;
 export class TestLogTab implements OnInit {
   /** The unique test ID passed from the parent component. */
   readonly testId = input.required<string>();
+  readonly jobId = input.required<string>();
 
   private readonly testService = inject(TEST_SERVICE);
   private readonly destroyRef = inject(DestroyRef);
@@ -88,7 +89,7 @@ export class TestLogTab implements OnInit {
     const id = this.testId();
 
     const initialFetch$: Observable<FetchState> = this.testService
-      .getTest({testId: id})
+      .getTest({testId: id, jobId: this.jobId()})
       .pipe(
         concatMap((testDetail) => {
           const link = testDetail.executionDetails?.cloudLogLink;
@@ -110,7 +111,9 @@ export class TestLogTab implements OnInit {
             return this.fetchLogChunk(id, state.offset, state.status);
           } else {
             return timer(POLLING_INTERVAL_MS).pipe(
-              concatMap(() => this.testService.getTest({testId: id})),
+              concatMap(() =>
+                this.testService.getTest({testId: id, jobId: this.jobId()}),
+              ),
               concatMap((testDetail) => {
                 const link = testDetail.executionDetails?.cloudLogLink;
                 if (link) {
@@ -166,7 +169,12 @@ export class TestLogTab implements OnInit {
     status: TestStatus,
   ): Observable<FetchState> {
     return this.testService
-      .getTestLog({testId: id, offset, length: CHUNK_SIZE})
+      .getTestLog({
+        testId: id,
+        jobId: this.jobId(),
+        offset,
+        length: CHUNK_SIZE,
+      })
       .pipe(
         map((logResp) => {
           return {

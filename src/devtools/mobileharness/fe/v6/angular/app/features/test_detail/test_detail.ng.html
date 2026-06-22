@@ -205,7 +205,7 @@
             @if (activeTab() === 'log') {
               <div class="tab-content">
                 @defer {
-                  <app-test-log-tab [testId]="test.id"></app-test-log-tab>
+                  <app-test-log-tab [testId]="test.id" [jobId]="test.job?.id || data?.jobId || ''"></app-test-log-tab>
                 } @placeholder {
                   <div class="tab-loading-placeholder">Loading logs...</div>
                 }

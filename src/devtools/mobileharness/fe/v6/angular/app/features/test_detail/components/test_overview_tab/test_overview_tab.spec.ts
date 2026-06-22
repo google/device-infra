@@ -55,7 +55,7 @@ describe('TestOverviewTab Component', () => {
       createTime: '2026-06-08T03:00:00Z',
       startTime: '2026-06-08T03:01:00Z',
       endTime: '2026-06-08T03:05:00Z',
-      lastUpdateTime: '2026-06-08T03:05:00Z',
+      updateTime: '2026-06-08T03:05:00Z',
     },
     properties: {
       'custom_prop_1': 'val1',

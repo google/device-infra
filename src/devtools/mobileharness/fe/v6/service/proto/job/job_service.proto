@@ -30,6 +30,9 @@ service JobService {
 
   // Streams or paginates log chunks of a running/completed Job.
   rpc GetJobLog(GetJobLogRequest) returns (GetJobLogResponse) {}
+
+  // Retrieves the content of a specific file associated with a Job.
+  rpc GetJobFile(GetJobFileRequest) returns (GetJobFileResponse) {}
 }
 
 message GetJobRequest {
@@ -38,6 +41,7 @@ message GetJobRequest {
 
 message GetJobResponse {
   JobDetail job = 1;
+  JobActions actions = 2;
 }
 
 message GetJobLogRequest {
@@ -59,4 +63,13 @@ message GetJobLogResponse {
 
   // Whether there are more log contents to be read.
   bool has_more = 3;
+}
+
+message GetJobFileRequest {
+  string job_id = 1;
+  string file_path = 2;
+}
+
+message GetJobFileResponse {
+  string content = 1;
 }

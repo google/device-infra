@@ -24,10 +24,11 @@ import {TestLogTab} from './test_log_tab';
   standalone: true,
   imports: [TestLogTab],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<app-test-log-tab [testId]="testId"></app-test-log-tab>`,
+  template: `<app-test-log-tab [testId]="testId" [jobId]="jobId"></app-test-log-tab>`,
 })
 class TestHostComponent {
   testId!: string;
+  jobId = 'job_123';
 }
 
 describe('TestLogTab Component', () => {
@@ -77,9 +78,11 @@ describe('TestLogTab Component', () => {
     it('should fetch logs and bind inputs correctly', () => {
       expect(mockTestService.getTest).toHaveBeenCalledWith({
         testId: 'test_123',
+        jobId: 'job_123',
       });
       expect(mockTestService.getTestLog).toHaveBeenCalledWith({
         testId: 'test_123',
+        jobId: 'job_123',
         offset: 0,
         length: 100000,
       });
@@ -132,6 +135,7 @@ describe('TestLogTab Component', () => {
 
       runningFixture = TestBed.createComponent(TestHostComponent);
       runningFixture.componentInstance.testId = 'test_running';
+      runningFixture.componentInstance.jobId = 'job_123';
       runningComponent = runningFixture.debugElement.query(
         By.directive(TestLogTab),
       ).componentInstance;

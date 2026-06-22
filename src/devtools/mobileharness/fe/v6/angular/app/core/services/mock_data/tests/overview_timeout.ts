@@ -20,7 +20,7 @@ export const SCENARIO_TEST_TIMEOUT: MockTestScenario = {
       name: 'hello_mobile_harness_test_on_mh',
       status: JobStatus.JOB_STATUS_DONE,
       result: JobResult.JOB_RESULT_FAIL,
-      spongeLink: 'http://sponge/mock-job-link',
+      spongeLink: 'http://sponge2/b65cadd7-6ad6-440e-a3b7-bfe1948557e6',
     },
     devices: {
       device: [
@@ -38,7 +38,7 @@ export const SCENARIO_TEST_TIMEOUT: MockTestScenario = {
       createTime: '2025-07-09T10:20:00Z',
       startTime: '2025-07-09T10:20:05Z',
       endTime: '2025-07-09T10:25:05Z',
-      lastUpdateTime: '2025-07-09T10:25:05Z',
+      updateTime: '2025-07-09T10:25:05Z',
       user: 'dafeni',
       actualUser: 'dafeni@google.com',
     },
@@ -51,5 +51,6 @@ export const SCENARIO_TEST_TIMEOUT: MockTestScenario = {
     },
   },
   log: 'Test execution timed out after 5 minutes.',
-  cloudLogLink: '#',
+  cloudLogLink:
+    'https://console.cloud.google.com/logs/query;query=resource.type%3D%22mobileharness_test%22%20AND%20labels.test_id%3D%22test-timeout-1%22',
 };

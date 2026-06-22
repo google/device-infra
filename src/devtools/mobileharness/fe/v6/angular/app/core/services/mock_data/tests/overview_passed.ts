@@ -8,10 +8,10 @@ import {MockTestScenario} from '../models';
 
 /** A mock test scenario representing a passed test. */
 export const SCENARIO_TEST_PASSED: MockTestScenario = {
-  id: 'test-passed-1',
+  id: 'f52aeb45-f80d-4072-870e-4d01b90f09ec',
   scenarioName: 'Passed Test',
   overview: {
-    id: 'test-passed-1',
+    id: 'f52aeb45-f80d-4072-870e-4d01b90f09ec',
     name: 'com.google.codelab.mobileharness.android.hellomobileharness.HelloMobileHarnessTest#buttonText',
     status: TestStatus.TEST_STATUS_DONE,
     result: TestResult.TEST_RESULT_PASS,
@@ -20,7 +20,7 @@ export const SCENARIO_TEST_PASSED: MockTestScenario = {
       name: 'hello_mobile_harness_test_on_mh',
       status: JobStatus.JOB_STATUS_DONE,
       result: JobResult.JOB_RESULT_PASS,
-      spongeLink: 'http://sponge/mock-job-link',
+      spongeLink: 'http://sponge2/b65cadd7-6ad6-440e-a3b7-bfe1948557e6',
     },
     devices: {
       device: [
@@ -31,16 +31,16 @@ export const SCENARIO_TEST_PASSED: MockTestScenario = {
       ],
     },
     host: {
-      name: '3a-cm-10-18-01.acs.google.com',
+      name: '3a-cm-10-18-01.acs.example.com',
       ip: '100.107.200.155',
     },
     executionDetails: {
       createTime: '2025-07-09T10:11:15Z',
       startTime: '2025-07-09T10:11:15Z',
       endTime: '2025-07-09T10:11:25Z',
-      lastUpdateTime: '2025-07-09T10:11:25Z',
+      updateTime: '2025-07-09T10:11:25Z',
       user: 'dafeni',
-      actualUser: 'dafeni@google.com',
+      actualUser: 'dafeni@example.com',
     },
     properties: {
       'dimension_rooted': 'false',
@@ -78,6 +78,7 @@ export const SCENARIO_TEST_PASSED: MockTestScenario = {
       ],
     },
   },
-  log: 'Test passed successfully.',
-  cloudLogLink: '#',
+  log: '[10:11:15] Test started\n[10:11:18] Clicking button...\n[10:11:25] Assertion passed: Button text matches.\n[10:11:25] Test finished successfully.',
+  cloudLogLink:
+    'https://console.cloud.example.com/logs/query;query=resource.type%3D%22mobileharness_test%22%20AND%20labels.test_id%3D%22test-passed-1%22',
 };

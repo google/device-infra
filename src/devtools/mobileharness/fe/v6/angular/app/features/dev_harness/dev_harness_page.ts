@@ -11,11 +11,13 @@ import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
 import {
   MOCK_DEVICE_SCENARIOS,
   MOCK_HOST_SCENARIOS,
+  MOCK_JOB_SCENARIOS,
   MOCK_TEST_SCENARIOS,
 } from '../../core/services/mock_data';
 import {
   MockDeviceScenario,
   MockHostScenario,
+  MockJobScenario,
   MockTestScenario,
 } from '../../core/services/mock_data/models';
 
@@ -35,10 +37,12 @@ export class DevHarnessPage {
   readonly deviceScenarios: MockDeviceScenario[];
   readonly hostScenarios: MockHostScenario[];
   readonly testScenarios: MockTestScenario[];
+  readonly jobScenarios: MockJobScenario[];
 
   readonly deviceCollapsed = signal(false);
   readonly hostCollapsed = signal(false);
   readonly testCollapsed = signal(false);
+  readonly jobCollapsed = signal(false);
 
   private readonly loadingService = inject(LoadingService);
 
@@ -65,6 +69,14 @@ export class DevHarnessPage {
       return 0;
     });
 
+    this.jobScenarios = [...MOCK_JOB_SCENARIOS].sort((a, b) => {
+      const aName = a.scenarioName;
+      const bName = b.scenarioName;
+      if (aName < bName) return -1;
+      if (aName > bName) return 1;
+      return 0;
+    });
+
     this.loadingService.hide();
   }
 
@@ -78,5 +90,9 @@ export class DevHarnessPage {
 
   toggleTestScenarios() {
     this.testCollapsed.update((v) => !v);
+  }
+
+  toggleJobScenarios() {
+    this.jobCollapsed.update((v) => !v);
   }
 }
