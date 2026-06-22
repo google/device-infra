@@ -42,10 +42,15 @@ import java.time.Instant
  * INSTRUMENTATION_CODE: -1
  * ```
  */
-class AmInstrumentationParser(
+class AmInstrumentationParser
+@JvmOverloads
+constructor(
   private val listeners: Set<AmInstrumentationListener> = emptySet(),
   private val testTimeTrackerFactory: () -> TestTimeTracker = { TestTimeTracker() },
+  private val systemClock: () -> Instant = { Instant.now() },
 ) {
+  private val startTime = systemClock()
+
   /** The result of the Instrumentation, available after parse completion. */
   var result: InstrumentationResult? = null
     private set
@@ -262,7 +267,14 @@ class AmInstrumentationParser(
       reportInstrumentationFailed("Test run failed to complete. $error")
     }
     val result =
-      InstrumentationResult(code, bundle.toMutableMap().also { knownStatus.forEach(it::remove) })
+      InstrumentationResult(
+          code = code,
+          bundle = bundle.toMutableMap().also { knownStatus.forEach(it::remove) },
+        )
+        .apply {
+          startTime = this@AmInstrumentationParser.startTime
+          endTime = systemClock()
+        }
     this.result = result
     reportInstrumentationEnded(result)
   }

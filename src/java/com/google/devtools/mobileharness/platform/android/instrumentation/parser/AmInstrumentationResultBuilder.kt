@@ -61,5 +61,8 @@ class AmInstrumentationResultBuilder(private val testSuiteResultBuilder: TestSui
       } else {
         ProtoTestStatus.FAILED
       }
+    val metaDataBuilder = testSuiteResultBuilder.testSuiteMetaDataBuilder
+    instrumentationResult.startTime?.let { metaDataBuilder.startTime = it.toProtoTimestamp() }
+    instrumentationResult.endTime?.let { metaDataBuilder.endTime = it.toProtoTimestamp() }
   }
 }

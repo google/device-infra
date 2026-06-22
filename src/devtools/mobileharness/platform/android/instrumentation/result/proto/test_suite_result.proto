@@ -47,6 +47,12 @@ message TestSuiteMetaData {
 
   // Number of test cases scheduled to be run.
   int32 scheduled_test_case_count = 2;
+
+  // Start time of the test suite execution.
+  google.protobuf.Timestamp start_time = 3;
+
+  // End time of the test suite execution.
+  google.protobuf.Timestamp end_time = 4;
 }
 
 // Test status of a test suite or test case

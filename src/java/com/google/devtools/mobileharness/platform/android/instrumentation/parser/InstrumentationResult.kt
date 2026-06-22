@@ -1,5 +1,7 @@
 package com.google.devtools.mobileharness.platform.android.instrumentation.parser
 
+import java.time.Instant
+
 /**
  * Results reported at the end of an `am instrument` command.
  *
@@ -9,6 +11,9 @@ package com.google.devtools.mobileharness.platform.android.instrumentation.parse
  * * other: Failure
  */
 data class InstrumentationResult(val code: Int? = null, val bundle: Map<String, String> = mapOf()) {
+  var startTime: Instant? = null
+  var endTime: Instant? = null
+
   val success
     get() = code == -1
 }
