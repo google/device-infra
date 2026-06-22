@@ -1158,7 +1158,7 @@ public class SessionRequestHandlerUtil {
                 jobTimeout,
                 testTimeout,
                 startTimeout,
-                isSkipDeviceInfo(sessionRequestInfo, subPlan),
+                shouldSkipDeviceInfo(sessionRequestInfo, subPlan),
                 ImmutableMap.copyOf(sessionRequestInfo.getXtsSuiteInfoMap()),
                 sessionRequestInfo.getIsAtsServerRequest(),
                 sessionRequestInfo.hasBusinessLogicUrl()
@@ -1667,12 +1667,12 @@ public class SessionRequestHandlerUtil {
         : jobTimeout.minus(JOB_TEST_TIMEOUT_DIFF);
   }
 
-  private static boolean isSkipDeviceInfo(
+  private static boolean shouldSkipDeviceInfo(
       SessionRequestInfo sessionRequestInfo, @Nullable SubPlan subPlan) {
     return (sessionRequestInfo.hasSkipDeviceInfo() ? sessionRequestInfo.getSkipDeviceInfo() : false)
         || (isRunRetry(sessionRequestInfo.getTestPlan())
             && subPlan != null
-            && subPlan.getPreviousSessionDeviceBuildFingerprint().orElse("").isEmpty());
+            && !subPlan.getPreviousSessionDeviceBuildFingerprint().orElse("").isEmpty());
   }
 
   private static void getModuleArgs(
