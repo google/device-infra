@@ -20,7 +20,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.devtools.mobileharness.shared.util.auth.CredentialFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
-import java.util.Optional;
+import javax.annotation.Nullable;
 
 /** Utility for getting GCS credential type. */
 public final class GcsCredentialUtil {
@@ -28,7 +28,7 @@ public final class GcsCredentialUtil {
   private GcsCredentialUtil() {}
 
   /**
-   * Gets the credential type for GCS access.
+   * Gets the credential type for GCS access based on bucket name.
    *
    * @param bucketName name of bucket to manage
    */
@@ -38,12 +38,25 @@ public final class GcsCredentialUtil {
 
   @VisibleForTesting
   static GcsUtil.CredentialType getCredentialType(String bucketName, SystemUtil systemUtil) {
+    String credentialFile = null;
+    if (bucketName != null && bucketName.equals(Flags.fileTransferBucket.get())) {
+      credentialFile = CredentialFileUtil.getFileTransferCredentialFile().orElse(null);
+    }
+    return getCredentialType(null, credentialFile, systemUtil);
+  }
 
-    Optional<String> credentialFile = CredentialFileUtil.getFileTransferCredentialFile();
-    if (bucketName.equals(Flags.fileTransferBucket.get()) && credentialFile.isPresent()) {
-      // If the bucket is the file transfer bucket and the credential file is provided, use the
-      // credential file.
-      return GcsUtil.CredentialType.ofCredentialFile(credentialFile.get());
+  /**
+   * Gets the credential type for GCS access.
+   *
+   * @param serviceAccount service account to use on Borg
+   * @param credentialFile optional credential file path
+   * @param systemUtil util for system interaction
+   */
+  public static GcsUtil.CredentialType getCredentialType(
+      @Nullable String serviceAccount, @Nullable String credentialFile, SystemUtil systemUtil) {
+
+    if (credentialFile != null && !credentialFile.isEmpty()) {
+      return GcsUtil.CredentialType.ofCredentialFile(credentialFile);
     }
 
     // Otherwise, use app default credential.

@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.Resol
 import com.google.devtools.mobileharness.shared.util.auth.CredentialFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Algorithm;
 import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Checksum;
+import com.google.devtools.mobileharness.shared.util.file.remote.GcsCredentialUtil;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsParams;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtilFactory;
@@ -146,17 +147,12 @@ public class GcsFileResolver extends AbstractFileResolver {
     String bucket = matcher.group("bucket");
     String filePath = matcher.group("path");
     GcsUtil.CredentialType credentialType =
-        getCredentialType(resolveSource.parameters().get(PARAM_GCS_SERVICE_ACCOUNT), bucket);
+        GcsCredentialUtil.getCredentialType(
+            resolveSource.parameters().get(PARAM_GCS_SERVICE_ACCOUNT),
+            CredentialFileUtil.getGcsResolverCredentialFile(bucket).orElse(null),
+            systemUtil);
 
     return ParseResult.create(GcsKey.create(bucket, credentialType), filePath);
-  }
-
-  private GcsUtil.CredentialType getCredentialType(@Nullable String serviceAccount, String bucket) {
-    Optional<String> credentialFile = CredentialFileUtil.getGcsResolverCredentialFile(bucket);
-    if (credentialFile.isPresent()) {
-      return GcsUtil.CredentialType.ofCredentialFile(credentialFile.get());
-    }
-    return GcsUtil.CredentialType.ofAppDefault();
   }
 
   private GcsUtil getGcsUtil(GcsKey gcsKey) throws MobileHarnessException {
