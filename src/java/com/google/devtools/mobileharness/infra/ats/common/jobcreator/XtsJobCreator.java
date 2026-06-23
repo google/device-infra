@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerU
 import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
+import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationXmlParser;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName;
@@ -50,10 +51,17 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryG
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
 import com.google.gson.Gson;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.DecoratorList;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.DeviceList;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.Driver;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.DeviceInfoCollectorDecoratorSpec;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -63,10 +71,13 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
@@ -527,8 +538,166 @@ public abstract class XtsJobCreator {
       validateNonTfSubPlan(subPlan);
     }
 
-    return sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-        sessionRequestInfo, subPlan, extraJobProperties.buildOrThrow());
+    ImmutableList<JobInfo> nonTfJobs =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            sessionRequestInfo, subPlan, extraJobProperties.buildOrThrow());
+
+    boolean hasNonTradefedJobs = nonTfJobs != null && !nonTfJobs.isEmpty();
+
+    boolean hasTradefedJobs = true;
+    try {
+      ImmutableList<String> tfModules =
+          sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo);
+      hasTradefedJobs = tfModules != null && !tfModules.isEmpty();
+    } catch (MobileHarnessException e) {
+      if (e.getErrorId() == InfraErrorId.XTS_NO_MATCHED_TRADEFED_MODULES) {
+        hasTradefedJobs = false;
+      } else {
+        throw e;
+      }
+    }
+
+    // In Tradefed sessions, device info collection (the device-info-files dir) is naturally
+    // handled by Tradefed target preparers. For Mobly-only sessions, this is missing.
+    // Therefore, we inject a synthetic setup job running NoOpDriver with the
+    // DeviceInfoCollectorDecorator to manually gather the device info files.
+    if (hasNonTradefedJobs && !hasTradefedJobs) {
+      Optional<DeviceInfoCollectorDecoratorSpec> specOpt =
+          parseDeviceInfoCollectorSpec(sessionRequestInfo);
+      if (specOpt.isPresent()) {
+        JobInfo setUpJob = createSetUpJob(specOpt.get());
+        nonTfJobs = ImmutableList.<JobInfo>builder().add(setUpJob).addAll(nonTfJobs).build();
+      } else {
+        logger.atWarning().log(
+            "Could not parse DeviceInfoCollectorDecorator config from %s-preconditions.configv2."
+                + " Skipping adding the setup job.",
+            sessionRequestInfo.getXtsType());
+      }
+    }
+    return nonTfJobs;
+  }
+
+  /**
+   * Creates a synthetic job solely responsible for running the DeviceInfoCollectorDecorator. This
+   * is necessary for Mobly-only xTS sessions, ensuring the device-info-files directory is collected
+   * and included in the final results directory.
+   */
+  private JobInfo createSetUpJob(DeviceInfoCollectorDecoratorSpec spec)
+      throws MobileHarnessException, InterruptedException {
+    String name = "setup";
+    JobConfig jobConfig =
+        JobConfig.newBuilder()
+            .setName(name)
+            .setExecMode("local")
+            .setJobTimeoutSec(300)
+            .setTestTimeoutSec(300)
+            .setStartTimeoutSec(300)
+            .setPriority(Priority.HIGH)
+            .setTestAttempts(1)
+            .setTests(StringList.newBuilder().addContent(name))
+            .setDevice(
+                DeviceList.newBuilder()
+                    .addSubDeviceSpec(
+                        SubDeviceSpec.newBuilder()
+                            .setType("AndroidRealDevice")
+                            .setDecorators(
+                                DecoratorList.newBuilder()
+                                    .addContent(
+                                        Driver.newBuilder()
+                                            .setName("DeviceInfoCollectorDecorator")))))
+            .setDriver(Driver.newBuilder().setName("NoOpDriver"))
+            .setGenFileDir(sessionRequestHandlerUtil.createJobGenDir(name).toString())
+            .build();
+
+    JobInfo jobInfo =
+        JobInfoCreator.createJobInfo(
+            jobConfig,
+            /* nonstandardFlags= */ ImmutableList.of(),
+            sessionRequestHandlerUtil.createJobGenDir(name).toString(),
+            sessionRequestHandlerUtil.createJobTmpDir(name).toString());
+
+    jobInfo
+        .subDeviceSpecs()
+        .getAllSubDevices()
+        .get(0)
+        .scopedSpecs()
+        .add("DeviceInfoCollectorDecoratorSpec", spec);
+    jobInfo.properties().add(SessionHandlerHelper.XTS_MODULE_NAME_PROP, name);
+    jobInfo.properties().add(Job.IS_XTS_NON_TF_JOB, "true");
+
+    return jobInfo;
+  }
+
+  private Optional<DeviceInfoCollectorDecoratorSpec> parseDeviceInfoCollectorSpec(
+      SessionRequestInfo sessionRequestInfo) {
+    String xtsType = sessionRequestInfo.getXtsType().toLowerCase(Locale.ROOT);
+    Path toolsDir =
+        XtsDirUtil.getXtsToolsDir(
+            Path.of(sessionRequestInfo.getXtsRootDir()), sessionRequestInfo.getXtsType());
+    Path tradefedJar = toolsDir.resolve(xtsType + "-tradefed.jar");
+    if (!localFileUtil.isFileExist(tradefedJar)) {
+      logger.atWarning().log(
+          "Tradefed jar not found for %s at %s", xtsType, tradefedJar.toAbsolutePath());
+      return Optional.empty();
+    }
+
+    String configFileName = xtsType + "-preconditions.configv2";
+    try (JarFile jarFile = new JarFile(tradefedJar.toFile())) {
+      Optional<JarEntry> entryOpt =
+          jarFile.stream()
+              .filter(
+                  e ->
+                      e.getName().equals(configFileName)
+                          || e.getName().endsWith("/" + configFileName))
+              .findFirst();
+      if (entryOpt.isEmpty()) {
+        logger.atWarning().log(
+            "Config file %s not found in %s", configFileName, tradefedJar.toAbsolutePath());
+        return Optional.empty();
+      }
+      JarEntry entry = entryOpt.get();
+
+      try (InputStream is = jarFile.getInputStream(entry)) {
+        Configuration configuration = ConfigurationXmlParser.parse(is, configFileName);
+        return configuration.getTargetPreparersList().stream()
+            .filter(
+                preparer ->
+                    preparer
+                        .getClazz()
+                        .equals(
+                            "com.google.wireless.qa.mobileharness.shared.api.decorator.DeviceInfoCollectorDecorator"))
+            .findFirst()
+            .map(
+                preparer -> {
+                  DeviceInfoCollectorDecoratorSpec.Builder specBuilder =
+                      DeviceInfoCollectorDecoratorSpec.newBuilder()
+                          .setXtsTestDir(
+                              XtsDirUtil.getXtsTestCasesDir(
+                                      Path.of(sessionRequestInfo.getXtsRootDir()),
+                                      sessionRequestInfo.getXtsType())
+                                  .toString());
+                  preparer
+                      .getOptionsList()
+                      .forEach(
+                          option -> {
+                            switch (option.getName()) {
+                              case "apk" -> specBuilder.setApk(option.getValue());
+                              case "package_name" -> specBuilder.setPackageName(option.getValue());
+                              case "src_dir" -> specBuilder.setSrcDir(option.getValue());
+                              case "dest_dir" -> specBuilder.setDestDir(option.getValue());
+                              default -> {}
+                            }
+                          });
+                  return specBuilder.build();
+                });
+      }
+    } catch (Exception e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to parse %s from %s", configFileName, tradefedJar);
+    }
+
+    logger.atWarning().log("Failed to parse DeviceInfoCollectorDecoratorSpec from %s", tradefedJar);
+    return Optional.empty();
   }
 
   /** Validates a sub plan for a non-tradefed job. */

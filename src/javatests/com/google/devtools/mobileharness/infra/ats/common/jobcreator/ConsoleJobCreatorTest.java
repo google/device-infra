@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.ats.common.jobcreator;
 
 import static com.google.common.truth.Truth.assertThat;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -49,13 +50,19 @@ import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.DeviceInfoCollectorDecoratorSpec;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -65,6 +72,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
@@ -606,5 +614,70 @@ public final class ConsoleJobCreatorTest {
             TradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES, testRecordPath.toString());
     assertThat(tradefedJobInfoList.get(0).extraJobProperties())
         .containsEntry(Job.IS_RUN_RETRY, "true");
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs_moblyOnly_setupJobInjected() throws Exception {
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .addAllModuleNames(ImmutableList.of("mock_mobly_module"));
+
+    when(localFileUtil.isDirExist(any(Path.class))).thenReturn(true);
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(true);
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(any()))
+        .thenReturn(ImmutableList.of());
+    when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(any())).thenReturn(Path.of("/tmp/tmp"));
+
+    // Create dummy jar with config
+    File toolsDir = folder.newFolder("android-cts", "tools");
+    File jarFile = new File(toolsDir, "cts-tradefed.jar");
+    try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(jarFile))) {
+      zos.putNextEntry(new ZipEntry("cts-preconditions.configv2"));
+      String xml =
+          "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+              + "<configuration description=\"CTS precondition v2 configs\">\n"
+              + "    <target_preparer"
+              + " class=\"com.google.wireless.qa.mobileharness.shared.api.decorator.DeviceInfoCollectorDecorator\">\n"
+              + "        <option name=\"apk\" value=\"CtsDeviceInfo.apk\"/>\n"
+              + "        <option name=\"package_name\""
+              + " value=\"com.android.compatibility.common.deviceinfo\"/>\n"
+              + "        <option name=\"src_dir\" value=\"/sdcard/device-info-files/\"/>\n"
+              + "        <option name=\"dest_dir\" value=\"device-info-files/\"/>\n"
+              + "    </target_preparer>\n"
+              + "</configuration>";
+      zos.write(xml.getBytes(UTF_8));
+      zos.closeEntry();
+    }
+    when(localFileUtil.isFileExist(eq(jarFile.toPath()))).thenReturn(true);
+    // Replace XTS_ROOT_DIR_PATH with the temp folder's root
+    SessionRequestInfo.Builder newBuilder =
+        builder.setXtsRootDir(folder.getRoot().getAbsolutePath());
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(newBuilder);
+
+    JobInfo mockJobInfo = Mockito.mock(JobInfo.class);
+    when(mockJobInfo.locator()).thenReturn(new JobLocator("job_id", "mobly_job"));
+    when(sessionRequestHandlerUtil.createXtsNonTradefedJobs(eq(sessionRequestInfo), any(), any()))
+        .thenReturn(ImmutableList.of(mockJobInfo));
+
+    ImmutableList<JobInfo> jobs = jobCreator.createXtsNonTradefedJobs(sessionRequestInfo);
+
+    assertThat(jobs).hasSize(2);
+    assertThat(jobs.get(0).locator().getName()).isEqualTo("setup");
+    assertThat(jobs.get(0).type().getDriver()).isEqualTo("NoOpDriver");
+    DeviceInfoCollectorDecoratorSpec spec =
+        jobs.get(0)
+            .subDeviceSpecs()
+            .getAllSubDevices()
+            .get(0)
+            .scopedSpecs()
+            .get("DeviceInfoCollectorDecoratorSpec")
+            .asMessage(DeviceInfoCollectorDecoratorSpec.class);
+    assertThat(spec).isNotNull();
+    assertThat(spec.getApk()).isEqualTo("CtsDeviceInfo.apk");
   }
 }
