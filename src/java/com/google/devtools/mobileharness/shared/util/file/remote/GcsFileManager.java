@@ -96,13 +96,16 @@ public class GcsFileManager {
   @Deprecated
   public GcsFileManager(Path homeDir, String bucket)
       throws MobileHarnessException, InterruptedException {
-    this(
-        homeDir,
-        bucket,
-        CredentialFileUtil.getFileTransferCredentialFile().isPresent()
-            ? GcsUtil.CredentialType.ofCredentialFile(
-                CredentialFileUtil.getFileTransferCredentialFile().get())
-            : GcsUtil.CredentialType.ofAppDefault());
+    this(homeDir, bucket, getCredentialType());
+  }
+
+  private static GcsUtil.CredentialType getCredentialType() {
+    Optional<String> fileTransferCredentialFile =
+        CredentialFileUtil.getFileTransferCredentialFile();
+    if (fileTransferCredentialFile.isPresent()) {
+      return GcsUtil.CredentialType.ofCredentialFile(fileTransferCredentialFile.get());
+    }
+    return GcsUtil.CredentialType.ofAppDefault();
   }
 
   /**
