@@ -105,9 +105,9 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/common/util:__subpackages__",
     ],
     deps = [
-        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "@maven//:com_google_code_findbugs_jsr305",
     ],
 )

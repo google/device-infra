@@ -16,9 +16,9 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.common.util;
 
-import com.google.auto.value.AutoValue;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import javax.annotation.Nullable;
 
 /**
@@ -28,142 +28,415 @@ import javax.annotation.Nullable;
  * <p>Note that properties across sources can differ, e.g. {@code android.os.Build} properties
  * sometimes deviate from the read-only properties that they're based on.
  */
-@AutoValue
-public abstract class DevicePropertyInfo {
+public final class DevicePropertyInfo {
+
+  @Nullable private final String abi;
+  @Nullable private final String abi2;
+  @Nullable private final String abis;
+  @Nullable private final String abis32;
+  @Nullable private final String abis64;
+  @Nullable private final String board;
+  @Nullable private final String brand;
+  @Nullable private final String device;
+  @Nullable private final String fingerprint;
+  @Nullable private final String vendorFingerprint;
+  @Nullable private final String bootimageFingerprint;
+  @Nullable private final String id;
+  @Nullable private final String manufacturer;
+  @Nullable private final String model;
+  @Nullable private final String product;
+  @Nullable private final String referenceFingerprint;
+  @Nullable private final String serial;
+  @Nullable private final String tags;
+  @Nullable private final String type;
+  @Nullable private final String versionBaseOs;
+  @Nullable private final String versionRelease;
+  @Nullable private final String versionSdk;
+  @Nullable private final String versionSecurityPatch;
+  @Nullable private final String versionIncremental;
+  @Nullable private final String versionSdkFull;
+
+  private DevicePropertyInfo(Builder builder) {
+    this.abi = builder.abi;
+    this.abi2 = builder.abi2;
+    this.abis = builder.abis;
+    this.abis32 = builder.abis32;
+    this.abis64 = builder.abis64;
+    this.board = builder.board;
+    this.brand = builder.brand;
+    this.device = builder.device;
+    this.fingerprint = builder.fingerprint;
+    this.vendorFingerprint = builder.vendorFingerprint;
+    this.bootimageFingerprint = builder.bootimageFingerprint;
+    this.id = builder.id;
+    this.manufacturer = builder.manufacturer;
+    this.model = builder.model;
+    this.product = builder.product;
+    this.referenceFingerprint = builder.referenceFingerprint;
+    this.serial = builder.serial;
+    this.tags = builder.tags;
+    this.type = builder.type;
+    this.versionBaseOs = builder.versionBaseOs;
+    this.versionRelease = builder.versionRelease;
+    this.versionSdk = builder.versionSdk;
+    this.versionSecurityPatch = builder.versionSecurityPatch;
+    this.versionIncremental = builder.versionIncremental;
+    this.versionSdkFull = builder.versionSdkFull;
+  }
 
   @Nullable
-  abstract String abi();
+  public String abi() {
+    return abi;
+  }
 
   @Nullable
-  abstract String abi2();
+  public String abi2() {
+    return abi2;
+  }
 
   @Nullable
-  abstract String abis();
+  public String abis() {
+    return abis;
+  }
 
   @Nullable
-  abstract String abis32();
+  public String abis32() {
+    return abis32;
+  }
 
   @Nullable
-  abstract String abis64();
+  public String abis64() {
+    return abis64;
+  }
 
   @Nullable
-  abstract String board();
+  public String board() {
+    return board;
+  }
 
   @Nullable
-  abstract String brand();
+  public String brand() {
+    return brand;
+  }
 
   @Nullable
-  abstract String device();
+  public String device() {
+    return device;
+  }
 
   @Nullable
-  abstract String fingerprint();
+  public String fingerprint() {
+    return fingerprint;
+  }
 
   @Nullable
-  abstract String vendorFingerprint();
+  public String vendorFingerprint() {
+    return vendorFingerprint;
+  }
 
   @Nullable
-  abstract String bootimageFingerprint();
+  public String bootimageFingerprint() {
+    return bootimageFingerprint;
+  }
 
   @Nullable
-  abstract String id();
+  public String id() {
+    return id;
+  }
 
   @Nullable
-  abstract String manufacturer();
+  public String manufacturer() {
+    return manufacturer;
+  }
 
   @Nullable
-  abstract String model();
+  public String model() {
+    return model;
+  }
 
   @Nullable
-  abstract String product();
+  public String product() {
+    return product;
+  }
 
   @Nullable
-  abstract String referenceFingerprint();
+  public String referenceFingerprint() {
+    return referenceFingerprint;
+  }
 
   @Nullable
-  abstract String serial();
+  public String serial() {
+    return serial;
+  }
 
   @Nullable
-  abstract String tags();
+  public String tags() {
+    return tags;
+  }
 
   @Nullable
-  abstract String type();
+  public String type() {
+    return type;
+  }
 
   @Nullable
-  abstract String versionBaseOs();
+  public String versionBaseOs() {
+    return versionBaseOs;
+  }
 
   @Nullable
-  abstract String versionRelease();
+  public String versionRelease() {
+    return versionRelease;
+  }
 
   @Nullable
-  abstract String versionSdk();
+  public String versionSdk() {
+    return versionSdk;
+  }
 
   @Nullable
-  abstract String versionSecurityPatch();
+  public String versionSecurityPatch() {
+    return versionSecurityPatch;
+  }
 
   @Nullable
-  abstract String versionIncremental();
+  public String versionIncremental() {
+    return versionIncremental;
+  }
 
   @Nullable
-  abstract String versionSdkFull();
+  public String versionSdkFull() {
+    return versionSdkFull;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o == this) {
+      return true;
+    }
+    if (o instanceof DevicePropertyInfo) {
+      DevicePropertyInfo that = (DevicePropertyInfo) o;
+      return Objects.equals(this.abi, that.abi())
+          && Objects.equals(this.abi2, that.abi2())
+          && Objects.equals(this.abis, that.abis())
+          && Objects.equals(this.abis32, that.abis32())
+          && Objects.equals(this.abis64, that.abis64())
+          && Objects.equals(this.board, that.board())
+          && Objects.equals(this.brand, that.brand())
+          && Objects.equals(this.device, that.device())
+          && Objects.equals(this.fingerprint, that.fingerprint())
+          && Objects.equals(this.vendorFingerprint, that.vendorFingerprint())
+          && Objects.equals(this.bootimageFingerprint, that.bootimageFingerprint())
+          && Objects.equals(this.id, that.id())
+          && Objects.equals(this.manufacturer, that.manufacturer())
+          && Objects.equals(this.model, that.model())
+          && Objects.equals(this.product, that.product())
+          && Objects.equals(this.referenceFingerprint, that.referenceFingerprint())
+          && Objects.equals(this.serial, that.serial())
+          && Objects.equals(this.tags, that.tags())
+          && Objects.equals(this.type, that.type())
+          && Objects.equals(this.versionBaseOs, that.versionBaseOs())
+          && Objects.equals(this.versionRelease, that.versionRelease())
+          && Objects.equals(this.versionSdk, that.versionSdk())
+          && Objects.equals(this.versionSecurityPatch, that.versionSecurityPatch())
+          && Objects.equals(this.versionIncremental, that.versionIncremental())
+          && Objects.equals(this.versionSdkFull, that.versionSdkFull());
+    }
+    return false;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(
+        abi,
+        abi2,
+        abis,
+        abis32,
+        abis64,
+        board,
+        brand,
+        device,
+        fingerprint,
+        vendorFingerprint,
+        bootimageFingerprint,
+        id,
+        manufacturer,
+        model,
+        product,
+        referenceFingerprint,
+        serial,
+        tags,
+        type,
+        versionBaseOs,
+        versionRelease,
+        versionSdk,
+        versionSecurityPatch,
+        versionIncremental,
+        versionSdkFull);
+  }
 
   /** Builder for {@link DevicePropertyInfo}. */
-  @AutoValue.Builder
-  public abstract static class Builder {
-    public abstract Builder abi(@Nullable String abi);
+  public static final class Builder {
+    @Nullable private String abi;
+    @Nullable private String abi2;
+    @Nullable private String abis;
+    @Nullable private String abis32;
+    @Nullable private String abis64;
+    @Nullable private String board;
+    @Nullable private String brand;
+    @Nullable private String device;
+    @Nullable private String fingerprint;
+    @Nullable private String vendorFingerprint;
+    @Nullable private String bootimageFingerprint;
+    @Nullable private String id;
+    @Nullable private String manufacturer;
+    @Nullable private String model;
+    @Nullable private String product;
+    @Nullable private String referenceFingerprint;
+    @Nullable private String serial;
+    @Nullable private String tags;
+    @Nullable private String type;
+    @Nullable private String versionBaseOs;
+    @Nullable private String versionRelease;
+    @Nullable private String versionSdk;
+    @Nullable private String versionSecurityPatch;
+    @Nullable private String versionIncremental;
+    @Nullable private String versionSdkFull;
 
-    public abstract Builder abi2(@Nullable String abi2);
+    public Builder() {}
 
-    public abstract Builder abis(@Nullable String abis);
+    public Builder abi(@Nullable String abi) {
+      this.abi = abi;
+      return this;
+    }
 
-    public abstract Builder abis32(@Nullable String abis32);
+    public Builder abi2(@Nullable String abi2) {
+      this.abi2 = abi2;
+      return this;
+    }
 
-    public abstract Builder abis64(@Nullable String abis64);
+    public Builder abis(@Nullable String abis) {
+      this.abis = abis;
+      return this;
+    }
 
-    public abstract Builder board(@Nullable String board);
+    public Builder abis32(@Nullable String abis32) {
+      this.abis32 = abis32;
+      return this;
+    }
 
-    public abstract Builder brand(@Nullable String brand);
+    public Builder abis64(@Nullable String abis64) {
+      this.abis64 = abis64;
+      return this;
+    }
 
-    public abstract Builder device(@Nullable String device);
+    public Builder board(@Nullable String board) {
+      this.board = board;
+      return this;
+    }
 
-    public abstract Builder fingerprint(@Nullable String fingerprint);
+    public Builder brand(@Nullable String brand) {
+      this.brand = brand;
+      return this;
+    }
 
-    public abstract Builder vendorFingerprint(@Nullable String vendorFingerprint);
+    public Builder device(@Nullable String device) {
+      this.device = device;
+      return this;
+    }
 
-    public abstract Builder id(@Nullable String id);
+    public Builder fingerprint(@Nullable String fingerprint) {
+      this.fingerprint = fingerprint;
+      return this;
+    }
 
-    public abstract Builder manufacturer(@Nullable String manufacturer);
+    public Builder vendorFingerprint(@Nullable String vendorFingerprint) {
+      this.vendorFingerprint = vendorFingerprint;
+      return this;
+    }
 
-    public abstract Builder model(@Nullable String model);
+    public Builder bootimageFingerprint(@Nullable String bootimageFingerprint) {
+      this.bootimageFingerprint = bootimageFingerprint;
+      return this;
+    }
 
-    public abstract Builder product(@Nullable String product);
+    public Builder id(@Nullable String id) {
+      this.id = id;
+      return this;
+    }
 
-    public abstract Builder referenceFingerprint(@Nullable String referenceFingerprint);
+    public Builder manufacturer(@Nullable String manufacturer) {
+      this.manufacturer = manufacturer;
+      return this;
+    }
 
-    public abstract Builder serial(@Nullable String serial);
+    public Builder model(@Nullable String model) {
+      this.model = model;
+      return this;
+    }
 
-    public abstract Builder tags(@Nullable String tags);
+    public Builder product(@Nullable String product) {
+      this.product = product;
+      return this;
+    }
 
-    public abstract Builder type(@Nullable String type);
+    public Builder referenceFingerprint(@Nullable String referenceFingerprint) {
+      this.referenceFingerprint = referenceFingerprint;
+      return this;
+    }
 
-    public abstract Builder versionBaseOs(@Nullable String versionBaseOs);
+    public Builder serial(@Nullable String serial) {
+      this.serial = serial;
+      return this;
+    }
 
-    public abstract Builder versionRelease(@Nullable String versionRelease);
+    public Builder tags(@Nullable String tags) {
+      this.tags = tags;
+      return this;
+    }
 
-    public abstract Builder versionSdk(@Nullable String versionSdk);
+    public Builder type(@Nullable String type) {
+      this.type = type;
+      return this;
+    }
 
-    public abstract Builder versionSecurityPatch(@Nullable String versionSecurityPatch);
+    public Builder versionBaseOs(@Nullable String versionBaseOs) {
+      this.versionBaseOs = versionBaseOs;
+      return this;
+    }
 
-    public abstract Builder versionIncremental(@Nullable String versionIncremental);
+    public Builder versionRelease(@Nullable String versionRelease) {
+      this.versionRelease = versionRelease;
+      return this;
+    }
 
-    public abstract Builder bootimageFingerprint(@Nullable String bootimageFingerprint);
+    public Builder versionSdk(@Nullable String versionSdk) {
+      this.versionSdk = versionSdk;
+      return this;
+    }
 
-    public abstract Builder versionSdkFull(@Nullable String versionSdkFull);
+    public Builder versionSecurityPatch(@Nullable String versionSecurityPatch) {
+      this.versionSecurityPatch = versionSecurityPatch;
+      return this;
+    }
 
-    public abstract DevicePropertyInfo build();
+    public Builder versionIncremental(@Nullable String versionIncremental) {
+      this.versionIncremental = versionIncremental;
+      return this;
+    }
+
+    public Builder versionSdkFull(@Nullable String versionSdkFull) {
+      this.versionSdkFull = versionSdkFull;
+      return this;
+    }
+
+    public DevicePropertyInfo build() {
+      return new DevicePropertyInfo(this);
+    }
   }
 
   public static Builder newBuilder() {
-    return new AutoValue_DevicePropertyInfo.Builder().bootimageFingerprint("unknown");
+    return new Builder().bootimageFingerprint("unknown");
   }
 
   /**

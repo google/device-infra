@@ -54,3 +54,13 @@ java_test(
         "@maven//:org_mockito_mockito_core",
     ],
 )
+
+java_test(
+    name = "DevicePropertyInfoTest",
+    size = "small",
+    srcs = ["DevicePropertyInfoTest.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:device_property_info",
+        "@maven//:junit_junit",
+    ],
+)
