@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Map.Entry;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -64,28 +65,35 @@ public class ConfigurationXmlParser {
    * @throws MobileHarnessException if fail to parse
    */
   public static Configuration parse(File xmlFile) throws MobileHarnessException {
-    FileInputStream fileInputStream;
-    try {
-      fileInputStream = new FileInputStream(xmlFile);
+    try (FileInputStream fileInputStream = new FileInputStream(xmlFile)) {
+      return parse(fileInputStream, xmlFile.getName());
     } catch (IOException e) {
       throw new MobileHarnessException(
           InfraErrorId.XTS_CONFIG_XML_PARSE_ERROR,
           String.format("Failed to open configuration xml file: %s", xmlFile),
           e);
     }
+  }
+
+  /**
+   * Parses the xml stream and saves the result to the {@code Configuration} proto.
+   *
+   * @throws MobileHarnessException if fail to parse
+   */
+  public static Configuration parse(InputStream xmlStream, String fileName)
+      throws MobileHarnessException {
     DocumentBuilder documentBuilder;
     Document document;
     Configuration.Builder configuration = Configuration.newBuilder();
     try {
       documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-      document = documentBuilder.parse(fileInputStream);
+      document = documentBuilder.parse(xmlStream);
     } catch (ParserConfigurationException | SAXException | IOException e) {
       throw new MobileHarnessException(
           InfraErrorId.XTS_CONFIG_XML_PARSE_ERROR, "Failed to parse configuration xml file", e);
     }
 
     Element root = document.getDocumentElement();
-    String fileName = xmlFile.getName();
     String fileNameWithoutExtension = Files.getNameWithoutExtension(fileName);
     configuration.setMetadata(
         ConfigurationMetadata.newBuilder()
@@ -112,6 +120,9 @@ public class ConfigurationXmlParser {
           break;
         case TEST:
           configuration.setTest(parseTest(node));
+          break;
+        case TARGET_PREPARER:
+          configuration.addTargetPreparers(parseTargetPreparer(node));
           break;
         default:
           break;

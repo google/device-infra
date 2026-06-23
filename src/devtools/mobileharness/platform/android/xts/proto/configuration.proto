@@ -64,4 +64,5 @@ message Configuration {
   repeated Option options = 4;
   repeated Device devices = 5;
   Test test = 6;
+  repeated TargetPreparer target_preparers = 7;
 }
