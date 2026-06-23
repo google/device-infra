@@ -37,8 +37,6 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.util.result.ClientAllocErrorUtil;
 import com.google.devtools.mobileharness.infra.container.proto.ModeSettingProto.ContainerModePreference;
-import com.google.devtools.mobileharness.infra.controller.test.local.utp.common.UtpMode;
-import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.IncompatibleReasonProto.InfraIncompatibleReason;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
@@ -143,7 +141,6 @@ public class TestRetryHandler {
     }
 
     Optional<TestInfo> foregoingTest = getForegoingTest(currentTestInfo);
-    Optional<UtpMode> currentUtpMode = getUtpMode(currentTestInfo);
 
     TestResult currentTestResult = currentTestInfo.resultWithCause().get().type();
     Optional<TestResult> foregoingTestResult =
@@ -158,12 +155,10 @@ public class TestRetryHandler {
             && TestResult.PASS == currentTestResult;
     if (isPassAfterRetry) {
       // Use cases:
-      // 1) Show the tests failed because of UTP:
-      //    NONPASSING_BEFORE_RETRY_PASS=true && UTP_MODE=UMTS_UTP/MH_HYBRID_UTP
-      // 2) Show the tests failed because of Container:
+      // 1) Show the tests failed because of Container:
       //    NONPASSING_BEFORE_RETRY_PASS=true & CONTAINER_MODE=true
-      // 3) Show the failed/error tests that are saved by a general retry:
-      //    NONPASSING_BEFORE_RETRY_PASS=true & CONTAINER_MODE=false & UTP_MODE=null
+      // 2) Show the failed/error tests that are saved by a general retry:
+      //    NONPASSING_BEFORE_RETRY_PASS=true & CONTAINER_MODE=false
       foregoingTest
           .get()
           .properties()
@@ -177,13 +172,11 @@ public class TestRetryHandler {
           .add(Test.VOLATILE_TEST_INFO_AFTER_TEST_ENDS, Boolean.TRUE.toString());
 
       // Use cases:
-      // 1) Show the pass retry attempts after a UTP fail/error run:
-      //    PASS_AFTER_RETRY=true && RETRY_REASON=POTENTIAL_{UMTS_UTP/MH_HYBRID_UTP}_ISSUE
-      // 2) Show the pass retry attempts after a container fail/error runs:
+      // 1) Show the pass retry attempts after a container fail/error runs:
       //    PASS_AFTER_RETRY=true && RETRY_REASON=POTENTIAL_CONTAINER_ISSUE
-      // 3) Show the failed/error tests that are saved by a general retry:
-      //    NONPASSING_BEFORE_RETRY_PASS=true & CONTAINER_MODE=false & UTP_MODE=null
-      // 4) Show the INFRA_ISSUE tests that are saved by an extra retry:
+      // 2) Show the failed/error tests that are saved by a general retry:
+      //    NONPASSING_BEFORE_RETRY_PASS=true & CONTAINER_MODE=false
+      // 3) Show the INFRA_ISSUE tests that are saved by an extra retry:
       //    PASS_AFTER_RETRY=true && RETRY_REASON=EXTRA_RETRY_FOR_INFRA_ISSUE
       currentTestInfo.properties().add(Test.PASS_AFTER_RETRY, Boolean.TRUE.toString());
       addFinalAttemptProperty(currentTestInfo);
@@ -236,8 +229,6 @@ public class TestRetryHandler {
     if (validAttemptNum < retrySetting.getTestAttempts()) {
       if (isPotentialContainerError(currentTestInfo)) {
         retryReason = "POTENTIAL_CONTAINER_ISSUE";
-      } else if (isPotentialUtpError(currentTestInfo)) {
-        retryReason = "POTENTIAL_" + currentUtpMode.get().name() + "_ISSUE";
       } else if (isRetryableForDrainTimeout(currentTestInfo)) {
         retryReason = "DRAIN_TIMEOUT_ERROR";
       } else if ((retryLevel == Retry.Level.ERROR
@@ -265,7 +256,8 @@ public class TestRetryHandler {
         && !DRIVER_BLOCK_LIST_FOR_INFRA_ERROR_EXTRA_RETRY.contains(jobInfo.type().getDriver())
         && !USER_BLOCK_LIST_FOR_INFRA_ERROR_EXTRA_RETRY.contains(jobInfo.jobUser().getRunAs())
         && validAttemptNum
-            == getAllAttempts(jobInfo, currentTestInfo).size() /* no auto retry for UTP */) {
+            == getAllAttempts(jobInfo, currentTestInfo)
+                .size() /* no auto retry for container / drain */) {
       // Have another retry for the INFRA_ISSUE even when the max attempt number is reached.
       if (testResult != TestResult.PASS && testResult != TestResult.SKIP && cause.isPresent()) {
         if (criticalErrorId.getType() == ErrorType.INFRA_ISSUE
@@ -424,18 +416,6 @@ public class TestRetryHandler {
     }
     currentTestInfo.properties().add(Test.RETRY_TEST_ID, newTestInfo.locator().getId());
 
-    // Disable hybrid UTP mode for all retries, excepts the following cases:
-    // 1) The first attempts can run with hybrid UTP
-    // 2) If "enable_mh_hybrid_utp_mode" is set to true, all attempts should run with hybrid mode.
-    // 3) If the test has user specified UTP configs, all attempts should run with hybrid mode.
-    if (!isForcedHybridUtpMode(currentTestInfo)) {
-      newTestInfo
-          .properties()
-          .add(
-              Test.HYBRID_UTP_FORCIBLY_DISABLE,
-              Ascii.toLowerCase(InfraIncompatibleReason.TEST_RETRY.name()));
-    }
-
     // RETRY_AFTER_CONTAINER_FAILS will fallback to non-container-mode test.
     boolean isCurrentContainerMode =
         currentTestInfo.properties().getBoolean(Test.CONTAINER_MODE).orElse(false);
@@ -459,12 +439,11 @@ public class TestRetryHandler {
         .flatMap(testId -> Optional.ofNullable(testInfo.jobInfo().tests().getById(testId)));
   }
 
-  // We want to make retry after containersandbox/UTP failure user-invisible. Therefore, we only
-  // consider tests which are not potentially container/UTP error as valid attempts.
+  // We want to make retry after container failure / drain timeout user-invisible. Therefore, we
+  // only consider tests which are not potentially container error or drain timeout as valid
+  // attempts.
   private static boolean isValidAttempt(TestInfo testInfo) {
-    return !isPotentialContainerError(testInfo)
-        && !isPotentialUtpError(testInfo)
-        && !isRetryableForDrainTimeout(testInfo);
+    return !isPotentialContainerError(testInfo) && !isRetryableForDrainTimeout(testInfo);
   }
 
   /**
@@ -493,25 +472,6 @@ public class TestRetryHandler {
                 == ErrorType.CUSTOMER_ISSUE);
   }
 
-  /**
-   * We consider tests satisfying the following requirement a potential UTP TestRunner error:
-   *
-   * <ol>
-   *   <li>It runs in any UTP mode.
-   *   <li>Its result is not PASS or Skipped.
-   *   <li>The parameter "enable_mh_hybrid_utp_mode" is not set to true.
-   *   <li>The test does not have user specified UTP configs.
-   * </ol>
-   */
-  private static boolean isPotentialUtpError(TestInfo currentTestInfo) {
-    TestResult currentTestResult = currentTestInfo.resultWithCause().get().type();
-    Optional<UtpMode> currentUtpMode = getUtpMode(currentTestInfo);
-    return !isForcedHybridUtpMode(currentTestInfo)
-        && currentUtpMode.isPresent()
-        && currentTestResult != TestResult.PASS
-        && currentTestResult != TestResult.SKIP;
-  }
-
   /** Check if the test is retryable for drain timeout. */
   private static boolean isRetryableForDrainTimeout(TestInfo testInfo) {
     Optional<ExceptionDetail> cause = testInfo.resultWithCause().get().causeProto();
@@ -529,36 +489,6 @@ public class TestRetryHandler {
 
   private static void addFinalAttemptProperty(TestInfo currentTestInfo) {
     currentTestInfo.properties().add(Test.IS_FINAL_ATTEMPT, "true");
-  }
-
-  /** Retrieves the UtpMode type from the test property if the given test is running in UTP Mode. */
-  private static Optional<UtpMode> getUtpMode(TestInfo testInfo) {
-    String utpModeStr = testInfo.properties().get(Test.UTP_MODE);
-    if (utpModeStr != null) {
-      try {
-        return Optional.of(UtpMode.valueOf(utpModeStr));
-      } catch (IllegalArgumentException e) {
-        testInfo
-            .log()
-            .atWarning()
-            .alsoTo(logger)
-            .log("Unknown UtpMode in test property: %s", utpModeStr);
-        // Add warning to TestInfo.warnings().
-      }
-    }
-    return Optional.empty();
-  }
-
-  /**
-   * Checks whether the user specifies the parameter "enable_mh_hybrid_utp_mode" is set to true or
-   * the test has user specified UTP configs.
-   *
-   * <p>If yes, we consider the user only wants to execute the test in UTP hybrid mode. Therefore,
-   * we won't retry the test in MH stacks.
-   */
-  private static boolean isForcedHybridUtpMode(TestInfo testInfo) {
-    return testInfo.jobInfo().params().isTrue("enable_mh_hybrid_utp_mode")
-        || testInfo.properties().getBoolean(Test.HAS_USER_UTP_CONFIG).orElse(false);
   }
 
   /**
