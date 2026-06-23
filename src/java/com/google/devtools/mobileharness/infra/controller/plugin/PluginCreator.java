@@ -18,11 +18,10 @@ package com.google.devtools.mobileharness.infra.controller.plugin;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.stream.Collectors.groupingBy;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.plugin.loader.PluginInstantiator;
@@ -34,11 +33,16 @@ import com.google.devtools.mobileharness.infra.controller.plugin.provider.Plugin
 import com.google.devtools.mobileharness.infra.controller.plugin.provider.PluginModuleClassProvider;
 import com.google.devtools.mobileharness.infra.controller.plugin.provider.RetryPluginClassProvider;
 import com.google.devtools.mobileharness.infra.controller.plugin.provider.RetryPluginModuleClassProvider;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.errorprone.annotations.FormatMethod;
 import com.google.inject.Module;
+import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin.PluginType;
+import com.google.wireless.qa.mobileharness.shared.controller.plugin.PluginModule;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
+import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ClassInfo;
+import io.github.classgraph.ScanResult;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -49,14 +53,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.NotThreadSafe;
-import org.reflections.Reflections;
-import org.reflections.util.ConfigurationBuilder;
 
 /**
  * Plugin loader for loading classes from the jar files.
@@ -79,8 +81,6 @@ import org.reflections.util.ConfigurationBuilder;
 public class PluginCreator implements AutoCloseable {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-  private static final ListeningExecutorService executorService =
-      ThreadPools.createStandardThreadPool("plugin-creator");
 
   /** The factory to create instance. */
   public interface Factory {
@@ -134,6 +134,11 @@ public class PluginCreator implements AutoCloseable {
   @GuardedBy("lock")
   @Nullable
   private ClassLoader classLoader;
+
+  /** The scan result of the plugin jars. */
+  @GuardedBy("lock")
+  @Nullable
+  private ScanResult scanResult;
 
   /**
    * Creates a plugin loader.
@@ -198,134 +203,14 @@ public class PluginCreator implements AutoCloseable {
         }
       }
 
-      logger.atInfo().log("Loading plugins from jars %s", jarUrls);
+      logInfo("Loading plugins from jars %s", jarUrls);
       classLoader =
           PluginLoader.createClassLoader(
               jarUrls, getClass().getClassLoader(), forceLoadFromJarClassRegex);
-
-      List<AsyncReflection> reflectedJars = new ArrayList<>();
-      if (moduleClassNames == null || classNames == null) {
-        for (URL jarUrl : jarUrls) {
-          ConfigurationBuilder configBuilder =
-              new ConfigurationBuilder()
-                  .setUrls(ImmutableList.of(jarUrl))
-                  .addClassLoader(classLoader);
-          reflectedJars.add(
-              new AsyncReflection(
-                  jarUrl, executorService.submit(() -> new Reflections(configBuilder))));
-        }
-      }
-
-      // Finds plugin module classes.
-      Set<Class<? extends Module>> moduleClasses;
-      if (moduleClassNames == null) {
-        logger.atInfo().log(
-            "No plugin module class name given, searching plugin module classes"
-                + " by plugin module annotation");
-        moduleClasses = new HashSet<>();
-        for (var jarEntry : reflectedJars) {
-          final URL jarUrl = jarEntry.url;
-          logger.atInfo().log("Searching plugin module classes in jar [%s]", jarUrl);
-          final Reflections reflections;
-          try {
-            reflections = jarEntry.reflection.get();
-          } catch (InterruptedException | ExecutionException e) {
-            throw new MobileHarnessException(
-                BasicErrorId.PLUGIN_LOADER_FAILED_TO_GET_JAR_URL,
-                String.format("Error reflecting plugin module jar [%s]", jarUrl),
-                e);
-          }
-          PluginModuleClassProvider moduleClassProvider =
-              new RetryPluginModuleClassProvider(
-                  new AnnotatedPluginModuleClassProvider(
-                      reflections, log, true /* warnUnmatchedTypes */, pluginType),
-                  new AnnotatedPluginModuleClassProvider(
-                      reflections, log, false /* warnUnmatchedTypes */, PluginType.UNSPECIFIED));
-
-          Set<Class<? extends Module>> newModuleClasses;
-          try {
-            newModuleClasses = moduleClassProvider.getPluginModuleClasses();
-          } catch (MobileHarnessException e) {
-            close();
-            throw e;
-          }
-          logger.atInfo().log(
-              "Get plugin module classes %s from jar [%s]", newModuleClasses, jarUrl);
-          moduleClasses.addAll(newModuleClasses);
-        }
-      } else {
-        logger.atInfo().log(
-            "Searching plugin module classes in all jars by names %s", moduleClassNames);
-        PluginModuleClassProvider moduleClassProvider =
-            new NamedPluginModuleClassProvider(moduleClassNames, classLoader);
-        try {
-          moduleClasses = moduleClassProvider.getPluginModuleClasses();
-        } catch (MobileHarnessException e) {
-          close();
-          throw e;
-        }
-        logger.atInfo().log("Get plugin module classes %s", moduleClasses);
-      }
-
-      // Finds plugin classes.
-      Set<Class<?>> classes;
-      if (classNames == null) {
-        logger.atInfo().log(
-            "No plugin class name given, searching plugin class by plugin annotation");
-        classes = new HashSet<>();
-        for (var jarEntry : reflectedJars) {
-          final URL jarUrl = jarEntry.url;
-          logger.atInfo().log("Searching plugin classes in jar [%s]", jarUrl);
-
-          // Class name not specified, finds all classes marked with @Plugin.
-          final Reflections reflections;
-          try {
-            reflections = jarEntry.reflection.get();
-          } catch (InterruptedException | ExecutionException e) {
-            throw new MobileHarnessException(
-                BasicErrorId.PLUGIN_LOADER_FAILED_TO_GET_JAR_URL,
-                String.format("Error reflecting plugin jar [%s]", jarUrl),
-                e);
-          }
-          PluginClassProvider classProvider =
-              new RetryPluginClassProvider(
-                  new AnnotatedPluginClassProvider(
-                      reflections, log, true /* warnUnmatchedTypes */, pluginType),
-                  new AnnotatedPluginClassProvider(
-                      reflections, log, false /* warnUnmatchedTypes */, PluginType.UNSPECIFIED));
-
-          Set<Class<?>> newClasses;
-          try {
-            newClasses = classProvider.getPluginClasses();
-          } catch (MobileHarnessException e) {
-            close();
-            throw e;
-          }
-          logger.atInfo().log("Get plugin classes %s from jar [%s]", newClasses, jarUrl);
-          if (newClasses.size() > 1) {
-            if (log != null) {
-              log.atWarning().log(
-                  "Get more than one plugin class from jar [%s]: %s", jarUrl, newClasses);
-            }
-            logger.atWarning().log(
-                "Get more than one plugin class from jar [%s]: %s", jarUrl, newClasses);
-          }
-          classes.addAll(newClasses);
-        }
-      } else {
-        logger.atInfo().log("Searching plugin classes in all jars by names %s", classNames);
-        PluginClassProvider classProvider = new NamedPluginClassProvider(classNames, classLoader);
-        try {
-          classes = classProvider.getPluginClasses();
-        } catch (MobileHarnessException e) {
-          close();
-          throw e;
-        }
-        logger.atInfo().log("Get plugin class %s", classes);
-      }
-
+      Set<Class<? extends Module>> moduleClasses = getPluginModuleClasses(jarUrls);
+      Set<Class<?>> classes = getPluginClasses(jarUrls);
       if (classes.isEmpty()) {
-        logger.atInfo().log("No plugin is loaded");
+        logInfo("No plugin is loaded");
         return false;
       }
 
@@ -335,7 +220,7 @@ public class PluginCreator implements AutoCloseable {
         try {
           plugins.add(
               PluginInstantiator.instantiatePlugin(pluginClass, moduleClasses, systemModules));
-          logger.atInfo().log("Loaded plugin: %s", pluginClass.getName());
+          logInfo("Loaded plugin: %s", pluginClass.getName());
         } catch (MobileHarnessException e) {
           close();
           throw e;
@@ -360,6 +245,10 @@ public class PluginCreator implements AutoCloseable {
   public void close() {
     synchronized (lock) {
       isClosed = true;
+      if (scanResult != null) {
+        scanResult.close();
+        scanResult = null;
+      }
       if (classLoader != null) {
         try {
           if (classLoader instanceof Closeable) {
@@ -367,20 +256,174 @@ public class PluginCreator implements AutoCloseable {
           }
           classLoader = null;
         } catch (IOException e) {
-          logger.atWarning().withCause(e).log(
-              "Failed to close plugin class loader for %s", jarUris);
+          logWarning("Failed to close plugin class loader for %s", jarUris);
         }
       }
     }
   }
 
-  private static final class AsyncReflection {
-    private final URL url;
-    private final ListenableFuture<Reflections> reflection;
+  /** Scans the target jars. Handles creation-specific exceptions explicitly. */
+  private void scanJars(List<URL> jarUrls) throws MobileHarnessException {
+    synchronized (lock) {
+      if (isClosed) {
+        logInfo("Plugin creator is closed, skip scanning all jars: [%s]", jarUrls);
+        return;
+      }
+      if (scanResult != null) {
+        logInfo("Plugin creator has already scanned all jars: [%s]", jarUrls);
+        return;
+      }
+      try {
+        scanResult =
+            new ClassGraph()
+                .overrideClassLoaders(classLoader)
+                .enableAnnotationInfo() // module scanning is enabled by default
+                .ignoreClassVisibility()
+                .scan();
+      } catch (Exception e) {
+        close();
+        throw new MobileHarnessException(
+            BasicErrorId.PLUGIN_LOADER_FAILED_TO_SCAN_CLASS_GRAPH_IN_JAR,
+            String.format("Error scanning class graph in plugin jar [%s]", jarUrls),
+            e);
+      }
+    }
+  }
 
-    private AsyncReflection(URL url, ListenableFuture<Reflections> reflection) {
-      this.url = url;
-      this.reflection = reflection;
+  /**
+   * Gets the plugin module classes. If {@code moduleClassNames} is specified, the loader tries to
+   * load class with the given names. Otherwise, the loader tries to load all classes with {@link
+   * PluginModule} annotation.
+   */
+  private Set<Class<? extends Module>> getPluginModuleClasses(List<URL> jarUrls)
+      throws MobileHarnessException {
+    synchronized (lock) {
+      Set<Class<? extends Module>> moduleClasses = new HashSet<>();
+      if (moduleClassNames == null) {
+        logInfo(
+            "No plugin module class name given, scanning the jars to search plugin module classes"
+                + " by plugin module annotation");
+        scanJars(jarUrls);
+        if (scanResult == null) {
+          logInfo("Failed to scan the jars: [%s]", jarUrls);
+          return moduleClasses;
+        }
+        // Group class metadata from ScanResult by their originating JAR URL
+        Map<URL, List<ClassInfo>> classesByJar =
+            scanResult.getClassesWithAnnotation(PluginModule.class).stream()
+                .collect(groupingBy(ClassInfo::getClasspathElementURL));
+        // Evaluate the fallback rules independently for each JAR.
+        for (var entry : classesByJar.entrySet()) {
+          final URL jarUrl = entry.getKey();
+          logInfo("Searching plugin module classes in jar [%s]", jarUrl);
+          final List<ClassInfo> classInfos = entry.getValue();
+          PluginModuleClassProvider moduleClassProvider =
+              new RetryPluginModuleClassProvider(
+                  new AnnotatedPluginModuleClassProvider(
+                      classInfos, log, /* warnUnmatchedTypes= */ true, pluginType),
+                  new AnnotatedPluginModuleClassProvider(
+                      classInfos, log, /* warnUnmatchedTypes= */ false, PluginType.UNSPECIFIED));
+          Set<Class<? extends Module>> newModuleClasses;
+          try {
+            newModuleClasses = moduleClassProvider.getPluginModuleClasses();
+          } catch (MobileHarnessException e) {
+            close();
+            throw e;
+          }
+          logInfo("Get plugin module classes %s from jar [%s]", newModuleClasses, jarUrl);
+          moduleClasses.addAll(newModuleClasses);
+        }
+      } else {
+        logInfo("Searching plugin module classes in all jars by names %s", moduleClassNames);
+        PluginModuleClassProvider moduleClassProvider =
+            new NamedPluginModuleClassProvider(moduleClassNames, classLoader);
+        try {
+          moduleClasses = moduleClassProvider.getPluginModuleClasses();
+        } catch (MobileHarnessException e) {
+          close();
+          throw e;
+        }
+        logInfo("Get plugin module classes %s", moduleClasses);
+      }
+      return moduleClasses;
+    }
+  }
+
+  /**
+   * Gets the plugin classes. If {@code classNames} is specified, the loader tries to load class
+   * with the given names. Otherwise, the loader tries to load all classes with {@link Plugin}
+   * annotation.
+   */
+  private Set<Class<?>> getPluginClasses(List<URL> jarUrls) throws MobileHarnessException {
+    synchronized (lock) {
+      Set<Class<?>> classes = new HashSet<>();
+      if (classNames == null) {
+        logInfo("No plugin class name given, searching plugin class by plugin annotation");
+        scanJars(jarUrls);
+        if (scanResult == null) {
+          logInfo("Failed to scan the jars: [%s]", jarUrls);
+          return classes;
+        }
+        // Group class metadata from ScanResult by their originating JAR URL
+        Map<URL, List<ClassInfo>> classesByJar =
+            scanResult.getClassesWithAnnotation(Plugin.class).stream()
+                .collect(groupingBy(ClassInfo::getClasspathElementURL));
+        // Evaluate the fallback rules independently for each JAR.
+        for (var entry : classesByJar.entrySet()) {
+          final URL jarUrl = entry.getKey();
+          logInfo("Searching plugin classes in jar [%s]", jarUrl);
+          final List<ClassInfo> classInfos = entry.getValue();
+          PluginClassProvider classProvider =
+              new RetryPluginClassProvider(
+                  new AnnotatedPluginClassProvider(
+                      classInfos, log, /* warnUnmatchedTypes= */ true, pluginType),
+                  new AnnotatedPluginClassProvider(
+                      classInfos, log, /* warnUnmatchedTypes= */ false, PluginType.UNSPECIFIED));
+          Set<Class<?>> newClasses;
+          try {
+            newClasses = classProvider.getPluginClasses();
+          } catch (MobileHarnessException e) {
+            close();
+            throw e;
+          }
+          logInfo("Get plugin classes %s from jar [%s]", newClasses, jarUrl);
+          if (newClasses.size() > 1) {
+            logWarning("Get more than one plugin class from jar [%s]: %s", jarUrl, newClasses);
+          }
+          classes.addAll(newClasses);
+        }
+      } else {
+        logInfo("Searching plugin classes in all jars by names %s", classNames);
+        PluginClassProvider classProvider = new NamedPluginClassProvider(classNames, classLoader);
+        try {
+          classes = classProvider.getPluginClasses();
+        } catch (MobileHarnessException e) {
+          close();
+          throw e;
+        }
+        logInfo("Get plugin classes %s", classes);
+      }
+      return classes;
+    }
+  }
+
+  /** Logs an info message to the log collector if present; otherwise logs to the logger. */
+  @FormatMethod
+  private void logInfo(String format, Object... args) {
+    if (log != null) {
+      log.atInfo().alsoTo(logger).log(format, args);
+    } else {
+      logger.atInfo().logVarargs(format, args);
+    }
+  }
+
+  /** Logs a warning message to the log collector if present; otherwise logs to the logger. */
+  @FormatMethod
+  private void logWarning(String format, Object... args) {
+    if (log != null) {
+      log.atWarning().alsoTo(logger).log(format, args);
+    } else {
+      logger.atWarning().logVarargs(format, args);
     }
   }
 }
