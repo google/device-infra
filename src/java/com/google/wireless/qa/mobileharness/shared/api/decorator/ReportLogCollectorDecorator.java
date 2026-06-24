@@ -25,8 +25,9 @@ import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnot
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.AbstractLifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.util.ReportLogCollectorUtil;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
-import com.google.wireless.qa.mobileharness.shared.api.spec.ReportLogCollectorSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.ReportLogCollectorDecoratorSpec;
 import java.io.File;
 import java.util.logging.Level;
 import javax.inject.Inject;
@@ -34,7 +35,7 @@ import javax.inject.Inject;
 /** A decorator that prepares and pulls report logs. */
 @DecoratorAnnotation(help = "Prepares and pulls report logs.")
 public class ReportLogCollectorDecorator extends AbstractLifecycleDecorator
-    implements ReportLogCollectorSpec {
+    implements SpecConfigable<ReportLogCollectorDecoratorSpec> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -61,9 +62,11 @@ public class ReportLogCollectorDecorator extends AbstractLifecycleDecorator
   @Override
   protected void setUp(TestInfo testInfo) throws InterruptedException {
     try {
-      String destDir = testInfo.jobInfo().params().get(PARAM_REPORT_LOG_DEST_DIR);
+      ReportLogCollectorDecoratorSpec spec =
+          testInfo.jobInfo().combinedSpec(this, getDevice().getDeviceId());
+      String destDir = spec.getDestDir();
       File resultDir = new File(testInfo.getGenFileDir());
-      if (destDir != null && !destDir.isEmpty()) {
+      if (!destDir.isEmpty()) {
         resultDir = new File(resultDir, destDir);
       }
       localFileUtil.prepareDir(resultDir.getAbsolutePath());
@@ -81,15 +84,17 @@ public class ReportLogCollectorDecorator extends AbstractLifecycleDecorator
   protected void tearDown(TestInfo testInfo) throws InterruptedException {
 
     try {
-      String srcDir = testInfo.jobInfo().params().get(PARAM_REPORT_LOG_SRC_DIR);
-      String destDir = testInfo.jobInfo().params().get(PARAM_REPORT_LOG_DEST_DIR);
-      String tempDirName = testInfo.jobInfo().params().get(PARAM_REPORT_LOG_TEMP_DIR);
-      boolean deviceDir = testInfo.jobInfo().params().getBool(PARAM_REPORT_LOG_DEVICE_DIR, false);
+      ReportLogCollectorDecoratorSpec spec =
+          testInfo.jobInfo().combinedSpec(this, getDevice().getDeviceId());
+      String srcDir = spec.getSrcDir();
+      String destDir = spec.getDestDir();
+      String tempDirName = spec.getTempDir();
+      boolean deviceDir = spec.getDeviceDir();
 
       String deviceId = getDevice().getDeviceId();
 
       File resultDir = new File(testInfo.getGenFileDir());
-      if (destDir != null && !destDir.isEmpty()) {
+      if (!destDir.isEmpty()) {
         resultDir = new File(resultDir, destDir);
       }
       localFileUtil.prepareDir(resultDir.getAbsolutePath());

@@ -176,14 +176,6 @@ java_library(
 )
 
 java_library(
-    name = "report_log_collector_spec",
-    srcs = ["ReportLogCollectorSpec.java"],
-    deps = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
-    ],
-)
-
-java_library(
     name = "split_method_spec",
     srcs = ["SplitMethodSpec.java"],
 )

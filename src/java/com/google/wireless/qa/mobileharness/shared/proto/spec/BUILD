@@ -358,6 +358,17 @@ java_proto_library(
 )
 
 proto_library(
+    name = "report_log_collector_decorator_spec_proto",
+    srcs = ["decorator/report_log_collector_decorator_spec.proto"],
+    deps = [":base_spec_proto"],
+)
+
+java_proto_library(
+    name = "report_log_collector_decorator_spec_java_proto",
+    deps = [":report_log_collector_decorator_spec_proto"],
+)
+
+proto_library(
     name = "device_info_collector_decorator_spec_proto",
     srcs = ["decorator/device_info_collector_decorator_spec.proto"],
     deps = [":base_spec_proto"],

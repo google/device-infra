@@ -25,12 +25,11 @@ import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
-import com.google.wireless.qa.mobileharness.shared.api.spec.ReportLogCollectorSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.ReportLogCollectorDecoratorSpec;
 import java.io.File;
 import org.junit.Before;
 import org.junit.Rule;
@@ -49,7 +48,6 @@ public class ReportLogCollectorDecoratorTest {
   @Mock private Driver decoratedDriver;
   @Mock private JobInfo jobInfo;
   @Mock private TestInfo testInfo;
-  @Mock private Params params;
   @Mock private AndroidFileUtil androidFileUtil;
   @Mock private LocalFileUtil localFileUtil;
 
@@ -59,7 +57,6 @@ public class ReportLogCollectorDecoratorTest {
   public void setUp() throws Exception {
     when(decoratedDriver.getDevice()).thenReturn(device);
     when(testInfo.jobInfo()).thenReturn(jobInfo);
-    when(jobInfo.params()).thenReturn(params);
     when(testInfo.log()).thenReturn(new Log(new Timing()));
     when(device.getDeviceId()).thenReturn("device_id");
     when(testInfo.getGenFileDir()).thenReturn("/gen_file_dir");
@@ -70,7 +67,9 @@ public class ReportLogCollectorDecoratorTest {
 
   @Test
   public void setUp_createsDestDir() throws Exception {
-    when(params.get(ReportLogCollectorSpec.PARAM_REPORT_LOG_DEST_DIR)).thenReturn("dest_dir");
+    ReportLogCollectorDecoratorSpec spec =
+        ReportLogCollectorDecoratorSpec.newBuilder().setDestDir("dest_dir").build();
+    when(jobInfo.combinedSpec(decorator, "device_id")).thenReturn(spec);
 
     decorator.setUp(testInfo);
 
@@ -79,11 +78,14 @@ public class ReportLogCollectorDecoratorTest {
 
   @Test
   public void tearDown_pullsAndReformatsLogs() throws Exception {
-    when(params.get(ReportLogCollectorSpec.PARAM_REPORT_LOG_SRC_DIR)).thenReturn("src_dir");
-    when(params.get(ReportLogCollectorSpec.PARAM_REPORT_LOG_DEST_DIR)).thenReturn("dest_dir");
-    when(params.get(ReportLogCollectorSpec.PARAM_REPORT_LOG_TEMP_DIR)).thenReturn("temp_dir");
-    when(params.getBool(ReportLogCollectorSpec.PARAM_REPORT_LOG_DEVICE_DIR, false))
-        .thenReturn(false);
+    ReportLogCollectorDecoratorSpec spec =
+        ReportLogCollectorDecoratorSpec.newBuilder()
+            .setSrcDir("src_dir")
+            .setDestDir("dest_dir")
+            .setTempDir("temp_dir")
+            .setDeviceDir(false)
+            .build();
+    when(jobInfo.combinedSpec(decorator, "device_id")).thenReturn(spec);
 
     decorator.tearDown(testInfo);
 
@@ -92,11 +94,14 @@ public class ReportLogCollectorDecoratorTest {
 
   @Test
   public void tearDown_appendsDeviceIdToTempDir_whenDeviceDirIsTrue() throws Exception {
-    when(params.get(ReportLogCollectorSpec.PARAM_REPORT_LOG_SRC_DIR)).thenReturn("src_dir");
-    when(params.get(ReportLogCollectorSpec.PARAM_REPORT_LOG_DEST_DIR)).thenReturn("dest_dir");
-    when(params.get(ReportLogCollectorSpec.PARAM_REPORT_LOG_TEMP_DIR)).thenReturn("temp_dir");
-    when(params.getBool(ReportLogCollectorSpec.PARAM_REPORT_LOG_DEVICE_DIR, false))
-        .thenReturn(true);
+    ReportLogCollectorDecoratorSpec spec =
+        ReportLogCollectorDecoratorSpec.newBuilder()
+            .setSrcDir("src_dir")
+            .setDestDir("dest_dir")
+            .setTempDir("temp_dir")
+            .setDeviceDir(true)
+            .build();
+    when(jobInfo.combinedSpec(decorator, "device_id")).thenReturn(spec);
 
     decorator.tearDown(testInfo);
 
@@ -109,9 +114,13 @@ public class ReportLogCollectorDecoratorTest {
 
   @Test
   public void tearDown_createsHostReportDir() throws Exception {
-    when(params.get(ReportLogCollectorSpec.PARAM_REPORT_LOG_SRC_DIR)).thenReturn("src_dir");
-    when(params.get(ReportLogCollectorSpec.PARAM_REPORT_LOG_DEST_DIR)).thenReturn("dest_dir");
-    when(params.get(ReportLogCollectorSpec.PARAM_REPORT_LOG_TEMP_DIR)).thenReturn("temp_dir");
+    ReportLogCollectorDecoratorSpec spec =
+        ReportLogCollectorDecoratorSpec.newBuilder()
+            .setSrcDir("src_dir")
+            .setDestDir("dest_dir")
+            .setTempDir("temp_dir")
+            .build();
+    when(jobInfo.combinedSpec(decorator, "device_id")).thenReturn(spec);
 
     decorator.tearDown(testInfo);
 
@@ -120,9 +129,13 @@ public class ReportLogCollectorDecoratorTest {
 
   @Test
   public void tearDown_createsResultDir() throws Exception {
-    when(params.get(ReportLogCollectorSpec.PARAM_REPORT_LOG_SRC_DIR)).thenReturn("src_dir");
-    when(params.get(ReportLogCollectorSpec.PARAM_REPORT_LOG_DEST_DIR)).thenReturn("dest_dir");
-    when(params.get(ReportLogCollectorSpec.PARAM_REPORT_LOG_TEMP_DIR)).thenReturn("temp_dir");
+    ReportLogCollectorDecoratorSpec spec =
+        ReportLogCollectorDecoratorSpec.newBuilder()
+            .setSrcDir("src_dir")
+            .setDestDir("dest_dir")
+            .setTempDir("temp_dir")
+            .build();
+    when(jobInfo.combinedSpec(decorator, "device_id")).thenReturn(spec);
 
     decorator.tearDown(testInfo);
 
