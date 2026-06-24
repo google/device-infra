@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.device.Devi
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeDeviceQuerier;
+import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsResourceFederation;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator.DeviceVerifier;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator.EmptyDeviceVerifier;
@@ -73,7 +74,7 @@ public class AtsMode implements ExecMode, ServiceProvider {
       LabRecordService labRecordService,
       JobSyncService jobSyncService,
       DeviceReserver deviceReserver,
-      ResourceFederation resourceFederation) {
+      @AtsResourceFederation ResourceFederation resourceFederation) {
     this.remoteDeviceManager = remoteDeviceManager;
     this.deviceQuerier = deviceQuerier;
     this.scheduler = scheduler;

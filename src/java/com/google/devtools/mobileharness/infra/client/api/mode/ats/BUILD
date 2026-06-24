@@ -27,6 +27,10 @@ package(
 java_library(
     name = "annotations",
     srcs = ["Annotations.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api/mode/ats:__subpackages__",
+    ],
     deps = ["@maven//:javax_inject_jsr330_api"],
 )
 
@@ -173,6 +177,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/labinfo:lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/shared/version",
         "//src/java/com/google/devtools/mobileharness/shared/version/checker",
+        "//src/java/com/google/wireless/qa/mobileharness/client/api/util/stub",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
     ],

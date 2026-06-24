@@ -26,7 +26,7 @@ import java.lang.annotation.Target;
 import javax.inject.Qualifier;
 
 /** The annotations for ATS mode. */
-final class Annotations {
+public final class Annotations {
 
   /** Annotation for AtsMode DeviceQuerier. */
   @Qualifier
@@ -45,6 +45,12 @@ final class Annotations {
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   @interface JobSyncServiceVersionChecker {}
+
+  /** Annotation for AtsMode ResourceFederation. */
+  @Qualifier
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface AtsResourceFederation {}
 
   private Annotations() {}
 }

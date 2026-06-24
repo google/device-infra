@@ -20,6 +20,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.allocation.
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeDeviceQuerier;
+import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsResourceFederation;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.JobSyncServiceVersionChecker;
 import com.google.devtools.mobileharness.infra.client.api.proto.ResourceFederationProto.ResourceFederation;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
@@ -28,6 +29,7 @@ import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.checker.ServiceSideVersionChecker;
 import com.google.inject.AbstractModule;
+import com.google.wireless.qa.mobileharness.client.api.util.stub.StubManager;
 import javax.inject.Singleton;
 
 /** Module for {@code AtsMode}. */
@@ -35,7 +37,10 @@ public class AtsModeModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    bind(ResourceFederation.class).toInstance(ResourceFederation.getDefaultInstance());
+    bind(ResourceFederation.class)
+        .annotatedWith(AtsResourceFederation.class)
+        .toInstance(ResourceFederation.getDefaultInstance());
+    bind(StubManager.class).toInstance(StubManager.getInstance());
     bind(LabInfoProvider.class).to(RemoteDeviceManager.class);
     bind(DeviceQuerier.class).annotatedWith(AtsModeDeviceQuerier.class).to(DeviceQuerierImpl.class);
     bind(DeviceReserver.class).to(AtsDeviceReserver.class);
