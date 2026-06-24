@@ -435,6 +435,126 @@ public class ErrorModelConverterTest {
   }
 
   @Test
+  public void getUserFacingCriticalErrorId_infraIssue() {
+    ErrorIdProto.ErrorId mhInfraErrorId =
+        ErrorIdProto.ErrorId.newBuilder()
+            .setCode(1)
+            .setType(ErrorTypeProto.ErrorType.INFRA_ISSUE)
+            .setNamespace(Namespace.MH)
+            .build();
+    ErrorIdProto.ErrorId vinsonDependencyErrorId =
+        ErrorIdProto.ErrorId.newBuilder()
+            .setCode(2)
+            .setType(ErrorTypeProto.ErrorType.DEPENDENCY_ISSUE)
+            .setNamespace(Namespace.MH)
+            .build();
+    ExceptionProto.ExceptionDetail error =
+        ExceptionProto.ExceptionDetail.newBuilder()
+            .setSummary(ExceptionProto.ExceptionSummary.newBuilder().setErrorId(mhInfraErrorId))
+            .setCause(
+                ExceptionProto.ExceptionDetail.newBuilder()
+                    .setSummary(
+                        ExceptionProto.ExceptionSummary.newBuilder()
+                            .setErrorId(vinsonDependencyErrorId)))
+            .build();
+
+    ErrorIdProto.ErrorId userfacingCriticalErrorId =
+        ErrorModelConverter.getUserFacingCriticalErrorId(error);
+    assertThat(userfacingCriticalErrorId).isEqualTo(mhInfraErrorId);
+  }
+
+  @Test
+  public void getUserFacingCriticalErrorId_determinedTailCause() {
+    ErrorIdProto.ErrorId mhUndeterminedErrorId =
+        ErrorIdProto.ErrorId.newBuilder()
+            .setCode(1)
+            .setType(ErrorTypeProto.ErrorType.UNDETERMINED)
+            .setNamespace(Namespace.MH)
+            .build();
+    ErrorIdProto.ErrorId vinsonDependencyErrorId =
+        ErrorIdProto.ErrorId.newBuilder()
+            .setCode(2)
+            .setType(ErrorTypeProto.ErrorType.DEPENDENCY_ISSUE)
+            .setNamespace(Namespace.MH)
+            .build();
+    ExceptionProto.ExceptionDetail error =
+        ExceptionProto.ExceptionDetail.newBuilder()
+            .setSummary(
+                ExceptionProto.ExceptionSummary.newBuilder().setErrorId(mhUndeterminedErrorId))
+            .setCause(
+                ExceptionProto.ExceptionDetail.newBuilder()
+                    .setSummary(
+                        ExceptionProto.ExceptionSummary.newBuilder()
+                            .setErrorId(vinsonDependencyErrorId)))
+            .build();
+
+    ErrorIdProto.ErrorId userfacingCriticalErrorId =
+        ErrorModelConverter.getUserFacingCriticalErrorId(error);
+    assertThat(userfacingCriticalErrorId).isEqualTo(vinsonDependencyErrorId);
+  }
+
+  @Test
+  public void getUserFacingCriticalErrorId_allUndetermined() {
+    ErrorIdProto.ErrorId mhUndeterminedErrorId =
+        ErrorIdProto.ErrorId.newBuilder()
+            .setCode(1)
+            .setType(ErrorTypeProto.ErrorType.UNDETERMINED)
+            .setNamespace(Namespace.MH)
+            .build();
+    ErrorIdProto.ErrorId vinsonUnclassifiedErrorId =
+        ErrorIdProto.ErrorId.newBuilder()
+            .setCode(2)
+            .setType(ErrorTypeProto.ErrorType.UNCLASSIFIED)
+            .setNamespace(Namespace.MH)
+            .build();
+    ExceptionProto.ExceptionDetail error =
+        ExceptionProto.ExceptionDetail.newBuilder()
+            .setSummary(
+                ExceptionProto.ExceptionSummary.newBuilder().setErrorId(mhUndeterminedErrorId))
+            .setCause(
+                ExceptionProto.ExceptionDetail.newBuilder()
+                    .setSummary(
+                        ExceptionProto.ExceptionSummary.newBuilder()
+                            .setErrorId(vinsonUnclassifiedErrorId)))
+            .build();
+
+    ErrorIdProto.ErrorId userfacingCriticalErrorId =
+        ErrorModelConverter.getUserFacingCriticalErrorId(error);
+    assertThat(userfacingCriticalErrorId).isEqualTo(mhUndeterminedErrorId);
+  }
+
+  @Test
+  public void getUserFacingCriticalError_returnsExpectedDetail() {
+    ErrorIdProto.ErrorId mhUndeterminedErrorId =
+        ErrorIdProto.ErrorId.newBuilder()
+            .setCode(1)
+            .setType(ErrorTypeProto.ErrorType.UNDETERMINED)
+            .setNamespace(Namespace.MH)
+            .build();
+    ErrorIdProto.ErrorId vinsonDependencyErrorId =
+        ErrorIdProto.ErrorId.newBuilder()
+            .setCode(2)
+            .setType(ErrorTypeProto.ErrorType.DEPENDENCY_ISSUE)
+            .setNamespace(Namespace.MH)
+            .build();
+    ExceptionProto.ExceptionDetail causeDetail =
+        ExceptionProto.ExceptionDetail.newBuilder()
+            .setSummary(
+                ExceptionProto.ExceptionSummary.newBuilder().setErrorId(vinsonDependencyErrorId))
+            .build();
+    ExceptionProto.ExceptionDetail error =
+        ExceptionProto.ExceptionDetail.newBuilder()
+            .setSummary(
+                ExceptionProto.ExceptionSummary.newBuilder().setErrorId(mhUndeterminedErrorId))
+            .setCause(causeDetail)
+            .build();
+
+    ExceptionProto.ExceptionDetail userfacingCriticalError =
+        ErrorModelConverter.getUserFacingCriticalError(error);
+    assertThat(userfacingCriticalError).isEqualTo(causeDetail);
+  }
+
+  @Test
   public void hasInfraIssue() {
     ExceptionProto.ExceptionDetail error =
         ExceptionProto.ExceptionDetail.newBuilder()
