@@ -6,7 +6,7 @@
   footerType="none"
 >
   <ng-content header-button>
-    <button matIconButton [matMenuTriggerFor]="menu">
+    <button matIconButton [matMenuTriggerFor]="menu" [disabled]="saving()">
       <mat-icon>more_vert</mat-icon>
     </button>
     <mat-menu #menu="matMenu">
@@ -18,7 +18,7 @@
   </ng-content>
 
   <div class="configuration-content">
-    <nav class="nav-bar">
+    <nav class="nav-bar" [class.disabled]="saving()">
       @for (nav of navList; track nav.id) {
         <a
           href="#{{ nav.id }}"

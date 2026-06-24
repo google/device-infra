@@ -33,6 +33,11 @@
   .nav-bar {
     @extend .config-nav-bar;
 
+    &.disabled {
+      pointer-events: none;
+      opacity: 0.5;
+    }
+
     .nav-item {
       @extend .config-nav-item;
       min-width: 14rem;

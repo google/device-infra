@@ -81,11 +81,12 @@ describe('Device Settings Component', () => {
   it('should be created', () => {
     const dialogOpener = TestBed.createComponent(
       MatTestDialogOpener.withComponent(DeviceSettings, {
-        data: {deviceId: 'test-device'},
+        data: {
+          deviceId: 'test-device',
+          config: SCENARIO_IN_SERVICE_IDLE.config as DeviceConfig,
+        },
       }),
     );
-    dialogOpener.componentInstance.dialogRef.componentInstance.config =
-      SCENARIO_IN_SERVICE_IDLE.config as DeviceConfig;
     TestBed.inject(ApplicationRef).tick();
     expect(dialogOpener.componentInstance.dialogRef).toBeTruthy();
     expect(
@@ -903,9 +904,10 @@ describe('Device Settings Component', () => {
     component.activeSection.set(ConfigSection.WIFI);
     component.updateWifi({type: 'none', ssid: '', psk: '', scanSsid: false});
 
-    const updateSpy = spyOn(fakeConfigService, 'updateDeviceConfig').and.returnValue(
-      of({success: true}),
-    );
+    const updateSpy = spyOn(
+      fakeConfigService,
+      'updateDeviceConfig',
+    ).and.returnValue(of({success: true}));
     const dialog = TestBed.inject(MatDialog);
     const successDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
       'afterClosed',
@@ -934,12 +936,18 @@ describe('Device Settings Component', () => {
     TestBed.inject(ApplicationRef).tick();
 
     component.activeSection.set(ConfigSection.WIFI);
-    const validWifi: WifiConfig = {type: 'custom', ssid: 'NewSSID', psk: 'pass', scanSsid: true};
+    const validWifi: WifiConfig = {
+      type: 'custom',
+      ssid: 'NewSSID',
+      psk: 'pass',
+      scanSsid: true,
+    };
     component.updateWifi(validWifi);
 
-    const updateSpy = spyOn(fakeConfigService, 'updateDeviceConfig').and.returnValue(
-      of({success: true}),
-    );
+    const updateSpy = spyOn(
+      fakeConfigService,
+      'updateDeviceConfig',
+    ).and.returnValue(of({success: true}));
     const dialog = TestBed.inject(MatDialog);
     const successDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
       'afterClosed',
@@ -952,5 +960,46 @@ describe('Device Settings Component', () => {
     expect(updateSpy).toHaveBeenCalled();
     const updateRequest = updateSpy.calls.mostRecent().args[0];
     expect(updateRequest.config.wifi).toEqual(validWifi);
+  });
+
+  it('should return non-editable UI status when saving is in progress', () => {
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(DeviceSettings, {
+        data: {deviceId: 'test-device'},
+      }),
+    );
+    const component =
+      dialogOpener.componentInstance.dialogRef.componentInstance;
+    component.saving.set(true);
+    TestBed.inject(ApplicationRef).tick();
+
+    expect(component.uiStatus.permissions.editability?.editable).toBeFalse();
+    expect(component.uiStatus.permissions.editability?.reason).toBe(
+      'Saving in progress...',
+    );
+
+    expect(component.uiStatus.wifi.editability?.editable).toBeFalse();
+    expect(component.uiStatus.dimensions.editability?.editable).toBeFalse();
+    expect(component.uiStatus.settings.editability?.editable).toBeFalse();
+  });
+
+  it('should not change section if saving is in progress', () => {
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(DeviceSettings, {
+        data: {deviceId: 'test-device'},
+      }),
+    );
+    const component =
+      dialogOpener.componentInstance.dialogRef.componentInstance;
+    TestBed.inject(ApplicationRef).tick();
+
+    expect(component.activeSection()).toBe(ConfigSection.PERMISSIONS);
+
+    component.saving.set(true);
+    const event = jasmine.createSpyObj('Event', ['preventDefault']);
+    component.setActiveSection(event, ConfigSection.WIFI);
+
+    expect(component.activeSection()).toBe(ConfigSection.PERMISSIONS); // Should not change
+    expect(event.preventDefault).toHaveBeenCalled();
   });
 });

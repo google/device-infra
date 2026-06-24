@@ -18,6 +18,7 @@ import {
   MatDialog,
   MatDialogModule,
   MatDialogRef,
+  MatDialogState,
 } from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
@@ -149,6 +150,32 @@ export class DeviceSettings implements OnInit {
   private readonly computedUiStatus = computed<DeviceConfigUiStatus>(() => {
     const hasPerm = this.hasPermission() ?? false;
     const internal = this.uiStatusInternal();
+
+    if (this.saving()) {
+      const savingStatus = {
+        editable: false,
+        reason: 'Saving in progress...',
+      };
+      return {
+        permissions: {
+          visible: internal.permissions.visible,
+          editability: savingStatus,
+        },
+        wifi: {
+          visible: internal.wifi.visible,
+          editability: savingStatus,
+        },
+        dimensions: {
+          visible: internal.dimensions.visible,
+          editability: savingStatus,
+        },
+        settings: {
+          visible: internal.settings.visible,
+          editability: savingStatus,
+        },
+      };
+    }
+
     return {
       permissions: {
         visible: internal.permissions.visible,
@@ -266,6 +293,10 @@ export class DeviceSettings implements OnInit {
     const targetSection = section as ConfigSection;
     event.preventDefault();
 
+    if (this.saving()) {
+      return;
+    }
+
     if (
       targetSection !== this.activeSection() &&
       this.isCategoryDirty(this.activeSection())
@@ -300,8 +331,14 @@ export class DeviceSettings implements OnInit {
     }
   }
 
+  private closeDialogIfOpen(result?: unknown) {
+    if (this.dialogRef && this.dialogRef.getState() === MatDialogState.OPEN) {
+      this.dialogRef.close(result);
+    }
+  }
+
   reset() {
-    this.dialogRef.close({
+    this.closeDialogIfOpen({
       action: 'reset',
       deviceId: this.deviceId(),
       universe: this.universe(),
@@ -360,7 +397,7 @@ export class DeviceSettings implements OnInit {
     });
   }
 
-  success(isSelfLockout = false) {
+  success() {
     const dialogData = {
       title: 'Configuration Saved',
       content: 'Your configuration has been saved successfully. ',
@@ -368,16 +405,10 @@ export class DeviceSettings implements OnInit {
       primaryButtonLabel: 'OK',
     };
 
-    const successDialogRef = this.dialog.open(ConfirmDialog, {
+    return this.dialog.open(ConfirmDialog, {
       data: dialogData,
       disableClose: true,
     });
-
-    if (isSelfLockout) {
-      successDialogRef.afterClosed().subscribe(() => {
-        this.dialogRef.close(true);
-      });
-    }
   }
 
   error(errorCode?: string) {
@@ -456,7 +487,12 @@ export class DeviceSettings implements OnInit {
           this.newConfig(),
         ) as DeviceConfig;
 
-        this.success(selfLockout);
+        const successDialogRef = this.success();
+        if (selfLockout) {
+          successDialogRef.afterClosed().subscribe(() => {
+            this.closeDialogIfOpen(true);
+          });
+        }
       });
   }
 
