@@ -2114,8 +2114,10 @@ public abstract class AndroidRealDeviceDelegate {
    */
   private boolean checkBattery() throws InterruptedException {
     boolean isDimensionChanged = false;
-    // Checks battery. Skips battery check if dimension "characteristics" contains "tv".
-    if (!device.getDimension("characteristics").contains("tv")) {
+    // Checks battery. Skips battery check if dimension "characteristics" contains "tv" or
+    // "automotive".
+    if (!device.getDimension("characteristics").contains("tv")
+        && !device.getDimension("characteristics").contains("automotive")) {
       logger.atInfo().log("Checking device %s battery level...", deviceId);
       Optional<Integer> batteryLevel = Optional.empty();
       String batteryStatus = "unknown";
