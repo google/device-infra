@@ -118,7 +118,11 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
               ImmutableList.of(
                   "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07",
                   "2025-08", "2025-09", "2025-10", "2025-11"),
-          "37.0", ImmutableList.of("2026-01", "2026-02", "2026-03", "2026-04", "2026-05"));
+          "37.0", ImmutableList.of("2026-01", "2026-02", "2026-03", "2026-04", "2026-05"),
+          "37.1",
+              ImmutableList.of(
+                  "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07",
+                  "2026-08"));
 
   private static final String MAINLINE_AOSP_VERSION_KEY = "AOSP";
 
