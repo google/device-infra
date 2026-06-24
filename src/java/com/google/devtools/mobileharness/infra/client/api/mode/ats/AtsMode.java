@@ -59,6 +59,7 @@ public class AtsMode implements ExecMode, ServiceProvider {
   private final LabRecordService labRecordService;
   private final JobSyncService jobSyncService;
   private final DeviceReserver deviceReserver;
+  private final ResourceFederation resourceFederation;
   private final DeviceVerifier deviceVerifier = new EmptyDeviceVerifier();
 
   @Inject
@@ -71,7 +72,8 @@ public class AtsMode implements ExecMode, ServiceProvider {
       LabRecordManager labRecordManager,
       LabRecordService labRecordService,
       JobSyncService jobSyncService,
-      DeviceReserver deviceReserver) {
+      DeviceReserver deviceReserver,
+      ResourceFederation resourceFederation) {
     this.remoteDeviceManager = remoteDeviceManager;
     this.deviceQuerier = deviceQuerier;
     this.scheduler = scheduler;
@@ -81,6 +83,7 @@ public class AtsMode implements ExecMode, ServiceProvider {
     this.labRecordService = labRecordService;
     this.jobSyncService = jobSyncService;
     this.deviceReserver = deviceReserver;
+    this.resourceFederation = resourceFederation;
   }
 
   @Override
@@ -118,11 +121,7 @@ public class AtsMode implements ExecMode, ServiceProvider {
       FileResolver fileResolver)
       throws MobileHarnessException {
     return new RemoteTestRunner(
-        setting,
-        threadPool,
-        ResourceFederation.getDefaultInstance(), // The resource federation is empty.
-        /* supportImpersonation= */ false,
-        fileResolver);
+        setting, threadPool, resourceFederation, /* supportImpersonation= */ false, fileResolver);
   }
 
   @Override

@@ -165,6 +165,7 @@ java_library(
         ":ats_device_reserver",
         ":device_querier",
         ":remote_device_manager",
+        "//src/devtools/mobileharness/infra/client/api/proto:resource_federation_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/reserver",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:abstract_scheduler",
