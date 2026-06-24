@@ -1,0 +1,40 @@
+@use '../../../../shared/styles/overview';
+
+:host {
+  display: block;
+  font-family: overview.$labconsole-font;
+
+  .error-info-card .info-card-content,
+  .warning-info-card .info-card-content {
+    padding: 1rem;
+  }
+
+  ::ng-deep {
+    app-info-card {
+      overflow: visible;
+
+      .panel-content.expanded,
+      .panel-content.expanded .content {
+        overflow: visible;
+      }
+    }
+  }
+
+  // Stacking contexts for sibling cards to ensure upwards popups render on top of subsequent card headers
+  .error-info-card {
+    position: relative;
+    z-index: 20;
+  }
+  .warning-info-card {
+    position: relative;
+    z-index: 15;
+  }
+  .execution-card {
+    position: relative;
+    z-index: 10;
+  }
+  .properties-card {
+    position: relative;
+    z-index: 5;
+  }
+}

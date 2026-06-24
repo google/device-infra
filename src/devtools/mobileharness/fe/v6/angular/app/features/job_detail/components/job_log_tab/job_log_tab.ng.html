@@ -1,0 +1,19 @@
+<div class="log-tab-card">
+  <div class="log-card-header">
+    <h3 class="log-card-title">Job Log</h3>
+    @if (cloudLogLink()) {
+      <a [href]="cloudLogLink()" target="_blank" class="cloud-log-link" matTooltip="Open Cloud Logs Explorer">
+        <span>Lab Server Logs on Cloud Logs Explorer</span>
+        <mat-icon>open_in_new</mat-icon>
+      </a>
+    }
+  </div>
+  <div class="log-divider"></div>
+  <div class="log-viewer-container">
+    <cdk-virtual-scroll-viewport itemSize="20" [style.height.px]="viewportHeight()" class="log-viewer-viewport">
+      <div *cdkVirtualFor="let line of logLines(); trackBy: trackByFn" class="log-line">
+        {{ line }}
+      </div>
+    </cdk-virtual-scroll-viewport>
+  </div>
+</div>

@@ -28,6 +28,25 @@
   font-weight: 600; // font-semibold
   color: #374151; // text-gray-700
   margin-bottom: 0.75rem; // mb-3
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+
+  &.mt-6 {
+    margin-top: 1.5rem;
+  }
+
+  mat-icon {
+    font-size: 1.25rem;
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+.transition-transform {
+  transition: transform 0.2s ease-in-out;
 }
 
 .sidebar-nav {

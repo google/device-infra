@@ -10,8 +10,9 @@ import {UrlService} from '@deviceinfra/app/core/services/url_service';
  * Enforces that deviceId is required for 'device' type and forbidden for 'host' type.
  */
 export type NavLinkConfig =
-  | {type: 'host'; hostName: string; hostIp: string; deviceId?: never}
-  | {type: 'device'; hostName: string; hostIp: string; deviceId: string};
+  | {type: 'host'; hostName: string; hostIp: string}
+  | {type: 'device'; hostName: string; hostIp: string; deviceId: string}
+  | {type: 'job'; jobId: string};
 
 /**
  * A customized link component to centralize navigation behavior.
@@ -83,8 +84,10 @@ export class NavLink implements OnInit, OnDestroy {
   private getRouterLink(): string {
     if (this.config.type === 'host') {
       return `/hosts/${this.config.hostName}`;
-    } else {
+    } else if (this.config.type === 'device') {
       return `/devices/${this.config.deviceId}`;
+    } else {
+      return `/jobs/${this.config.jobId}`;
     }
   }
 
@@ -167,9 +170,19 @@ export class NavLink implements OnInit, OnDestroy {
   }
 
   private getNavParams(): {
-    page: 'host_details' | 'device_details';
+    page: 'host_details' | 'device_details' | 'job_details';
     params: Record<string, string>;
   } {
+    if (this.config.type === 'job') {
+      return {
+        page: 'job_details',
+        params: {
+          'job_id': this.config.jobId,
+          ...this.customQueryParams,
+        },
+      };
+    }
+
     const page =
       this.config.type === 'host' ? 'host_details' : 'device_details';
     const params: Record<string, string> = {

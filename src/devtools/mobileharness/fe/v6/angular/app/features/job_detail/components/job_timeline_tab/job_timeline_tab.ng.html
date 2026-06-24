@@ -1,0 +1,23 @@
+<div class="timeline-tab-card">
+  @if (timelineEvents(); as events) {
+    @if (events.length > 0) {
+      <div class="timeline-container">
+        @let totalDuration = getTimelineTotalDuration(events);
+        @for (event of events; track event.name) {
+          @let offsetPercent = (event.offset / totalDuration) * 100;
+          @let widthPercent = (event.duration / totalDuration) * 100;
+          <div class="timeline-event">
+            <div class="timeline-label" [matTooltip]="event.name">{{ event.name }}</div>
+            <div class="timeline-track">
+              <div class="timeline-bar" [class.pulse-animation]="event.inProgress" [style.left.%]="offsetPercent" [style.width.%]="widthPercent"></div>
+            </div>
+          </div>
+        }
+      </div>
+    } @else {
+      <p class="no-data-text">No timeline data available.</p>
+    }
+  } @else {
+    <p class="no-data-text">No timeline data available.</p>
+  }
+</div>

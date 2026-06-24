@@ -1,22 +1,64 @@
 <div class="harness-container">
   <aside class="harness-sidebar">
-    <h3 class="sidebar-title">Device Scenarios</h3>
-    <nav class="sidebar-nav">
-      @for (scenario of deviceScenarios; track scenario.id) {
-        <a [routerLink]="['/devices', scenario.id]" queryParamsHandling="preserve" class="nav-link">
-          {{ scenario.scenarioName }}
-        </a>
-      }
-    </nav>
+    <!-- Device Scenarios -->
+    <h3 class="sidebar-title" (click)="toggleDeviceScenarios()">
+      <span>Device Scenarios</span>
+      <mat-icon [style.transform]="deviceCollapsed() ? 'rotate(-90deg)' : 'rotate(0deg)'" class="transition-transform">expand_more</mat-icon>
+    </h3>
+    @if (!deviceCollapsed()) {
+      <nav class="sidebar-nav">
+        @for (scenario of deviceScenarios; track scenario.id) {
+          <a [routerLink]="['/devices', scenario.id]" queryParamsHandling="preserve" class="nav-link">
+            {{ scenario.scenarioName }}
+          </a>
+        }
+      </nav>
+    }
 
-    <h3 class="sidebar-title">Host Scenarios</h3>
-    <nav class="sidebar-nav">
-      @for (scenario of hostScenarios; track scenario.hostName) {
-        <a [routerLink]="['/hosts', scenario.hostName]" queryParamsHandling="preserve" class="nav-link">
-          {{ scenario.scenarioName }}
-        </a>
-      }
-    </nav>
+    <!-- Host Scenarios -->
+    <h3 class="sidebar-title mt-6" (click)="toggleHostScenarios()">
+      <span>Host Scenarios</span>
+      <mat-icon [style.transform]="hostCollapsed() ? 'rotate(-90deg)' : 'rotate(0deg)'" class="transition-transform">expand_more</mat-icon>
+    </h3>
+    @if (!hostCollapsed()) {
+      <nav class="sidebar-nav">
+        @for (scenario of hostScenarios; track scenario.hostName) {
+          <a [routerLink]="['/hosts', scenario.hostName]" queryParamsHandling="preserve" class="nav-link">
+            {{ scenario.scenarioName }}
+          </a>
+        }
+      </nav>
+    }
+
+    <!-- Test Scenarios -->
+    <h3 class="sidebar-title mt-6" (click)="toggleTestScenarios()">
+      <span>Test Scenarios</span>
+      <mat-icon [style.transform]="testCollapsed() ? 'rotate(-90deg)' : 'rotate(0deg)'" class="transition-transform">expand_more</mat-icon>
+    </h3>
+    @if (!testCollapsed()) {
+      <nav class="sidebar-nav">
+        @for (scenario of testScenarios; track scenario.id) {
+          <a [routerLink]="['/tests', scenario.id]" queryParamsHandling="preserve" class="nav-link">
+            {{ scenario.scenarioName }}
+          </a>
+        }
+      </nav>
+    }
+
+    <!-- Job Scenarios -->
+    <h3 class="sidebar-title mt-6" (click)="toggleJobScenarios()">
+      <span>Job Scenarios</span>
+      <mat-icon [style.transform]="jobCollapsed() ? 'rotate(-90deg)' : 'rotate(0deg)'" class="transition-transform">expand_more</mat-icon>
+    </h3>
+    @if (!jobCollapsed()) {
+      <nav class="sidebar-nav">
+        @for (scenario of jobScenarios; track scenario.id) {
+          <a [routerLink]="['/jobs', scenario.id]" queryParamsHandling="preserve" class="nav-link">
+            {{ scenario.scenarioName }}
+          </a>
+        }
+      </nav>
+    }
   </aside>
   <div class="harness-main">
     <p class="placeholder-text">Select a scenario from the left sidebar to view the details.</p>

@@ -1,0 +1,73 @@
+@use '../../../../shared/styles/overview';
+
+:host {
+  display: block;
+  font-family: overview.$labconsole-font;
+}
+
+// Job Timeline Tab
+.timeline-tab-card {
+  background-color: #f0f4f9;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+.timeline-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.timeline-event {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.timeline-label {
+  width: 150px;
+  flex-shrink: 0;
+  font-size: 0.875rem;
+  color: #5f6368;
+  font-weight: 500;
+  text-align: right;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.timeline-track {
+  flex-grow: 1;
+  background-color: #e8eaed;
+  height: 16px;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.timeline-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 8px;
+  background-color: #1a73e8;
+  transition: all 0.3s ease;
+}
+
+.no-data-text {
+  color: #5f6368;
+  font-size: 0.875rem;
+  font-style: italic;
+  margin: 0;
+}
+
+// Animations
+.pulse-animation {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .7; }
+}

@@ -44,7 +44,7 @@ describe('TooltipIfTruncatedDirective', () => {
     const div = fixture.debugElement.query(By.css('#test-target'));
 
     // Trigger mouseenter to run the directive logic
-    div.triggerEventHandler('mouseenter', null);
+    div.triggerEventHandler('mouseenter', new MouseEvent('mouseenter'));
     fixture.detectChanges();
 
     const tooltip = div.injector.get(MatTooltip);
@@ -54,7 +54,7 @@ describe('TooltipIfTruncatedDirective', () => {
   it('should disable tooltip when text is NOT truncated (focusin)', () => {
     const div = fixture.debugElement.query(By.css('#test-target'));
 
-    div.triggerEventHandler('focusin', null);
+    div.triggerEventHandler('focusin', new FocusEvent('focusin'));
     fixture.detectChanges();
 
     const tooltip = div.injector.get(MatTooltip);
@@ -72,7 +72,7 @@ describe('TooltipIfTruncatedDirective', () => {
 
     const div = fixture.debugElement.query(By.css('#test-target'));
 
-    div.triggerEventHandler('mouseenter', null);
+    div.triggerEventHandler('mouseenter', new MouseEvent('mouseenter'));
     fixture.detectChanges();
 
     const tooltip = div.injector.get(MatTooltip);
@@ -89,7 +89,7 @@ describe('TooltipIfTruncatedDirective', () => {
 
     const div = fixture.debugElement.query(By.css('#test-target'));
 
-    div.triggerEventHandler('focusin', null);
+    div.triggerEventHandler('focusin', new FocusEvent('focusin'));
     fixture.detectChanges();
 
     const tooltip = div.injector.get(MatTooltip);
