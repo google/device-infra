@@ -24,11 +24,13 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Metric;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportFormat;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
@@ -260,6 +262,67 @@ public final class SessionResultHandlerUtilTest {
     assertThat(userfacingReport.getSummary().getPassed()).isEqualTo(7);
     assertThat(userfacingReport.getSummary().getFailed()).isEqualTo(4);
     assertThat(userfacingReport.getSummary().getWarning()).isEqualTo(2);
+  }
+
+  @Test
+  public void preprocessReport_withWarningForApproval() throws Exception {
+    Configuration module1Config = createModuleConfigWithFailureLevel("module1", Optional.empty());
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("testPlan")
+                .setCommandLineArgs("commandLineArgs")
+                .setXtsRootDir("xtsRootDir")
+                .setXtsType("xtsType")
+                .putAllExpandedModules(ImmutableMap.of("module1", module1Config)));
+
+    Module module =
+        Module.newBuilder()
+            .setName("module1")
+            .setPassed(1)
+            .setFailedTests(2)
+            .setWarningTests(0)
+            .addTestCase(
+                TestCase.newBuilder()
+                    .addTest(
+                        com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto
+                            .Test.newBuilder()
+                            .setName("test1")
+                            .setResult("pass"))
+                    .addTest(
+                        com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto
+                            .Test.newBuilder()
+                            .setName("test2")
+                            .setResult("fail")
+                            .addMetric(
+                                Metric.newBuilder()
+                                    .setKey(
+                                        CompatibilityReportFormat.WARNING_FOR_APPROVAL_METRIC_KEY)
+                                    .build())))
+            .addTestCase(
+                TestCase.newBuilder()
+                    .addTest(
+                        com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto
+                            .Test.newBuilder()
+                            .setName("test3")
+                            .setResult("fail")))
+            .build();
+
+    Result originalReport =
+        Result.newBuilder()
+            .addModuleInfo(module)
+            .setSummary(Summary.newBuilder().setPassed(1).setFailed(2).setWarning(0))
+            .build();
+
+    Result userfacingReport =
+        sessionResultHandlerUtil.preprocessReport(originalReport, sessionRequestInfo);
+
+    assertModuleResultAfterFormat(
+        userfacingReport.getModuleInfo(0), "module1", 1, 1, 1, "warning", "fail");
+
+    assertThat(userfacingReport.getSummary().getPassed()).isEqualTo(1);
+    assertThat(userfacingReport.getSummary().getFailed()).isEqualTo(1);
+    assertThat(userfacingReport.getSummary().getWarning()).isEqualTo(1);
   }
 
   private Configuration createModuleConfigWithFailureLevel(

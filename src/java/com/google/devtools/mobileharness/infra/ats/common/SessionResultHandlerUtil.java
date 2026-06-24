@@ -1442,6 +1442,7 @@ public class SessionResultHandlerUtil {
       if (moduleReportFormat.containsKey(moduleName)) {
         moduleReportFormat.get(moduleBuilder.getName()).applyToModule(moduleBuilder);
       }
+      CompatibilityReportFormat.applyWarningForApproval(moduleBuilder);
     }
 
     // Update the Summary element's passed, failed and warning attributes.

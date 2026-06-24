@@ -17,8 +17,10 @@
 package com.google.devtools.mobileharness.infra.ats.console.result.report;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Metric;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
@@ -33,6 +35,9 @@ import java.util.Optional;
 public abstract class CompatibilityReportFormat {
 
   private static final String OPTION_TEST_FAILURE_LEVEL = "failure_level";
+
+  @VisibleForTesting
+  public static final String WARNING_FOR_APPROVAL_METRIC_KEY = "WarningForApproval";
 
   // TODO: Remove the static map once the warning annotation is fully supported.
   private static final ImmutableSetMultimap<String, String> MODULE_TO_WARNING_TESTS =
@@ -141,6 +146,44 @@ public abstract class CompatibilityReportFormat {
         // Do nothing.
       }
       default -> moduleBuilder.setFailedTests(0);
+    }
+  }
+
+  /**
+   * Changes the test status to WARNING for all tests with {@link TestStatus#FAILURE} in the module
+   * that have a metric with key "WarningForApproval" and updates test counts accordingly.
+   */
+  public static void applyWarningForApproval(Module.Builder moduleBuilder) {
+    if (moduleBuilder.getFailedTests() == 0) {
+      return;
+    }
+    String warningLevel = TestStatus.convertToTestStatusCompatibilityString(TestStatus.WARNING);
+    String failureLevel = TestStatus.convertToTestStatusCompatibilityString(TestStatus.FAILURE);
+    int changedCount = 0;
+    for (int i = 0; i < moduleBuilder.getTestCaseCount(); i++) {
+      TestCase testCase = moduleBuilder.getTestCase(i);
+      for (int j = 0; j < testCase.getTestCount(); j++) {
+        Test test = testCase.getTest(j);
+        if (test.getResult().equals(failureLevel)) {
+          boolean hasWarningForApproval = false;
+          for (Metric metric : test.getMetricList()) {
+            if (metric.getKey().equals(WARNING_FOR_APPROVAL_METRIC_KEY)) {
+              hasWarningForApproval = true;
+              break;
+            }
+          }
+          if (hasWarningForApproval) {
+            changedCount++;
+            moduleBuilder.getTestCaseBuilder(i).getTestBuilder(j).setResult(warningLevel);
+          }
+        }
+      }
+    }
+
+    if (changedCount > 0) {
+      moduleBuilder
+          .setWarningTests(moduleBuilder.getWarningTests() + changedCount)
+          .setFailedTests(moduleBuilder.getFailedTests() - changedCount);
     }
   }
 
