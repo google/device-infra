@@ -33,12 +33,14 @@ public class XtsDeviceCache extends DeviceCache {
   public boolean cache(String deviceControlId, String deviceType, Duration timeout) {
     logger.atInfo().log(
         "Caching device %s of type %s for %s", deviceControlId, deviceType, timeout);
-    return DeviceCacheManager.getInstance().cache(CACHE_TYPE, deviceControlId, deviceType, timeout);
+    return DeviceCacheManager.getInstance()
+        .cache(CACHE_TYPE, deviceControlId, deviceType, timeout, /* leaseId= */ null);
   }
 
   @Override
   @CanIgnoreReturnValue
   public boolean invalidateCache(String deviceControlId) {
-    return DeviceCacheManager.getInstance().invalidate(CACHE_TYPE, deviceControlId);
+    return DeviceCacheManager.getInstance()
+        .invalidate(CACHE_TYPE, deviceControlId, /* leaseId= */ null);
   }
 }

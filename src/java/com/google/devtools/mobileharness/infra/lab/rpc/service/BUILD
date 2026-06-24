@@ -50,6 +50,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/job/in",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out:timing",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:rpc_device_cache",
         "//src/java/com/google/devtools/mobileharness/infra/container/controller:proxy_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/container/controller:proxy_to_direct_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/provider:device_provider",

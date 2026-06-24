@@ -194,6 +194,42 @@ message CloseTestResponse {
   TestRunnerTiming test_timing = 1;
 }
 
+message LeaseDeviceCacheRequest {
+  // Required. The unique ID of the lease session or task (e.g., "session_id_1"
+  // or "job_id_2"). Used to track registry ownership and prevent accidental
+  // cache release across concurrent sessions.
+  string lease_id = 1;
+
+  // Required. The control IDs of the devices to lease the cache for.
+  repeated string device_control_ids = 2;
+
+  // Required. The duration of the lease. The cache expiration time will be set
+  // to (arrival_time + lease_duration), allowing slide/extend heartbeats.
+  google.protobuf.Duration lease_duration = 3;
+
+  // Required. The type of the device cache. Case-insensitive.
+  // Example: "xts".
+  string cache_type = 4;
+}
+
+message LeaseDeviceCacheResponse {}
+
+message ReleaseDeviceCacheRequest {
+  // Required. The unique ID of the lease session or task (e.g.,
+  // "session_id_1"). Only the matching lease_id that originally leased the
+  // cache is authorized to release it.
+  string lease_id = 1;
+
+  // Required. The control IDs of the devices to release the cache for.
+  repeated string device_control_ids = 2;
+
+  // Required. The type of the device cache. Case-insensitive.
+  // Example: "xts".
+  string cache_type = 3;
+}
+
+message ReleaseDeviceCacheResponse {}
+
 // Since MH lab 4.51.
 service PrepareTestService {
   // Creates a MH remote-mode test in the MH lab.
@@ -212,4 +248,14 @@ service PrepareTestService {
 
   // Closes a test and releases resources in the MH lab.
   rpc CloseTest(CloseTestRequest) returns (CloseTestResponse) {}
+
+  // Leases or extends the lease of the device cache in the MH lab.
+  // Since MH lab 4.373.0.
+  rpc LeaseDeviceCache(LeaseDeviceCacheRequest)
+      returns (LeaseDeviceCacheResponse) {}
+
+  // Releases the device cache in the MH lab.
+  // Since MH lab 4.373.0.
+  rpc ReleaseDeviceCache(ReleaseDeviceCacheRequest)
+      returns (ReleaseDeviceCacheResponse) {}
 }

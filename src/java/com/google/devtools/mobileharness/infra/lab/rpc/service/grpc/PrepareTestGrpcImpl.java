@@ -24,6 +24,10 @@ import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.CreateTestResponse;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.GetTestEngineStatusRequest;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.GetTestEngineStatusResponse;
+import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.LeaseDeviceCacheRequest;
+import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.LeaseDeviceCacheResponse;
+import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.ReleaseDeviceCacheRequest;
+import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.ReleaseDeviceCacheResponse;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.StartTestEngineRequest;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.StartTestEngineResponse;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.PrepareTestServiceImpl;
@@ -82,5 +86,27 @@ public class PrepareTestGrpcImpl extends PrepareTestServiceGrpc.PrepareTestServi
         impl::closeTest,
         PrepareTestServiceGrpc.getServiceDescriptor(),
         PrepareTestServiceGrpc.getCloseTestMethod());
+  }
+
+  @Override
+  public void leaseDeviceCache(
+      LeaseDeviceCacheRequest req, StreamObserver<LeaseDeviceCacheResponse> responseObserver) {
+    GrpcServiceUtil.invoke(
+        req,
+        responseObserver,
+        impl::leaseDeviceCache,
+        PrepareTestServiceGrpc.getServiceDescriptor(),
+        PrepareTestServiceGrpc.getLeaseDeviceCacheMethod());
+  }
+
+  @Override
+  public void releaseDeviceCache(
+      ReleaseDeviceCacheRequest req, StreamObserver<ReleaseDeviceCacheResponse> responseObserver) {
+    GrpcServiceUtil.invoke(
+        req,
+        responseObserver,
+        impl::releaseDeviceCache,
+        PrepareTestServiceGrpc.getServiceDescriptor(),
+        PrepareTestServiceGrpc.getReleaseDeviceCacheMethod());
   }
 }

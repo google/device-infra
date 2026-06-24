@@ -26,11 +26,13 @@ public class LocalDeviceCache extends DeviceCache {
 
   @Override
   public boolean cache(String deviceControlId, String deviceType, Duration timeout) {
-    return DeviceCacheManager.getInstance().cache(CACHE_TYPE, deviceControlId, deviceType, timeout);
+    return DeviceCacheManager.getInstance()
+        .cache(CACHE_TYPE, deviceControlId, deviceType, timeout, /* leaseId= */ null);
   }
 
   @Override
   public boolean invalidateCache(String deviceControlId) {
-    return DeviceCacheManager.getInstance().invalidate(CACHE_TYPE, deviceControlId);
+    return DeviceCacheManager.getInstance()
+        .invalidate(CACHE_TYPE, deviceControlId, /* leaseId= */ null);
   }
 }

@@ -81,9 +81,10 @@ public class DeviceCacheManager {
 
   @AutoValue
   abstract static class CacheInfo {
-    private static CacheInfo create(@Nullable String deviceType, Timestamp expireTimestamp) {
+    private static CacheInfo create(
+        @Nullable String deviceType, Timestamp expireTimestamp, @Nullable String leaseId) {
       return new AutoValue_DeviceCacheManager_CacheInfo(
-          Optional.ofNullable(deviceType), expireTimestamp);
+          Optional.ofNullable(deviceType), expireTimestamp, Optional.ofNullable(leaseId));
     }
 
     /** Device type this cache is for. Empty to match any types */
@@ -91,9 +92,13 @@ public class DeviceCacheManager {
 
     /** Timestamp when this cache will expire. */
     abstract Timestamp expireTimestamp();
+
+    /** Lease ID of the cache. Empty if not leased */
+    abstract Optional<String> leaseId();
   }
 
-  enum CacheType {
+  /** Types of device cache. */
+  public enum CacheType {
     GENERAL,
     CONTAINER,
     XTS,
@@ -101,7 +106,11 @@ public class DeviceCacheManager {
 
   @CanIgnoreReturnValue
   boolean cache(
-      CacheType cacheType, String deviceControlId, @Nullable String deviceType, Duration timeout) {
+      CacheType cacheType,
+      String deviceControlId,
+      @Nullable String deviceType,
+      Duration timeout,
+      @Nullable String leaseId) {
     synchronized (cachesByCacheType) {
       Map<String, CacheInfo> caches = cachesByCacheType.get(cacheType);
       if (caches.containsKey(deviceControlId) && overriddenCount.incrementAndGet() % 100 == 0) {
@@ -114,27 +123,41 @@ public class DeviceCacheManager {
             Throwables.getStackTraceAsString(new Throwable()));
       }
       logger.atInfo().log(
-          "Add cache(%s) for device [%s] with timeout %s", cacheType, deviceControlId, timeout);
+          "Add cache(%s) for device [%s] with timeout %s, leaseId %s",
+          cacheType, deviceControlId, timeout, leaseId);
 
       Instant deadline = clock.instant().plus(timeout);
       caches.put(
           deviceControlId,
           CacheInfo.create(
               deviceType,
-              Timestamps.fromNanos(
-                  deadline.getEpochSecond() * 1_000_000_000 + deadline.getNano())));
+              Timestamps.fromNanos(deadline.getEpochSecond() * 1_000_000_000 + deadline.getNano()),
+              leaseId));
       return true;
     }
   }
 
-  boolean invalidate(CacheType cacheType, String deviceControlId) {
+  @CanIgnoreReturnValue
+  boolean invalidate(CacheType cacheType, String deviceControlId, @Nullable String leaseId) {
     synchronized (cachesByCacheType) {
       Map<String, CacheInfo> caches = cachesByCacheType.get(cacheType);
-      if (caches.remove(deviceControlId) == null) {
+      CacheInfo oldCache = caches.get(deviceControlId);
+      if (oldCache == null) {
         logger.atWarning().log(
-            "Invalidating [%s] cache for device [%s] failed.", cacheType, deviceControlId);
+            "Invalidating [%s] cache for device [%s] failed. Cache not found.",
+            cacheType, deviceControlId);
         return false;
       }
+      if (leaseId != null
+          && oldCache.leaseId().isPresent()
+          && !oldCache.leaseId().get().equals(leaseId)) {
+        logger.atInfo().log(
+            "Skip invalidating [%s] cache for device [%s] because leaseId %s does not match the"
+                + " stored leaseId %s.",
+            cacheType, deviceControlId, leaseId, oldCache.leaseId().get());
+        return false;
+      }
+      caches.remove(deviceControlId);
       logger.atInfo().log(
           "Invalidating [%s] cache for device [%s] succeeded.", cacheType, deviceControlId);
       return true;
@@ -143,13 +166,14 @@ public class DeviceCacheManager {
 
   /** Invalidate both container and general device cache. */
   public void invalidateGeneralAndContainerCaches(String deviceControlId) {
-    invalidate(CacheType.GENERAL, deviceControlId);
-    invalidate(CacheType.CONTAINER, deviceControlId);
+    invalidate(CacheType.GENERAL, deviceControlId, /* leaseId= */ null);
+    invalidate(CacheType.CONTAINER, deviceControlId, /* leaseId= */ null);
   }
 
   public Set<String> getCachedDevices(String deviceType) {
     synchronized (cachesByCacheType) {
       Set<String> result = new HashSet<>();
+
       for (CacheType cacheType : CacheType.values()) {
         result.addAll(getCachedDevices(cacheType, deviceType));
       }

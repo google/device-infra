@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -44,6 +45,7 @@ import com.google.devtools.mobileharness.api.model.job.in.Timeout;
 import com.google.devtools.mobileharness.api.model.job.out.Timing;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
+import com.google.devtools.mobileharness.api.testrunner.device.cache.RpcDeviceCache;
 import com.google.devtools.mobileharness.infra.container.controller.ProxyTestRunner;
 import com.google.devtools.mobileharness.infra.container.controller.ProxyToDirectTestRunner;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.ResolveFileStatus;
@@ -77,6 +79,10 @@ import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.CreateTestResponse.ContainerInfo;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.GetTestEngineStatusRequest;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.GetTestEngineStatusResponse;
+import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.LeaseDeviceCacheRequest;
+import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.LeaseDeviceCacheResponse;
+import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.ReleaseDeviceCacheRequest;
+import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.ReleaseDeviceCacheResponse;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.StartTestEngineRequest;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.StartTestEngineResponse;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.TestRunnerTiming;
@@ -331,6 +337,30 @@ public class PrepareTestServiceImpl {
     }
 
     return response.build();
+  }
+
+  @CanIgnoreReturnValue
+  public LeaseDeviceCacheResponse leaseDeviceCache(LeaseDeviceCacheRequest req)
+      throws MobileHarnessException, InterruptedException {
+    logger.atInfo().log("LeaseDeviceCacheRequest [%s]", shortDebugString(req));
+    Duration lease = toJavaDuration(req.getLeaseDuration());
+    String cacheType = req.getCacheType();
+    String leaseId = req.getLeaseId().isEmpty() ? null : req.getLeaseId();
+    for (String deviceId : req.getDeviceControlIdsList()) {
+      RpcDeviceCache.cache(cacheType, deviceId, lease, leaseId);
+    }
+    return LeaseDeviceCacheResponse.getDefaultInstance();
+  }
+
+  @CanIgnoreReturnValue
+  public ReleaseDeviceCacheResponse releaseDeviceCache(ReleaseDeviceCacheRequest req) {
+    logger.atInfo().log("ReleaseDeviceCacheRequest [%s]", shortDebugString(req));
+    String leaseId = req.getLeaseId().isEmpty() ? null : req.getLeaseId();
+    String cacheType = req.getCacheType();
+    for (String deviceId : req.getDeviceControlIdsList()) {
+      RpcDeviceCache.invalidate(cacheType, deviceId, leaseId);
+    }
+    return ReleaseDeviceCacheResponse.getDefaultInstance();
   }
 
   private TestRunnerTiming getTestTiming(String testId) throws MobileHarnessException {
