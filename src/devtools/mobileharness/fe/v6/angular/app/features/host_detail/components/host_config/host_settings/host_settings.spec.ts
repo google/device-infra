@@ -4,6 +4,7 @@ import {
   MAT_DIALOG_DATA,
   MatDialog,
   MatDialogRef,
+  MatDialogState,
 } from '@angular/material/dialog';
 import {
   MatTestDialogOpener,
@@ -1610,7 +1611,12 @@ describe('HostSettings Component', () => {
     TestBed.inject(ApplicationRef).tick();
 
     comp.activeSection.set('wifi');
-    const validWifi: WifiConfig = {type: 'custom', ssid: 'NewSSID', psk: 'pass', scanSsid: true};
+    const validWifi: WifiConfig = {
+      type: 'custom',
+      ssid: 'NewSSID',
+      psk: 'pass',
+      scanSsid: true,
+    };
     comp.updateDeviceWifi(validWifi);
 
     const updateSpy = mockConfigService.updateHostConfig.and.returnValue(
@@ -1628,5 +1634,279 @@ describe('HostSettings Component', () => {
     expect(updateSpy).toHaveBeenCalled();
     const updateRequest = updateSpy.calls.mostRecent().args[0];
     expect(updateRequest.config.deviceConfig?.wifi).toEqual(validWifi);
+  });
+
+  it('should return non-editable UI status when saving is in progress', () => {
+    setupDialogData();
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostSettings, {
+        data: dialogData,
+      }),
+    );
+    comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    comp.saving.set(true);
+    TestBed.inject(ApplicationRef).tick();
+
+    expect(
+      comp.hostPermissionsUiStatus().hostAdmins.editability?.editable,
+    ).toBe(false);
+    expect(comp.hostPermissionsUiStatus().hostAdmins.editability?.reason).toBe(
+      'Saving in progress...',
+    );
+
+    expect(comp.permissionsUiStatus().editability?.editable).toBe(false);
+    expect(comp.permissionsUiStatus().editability?.reason).toBe(
+      'Saving in progress...',
+    );
+
+    const menuButton = document.querySelector(
+      'button[mat-icon-button]',
+    ) as HTMLButtonElement;
+    expect(menuButton).toBeTruthy();
+    expect(menuButton.disabled).toBeTrue();
+
+    const navBar = document.querySelector('.nav-bar');
+    expect(navBar).toBeTruthy();
+    expect(navBar!.classList.contains('disabled')).toBeTrue();
+  });
+
+  it('should prioritize saving status over other non-editable status', () => {
+    setupDialogData();
+    // Set explicit non-editable status in uiStatus
+    mockHostConfigStateService.getUiStatus.and.returnValue({
+      hostAdmins: {visible: true, editability: {editable: true}},
+      deviceConfigMode: {visible: true, editability: {editable: true}},
+      deviceConfig: {
+        sectionStatus: {
+          visible: true,
+          editability: {editable: false, reason: 'Custom Device Error'},
+        },
+        subSections: {},
+      },
+      hostProperties: {
+        sectionStatus: {visible: true, editability: {editable: true}},
+      },
+      deviceDiscovery: {visible: true, editability: {editable: true}},
+    });
+
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostSettings, {
+        data: dialogData,
+      }),
+    );
+    comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    comp.saving.set(true);
+    comp.hasPermission.set(false); // Also make permission false
+    TestBed.inject(ApplicationRef).tick();
+
+    // Should return 'Saving in progress...' instead of 'Custom Device Error'
+    expect(comp.permissionsUiStatus().editability?.reason).toBe(
+      'Saving in progress...',
+    );
+
+    // Should return 'Saving in progress...' instead of permission error
+    expect(comp.hostPermissionsUiStatus().hostAdmins.editability?.reason).toBe(
+      'Saving in progress...',
+    );
+  });
+
+  it('should not change section if saving is in progress', () => {
+    setupDialogData();
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostSettings, {
+        data: dialogData,
+      }),
+    );
+    comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    TestBed.inject(ApplicationRef).tick();
+
+    expect(comp.activeSection()).toBe('host-permissions');
+
+    comp.saving.set(true);
+    const event = jasmine.createSpyObj('Event', ['preventDefault']);
+    comp.setActiveSection(event, 'config-mode');
+
+    expect(comp.activeSection()).toBe('host-permissions'); // Should not change
+    expect(event.preventDefault).toHaveBeenCalled();
+  });
+
+  it('should update baseline immediately on successful save before reload', () => {
+    setupDialogData();
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostSettings, {
+        data: dialogData,
+      }),
+    );
+    comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    TestBed.inject(ApplicationRef).tick();
+
+    comp.activeSection.set('config-mode');
+    // Make it dirty
+    comp.updateDeviceConfigMode('SHARED');
+    expect(comp.isCategoryDirty('config-mode')).toBeTrue();
+
+    // Also make a device category dirty
+    comp.updateDeviceWifi({
+      type: 'custom',
+      ssid: 'NewSSID',
+      psk: 'pass',
+      scanSsid: true,
+    });
+    expect(comp.isCategoryDirty('wifi')).toBeTrue();
+
+    const updateSubject = new Subject<UpdateHostConfigResult>();
+    mockConfigService.updateHostConfig.and.returnValue(
+      updateSubject.asObservable(),
+    );
+
+    // Control reloadConfig emission
+    const reloadSubject = new Subject<GetHostConfigResult>();
+    mockConfigService.getHostConfig.and.returnValue(
+      reloadSubject.asObservable(),
+    );
+
+    const successDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    successDialogRefSpy.afterClosed.and.returnValue(of('primary'));
+    spyOn(MatDialog.prototype, 'open').and.returnValue(successDialogRefSpy);
+
+    comp.save();
+    updateSubject.next({success: true});
+    updateSubject.complete();
+    TestBed.inject(ApplicationRef).tick();
+
+    // Dirty state should be false immediately
+    expect(comp.isCategoryDirty('config-mode')).toBeFalse();
+    expect(comp.isCategoryDirty('wifi')).toBeFalse();
+
+    // Cleanup pending observable
+    reloadSubject.complete();
+  });
+
+  it('should set isLoading during reloadConfig via save', () => {
+    setupDialogData();
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostSettings, {
+        data: dialogData,
+      }),
+    );
+    comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    TestBed.inject(ApplicationRef).tick();
+
+    comp.activeSection.set('config-mode');
+
+    const updateSubject = new Subject<UpdateHostConfigResult>();
+    mockConfigService.updateHostConfig.and.returnValue(
+      updateSubject.asObservable(),
+    );
+
+    const getHostConfigSubject = new Subject<GetHostConfigResult>();
+    mockConfigService.getHostConfig.and.returnValue(
+      getHostConfigSubject.asObservable(),
+    );
+
+    const successDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    spyOn(comp, 'success').and.returnValue(successDialogRefSpy);
+
+    comp.save();
+
+    updateSubject.next({success: true});
+    updateSubject.complete();
+    TestBed.inject(ApplicationRef).tick();
+
+    expect(comp.isLoading()).toBeTrue();
+
+    getHostConfigSubject.next({uiStatus: comp.uiStatus()});
+    getHostConfigSubject.complete();
+    TestBed.inject(ApplicationRef).tick();
+
+    expect(comp.isLoading()).toBeFalse();
+  });
+
+  it('should close dialog on reloadConfig error if open via save', () => {
+    setupDialogData();
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostSettings, {
+        data: dialogData,
+      }),
+    );
+    comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    dialogRef = dialogOpener.componentInstance.dialogRef;
+    spyOn(dialogRef, 'close');
+    spyOn(dialogRef, 'getState').and.returnValue(MatDialogState.OPEN);
+    TestBed.inject(ApplicationRef).tick();
+
+    comp.activeSection.set('config-mode');
+
+    const updateSubject = new Subject<UpdateHostConfigResult>();
+    mockConfigService.updateHostConfig.and.returnValue(
+      updateSubject.asObservable(),
+    );
+
+    const getHostConfigSubject = new Subject<GetHostConfigResult>();
+    mockConfigService.getHostConfig.and.returnValue(
+      getHostConfigSubject.asObservable(),
+    );
+
+    const successDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    spyOn(comp, 'success').and.returnValue(successDialogRefSpy);
+
+    comp.save();
+
+    updateSubject.next({success: true});
+    updateSubject.complete();
+    TestBed.inject(ApplicationRef).tick();
+
+    getHostConfigSubject.error(new Error('Failed to reload'));
+    TestBed.inject(ApplicationRef).tick();
+
+    expect(dialogRef.close).toHaveBeenCalled();
+  });
+
+  it('should not close dialog on reloadConfig error if already closed via save', () => {
+    setupDialogData();
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostSettings, {
+        data: dialogData,
+      }),
+    );
+    comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    dialogRef = dialogOpener.componentInstance.dialogRef;
+    spyOn(dialogRef, 'close');
+    spyOn(dialogRef, 'getState').and.returnValue(MatDialogState.CLOSED);
+    TestBed.inject(ApplicationRef).tick();
+
+    comp.activeSection.set('config-mode');
+
+    const updateSubject = new Subject<UpdateHostConfigResult>();
+    mockConfigService.updateHostConfig.and.returnValue(
+      updateSubject.asObservable(),
+    );
+
+    const getHostConfigSubject = new Subject<GetHostConfigResult>();
+    mockConfigService.getHostConfig.and.returnValue(
+      getHostConfigSubject.asObservable(),
+    );
+
+    const successDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    spyOn(comp, 'success').and.returnValue(successDialogRefSpy);
+
+    comp.save();
+
+    updateSubject.next({success: true});
+    updateSubject.complete();
+    TestBed.inject(ApplicationRef).tick();
+
+    getHostConfigSubject.error(new Error('Failed to reload'));
+    TestBed.inject(ApplicationRef).tick();
+
+    expect(dialogRef.close).not.toHaveBeenCalled();
   });
 });

@@ -6,7 +6,7 @@
   footerType="none"
 >
   <ng-container header-button>
-    <button mat-icon-button [matMenuTriggerFor]="menu">
+    <button mat-icon-button [matMenuTriggerFor]="menu" [disabled]="saving()">
       <mat-icon>more_vert</mat-icon>
     </button>
     <mat-menu #menu="matMenu">
@@ -18,7 +18,7 @@
   </ng-container>
 
   <div class="content-container">
-    <nav class="nav-bar">
+    <nav class="nav-bar" [class.disabled]="saving()">
       @for (item of navList; track item.id) {
         @if (item.visibility()) {
           @if (item.type === 'item') {
@@ -67,6 +67,7 @@
               class="unlock-button"
               matTooltip="Unlock Host Properties"
               (click)="unlockHostProperties()"
+              [disabled]="saving()"
             >
               <mat-icon>lock_open</mat-icon>
             </button>
@@ -208,6 +209,11 @@
           </button>
         </ng-container>
       </app-footer>
+      @if (isLoading()) {
+        <div class="loading-overlay">
+          <mat-spinner [diameter]="40"></mat-spinner>
+        </div>
+      }
     </main>
   </div>
 </app-dialog>

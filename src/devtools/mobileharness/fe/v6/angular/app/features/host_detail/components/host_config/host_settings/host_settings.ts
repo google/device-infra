@@ -15,6 +15,7 @@ import {
   MAT_DIALOG_DATA,
   MatDialog,
   MatDialogRef,
+  MatDialogState,
 } from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
@@ -280,6 +281,16 @@ export class HostSettings implements OnInit {
     };
     const currentStatus = status || defaultStatus;
 
+    if (this.saving()) {
+      return {
+        ...currentStatus,
+        editability: {
+          editable: false,
+          reason: 'Saving in progress...',
+        },
+      };
+    }
+
     if (!this.hasPermission()) {
       return {
         ...currentStatus,
@@ -296,6 +307,12 @@ export class HostSettings implements OnInit {
     editable: boolean;
     reason: string;
   } {
+    if (this.saving()) {
+      return {
+        editable: false,
+        reason: 'Saving in progress...',
+      };
+    }
     const editability = this.uiStatus().deviceConfig.sectionStatus.editability;
     if (!editability) {
       return {
@@ -510,6 +527,7 @@ export class HostSettings implements OnInit {
   hasError = false;
 
   saving = signal<boolean>(false);
+  isLoading = signal<boolean>(false);
   hasPermission = signal<boolean>(false);
 
   ngOnInit() {
@@ -559,6 +577,10 @@ export class HostSettings implements OnInit {
 
   setActiveSection(event: Event, section: string) {
     event.preventDefault();
+
+    if (this.saving()) {
+      return;
+    }
 
     if (
       section !== this.activeSection() &&
@@ -715,8 +737,14 @@ export class HostSettings implements OnInit {
     );
   }
 
+  private closeDialogIfOpen(result?: unknown) {
+    if (this.dialogRef && this.dialogRef.getState() === MatDialogState.OPEN) {
+      this.dialogRef.close(result);
+    }
+  }
+
   reset() {
-    this.dialogRef.close({action: 'reset', hostName: this.hostName});
+    this.closeDialogIfOpen({action: 'reset', hostName: this.hostName});
   }
 
   selfLockout() {
@@ -742,7 +770,7 @@ export class HostSettings implements OnInit {
     });
   }
 
-  success(isSelfLockout = false) {
+  success() {
     const dialogData = {
       title: 'Configuration Saved',
       content: 'Your configuration has been saved successfully. ',
@@ -750,16 +778,10 @@ export class HostSettings implements OnInit {
       primaryButtonLabel: 'OK',
     };
 
-    const successDialogRef = this.dialog.open(ConfirmDialog, {
+    return this.dialog.open(ConfirmDialog, {
       data: dialogData,
       disableClose: true,
     });
-
-    if (isSelfLockout) {
-      successDialogRef.afterClosed().subscribe(() => {
-        this.dialogRef.close(true);
-      });
-    }
   }
 
   error(errorCode?: string) {
@@ -788,12 +810,18 @@ export class HostSettings implements OnInit {
   save(selfLockout = false, forceSave = false) {
     const section = this.activeSection();
 
+    // if user has added a new empty dimension(either name or value is empty)
+    // prompt if user want to remove them
     if (
       section === 'dimensions' &&
       !forceSave &&
       hasEmptyDimensions(this.deviceConfig().dimensions)
     ) {
+      // prompt user to remove empty dimensions
       this.saveInterceptors.promptEmptyData('dimensions', () => {
+        // if user confirms to remove empty dimensions, then update the
+        // deviceConfig with the empty dimensions removed, and then save the
+        // config.
         this.updateDeviceDimensions(
           clearEmptyDimensions(this.deviceConfig().dimensions),
         );
@@ -815,6 +843,7 @@ export class HostSettings implements OnInit {
       return;
     }
 
+    // same logic as above, but for host properties
     if (
       section === 'host-properties' &&
       !forceSave &&
@@ -834,6 +863,7 @@ export class HostSettings implements OnInit {
       });
       return;
     }
+
     const requestSectionMap: Record<string, HostConfigSection> = {
       'host-permissions': HostConfigSection.HOST_PERMISSIONS,
       'config-mode': HostConfigSection.DEVICE_CONFIG_MODE,
@@ -893,7 +923,27 @@ export class HostSettings implements OnInit {
           return;
         }
 
-        this.reloadConfig(true, selfLockout);
+        // Immediately update baseline to prevent phantom warning
+        this.originalHostConfig = objectUtils.deepCopy(
+          this.hostConfig(),
+        ) as HostConfig;
+        this.originalDeviceConfig = objectUtils.deepCopy(
+          this.deviceConfig(),
+        ) as DeviceConfig;
+
+        const successDialogRef = this.success();
+
+        if (selfLockout) {
+          // No need to reload. Just close the dialog after the user clicks OK.
+          successDialogRef.afterClosed().subscribe(() => {
+            this.closeDialogIfOpen(true);
+          });
+        } else {
+          // reloadConfig will only affect the UI in the config dialog, not the
+          // host detail page. So we don't need to call reloadConfig() when
+          // config dialog is closed.
+          this.reloadConfig();
+        }
       });
   }
 
@@ -942,32 +992,37 @@ export class HostSettings implements OnInit {
       });
   }
 
-  private reloadConfig(showSuccess = false, selfLockout = false) {
-    this.configService.getHostConfig(this.hostName).subscribe({
-      next: (result) => {
-        if (result) {
-          if (result.uiStatus) {
-            this.uiStatus.set(result.uiStatus);
-            this.hostConfigStateService.setUiStatus(
-              this.hostName,
-              result.uiStatus,
-            );
+  private reloadConfig() {
+    this.isLoading.set(true);
+    this.configService
+      .getHostConfig(this.hostName)
+      .pipe(
+        finalize(() => {
+          this.isLoading.set(false);
+        }),
+      )
+      .subscribe({
+        next: (result) => {
+          if (result) {
+            if (result.uiStatus) {
+              this.uiStatus.set(result.uiStatus);
+              this.hostConfigStateService.setUiStatus(
+                this.hostName,
+                result.uiStatus,
+              );
+            }
+            if (result.hostConfig) {
+              this.config = result.hostConfig;
+              this.initializeData();
+            }
           }
-          if (result.hostConfig) {
-            this.config = result.hostConfig;
-            this.initializeData();
-          }
-        }
-        if (showSuccess) {
-          this.success(selfLockout);
-        }
-      },
-      error: (err) => {
-        this.snackBar.showError('Failed to reload configuration.');
-        if (showSuccess) {
-          this.success(selfLockout);
-        }
-      },
-    });
+        },
+        error: (err) => {
+          this.snackBar.showError('Failed to reload configuration.');
+          // when failed to reload config, to avoid the user working on a stale
+          // config, we should close the dialog if it is open.
+          this.closeDialogIfOpen();
+        },
+      });
   }
 }
