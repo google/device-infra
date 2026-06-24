@@ -23,9 +23,20 @@ package(
 )
 
 java_library(
+    name = "device_cache",
+    srcs = ["DeviceCacheStub.java"],
+    deps = [
+        "//src/devtools/mobileharness/infra/lab/proto:prepare_test_service_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc:exception",
+        "@maven//:com_google_code_findbugs_jsr305",
+    ],
+)
+
+java_library(
     name = "prepare_test",
     srcs = ["PrepareTestStub.java"],
     deps = [
+        ":device_cache",
         "//src/devtools/mobileharness/infra/lab/proto:prepare_test_service_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/rpc:exception",
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
