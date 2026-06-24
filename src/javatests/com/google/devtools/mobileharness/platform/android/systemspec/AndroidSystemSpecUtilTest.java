@@ -22,6 +22,7 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
@@ -711,6 +712,37 @@ public class AndroidSystemSpecUtilTest {
         .thenReturn("");
 
     assertThat(systemSpecUtil.isAutomotiveDevice(SERIAL)).isFalse();
+  }
+
+  @Test
+  public void isAutomotiveDeviceByCheckingDimensions_byHardwareType() throws Exception {
+    ImmutableListMultimap<String, String> dimensions =
+        ImmutableListMultimap.of("hardware_type", "automotive");
+    assertThat(AndroidSystemSpecUtil.isAutomotiveDeviceByCheckingDimensions(dimensions)).isTrue();
+  }
+
+  @Test
+  public void isAutomotiveDeviceByCheckingDimensions_byCharacteristics() throws Exception {
+    ImmutableListMultimap<String, String> dimensions =
+        ImmutableListMultimap.of("characteristics", "automotive,watch");
+    assertThat(AndroidSystemSpecUtil.isAutomotiveDeviceByCheckingDimensions(dimensions)).isTrue();
+  }
+
+  @Test
+  public void isAutomotiveDeviceByCheckingDimensions_byFeature() throws Exception {
+    ImmutableListMultimap<String, String> dimensions =
+        ImmutableListMultimap.of("feature", "android.hardware.type.automotive");
+    assertThat(AndroidSystemSpecUtil.isAutomotiveDeviceByCheckingDimensions(dimensions)).isTrue();
+  }
+
+  @Test
+  public void isAutomotiveDeviceByCheckingDimensions_false() throws Exception {
+    ImmutableListMultimap<String, String> dimensions =
+        ImmutableListMultimap.of(
+            "hardware_type", "phone",
+            "characteristics", "emulator",
+            "feature", "android.hardware.type.watch");
+    assertThat(AndroidSystemSpecUtil.isAutomotiveDeviceByCheckingDimensions(dimensions)).isFalse();
   }
 
   @Test
