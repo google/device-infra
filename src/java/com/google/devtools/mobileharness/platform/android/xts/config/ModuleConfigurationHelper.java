@@ -201,7 +201,7 @@ public class ModuleConfigurationHelper {
         String.format("Cannot find test artifact %s", fileName));
   }
 
-  private Optional<Entry<String, JsonObject>> convertOptionsToScopedSpec(
+  public static Optional<Entry<String, JsonObject>> convertOptionsToScopedSpec(
       String driverOrDecoratorName, List<Option> options) throws MobileHarnessException {
     Optional<String> specName =
         DriverDecoratorSpecMapper.getSpecNameByDriverOrDecorator(driverOrDecoratorName);

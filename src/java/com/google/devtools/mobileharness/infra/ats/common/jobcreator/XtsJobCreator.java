@@ -41,7 +41,9 @@ import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestIn
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationXmlParser;
+import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.TargetPreparer;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
@@ -53,6 +55,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
@@ -61,7 +64,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.DeviceList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.Driver;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
-import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.DeviceInfoCollectorDecoratorSpec;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -562,8 +564,7 @@ public abstract class XtsJobCreator {
     // Therefore, we inject a synthetic setup job running NoOpDriver with the
     // DeviceInfoCollectorDecorator to manually gather the device info files.
     if (hasNonTradefedJobs && !hasTradefedJobs) {
-      Optional<DeviceInfoCollectorDecoratorSpec> specOpt =
-          parseDeviceInfoCollectorSpec(sessionRequestInfo);
+      Optional<JsonObject> specOpt = parseDeviceInfoCollectorSpec(sessionRequestInfo);
       if (specOpt.isPresent()) {
         JobInfo setUpJob = createSetUpJob(specOpt.get());
         nonTfJobs = ImmutableList.<JobInfo>builder().add(setUpJob).addAll(nonTfJobs).build();
@@ -582,7 +583,7 @@ public abstract class XtsJobCreator {
    * is necessary for Mobly-only xTS sessions, ensuring the device-info-files directory is collected
    * and included in the final results directory.
    */
-  private JobInfo createSetUpJob(DeviceInfoCollectorDecoratorSpec spec)
+  private JobInfo createSetUpJob(JsonObject specJson)
       throws MobileHarnessException, InterruptedException {
     String name = "setup";
     JobConfig jobConfig =
@@ -621,15 +622,14 @@ public abstract class XtsJobCreator {
         .getAllSubDevices()
         .get(0)
         .scopedSpecs()
-        .add("DeviceInfoCollectorDecoratorSpec", spec);
+        .add("DeviceInfoCollectorDecoratorSpec", specJson);
     jobInfo.properties().add(SessionHandlerHelper.XTS_MODULE_NAME_PROP, name);
     jobInfo.properties().add(Job.IS_XTS_NON_TF_JOB, "true");
 
     return jobInfo;
   }
 
-  private Optional<DeviceInfoCollectorDecoratorSpec> parseDeviceInfoCollectorSpec(
-      SessionRequestInfo sessionRequestInfo) {
+  private Optional<JsonObject> parseDeviceInfoCollectorSpec(SessionRequestInfo sessionRequestInfo) {
     String xtsType = sessionRequestInfo.getXtsType().toLowerCase(Locale.ROOT);
     Path toolsDir =
         XtsDirUtil.getXtsToolsDir(
@@ -659,37 +659,29 @@ public abstract class XtsJobCreator {
 
       try (InputStream is = jarFile.getInputStream(entry)) {
         Configuration configuration = ConfigurationXmlParser.parse(is, configFileName);
-        return configuration.getTargetPreparersList().stream()
-            .filter(
-                preparer ->
-                    preparer
-                        .getClazz()
-                        .equals(
-                            "com.google.wireless.qa.mobileharness.shared.api.decorator.DeviceInfoCollectorDecorator"))
-            .findFirst()
-            .map(
-                preparer -> {
-                  DeviceInfoCollectorDecoratorSpec.Builder specBuilder =
-                      DeviceInfoCollectorDecoratorSpec.newBuilder()
-                          .setXtsTestDir(
-                              XtsDirUtil.getXtsTestCasesDir(
-                                      Path.of(sessionRequestInfo.getXtsRootDir()),
-                                      sessionRequestInfo.getXtsType())
-                                  .toString());
-                  preparer
-                      .getOptionsList()
-                      .forEach(
-                          option -> {
-                            switch (option.getName()) {
-                              case "apk" -> specBuilder.setApk(option.getValue());
-                              case "package_name" -> specBuilder.setPackageName(option.getValue());
-                              case "src_dir" -> specBuilder.setSrcDir(option.getValue());
-                              case "dest_dir" -> specBuilder.setDestDir(option.getValue());
-                              default -> {}
-                            }
-                          });
-                  return specBuilder.build();
-                });
+        Optional<TargetPreparer> deviceInfoPreparer =
+            configuration.getTargetPreparersList().stream()
+                .filter(
+                    preparer ->
+                        ConfigurationUtil.getSimpleClassName(preparer.getClazz())
+                            .equals("DeviceInfoCollectorDecorator"))
+                .findFirst();
+
+        if (deviceInfoPreparer.isPresent()) {
+          Optional<Map.Entry<String, JsonObject>> scopedSpec =
+              ModuleConfigurationHelper.convertOptionsToScopedSpec(
+                  "DeviceInfoCollectorDecorator", deviceInfoPreparer.get().getOptionsList());
+          if (scopedSpec.isPresent()) {
+            JsonObject specJson = scopedSpec.get().getValue();
+            specJson.addProperty(
+                "xts_test_dir",
+                XtsDirUtil.getXtsTestCasesDir(
+                        Path.of(sessionRequestInfo.getXtsRootDir()),
+                        sessionRequestInfo.getXtsType())
+                    .toString());
+            return Optional.of(specJson);
+          }
+        }
       }
     } catch (Exception e) {
       logger.atWarning().withCause(e).log(
