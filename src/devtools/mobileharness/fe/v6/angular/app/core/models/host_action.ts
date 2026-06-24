@@ -83,6 +83,52 @@ export declare interface ReleaseReady {
 }
 
 /**
+ * Action type for lifecycle preflight check.
+ */
+export type LifecycleActionType = 'START' | 'RESTART' | 'STOP';
+
+/**
+ * Response for PreflightLabServerLifecycle API.
+ */
+export declare interface PreflightLabServerLifecycleResponse {
+  readonly permissionDenied?: PermissionDenied;
+  readonly actionUnavailable?: ActionUnavailable;
+  readonly versionIssue?: VersionIssue;
+  readonly ready?: ActionReady;
+}
+
+/**
+ * The action is not available under the current Activity.
+ */
+export declare interface ActionUnavailable {
+  readonly actualActivity: string;
+}
+
+/**
+ * Version issue type.
+ */
+export type VersionIssueType =
+  | 'TYPE_UNSPECIFIED'
+  | 'NO_VERSION_RECORD'
+  | 'VERSION_TOO_OLD';
+
+/**
+ * Version is unavailable; user needs to select a version before proceeding.
+ */
+export declare interface VersionIssue {
+  readonly type: VersionIssueType;
+  readonly currentVersion: string;
+  readonly availableVersions: DeployableVersion[];
+}
+
+/**
+ * All checks passed. Ready to proceed.
+ */
+export declare interface ActionReady {
+  readonly actualActivity: string;
+}
+
+/**
  * Represents the status of a Lab Server release.
  */
 export type ReleaseStatus =

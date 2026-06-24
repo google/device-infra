@@ -6,7 +6,9 @@ import {
   GetHostDebugInfoResponse,
   GetPopularFlagsResponse,
   HostHeaderInfo,
+  LifecycleActionType,
   ListTroubleshootScriptsResponse,
+  PreflightLabServerLifecycleResponse,
   PreflightLabServerReleaseResponse,
   ReleaseLabServerRequest,
   ReleaseLabServerResponse,
@@ -79,6 +81,16 @@ export abstract class HostService {
   abstract preflightLabServerRelease(
     hostName: string,
   ): Observable<PreflightLabServerReleaseResponse>;
+
+  /**
+   * Preflight check for lifecycle actions (Start/Restart/Stop).
+   * Validates permission, action availability, and version before proceeding.
+   */
+  abstract preflightLabServerLifecycle(
+    hostName: string,
+    action: LifecycleActionType,
+    expectedActivity: string,
+  ): Observable<PreflightLabServerLifecycleResponse>;
 
   /**
    * Decommissions missing devices on a specific host.

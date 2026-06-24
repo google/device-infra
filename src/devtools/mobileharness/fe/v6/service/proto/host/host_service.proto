@@ -128,6 +128,16 @@ service HostService {
     };
   }
 
+  // Preflight check for lab server lifecycle actions (Start/Restart/Stop).
+  // For release/deployment, use PreflightLabServerRelease instead.
+  rpc PreflightLabServerLifecycle(PreflightLabServerLifecycleRequest)
+      returns (PreflightLabServerLifecycleResponse) {
+    option (google.api.http) = {
+      post: "/v6/hosts/{host_name}:preflightLifecycle"
+      body: "*"
+    };
+  }
+
   // Starts the lab server process on the host with same release version and
   // latest flags.
   rpc StartLabServer(StartLabServerRequest) returns (StartLabServerResponse) {
@@ -273,19 +283,77 @@ message PreflightLabServerReleaseRequest {
   string universe = 2;
 }
 
+// No permission for the requested action.
+message PreflightPermissionDenied {}
+
 // Response message for PreflightLabServerRelease.
 message PreflightLabServerReleaseResponse {
-  // No deploy permission.
-  message PermissionDenied {}
-
   // All checks passed. Here are the available versions to deploy.
   message ReleaseReady {
     repeated DeployableVersion versions = 1;
   }
 
   oneof result {
-    PermissionDenied permission_denied = 1;
+    PreflightPermissionDenied permission_denied = 1;
     ReleaseReady ready = 2;
+  }
+}
+
+// Request message for PreflightLabServerLifecycle.
+message PreflightLabServerLifecycleRequest {
+  string host_name = 1;
+
+  // The type of lifecycle action to preflight.
+  enum ActionType {
+    ACTION_TYPE_UNSPECIFIED = 0;
+    START = 1;
+    RESTART = 2;
+    STOP = 3;
+  }
+  ActionType action = 2;
+
+  // The Activity currently displayed on the Lab Server card in the frontend.
+  // Used to detect stale page state (e.g. "RUNNING", "STOPPED").
+  string expected_activity = 3;
+
+  // The universe of the host.
+  string universe = 4;
+}
+
+// Response message for PreflightLabServerLifecycle.
+message PreflightLabServerLifecycleResponse {
+  // The action is not available under the current Activity.
+  // e.g. user clicked Stop, but activity has already changed to STOPPED.
+  message ActionUnavailable {
+    string actual_activity = 1;  // The real Activity at this moment
+  }
+
+  // Version is unavailable; user needs to select a version before proceeding.
+  // Includes available versions so the frontend can show the Release Dialog
+  // without an extra RPC round-trip.
+  message VersionIssue {
+    enum Type {
+      TYPE_UNSPECIFIED = 0;
+      NO_VERSION_RECORD = 1;  // Never deployed, no version history
+      VERSION_TOO_OLD = 2;    // Previous version is deprecated
+    }
+    Type type = 1;
+    string current_version = 2;                         // Reserved
+    repeated DeployableVersion available_versions = 3;  // Versions to choose
+  }
+
+  // All checks passed. Ready to proceed.
+  message ActionReady {
+    string actual_activity = 1;  // The real Activity at this moment
+  }
+
+  // Backend short-circuits in order: permission -> action availability ->
+  // version. Exactly one of these four outcomes is returned.
+  oneof result {
+    PreflightPermissionDenied permission_denied = 1;
+    ActionUnavailable action_unavailable = 2;
+    VersionIssue version_issue = 3;
+    ActionReady ready = 4;
   }
 }
 
