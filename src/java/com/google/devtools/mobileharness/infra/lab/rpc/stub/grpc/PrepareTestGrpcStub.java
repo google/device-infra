@@ -26,6 +26,10 @@ import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.CreateTestResponse;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.GetTestEngineStatusRequest;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.GetTestEngineStatusResponse;
+import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.LeaseDeviceCacheRequest;
+import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.LeaseDeviceCacheResponse;
+import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.ReleaseDeviceCacheRequest;
+import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.ReleaseDeviceCacheResponse;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.StartTestEngineRequest;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.StartTestEngineResponse;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.PrepareTestStub;
@@ -84,6 +88,26 @@ public class PrepareTestGrpcStub implements PrepareTestStub {
   }
 
   @Override
+  public LeaseDeviceCacheResponse leaseDeviceCache(LeaseDeviceCacheRequest request)
+      throws RpcExceptionWithErrorId {
+    return GrpcStubUtil.invoke(
+        stub::leaseDeviceCache,
+        request,
+        InfraErrorId.LAB_RPC_PREPARE_TEST_LEASE_DEVICE_CACHE_GRPC_ERROR,
+        "Failed to lease device cache");
+  }
+
+  @Override
+  public ReleaseDeviceCacheResponse releaseDeviceCache(ReleaseDeviceCacheRequest request)
+      throws RpcExceptionWithErrorId {
+    return GrpcStubUtil.invoke(
+        stub::releaseDeviceCache,
+        request,
+        InfraErrorId.LAB_RPC_PREPARE_TEST_RELEASE_DEVICE_CACHE_GRPC_ERROR,
+        "Failed to release device cache");
+  }
+
+  @Override
   public void close() {
     // This stub is not responsible for managing lifecycle of the channel.
   }
@@ -97,6 +121,10 @@ public class PrepareTestGrpcStub implements PrepareTestStub {
     StartTestEngineResponse startTestEngine(StartTestEngineRequest request);
 
     CloseTestResponse closeTest(CloseTestRequest request);
+
+    LeaseDeviceCacheResponse leaseDeviceCache(LeaseDeviceCacheRequest request);
+
+    ReleaseDeviceCacheResponse releaseDeviceCache(ReleaseDeviceCacheRequest request);
   }
 
   public static BlockingInterface newBlockingInterface(Channel channel) {

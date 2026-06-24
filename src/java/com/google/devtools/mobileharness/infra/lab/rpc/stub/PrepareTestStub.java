@@ -23,6 +23,10 @@ import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.CreateTestResponse;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.GetTestEngineStatusRequest;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.GetTestEngineStatusResponse;
+import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.LeaseDeviceCacheRequest;
+import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.LeaseDeviceCacheResponse;
+import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.ReleaseDeviceCacheRequest;
+import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.ReleaseDeviceCacheResponse;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.StartTestEngineRequest;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.StartTestEngineResponse;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
@@ -66,5 +70,25 @@ public interface PrepareTestStub extends NonThrowingAutoCloseable {
   default CloseTestResponse closeTest(CloseTestRequest request, @Nullable String impersonationUser)
       throws RpcExceptionWithErrorId {
     return closeTest(request);
+  }
+
+  LeaseDeviceCacheResponse leaseDeviceCache(LeaseDeviceCacheRequest request)
+      throws RpcExceptionWithErrorId;
+
+  /** Leases or extends the lease of the device cache in the lab with the impersonation user. */
+  default LeaseDeviceCacheResponse leaseDeviceCache(
+      LeaseDeviceCacheRequest request, @Nullable String impersonationUser)
+      throws RpcExceptionWithErrorId {
+    return leaseDeviceCache(request);
+  }
+
+  ReleaseDeviceCacheResponse releaseDeviceCache(ReleaseDeviceCacheRequest request)
+      throws RpcExceptionWithErrorId;
+
+  /** Releases the device cache in the lab with the impersonation user. */
+  default ReleaseDeviceCacheResponse releaseDeviceCache(
+      ReleaseDeviceCacheRequest request, @Nullable String impersonationUser)
+      throws RpcExceptionWithErrorId {
+    return releaseDeviceCache(request);
   }
 }
