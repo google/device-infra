@@ -441,7 +441,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
   }
 
   /**
-   * @return whether the device is IDLE or NEAR_IDLE in external device manager
+   * @return whether the device is IDLE in external device manager
    */
   private boolean waitIdleInExternalDeviceManager(Duration timeout) {
     Instant expireTime = clock.instant().plus(timeout);
@@ -449,8 +449,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
       ExternalDeviceManager.DeviceStatus deviceStatus =
           externalDeviceManager.getDeviceStatus(
               device.getDeviceId(), device.getClass().getSimpleName(), device.getDeviceTypes());
-      if (deviceStatus.equals(ExternalDeviceManager.DeviceStatus.IDLE)
-          || deviceStatus.equals(ExternalDeviceManager.DeviceStatus.NEAR_IDLE)) {
+      if (deviceStatus.equals(ExternalDeviceManager.DeviceStatus.IDLE)) {
         return true;
       }
       try {

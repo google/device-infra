@@ -76,11 +76,6 @@ public interface ExternalDeviceManager extends DrainHandler {
     // Allocated by the external device manager.
     RESERVED_BY_EXTERNAL_DM,
     UNAVAILABLE,
-    // The device is almost idle, but still cannot be allocated.
-    // When a test has released a device in the external device manager, i.e. Tradefed, we may want
-    // to wait for a while and let other stack to use the device firstly to reduce allocation
-    // conflicts and implement simple priority.
-    NEAR_IDLE,
   }
 
   /** A reservation of a device in an {@link ExternalDeviceManager}. */
