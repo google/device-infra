@@ -46,6 +46,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.DeviceInfoCollectorDecoratorSpec;
+import java.io.File;
 import java.time.Duration;
 import java.util.function.Supplier;
 import org.junit.Before;
@@ -191,7 +192,7 @@ public final class DeviceInfoCollectorDecoratorTest {
             any());
 
     // Verify file pulling
-    verify(localFileUtil).prepareDir(HOST_DEST_DIR);
+    verify(localFileUtil).prepareDir(new File(HOST_DEST_DIR).getParent());
     verify(androidFileUtil).pull(DEVICE_ID, SRC_DIR, HOST_DEST_DIR);
   }
 

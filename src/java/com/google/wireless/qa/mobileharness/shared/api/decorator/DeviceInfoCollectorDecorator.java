@@ -153,7 +153,7 @@ public class DeviceInfoCollectorDecorator extends StepSkippableLifecycleDecorato
     }
 
     String hostDestDir = PathUtil.join(testInfo.getGenFileDir(), destDir);
-    localFileUtil.prepareDir(hostDestDir);
+    localFileUtil.prepareDir(new File(hostDestDir).getParent());
 
     testInfo
         .log()
