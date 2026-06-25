@@ -218,7 +218,7 @@ public class SessionRequestHandlerUtil {
    * Gets a list of SubDeviceSpec for the job. One SubDeviceSpec maps to one sub device used for
    * running the job as the job may need multiple devices to run the test.
    */
-  public ImmutableList<SubDeviceSpec> getSubDeviceSpecListForTradefed(
+  public ImmutableList<SubDeviceSpec> getSessionSubDeviceSpecList(
       SessionRequestInfo sessionRequestInfo) throws MobileHarnessException, InterruptedException {
 
     // ATS UI solely rely on user handpicked devices, and don't need CLI param

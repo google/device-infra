@@ -311,7 +311,7 @@ public final class AtsServerSessionPluginTest {
     doReturn(ImmutableList.of(new File("some_testcase")))
         .when(localFileUtil)
         .listFiles(endsWith("/android-cts/testcases"), eq(false));
-    when(sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(any()))
+    when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any()))
         .thenReturn(
             ImmutableList.of(
                 com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec

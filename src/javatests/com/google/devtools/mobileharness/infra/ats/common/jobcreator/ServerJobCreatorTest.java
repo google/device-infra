@@ -58,6 +58,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import java.io.File;
 import java.nio.file.Path;
@@ -90,7 +91,17 @@ public final class ServerJobCreatorTest {
 
   private static final String SUBPLAN3_XML =
       RunfilesUtil.getRunfilesLocation(TEST_DATA_PREFIX + "subplan3.xml");
-  private static final String ANDROID_XTS_ZIP_PATH = "ats-file-server::/path/to/android_xts.zip";
+  private static final String ANDROID_XTS_ZIP_PATH = "/path/to/android_xts.zip";
+  private static final ImmutableList<SubDeviceSpec> MOCK_SUB_DEVICE_SPEC_LIST =
+      ImmutableList.of(
+          SubDeviceSpec.newBuilder()
+              .setType("AndroidRealDevice")
+              .setDimensions(StringMap.newBuilder().putContent("id", "device_id_1"))
+              .build(),
+          SubDeviceSpec.newBuilder()
+              .setType("AndroidRealDevice")
+              .setDimensions(StringMap.newBuilder().putContent("id", "device_id_2"))
+              .build());
 
   @Rule public MockitoRule mockito = MockitoJUnit.rule();
   @Rule public TemporaryFolder folder = new TemporaryFolder();
@@ -124,10 +135,8 @@ public final class ServerJobCreatorTest {
             tmpFolder.getRoot().getAbsolutePath()));
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     realLocalFileUtil = new LocalFileUtil();
-    when(sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(any()))
-        .thenReturn(
-            ImmutableList.of(
-                SubDeviceSpec.getDefaultInstance(), SubDeviceSpec.getDefaultInstance()));
+    when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any()))
+        .thenReturn(MOCK_SUB_DEVICE_SPEC_LIST);
     xtsRootDir = publicDir + "/session_session_id/file";
     realLocalFileUtil.prepareParentDir(xtsRootDir);
   }
@@ -212,7 +221,11 @@ public final class ServerJobCreatorTest {
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
+        .initializeJobConfig(
+            eq(sessionRequestInfo),
+            driverParamsCaptor.capture(),
+            eq(MOCK_SUB_DEVICE_SPEC_LIST),
+            any());
     assertThat(driverParamsCaptor.getValue())
         .containsExactly(
             "run_command_args",
@@ -266,7 +279,11 @@ public final class ServerJobCreatorTest {
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
+        .initializeJobConfig(
+            eq(sessionRequestInfo),
+            driverParamsCaptor.capture(),
+            eq(MOCK_SUB_DEVICE_SPEC_LIST),
+            any());
     assertThat(driverParamsCaptor.getValue())
         .containsExactly(
             "run_command_args",
@@ -321,7 +338,11 @@ public final class ServerJobCreatorTest {
             sessionRequestInfo, ImmutableList.of("mock_module"));
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
+        .initializeJobConfig(
+            eq(sessionRequestInfo),
+            driverParamsCaptor.capture(),
+            eq(MOCK_SUB_DEVICE_SPEC_LIST),
+            any());
     assertThat(driverParamsCaptor.getValue())
         .containsEntry("run_command_args", "-m mock_module --enable-default-logs true");
   }
@@ -361,7 +382,11 @@ public final class ServerJobCreatorTest {
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
+        .initializeJobConfig(
+            eq(sessionRequestInfo),
+            driverParamsCaptor.capture(),
+            eq(MOCK_SUB_DEVICE_SPEC_LIST),
+            any());
 
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
     assertThat(driverParamsMap).hasSize(6);
@@ -425,7 +450,11 @@ public final class ServerJobCreatorTest {
         .isEqualTo("armeabi-v7a ModuleB android.test.Foo#test1");
 
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
+        .initializeJobConfig(
+            eq(sessionRequestInfo),
+            driverParamsCaptor.capture(),
+            eq(MOCK_SUB_DEVICE_SPEC_LIST),
+            any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
     assertThat(driverParamsMap).hasSize(6);
     assertThat(driverParamsMap)
@@ -484,7 +513,11 @@ public final class ServerJobCreatorTest {
     assertThat(retryArgs.previousSessionIndex().isEmpty()).isTrue();
 
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
+        .initializeJobConfig(
+            eq(sessionRequestInfo),
+            driverParamsCaptor.capture(),
+            eq(MOCK_SUB_DEVICE_SPEC_LIST),
+            any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
     assertThat(driverParamsMap).hasSize(6);
     assertThat(driverParamsMap)
@@ -540,7 +573,11 @@ public final class ServerJobCreatorTest {
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
+        .initializeJobConfig(
+            eq(sessionRequestInfo),
+            driverParamsCaptor.capture(),
+            eq(MOCK_SUB_DEVICE_SPEC_LIST),
+            any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
     assertThat(driverParamsMap)
         .containsAtLeast(
@@ -600,7 +637,11 @@ public final class ServerJobCreatorTest {
     assertThat(tradefedJobInfoList).hasSize(1);
 
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
+        .initializeJobConfig(
+            eq(sessionRequestInfo),
+            driverParamsCaptor.capture(),
+            eq(MOCK_SUB_DEVICE_SPEC_LIST),
+            any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
     assertThat(driverParamsMap)
         .containsAtLeast(

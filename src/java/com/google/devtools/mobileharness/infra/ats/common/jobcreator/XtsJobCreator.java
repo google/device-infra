@@ -59,7 +59,6 @@ import com.google.gson.JsonObject;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
-import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.DecoratorList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.DeviceList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.Driver;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringList;
@@ -250,7 +249,7 @@ public abstract class XtsJobCreator {
     }
 
     ImmutableList<SubDeviceSpec> subDeviceSpecList =
-        sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(sessionRequestInfo);
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo);
     logger.atInfo().log("Get the sub device spec list: %s", subDeviceSpecList);
 
     injectEnvSpecificProperties(sessionRequestInfo, driverParams, subDeviceSpecList.size());
@@ -566,7 +565,7 @@ public abstract class XtsJobCreator {
     if (hasNonTradefedJobs && !hasTradefedJobs) {
       Optional<JsonObject> specOpt = parseDeviceInfoCollectorSpec(sessionRequestInfo);
       if (specOpt.isPresent()) {
-        JobInfo setUpJob = createSetUpJob(specOpt.get());
+        JobInfo setUpJob = createSetUpJob(specOpt.get(), sessionRequestInfo);
         nonTfJobs = ImmutableList.<JobInfo>builder().add(setUpJob).addAll(nonTfJobs).build();
       } else {
         logger.atWarning().log(
@@ -583,9 +582,21 @@ public abstract class XtsJobCreator {
    * is necessary for Mobly-only xTS sessions, ensuring the device-info-files directory is collected
    * and included in the final results directory.
    */
-  private JobInfo createSetUpJob(JsonObject specJson)
+  private JobInfo createSetUpJob(JsonObject specJson, SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
     String name = "setup";
+    ImmutableList<SubDeviceSpec> subDeviceSpecList =
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo).stream()
+            .map(
+                spec ->
+                    spec.toBuilder()
+                        .setDecorators(
+                            spec.getDecorators().toBuilder()
+                                .addContent(
+                                    Driver.newBuilder().setName("DeviceInfoCollectorDecorator")))
+                        .build())
+            .collect(toImmutableList());
+
     JobConfig jobConfig =
         JobConfig.newBuilder()
             .setName(name)
@@ -596,16 +607,7 @@ public abstract class XtsJobCreator {
             .setPriority(Priority.HIGH)
             .setTestAttempts(1)
             .setTests(StringList.newBuilder().addContent(name))
-            .setDevice(
-                DeviceList.newBuilder()
-                    .addSubDeviceSpec(
-                        SubDeviceSpec.newBuilder()
-                            .setType("AndroidRealDevice")
-                            .setDecorators(
-                                DecoratorList.newBuilder()
-                                    .addContent(
-                                        Driver.newBuilder()
-                                            .setName("DeviceInfoCollectorDecorator")))))
+            .setDevice(DeviceList.newBuilder().addAllSubDeviceSpec(subDeviceSpecList))
             .setDriver(Driver.newBuilder().setName("NoOpDriver"))
             .setGenFileDir(sessionRequestHandlerUtil.createJobGenDir(name).toString())
             .build();
@@ -620,9 +622,8 @@ public abstract class XtsJobCreator {
     jobInfo
         .subDeviceSpecs()
         .getAllSubDevices()
-        .get(0)
-        .scopedSpecs()
-        .add("DeviceInfoCollectorDecoratorSpec", specJson);
+        .forEach(
+            subDevice -> subDevice.scopedSpecs().add("DeviceInfoCollectorDecoratorSpec", specJson));
     jobInfo.properties().add(SessionHandlerHelper.XTS_MODULE_NAME_PROP, name);
     jobInfo.properties().add(Job.IS_XTS_NON_TF_JOB, "true");
 

@@ -53,6 +53,7 @@ import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
+import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.DeviceInfoCollectorDecoratorSpec;
 import java.io.File;
@@ -80,6 +81,16 @@ import org.mockito.junit.MockitoRule;
 public final class ConsoleJobCreatorTest {
 
   private static final String XTS_ROOT_DIR_PATH = "/path/to/xts_root_dir";
+  private static final ImmutableList<SubDeviceSpec> MOCK_SUB_DEVICE_SPEC_LIST =
+      ImmutableList.of(
+          SubDeviceSpec.newBuilder()
+              .setType("AndroidRealDevice")
+              .setDimensions(StringMap.newBuilder().putContent("id", "device_id_1"))
+              .build(),
+          SubDeviceSpec.newBuilder()
+              .setType("AndroidRealDevice")
+              .setDimensions(StringMap.newBuilder().putContent("id", "device_id_2"))
+              .build());
 
   @Rule public MockitoRule mockito = MockitoJUnit.rule();
   @Rule public TemporaryFolder folder = new TemporaryFolder();
@@ -99,10 +110,8 @@ public final class ConsoleJobCreatorTest {
     flags.setAll(ImmutableMap.of("enable_ats_mode", "true", "use_tf_retry", "false"));
 
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
-    when(sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(any()))
-        .thenReturn(
-            ImmutableList.of(
-                SubDeviceSpec.getDefaultInstance(), SubDeviceSpec.getDefaultInstance()));
+    when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any()))
+        .thenReturn(MOCK_SUB_DEVICE_SPEC_LIST);
   }
 
   @Test
@@ -133,7 +142,11 @@ public final class ConsoleJobCreatorTest {
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
+        .initializeJobConfig(
+            eq(sessionRequestInfo),
+            driverParamsCaptor.capture(),
+            eq(MOCK_SUB_DEVICE_SPEC_LIST),
+            any());
     assertThat(driverParamsCaptor.getValue())
         .containsExactly(
             "run_command_args",
@@ -194,7 +207,11 @@ public final class ConsoleJobCreatorTest {
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
+        .initializeJobConfig(
+            eq(sessionRequestInfo),
+            driverParamsCaptor.capture(),
+            eq(MOCK_SUB_DEVICE_SPEC_LIST),
+            any());
     Map<String, String> driverParams = driverParamsCaptor.getValue();
     assertThat(driverParams).containsEntry("xts_type", "cts");
     assertThat(driverParams).containsEntry("xts_root_dir", xtsRootDir.getAbsolutePath());
@@ -260,7 +277,11 @@ public final class ConsoleJobCreatorTest {
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
+        .initializeJobConfig(
+            eq(sessionRequestInfo),
+            driverParamsCaptor.capture(),
+            eq(MOCK_SUB_DEVICE_SPEC_LIST),
+            any());
     assertThat(driverParamsCaptor.getValue())
         .containsExactly(
             "xts_type",
@@ -307,7 +328,11 @@ public final class ConsoleJobCreatorTest {
 
     assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
-        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
+        .initializeJobConfig(
+            eq(sessionRequestInfo),
+            driverParamsCaptor.capture(),
+            eq(MOCK_SUB_DEVICE_SPEC_LIST),
+            any());
     assertThat(driverParamsCaptor.getValue())
         .containsEntry(
             "run_command_args",

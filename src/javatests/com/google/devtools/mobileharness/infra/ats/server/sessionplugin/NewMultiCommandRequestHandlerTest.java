@@ -257,7 +257,7 @@ public final class NewMultiCommandRequestHandlerTest {
                     new XtsTradefedRuntimeInfo(
                         /* invocations= */ ImmutableList.of(), /* timestamp= */ Instant.now()),
                     /* lastModifiedTime= */ Instant.now())));
-    when(sessionRequestHandlerUtil.getSubDeviceSpecListForTradefed(any()))
+    when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any()))
         .thenReturn(
             ImmutableList.of(
                 SubDeviceSpec.getDefaultInstance(), SubDeviceSpec.getDefaultInstance()));
