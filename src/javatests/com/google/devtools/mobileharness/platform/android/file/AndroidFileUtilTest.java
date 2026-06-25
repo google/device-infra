@@ -845,6 +845,16 @@ public final class AndroidFileUtilTest {
   }
 
   @Test
+  public void makeDirectory_success() throws Exception {
+    String dirPathOnDevice = "/data/local/tmp/dir one/two";
+    when(adb.runShellWithRetry(any(), any())).thenReturn("");
+
+    androidFileUtil.makeDirectory(SERIAL, dirPathOnDevice);
+
+    verify(adb).runShellWithRetry(eq(SERIAL), eq("mkdir -p \"/data/local/tmp/dir one/two\""));
+  }
+
+  @Test
   public void makeDirectory() throws Exception {
     String dirPathOnDevice = "/abc";
     when(adb.runShellWithRetry(

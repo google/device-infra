@@ -135,7 +135,7 @@ public class AndroidFileUtil {
   @VisibleForTesting static final String ADB_SHELL_RENAME_FILES = "mv";
 
   /** ADB shell template for make directory. Should fill the dir path. */
-  @VisibleForTesting static final String ADB_SHELL_TEMPLATE_MAKE_DIRECTORY = "mkdir -p %s";
+  @VisibleForTesting static final String ADB_SHELL_TEMPLATE_MAKE_DIRECTORY = "mkdir -p \"%s\"";
 
   /**
    * ADB shell template for removing file/dir. Format %1$s with path. "rm -f" is not support on
