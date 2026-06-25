@@ -48,7 +48,7 @@ public class FeatureReadiness {
   }
 
   public boolean isDeviceRemoteControlReady() {
-    return false;
+    return true;
   }
 
   public boolean isHostDebugReady() {
