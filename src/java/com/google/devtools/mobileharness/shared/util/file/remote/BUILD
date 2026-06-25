@@ -80,6 +80,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/auth:credential_file_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
 )
