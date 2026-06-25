@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.api.testrunner.device.cache;
 import com.google.common.base.Ascii;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCacheManager.CacheType;
 import java.time.Duration;
+import java.util.Collection;
 import javax.annotation.Nullable;
 
 /** The facade of the device cache manager for RPC services. */
@@ -26,28 +27,30 @@ public final class RpcDeviceCache {
 
   private RpcDeviceCache() {}
 
-  /** Leases or extends the lease of the device cache for the specified string cache type. */
+  /** Leases or extends the lease of the device caches for the specified string cache type. */
   public static void cache(
-      String cacheType, String deviceControlId, Duration timeout, @Nullable String leaseId) {
-    CacheType type = CacheType.XTS;
-    if (Ascii.equalsIgnoreCase("container", cacheType)) {
-      type = CacheType.CONTAINER;
-    } else if (Ascii.equalsIgnoreCase("general", cacheType)) {
-      type = CacheType.GENERAL;
+      String cacheType,
+      Collection<String> deviceControlIds,
+      Duration timeout,
+      @Nullable String leaseId) {
+    CacheType type = getCacheType(cacheType);
+    DeviceCacheManager manager = DeviceCacheManager.getInstance();
+    for (String deviceControlId : deviceControlIds) {
+      manager.cache(type, deviceControlId, /* deviceType= */ null, timeout, leaseId);
     }
-    DeviceCacheManager.getInstance()
-        .cache(type, deviceControlId, /* deviceType= */ null, timeout, leaseId);
   }
 
-  /** Invalidates the device cache of the specified string cache type. */
+  /** Invalidates the device caches of the specified string cache type. */
   public static void invalidate(
-      String cacheType, String deviceControlId, @Nullable String leaseId) {
-    CacheType type = CacheType.XTS;
-    if (Ascii.equalsIgnoreCase("container", cacheType)) {
-      type = CacheType.CONTAINER;
-    } else if (Ascii.equalsIgnoreCase("general", cacheType)) {
-      type = CacheType.GENERAL;
+      String cacheType, Collection<String> deviceControlIds, @Nullable String leaseId) {
+    CacheType type = getCacheType(cacheType);
+    DeviceCacheManager manager = DeviceCacheManager.getInstance();
+    for (String deviceControlId : deviceControlIds) {
+      manager.invalidate(type, deviceControlId, leaseId);
     }
-    DeviceCacheManager.getInstance().invalidate(type, deviceControlId, leaseId);
+  }
+
+  private static CacheType getCacheType(String cacheType) {
+    return CacheType.valueOf(Ascii.toUpperCase(cacheType));
   }
 }

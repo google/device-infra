@@ -30,7 +30,6 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
-import com.google.devtools.mobileharness.api.testrunner.device.cache.XtsDeviceCache;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginNotification;
@@ -41,6 +40,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
@@ -86,7 +86,7 @@ public final class AtsSessionPluginTest {
   @Bind @Mock private TestMessageUtil testMessageUtil;
   @Bind @Mock private XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil;
   @Bind @Mock private LocalFileUtil localFileUtil;
-  @Bind @Mock private XtsDeviceCache xtsDeviceCache;
+  @Bind @Mock private SessionDeviceCache sessionDeviceCache;
 
   @Inject private AtsSessionPlugin atsSessionPlugin;
 

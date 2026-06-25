@@ -39,8 +39,8 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
+import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
-import com.google.devtools.mobileharness.api.testrunner.device.cache.XtsDeviceCache;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
@@ -63,6 +63,9 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.WithProto;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache.CacheRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache.InvalidateCacheRequest;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
@@ -138,7 +141,7 @@ public class AtsSessionPlugin {
   private final TestMessageUtil testMessageUtil;
   private final XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil;
   private final LocalFileUtil localFileUtil;
-  private final XtsDeviceCache xtsDeviceCache;
+  private final SessionDeviceCache sessionDeviceCache;
   private final ListeningScheduledExecutorService scheduledThreadPool;
 
   @GuardedBy("itself")
@@ -184,7 +187,7 @@ public class AtsSessionPlugin {
       TestMessageUtil testMessageUtil,
       XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil,
       LocalFileUtil localFileUtil,
-      XtsDeviceCache xtsDeviceCache) {
+      SessionDeviceCache sessionDeviceCache) {
     this.sessionInfo = sessionInfo;
     this.dumpEnvVarCommandHandler = dumpEnvVarCommandHandler;
     this.dumpStackCommandHandler = dumpStackCommandHandler;
@@ -195,7 +198,7 @@ public class AtsSessionPlugin {
     this.testMessageUtil = testMessageUtil;
     this.xtsTradefedRuntimeInfoFileUtil = xtsTradefedRuntimeInfoFileUtil;
     this.localFileUtil = localFileUtil;
-    this.xtsDeviceCache = xtsDeviceCache;
+    this.sessionDeviceCache = sessionDeviceCache;
     this.scheduledThreadPool =
         ThreadPools.createStandardScheduledThreadPool(
             "ats-session-plugin-scheduled-thread-pool-" + sessionInfo.getSessionId(),
@@ -383,7 +386,20 @@ public class AtsSessionPlugin {
     synchronized (cachedDeviceControlIds) {
       if (!cachedDeviceControlIds.isEmpty()) {
         logger.atInfo().log("Invalidate xTS device caches: %s", cachedDeviceControlIds);
-        cachedDeviceControlIds.forEach(xtsDeviceCache::invalidateCache);
+        try {
+          sessionDeviceCache.invalidateCache(
+              new InvalidateCacheRequest(
+                  LabLocator.LOCALHOST,
+                  ImmutableList.copyOf(cachedDeviceControlIds),
+                  "xts",
+                  sessionInfo.getSessionId()));
+        } catch (MobileHarnessException | InterruptedException e) {
+          if (e instanceof InterruptedException) {
+            Thread.currentThread().interrupt();
+          }
+          logger.atWarning().withCause(e).log(
+              "Failed to invalidate cache for devices %s", cachedDeviceControlIds);
+        }
         cachedDeviceControlIds.clear();
       }
     }
@@ -537,15 +553,25 @@ public class AtsSessionPlugin {
     // shouldn't be blocked on waiting for the device to become online, so we cache the devices
     // here.
     if (Flags.atsConsoleCacheXtsDevices.getNonNull()) {
-      synchronized (cachedDeviceControlIds) {
-        event
-            .getLocalDevices()
-            .forEach(
-                (deviceId, device) -> {
-                  xtsDeviceCache.cache(
-                      deviceId, device.getClass().getSimpleName(), ChronoUnit.YEARS.getDuration());
-                  cachedDeviceControlIds.add(deviceId);
-                });
+      ImmutableList<String> deviceIds = event.getLocalDevices().keySet().asList();
+      if (!deviceIds.isEmpty()) {
+        synchronized (cachedDeviceControlIds) {
+          try {
+            sessionDeviceCache.cache(
+                new CacheRequest(
+                    LabLocator.LOCALHOST,
+                    deviceIds,
+                    ChronoUnit.YEARS.getDuration(),
+                    "xts",
+                    sessionInfo.getSessionId()));
+            cachedDeviceControlIds.addAll(deviceIds);
+          } catch (MobileHarnessException | InterruptedException e) {
+            if (e instanceof InterruptedException) {
+              Thread.currentThread().interrupt();
+            }
+            logger.atWarning().withCause(e).log("Failed to cache devices %s", deviceIds);
+          }
+        }
       }
     }
   }

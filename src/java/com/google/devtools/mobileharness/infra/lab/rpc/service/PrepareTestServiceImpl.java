@@ -346,9 +346,7 @@ public class PrepareTestServiceImpl {
     Duration lease = toJavaDuration(req.getLeaseDuration());
     String cacheType = req.getCacheType();
     String leaseId = req.getLeaseId().isEmpty() ? null : req.getLeaseId();
-    for (String deviceId : req.getDeviceControlIdsList()) {
-      RpcDeviceCache.cache(cacheType, deviceId, lease, leaseId);
-    }
+    RpcDeviceCache.cache(cacheType, req.getDeviceControlIdsList(), lease, leaseId);
     return LeaseDeviceCacheResponse.getDefaultInstance();
   }
 
@@ -357,9 +355,7 @@ public class PrepareTestServiceImpl {
     logger.atInfo().log("ReleaseDeviceCacheRequest [%s]", shortDebugString(req));
     String leaseId = req.getLeaseId().isEmpty() ? null : req.getLeaseId();
     String cacheType = req.getCacheType();
-    for (String deviceId : req.getDeviceControlIdsList()) {
-      RpcDeviceCache.invalidate(cacheType, deviceId, leaseId);
-    }
+    RpcDeviceCache.invalidate(cacheType, req.getDeviceControlIdsList(), leaseId);
     return ReleaseDeviceCacheResponse.getDefaultInstance();
   }
 
