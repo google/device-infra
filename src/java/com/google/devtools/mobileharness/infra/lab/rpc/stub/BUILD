@@ -29,6 +29,7 @@ java_library(
         "//src/devtools/mobileharness/infra/lab/proto:prepare_test_service_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/rpc:exception",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
     ],
 )
 

@@ -22,7 +22,9 @@ import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.A
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeDeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsResourceFederation;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.JobSyncServiceVersionChecker;
+import com.google.devtools.mobileharness.infra.client.api.mode.ats.util.RemoteSessionDeviceCache;
 import com.google.devtools.mobileharness.infra.client.api.proto.ResourceFederationProto.ResourceFederation;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.simple.SimpleScheduler;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
@@ -52,5 +54,6 @@ public class AtsModeModule extends AbstractModule {
         .annotatedWith(JobSyncServiceVersionChecker.class)
         .toInstance(
             new ServiceSideVersionChecker(Version.MASTER_V5_VERSION, Version.MIN_CLIENT_VERSION));
+    bind(SessionDeviceCache.class).to(RemoteSessionDeviceCache.class).in(Singleton.class);
   }
 }

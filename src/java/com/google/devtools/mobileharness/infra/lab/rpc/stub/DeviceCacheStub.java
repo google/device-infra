@@ -21,16 +21,19 @@ import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.LeaseDeviceCacheResponse;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.ReleaseDeviceCacheRequest;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.ReleaseDeviceCacheResponse;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import javax.annotation.Nullable;
 
 /** Stub interface of {@code DeviceCacheService}-like operations. */
 public interface DeviceCacheStub {
 
   /** Leases or extends the lease of the device cache in the lab. */
+  @CanIgnoreReturnValue
   LeaseDeviceCacheResponse leaseDeviceCache(LeaseDeviceCacheRequest request)
       throws RpcExceptionWithErrorId;
 
   /** Leases or extends the lease of the device cache in the lab with the impersonation user. */
+  @CanIgnoreReturnValue
   default LeaseDeviceCacheResponse leaseDeviceCache(
       LeaseDeviceCacheRequest request, @Nullable String impersonationUser)
       throws RpcExceptionWithErrorId {
@@ -38,10 +41,12 @@ public interface DeviceCacheStub {
   }
 
   /** Releases the device cache in the lab. */
+  @CanIgnoreReturnValue
   ReleaseDeviceCacheResponse releaseDeviceCache(ReleaseDeviceCacheRequest request)
       throws RpcExceptionWithErrorId;
 
   /** Releases the device cache in the lab with the impersonation user. */
+  @CanIgnoreReturnValue
   default ReleaseDeviceCacheResponse releaseDeviceCache(
       ReleaseDeviceCacheRequest request, @Nullable String impersonationUser)
       throws RpcExceptionWithErrorId {

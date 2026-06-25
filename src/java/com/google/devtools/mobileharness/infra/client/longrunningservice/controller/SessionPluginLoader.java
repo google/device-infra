@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLabel;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLoadingConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache;
 import com.google.devtools.mobileharness.infra.controller.plugin.loader.PluginInstantiator;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoService;
@@ -78,6 +79,7 @@ public class SessionPluginLoader {
   private final LocalSessionStub localSessionStub;
   private final DeviceReserver deviceReserver;
   private final LabInfoService labInfoService;
+  private final SessionDeviceCache sessionDeviceCache;
 
   @Inject
   SessionPluginLoader(
@@ -87,7 +89,8 @@ public class SessionPluginLoader {
       @ServerStartTime Instant serverStartTime,
       LocalSessionStub localSessionStub,
       DeviceReserver deviceReserver,
-      LabInfoService labInfoService) {
+      LabInfoService labInfoService,
+      SessionDeviceCache sessionDeviceCache) {
     this.reflectionUtil = reflectionUtil;
     this.eventBusBackend = eventBusBackend;
     this.deviceQuerier = deviceQuerier;
@@ -95,6 +98,7 @@ public class SessionPluginLoader {
     this.localSessionStub = localSessionStub;
     this.deviceReserver = deviceReserver;
     this.labInfoService = labInfoService;
+    this.sessionDeviceCache = sessionDeviceCache;
   }
 
   ImmutableList<SessionPlugin> loadSessionPlugins(
@@ -146,6 +150,7 @@ public class SessionPluginLoader {
               localSessionStub,
               deviceReserver,
               labInfoService,
+              sessionDeviceCache,
               sessionEnvironment,
               closeableResources);
 
@@ -236,6 +241,7 @@ public class SessionPluginLoader {
     private final LocalSessionStub localSessionStub;
     private final DeviceReserver deviceReserver;
     private final LabInfoService labInfoService;
+    private final SessionDeviceCache sessionDeviceCache;
     private final SessionEnvironment sessionEnvironment;
     private final CloseableResources closeableResources;
 
@@ -246,6 +252,7 @@ public class SessionPluginLoader {
         LocalSessionStub localSessionStub,
         DeviceReserver deviceReserver,
         LabInfoService labInfoService,
+        SessionDeviceCache sessionDeviceCache,
         SessionEnvironment sessionEnvironment,
         CloseableResources closeableResources) {
       this.sessionInfo = sessionInfo;
@@ -254,6 +261,7 @@ public class SessionPluginLoader {
       this.localSessionStub = localSessionStub;
       this.deviceReserver = deviceReserver;
       this.labInfoService = labInfoService;
+      this.sessionDeviceCache = sessionDeviceCache;
       this.sessionEnvironment = sessionEnvironment;
       this.closeableResources = closeableResources;
     }
@@ -265,6 +273,7 @@ public class SessionPluginLoader {
       bind(Instant.class).annotatedWith(ServerStartTime.class).toInstance(serverStartTime);
       bind(Clock.class).toInstance(Clock.systemUTC());
       bind(Sleeper.class).toInstance(Sleeper.defaultSleeper());
+      bind(SessionDeviceCache.class).toInstance(sessionDeviceCache);
       bind(Path.class)
           .annotatedWith(SessionGenDir.class)
           .toInstance(sessionEnvironment.sessionGenDir());

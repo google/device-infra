@@ -183,6 +183,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_plugin",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:with_proto",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/service:local_session_stub",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util:session_device_cache",
         "//src/java/com/google/devtools/mobileharness/infra/controller/plugin/loader:plugin_instantiator",
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
         "//src/java/com/google/devtools/mobileharness/shared/labinfo:lab_info_service",

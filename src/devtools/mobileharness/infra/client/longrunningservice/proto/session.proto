@@ -99,6 +99,7 @@ message SessionPluginConfigs {
 // 9. DeviceReserver.
 // 10. LabInfoService.
 // 11. Sleeper.
+// 12. SessionDeviceCache.
 message SessionPluginConfig {
   // Required.
   SessionPluginLoadingConfig loading_config = 1;

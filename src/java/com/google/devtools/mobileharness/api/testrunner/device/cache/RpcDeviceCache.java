@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.api.testrunner.device.cache;
 
 import com.google.common.base.Ascii;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCacheManager.CacheType;
-import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.time.Duration;
 import javax.annotation.Nullable;
 
@@ -28,8 +27,7 @@ public final class RpcDeviceCache {
   private RpcDeviceCache() {}
 
   /** Leases or extends the lease of the device cache for the specified string cache type. */
-  @CanIgnoreReturnValue
-  public static boolean cache(
+  public static void cache(
       String cacheType, String deviceControlId, Duration timeout, @Nullable String leaseId) {
     CacheType type = CacheType.XTS;
     if (Ascii.equalsIgnoreCase("container", cacheType)) {
@@ -37,13 +35,12 @@ public final class RpcDeviceCache {
     } else if (Ascii.equalsIgnoreCase("general", cacheType)) {
       type = CacheType.GENERAL;
     }
-    return DeviceCacheManager.getInstance()
+    DeviceCacheManager.getInstance()
         .cache(type, deviceControlId, /* deviceType= */ null, timeout, leaseId);
   }
 
   /** Invalidates the device cache of the specified string cache type. */
-  @CanIgnoreReturnValue
-  public static boolean invalidate(
+  public static void invalidate(
       String cacheType, String deviceControlId, @Nullable String leaseId) {
     CacheType type = CacheType.XTS;
     if (Ascii.equalsIgnoreCase("container", cacheType)) {
@@ -51,6 +48,6 @@ public final class RpcDeviceCache {
     } else if (Ascii.equalsIgnoreCase("general", cacheType)) {
       type = CacheType.GENERAL;
     }
-    return DeviceCacheManager.getInstance().invalidate(type, deviceControlId, leaseId);
+    DeviceCacheManager.getInstance().invalidate(type, deviceControlId, leaseId);
   }
 }

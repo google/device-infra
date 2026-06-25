@@ -172,6 +172,8 @@ java_library(
         "//src/devtools/mobileharness/infra/client/api/proto:resource_federation_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/reserver",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats/util:remote_session_device_cache",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util:session_device_cache",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:abstract_scheduler",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/simple",
         "//src/java/com/google/devtools/mobileharness/shared/labinfo:lab_info_provider",

@@ -123,3 +123,20 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "local_session_device_cache",
+    srcs = ["LocalSessionDeviceCache.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+    ],
+    deps = [
+        ":device_cache_manager",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util:session_device_cache",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)

@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkState;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.testrunner.device.cache.LocalSessionDeviceCache;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.ClientApiModule;
@@ -42,6 +43,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.ser
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStubImpl;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.SessionService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.VersionService;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.persistence.JdbcBasedSessionPersistenceUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.persistence.SessionPersistenceUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.persistence.SessionPersistenceUtil.NoOpSessionPersistenceUtil;
@@ -222,6 +224,7 @@ class OlcServerModule extends AbstractModule {
       bind(ExecMode.class).to(loadExecMode(LOCAL_MODE_CLASS_NAME)).in(Scopes.SINGLETON);
       bind(DeviceReserver.class).toProvider(ExecModeDeviceReserverProvider.class);
       bind(LabInfoService.class).toProvider(LocalModeLabInfoServiceProvider.class);
+      bind(SessionDeviceCache.class).to(LocalSessionDeviceCache.class).in(Scopes.SINGLETON);
     }
   }
 

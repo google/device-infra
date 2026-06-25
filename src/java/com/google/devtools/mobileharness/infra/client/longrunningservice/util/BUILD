@@ -61,3 +61,19 @@ java_library(
         "@maven//:com_google_protobuf_protobuf_java",
     ],
 )
+
+java_library(
+    name = "session_device_cache",
+    srcs = ["SessionDeviceCache.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
+        "@maven//:com_google_guava_guava",
+    ],
+)

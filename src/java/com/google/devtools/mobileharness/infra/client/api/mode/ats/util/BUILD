@@ -23,16 +23,26 @@ package(
 )
 
 java_library(
-    name = "device_cache_stub_resolver",
-    srcs = ["DeviceCacheStubResolver.java"],
+    name = "remote_session_device_cache",
+    srcs = ["RemoteSessionDeviceCache.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api/mode/ats:__subpackages__",
+    ],
     deps = [
         "//src/devtools/mobileharness/infra/client/api/proto:resource_federation_java_proto",
+        "//src/devtools/mobileharness/infra/lab/proto:prepare_test_service_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/rpc:exception",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:lab_server_locator",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util:session_device_cache",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:device_cache",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/java/com/google/wireless/qa/mobileharness/client/api/util/stub",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:javax_inject_jsr330_api",
     ],
 )
