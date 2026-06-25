@@ -1,0 +1,41 @@
+test_suite_meta_data {
+  scheduled_test_case_count: 2
+  test_suite_name: "a-test-suite"
+}
+test_status: PASSED
+test_result {
+  test_case {
+    test_class: "EnvironmentVariableTest"
+    test_package: "com.google.android.apps.mtaas.testing.mtaastesting"
+    test_method: "testEnvironmentVariablesSet"
+    start_time {
+      seconds: 1618499210
+      nanos: 755000000
+    }
+    end_time {
+      seconds: 1618499211
+      nanos: 192000000
+    }
+  }
+  test_status: PASSED
+  error {
+  }
+}
+test_result {
+  test_case {
+    test_class: "ObbFileTest"
+    test_package: "com.google.android.apps.mtaas.testing.mtaastesting"
+    test_method: "testObbFilesHaveBeenPushed"
+    start_time {
+      seconds: 1618499211
+      nanos: 708000000
+    }
+    end_time {
+      seconds: 1618499211
+      nanos: 920000000
+    }
+  }
+  test_status: PASSED
+  error {
+  }
+}

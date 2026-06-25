@@ -1,0 +1,25 @@
+test_suite_meta_data {
+  scheduled_test_case_count: 1
+}
+test_status: FAILED
+test_result {
+  test_case {
+    test_class: "CrashActivityTest"
+    test_package: "com.google.android.apps.mtaas.testing.appcrash"
+    test_method: "crashesOnClick"
+    start_time {
+      seconds: 1618499201
+      nanos: 890000000
+    }
+    end_time {
+      seconds: 1618499202
+      nanos: 428000000
+    }
+  }
+  test_status: FAILED
+  error {
+    error_message: "androidx.test.espresso.PerformException: ..."
+    error_type: "com.google.android.apps.mtaas.testing.appcrash.activities.CrashActivity$TestCrashException"
+    stack_trace: "androidx.test.espresso.PerformException: ..."
+  }
+}

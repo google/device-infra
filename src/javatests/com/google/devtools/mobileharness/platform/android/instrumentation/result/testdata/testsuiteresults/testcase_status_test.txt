@@ -1,0 +1,43 @@
+test_suite_meta_data {
+  scheduled_test_case_count: 2
+}
+test_status: PASSED
+test_result {
+  test_case {
+    test_class: "TestcaseStatusTest"
+    test_package: "com.google.android.apps.mtaas.testing.mtaastesting"
+    test_method: "testAssumptionFailed"
+    start_time {
+      seconds: 1618499683
+      nanos: 201000000
+    }
+    end_time {
+      seconds: 1618499683
+      nanos: 217000000
+    }
+  }
+  test_status: IGNORED
+  error {
+    error_message: "org.junit.AssumptionViolatedException: got: <false>, expected: is <true>..."
+    error_type: "org.junit.AssumptionViolatedException"
+    stack_trace: "org.junit.AssumptionViolatedException: got: <false>, expected: is <true>..."
+  }
+}
+test_result {
+  test_case {
+    test_class: "TestcaseStatusTest"
+    test_package: "com.google.android.apps.mtaas.testing.mtaastesting"
+    test_method: "testIgnored"
+    start_time {
+      seconds: 1618499683
+      nanos: 245000000
+    }
+    end_time {
+      seconds: 1618499683
+      nanos: 248000000
+    }
+  }
+  test_status: IGNORED
+  error {
+  }
+}

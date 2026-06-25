@@ -62,6 +62,17 @@ enum TestStatus {
   // configuration issue, an infrastructure issue or other. This should
   // always be accompanied by a platform error that describes the error.
   ERROR = 5;
+  // Test was cancelled externally (e.g. SIGTERM) after it had started running.
+  ABORTED = 6;
+  // Similar to IGNORED, but this Test was supposed to be run and did not get a
+  // chance to due to some internal state (e.g. irrecoverable infra errors,
+  // infra timeouts, or cancellation before the test was started).
+  CANCELLED = 7;
+  // Optional status, If setup and teardown was done, but a test determined it
+  // should be ignored at runtime.
+  // For TestSuiteResults, this occurs when no test results were found or all
+  // results were SKIPPED/IGNORED.
+  SKIPPED = 8;
 }
 
 // Test result encapsulates the result of a single test run.
