@@ -5,9 +5,11 @@ import {
   Component,
   EventEmitter,
   Input,
+  OnChanges,
   OnInit,
   Output,
   signal,
+  SimpleChanges,
   TemplateRef,
 } from '@angular/core';
 import {FormsModule} from '@angular/forms';
@@ -49,7 +51,7 @@ export interface WizardStep {
     Dialog,
   ],
 })
-export class WizardStepper implements OnInit {
+export class WizardStepper implements OnInit, OnChanges {
   @Input() title = '';
   @Input() type: 'device' | 'host' = 'device';
   @Input() width = '72rem';
@@ -79,12 +81,28 @@ export class WizardStepper implements OnInit {
 
   subtitle = signal('');
 
-  ngOnInit() {
-    this.currentStepIndex.set(
-      this.WIZARD_STEPS.findIndex((step) => step.id === this.currentStep),
-    );
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['currentStep'] || changes['WIZARD_STEPS']) {
+      this.syncStepIndex();
+    }
+  }
 
-    this.subtitle.set(this.getSubtitle());
+  ngOnInit() {
+    this.syncStepIndex();
+  }
+
+  private syncStepIndex() {
+    if (!this.WIZARD_STEPS || this.WIZARD_STEPS.length === 0) return;
+    const index = this.WIZARD_STEPS.findIndex(
+      (step) => step.id === this.currentStep,
+    );
+    if (index !== -1) {
+      // If the found step is already the active step, return early to avoid
+      // redundant signal updates and unnecessary change detection cycles.
+      if (index === this.currentStepIndex()) return;
+      this.currentStepIndex.set(index);
+      this.subtitle.set(this.getSubtitle());
+    }
   }
 
   getSubtitle() {

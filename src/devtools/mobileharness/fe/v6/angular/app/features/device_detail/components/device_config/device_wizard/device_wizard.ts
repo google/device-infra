@@ -1,18 +1,17 @@
 import {CommonModule} from '@angular/common';
 import {
-  AfterViewInit,
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   OnInit,
   signal,
   TemplateRef,
-  ViewChild,
+  viewChild,
 } from '@angular/core';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
 import {
   MAT_DIALOG_DATA,
-  MatDialog,
   MatDialogModule,
   MatDialogRef,
 } from '@angular/material/dialog';
@@ -23,12 +22,9 @@ import {MatTableModule} from '@angular/material/table';
 import {finalize} from 'rxjs/operators';
 
 import {DEFAULT_DEVICE_CONFIG} from '../../../../../core/constants/device_config_constants';
-import type {
-  DeviceConfig,
-  DeviceDimension,
-} from '../../../../../core/models/device_config_models';
 import {
   ConfigSection,
+  type DeviceConfig,
   UpdateDeviceConfigRequest,
 } from '../../../../../core/models/device_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
@@ -43,7 +39,7 @@ import {
   WizardStep,
   WizardStepper,
 } from '../../../../../shared/components/config_common/wizard_stepper/wizard_stepper';
-import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/confirm_dialog';
+import {useConfigDialogActions} from '../../../../../shared/composables/config_dialog_actions';
 import {Dimensions} from '../steps/dimensions/dimensions';
 import {Permissions} from '../steps/permissions/permissions';
 import {Wifi} from '../steps/wifi/wifi';
@@ -77,20 +73,58 @@ import {Wifi} from '../steps/wifi/wifi';
     ReviewTable,
   ],
 })
-export class DeviceWizard implements OnInit, AfterViewInit {
+export class DeviceWizard implements OnInit {
   readonly data = inject(MAT_DIALOG_DATA);
   readonly configService = inject(CONFIG_SERVICE);
-  private readonly dialog = inject(MatDialog);
   private readonly dialogRef = inject(MatDialogRef<DeviceWizard>);
   private readonly environment = inject(Environment);
+
+  private readonly dialogActions = useConfigDialogActions({
+    dialogRef: this.dialogRef,
+    onCancelSelfLockout: () => {
+      this.currentStep.set('permissions');
+    },
+    onSubmitOverride: () => {
+      this.submit(true);
+    },
+  });
   readonly isGoogleInternal = this.environment.isGoogleInternal();
 
   // used for wizard stepper
-  @ViewChild('permissions') permissionsTemplate!: TemplateRef<{}>;
-  @ViewChild('wifi') wifiTemplate!: TemplateRef<{}>;
-  @ViewChild('dimensions') dimensionsTemplate!: TemplateRef<{}>;
-  @ViewChild('review') reviewTemplate!: TemplateRef<{}>;
-  WIZARD_STEPS_NEW: WizardStep[] = this.getWizardSteps();
+  readonly permissionsTemplate = viewChild<TemplateRef<{}>>('permissions');
+  readonly wifiTemplate = viewChild<TemplateRef<{}>>('wifi');
+  readonly dimensionsTemplate = viewChild<TemplateRef<{}>>('dimensions');
+  readonly reviewTemplate = viewChild<TemplateRef<{}>>('review');
+
+  readonly WIZARD_STEPS_NEW = computed<WizardStep[]>(() => {
+    const permissions = this.permissionsTemplate();
+    const wifi = this.wifiTemplate();
+    const dimensions = this.dimensionsTemplate();
+    const review = this.reviewTemplate();
+
+    if (!permissions || !wifi || !dimensions || !review) {
+      return [];
+    }
+
+    return [
+      {
+        id: 'permissions',
+        label: 'Permissions',
+        template: permissions,
+      },
+      {id: 'wifi', label: 'Wi-Fi', template: wifi},
+      {
+        id: 'dimensions',
+        label: 'Dimensions',
+        template: dimensions,
+      },
+      {
+        id: 'review-and-submit',
+        label: 'Review & Submit',
+        template: review,
+      },
+    ];
+  });
 
   currentStep = signal<string>('permissions');
 
@@ -104,30 +138,9 @@ export class DeviceWizard implements OnInit, AfterViewInit {
   dataSource: ReviewTableRow[] = [];
 
   // used for apply changes button
-  @ViewChild('stepper') stepper!: WizardStepper;
+  readonly stepper = viewChild<WizardStepper>('stepper');
   verifying = signal<boolean>(false);
   applyChangesDisabled = signal<boolean>(true);
-
-  getWizardSteps(): WizardStep[] {
-    return [
-      {
-        id: 'permissions',
-        label: 'Permissions',
-        template: this.permissionsTemplate,
-      },
-      {id: 'wifi', label: 'Wi-Fi', template: this.wifiTemplate},
-      {
-        id: 'dimensions',
-        label: 'Dimensions',
-        template: this.dimensionsTemplate,
-      },
-      {
-        id: 'review-and-submit',
-        label: 'Review & Submit',
-        template: this.reviewTemplate,
-      },
-    ];
-  }
 
   ngOnInit() {
     if (this.data.source === 'copy') {
@@ -137,10 +150,6 @@ export class DeviceWizard implements OnInit, AfterViewInit {
     }
   }
 
-  ngAfterViewInit() {
-    this.WIZARD_STEPS_NEW = this.getWizardSteps();
-  }
-
   onCurrentStepChange(currentStep: string) {
     this.currentStep.set(currentStep);
     if (currentStep === 'review-and-submit') {
@@ -148,13 +157,6 @@ export class DeviceWizard implements OnInit, AfterViewInit {
     }
   }
 
-  // used for review & submit table
-  isTitleRow(index: number, row: ReviewTableRow): boolean {
-    return row.type === 'title';
-  }
-  isDataRow(index: number, row: ReviewTableRow): boolean {
-    return row.type === 'data';
-  }
   covertToReviewTable() {
     const supportDimensions = (this.config.dimensions?.supported || []).filter(
       (item) => !(!item.name && !item.value),
@@ -193,7 +195,11 @@ export class DeviceWizard implements OnInit, AfterViewInit {
             ? 'None'
             : this.config.wifi.type,
       },
-      {type: 'data', feature: 'SSID', value: this.config.wifi?.ssid || 'None'},
+      {
+        type: 'data',
+        feature: 'SSID',
+        value: this.config.wifi?.ssid || 'None',
+      },
       {
         type: 'data',
         feature: 'Hidden Network',
@@ -203,32 +209,14 @@ export class DeviceWizard implements OnInit, AfterViewInit {
       {
         type: 'data',
         feature: 'Supported Dimensions',
-        value:
-          supportDimensions.length > 0
-            ? supportDimensions
-                .map(
-                  (s: DeviceDimension) =>
-                    `<div class="review-dim-value"><strong>${
-                      s.name
-                    }</strong>: ${s.value}</div>`,
-                )
-                .join('')
-            : 'None',
+        value: supportDimensions,
+        valueType: 'dimensions',
       },
       {
         type: 'data',
         feature: 'Required Dimensions',
-        value:
-          requiredDimensions.length > 0
-            ? requiredDimensions
-                .map(
-                  (r: DeviceDimension) =>
-                    `<div class="review-dim-value"><strong>${
-                      r.name
-                    }</strong>: ${r.value}</div>`,
-                )
-                .join('')
-            : 'None',
+        value: requiredDimensions,
+        valueType: 'dimensions',
       },
     );
 
@@ -257,7 +245,7 @@ export class DeviceWizard implements OnInit, AfterViewInit {
     if (this.data.source === 'copy') {
       this.verifying.set(true);
     } else {
-      this.stepper.verifying.set(true);
+      this.stepper()?.verifying.set(true);
     }
 
     const deviceConfig = {...this.config};
@@ -280,82 +268,17 @@ export class DeviceWizard implements OnInit, AfterViewInit {
           if (this.data.source === 'copy') {
             this.verifying.set(false);
           } else {
-            this.stepper.verifying.set(false);
+            this.stepper()?.verifying.set(false);
           }
         }),
       )
       .subscribe((result) => {
         if (!result.success) {
-          this.error(result.error?.code);
+          this.dialogActions.error(result.error?.code);
           return;
         }
 
-        this.success();
+        this.dialogActions.success();
       });
-  }
-
-  success() {
-    const dialogData = {
-      title: 'Configuration Saved',
-      content: 'Your configuration has been saved successfully. ',
-      type: 'success',
-      primaryButtonLabel: 'OK',
-    };
-    this.dialog
-      .open(ConfirmDialog, {
-        data: dialogData,
-        disableClose: true,
-      })
-      .afterClosed()
-      .subscribe(() => {
-        this.dialogRef.close(true);
-      });
-  }
-
-  error(errorCode?: string) {
-    if (errorCode === 'SELF_LOCKOUT_DETECTED' && this.data.source !== 'copy') {
-      this.selfLockout();
-      return;
-    }
-
-    const errorMessage = errorCode
-      ? ` with error code ${errorCode}. Please try again.`
-      : '. Please try again.';
-    const dialogData = {
-      title: 'Configuration Failed',
-      content: `Your configuration has failed to save` + errorMessage,
-      type: 'error',
-      primaryButtonLabel: 'OK',
-    };
-
-    this.dialog.open(ConfirmDialog, {
-      data: dialogData,
-      disableClose: true,
-    });
-  }
-
-  selfLockout() {
-    const dialogData = {
-      title: 'Permission Warning',
-      content:
-        'The new owners list does not contain your username, and you are not a member of any of the specified owner groups. Proceeding will remove your ability to configure this device in the future.',
-      type: 'warning',
-      primaryButtonLabel: 'Proceed Anyway',
-      secondaryButtonLabel: 'Go Back',
-    };
-    const selfLockoutDialog = this.dialog.open(ConfirmDialog, {
-      data: dialogData,
-      disableClose: true,
-    });
-    selfLockoutDialog.afterClosed().subscribe((result) => {
-      if (result === 'secondary') {
-        this.currentStep.set('permissions');
-        // this.cdr.markForCheck();
-        return;
-      }
-      if (result === 'primary') {
-        this.submit(true);
-      }
-    });
   }
 }

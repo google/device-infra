@@ -5,7 +5,7 @@
     type="host"
     width="56rem"
     [param]="{deviceId: '', hostName: data.hostName}"
-    [WIZARD_STEPS]="WIZARD_STEPS"
+    [WIZARD_STEPS]="WIZARD_STEPS()"
     [currentStep]="currentStep()"
     (currentStepChange)="onCurrentStepChange($event)"
     (apply)="submit()"

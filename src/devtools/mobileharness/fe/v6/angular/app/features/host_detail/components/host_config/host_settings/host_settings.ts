@@ -49,6 +49,7 @@ import {
 import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
 import {Footer} from '../../../../../shared/components/config_common/footer/footer';
 import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/confirm_dialog';
+import {useConfigDialogActions} from '../../../../../shared/composables/config_dialog_actions';
 import {useSaveInterceptors} from '../../../../../shared/composables/save_interceptors';
 import {SnackBarService} from '../../../../../shared/services/snackbar_service';
 import {objectUtils} from '../../../../../shared/utils/object_utils';
@@ -92,13 +93,27 @@ import {HostProperties} from '../steps/host_properties/host_properties';
   ],
 })
 export class HostSettings implements OnInit {
-  readonly testId = Math.random();
-  constructor() {
-    console.log('HostSettings constructor called, testId =', this.testId);
-  }
   private readonly dialog = inject(MatDialog); // to open confirm dialog
   private readonly dialogRef = inject(MatDialogRef<HostSettings>);
   private readonly destroyRef = inject(DestroyRef);
+
+  private isSavingSelfLockout = false;
+  readonly dialogActions = useConfigDialogActions({
+    onCancelSelfLockout: () => {
+      this.activeSection.set(HostConfigSection.HOST_PERMISSIONS);
+    },
+    onSubmitOverride: () => {
+      this.save(true);
+    },
+    onSuccessClose: () => {
+      if (this.isSavingSelfLockout) {
+        this.closeDialogIfOpen(true);
+      } else {
+        this.reloadConfig();
+      }
+    },
+  });
+
   private readonly saveInterceptors = useSaveInterceptors();
   private readonly dialogData = inject(MAT_DIALOG_DATA, {optional: true}) as {
     hostName: string;
@@ -531,30 +546,12 @@ export class HostSettings implements OnInit {
   hasPermission = signal<boolean>(false);
 
   ngOnInit() {
-    console.log(
-      'HostSettings.ngOnInit:',
-      this.testId,
-      'dialogData present:',
-      !!this.dialogData,
-    );
     if (this.dialogData) {
-      console.log(
-        'HostSettings.ngOnInit:',
-        this.testId,
-        'dialogData.hostName =',
-        this.dialogData.hostName,
-      );
       this.hostName = this.dialogData.hostName || this.hostName;
-      if (this.dialogData.config) {
-        this.config = this.dialogData.config;
-      }
     }
-    console.log(
-      'HostSettings.ngOnInit:',
-      this.testId,
-      'hostName set to:',
-      this.hostName,
-    );
+    if (this.dialogData?.config) {
+      this.config = this.dialogData.config;
+    }
 
     this.uiStatus.set(this.hostConfigStateService.getUiStatus(this.hostName));
 
@@ -747,66 +744,6 @@ export class HostSettings implements OnInit {
     this.closeDialogIfOpen({action: 'reset', hostName: this.hostName});
   }
 
-  selfLockout() {
-    const dialogData = {
-      title: 'Permission Warning',
-      content:
-        'The new owners list does not contain your username, and you are not a member of any of the specified owner groups. Proceeding will remove your ability to configure this device in the future.',
-      type: 'warning',
-      primaryButtonLabel: 'Proceed Anyway',
-      secondaryButtonLabel: 'Go Back',
-    };
-    const selfLockoutDialog = this.dialog.open(ConfirmDialog, {
-      data: dialogData,
-      disableClose: true,
-    });
-    selfLockoutDialog.afterClosed().subscribe((result) => {
-      if (result === 'secondary') {
-        return;
-      }
-      if (result === 'primary') {
-        this.save(true);
-      }
-    });
-  }
-
-  success() {
-    const dialogData = {
-      title: 'Configuration Saved',
-      content: 'Your configuration has been saved successfully. ',
-      type: 'success',
-      primaryButtonLabel: 'OK',
-    };
-
-    return this.dialog.open(ConfirmDialog, {
-      data: dialogData,
-      disableClose: true,
-    });
-  }
-
-  error(errorCode?: string) {
-    if (errorCode === 'SELF_LOCKOUT_DETECTED') {
-      this.selfLockout();
-      return;
-    }
-
-    const errorMessage = errorCode
-      ? ` with error code ${errorCode}. Please try again.`
-      : '. Please try again.';
-
-    const dialogData = {
-      title: 'Configuration Failed',
-      content: `Your configuration has failed to save` + errorMessage,
-      type: 'error',
-      primaryButtonLabel: 'OK',
-    };
-
-    this.dialog.open(ConfirmDialog, {
-      data: dialogData,
-      disableClose: true,
-    });
-  }
-
   save(selfLockout = false, forceSave = false) {
     const section = this.activeSection();
 
@@ -910,6 +847,8 @@ export class HostSettings implements OnInit {
     };
 
     this.saving.set(true);
+    this.isSavingSelfLockout = selfLockout;
+
     this.configService
       .updateHostConfig(request)
       .pipe(
@@ -919,7 +858,7 @@ export class HostSettings implements OnInit {
       )
       .subscribe((result) => {
         if (!result.success) {
-          this.error(result.error?.code);
+          this.dialogActions.error(result.error?.code);
           return;
         }
 
@@ -931,19 +870,7 @@ export class HostSettings implements OnInit {
           this.deviceConfig(),
         ) as DeviceConfig;
 
-        const successDialogRef = this.success();
-
-        if (selfLockout) {
-          // No need to reload. Just close the dialog after the user clicks OK.
-          successDialogRef.afterClosed().subscribe(() => {
-            this.closeDialogIfOpen(true);
-          });
-        } else {
-          // reloadConfig will only affect the UI in the config dialog, not the
-          // host detail page. So we don't need to call reloadConfig() when
-          // config dialog is closed.
-          this.reloadConfig();
-        }
+        this.dialogActions.success();
       });
   }
 
@@ -1019,8 +946,8 @@ export class HostSettings implements OnInit {
         },
         error: (err) => {
           this.snackBar.showError('Failed to reload configuration.');
-          // when failed to reload config, to avoid the user working on a stale
-          // config, we should close the dialog if it is open.
+          // when failed to reload config, to avoid the user working on a
+          // stale config, we should close the dialog if it is open.
           this.closeDialogIfOpen();
         },
       });
