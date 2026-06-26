@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.fe.v6.service.config.handlers;
 
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.FluentFuture;
 import com.google.common.util.concurrent.Futures;
@@ -36,8 +37,10 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembersh
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -95,6 +98,12 @@ public final class UpdateDeviceConfigHandler {
                 optResponse.isPresent()
                     ? immediateFuture(optResponse)
                     : performSelfLockoutCheck(request, incoming, username),
+            executor)
+        .transformAsync(
+            optResponse ->
+                optResponse.isPresent()
+                    ? immediateFuture(optResponse)
+                    : validatePrincipals(request, incoming),
             executor)
         .transformAsync(
             optResponse ->
@@ -160,26 +169,98 @@ public final class UpdateDeviceConfigHandler {
         executor);
   }
 
+  private ListenableFuture<Optional<UpdateDeviceConfigResponse>> validatePrincipals(
+      UpdateDeviceConfigRequest request, BasicDeviceConfig incoming) {
+    // Only validate when permissions are being updated.
+    switch (request.getSection()) {
+      case PERMISSIONS, ALL -> {}
+      default -> {
+        return immediateFuture(Optional.empty());
+      }
+    }
+
+    ImmutableList<String> allNames =
+        Stream.concat(incoming.getOwnerList().stream(), incoming.getExecutorList().stream())
+            .distinct()
+            .collect(ImmutableList.toImmutableList());
+
+    if (allNames.isEmpty()) {
+      return immediateFuture(Optional.empty());
+    }
+
+    ImmutableList<ListenableFuture<Boolean>> existsFutures =
+        allNames.stream()
+            .map(groupMembershipProvider::exists)
+            .collect(ImmutableList.toImmutableList());
+
+    return Futures.catching(
+        Futures.transform(
+            Futures.allAsList(existsFutures),
+            results -> {
+              List<String> invalidNames = new ArrayList<>();
+              for (int i = 0; i < results.size(); i++) {
+                if (!results.get(i)) {
+                  invalidNames.add(allNames.get(i));
+                }
+              }
+              if (!invalidNames.isEmpty()) {
+                return Optional.of(
+                    UpdateDeviceConfigResponse.newBuilder()
+                        .setSuccess(false)
+                        .setError(
+                            UpdateError.newBuilder()
+                                .setCode(UpdateError.Code.VALIDATION_ERROR)
+                                .setMessage(
+                                    "The following owner/executor names are not recognized: "
+                                        + String.join(", ", invalidNames)))
+                        .build());
+              }
+              return Optional.empty();
+            },
+            executor),
+        Exception.class,
+        e -> {
+          logger.atWarning().withCause(e).log(
+              "Failed to validate principals, allowing save to proceed");
+          return Optional.empty();
+        },
+        executor);
+  }
+
   private ListenableFuture<UpdateDeviceConfigResponse> saveUpdatedConfig(
       UpdateDeviceConfigRequest request, UniverseScope universe, BasicDeviceConfig incoming) {
-    return Futures.transformAsync(
-        configurationProvider.getDeviceConfig(request.getId(), universe),
-        deviceConfigResult -> {
-          Optional<DeviceConfig> existingConfigOpt = deviceConfigResult.config();
-          DeviceConfig.Builder configToUpdate =
-              existingConfigOpt.isPresent()
-                  ? existingConfigOpt.get().toBuilder()
-                  : DeviceConfig.newBuilder().setUuid(request.getId());
+    return Futures.catching(
+        Futures.transformAsync(
+            configurationProvider.getDeviceConfig(request.getId(), universe),
+            deviceConfigResult -> {
+              Optional<DeviceConfig> existingConfigOpt = deviceConfigResult.config();
+              DeviceConfig.Builder configToUpdate =
+                  existingConfigOpt.isPresent()
+                      ? existingConfigOpt.get().toBuilder()
+                      : DeviceConfig.newBuilder().setUuid(request.getId());
 
-          BasicDeviceConfig updatedBasicConfig =
-              updateBasicConfig(configToUpdate.getBasicConfig(), request, incoming);
-          configToUpdate.setBasicConfig(updatedBasicConfig);
+              BasicDeviceConfig updatedBasicConfig =
+                  updateBasicConfig(configToUpdate.getBasicConfig(), request, incoming);
+              configToUpdate.setBasicConfig(updatedBasicConfig);
 
-          return Futures.transform(
-              configurationProvider.updateDeviceConfig(
-                  request.getId(), configToUpdate.build(), universe),
-              unused -> UpdateDeviceConfigResponse.newBuilder().setSuccess(true).build(),
-              executor);
+              return Futures.transform(
+                  configurationProvider.updateDeviceConfig(
+                      request.getId(), configToUpdate.build(), universe),
+                  unused -> UpdateDeviceConfigResponse.newBuilder().setSuccess(true).build(),
+                  executor);
+            },
+            executor),
+        Exception.class,
+        e -> {
+          logger.atWarning().withCause(e).log(
+              "Failed to save device configuration for %s", request.getId());
+          return UpdateDeviceConfigResponse.newBuilder()
+              .setSuccess(false)
+              .setError(
+                  UpdateError.newBuilder()
+                      .setCode(UpdateError.Code.UNKNOWN)
+                      .setMessage("Failed to save device configuration."))
+              .build();
         },
         executor);
   }

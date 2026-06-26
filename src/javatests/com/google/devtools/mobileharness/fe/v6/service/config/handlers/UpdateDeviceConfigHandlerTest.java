@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.config.handlers;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
@@ -92,6 +93,8 @@ public final class UpdateDeviceConfigHandlerTest {
         .thenReturn(configServiceCapability);
     when(configServiceCapability.isConfigServiceAvailable()).thenReturn(true);
     when(environment.isAts()).thenReturn(false);
+    // Default: all names are valid. Individual tests can override.
+    when(groupMembershipProvider.exists(any(String.class))).thenReturn(immediateFuture(true));
   }
 
   @Test
@@ -654,5 +657,220 @@ public final class UpdateDeviceConfigHandlerTest {
     com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig updatedConfig =
         captor.getValue();
     assertThat(updatedConfig.getBasicConfig().hasDefaultWifi()).isFalse();
+  }
+
+  @Test
+  public void updateDeviceConfig_providerFails_returnsErrorResponse() throws Exception {
+    String deviceId = "test_device";
+    String universe = "google_1p";
+    DeviceConfig feConfig =
+        DeviceConfig.newBuilder()
+            .setPermissions(PermissionInfo.newBuilder().addOwners("invalid_user").build())
+            .build();
+    UpdateDeviceConfigRequest request =
+        UpdateDeviceConfigRequest.newBuilder()
+            .setId(deviceId)
+            .setUniverse(universe)
+            .setConfig(feConfig)
+            .setSection(DeviceConfigSection.PERMISSIONS)
+            .build();
+
+    Device.DeviceConfig existingConfig = Device.DeviceConfig.getDefaultInstance();
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
+        .thenReturn(
+            immediateFuture(
+                DeviceData.create(
+                    DeviceInfo.getDefaultInstance(),
+                    existingConfig,
+                    ManagementMode.PER_DEVICE,
+                    Optional.empty(),
+                    Optional.of(existingConfig))));
+    when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
+    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
+        .thenReturn(
+            immediateFailedFuture(
+                new IllegalStateException("Failed to update config of device test_device: ...")));
+
+    UpdateDeviceConfigResponse response =
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.empty())
+            .get();
+
+    assertThat(response.getSuccess()).isFalse();
+    assertThat(response.getError().getCode()).isEqualTo(UpdateError.Code.UNKNOWN);
+    assertThat(response.getError().getMessage()).contains("Failed to save device configuration.");
+  }
+
+  @Test
+  public void updateDeviceConfig_invalidOwnerName_returnsValidationError() throws Exception {
+    String deviceId = "test_device";
+    DeviceConfig feConfig =
+        DeviceConfig.newBuilder()
+            .setPermissions(
+                PermissionInfo.newBuilder()
+                    .addOwners("valid-owner")
+                    .addOwners("invalid-owner-name-test")
+                    .build())
+            .build();
+    UpdateDeviceConfigRequest request =
+        UpdateDeviceConfigRequest.newBuilder()
+            .setId(deviceId)
+            .setUniverse("google_1p")
+            .setConfig(feConfig)
+            .setSection(DeviceConfigSection.PERMISSIONS)
+            .build();
+
+    Device.DeviceConfig existingConfig = Device.DeviceConfig.getDefaultInstance();
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
+        .thenReturn(
+            immediateFuture(
+                DeviceData.create(
+                    DeviceInfo.getDefaultInstance(),
+                    existingConfig,
+                    ManagementMode.PER_DEVICE,
+                    Optional.empty(),
+                    Optional.of(existingConfig))));
+    when(groupMembershipProvider.exists("valid-owner")).thenReturn(immediateFuture(true));
+    when(groupMembershipProvider.exists("invalid-owner-name-test"))
+        .thenReturn(immediateFuture(false));
+
+    UpdateDeviceConfigResponse response =
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.empty())
+            .get();
+
+    assertThat(response.getSuccess()).isFalse();
+    assertThat(response.getError().getCode()).isEqualTo(UpdateError.Code.VALIDATION_ERROR);
+    assertThat(response.getError().getMessage())
+        .contains("The following owner/executor names are not recognized:");
+    assertThat(response.getError().getMessage()).contains("invalid-owner-name-test");
+  }
+
+  @Test
+  public void updateDeviceConfig_invalidExecutorName_returnsValidationError() throws Exception {
+    String deviceId = "test_device";
+    DeviceConfig feConfig =
+        DeviceConfig.newBuilder()
+            .setPermissions(
+                PermissionInfo.newBuilder()
+                    .addOwners("valid-owner")
+                    .addExecutors("bad-executor")
+                    .build())
+            .build();
+    UpdateDeviceConfigRequest request =
+        UpdateDeviceConfigRequest.newBuilder()
+            .setId(deviceId)
+            .setUniverse("google_1p")
+            .setConfig(feConfig)
+            .setSection(DeviceConfigSection.PERMISSIONS)
+            .build();
+
+    Device.DeviceConfig existingConfig = Device.DeviceConfig.getDefaultInstance();
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
+        .thenReturn(
+            immediateFuture(
+                DeviceData.create(
+                    DeviceInfo.getDefaultInstance(),
+                    existingConfig,
+                    ManagementMode.PER_DEVICE,
+                    Optional.empty(),
+                    Optional.of(existingConfig))));
+    when(groupMembershipProvider.exists("valid-owner")).thenReturn(immediateFuture(true));
+    when(groupMembershipProvider.exists("bad-executor")).thenReturn(immediateFuture(false));
+
+    UpdateDeviceConfigResponse response =
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.empty())
+            .get();
+
+    assertThat(response.getSuccess()).isFalse();
+    assertThat(response.getError().getCode()).isEqualTo(UpdateError.Code.VALIDATION_ERROR);
+    assertThat(response.getError().getMessage()).contains("bad-executor");
+  }
+
+  @Test
+  public void updateDeviceConfig_validationServiceDown_allowsSave() throws Exception {
+    String deviceId = "test_device";
+    DeviceConfig feConfig =
+        DeviceConfig.newBuilder()
+            .setPermissions(PermissionInfo.newBuilder().addOwners("some-user").build())
+            .build();
+    UpdateDeviceConfigRequest request =
+        UpdateDeviceConfigRequest.newBuilder()
+            .setId(deviceId)
+            .setUniverse("google_1p")
+            .setConfig(feConfig)
+            .setSection(DeviceConfigSection.PERMISSIONS)
+            .build();
+
+    Device.DeviceConfig existingConfig = Device.DeviceConfig.getDefaultInstance();
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
+        .thenReturn(
+            immediateFuture(
+                DeviceData.create(
+                    DeviceInfo.getDefaultInstance(),
+                    existingConfig,
+                    ManagementMode.PER_DEVICE,
+                    Optional.empty(),
+                    Optional.of(existingConfig))));
+    // Validation service throws, simulating Ganpati being unavailable.
+    when(groupMembershipProvider.exists("some-user"))
+        .thenReturn(immediateFailedFuture(new RuntimeException("Ganpati unavailable")));
+    when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
+    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
+        .thenReturn(immediateVoidFuture());
+
+    UpdateDeviceConfigResponse response =
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.of("some-user"))
+            .get();
+
+    // Should proceed with save despite validation service being down.
+    assertThat(response.getSuccess()).isTrue();
+  }
+
+  @Test
+  public void updateDeviceConfig_allSection_validatesOwnerExecutors() throws Exception {
+    String deviceId = "test_device";
+    DeviceConfig feConfig =
+        DeviceConfig.newBuilder()
+            .setPermissions(
+                PermissionInfo.newBuilder()
+                    .addOwners("valid-owner")
+                    .addExecutors("invalid-executor")
+                    .build())
+            .setWifi(WifiConfig.newBuilder().setSsid("ssid").build())
+            .build();
+    UpdateDeviceConfigRequest request =
+        UpdateDeviceConfigRequest.newBuilder()
+            .setId(deviceId)
+            .setUniverse("google_1p")
+            .setConfig(feConfig)
+            .setSection(DeviceConfigSection.ALL)
+            .build();
+
+    Device.DeviceConfig existingConfig = Device.DeviceConfig.getDefaultInstance();
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
+        .thenReturn(
+            immediateFuture(
+                DeviceData.create(
+                    DeviceInfo.getDefaultInstance(),
+                    existingConfig,
+                    ManagementMode.PER_DEVICE,
+                    Optional.empty(),
+                    Optional.of(existingConfig))));
+    when(groupMembershipProvider.exists("valid-owner")).thenReturn(immediateFuture(true));
+    when(groupMembershipProvider.exists("invalid-executor")).thenReturn(immediateFuture(false));
+
+    UpdateDeviceConfigResponse response =
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.empty())
+            .get();
+
+    assertThat(response.getSuccess()).isFalse();
+    assertThat(response.getError().getCode()).isEqualTo(UpdateError.Code.VALIDATION_ERROR);
+    assertThat(response.getError().getMessage()).contains("invalid-executor");
   }
 }
