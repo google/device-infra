@@ -103,13 +103,11 @@ export class HttpHostService extends HostService {
   override preflightLabServerLifecycle(
     hostName: string,
     action: LifecycleActionType,
-    expectedActivity: string,
   ): Observable<PreflightLabServerLifecycleResponse> {
     return this.http.post<PreflightLabServerLifecycleResponse>(
       `${this.apiUrl}/${hostName}:preflightLifecycle`,
       {
         action,
-        expectedActivity,
       },
     );
   }

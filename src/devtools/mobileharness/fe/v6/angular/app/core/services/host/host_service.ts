@@ -89,7 +89,6 @@ export abstract class HostService {
   abstract preflightLabServerLifecycle(
     hostName: string,
     action: LifecycleActionType,
-    expectedActivity: string,
   ): Observable<PreflightLabServerLifecycleResponse>;
 
   /**

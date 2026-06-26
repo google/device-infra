@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.HostTypes;
+import com.google.devtools.mobileharness.fe.v6.service.host.util.LabServerActionAvailabilities;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostConnectivityStatus;
@@ -51,8 +52,6 @@ public class LabServerStartButtonBuilder {
       HostConnectivityStatus connectivityStatus,
       DaemonServerInfo.Status daemonStatus) {
 
-    // TODO: Refactor this logic into a shared util class when it is needed by 2 consumers (e.g.,
-    // for the preflight request).
     if (!featureManagerFactory.create(universe).isLabServerStartFeatureEnabled()) {
       return ActionButtonState.newBuilder().setVisible(false).build();
     }
@@ -63,15 +62,11 @@ public class LabServerStartButtonBuilder {
       return ActionButtonState.newBuilder().setVisible(false).build();
     }
 
-    boolean isTargetActivityState =
-        activity.getState() == LabServerInfo.ActivityState.DRAINED
-            || activity.getState() == LabServerInfo.ActivityState.STOPPED
-            || activity.getState() == LabServerInfo.ActivityState.UNKNOWN;
-
     boolean daemonRunning = daemonStatus.getState() == DaemonServerInfo.State.RUNNING;
-    boolean daemonMissing = daemonStatus.getState() == DaemonServerInfo.State.MISSING;
 
-    boolean visibleCondition = daemonMissing || (daemonRunning && isTargetActivityState);
+    boolean visibleCondition =
+        LabServerActionAvailabilities.isStartAvailable(
+            activity.getState(), daemonStatus.getState());
 
     if (!visibleCondition) {
       return ActionButtonState.newBuilder().setVisible(false).build();

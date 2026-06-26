@@ -328,12 +328,11 @@ TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0`,
   override preflightLabServerLifecycle(
     hostName: string,
     action: LifecycleActionType,
-    expectedActivity: string,
   ): Observable<PreflightLabServerLifecycleResponse> {
-    // Default fake: always return ready with the expected activity.
+    // Default fake: always return ready with a mock running activity.
     return of({
       ready: {
-        actualActivity: expectedActivity,
+        actualActivity: 'RUNNING',
       },
     }).pipe(delay(1000));
   }
