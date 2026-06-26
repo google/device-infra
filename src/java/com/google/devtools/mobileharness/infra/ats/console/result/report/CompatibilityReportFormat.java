@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.infra.ats.console.result.report;
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSetMultimap;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Metric;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;
@@ -38,18 +37,6 @@ public abstract class CompatibilityReportFormat {
 
   @VisibleForTesting
   public static final String WARNING_FOR_APPROVAL_METRIC_KEY = "WarningForApproval";
-
-  // TODO: Remove the static map once the warning annotation is fully supported.
-  private static final ImmutableSetMultimap<String, String> MODULE_TO_WARNING_TESTS =
-      ImmutableSetMultimap.<String, String>builder()
-          .put(
-              "GtsStorageHostTestCases",
-              "com.google.android.storage.gts.UfsDetectionHostTest#testDeviceUsesUfs_SR")
-          .putAll(
-              "GtsPerformanceHostTestCases",
-              "com.google.android.performance.gts.BouncyBallHostTest#testBouncyBallNoFrameDropsForceOnGpuComposition_SR",
-              "com.google.android.performance.gts.BouncyBallHostTest#testBouncyBallNoFrameDropsDefaultGpuComposition_SR")
-          .build();
 
   /** The target name this format is for. Can be module name or test plan name. */
   public abstract String targetName();
@@ -74,9 +61,6 @@ public abstract class CompatibilityReportFormat {
         && metadataMap.get(OPTION_TEST_FAILURE_LEVEL).getValueCount() > 0) {
       builder.setFailureLevel(
           TestStatus.valueOf(metadataMap.get(OPTION_TEST_FAILURE_LEVEL).getValue(0)));
-      return Optional.of(builder.build());
-    } else if (MODULE_TO_WARNING_TESTS.containsKey(moduleName)) {
-      builder.setFailureLevel(TestStatus.WARNING).setTests(MODULE_TO_WARNING_TESTS.get(moduleName));
       return Optional.of(builder.build());
     } else {
       return Optional.empty();
