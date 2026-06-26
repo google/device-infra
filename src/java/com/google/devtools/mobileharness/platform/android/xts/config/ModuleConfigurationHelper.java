@@ -226,7 +226,12 @@ public class ModuleConfigurationHelper {
             ExtErrorId.MODULE_CONFIG_UNRECOGNIZED_OPTION_ERROR,
             String.format("Unrecognized option %s for %s", option.getName(), specName));
       }
-      if (fieldDescriptor.isRepeated()) {
+      if (fieldDescriptor.isMapField()) {
+        JsonObject jsonObject =
+            spec.has(option.getName()) ? spec.getAsJsonObject(option.getName()) : new JsonObject();
+        jsonObject.addProperty(option.getKey(), option.getValue());
+        spec.add(option.getName(), jsonObject);
+      } else if (fieldDescriptor.isRepeated()) {
         JsonArray jsonArray =
             spec.has(option.getName()) ? spec.getAsJsonArray(option.getName()) : new JsonArray();
         jsonArray.add(option.getValue());

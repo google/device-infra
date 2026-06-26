@@ -31,6 +31,7 @@ java_library(
     ],
     runtime_deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:no_op_test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_file_puller_decorator",
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
@@ -50,6 +51,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
+        "@maven//:com_google_code_gson_gson:gson-elements",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_truth_extensions_truth_proto_extension",
         "@maven//:junit_junit",

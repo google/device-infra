@@ -32,12 +32,15 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.DeviceConfigurationProto.DeviceGroup;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.DeviceConfigurationProto.ModuleDeviceConfiguration;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.gson.JsonObject;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -301,6 +304,24 @@ public class ModuleConfigurationHelperTest {
                             jobInfo, config, /* moduleDeviceConfig= */ null, ImmutableList.of()))
                 .getErrorId())
         .isEqualTo(ExtErrorId.MODULE_CONFIG_UNRECOGNIZED_OPTION_ERROR);
+  }
+
+  @Test
+  public void convertOptionsToScopedSpec_mapField() throws Exception {
+    Optional<Map.Entry<String, JsonObject>> result =
+        ModuleConfigurationHelper.convertOptionsToScopedSpec(
+            "AndroidFilePullerDecorator",
+            ImmutableList.of(
+                Option.newBuilder()
+                    .setName("property")
+                    .setKey("ro.treble.enabled")
+                    .setValue("true")
+                    .build()));
+
+    assertThat(result).isPresent();
+    assertThat(result.get().getKey()).isEqualTo("AndroidFilePullerDecoratorSpec");
+    assertThat(result.get().getValue().toString())
+        .isEqualTo("{\"property\":{\"ro.treble.enabled\":\"true\"}}");
   }
 
   private JobInfo createBaseJobInfo() {
