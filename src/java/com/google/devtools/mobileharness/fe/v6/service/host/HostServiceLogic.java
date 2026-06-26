@@ -35,6 +35,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ListTroubleshootScriptsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ListTroubleshootScriptsResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerLifecycleRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerLifecycleResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ReleaseLabServerRequest;
@@ -71,6 +73,9 @@ public interface HostServiceLogic {
 
   ListenableFuture<PreflightLabServerReleaseResponse> preflightLabServerRelease(
       PreflightLabServerReleaseRequest request, Optional<String> username);
+
+  ListenableFuture<PreflightLabServerLifecycleResponse> preflightLabServerLifecycle(
+      PreflightLabServerLifecycleRequest request, Optional<String> username);
 
   ListenableFuture<DecommissionMissingDevicesResponse> decommissionMissingDevices(
       DecommissionMissingDevicesRequest request);

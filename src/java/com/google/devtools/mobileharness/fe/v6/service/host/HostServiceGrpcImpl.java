@@ -37,6 +37,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPa
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostServiceGrpc;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ListTroubleshootScriptsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ListTroubleshootScriptsResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerLifecycleRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerLifecycleResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ReleaseLabServerRequest;
@@ -154,6 +156,19 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
         executor,
         HostServiceGrpc.getServiceDescriptor(),
         HostServiceGrpc.getPreflightLabServerReleaseMethod());
+  }
+
+  @Override
+  public void preflightLabServerLifecycle(
+      PreflightLabServerLifecycleRequest request,
+      StreamObserver<PreflightLabServerLifecycleResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        req -> logic.preflightLabServerLifecycle(req, Optional.empty()),
+        executor,
+        HostServiceGrpc.getServiceDescriptor(),
+        HostServiceGrpc.getPreflightLabServerLifecycleMethod());
   }
 
   @Override

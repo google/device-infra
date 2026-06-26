@@ -10,7 +10,9 @@ import {
   GetHostDebugInfoResponse,
   GetPopularFlagsResponse,
   HostHeaderInfo,
+  LifecycleActionType,
   ListTroubleshootScriptsResponse,
+  PreflightLabServerLifecycleResponse,
   PreflightLabServerReleaseResponse,
   ReleaseLabServerRequest,
   ReleaseLabServerResponse,
@@ -95,6 +97,20 @@ export class HttpHostService extends HostService {
   ): Observable<PreflightLabServerReleaseResponse> {
     return this.http.get<PreflightLabServerReleaseResponse>(
       `${this.apiUrl}/${hostName}/preflightLabServerRelease`,
+    );
+  }
+
+  override preflightLabServerLifecycle(
+    hostName: string,
+    action: LifecycleActionType,
+    expectedActivity: string,
+  ): Observable<PreflightLabServerLifecycleResponse> {
+    return this.http.post<PreflightLabServerLifecycleResponse>(
+      `${this.apiUrl}/${hostName}:preflightLifecycle`,
+      {
+        action,
+        expectedActivity,
+      },
     );
   }
 

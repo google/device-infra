@@ -7,7 +7,9 @@ import {
   GetHostDebugInfoResponse,
   GetPopularFlagsResponse,
   HostHeaderInfo,
+  LifecycleActionType,
   ListTroubleshootScriptsResponse,
+  PreflightLabServerLifecycleResponse,
   PreflightLabServerReleaseResponse,
   ReleaseLabServerRequest,
   ReleaseLabServerResponse,
@@ -321,6 +323,19 @@ TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0`,
     const preflightLabServerReleaseResponse =
       scenario?.releaseResponse || createDefaultReleaseResponse();
     return of(preflightLabServerReleaseResponse).pipe(delay(1000));
+  }
+
+  override preflightLabServerLifecycle(
+    hostName: string,
+    action: LifecycleActionType,
+    expectedActivity: string,
+  ): Observable<PreflightLabServerLifecycleResponse> {
+    // Default fake: always return ready with the expected activity.
+    return of({
+      ready: {
+        actualActivity: expectedActivity,
+      },
+    }).pipe(delay(1000));
   }
 
   override decommissionMissingDevices(
