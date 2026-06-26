@@ -60,7 +60,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/plugin/loader:plugin_instantiator",
         "//src/java/com/google/devtools/mobileharness/infra/controller/plugin/provider:plugin_class_provider",
-        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/plugin",
         "//src/java/com/google/wireless/qa/mobileharness/shared/log",
@@ -68,7 +67,7 @@ java_library(
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
-        "@maven//:org_reflections_reflections",
+        "@maven//:io_github_classgraph_classgraph",
     ],
 )
 

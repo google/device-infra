@@ -36,6 +36,6 @@ java_library(
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
-        "@maven//:org_reflections_reflections",
+        "@maven//:io_github_classgraph_classgraph",
     ],
 )

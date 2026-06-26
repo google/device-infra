@@ -23,15 +23,17 @@ import com.google.inject.Module;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin.PluginType;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.PluginModule;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
+import io.github.classgraph.ClassInfo;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
-import org.reflections.Reflections;
 
 /** Provides plugin module classes that have been annotated with the given {@link PluginType}s. */
 public class AnnotatedPluginModuleClassProvider implements PluginModuleClassProvider {
 
-  private final Reflections reflections;
+  // private final ScanResult scanResult;
+  private final List<ClassInfo> classInfos;
   @Nullable private final LogCollector<?> log;
   private final boolean warnUnmatchedTypes;
   private final ImmutableSet<PluginType> pluginTypes;
@@ -41,11 +43,11 @@ public class AnnotatedPluginModuleClassProvider implements PluginModuleClassProv
    * @param pluginTypes The types of plugin to allow.
    */
   public AnnotatedPluginModuleClassProvider(
-      Reflections reflections,
+      List<ClassInfo> classInfos,
       @Nullable LogCollector<?> log,
       boolean warnUnmatchedTypes,
       PluginType... pluginTypes) {
-    this.reflections = reflections;
+    this.classInfos = classInfos;
     this.log = log;
     this.warnUnmatchedTypes = warnUnmatchedTypes;
     this.pluginTypes = ImmutableSet.copyOf(pluginTypes);
@@ -54,7 +56,8 @@ public class AnnotatedPluginModuleClassProvider implements PluginModuleClassProv
   @Override
   public Set<Class<? extends Module>> getPluginModuleClasses() throws MobileHarnessException {
     try {
-      return reflections.getTypesAnnotatedWith(PluginModule.class).stream()
+      return classInfos.stream()
+          .map(classInfo -> classInfo.loadClass(/* ignoreExceptions= */ false))
           .filter(
               aClass ->
                   AnnotatedPluginClassProvider.checkPluginType(
@@ -65,6 +68,11 @@ public class AnnotatedPluginModuleClassProvider implements PluginModuleClassProv
                       pluginTypes))
           .<Class<? extends Module>>map(aClass -> aClass.asSubclass(Module.class))
           .collect(Collectors.toSet());
+    } catch (IllegalArgumentException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.PLUGIN_LOADER_FAILED_TO_LOAD_PLUGIN_MODULE_CLASS,
+          "Fail to load plugin module class.",
+          e);
     } catch (ClassCastException e) {
       throw new MobileHarnessException(
           BasicErrorId.PLUGIN_LOADER_FAILED_TO_CREATE_PLUGIN_MODULE_INSTANCE,
