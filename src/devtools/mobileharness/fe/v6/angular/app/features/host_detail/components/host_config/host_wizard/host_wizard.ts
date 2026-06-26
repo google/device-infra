@@ -1,17 +1,16 @@
 import {
-  AfterViewInit,
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   OnInit,
   signal,
   TemplateRef,
-  ViewChild,
+  viewChild,
 } from '@angular/core';
 import {MatChipsModule} from '@angular/material/chips';
 import {
   MAT_DIALOG_DATA,
-  MatDialog,
   MatDialogModule,
   MatDialogRef,
 } from '@angular/material/dialog';
@@ -25,6 +24,7 @@ import {ConfigSection as DeviceConfigSection} from '../../../../../core/models/d
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {Environment} from '../../../../../core/services/environment';
 import {normalizeHostConfig} from '../../../../../core/utils/host_config_utils';
+
 import {Permissions} from '../../../../../features/device_detail/components/device_config/steps/permissions/permissions';
 import {Wifi} from '../../../../../features/device_detail/components/device_config/steps/wifi/wifi';
 import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
@@ -36,7 +36,7 @@ import {
   WizardStep,
   WizardStepper,
 } from '../../../../../shared/components/config_common/wizard_stepper/wizard_stepper';
-import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/confirm_dialog';
+import {useConfigDialogActions} from '../../../../../shared/composables/config_dialog_actions';
 import {ConfigMode} from '../steps/config_mode/config_mode';
 import {HostPermissionList} from '../steps/host_permissions/host_permissions';
 
@@ -66,23 +66,64 @@ import {HostPermissionList} from '../steps/host_permissions/host_permissions';
     ReviewTable,
   ],
 })
-export class HostWizard implements OnInit, AfterViewInit {
+export class HostWizard implements OnInit {
   readonly data = inject(MAT_DIALOG_DATA); // to receive hostDetail openDialog
   // params source, config, etc.
-  private readonly dialog = inject(MatDialog); // to open confirm dialog
   private readonly dialogRef = inject(MatDialogRef<HostWizard>); // to close the dialog
+
+  private readonly dialogActions = useConfigDialogActions({
+    dialogRef: this.dialogRef,
+    onCancelSelfLockout: () => {
+      this.currentStep.set('host-permissions');
+    },
+    onSubmitOverride: () => {
+      this.submit(true);
+    },
+  });
 
   private readonly configService = inject(CONFIG_SERVICE);
   private readonly environment = inject(Environment);
   readonly isGoogleInternal = this.environment.isGoogleInternal();
 
   // used for stepper
-  @ViewChild('permissions') permissionsTemplate!: TemplateRef<{}>;
-  @ViewChild('configMode') configModeTemplate!: TemplateRef<{}>;
-  @ViewChild('default') defaultTemplate!: TemplateRef<{}>;
-  @ViewChild('review') reviewTemplate!: TemplateRef<{}>;
+  readonly permissionsTemplate = viewChild<TemplateRef<{}>>('permissions');
+  readonly configModeTemplate = viewChild<TemplateRef<{}>>('configMode');
+  readonly defaultTemplate = viewChild<TemplateRef<{}>>('default');
+  readonly reviewTemplate = viewChild<TemplateRef<{}>>('review');
 
-  WIZARD_STEPS: WizardStep[] = this.getWizardSteps();
+  readonly WIZARD_STEPS = computed<WizardStep[]>(() => {
+    const permissions = this.permissionsTemplate();
+    const configMode = this.configModeTemplate();
+    const defaultTemp = this.defaultTemplate();
+    const review = this.reviewTemplate();
+
+    if (!permissions || !configMode || !defaultTemp || !review) {
+      return [];
+    }
+
+    return [
+      {
+        id: 'host-permissions',
+        label: 'Host Permissions',
+        template: permissions,
+      },
+      {
+        id: 'device-config-mode',
+        label: 'Device Config Mode',
+        template: configMode,
+      },
+      {
+        id: 'default-device-config',
+        label: 'Default Device Config',
+        template: defaultTemp,
+      },
+      {
+        id: 'review-and-submit',
+        label: 'Review & Submit',
+        template: review,
+      },
+    ];
+  });
 
   currentStep = signal('host-permissions');
 
@@ -96,7 +137,7 @@ export class HostWizard implements OnInit, AfterViewInit {
   dataSource: ReviewTableRow[] = [];
 
   // used for apply changes button
-  @ViewChild('stepper') stepper!: WizardStepper;
+  readonly stepper = viewChild<WizardStepper>('stepper');
   verifying = signal<boolean>(false);
   applyChangesDisabled = signal<boolean>(true);
 
@@ -107,36 +148,8 @@ export class HostWizard implements OnInit, AfterViewInit {
     }
   }
 
-  getWizardSteps(): WizardStep[] {
-    return [
-      {
-        id: 'host-permissions',
-        label: 'Host Permissions',
-        template: this.permissionsTemplate,
-      },
-      {
-        id: 'device-config-mode',
-        label: 'Device Config Mode',
-        template: this.configModeTemplate,
-      },
-      {
-        id: 'default-device-config',
-        label: 'Default Device Config',
-        template: this.defaultTemplate,
-      },
-      {
-        id: 'review-and-submit',
-        label: 'Review & Submit',
-        template: this.reviewTemplate,
-      },
-    ];
-  }
-
-  ngAfterViewInit() {
-    this.WIZARD_STEPS = this.getWizardSteps();
-  }
-
   onCurrentStepChange(currentStep: string) {
+    this.currentStep.set(currentStep);
     if (currentStep === 'default-device-config') {
       this.hostConfig.set({
         ...this.hostConfig(),
@@ -170,10 +183,7 @@ export class HostWizard implements OnInit, AfterViewInit {
         {
           type: 'data',
           feature: 'Host Admins',
-          value:
-            this.hostConfig().permissions.hostAdmins.length > 0
-              ? this.hostConfig().permissions.hostAdmins.join(', ')
-              : 'None',
+          value: (this.hostConfig().permissions?.hostAdmins || []).join(', ') || 'None',
         },
       );
     }
@@ -203,16 +213,13 @@ export class HostWizard implements OnInit, AfterViewInit {
       );
     }
 
+    const wifiType = this.hostConfig().deviceConfig?.wifi?.type;
     dataSource.push(
       {type: 'title', feature: 'Default Device Config - Wi-Fi'},
       {
         type: 'data',
         feature: 'Type',
-        value:
-          !this.hostConfig().deviceConfig?.wifi?.type ||
-          this.hostConfig().deviceConfig?.wifi?.type === 'none'
-            ? 'None'
-            : this.hostConfig().deviceConfig?.wifi?.type,
+        value: (!wifiType || wifiType === 'none') ? 'None' : wifiType,
       },
       {
         type: 'data',
@@ -253,32 +260,14 @@ export class HostWizard implements OnInit, AfterViewInit {
         {
           type: 'data',
           feature: 'Supported Dimensions',
-          value:
-            supportDimensions.length > 0
-              ? supportDimensions
-                  .map(
-                    (item) =>
-                      `<div class="review-dim-value"><strong>${
-                        item.name
-                      }</strong>: ${item.value}</div>`,
-                  )
-                  .join('')
-              : 'None',
+          value: supportDimensions,
+          valueType: 'dimensions',
         },
         {
           type: 'data',
           feature: 'Required Dimensions',
-          value:
-            requiredDimensions.length > 0
-              ? requiredDimensions
-                  .map(
-                    (item) =>
-                      `<div class="review-dim-value"><strong>${
-                        item.name
-                      }</strong>: ${item.value}</div>`,
-                  )
-                  .join('')
-              : 'None',
+          value: requiredDimensions,
+          valueType: 'dimensions',
         },
       );
 
@@ -305,82 +294,35 @@ export class HostWizard implements OnInit, AfterViewInit {
           {
             type: 'data',
             feature: 'Monitored Device UUIDs',
-            value:
-              this.hostConfig().deviceDiscovery.monitoredDeviceUuids.length > 0
-                ? this.hostConfig().deviceDiscovery.monitoredDeviceUuids.join(
-                    ', ',
-                  )
-                : 'None',
+            value: this.hostConfig().deviceDiscovery.monitoredDeviceUuids.length > 0 ? this.hostConfig().deviceDiscovery.monitoredDeviceUuids.join(', ') : 'None',
           },
           {
             type: 'data',
             feature: 'Testbed UUIDs',
-            value:
-              this.hostConfig().deviceDiscovery.testbedUuids.length > 0
-                ? this.hostConfig().deviceDiscovery.testbedUuids.join(', ')
-                : 'None',
+            value: this.hostConfig().deviceDiscovery.testbedUuids.length > 0 ? this.hostConfig().deviceDiscovery.testbedUuids.join(', ') : 'None',
           },
           {
             type: 'data',
             feature: 'Misc Device UUIDs',
-            value:
-              this.hostConfig().deviceDiscovery.miscDeviceUuids.length > 0
-                ? this.hostConfig().deviceDiscovery.miscDeviceUuids.join(', ')
-                : 'None',
+            value: this.hostConfig().deviceDiscovery.miscDeviceUuids.length > 0 ? this.hostConfig().deviceDiscovery.miscDeviceUuids.join(', ') : 'None',
           },
           {
             type: 'data',
             feature: 'Over TCP IPs',
-            value:
-              this.hostConfig().deviceDiscovery.overTcpIps.length > 0
-                ? this.hostConfig().deviceDiscovery.overTcpIps.join('<br />')
-                : 'None',
+            value: this.hostConfig().deviceDiscovery.overTcpIps,
+            valueType: 'string-list',
           },
           {
             type: 'data',
             feature: 'Over SSH Devices',
-            value:
-              overSshDevices.length > 0
-                ? `<table class="review-ssh-table">
-                      <tr>
-                        <td width="20%"><strong>IP Address</strong></td>
-                        <td width="20%"><strong>Username</strong></td>
-                        <td width="20%"><strong>Password</strong></td>
-                        <td width="20%"><strong>SSH Device Type</strong></td>
-                      </tr>` +
-                  overSshDevices
-                    .map(
-                      (item) => `<tr>
-                            <td>${item.ipAddress}</td>
-                            <td>${item.username}</td>
-                            <td>${item.password}</td>
-                            <td>${item.sshDeviceType}</td>
-                          </tr>`,
-                    )
-                    .join('') +
-                  `</table>`
-                : 'None',
+            value: overSshDevices,
+            valueType: 'ssh-devices',
           },
           {
             type: 'data',
             feature: 'Maneki Specs',
-            value:
-              manekiSpecs.length > 0
-                ? `<table>
-                      <tr>
-                        <td width="20%"><strong>Device Type</strong></td>
-                        <td width="20%"><strong>Mac Address</strong></td>
-                      </tr>` +
-                  manekiSpecs
-                    .map(
-                      (item) => `<tr>
-                            <td>${item.type}</td>
-                            <td>${item.macAddress}</td>
-                          </tr>`,
-                    )
-                    .join('') +
-                  `</table>`
-                : 'None',
+            value: manekiSpecs,
+            valueType: 'maneki-specs',
           },
           {
             type: 'title',
@@ -389,15 +331,8 @@ export class HostWizard implements OnInit, AfterViewInit {
           {
             type: 'data',
             feature: 'Host Properties',
-            value:
-              hostProperties.length > 0
-                ? hostProperties
-                    .map(
-                      (item) =>
-                        `<div><strong>${item.key}</strong>: ${item.value}</div>`,
-                    )
-                    .join('')
-                : 'None',
+            value: hostProperties,
+            valueType: 'host-properties',
           },
         );
       }
@@ -406,7 +341,7 @@ export class HostWizard implements OnInit, AfterViewInit {
     this.dataSource = dataSource;
   }
 
-  submit() {
+  submit(overrideSelfLockout = false) {
     const wifi = this.hostConfig().deviceConfig?.wifi;
     const finalWifi = (!wifi || wifi.type === 'none') ? undefined : wifi;
     const requestConfig: HostConfig = {
@@ -426,7 +361,7 @@ export class HostWizard implements OnInit, AfterViewInit {
     if (this.data.source === 'copy') {
       this.verifying.set(true);
     } else {
-      this.stepper.verifying.set(true);
+      this.stepper()?.verifying.set(true);
     }
 
     this.configService
@@ -437,60 +372,23 @@ export class HostWizard implements OnInit, AfterViewInit {
           section: HostConfigSection.ALL,
           deviceConfigSection: DeviceConfigSection.ALL,
         },
+        options: {overrideSelfLockout},
       })
       .pipe(
         finalize(() => {
           if (this.data.source === 'copy') {
             this.verifying.set(false);
           } else {
-            this.stepper.verifying.set(false);
+            this.stepper()?.verifying.set(false);
           }
         }),
       )
       .subscribe((result) => {
         if (!result.success) {
-          this.error(result.error?.code);
+          this.dialogActions.error(result.error?.code);
           return;
         }
-        this.success();
+        this.dialogActions.success();
       });
-  }
-
-  success() {
-    const dialogData = {
-      title: 'Configuration Saved',
-      content: 'Your configuration has been saved successfully. ',
-      type: 'success',
-      primaryButtonLabel: 'OK',
-    };
-
-    this.dialog
-      .open(ConfirmDialog, {
-        data: dialogData,
-        disableClose: true,
-      })
-      .afterClosed()
-      .subscribe((result) => {
-        if (result) {
-          this.dialogRef.close();
-        }
-      });
-  }
-
-  error(errorCode?: string) {
-    const errorMessage = errorCode
-      ? ` with error code ${errorCode}. Please try again.`
-      : '. Please try again.';
-    const dialogData = {
-      title: 'Configuration Failed',
-      content: `Your configuration has failed to save` + errorMessage,
-      type: 'error',
-      primaryButtonLabel: 'OK',
-    };
-
-    this.dialog.open(ConfirmDialog, {
-      data: dialogData,
-      disableClose: true,
-    });
   }
 }

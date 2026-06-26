@@ -47,6 +47,7 @@ import {
 import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
 import {Footer} from '../../../../../shared/components/config_common/footer/footer';
 import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/confirm_dialog';
+import {useConfigDialogActions} from '../../../../../shared/composables/config_dialog_actions';
 import {useSaveInterceptors} from '../../../../../shared/composables/save_interceptors';
 import {objectUtils} from '../../../../../shared/utils/object_utils';
 import {Dimensions} from '../steps/dimensions/dimensions';
@@ -88,6 +89,22 @@ export class DeviceSettings implements OnInit {
   private readonly dialog = inject(MatDialog); // to open confirm dialog
   private readonly dialogRef = inject(MatDialogRef<DeviceSettings>);
   private readonly destroyRef = inject(DestroyRef);
+
+  private isSavingSelfLockout = false;
+  readonly dialogActions = useConfigDialogActions({
+    onCancelSelfLockout: () => {
+      this.activeSection.set(ConfigSection.PERMISSIONS);
+    },
+    onSubmitOverride: () => {
+      this.save(true);
+    },
+    onSuccessClose: () => {
+      if (this.isSavingSelfLockout) {
+        this.closeDialogIfOpen(true);
+      }
+    },
+  });
+
   private readonly saveInterceptors = useSaveInterceptors();
   private readonly dialogData = inject(MAT_DIALOG_DATA, {optional: true}) as {
     deviceId: string;
@@ -373,66 +390,6 @@ export class DeviceSettings implements OnInit {
     this.hasPermission.set(result.hasPermission);
   }
 
-  selfLockout() {
-    const dialogData = {
-      title: 'Permission Warning',
-      content:
-        'The new owners list does not contain your username, and you are not a member of any of the specified owner groups. Proceeding will remove your ability to configure this device in the future.',
-      type: 'warning',
-      primaryButtonLabel: 'Proceed Anyway',
-      secondaryButtonLabel: 'Go Back',
-    };
-    const selfLockoutDialog = this.dialog.open(ConfirmDialog, {
-      data: dialogData,
-      disableClose: true,
-    });
-    selfLockoutDialog.afterClosed().subscribe((result) => {
-      if (result === 'secondary') {
-        this.activeSection.set(ConfigSection.PERMISSIONS);
-        return;
-      }
-      if (result === 'primary') {
-        this.save(true);
-      }
-    });
-  }
-
-  success() {
-    const dialogData = {
-      title: 'Configuration Saved',
-      content: 'Your configuration has been saved successfully. ',
-      type: 'success',
-      primaryButtonLabel: 'OK',
-    };
-
-    return this.dialog.open(ConfirmDialog, {
-      data: dialogData,
-      disableClose: true,
-    });
-  }
-
-  error(errorCode?: string) {
-    if (errorCode === 'SELF_LOCKOUT_DETECTED') {
-      this.selfLockout();
-      return;
-    }
-
-    const errorMessage = errorCode
-      ? ` with error code ${errorCode}. Please try again.`
-      : '. Please try again.';
-
-    const dialogData = {
-      title: 'Configuration Failed',
-      content: `Your configuration has failed to save` + errorMessage,
-      type: 'error',
-      primaryButtonLabel: 'OK',
-    };
-    this.dialog.open(ConfirmDialog, {
-      data: dialogData,
-      disableClose: true,
-    });
-  }
-
   save(selfLockout = false, forceSave = false) {
     const section = this.activeSection();
 
@@ -456,6 +413,7 @@ export class DeviceSettings implements OnInit {
     }
 
     this.saving.set(true);
+    this.isSavingSelfLockout = selfLockout;
 
     const deviceConfig = {...this.newConfig()};
     if (deviceConfig.wifi && deviceConfig.wifi.type === 'none') {
@@ -479,7 +437,7 @@ export class DeviceSettings implements OnInit {
       )
       .subscribe((result) => {
         if (!result.success) {
-          this.error(result.error?.code);
+          this.dialogActions.error(result.error?.code);
           return;
         }
 
@@ -487,12 +445,7 @@ export class DeviceSettings implements OnInit {
           this.newConfig(),
         ) as DeviceConfig;
 
-        const successDialogRef = this.success();
-        if (selfLockout) {
-          successDialogRef.afterClosed().subscribe(() => {
-            this.closeDialogIfOpen(true);
-          });
-        }
+        this.dialogActions.success();
       });
   }
 

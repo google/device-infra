@@ -9,7 +9,88 @@
 
     <ng-container matColumnDef="value">
       <th mat-header-cell *matHeaderCellDef>Applied Configuration</th>
-      <td mat-cell *matCellDef="let element" [innerHtml]="element.value | safeHtmlPipe"></td>
+      <td mat-cell *matCellDef="let element">
+        @switch (element.valueType) {
+          @case ('string-list') {
+            @if (element.value && element.value.length > 0) {
+              @for (item of element.value; track item) {
+                <div>{{ item }}</div>
+              }
+            } @else {
+              None
+            }
+          }
+          @case ('dimensions') {
+            @if (element.value && element.value.length > 0) {
+              @for (d of element.value; track d.name) {
+                <div class="review-dim-value"><strong>{{d.name}}</strong>: {{d.value}}</div>
+              }
+            } @else {
+              None
+            }
+          }
+          @case ('ssh-devices') {
+            @if (element.value && element.value.length > 0) {
+              <table class="review-ssh-table">
+                <thead>
+                  <tr>
+                    <th width="20%">IP Address</th>
+                    <th width="20%">Username</th>
+                    <th width="20%">Password</th>
+                    <th width="20%">SSH Device Type</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of element.value; track item.ipAddress) {
+                    <tr>
+                      <td>{{item.ipAddress}}</td>
+                      <td>{{item.username}}</td>
+                      <td>{{item.password}}</td>
+                      <td>{{item.sshDeviceType}}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            } @else {
+              None
+            }
+          }
+          @case ('maneki-specs') {
+            @if (element.value && element.value.length > 0) {
+              <table>
+                <thead>
+                  <tr>
+                    <th width="20%">Device Type</th>
+                    <th width="20%">Mac Address</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (item of element.value; track item.macAddress) {
+                    <tr>
+                      <td>{{item.type}}</td>
+                      <td>{{item.macAddress}}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            } @else {
+              None
+            }
+          }
+          @case ('host-properties') {
+            @if (element.value && element.value.length > 0) {
+              @for (item of element.value; track item.key) {
+                <div><strong>{{item.key}}</strong>: {{item.value}}</div>
+              }
+            } @else {
+              None
+            }
+          }
+          @default {
+            {{ element.value }}
+          }
+        }
+      </td>
     </ng-container>
 
     <ng-container matColumnDef="title">
