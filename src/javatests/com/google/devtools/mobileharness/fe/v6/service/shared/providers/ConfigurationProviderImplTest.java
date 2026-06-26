@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.shared.providers;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -38,6 +39,7 @@ import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigService
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.DeviceConfigStub;
+import java.util.concurrent.ExecutionException;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -185,5 +187,27 @@ public final class ConfigurationProviderImplTest {
                 .updateLabConfig("host_name", LabConfig.getDefaultInstance(), UNIVERSE)
                 .get())
         .isNull();
+  }
+
+  @Test
+  public void updateDeviceConfig_errorMessageInResponse_futureFailsWithException()
+      throws Exception {
+    String deviceId = "device_id";
+    DeviceConfig deviceConfig = DeviceConfig.newBuilder().setUuid(deviceId).build();
+    UpdateDeviceConfigsResponse response =
+        UpdateDeviceConfigsResponse.newBuilder()
+            .putErrorMessage(deviceId, "invalid owner: bad_user")
+            .build();
+    when(deviceConfigStub.updateDeviceConfigsAsync(any(), eq(false)))
+        .thenReturn(immediateFuture(response));
+
+    ExecutionException thrown =
+        assertThrows(
+            ExecutionException.class,
+            () -> configurationProvider.updateDeviceConfig(deviceId, deviceConfig, UNIVERSE).get());
+
+    assertThat(thrown).hasCauseThat().isInstanceOf(IllegalStateException.class);
+    assertThat(thrown).hasCauseThat().hasMessageThat().contains(deviceId);
+    assertThat(thrown).hasCauseThat().hasMessageThat().contains("invalid owner: bad_user");
   }
 }
