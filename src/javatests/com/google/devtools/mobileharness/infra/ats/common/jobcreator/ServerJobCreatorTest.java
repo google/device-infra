@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.common.jobcreator;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
@@ -135,7 +136,7 @@ public final class ServerJobCreatorTest {
             tmpFolder.getRoot().getAbsolutePath()));
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     realLocalFileUtil = new LocalFileUtil();
-    when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any()))
+    when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any(), anyBoolean()))
         .thenReturn(MOCK_SUB_DEVICE_SPEC_LIST);
     xtsRootDir = publicDir + "/session_session_id/file";
     realLocalFileUtil.prepareParentDir(xtsRootDir);

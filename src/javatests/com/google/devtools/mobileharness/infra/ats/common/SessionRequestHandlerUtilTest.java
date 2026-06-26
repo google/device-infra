@@ -223,7 +223,9 @@ public final class SessionRequestHandlerUtilTest {
                 .setJobTimeout(toProtoDuration(Duration.ofSeconds(3000L)))
                 .setStartTimeout(toProtoDuration(Duration.ofSeconds(1000L))));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
-        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo);
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo,
+            !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo));
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
             sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
@@ -241,7 +243,9 @@ public final class SessionRequestHandlerUtilTest {
     SessionRequestInfo sessionRequestInfo =
         SessionRequestInfoUtil.buildAndValidate(defaultSessionRequestInfoBuilder());
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
-        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo);
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo,
+            !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo));
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
             sessionRequestInfo, driverParams, subDeviceSpecs, ImmutableMultimap.of());
@@ -264,7 +268,10 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThrows(
         MobileHarnessException.class,
-        () -> sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo));
+        () ->
+            sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+                sessionRequestInfo,
+                !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)));
   }
 
   @Test
@@ -276,7 +283,9 @@ public final class SessionRequestHandlerUtilTest {
                 .setIsAtsServerRequest(true)
                 .addAllDeviceSerials(ImmutableList.of("device_id_1")));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
-        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo);
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo,
+            !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo));
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
             sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
@@ -303,7 +312,9 @@ public final class SessionRequestHandlerUtilTest {
                 .setAllowPartialDeviceMatch(true)
                 .addAllDeviceSerials(ImmutableList.of("device_id_1", "device_id_2")));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
-        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo);
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo,
+            !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo));
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
             sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
@@ -336,7 +347,9 @@ public final class SessionRequestHandlerUtilTest {
                 .addAllDeviceSerials(ImmutableList.of("device_id_1")));
 
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
-        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo);
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo,
+            !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo));
 
     assertThat(subDeviceSpecs).hasSize(1);
     assertThat(subDeviceSpecs.get(0).getDimensions().getContentMap())
@@ -380,7 +393,9 @@ public final class SessionRequestHandlerUtilTest {
                 .addAllDeviceSerials(ImmutableList.of("device_id_1")));
 
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
-        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo);
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo,
+            !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo));
 
     assertThat(subDeviceSpecs).hasSize(1);
     assertThat(subDeviceSpecs.get(0).getDimensions().getContentMap())
@@ -403,7 +418,10 @@ public final class SessionRequestHandlerUtilTest {
     MobileHarnessException exception =
         assertThrows(
             MobileHarnessException.class,
-            () -> sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo));
+            () ->
+                sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+                    sessionRequestInfo,
+                    !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)));
 
     assertThat(exception).hasMessageThat().contains("none of the selected devices are ready");
     verify(sleeper, times(39)).sleep(Duration.ofSeconds(30));
@@ -431,7 +449,9 @@ public final class SessionRequestHandlerUtilTest {
                 .addAllDeviceSerials(ImmutableList.of("device_id_1", "device_id_2")));
 
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
-        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo);
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo,
+            !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo));
 
     assertThat(subDeviceSpecs).hasSize(1);
     assertThat(subDeviceSpecs.get(0).getDimensions().getContentMap())
@@ -460,7 +480,9 @@ public final class SessionRequestHandlerUtilTest {
                 .addAllDeviceSerials(ImmutableList.of("device_id_1", "device_id_2")));
 
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
-        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo);
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo,
+            !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo));
 
     assertThat(subDeviceSpecs).hasSize(2);
     assertThat(subDeviceSpecs.get(0).getDimensions().getContentMap())
@@ -479,7 +501,9 @@ public final class SessionRequestHandlerUtilTest {
             defaultSessionRequestInfoBuilder()
                 .setDeviceType(SessionRequestHandlerUtil.ANDROID_REAL_DEVICE_TYPE));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
-        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo);
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo,
+            !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo));
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
             sessionRequestInfo, driverParams, subDeviceSpecs, ImmutableMultimap.of());
@@ -507,7 +531,9 @@ public final class SessionRequestHandlerUtilTest {
             defaultSessionRequestInfoBuilder()
                 .addAllExcludeDeviceSerials(ImmutableList.of("device_id_1")));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
-        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo);
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo,
+            !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo));
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
             sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
@@ -522,7 +548,9 @@ public final class SessionRequestHandlerUtilTest {
         SessionRequestInfoUtil.buildAndValidate(
             defaultSessionRequestInfoBuilder().setTestPlan("cts-multidevice"));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
-        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo);
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo,
+            !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo));
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
             sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
@@ -540,7 +568,9 @@ public final class SessionRequestHandlerUtilTest {
                 .setTestPlan("cts-multidevice")
                 .setDeviceType(SessionRequestHandlerUtil.ANDROID_LOCAL_EMULATOR_TYPE));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
-        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo);
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo,
+            !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo));
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
             sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
@@ -567,7 +597,9 @@ public final class SessionRequestHandlerUtilTest {
         SessionRequestInfoUtil.buildAndValidate(
             defaultSessionRequestInfoBuilder().setTestPlan("cts-multi-device"));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
-        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo);
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo,
+            !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo));
     assertThrows(
         MobileHarnessException.class,
         () -> {
@@ -584,7 +616,9 @@ public final class SessionRequestHandlerUtilTest {
                 .setCommandLineArgs("cts --shard-count 2")
                 .setShardCount(2));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
-        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo);
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo,
+            !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo));
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
             sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
@@ -603,7 +637,9 @@ public final class SessionRequestHandlerUtilTest {
                 .setCommandLineArgs("cts --shard-count 3")
                 .setShardCount(3));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
-        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo);
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo,
+            !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo));
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
             sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
@@ -622,7 +658,10 @@ public final class SessionRequestHandlerUtilTest {
         SessionRequestInfoUtil.buildAndValidate(defaultSessionRequestInfoBuilder());
     assertThrows(
         MobileHarnessException.class,
-        () -> sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo));
+        () ->
+            sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+                sessionRequestInfo,
+                !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)));
   }
 
   @Test
@@ -636,7 +675,9 @@ public final class SessionRequestHandlerUtilTest {
                 .setShardCount(2)
                 .addAllExtraArgs(ImmutableList.of("--logcat-on-failure")));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
-        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo);
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo,
+            !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo));
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
             sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
@@ -654,7 +695,9 @@ public final class SessionRequestHandlerUtilTest {
                 .addAllDeviceSerials(
                     ImmutableList.of("device_id_1", "not_exist_device", "device_id_2")));
     ImmutableList<SubDeviceSpec> subDeviceSpecs =
-        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo);
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo,
+            !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo));
     JobConfig jobConfig =
         sessionRequestHandlerUtil.initializeJobConfig(
             sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
@@ -673,7 +716,10 @@ public final class SessionRequestHandlerUtilTest {
                 .addAllDeviceSerials(ImmutableList.of("device_id_4", "device_id_5")));
     assertThrows(
         MobileHarnessException.class,
-        () -> sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo));
+        () ->
+            sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+                sessionRequestInfo,
+                !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)));
   }
 
   @Test

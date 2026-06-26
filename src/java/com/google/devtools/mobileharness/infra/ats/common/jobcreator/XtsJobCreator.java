@@ -248,8 +248,11 @@ public abstract class XtsJobCreator {
       driverParams.put("env_vars", new Gson().toJson(sessionRequestInfo.getEnvVarsMap()));
     }
 
+    boolean enableModuleSharding =
+        SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo);
     ImmutableList<SubDeviceSpec> subDeviceSpecList =
-        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo);
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo, /* forMultiDeviceJob= */ !enableModuleSharding);
     logger.atInfo().log("Get the sub device spec list: %s", subDeviceSpecList);
 
     injectEnvSpecificProperties(sessionRequestInfo, driverParams, subDeviceSpecList.size());
@@ -586,7 +589,9 @@ public abstract class XtsJobCreator {
       throws MobileHarnessException, InterruptedException {
     String name = "setup";
     ImmutableList<SubDeviceSpec> subDeviceSpecList =
-        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(sessionRequestInfo).stream()
+        sessionRequestHandlerUtil
+            .getSessionSubDeviceSpecList(sessionRequestInfo, /* forMultiDeviceJob= */ true)
+            .stream()
             .map(
                 spec ->
                     spec.toBuilder()

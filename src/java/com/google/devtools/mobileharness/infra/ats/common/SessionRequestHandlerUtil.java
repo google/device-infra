@@ -219,12 +219,13 @@ public class SessionRequestHandlerUtil {
    * running the job as the job may need multiple devices to run the test.
    */
   public ImmutableList<SubDeviceSpec> getSessionSubDeviceSpecList(
-      SessionRequestInfo sessionRequestInfo) throws MobileHarnessException, InterruptedException {
+      SessionRequestInfo sessionRequestInfo, boolean forMultiDeviceJob)
+      throws MobileHarnessException, InterruptedException {
 
     // ATS UI solely rely on user handpicked devices, and don't need CLI param
     // to filter devices. In the future, will use MH native dimensions for advanced filtering.
     if (sessionRequestInfo.getIsAtsServerRequest()) {
-      return getSubDeviceSpecListForAtsServerRequest(sessionRequestInfo);
+      return getSubDeviceSpecListForAtsServerRequest(sessionRequestInfo, forMultiDeviceJob);
     }
 
     String testPlan = sessionRequestInfo.getTestPlan();
@@ -255,7 +256,8 @@ public class SessionRequestHandlerUtil {
   }
 
   private ImmutableList<SubDeviceSpec> getSubDeviceSpecListForAtsServerRequest(
-      SessionRequestInfo sessionRequestInfo) throws MobileHarnessException, InterruptedException {
+      SessionRequestInfo sessionRequestInfo, boolean forMultiDeviceJob)
+      throws MobileHarnessException, InterruptedException {
     if (sessionRequestInfo.getDeviceSerialsList().isEmpty()) {
       throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.OLCS_NO_AVAILABLE_DEVICE,
@@ -274,7 +276,7 @@ public class SessionRequestHandlerUtil {
         && needTestHarnessPropertyFalse(sessionRequestInfo)) {
       extraDimensions.put(toLowerCase(AndroidProperty.PERSIST_TEST_HARNESS.name()), Value.FALSE);
     }
-    if (shouldEnableModuleSharding(sessionRequestInfo)) {
+    if (!forMultiDeviceJob) {
       StringMap dimensions =
           StringMap.newBuilder()
               .putContent(

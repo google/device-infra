@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.endsWith;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.startsWith;
@@ -311,7 +312,7 @@ public final class AtsServerSessionPluginTest {
     doReturn(ImmutableList.of(new File("some_testcase")))
         .when(localFileUtil)
         .listFiles(endsWith("/android-cts/testcases"), eq(false));
-    when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any()))
+    when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any(), anyBoolean()))
         .thenReturn(
             ImmutableList.of(
                 com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec

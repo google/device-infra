@@ -21,6 +21,7 @@ import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJav
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.endsWith;
 import static org.mockito.ArgumentMatchers.eq;
@@ -257,7 +258,7 @@ public final class NewMultiCommandRequestHandlerTest {
                     new XtsTradefedRuntimeInfo(
                         /* invocations= */ ImmutableList.of(), /* timestamp= */ Instant.now()),
                     /* lastModifiedTime= */ Instant.now())));
-    when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any()))
+    when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any(), anyBoolean()))
         .thenReturn(
             ImmutableList.of(
                 SubDeviceSpec.getDefaultInstance(), SubDeviceSpec.getDefaultInstance()));

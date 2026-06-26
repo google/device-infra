@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doCallRealMethod;
@@ -110,7 +111,7 @@ public final class ConsoleJobCreatorTest {
     flags.setAll(ImmutableMap.of("enable_ats_mode", "true", "use_tf_retry", "false"));
 
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
-    when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any()))
+    when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any(), anyBoolean()))
         .thenReturn(MOCK_SUB_DEVICE_SPEC_LIST);
   }
 
