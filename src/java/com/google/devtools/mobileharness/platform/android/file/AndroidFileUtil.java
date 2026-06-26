@@ -743,10 +743,11 @@ public class AndroidFileUtil {
       throws MobileHarnessException, InterruptedException {
     String info = "";
     Exception exception = null;
+    String escapedDirectory = ShellUtils.shellEscape(dirPathOnDevice);
     try {
       info =
           adb.runShellWithRetry(
-              serial, String.format(ADB_SHELL_TEMPLATE_MAKE_DIRECTORY, dirPathOnDevice));
+              serial, String.format(ADB_SHELL_TEMPLATE_MAKE_DIRECTORY, escapedDirectory));
     } catch (MobileHarnessException e) {
       exception = e;
     }
@@ -760,14 +761,14 @@ public class AndroidFileUtil {
                     .ANDROID_FILE_UTIL_NO_SPACE_TO_MAKE_DIRECTORY_ERROR_IN_SATELLITE_LAB,
             String.format(
                 "Please clean the device to make space for directory %s on device %s : %s",
-                dirPathOnDevice, serial, (exception == null ? info : exception.getMessage())),
+                escapedDirectory, serial, (exception == null ? info : exception.getMessage())),
             exception);
       }
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_FILE_UTIL_MAKE_DIRECTORY_ERROR,
           String.format(
               "Failed to make directory %s on device %s: %s",
-              dirPathOnDevice, serial, (exception == null ? info : exception.getMessage())),
+              escapedDirectory, serial, (exception == null ? info : exception.getMessage())),
           exception);
     }
   }

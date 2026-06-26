@@ -872,6 +872,23 @@ public final class AndroidFileUtilTest {
   }
 
   @Test
+  public void makeDirectory_directoryWithSpace_usesShellEscape() throws Exception {
+    String dirPathOnDevice = "/abc/def ghi";
+    String escapedDirectory = "'/abc/def ghi'";
+    when(adb.runShellWithRetry(
+            SERIAL,
+            String.format(AndroidFileUtil.ADB_SHELL_TEMPLATE_MAKE_DIRECTORY, escapedDirectory)))
+        .thenReturn("");
+
+    androidFileUtil.makeDirectory(SERIAL, dirPathOnDevice);
+
+    verify(adb)
+        .runShellWithRetry(
+            SERIAL,
+            String.format(AndroidFileUtil.ADB_SHELL_TEMPLATE_MAKE_DIRECTORY, escapedDirectory));
+  }
+
+  @Test
   public void makeDirectory_noSpaceLeft_satelliteLab() throws Exception {
     String dirPathOnDevice = "/abc";
     when(adb.runShellWithRetry(
