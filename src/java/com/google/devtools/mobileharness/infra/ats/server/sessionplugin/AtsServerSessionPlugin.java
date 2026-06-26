@@ -17,8 +17,11 @@
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.devtools.mobileharness.infra.ats.common.AtsSessionPluginUtil.copyTestPropertiesForDynamicDownloadJobs;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
+import static java.util.concurrent.TimeUnit.HOURS;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -26,8 +29,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
+import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
+import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.ModuleRunResult;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification;
@@ -58,11 +64,15 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLoadingConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache.CacheRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache.InvalidateCacheRequest;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedTestModuleResultsMessage;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedTestModuleResults;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.protobuf.Any;
@@ -80,11 +90,16 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.logging.Level;
 import javax.inject.Inject;
 
 /** Session Plugin to serve test requests coming from ATS server. */
@@ -120,7 +135,6 @@ final class AtsServerSessionPlugin {
   @GuardedBy("sessionLock")
   private List<JobInfo> tradefedJobs = null;
 
-  @GuardedBy("sessionLock")
   private final SessionInfo sessionInfo;
 
   private final NewMultiCommandRequestHandler newMultiCommandRequestHandler;
@@ -128,6 +142,11 @@ final class AtsServerSessionPlugin {
   private final Clock clock;
   private final TestMessageUtil testMessageUtil;
   private final LocalFileUtil localFileUtil;
+  private final SessionDeviceCache sessionDeviceCache;
+  private final ListeningScheduledExecutorService scheduledThreadPool;
+
+  @GuardedBy("itself")
+  private final Map<LabLocator, Set<String>> cachedDevices = new HashMap<>();
 
   @Inject
   AtsServerSessionPlugin(
@@ -136,13 +155,23 @@ final class AtsServerSessionPlugin {
       LocalSessionStub localSessionStub,
       Clock clock,
       TestMessageUtil testMessageUtil,
-      LocalFileUtil localFileUtil) {
+      LocalFileUtil localFileUtil,
+      SessionDeviceCache sessionDeviceCache) {
     this.sessionInfo = sessionInfo;
     this.newMultiCommandRequestHandler = newMultiCommandRequestHandler;
     this.localSessionStub = localSessionStub;
     this.clock = clock;
     this.testMessageUtil = testMessageUtil;
     this.localFileUtil = localFileUtil;
+    this.sessionDeviceCache = sessionDeviceCache;
+    this.scheduledThreadPool =
+        ThreadPools.createStandardScheduledThreadPool(
+            "ats-server-session-plugin-device-cache-refresher-" + sessionInfo.getSessionId(), 1);
+    logFailure(
+        this.scheduledThreadPool.scheduleWithFixedDelay(
+            this::refreshCache, /* initialDelay= */ 1, /* delay= */ 1, HOURS),
+        Level.WARNING,
+        "Failed to refresh device cache");
   }
 
   @Subscribe
@@ -217,6 +246,15 @@ final class AtsServerSessionPlugin {
         if (shouldSendCancellationMessage) {
           sendCancellationMessageToStartedTest(testInfo);
         }
+        ImmutableList<DeviceLocator> deviceLocators =
+            event.getAllocation().getAllDeviceLocators().stream()
+                .map(
+                    com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator
+                        ::toNewDeviceLocator)
+                .collect(toImmutableList());
+        if (!deviceLocators.isEmpty()) {
+          cacheDevices(deviceLocators);
+        }
         requestDetail.setWorkingJobId(testInfo.jobInfo().locator().getId());
         requestDetail.setWorkingTestId(testInfo.locator().getId());
       } finally {
@@ -288,6 +326,7 @@ final class AtsServerSessionPlugin {
             .setErrorMessage(e.getMessage() == null ? "Empty error message" : e.getMessage());
         throw e;
       } finally {
+        invalidateDevicesCache();
         updateSessionPluginOutput(requestDetail);
         newMultiCommandRequestHandler.cleanup(sessionInfo);
       }
@@ -724,5 +763,140 @@ final class AtsServerSessionPlugin {
       return existingMessage;
     }
     return existingMessage + " //--// " + newMessage;
+  }
+
+  private enum CacheAction {
+    CACHE,
+    REFRESH,
+    INVALIDATE
+  }
+
+  /**
+   * Caches the allocated devices for the session.
+   *
+   * <p>This caches devices to solve the problem where a session requires a set of devices and
+   * generates requirements for multiple jobs at the beginning. When one job finishes and the next
+   * job is submitted to {@link SessionInfo}, some devices might temporarily or permanently become
+   * undetected by the infrastructure (e.g., due to USB reset issues), causing the subsequent job
+   * allocation to fail.
+   *
+   * <p>With the cache, {@code SessionDeviceCache} accesses the lab-side {@code XtsDeviceCache} via
+   * RPC in order to keep the local device runner alive for the cached devices. Throughout the
+   * cached period, the devices transition normally between {@code IDLE} and {@code BUSY} states in
+   * the infrastructure. This delegates the handling of whether a device is truly offline to the
+   * specific driver and plugin, instead of having the infrastructure release them prematurely.
+   *
+   * <p>The cache is managed as follows:
+   *
+   * <ul>
+   *   <li>Initially registered during {@code onTestStarting} when the devices are allocated.
+   *   <li>Periodically refreshed with a fixed delay of 1 hour (using a 3-hour lease duration) to
+   *       prevent permanent lockups in case of OLC server crashes.
+   *   <li>Fully invalidated and released when the session finishes or gets aborted (via {@code
+   *       onSessionEnded}).
+   * </ul>
+   */
+  private void cacheDevices(ImmutableList<DeviceLocator> deviceLocators) {
+    Map<LabLocator, List<String>> newDevicesToCache = new HashMap<>();
+    synchronized (cachedDevices) {
+      for (DeviceLocator deviceLocator : deviceLocators) {
+        LabLocator lab = deviceLocator.labLocator();
+        String id = deviceLocator.id();
+        Set<String> ids = cachedDevices.computeIfAbsent(lab, k -> new HashSet<>());
+        if (ids.add(id)) {
+          newDevicesToCache.computeIfAbsent(lab, k -> new ArrayList<>()).add(id);
+        }
+      }
+    }
+    doCacheDevices(newDevicesToCache, CacheAction.CACHE);
+  }
+
+  private void refreshCache() {
+    ImmutableMap<LabLocator, ImmutableList<String>> devicesToRefresh;
+    synchronized (cachedDevices) {
+      devicesToRefresh =
+          cachedDevices.entrySet().stream()
+              .filter(entry -> !entry.getValue().isEmpty())
+              .collect(
+                  toImmutableMap(
+                      Map.Entry::getKey, entry -> ImmutableList.copyOf(entry.getValue())));
+    }
+    doCacheDevices(devicesToRefresh, CacheAction.REFRESH);
+  }
+
+  private void invalidateDevicesCache() {
+    scheduledThreadPool.shutdown();
+    ImmutableMap<LabLocator, ImmutableList<String>> devicesToInvalidate;
+    synchronized (cachedDevices) {
+      devicesToInvalidate =
+          cachedDevices.entrySet().stream()
+              .filter(entry -> !entry.getValue().isEmpty())
+              .collect(
+                  toImmutableMap(
+                      Map.Entry::getKey, entry -> ImmutableList.copyOf(entry.getValue())));
+      cachedDevices.clear();
+    }
+    doCacheDevices(devicesToInvalidate, CacheAction.INVALIDATE);
+  }
+
+  private void doCacheDevices(
+      Map<LabLocator, ? extends Collection<String>> devicesToCache, CacheAction action) {
+    for (Map.Entry<LabLocator, ? extends Collection<String>> entry : devicesToCache.entrySet()) {
+      LabLocator lab = entry.getKey();
+      ImmutableList<String> ids = ImmutableList.copyOf(entry.getValue());
+      try {
+        switch (action) {
+          case CACHE -> {
+            logger.atInfo().log(
+                "Caching newly allocated devices %s on lab %s for session %s",
+                ids, lab, sessionInfo.getSessionId());
+            sessionDeviceCache.cache(
+                new CacheRequest(
+                    lab,
+                    ids,
+                    /* timeout= */ Duration.ofHours(3),
+                    "xts",
+                    sessionInfo.getSessionId()));
+          }
+          case REFRESH -> {
+            logger.atInfo().log(
+                "Refreshing device caches: %s on lab %s for session %s",
+                ids, lab, sessionInfo.getSessionId());
+            sessionDeviceCache.cache(
+                new CacheRequest(
+                    lab,
+                    ids,
+                    /* timeout= */ Duration.ofHours(3),
+                    "xts",
+                    sessionInfo.getSessionId()));
+          }
+          case INVALIDATE -> {
+            logger.atInfo().log(
+                "Invalidating device caches: %s on lab %s for session %s",
+                ids, lab, sessionInfo.getSessionId());
+            sessionDeviceCache.invalidateCache(
+                new InvalidateCacheRequest(lab, ids, "xts", sessionInfo.getSessionId()));
+          }
+        }
+      } catch (MobileHarnessException | InterruptedException e) {
+        if (e instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+        }
+        switch (action) {
+          case CACHE ->
+              logger.atWarning().withCause(e).log(
+                  "Failed to cache devices %s on lab %s for session %s",
+                  ids, lab, sessionInfo.getSessionId());
+          case REFRESH ->
+              logger.atWarning().withCause(e).log(
+                  "Failed to refresh cache for devices %s on lab %s for session %s",
+                  ids, lab, sessionInfo.getSessionId());
+          case INVALIDATE ->
+              logger.atWarning().withCause(e).log(
+                  "Failed to invalidate cache for devices %s on lab %s for session %s",
+                  ids, lab, sessionInfo.getSessionId());
+        }
+      }
+    }
   }
 }

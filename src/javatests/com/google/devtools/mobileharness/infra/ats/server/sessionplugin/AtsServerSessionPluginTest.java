@@ -44,6 +44,8 @@ import com.google.devtools.mobileharness.api.model.job.in.Decorators;
 import com.google.devtools.mobileharness.api.model.job.in.Dimensions;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
+import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
+import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
@@ -75,6 +77,9 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache.CacheRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache.InvalidateCacheRequest;
 import com.google.devtools.mobileharness.infra.controller.scheduler.model.job.in.DeviceRequirement;
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
@@ -98,6 +103,7 @@ import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
+import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -165,9 +171,11 @@ public final class AtsServerSessionPluginTest {
   @Bind @Mock private LocalSessionStub localSessionStub;
   @Bind @Mock private TestMessageUtil testMessageUtil;
   @Bind @Mock private Sleeper sleeper;
+  @Bind @Mock private SessionDeviceCache sessionDeviceCache;
   @Bind @Spy private LocalFileUtil localFileUtil = new LocalFileUtil();
 
   @Mock private JobInfo jobInfo;
+  @Mock private Allocation allocation;
   @Mock private JobInfo jobInfo2;
   @Mock private JobInfo moblyJobInfo;
   @Mock private JobInfo moblyJobInfo2;
@@ -189,8 +197,13 @@ public final class AtsServerSessionPluginTest {
     Instant baseTime = Instant.ofEpochMilli(1000);
     timing = new Timing(baseTime);
     timing.start(baseTime.plusMillis(1));
-    Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     when(sessionInfo.getSessionId()).thenReturn("session_id");
+    Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+    com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator wirelessLocator =
+        mock(com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator.class);
+    DeviceLocator devLocator = DeviceLocator.of("device_id_100", LabLocator.LOCALHOST);
+    when(wirelessLocator.toNewDeviceLocator()).thenReturn(devLocator);
+    when(allocation.getAllDeviceLocators()).thenReturn(ImmutableList.of(wirelessLocator));
     when(jobInfo.locator()).thenReturn(new JobLocator("job_id", "job_name"));
     properties = new Properties(timing);
     when(jobInfo.properties()).thenReturn(properties);
@@ -618,7 +631,8 @@ public final class AtsServerSessionPluginTest {
             sessionInfo,
             SessionNotification.newBuilder().setNotification(Any.pack(notification)).build(),
             TextFormat.printer()));
-    plugin.onTestStarting(new TestStartingEvent(testInfo, null, DeviceInfo.getDefaultInstance()));
+    plugin.onTestStarting(
+        new TestStartingEvent(testInfo, allocation, DeviceInfo.getDefaultInstance()));
 
     verify(testMessageUtil).sendProtoMessageToTest(eq(testInfo), any());
   }
@@ -651,7 +665,8 @@ public final class AtsServerSessionPluginTest {
         AtsServerSessionNotification.newBuilder()
             .setCancelSession(CancelSession.getDefaultInstance())
             .build();
-    plugin.onTestStarting(new TestStartingEvent(testInfo, null, DeviceInfo.getDefaultInstance()));
+    plugin.onTestStarting(
+        new TestStartingEvent(testInfo, allocation, DeviceInfo.getDefaultInstance()));
     plugin.onSessionNotification(
         new SessionNotificationEvent(
             sessionInfo,
@@ -1777,5 +1792,29 @@ public final class AtsServerSessionPluginTest {
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
     assertThat(requestDetail.getState()).isEqualTo(RequestState.CANCELED);
+  }
+
+  @Test
+  public void onTestStarting_andSessionEnded_cachesAndInvalidatesDevices() throws Exception {
+    plugin.onTestStarting(
+        new TestStartingEvent(testInfo, allocation, DeviceInfo.getDefaultInstance()));
+
+    verify(sessionDeviceCache)
+        .cache(
+            eq(
+                new CacheRequest(
+                    LabLocator.LOCALHOST,
+                    ImmutableList.of("device_id_100"),
+                    Duration.ofHours(3),
+                    "xts",
+                    "session_id")));
+
+    plugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null));
+
+    verify(sessionDeviceCache)
+        .invalidateCache(
+            eq(
+                new InvalidateCacheRequest(
+                    LabLocator.LOCALHOST, ImmutableList.of("device_id_100"), "xts", "session_id")));
   }
 }
