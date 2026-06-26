@@ -29,7 +29,7 @@ import org.junit.runners.JUnit4;
 public final class ProtoReflectionUtilTest {
 
   @Test
-  public void behaviorBeingTested_expectedResult() {
+  public void newInstance_returnsBuilder() {
     Foo.Builder builder = ProtoReflectionUtil.newInstance(Foo.class, Foo.Builder.class);
 
     assertEquals(
