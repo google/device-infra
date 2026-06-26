@@ -106,12 +106,14 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/event/util",
         "//src/java/com/google/devtools/mobileharness/platform/android/instrumentation:android_instrumentation_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/instrumentation/parser",
+        "//src/java/com/google/devtools/mobileharness/platform/android/instrumentation/result:test_suite_result_converter",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemsetting",
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:android_package_manager_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/base",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/junit/xmlwriter/model",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:aapt",
@@ -130,6 +132,7 @@ java_library(
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
+        "@protobuf//:protobuf_java_util",
     ],
 )
 

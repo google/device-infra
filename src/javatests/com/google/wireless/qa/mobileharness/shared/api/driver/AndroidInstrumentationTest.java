@@ -22,6 +22,7 @@ import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_END_EPOCH_MS;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_START_EPOCH_MS;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -70,6 +71,8 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfoMocker;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
+import java.io.File;
+import java.nio.file.Files;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -81,6 +84,7 @@ import javax.annotation.Nullable;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentMatchers;
@@ -91,6 +95,7 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public class AndroidInstrumentationTest {
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
+  @Rule public final TemporaryFolder tempFolder = new TemporaryFolder();
   @Mock private Device device;
   @Bind @Mock private AndroidFileUtil androidFileUtil;
   @Mock private AndroidPackageManagerUtil androidPackageManagerUtil;
@@ -126,8 +131,6 @@ public class AndroidInstrumentationTest {
   private static final String TEST_METHOD_NAME = "testText";
   private static final String TEST_NAME =
       TEST_PACKAGE + "." + TEST_CLASS_NAME + "#" + TEST_METHOD_NAME;
-  private static final String JOB_GEN_FILE_DIR_PATH = "/job/gen/file/dir";
-  private static final String GEN_FILE_DIR_PATH = JOB_GEN_FILE_DIR_PATH + "/test/gen/file/dir";
   private static final String TMP_FILE_DIR_PATH = "/test/tmp/file/dir";
   private static final String DEFAULT_INSTRUMENTATION_LOG_FILE_NAME = "instrument.log";
 
@@ -135,6 +138,9 @@ public class AndroidInstrumentationTest {
   private static final int DEFAULT_SDK_VERSION = 28;
   private static final String EXTERNAL_STORAGE = "/mnt/sdcard";
   private static final Duration TEST_TIMEOUT = Duration.ofSeconds(30);
+
+  private String jobGenFileDirPath;
+  private String genFileDirPath;
 
   private AndroidInstrumentation driver;
 
@@ -158,6 +164,12 @@ public class AndroidInstrumentationTest {
     when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(DEFAULT_SDK_VERSION);
     when(androidInstrumentationUtil.getTestArgs(any())).thenReturn(ImmutableMap.of());
     when(clock.instant()).thenReturn(Instant.ofEpochMilli(1L)).thenReturn(Instant.ofEpochMilli(2L));
+    jobGenFileDirPath = tempFolder.getRoot().getAbsolutePath() + "/job/gen/file/dir";
+    genFileDirPath = jobGenFileDirPath + "/test/gen/file/dir";
+    File genFileDir = new File(genFileDirPath);
+    if (!genFileDir.exists()) {
+      genFileDir.mkdirs();
+    }
   }
 
   @Test
@@ -185,7 +197,7 @@ public class AndroidInstrumentationTest {
     assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
     verify(fileUtil)
         .writeToFile(
-            PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
+            PathUtil.join(genFileDirPath, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
             instrumentationLog);
     assertThat(testInfo.properties().get(ANDROID_INSTRUMENTATION_TEST_START_EPOCH_MS))
         .isEqualTo("1");
@@ -257,7 +269,7 @@ public class AndroidInstrumentationTest {
     assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.FAIL);
     verify(fileUtil)
         .writeToFile(
-            PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
+            PathUtil.join(genFileDirPath, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
             instrumentationLog);
   }
 
@@ -286,7 +298,7 @@ public class AndroidInstrumentationTest {
     assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
     verify(fileUtil)
         .writeToFile(
-            PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
+            PathUtil.join(genFileDirPath, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
             instrumentationLog);
   }
 
@@ -318,7 +330,7 @@ public class AndroidInstrumentationTest {
     assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
     verify(fileUtil)
         .writeToFile(
-            PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
+            PathUtil.join(genFileDirPath, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
             instrumentationLog);
   }
 
@@ -358,15 +370,21 @@ public class AndroidInstrumentationTest {
     assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
     verify(fileUtil)
         .writeToFile(
-            PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
+            PathUtil.join(genFileDirPath, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
             instrumentationLog);
     verify(fileUtil)
         .writeToFile(
-            eq(PathUtil.join(GEN_FILE_DIR_PATH, "instrument_test_result.textproto")),
+            eq(PathUtil.join(genFileDirPath, "instrument_test_result.textproto")),
             any(String.class));
     verify(fileUtil)
         .writeToFile(
-            eq(PathUtil.join(GEN_FILE_DIR_PATH, "instrument_test_result.pb")), any(byte[].class));
+            eq(PathUtil.join(genFileDirPath, "instrument_test_result.pb")), any(byte[].class));
+
+    File xmlResultFile = new File(PathUtil.join(genFileDirPath, "test_result.xml"));
+    assertThat(xmlResultFile.exists()).isTrue();
+    String xmlContent = new String(Files.readAllBytes(xmlResultFile.toPath()), UTF_8);
+    assertThat(xmlContent).contains("<testsuites>");
+    assertThat(xmlContent).contains("<testsuite ");
   }
 
   @Test
@@ -402,7 +420,7 @@ public class AndroidInstrumentationTest {
     assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.FAIL);
     verify(fileUtil)
         .writeToFile(
-            PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
+            PathUtil.join(genFileDirPath, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
             instrumentationLog);
   }
 
@@ -451,7 +469,7 @@ public class AndroidInstrumentationTest {
     assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.ERROR);
     verify(fileUtil)
         .writeToFile(
-            PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
+            PathUtil.join(genFileDirPath, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
             instrumentationLog);
   }
 
@@ -506,7 +524,7 @@ public class AndroidInstrumentationTest {
     assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.ERROR);
     verify(fileUtil)
         .writeToFile(
-            PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
+            PathUtil.join(genFileDirPath, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
             instrumentationLog);
   }
 
@@ -555,7 +573,7 @@ public class AndroidInstrumentationTest {
     assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
     verify(fileUtil)
         .writeToFile(
-            PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
+            PathUtil.join(genFileDirPath, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
             instrumentationLog);
   }
 
@@ -583,7 +601,7 @@ public class AndroidInstrumentationTest {
     assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
     verify(fileUtil)
         .writeToFile(
-            PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
+            PathUtil.join(genFileDirPath, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
             instrumentationLog);
   }
 
@@ -610,7 +628,7 @@ public class AndroidInstrumentationTest {
     assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
     verify(fileUtil)
         .writeToFile(
-            PathUtil.join(GEN_FILE_DIR_PATH, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
+            PathUtil.join(genFileDirPath, DEFAULT_INSTRUMENTATION_LOG_FILE_NAME),
             instrumentationLog);
   }
 
@@ -644,7 +662,7 @@ public class AndroidInstrumentationTest {
     jobInfo.params().add(AndroidInstrumentationDriverSpec.PARAM_OPTIONS, options);
     JobSetting jobSetting = spy(jobInfo.setting());
     doReturn(jobSetting).when(jobInfo).setting();
-    when(jobSetting.getGenFileDir()).thenReturn(JOB_GEN_FILE_DIR_PATH);
+    when(jobSetting.getGenFileDir()).thenReturn(jobGenFileDirPath);
     when(testInfo.getTmpFileDir()).thenReturn(TMP_FILE_DIR_PATH);
     String hostArgFilePath =
         PathUtil.join(TMP_FILE_DIR_PATH, TestStorageConstants.TEST_ARGS_FILE_NAME);
@@ -659,7 +677,7 @@ public class AndroidInstrumentationTest {
         .thenReturn(Optional.of(EXTERNAL_STORAGE));
 
     // Removes google test dir on device.
-    when(testInfo.getGenFileDir()).thenReturn(GEN_FILE_DIR_PATH);
+    when(testInfo.getGenFileDir()).thenReturn(genFileDirPath);
 
     // Installs apks.
     when(apkInstaller.installApkIfNotExist(

@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.platform.android.instrumentation.Prepar
 import com.google.devtools.mobileharness.platform.android.instrumentation.parser.AmInstrumentationParser;
 import com.google.devtools.mobileharness.platform.android.instrumentation.parser.AmInstrumentationResultBuilder;
 import com.google.devtools.mobileharness.platform.android.instrumentation.parser.TestTimeTrackerKt;
+import com.google.devtools.mobileharness.platform.android.instrumentation.result.TestSuiteResultConverter;
 import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestStatus;
 import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestSuiteResult;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
@@ -50,7 +51,10 @@ import com.google.devtools.mobileharness.platform.android.packagemanager.Android
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.junit.xmlwriter.model.AntXmlResultWriter;
+import com.google.devtools.mobileharness.shared.util.junit.xmlwriter.model.XmlWriter;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.android.parser.AndroidInstrumentationParser;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
@@ -67,6 +71,9 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidInstrumentationSpec;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -507,11 +514,12 @@ public class AndroidInstrumentation extends BaseDriver
                   + " - test target: %s%n - timeout: %d ms%n - options: %s",
               testTarget, testTimeoutMs, StrUtil.DEFAULT_MAP_JOINER.join(optionMap));
       testInfo.log().atInfo().alsoTo(logger).log("%s", message);
+      Instant instrumentationStartTime = clock.instant();
       testInfo
           .properties()
           .add(
               ANDROID_INSTRUMENTATION_TEST_START_EPOCH_MS,
-              Long.toString(clock.instant().toEpochMilli()));
+              Long.toString(instrumentationStartTime.toEpochMilli()));
 
       String output;
       MobileHarnessException mhException = null;
@@ -576,12 +584,14 @@ public class AndroidInstrumentation extends BaseDriver
       }
 
       if (testSuiteResultBuilder != null) {
+        TestSuiteResult testSuiteResult = testSuiteResultBuilder.build();
         fileUtil.writeToFile(
             PathUtil.join(testInfo.getGenFileDir(), "instrument_test_result.textproto"),
-            testSuiteResultBuilder.build().toString());
+            testSuiteResult.toString());
         fileUtil.writeToFile(
             PathUtil.join(testInfo.getGenFileDir(), "instrument_test_result.pb"),
-            testSuiteResultBuilder.build().toByteArray());
+            testSuiteResult.toByteArray());
+        generateJunitXml(testSuiteResult, testInfo, instrumentationStartTime);
       }
 
       // Checks the result.
@@ -984,5 +994,29 @@ public class AndroidInstrumentation extends BaseDriver
   protected String getTestApk(TestInfo testInfo) {
     return Iterables.getOnlyElement(
         testInfo.jobInfo().files().get(AndroidInstrumentationDriverSpec.TAG_TEST_APK));
+  }
+
+  private static void generateJunitXml(
+      TestSuiteResult testSuiteResult, TestInfo testInfo, Instant instrumentationStartTime)
+      throws MobileHarnessException {
+    String testResultFilePath = PathUtil.join(testInfo.getGenFileDir(), "test_result.xml");
+    try {
+      com.google.devtools.mobileharness.shared.util.junit.xmlwriter.model.TestResult testResult =
+          TestSuiteResultConverter.toJunitTestResult(
+              testSuiteResult, Timestamps.fromMillis(instrumentationStartTime.toEpochMilli()));
+      try (OutputStream outputStream = new FileOutputStream(testResultFilePath)) {
+        XmlWriter writer = new XmlWriter(outputStream);
+        AntXmlResultWriter resultWriter =
+            new AntXmlResultWriter(/* optionalTestSuitesNode= */ false);
+        resultWriter.writeTestSuites(writer, testResult);
+      }
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_INSTRUMENTATION_WRITE_JUNIT_XML_ERROR,
+          String.format(
+              "Failed to write instrumentation test result to the XML file: %s",
+              testResultFilePath),
+          e);
+    }
   }
 }
