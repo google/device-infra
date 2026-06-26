@@ -156,6 +156,8 @@ public final class Dimension {
     DIAL_APP_URL_SUFFIX,
     /** The URL suffix for DIAL rest. */
     DIAL_REST_URL_SUFFIX,
+    /** The DAB MQTT broker URI. */
+    /** The DAB Device ID. */
     /** Whether the device has the YouTube app installed. */
     /** The release version of the device. */
     RELEASE_VERSION,
