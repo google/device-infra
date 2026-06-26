@@ -20,6 +20,7 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -41,6 +42,7 @@ import javax.inject.Inject;
 
 /** Unified implementation of {@link ConfigurationProvider}. */
 public class ConfigurationProviderImpl implements ConfigurationProvider {
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final DeviceConfigStub deviceConfigStub;
   private final ListeningExecutorService executor;
@@ -126,7 +128,16 @@ public class ConfigurationProviderImpl implements ConfigurationProvider {
             .build();
     return Futures.transform(
         deviceConfigStub.updateDeviceConfigsAsync(request, useClientRpcAuthority),
-        response -> null,
+        response -> {
+          String errorMessage = response.getErrorMessageMap().get(deviceId);
+          if (errorMessage != null) {
+            logger.atWarning().log(
+                "Device config service returned error for %s: %s", deviceId, errorMessage);
+            throw new IllegalStateException(
+                String.format("Failed to update config of device %s: %s", deviceId, errorMessage));
+          }
+          return null;
+        },
         executor);
   }
 

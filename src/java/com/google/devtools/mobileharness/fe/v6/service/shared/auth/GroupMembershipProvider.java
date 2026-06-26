@@ -24,4 +24,13 @@ public interface GroupMembershipProvider {
 
   /** Returns true if the given user is a member of any of the given groups. */
   ListenableFuture<Boolean> isMemberOfAny(String username, List<String> groupNames);
+
+  /**
+   * Returns true if the given name is a valid user or mdb group.
+   *
+   * <p>This is used for pre-save validation of owner/executor names. Implementations should return
+   * true if the name exists and false if it doesn't. If the underlying service is unavailable,
+   * implementations should return true to avoid blocking saves.
+   */
+  ListenableFuture<Boolean> exists(String name);
 }

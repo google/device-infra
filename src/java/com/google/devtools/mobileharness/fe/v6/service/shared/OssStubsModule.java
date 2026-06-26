@@ -158,5 +158,10 @@ public final class OssStubsModule extends AbstractModule {
     public ListenableFuture<Boolean> isMemberOfAny(String username, List<String> groupNames) {
       return immediateFuture(false);
     }
+
+    @Override
+    public ListenableFuture<Boolean> exists(String name) {
+      return immediateFuture(true);
+    }
   }
 }
