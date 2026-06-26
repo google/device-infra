@@ -112,7 +112,12 @@ public class JobSpecWalker {
         walkExtension(builder, field, visitor);
       } else {
         if (field.getType() == Type.MESSAGE) {
-          if (field.isRepeated()) {
+          if (field.isMapField()) {
+            // Skipping the walking when the field is of map type, as we don't currently have use
+            // case for it.
+            // We explicitly skip it to avoid exceptions/crashes when calling
+            // getRepeatedFieldBuilder.
+          } else if (field.isRepeated()) {
             walkRepeatedMessage(builder, field, visitor);
           } else {
             walkMessage(builder.getFieldBuilder(field), visitor);
