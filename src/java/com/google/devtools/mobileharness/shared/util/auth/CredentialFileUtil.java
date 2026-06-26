@@ -58,13 +58,21 @@ public class CredentialFileUtil {
   }
 
   /** Returns the credential file for file transfer. */
-  public static Optional<String> getFileTransferCredentialFile() {
+  public static Optional<String> getFileTransferCredentialFile(String bucket) {
+    if (bucket.equals(Flags.fileTransferBucket.get())) {
+      return getDefaultGcsCredentialFile();
+    }
+    return Optional.empty();
+  }
+
+  /** Returns the default GCS credential file. */
+  public static Optional<String> getDefaultGcsCredentialFile() {
     LocalFileUtil localFileUtil = new LocalFileUtil();
 
     String fileTransferCredFile = Flags.fileTransferCredFile.get();
     if (fileTransferCredFile != null && localFileUtil.isFileExist(fileTransferCredFile)) {
       logger.atInfo().log(
-          "Using local file from --file_transfer_cred_file as file transfer credential: %s",
+          "Using local file from --file_transfer_cred_file as default GCS credential: %s",
           fileTransferCredFile);
       return Optional.of(fileTransferCredFile);
     }
@@ -72,11 +80,11 @@ public class CredentialFileUtil {
   }
 
   /** Returns the credential file for GCS file resolver. */
-  public static Optional<String> getGcsResolverCredentialFile(String bucket) {
+  public static Optional<String> getGcsResolverCredentialFile() {
     if (Flags.gcsResolverCredentialFile.get() != null) {
       return Optional.of(Flags.gcsResolverCredentialFile.get());
     }
 
-    return Optional.empty();
+    return getDefaultGcsCredentialFile();
   }
 }

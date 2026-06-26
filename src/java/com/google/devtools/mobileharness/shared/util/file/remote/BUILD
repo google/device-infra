@@ -78,8 +78,8 @@ java_library(
     deps = [
         ":gcs_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/auth:credential_file_util",
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -91,7 +91,6 @@ java_library(
     ],
     deps = [
         ":dataclass",
-        ":gcs_credential_util",
         ":gcs_util",
         ":gcs_util_factory",
         "//src/java/com/google/devtools/mobileharness/api/model/error",

@@ -147,7 +147,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
             FileTransferConstant.getLocalCacheTtl(),
             Optional.of(params.uploadShardSize()),
             Optional.of(params.downloadShardSize()),
-            GcsCredentialUtil.getCredentialType(params.cloudFileTransferBucket())),
+            GcsCredentialUtil.getFileTransferCredentialType(params.cloudFileTransferBucket())),
         params.homeDir().resolve("tmp"),
         params,
         new LocalFileUtil(),

@@ -254,7 +254,7 @@ public class CloudFileTransferServiceImpl {
           localCacheTtl,
           uploadShardSize,
           downloadShardSize,
-          GcsCredentialUtil.getCredentialType(bucketName));
+          GcsCredentialUtil.getFileTransferCredentialType(bucketName));
     } catch (MobileHarnessException e) {
       logger.atWarning().withCause(e).log(
           "Failed to create GcsFileManager for bucket: %s", bucketName);

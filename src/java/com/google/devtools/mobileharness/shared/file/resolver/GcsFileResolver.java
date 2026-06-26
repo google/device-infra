@@ -30,9 +30,9 @@ import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveResult;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveSource;
-import com.google.devtools.mobileharness.shared.util.auth.CredentialFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Algorithm;
 import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Checksum;
+import com.google.devtools.mobileharness.shared.util.file.remote.GcsCredentialUtil;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsParams;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtilFactory;
@@ -57,7 +57,6 @@ public class GcsFileResolver extends AbstractFileResolver {
       Pattern.compile("^gs://(?<bucket>[^/]+)/(?<path>.+)$");
 
   private final LoadingCache<GcsKey, GcsUtil> gcsUtilCache;
-  private final SystemUtil systemUtil;
 
   @AutoValue
   abstract static class GcsKey {
@@ -86,7 +85,6 @@ public class GcsFileResolver extends AbstractFileResolver {
   public GcsFileResolver(
       @Nullable ListeningExecutorService executorService, SystemUtil systemUtil) {
     super(executorService);
-    this.systemUtil = systemUtil;
     CacheLoader<GcsKey, GcsUtil> cacheLoader =
         new CacheLoader<>() {
           @Override
@@ -146,17 +144,10 @@ public class GcsFileResolver extends AbstractFileResolver {
     String bucket = matcher.group("bucket");
     String filePath = matcher.group("path");
     GcsUtil.CredentialType credentialType =
-        getCredentialType(resolveSource.parameters().get(PARAM_GCS_SERVICE_ACCOUNT), bucket);
+        GcsCredentialUtil.getGcsResolverCredentialType(
+            resolveSource.parameters().get(PARAM_GCS_SERVICE_ACCOUNT));
 
     return ParseResult.create(GcsKey.create(bucket, credentialType), filePath);
-  }
-
-  private GcsUtil.CredentialType getCredentialType(@Nullable String serviceAccount, String bucket) {
-    Optional<String> credentialFile = CredentialFileUtil.getGcsResolverCredentialFile(bucket);
-    if (credentialFile.isPresent()) {
-      return GcsUtil.CredentialType.ofCredentialFile(credentialFile.get());
-    }
-    return GcsUtil.CredentialType.ofAppDefault();
   }
 
   private GcsUtil getGcsUtil(GcsKey gcsKey) throws MobileHarnessException {

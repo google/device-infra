@@ -99,9 +99,9 @@ public class GcsFileManager {
     this(
         homeDir,
         bucket,
-        CredentialFileUtil.getFileTransferCredentialFile().isPresent()
+        CredentialFileUtil.getDefaultGcsCredentialFile().isPresent()
             ? GcsUtil.CredentialType.ofCredentialFile(
-                CredentialFileUtil.getFileTransferCredentialFile().get())
+                CredentialFileUtil.getDefaultGcsCredentialFile().get())
             : GcsUtil.CredentialType.ofAppDefault());
   }
 
