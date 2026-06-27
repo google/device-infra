@@ -122,6 +122,7 @@ java_library(
     ],
     visibility = [
         "//:omnilab_fusion",
+        "//javatests/com/google/devtools/mobileharness/platform/maneki/utils:__pkg__",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/proxy:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/provider:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
