@@ -18,10 +18,12 @@ package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.HostTypes;
+import com.google.devtools.mobileharness.fe.v6.service.host.util.LabServerActionAvailabilities;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostConnectivityStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.LifecycleActionType;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
@@ -51,8 +53,6 @@ public class LabServerStartButtonBuilder {
       HostConnectivityStatus connectivityStatus,
       DaemonServerInfo.Status daemonStatus) {
 
-    // TODO: Refactor this logic into a shared util class when it is needed by 2 consumers (e.g.,
-    // for the preflight request).
     if (!featureManagerFactory.create(universe).isLabServerStartFeatureEnabled()) {
       return ActionButtonState.newBuilder().setVisible(false).build();
     }
@@ -63,20 +63,15 @@ public class LabServerStartButtonBuilder {
       return ActionButtonState.newBuilder().setVisible(false).build();
     }
 
-    boolean isTargetActivityState =
-        activity.getState() == LabServerInfo.ActivityState.DRAINED
-            || activity.getState() == LabServerInfo.ActivityState.STOPPED
-            || activity.getState() == LabServerInfo.ActivityState.UNKNOWN;
-
-    boolean daemonRunning = daemonStatus.getState() == DaemonServerInfo.State.RUNNING;
-    boolean daemonMissing = daemonStatus.getState() == DaemonServerInfo.State.MISSING;
-
-    boolean visibleCondition = daemonMissing || (daemonRunning && isTargetActivityState);
+    // Visible when the activity is a valid Start target; daemon state decides enabled.
+    boolean visibleCondition =
+        LabServerActionAvailabilities.isTargetActivity(LifecycleActionType.START, activity);
 
     if (!visibleCondition) {
       return ActionButtonState.newBuilder().setVisible(false).build();
     }
 
+    boolean daemonRunning = daemonStatus.getState() == DaemonServerInfo.State.RUNNING;
     boolean isReady = featureReadiness.isLabServerStartReady();
 
     String tooltip =

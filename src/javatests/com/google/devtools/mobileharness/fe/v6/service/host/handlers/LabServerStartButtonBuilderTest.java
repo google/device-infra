@@ -187,7 +187,7 @@ public final class LabServerStartButtonBuilderTest {
   }
 
   @Test
-  public void build_visibleConditionMetAndReadyDaemonMissing_returnsVisibleAndDisabled() {
+  public void build_targetActivityDaemonMissing_returnsVisibleAndDisabled() {
     when(mockFeatureManager.isLabServerStartFeatureEnabled()).thenReturn(true);
     when(mockFeatureReadiness.isLabServerStartReady()).thenReturn(true);
 
@@ -195,13 +195,16 @@ public final class LabServerStartButtonBuilderTest {
         HostConnectivityStatus.newBuilder().setState(HostConnectivityStatus.State.RUNNING).build();
     DaemonServerInfo.Status daemonMissing =
         DaemonServerInfo.Status.newBuilder().setState(DaemonServerInfo.State.MISSING).build();
+    LabServerInfo.Activity stoppedActivity =
+        LabServerInfo.Activity.newBuilder().setState(LabServerInfo.ActivityState.STOPPED).build();
 
+    // Visible because the activity is a valid Start target; disabled because daemon is missing.
     var result =
         labServerStartButtonBuilder.build(
             UNIVERSE,
             Optional.empty(),
             Optional.empty(),
-            LabServerInfo.Activity.getDefaultInstance(),
+            stoppedActivity,
             runningStatus,
             daemonMissing);
 
@@ -211,26 +214,25 @@ public final class LabServerStartButtonBuilderTest {
   }
 
   @Test
-  public void build_hostNotRunningDaemonMissing_returnsVisibleAndDisabled() {
+  public void build_nonTargetActivity_returnsInvisible() {
     when(mockFeatureManager.isLabServerStartFeatureEnabled()).thenReturn(true);
     when(mockFeatureReadiness.isLabServerStartReady()).thenReturn(true);
 
-    HostConnectivityStatus missingStatus =
-        HostConnectivityStatus.newBuilder().setState(HostConnectivityStatus.State.MISSING).build();
     DaemonServerInfo.Status daemonMissing =
         DaemonServerInfo.Status.newBuilder().setState(DaemonServerInfo.State.MISSING).build();
+    LabServerInfo.Activity startedActivity =
+        LabServerInfo.Activity.newBuilder().setState(LabServerInfo.ActivityState.STARTED).build();
 
+    // Not a valid Start target -> hidden, regardless of daemon state.
     var result =
         labServerStartButtonBuilder.build(
             UNIVERSE,
             Optional.empty(),
             Optional.empty(),
-            LabServerInfo.Activity.getDefaultInstance(),
-            missingStatus,
+            startedActivity,
+            HostConnectivityStatus.getDefaultInstance(),
             daemonMissing);
 
-    assertThat(result.getVisible()).isTrue();
-    assertThat(result.getEnabled()).isFalse();
-    assertThat(result.getTooltip()).contains("daemon server is missing");
+    assertThat(result.getVisible()).isFalse();
   }
 }
