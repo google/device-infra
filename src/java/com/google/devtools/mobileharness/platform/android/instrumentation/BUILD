@@ -40,6 +40,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out",
         "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/instrumentation/androidx",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkfile:apk_analyzer",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemstate",

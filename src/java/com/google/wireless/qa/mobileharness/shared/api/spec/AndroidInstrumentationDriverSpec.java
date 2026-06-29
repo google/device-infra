@@ -254,6 +254,19 @@ public interface AndroidInstrumentationDriverSpec {
   @ParamAnnotation(
       required = false,
       help =
+          """
+          Specifies AndroidX orchestrator and test services APK versions to install. One of
+          '' (the default, no installation), 'auto' (system default), or from the supported \
+          versions in \
+          third_party/deviceinfra/src/java/com/google/devtools/mobileharness/platform/android/instrumentation/androidx/AndroidxDependencies.java. \
+          Warning: Versions and default mappings are subject to change or removed without notice. \
+          Pinning an explicit version requires manual maintenance by users.
+          """)
+  String PARAM_ORCHESTRATOR_VERSION = "orchestrator_version";
+
+  @ParamAnnotation(
+      required = false,
+      help =
           "Whether to use test storage service to run the instrumentation. By default, this is"
               + " true.")
   String PARAM_USE_TEST_STORAGE_SERVICE = "use_test_storage_service";

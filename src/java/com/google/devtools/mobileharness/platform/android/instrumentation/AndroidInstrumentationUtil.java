@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.api.model.job.out.Warnings;
 import com.google.devtools.mobileharness.api.model.proto.Test;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
+import com.google.devtools.mobileharness.platform.android.instrumentation.androidx.AndroidxDependencies;
 import com.google.devtools.mobileharness.platform.android.lightning.apkfile.ApkAnalyzer;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
@@ -240,6 +241,8 @@ public class AndroidInstrumentationUtil {
 
   private final Sleeper sleeper;
 
+  private final AndroidxDependencies androidxDependencies;
+
   /** Creates a util for Android device operations. */
   public AndroidInstrumentationUtil() {
     this(
@@ -255,7 +258,8 @@ public class AndroidInstrumentationUtil {
         new ResUtil(),
         new Aapt(),
         new ApkInstaller(),
-        Sleeper.defaultSleeper());
+        Sleeper.defaultSleeper(),
+        new AndroidxDependencies());
   }
 
   /** Constructor for unit tests only. */
@@ -273,7 +277,8 @@ public class AndroidInstrumentationUtil {
       ResUtil resUtil,
       Aapt aapt,
       ApkInstaller apkInstaller,
-      Sleeper sleeper) {
+      Sleeper sleeper,
+      AndroidxDependencies androidxDependencies) {
     this.adb = adb;
     this.commandExecutor = commandExecutor;
     this.clock = clock;
@@ -287,6 +292,7 @@ public class AndroidInstrumentationUtil {
     this.aapt = aapt;
     this.apkInstaller = apkInstaller;
     this.sleeper = sleeper;
+    this.androidxDependencies = androidxDependencies;
   }
 
   /**
@@ -718,17 +724,28 @@ public class AndroidInstrumentationUtil {
         appInstallFinishHandler);
 
     // Installs the test_services.apk to support AndroidTestUtil methods.
-    String testServicesApkPath =
+    String orchestratorVersion =
         testInfo
-                .jobInfo()
-                .files()
-                .get(AndroidInstrumentationDriverSpec.TAG_TEST_SERVICES_APK)
-                .isEmpty()
-            ? getResourceFile(AndroidInstrumentationDriverSpec.TEST_SERVICES_APK_PATH)
-            : testInfo
-                .jobInfo()
-                .files()
-                .getSingle(AndroidInstrumentationDriverSpec.TAG_TEST_SERVICES_APK);
+            .jobInfo()
+            .params()
+            .get(AndroidInstrumentationDriverSpec.PARAM_ORCHESTRATOR_VERSION);
+    String testServicesApkPath;
+    if (!StrUtil.isEmptyOrWhitespace(orchestratorVersion)) {
+      testServicesApkPath = androidxDependencies.getTestServicesApkPath(orchestratorVersion);
+    } else if (!testInfo
+        .jobInfo()
+        .files()
+        .get(AndroidInstrumentationDriverSpec.TAG_TEST_SERVICES_APK)
+        .isEmpty()) {
+      testServicesApkPath =
+          testInfo
+              .jobInfo()
+              .files()
+              .getSingle(AndroidInstrumentationDriverSpec.TAG_TEST_SERVICES_APK);
+    } else {
+      testServicesApkPath =
+          getResourceFile(AndroidInstrumentationDriverSpec.TEST_SERVICES_APK_PATH);
+    }
     String testServicePackageName = aapt.getApkPackageName(testServicesApkPath);
     ApkInstallArgs testServicesApkInstallArgs =
         createServiceApkInstallArgs(testServicesApkPath, deviceSdkVersion, testInfo);
@@ -741,16 +758,21 @@ public class AndroidInstrumentationUtil {
         appInstallFinishHandler);
 
     // Install the orchestrator apk if it is set.
-    if (!testInfo
+    String orchestratorApkPath = null;
+    if (!StrUtil.isEmptyOrWhitespace(orchestratorVersion)) {
+      orchestratorApkPath = androidxDependencies.getOrchestratorApkPath(orchestratorVersion);
+    } else if (!testInfo
         .jobInfo()
         .files()
         .get(AndroidInstrumentationDriverSpec.TAG_ORCHESTRATOR_APK)
         .isEmpty()) {
-      var orchestratorApkPath =
+      orchestratorApkPath =
           testInfo
               .jobInfo()
               .files()
               .getSingle(AndroidInstrumentationDriverSpec.TAG_ORCHESTRATOR_APK);
+    }
+    if (orchestratorApkPath != null) {
       var orchestratorPackageName = aapt.getApkPackageName(orchestratorApkPath);
       var orchestratorApkInstallArgs =
           createServiceApkInstallArgs(orchestratorApkPath, deviceSdkVersion, testInfo);
