@@ -28,7 +28,9 @@ import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.DefaultRetryStrategy;
-import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.DefaultRetryStrategy.RetryInfo;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.FlakyTestRetryStrategy;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.RetryStrategy;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.RetryStrategy.RetryInfo;
 import com.google.devtools.mobileharness.infra.client.api.util.result.ClientAllocErrorUtil;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
@@ -50,16 +52,26 @@ public class TestRetryHandler {
           Ascii.toLowerCase(Test._DRAIN_TIMEOUT_RETRY_ATTEMPTS.name()), PROPERTY_REPEAT_INDEX);
 
   private final DeviceAllocator deviceAllocator;
-  private final DefaultRetryStrategy defaultRetryStrategy;
+  private final RetryStrategy defaultRetryStrategy;
+  private final RetryStrategy flakyTestRetryStrategy;
 
   public TestRetryHandler(DeviceAllocator deviceAllocator) {
-    this(deviceAllocator, new DefaultRetryStrategy());
+    this(deviceAllocator, new DefaultRetryStrategy(), new FlakyTestRetryStrategy());
   }
 
   @VisibleForTesting
-  TestRetryHandler(DeviceAllocator deviceAllocator, DefaultRetryStrategy defaultRetryStrategy) {
+  TestRetryHandler(DeviceAllocator deviceAllocator, RetryStrategy retryStrategy) {
+    this(deviceAllocator, retryStrategy, new FlakyTestRetryStrategy());
+  }
+
+  @VisibleForTesting
+  TestRetryHandler(
+      DeviceAllocator deviceAllocator,
+      RetryStrategy defaultRetryStrategy,
+      RetryStrategy flakyTestRetryStrategy) {
     this.deviceAllocator = deviceAllocator;
     this.defaultRetryStrategy = defaultRetryStrategy;
+    this.flakyTestRetryStrategy = flakyTestRetryStrategy;
   }
 
   @Subscribe
@@ -77,8 +89,11 @@ public class TestRetryHandler {
     for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
       String testName = testInfo.locator().getName();
       testInfo.properties().add(PROPERTY_REPEAT_INDEX, "0");
+      addFinalAttemptProperty(testInfo);
       for (int i = 1; i < repeatRuns; i++) {
-        jobInfo.tests().add(testName).properties().add(PROPERTY_REPEAT_INDEX, Integer.toString(i));
+        TestInfo repeatRunTesInfo = jobInfo.tests().add(testName);
+        repeatRunTesInfo.properties().add(PROPERTY_REPEAT_INDEX, Integer.toString(i));
+        addFinalAttemptProperty(repeatRunTesInfo);
       }
     }
   }
@@ -103,7 +118,6 @@ public class TestRetryHandler {
     Retry retrySetting = jobInfo.setting().getRetry();
     Retry.Level retryLevel = retrySetting.getRetryLevel();
     if (retryLevel == Retry.Level.ALL) {
-      addFinalAttemptProperty(currentTestInfo);
       // Already handled in JobStartEvent. Ignore.
       return;
     }
@@ -119,25 +133,19 @@ public class TestRetryHandler {
 
     boolean isPassAfterRetry =
         foregoingTestResult.isPresent()
-            && TestResult.PASS != foregoingTestResult.get()
-            && TestResult.PASS == currentTestResult;
+            && foregoingTestResult.get() != TestResult.PASS
+            && currentTestResult == TestResult.PASS;
     if (isPassAfterRetry) {
       // Use cases:
       // 1) Show the tests failed because of Container:
       //    NONPASSING_BEFORE_RETRY_PASS=true & CONTAINER_MODE=true
       // 2) Show the failed/error tests that are saved by a general retry:
       //    NONPASSING_BEFORE_RETRY_PASS=true & CONTAINER_MODE=false
-      foregoingTest
-          .get()
-          .properties()
-          .add(Test.NONPASSING_BEFORE_RETRY_PASS, Boolean.TRUE.toString());
+      foregoingTest.get().properties().add(Test.NONPASSING_BEFORE_RETRY_PASS, "true");
       // See b/184734364. Since the foregoing test has ended and nowadays MossUploader will not
       // update test after it ends, we need to explicitly tell MossUploader to update the foregoing
       // test when the job ends.
-      foregoingTest
-          .get()
-          .properties()
-          .add(Test.VOLATILE_TEST_INFO_AFTER_TEST_ENDS, Boolean.TRUE.toString());
+      foregoingTest.get().properties().add(Test.VOLATILE_TEST_INFO_AFTER_TEST_ENDS, "true");
 
       // Use cases:
       // 1) Show the pass retry attempts after a container fail/error runs:
@@ -146,7 +154,7 @@ public class TestRetryHandler {
       //    NONPASSING_BEFORE_RETRY_PASS=true & CONTAINER_MODE=false
       // 3) Show the INFRA_ISSUE tests that are saved by an extra retry:
       //    PASS_AFTER_RETRY=true && RETRY_REASON=EXTRA_RETRY_FOR_INFRA_ISSUE
-      currentTestInfo.properties().add(Test.PASS_AFTER_RETRY, Boolean.TRUE.toString());
+      currentTestInfo.properties().add(Test.PASS_AFTER_RETRY, "true");
       addFinalAttemptProperty(currentTestInfo);
       return;
     }
@@ -179,14 +187,14 @@ public class TestRetryHandler {
       return;
     }
 
-    RetryInfo retryInfo = defaultRetryStrategy.decideRetryOnTestEnd(currentTestInfo);
+    RetryInfo retryInfo = getRetryStrategy(jobInfo).decideRetryOnTestEnd(currentTestInfo);
 
-    if (!retryInfo.shouldRetry()) {
+    if (retryInfo.retryReason().isEmpty()) {
       addFinalAttemptProperty(currentTestInfo);
     } else {
-      String retryReason = retryInfo.retryReason();
+      String retryReason = retryInfo.retryReason().orElse("");
       String testName = currentTestInfo.locator().getName();
-      TestInfo newTest = addNewTest(jobInfo, currentTestInfo, retryInfo.validAttemptNum());
+      TestInfo newTest = addNewTest(jobInfo, currentTestInfo);
 
       newTest.properties().add(Test.RETRY_REASON, retryReason);
       newTest.properties().addAll(retryInfo.newTestProperties());
@@ -220,8 +228,7 @@ public class TestRetryHandler {
     }
   }
 
-  private static TestInfo addNewTest(
-      JobInfo jobInfo, TestInfo currentTestInfo, long validAttemptNum)
+  private static TestInfo addNewTest(JobInfo jobInfo, TestInfo currentTestInfo)
       throws MobileHarnessException {
     String testName = currentTestInfo.locator().getName();
     TestInfo newTestInfo = jobInfo.tests().add(testName);
@@ -236,16 +243,31 @@ public class TestRetryHandler {
     newTestInfo
         .properties()
         .add(Test.FOREGOING_TEST_RESULT, currentTestInfo.resultWithCause().get().type().name());
-    if (validAttemptNum > 0) {
-      // If there have been valid attempts, set the index(start from 0) for the retry.
-      newTestInfo.properties().add(Test.RETRY_INDEX, Long.toString(validAttemptNum));
-      if (!currentTestInfo.properties().has(Test.RETRY_INDEX)) {
-        currentTestInfo.properties().add(Test.RETRY_INDEX, Long.toString(validAttemptNum - 1));
-      }
-    }
+
     currentTestInfo.properties().add(Test.RETRY_TEST_ID, newTestInfo.locator().getId());
 
     return newTestInfo;
+  }
+
+  private RetryStrategy getRetryStrategy(JobInfo jobInfo) {
+    int flakyTestAttempts = jobInfo.params().getInt("flaky_test_attempts", -1);
+    if (flakyTestAttempts >= 1) {
+      jobInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "flaky_test_attempt is set to %d. Using FlakyTestRetryStrategy. All"
+                  + " retry_level/test_attempts args will be ignored.",
+              flakyTestAttempts);
+      return flakyTestRetryStrategy;
+    }
+    jobInfo
+        .log()
+        .atInfo()
+        .alsoTo(logger)
+        .log("Using DefaultRetryStrategy. Will respect retry_level/test_attempts args.");
+    return defaultRetryStrategy;
   }
 
   /** Returns the test which generated the given retry test. */

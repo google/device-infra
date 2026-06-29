@@ -37,7 +37,7 @@ import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWith
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
-import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.DefaultRetryStrategy.RetryInfo;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.RetryStrategy.RetryInfo;
 import com.google.devtools.mobileharness.infra.container.proto.ModeSettingProto.ContainerModePreference;
 import com.google.devtools.mobileharness.shared.util.time.CountDownTimer;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
@@ -76,10 +76,10 @@ public class DefaultRetryStrategyTest {
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Mock private JobInfo jobInfo;
   @Mock private CountDownTimer jobTimer;
-  @Mock private Params jobParams;
   @Mock private TestInfos testInfos;
   @Mock private Result testResult;
   private Properties jobProperties;
+  private Params jobParams;
 
   @SuppressWarnings("DoNotMockAutoValue")
   @Mock
@@ -93,16 +93,13 @@ public class DefaultRetryStrategyTest {
     when(jobInfo.log()).thenReturn(new Log(new Timing()));
     when(jobInfo.tests()).thenReturn(testInfos);
     when(jobInfo.timer()).thenReturn(jobTimer);
-    when(jobInfo.params()).thenReturn(jobParams);
     when(jobInfo.type())
         .thenReturn(JobType.newBuilder().setDriver(ANDROID_INSTRUMENTATION).build());
     when(testResult.get()).thenReturn(testResultWithCause);
     when(testResultWithCause.causeProtoNonEmpty()).thenReturn(ExceptionDetail.getDefaultInstance());
 
-    when(jobParams.get(
-            JobInfo.PARAM_CONTAINER_MODE_PREFERENCE,
-            ContainerModePreference.CONTAINER_MODE_PREFERENCE_UNSPECIFIED.name()))
-        .thenReturn(ContainerModePreference.CONTAINER_MODE_PREFERENCE_UNSPECIFIED.name());
+    jobParams = new Params(null);
+    when(jobInfo.params()).thenReturn(jobParams);
 
     jobProperties = new Properties(new Timing());
     jobProperties.add(PropertyName.Job.ACTUAL_USER, "mh");
@@ -123,12 +120,13 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isTrue();
-    assertThat(retryInfo.retryReason()).isEqualTo("TEST_ERROR");
-    assertThat(retryInfo.validAttemptNum()).isEqualTo(1);
-
+    assertThat(retryInfo.retryReason().orElse(null)).isEqualTo("TEST_ERROR");
     assertThat(retryInfo.newTestProperties())
-        .containsExactly(Ascii.toLowerCase(PropertyName.Test.CONTAINER_MODE.name()), "false");
+        .containsExactly(
+            Ascii.toLowerCase(PropertyName.Test.CONTAINER_MODE.name()),
+            "false",
+            Ascii.toLowerCase(PropertyName.Test.RETRY_INDEX.name()),
+            "1");
   }
 
   @Test
@@ -141,8 +139,7 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isFalse();
-    assertThat(retryInfo.validAttemptNum()).isEqualTo(1);
+    assertThat(retryInfo.retryReason()).isEmpty();
     assertThat(retryInfo.newTestProperties()).isEmpty();
   }
 
@@ -156,8 +153,7 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isFalse();
-    assertThat(retryInfo.validAttemptNum()).isEqualTo(1);
+    assertThat(retryInfo.retryReason()).isEmpty();
     assertThat(retryInfo.newTestProperties()).isEmpty();
   }
 
@@ -171,15 +167,14 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isFalse();
-    assertThat(retryInfo.validAttemptNum()).isEqualTo(1);
+    assertThat(retryInfo.retryReason()).isEmpty();
     assertThat(retryInfo.newTestProperties()).isEmpty();
   }
 
   @Test
   public void decideRetryOnTestEnd_defaultLevel_withTestTimeout_retryOnTimeoutTrue()
       throws MobileHarnessException, InterruptedException {
-    when(jobParams.getBool("retry_on_timeout", true)).thenReturn(true);
+    jobParams.add("retry_on_timeout", "true");
     when(jobTimer.isExpired()).thenReturn(false);
     when(jobInfo.setting()).thenReturn(JobSetting.newBuilder().setRetry(DEFAULT_RETRY).build());
     TestInfo initAttempt = mockTestInfo("init_test_id", TestResult.TIMEOUT);
@@ -187,17 +182,19 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isTrue();
-    assertThat(retryInfo.retryReason()).isEqualTo("TEST_TIMEOUT");
-    assertThat(retryInfo.validAttemptNum()).isEqualTo(1);
+    assertThat(retryInfo.retryReason().orElse(null)).isEqualTo("TEST_TIMEOUT");
     assertThat(retryInfo.newTestProperties())
-        .containsExactly(Ascii.toLowerCase(PropertyName.Test.CONTAINER_MODE.name()), "false");
+        .containsExactly(
+            Ascii.toLowerCase(PropertyName.Test.CONTAINER_MODE.name()),
+            "false",
+            Ascii.toLowerCase(PropertyName.Test.RETRY_INDEX.name()),
+            "1");
   }
 
   @Test
   public void decideRetryOnTestEnd_defaultLevel_withTestTimeout_retryOnTimeoutFalse()
       throws MobileHarnessException, InterruptedException {
-    when(jobParams.getBool("retry_on_timeout", true)).thenReturn(false);
+    jobParams.add("retry_on_timeout", "false");
     when(jobTimer.isExpired()).thenReturn(false);
     when(jobInfo.setting()).thenReturn(JobSetting.newBuilder().setRetry(DEFAULT_RETRY).build());
     TestInfo initAttempt = mockTestInfo("init_test_id", TestResult.TIMEOUT);
@@ -205,15 +202,14 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isFalse();
-    assertThat(retryInfo.validAttemptNum()).isEqualTo(1);
+    assertThat(retryInfo.retryReason()).isEmpty();
     assertThat(retryInfo.newTestProperties()).isEmpty();
   }
 
   @Test
   public void decideRetryOnTestEnd_defaultLevel_withCustomerTimeoutException_retryOnTimeoutTrue()
       throws MobileHarnessException, InterruptedException {
-    when(jobParams.getBool("retry_on_timeout", true)).thenReturn(true);
+    jobParams.add("retry_on_timeout", "true");
     when(jobTimer.isExpired()).thenReturn(false);
     when(jobInfo.setting()).thenReturn(JobSetting.newBuilder().setRetry(DEFAULT_RETRY).build());
     TestInfo initAttempt =
@@ -225,17 +221,19 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isTrue();
-    assertThat(retryInfo.retryReason()).isEqualTo("TEST_ERROR");
-    assertThat(retryInfo.validAttemptNum()).isEqualTo(1);
+    assertThat(retryInfo.retryReason().orElse(null)).isEqualTo("TEST_ERROR");
     assertThat(retryInfo.newTestProperties())
-        .containsExactly(Ascii.toLowerCase(PropertyName.Test.CONTAINER_MODE.name()), "false");
+        .containsExactly(
+            Ascii.toLowerCase(PropertyName.Test.CONTAINER_MODE.name()),
+            "false",
+            Ascii.toLowerCase(PropertyName.Test.RETRY_INDEX.name()),
+            "1");
   }
 
   @Test
   public void decideRetryOnTestEnd_defaultLevel_withCustomerTimeoutException_retryOnTimeoutFalse()
       throws MobileHarnessException, InterruptedException {
-    when(jobParams.getBool("retry_on_timeout", true)).thenReturn(false);
+    jobParams.add("retry_on_timeout", "false");
     when(jobTimer.isExpired()).thenReturn(false);
     when(jobInfo.setting()).thenReturn(JobSetting.newBuilder().setRetry(DEFAULT_RETRY).build());
     TestInfo initAttempt =
@@ -247,8 +245,7 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isFalse();
-    assertThat(retryInfo.validAttemptNum()).isEqualTo(1);
+    assertThat(retryInfo.retryReason()).isEmpty();
     assertThat(retryInfo.newTestProperties()).isEmpty();
   }
 
@@ -266,12 +263,13 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isTrue();
-    assertThat(retryInfo.retryReason()).isEqualTo("TEST_FAIL");
-    assertThat(retryInfo.validAttemptNum()).isEqualTo(1);
-
+    assertThat(retryInfo.retryReason().orElse(null)).isEqualTo("TEST_FAIL");
     assertThat(retryInfo.newTestProperties())
-        .containsExactly(Ascii.toLowerCase(PropertyName.Test.CONTAINER_MODE.name()), "false");
+        .containsExactly(
+            Ascii.toLowerCase(PropertyName.Test.CONTAINER_MODE.name()),
+            "false",
+            Ascii.toLowerCase(PropertyName.Test.RETRY_INDEX.name()),
+            "1");
   }
 
   @Test
@@ -292,15 +290,15 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isTrue();
-    assertThat(retryInfo.retryReason()).isEqualTo("TEST_FAIL");
-    assertThat(retryInfo.validAttemptNum()).isEqualTo(1);
+    assertThat(retryInfo.retryReason().orElse(null)).isEqualTo("TEST_FAIL");
     assertThat(retryInfo.newTestProperties())
         .containsExactly(
             Ascii.toLowerCase(PropertyName.Test.RETRY_AFTER_NO_VALID_UID_ASSIGNED.name()),
             "true",
             Ascii.toLowerCase(PropertyName.Test.CONTAINER_MODE.name()),
-            "false");
+            "false",
+            Ascii.toLowerCase(PropertyName.Test.RETRY_INDEX.name()),
+            "1");
   }
 
   @Test
@@ -318,9 +316,7 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isTrue();
-    assertThat(retryInfo.retryReason()).isEqualTo("POTENTIAL_CONTAINER_ISSUE");
-    assertThat(retryInfo.validAttemptNum()).isEqualTo(0);
+    assertThat(retryInfo.retryReason().orElse(null)).isEqualTo("POTENTIAL_CONTAINER_ISSUE");
 
     assertThat(retryInfo.newTestProperties())
         .containsExactly(
@@ -330,10 +326,9 @@ public class DefaultRetryStrategyTest {
   @Test
   public void decideRetryOnTestEnd_mandatoryContainer_shouldNotRetry()
       throws MobileHarnessException, InterruptedException {
-    when(jobParams.get(
-            JobInfo.PARAM_CONTAINER_MODE_PREFERENCE,
-            ContainerModePreference.CONTAINER_MODE_PREFERENCE_UNSPECIFIED.name()))
-        .thenReturn(ContainerModePreference.MANDATORY_CONTAINER.name());
+    jobParams.add(
+        JobInfo.PARAM_CONTAINER_MODE_PREFERENCE,
+        ContainerModePreference.MANDATORY_CONTAINER.name());
     when(jobTimer.isExpired()).thenReturn(false);
     when(jobInfo.setting())
         .thenReturn(
@@ -347,8 +342,7 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isFalse();
-    assertThat(retryInfo.validAttemptNum()).isEqualTo(1);
+    assertThat(retryInfo.retryReason()).isEmpty();
     assertThat(retryInfo.newTestProperties()).isEmpty();
   }
 
@@ -373,11 +367,14 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(lastAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isTrue();
-    assertThat(retryInfo.retryReason()).isEqualTo("EXTRA_RETRY_FOR_INFRA_ISSUE_AS_CRITICAL_ERROR");
-    assertThat(retryInfo.validAttemptNum()).isEqualTo(2);
+    assertThat(retryInfo.retryReason().orElse(null))
+        .isEqualTo("EXTRA_RETRY_FOR_INFRA_ISSUE_AS_CRITICAL_ERROR");
     assertThat(retryInfo.newTestProperties())
-        .containsExactly(Ascii.toLowerCase(PropertyName.Test.CONTAINER_MODE.name()), "false");
+        .containsExactly(
+            Ascii.toLowerCase(PropertyName.Test.CONTAINER_MODE.name()),
+            "false",
+            Ascii.toLowerCase(PropertyName.Test.RETRY_INDEX.name()),
+            "2");
   }
 
   @Test
@@ -402,8 +399,7 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(lastAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isFalse();
-    assertThat(retryInfo.validAttemptNum()).isEqualTo(2);
+    assertThat(retryInfo.retryReason()).isEmpty();
     assertThat(retryInfo.newTestProperties()).isEmpty();
   }
 
@@ -448,8 +444,7 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(lastAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isFalse();
-    assertThat(retryInfo.validAttemptNum()).isEqualTo(2);
+    assertThat(retryInfo.retryReason()).isEmpty();
     assertThat(retryInfo.newTestProperties()).isEmpty();
   }
 
@@ -473,8 +468,7 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(lastAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isFalse();
-    assertThat(retryInfo.validAttemptNum()).isEqualTo(2);
+    assertThat(retryInfo.retryReason()).isEmpty();
     assertThat(retryInfo.newTestProperties()).isEmpty();
   }
 
@@ -498,8 +492,7 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(lastAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isFalse();
-    assertThat(retryInfo.validAttemptNum()).isEqualTo(2);
+    assertThat(retryInfo.retryReason()).isEmpty();
     assertThat(retryInfo.newTestProperties()).isEmpty();
   }
 
@@ -525,8 +518,7 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(lastAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isFalse();
-    assertThat(retryInfo.validAttemptNum()).isEqualTo(2);
+    assertThat(retryInfo.retryReason()).isEmpty();
     assertThat(retryInfo.newTestProperties()).isEmpty();
   }
 
@@ -548,8 +540,7 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(lastAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isFalse();
-    assertThat(retryInfo.validAttemptNum()).isEqualTo(2);
+    assertThat(retryInfo.retryReason()).isEmpty();
     assertThat(retryInfo.newTestProperties()).isEmpty();
   }
 
@@ -570,11 +561,13 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(lastAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isTrue();
-    assertThat(retryInfo.retryReason()).isEqualTo("TEST_FAIL");
-    assertThat(retryInfo.validAttemptNum()).isEqualTo(1);
+    assertThat(retryInfo.retryReason().orElse(null)).isEqualTo("TEST_FAIL");
     assertThat(retryInfo.newTestProperties())
-        .containsExactly(Ascii.toLowerCase(PropertyName.Test.CONTAINER_MODE.name()), "false");
+        .containsExactly(
+            Ascii.toLowerCase(PropertyName.Test.CONTAINER_MODE.name()),
+            "false",
+            Ascii.toLowerCase(PropertyName.Test.RETRY_INDEX.name()),
+            "1");
   }
 
   @Test
@@ -596,8 +589,7 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isTrue();
-    assertThat(retryInfo.retryReason()).isEqualTo("DRAIN_TIMEOUT_ERROR");
+    assertThat(retryInfo.retryReason().orElse(null)).isEqualTo("DRAIN_TIMEOUT_ERROR");
     assertThat(retryInfo.newTestProperties())
         .containsExactly(
             Ascii.toLowerCase(PropertyName.Test.CONTAINER_MODE.name()),
@@ -627,8 +619,7 @@ public class DefaultRetryStrategyTest {
 
     RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
 
-    assertThat(retryInfo.shouldRetry()).isFalse();
-    assertThat(retryInfo.validAttemptNum()).isEqualTo(1);
+    assertThat(retryInfo.retryReason()).isEmpty();
     assertThat(retryInfo.newTestProperties()).isEmpty();
   }
 

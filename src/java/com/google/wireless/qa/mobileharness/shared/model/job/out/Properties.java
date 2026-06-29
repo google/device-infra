@@ -174,6 +174,26 @@ public class Properties {
   }
 
   /**
+   * Returns the int value to which the specified key is mapped in the properties, or empty if the
+   * properties contains no mapping for the key or the value is not a valid int.
+   */
+  public Optional<Integer> getInt(String key) {
+    try {
+      return Optional.of(Integer.parseInt(get(key)));
+    } catch (NumberFormatException e) {
+      return Optional.empty();
+    }
+  }
+
+  /**
+   * Returns the int value to which the specified key is mapped in the properties, or empty if the
+   * properties contains no mapping for the key or the value is not a valid int.
+   */
+  public Optional<Integer> getInt(PropertyName key) {
+    return getInt(Ascii.toLowerCase(key.toString()));
+  }
+
+  /**
    * Returns the long value to which the specified key is mapped in the properties, or empty if the
    * properties contains no mapping for the key or the value is not a valid long.
    */

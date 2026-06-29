@@ -38,12 +38,10 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.Map;
 import java.util.Optional;
-import javax.annotation.Nullable;
 
 /** Default strategy deciding whether a finished test should be retried. */
-public class DefaultRetryStrategy {
+public class DefaultRetryStrategy implements RetryStrategy {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final String PARAM_RETRY_ON_TIMEOUT = "retry_on_timeout";
@@ -78,25 +76,10 @@ public class DefaultRetryStrategy {
 
   private static final long MAX_RETRY_ATTEMPTS_FOR_DRAIN_TIMEOUT = 5;
 
-  /**
-   * Struct containing details of a retry decision.
-   *
-   * @param shouldRetry Whether the test should be retried.
-   * @param retryReason The reason for the retry. If null, the test will not be retried. If not
-   *     null, the framework will create a new test attempt with the given reason.
-   * @param validAttemptNum The number of valid attempts until the current test, not including the
-   *     retry.
-   * @param newTestProperties Properties to be added to the new test attempt if a retry is made.
-   */
-  public record RetryInfo(
-      boolean shouldRetry,
-      @Nullable String retryReason,
-      int validAttemptNum,
-      Map<String, String> newTestProperties) {}
-
   public DefaultRetryStrategy() {}
 
   /** Decide whether the test should be retried. */
+  @Override
   public RetryInfo decideRetryOnTestEnd(TestInfo currentTestInfo)
       throws MobileHarnessException, InterruptedException {
     JobInfo jobInfo = currentTestInfo.jobInfo();
@@ -110,7 +93,7 @@ public class DefaultRetryStrategy {
                 .filter(DefaultRetryStrategy::isValidAttempt)
                 .count();
     if (validAttemptNum > retrySetting.getTestAttempts()) {
-      return new RetryInfo(false, null, validAttemptNum, ImmutableMap.of());
+      return NO_RETRY;
     }
 
     TestResult testResult = currentTestInfo.resultWithCause().get().type();
@@ -208,6 +191,15 @@ public class DefaultRetryStrategy {
     }
     ImmutableMap.Builder<String, String> newTestProperties = ImmutableMap.builder();
     if (retryReason != null) {
+      if (validAttemptNum > 0) {
+        // If there have been valid attempts, set the index(start from 0) for the retry.
+        newTestProperties.put(
+            Ascii.toLowerCase(Test.RETRY_INDEX.name()), Long.toString(validAttemptNum));
+        if (!currentTestInfo.properties().has(Test.RETRY_INDEX)) {
+          currentTestInfo.properties().add(Test.RETRY_INDEX, Long.toString(validAttemptNum - 1));
+        }
+      }
+
       if (criticalErrorId != null
           && Ascii.equalsIgnoreCase(
               criticalErrorId.getName(),
@@ -236,8 +228,7 @@ public class DefaultRetryStrategy {
         newTestProperties.put(Ascii.toLowerCase(Test.CONTAINER_MODE.name()), "false");
       }
     }
-    return new RetryInfo(
-        retryReason != null, retryReason, validAttemptNum, newTestProperties.buildOrThrow());
+    return new RetryInfo(Optional.ofNullable(retryReason), newTestProperties.buildOrThrow());
   }
 
   private ImmutableList<TestInfo> getAllAttempts(JobInfo jobInfo, TestInfo currentTestInfo) {

@@ -26,7 +26,11 @@ package(
 
 java_library(
     name = "retry",
-    srcs = ["DefaultRetryStrategy.java"],
+    srcs = [
+        "DefaultRetryStrategy.java",
+        "FlakyTestRetryStrategy.java",
+        "RetryStrategy.java",
+    ],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
@@ -37,7 +41,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
 )
