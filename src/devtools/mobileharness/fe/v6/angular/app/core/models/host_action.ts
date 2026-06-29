@@ -110,7 +110,7 @@ export declare interface ActionUnavailable {
 export type VersionIssueType =
   | 'TYPE_UNSPECIFIED'
   | 'NO_VERSION_RECORD'
-  | 'VERSION_TOO_OLD';
+  | 'CURRENT_VERSION_UNAVAILABLE';
 
 /**
  * Version is unavailable; user needs to select a version before proceeding.
