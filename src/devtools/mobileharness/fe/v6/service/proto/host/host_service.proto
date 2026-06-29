@@ -312,9 +312,11 @@ message PreflightLabServerLifecycleRequest {
   }
   ActionType action = 2;
 
-  // The Activity currently displayed on the Lab Server card in the frontend.
-  // Used to detect stale page state (e.g. "RUNNING", "STOPPED").
-  string expected_activity = 3;
+  // Field 3 was a previously-planned `expected_activity` for stale-page
+  // detection. The backend determines availability from the freshly-fetched
+  // actual_activity instead, so the field was removed.
+  reserved 3;
+  reserved "expected_activity";
 
   // The universe of the host.
   string universe = 4;
@@ -335,10 +337,11 @@ message PreflightLabServerLifecycleResponse {
     enum Type {
       TYPE_UNSPECIFIED = 0;
       NO_VERSION_RECORD = 1;  // Never deployed, no version history
-      VERSION_TOO_OLD = 2;    // Previous version is deprecated
+      CURRENT_VERSION_UNAVAILABLE =
+          2;  // Current version is no longer supported
     }
     Type type = 1;
-    string current_version = 2;                         // Reserved
+    string current_version = 2;  // The current running version, if any
     repeated DeployableVersion available_versions = 3;  // Versions to choose
   }
 

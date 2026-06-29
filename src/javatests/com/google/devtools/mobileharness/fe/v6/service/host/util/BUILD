@@ -34,6 +34,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:host_types",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:host_version_util",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:lab_activities",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:lab_server_action_availabilities",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:junit_junit",
     ],
