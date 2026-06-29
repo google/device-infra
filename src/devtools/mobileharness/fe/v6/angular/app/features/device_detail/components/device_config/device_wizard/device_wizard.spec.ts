@@ -1,5 +1,5 @@
 import {TestBed} from '@angular/core/testing';
-import {MatDialogModule} from '@angular/material/dialog';
+import {MatDialog, MatDialogModule} from '@angular/material/dialog';
 import {MatTestDialogOpener} from '@angular/material/dialog/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
@@ -292,5 +292,141 @@ describe('Device Wizard Component', () => {
     expect(updateSpy).toHaveBeenCalled();
     const updateRequest = updateSpy.calls.mostRecent().args[0];
     expect(updateRequest.config.wifi).toBeUndefined();
+  });
+
+  it('should close dialog ref on successful config submit in copy flow', async () => {
+    const fixture = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(DeviceWizard, {
+        data: {
+          deviceId: 'test-id',
+          source: 'copy',
+          config: {
+            permissions: {owners: ['owner1']},
+          },
+        },
+      }),
+    );
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const opener =
+      fixture.componentInstance as MatTestDialogOpener<DeviceWizard>;
+    const component = opener.dialogRef.componentInstance;
+
+    const configService = TestBed.inject(CONFIG_SERVICE);
+    spyOn(configService, 'updateDeviceConfig').and.returnValue(
+      of({success: true, deviceConfig: {}, uiStatus: {}}),
+    );
+
+    const dialog = TestBed.inject(MatDialog);
+    const successDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    successDialogRefSpy.afterClosed.and.returnValue(of(true));
+    spyOn(dialog, 'open').and.returnValue(successDialogRefSpy);
+
+    const wizardDialogRef = opener.dialogRef;
+    spyOn(wizardDialogRef, 'close');
+
+    component.submit();
+
+    expect(wizardDialogRef.close).toHaveBeenCalledWith(true);
+  });
+
+  it('should return empty steps when templates are not resolved', () => {
+    const fixture = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(DeviceWizard, {
+        data: {deviceId: 'test-id', source: 'new'},
+      }),
+    );
+    const component = fixture.componentInstance.dialogRef.componentInstance;
+    // detectChanges is not called yet, so viewChild templates are undefined.
+    expect(component.WIZARD_STEPS_NEW()).toEqual([]);
+  });
+
+  it('should redirect currentStep to permissions when self lockout warning is cancelled', async () => {
+    const fixture = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(DeviceWizard, {
+        data: {
+          deviceId: 'test-id',
+          source: 'new',
+        },
+      }),
+    );
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const component = fixture.componentInstance.dialogRef.componentInstance;
+    const configService = TestBed.inject(CONFIG_SERVICE);
+
+    spyOn(configService, 'updateDeviceConfig').and.returnValue(
+      of({
+        success: false,
+        error: {code: 'SELF_LOCKOUT_DETECTED'},
+        deviceConfig: {},
+        uiStatus: {},
+      }),
+    );
+
+    const confirmDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    confirmDialogRefSpy.afterClosed.and.returnValue(of('secondary')); // clicks "Go Back"
+    const dialogSpy = spyOn(MatDialog.prototype, 'open').and.returnValue(
+      confirmDialogRefSpy,
+    );
+
+    component.currentStep.set('review-and-submit');
+    component.submit();
+
+    expect(dialogSpy).toHaveBeenCalled();
+    expect(component.currentStep()).toBe('permissions');
+  });
+
+  it('should retry submit with override self lockout set when proceeds anyway', async () => {
+    const fixture = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(DeviceWizard, {
+        data: {
+          deviceId: 'test-id',
+          source: 'new',
+        },
+      }),
+    );
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const component = fixture.componentInstance.dialogRef.componentInstance;
+    const configService = TestBed.inject(CONFIG_SERVICE);
+
+    let callCount = 0;
+    const updateSpy = spyOn(configService, 'updateDeviceConfig').and.callFake(
+      () => {
+        callCount++;
+        if (callCount === 1) {
+          return of({
+            success: false,
+            error: {code: 'SELF_LOCKOUT_DETECTED'},
+            deviceConfig: {},
+            uiStatus: {},
+          });
+        }
+        return of({success: true, deviceConfig: {}, uiStatus: {}});
+      },
+    );
+
+    const dialog = TestBed.inject(MatDialog);
+    const confirmDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    confirmDialogRefSpy.afterClosed.and.returnValue(of('primary')); // Proceed anyway
+    spyOn(dialog, 'open').and.returnValue(confirmDialogRefSpy);
+
+    component.submit();
+
+    expect(updateSpy).toHaveBeenCalledTimes(2);
+    const firstCallArgs = updateSpy.calls.first().args[0];
+    const secondCallArgs = updateSpy.calls.mostRecent().args[0];
+    expect(firstCallArgs.options?.overrideSelfLockout).toBeFalse();
+    expect(secondCallArgs.options?.overrideSelfLockout).toBeTrue();
   });
 });

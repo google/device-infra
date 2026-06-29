@@ -21,6 +21,7 @@ import {
 import {
   type GetHostConfigResult,
   type HostConfig,
+  HostConfigSection,
   type HostConfigUiStatus,
   UpdateHostConfigResult,
 } from '../../../../../core/models/host_config_models';
@@ -33,13 +34,14 @@ import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/con
 
 import {HostSettings} from './host_settings';
 
+interface HostSettingsWithPrivateMethods {
+  reloadConfig(): void;
+}
+
 describe('HostSettings Component', () => {
   let mockConfigService: jasmine.SpyObj<ConfigService>;
   let dialogRef: MatDialogRef<HostSettings>;
-  const dialogData: {
-    hostName?: string;
-    config?: HostConfig;
-  } = {};
+  const dialogData: {hostName?: string; config?: HostConfig} = {};
   let comp: HostSettings;
   let mockHostConfigStateService: jasmine.SpyObj<HostConfigStateService>;
   let hostConfigResponse: GetHostConfigResult;
@@ -285,7 +287,8 @@ describe('HostSettings Component', () => {
     TestBed.inject(ApplicationRef).tick();
 
     // Default mock setup has all visible
-    expect(comp.visibleSections().length).toBe(4); // host-permissions, device-config, device-discovery, host-properties
+    expect(comp.visibleSections().length).toBe(4); // host-permissions, device-config, device-discovery,
+    // host-properties
 
     comp.uiStatus.update((status) => ({
       ...status,
@@ -887,7 +890,7 @@ describe('HostSettings Component', () => {
       confirmDialogRefSpy,
     );
 
-    comp.error('SELF_LOCKOUT_DETECTED');
+    comp.dialogActions.error('SELF_LOCKOUT_DETECTED');
 
     expect(dialogSpy).toHaveBeenCalled();
     const openCall = dialogSpy.calls.first();
@@ -912,7 +915,7 @@ describe('HostSettings Component', () => {
       jasmine.createSpyObj('MatDialogRef', ['afterClosed']),
     );
 
-    comp.error('UNKNOWN_ERROR');
+    comp.dialogActions.error('UNKNOWN_ERROR');
 
     expect(dialogSpy).toHaveBeenCalled();
     const openCall = dialogSpy.calls.first();
@@ -1169,15 +1172,6 @@ describe('HostSettings Component', () => {
     comp.hasPermission.set(true);
     TestBed.inject(ApplicationRef).tick();
 
-    console.log('--- TEST: should disable "Clear All" button ---');
-    console.log('comp.testId:', comp.testId);
-    console.log('comp.hostName:', comp.hostName);
-    console.log('comp.uiStatus():', JSON.stringify(comp.uiStatus()));
-    console.log(
-      'comp.isAllVisibleSectionsEditable():',
-      comp.isAllVisibleSectionsEditable(),
-    );
-
     expect(comp.isAllVisibleSectionsEditable()).toBeFalse();
 
     const icon = Array.from(document.querySelectorAll('mat-icon')).find(
@@ -1223,15 +1217,6 @@ describe('HostSettings Component', () => {
     spyOn(dialogRef, 'close');
     comp.hasPermission.set(true);
     TestBed.inject(ApplicationRef).tick();
-
-    console.log('--- TEST: should enable "Clear All" button ---');
-    console.log('comp.testId:', comp.testId);
-    console.log('comp.hostName:', comp.hostName);
-    console.log('comp.uiStatus():', JSON.stringify(comp.uiStatus()));
-    console.log(
-      'comp.isAllVisibleSectionsEditable():',
-      comp.isAllVisibleSectionsEditable(),
-    );
 
     expect(comp.isAllVisibleSectionsEditable()).toBeTrue();
 
@@ -1367,6 +1352,83 @@ describe('HostSettings Component', () => {
       mockConfigService.updateHostConfig.calls.mostRecent()!.args[0].options
         ?.overrideSelfLockout,
     ).toBeTrue();
+  });
+
+  it('should not retry save when self-lockout warning is cancelled', () => {
+    setupDialogData();
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostSettings, {
+        data: dialogData,
+      }),
+    );
+    comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    dialogRef = dialogOpener.componentInstance.dialogRef;
+    TestBed.inject(ApplicationRef).tick();
+
+    const updateSubject = new Subject<UpdateHostConfigResult>();
+    mockConfigService.updateHostConfig.and.returnValue(
+      updateSubject.asObservable(),
+    );
+
+    const confirmDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    confirmDialogRefSpy.afterClosed.and.returnValue(of('secondary')); // User clicks cancel
+    const dialogSpy = spyOn(MatDialog.prototype, 'open').and.returnValue(
+      confirmDialogRefSpy,
+    );
+
+    comp.save();
+
+    updateSubject.next({
+      success: false,
+      error: {code: 'SELF_LOCKOUT_DETECTED'},
+    });
+    updateSubject.complete();
+    TestBed.inject(ApplicationRef).tick();
+
+    expect(dialogSpy).toHaveBeenCalled();
+    // Verify it was only called once (the initial save, no retry)
+    expect(mockConfigService.updateHostConfig).toHaveBeenCalledTimes(1);
+    expect(comp.activeSection()).toBe(HostConfigSection.HOST_PERMISSIONS);
+  });
+
+  it('should not retry save when self-lockout warning is dismissed with other values', () => {
+    setupDialogData();
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostSettings, {
+        data: dialogData,
+      }),
+    );
+    comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    dialogRef = dialogOpener.componentInstance.dialogRef;
+    TestBed.inject(ApplicationRef).tick();
+
+    const updateSubject = new Subject<UpdateHostConfigResult>();
+    mockConfigService.updateHostConfig.and.returnValue(
+      updateSubject.asObservable(),
+    );
+
+    const confirmDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    confirmDialogRefSpy.afterClosed.and.returnValue(of('some-other-value')); // User dismisses in other ways
+    const dialogSpy = spyOn(MatDialog.prototype, 'open').and.returnValue(
+      confirmDialogRefSpy,
+    );
+
+    comp.save();
+
+    updateSubject.next({
+      success: false,
+      error: {code: 'SELF_LOCKOUT_DETECTED'},
+    });
+    updateSubject.complete();
+    TestBed.inject(ApplicationRef).tick();
+
+    expect(dialogSpy).toHaveBeenCalled();
+    // Verify it was only called once (the initial save, no retry)
+    expect(mockConfigService.updateHostConfig).toHaveBeenCalledTimes(1);
   });
 
   it('should close dialog on successful self-lockout save', () => {
@@ -1530,9 +1592,7 @@ describe('HostSettings Component', () => {
 
     const openCall = dialogSpy.calls.first();
     const dialogConfig = openCall!.args[1] as {
-      data: {
-        onConfirm: () => Observable<void>;
-      };
+      data: {onConfirm: () => Observable<void>};
     };
 
     // Test onConfirm callback failure
@@ -1779,6 +1839,7 @@ describe('HostSettings Component', () => {
     // Dirty state should be false immediately
     expect(comp.isCategoryDirty('config-mode')).toBeFalse();
     expect(comp.isCategoryDirty('wifi')).toBeFalse();
+    expect(mockConfigService.getHostConfig).toHaveBeenCalledWith('test-host');
 
     // Cleanup pending observable
     reloadSubject.complete();
@@ -1806,10 +1867,9 @@ describe('HostSettings Component', () => {
       getHostConfigSubject.asObservable(),
     );
 
-    const successDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
-      'afterClosed',
-    ]);
-    spyOn(comp, 'success').and.returnValue(successDialogRefSpy);
+    spyOn(comp.dialogActions, 'success').and.callFake(() => {
+      (comp as unknown as HostSettingsWithPrivateMethods).reloadConfig();
+    });
 
     comp.save();
 
@@ -1851,10 +1911,9 @@ describe('HostSettings Component', () => {
       getHostConfigSubject.asObservable(),
     );
 
-    const successDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
-      'afterClosed',
-    ]);
-    spyOn(comp, 'success').and.returnValue(successDialogRefSpy);
+    spyOn(comp.dialogActions, 'success').and.callFake(() => {
+      (comp as unknown as HostSettingsWithPrivateMethods).reloadConfig();
+    });
 
     comp.save();
 
@@ -1893,10 +1952,9 @@ describe('HostSettings Component', () => {
       getHostConfigSubject.asObservable(),
     );
 
-    const successDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
-      'afterClosed',
-    ]);
-    spyOn(comp, 'success').and.returnValue(successDialogRefSpy);
+    spyOn(comp.dialogActions, 'success').and.callFake(() => {
+      (comp as unknown as HostSettingsWithPrivateMethods).reloadConfig();
+    });
 
     comp.save();
 

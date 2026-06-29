@@ -2,7 +2,7 @@
   <app-wizard-stepper
     #stepper
     title="Guided Setup"
-    [WIZARD_STEPS]="WIZARD_STEPS_NEW"
+    [WIZARD_STEPS]="WIZARD_STEPS_NEW()"
     [nextStepDisabled]="hasError && errorStep === currentStep()"
     [currentStep]="currentStep()"
     [param]="{deviceId: data.deviceId, hostName: '', universe: data.universe}"

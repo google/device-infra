@@ -384,6 +384,60 @@ public final class UpdateHostConfigHandlerTest {
   }
 
   @Test
+  public void updateHostConfig_atsEnvironment_allSection_success() throws Exception {
+    when(environment.isAts()).thenReturn(true);
+    String hostName = "test_host";
+    UpdateHostConfigRequest request =
+        UpdateHostConfigRequest.newBuilder()
+            .setHostName(hostName)
+            .setScope(
+                HostConfigUpdateScope.newBuilder()
+                    .setSection(HostConfigSection.HOST_CONFIG_SECTION_ALL)
+                    .build())
+            .build();
+
+    when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
+        .thenReturn(
+            immediateFuture(
+                ConfigResult.available(
+                    Optional.of(LabConfig.newBuilder().setHostName(hostName).build()))));
+    when(configurationProvider.updateLabConfig(eq(hostName), any(), eq(SELF_UNIVERSE)))
+        .thenReturn(immediateVoidFuture());
+
+    UpdateHostConfigResponse response =
+        updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
+
+    assertThat(response.getSuccess()).isTrue();
+  }
+
+  @Test
+  public void updateHostConfig_atsEnvironment_deviceConfigModeSection_success() throws Exception {
+    when(environment.isAts()).thenReturn(true);
+    String hostName = "test_host";
+    UpdateHostConfigRequest request =
+        UpdateHostConfigRequest.newBuilder()
+            .setHostName(hostName)
+            .setScope(
+                HostConfigUpdateScope.newBuilder()
+                    .setSection(HostConfigSection.DEVICE_CONFIG_MODE)
+                    .build())
+            .build();
+
+    when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
+        .thenReturn(
+            immediateFuture(
+                ConfigResult.available(
+                    Optional.of(LabConfig.newBuilder().setHostName(hostName).build()))));
+    when(configurationProvider.updateLabConfig(eq(hostName), any(), eq(SELF_UNIVERSE)))
+        .thenReturn(immediateVoidFuture());
+
+    UpdateHostConfigResponse response =
+        updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
+
+    assertThat(response.getSuccess()).isTrue();
+  }
+
+  @Test
   public void updateHostConfig_atsEnvironment_deviceConfigSection_success() throws Exception {
     when(environment.isAts()).thenReturn(true);
     String hostName = "test_host";
@@ -501,6 +555,60 @@ public final class UpdateHostConfigHandlerTest {
             .setScope(
                 HostConfigUpdateScope.newBuilder()
                     .setSection(HostConfigSection.HOST_PERMISSIONS)
+                    .build())
+            .build();
+
+    when(groupMembershipProvider.isMemberOfAny(eq(user), any())).thenReturn(immediateFuture(false));
+
+    UpdateHostConfigResponse response =
+        updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.of(user)).get();
+
+    assertThat(response.getSuccess()).isFalse();
+    assertThat(response.getError().getCode()).isEqualTo(UpdateError.Code.SELF_LOCKOUT_DETECTED);
+  }
+
+  @Test
+  public void updateHostConfig_selfLockout_allSection_fail() throws Exception {
+    String hostName = "test_host";
+    String user = "test_user";
+    HostConfig feConfig =
+        HostConfig.newBuilder()
+            .setPermissions(HostPermissions.newBuilder().addHostAdmins("other_user").build())
+            .build();
+    UpdateHostConfigRequest request =
+        UpdateHostConfigRequest.newBuilder()
+            .setHostName(hostName)
+            .setConfig(feConfig)
+            .setScope(
+                HostConfigUpdateScope.newBuilder()
+                    .setSection(HostConfigSection.HOST_CONFIG_SECTION_ALL)
+                    .build())
+            .build();
+
+    when(groupMembershipProvider.isMemberOfAny(eq(user), any())).thenReturn(immediateFuture(false));
+
+    UpdateHostConfigResponse response =
+        updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.of(user)).get();
+
+    assertThat(response.getSuccess()).isFalse();
+    assertThat(response.getError().getCode()).isEqualTo(UpdateError.Code.SELF_LOCKOUT_DETECTED);
+  }
+
+  @Test
+  public void updateHostConfig_selfLockout_unspecifiedSection_fail() throws Exception {
+    String hostName = "test_host";
+    String user = "test_user";
+    HostConfig feConfig =
+        HostConfig.newBuilder()
+            .setPermissions(HostPermissions.newBuilder().addHostAdmins("other_user").build())
+            .build();
+    UpdateHostConfigRequest request =
+        UpdateHostConfigRequest.newBuilder()
+            .setHostName(hostName)
+            .setConfig(feConfig)
+            .setScope(
+                HostConfigUpdateScope.newBuilder()
+                    .setSection(HostConfigSection.HOST_CONFIG_SECTION_UNSPECIFIED)
                     .build())
             .build();
 

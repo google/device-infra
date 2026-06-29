@@ -1,5 +1,9 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {MatDialogModule} from '@angular/material/dialog';
+import {
+  MatDialog,
+  MatDialogModule,
+  MatDialogRef,
+} from '@angular/material/dialog';
 import {
   MatTestDialogOpener,
   MatTestDialogOpenerModule,
@@ -10,6 +14,7 @@ import {of} from 'rxjs';
 
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {Environment} from '../../../../../core/services/environment';
+import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/confirm_dialog';
 import {HostWizard} from './host_wizard';
 
 describe('HostWizard Component', () => {
@@ -272,12 +277,181 @@ describe('HostWizard Component', () => {
 
     const comp = dialogOpener.componentInstance.dialogRef.componentInstance;
     const configService = TestBed.inject(CONFIG_SERVICE);
-    const updateSpy = spyOn(configService, 'updateHostConfig').and.callThrough();
+    const updateSpy = spyOn(
+      configService,
+      'updateHostConfig',
+    ).and.callThrough();
 
     comp.submit();
 
     expect(updateSpy).toHaveBeenCalled();
     const updateRequest = updateSpy.calls.mostRecent().args[0];
     expect(updateRequest.config.deviceConfig?.wifi).toBeUndefined();
+  });
+
+  it('should close dialog ref on successful config submit in copy flow', async () => {
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostWizard, {
+        data: {
+          hostName: 'test-host',
+          source: 'copy',
+          config: {
+            permissions: {hostAdmins: ['admin']},
+          },
+        },
+      }),
+    ) as ComponentFixture<MatTestDialogOpener<HostWizard>>;
+    dialogOpener.detectChanges();
+    await dialogOpener.whenStable();
+
+    const comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    const configService = TestBed.inject(CONFIG_SERVICE);
+    spyOn(configService, 'updateHostConfig').and.returnValue(
+      of({success: true}),
+    );
+
+    const dialog = TestBed.inject(MatDialog);
+    const successDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    successDialogRefSpy.afterClosed.and.returnValue(of(true));
+    spyOn(dialog, 'open').and.returnValue(successDialogRefSpy);
+
+    const wizardDialogRef = (
+      comp as unknown as {dialogRef: MatDialogRef<HostWizard>}
+    ).dialogRef;
+    spyOn(wizardDialogRef, 'close');
+
+    comp.submit();
+
+    expect(wizardDialogRef.close).toHaveBeenCalledWith(true);
+  });
+
+  it('should show self lockout warning and retry with override when SELF_LOCKOUT_DETECTED is returned', async () => {
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostWizard, {
+        data: {
+          hostName: 'test-host',
+          source: 'copy',
+          config: {
+            permissions: {hostAdmins: ['admin']},
+          },
+        },
+      }),
+    ) as ComponentFixture<MatTestDialogOpener<HostWizard>>;
+    dialogOpener.detectChanges();
+    await dialogOpener.whenStable();
+
+    const comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    const configService = TestBed.inject(CONFIG_SERVICE);
+
+    let callCount = 0;
+    const updateSpy = spyOn(configService, 'updateHostConfig').and.callFake(
+      () => {
+        callCount++;
+        if (callCount === 1) {
+          return of({
+            success: false,
+            error: {
+              code: 'SELF_LOCKOUT_DETECTED',
+              message: 'Self lockout detected',
+            },
+          });
+        }
+        return of({success: true});
+      },
+    );
+
+    const dialog = TestBed.inject(MatDialog);
+    const dialogRefSpy = jasmine.createSpyObj('MatDialogRef', ['afterClosed']);
+    dialogRefSpy.afterClosed.and.returnValue(of('primary'));
+    const dialogSpy = spyOn(dialog, 'open').and.returnValue(dialogRefSpy);
+
+    comp.submit();
+
+    expect(updateSpy).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        options: {overrideSelfLockout: false},
+      }),
+    );
+
+    expect(dialogSpy).toHaveBeenCalledWith(
+      ConfirmDialog,
+      jasmine.objectContaining({
+        data: jasmine.objectContaining({
+          type: 'warning',
+          primaryButtonLabel: 'Proceed Anyway',
+        }),
+      }),
+    );
+
+    expect(updateSpy).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        options: {overrideSelfLockout: true},
+      }),
+    );
+  });
+
+  it('should return empty steps when templates are not resolved', () => {
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostWizard, {
+        data: {hostName: 'test-host', source: 'new'},
+      }),
+    ) as ComponentFixture<MatTestDialogOpener<HostWizard>>;
+    const comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    expect(comp.WIZARD_STEPS()).toEqual([]);
+  });
+
+  it('should redirect currentStep to host-permissions when self lockout warning is cancelled', async () => {
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostWizard, {
+        data: {
+          hostName: 'test-host',
+          source: 'new',
+        },
+      }),
+    ) as ComponentFixture<MatTestDialogOpener<HostWizard>>;
+    dialogOpener.detectChanges();
+    await dialogOpener.whenStable();
+
+    const comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    const configService = TestBed.inject(CONFIG_SERVICE);
+
+    spyOn(configService, 'updateHostConfig').and.returnValue(
+      of({
+        success: false,
+        error: {code: 'SELF_LOCKOUT_DETECTED'},
+        uiStatus: {},
+      }),
+    );
+
+    const dialog = TestBed.inject(MatDialog);
+    const confirmDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    confirmDialogRefSpy.afterClosed.and.returnValue(of('secondary')); // clicks "Go Back"
+    const dialogSpy = spyOn(dialog, 'open').and.returnValue(
+      confirmDialogRefSpy,
+    );
+
+    comp.currentStep.set('review-and-submit');
+    comp.submit();
+
+    expect(dialogSpy).toHaveBeenCalled();
+    expect(comp.currentStep()).toBe('host-permissions');
+  });
+
+  it('should update currentStep on step change', async () => {
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostWizard, {
+        data: {hostName: 'test-host', source: 'new'},
+      }),
+    ) as ComponentFixture<MatTestDialogOpener<HostWizard>>;
+    dialogOpener.detectChanges();
+    await dialogOpener.whenStable();
+
+    const comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    comp.onCurrentStepChange('device-config-mode');
+    expect(comp.currentStep()).toBe('device-config-mode');
   });
 });
