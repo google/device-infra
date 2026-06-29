@@ -1309,6 +1309,19 @@ public class SystemUtil {
     return toNonRootCmd(command, false);
   }
 
+  /** Returns the Mac model of the host (output of `sysctl -n hw.model`). */
+  public Optional<String> getMacModel() throws MobileHarnessException, InterruptedException {
+    if (!isOnMac()) {
+      return Optional.empty();
+    }
+    try {
+      return Optional.of(executor.run(Command.of("sysctl", "-n", "hw.model")).trim());
+    } catch (CommandException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.COMMAND_EXEC_FAIL, "Failed to get Mac model via sysctl", e);
+    }
+  }
+
   /** Gets the java command path on the running machine. */
   public String getJavaCommandPath() {
     return Flags.javaCommandPath.getNonNull();

@@ -47,6 +47,8 @@ public final class HostPropertyConstants {
     ROOT_DISK_SPACE,
     /** The total memory of the host. */
     TOTAL_MEM,
+    /** The CPU architecture of the host. */
+    CPU_ARCHITECTURE,
   }
 
   private HostPropertyConstants() {}
