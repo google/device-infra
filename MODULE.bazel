@@ -267,6 +267,7 @@ maven.install(
         "com.squareup.okhttp3:okhttp:4.12.0",
         "commons-io:commons-io:2.15.1",
         "info.picocli:picocli:4.7.5",
+        "io.github.classgraph:classgraph:4.8.184",
         "javax.inject:jsr330-api:0.9",
         "net.bytebuddy:byte-buddy:1.14.11",
         "net.sf.kxml:kxml2:2.3.0",

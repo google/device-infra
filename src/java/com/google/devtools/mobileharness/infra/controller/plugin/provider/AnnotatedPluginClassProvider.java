@@ -16,23 +16,27 @@
 
 package com.google.devtools.mobileharness.infra.controller.plugin.provider;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin.PluginType;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
+import io.github.classgraph.ClassInfo;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
-import org.reflections.Reflections;
 
 /** Provides plugin classes that have been annotated with the given {@link PluginType}s. */
 public class AnnotatedPluginClassProvider implements PluginClassProvider {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private final Reflections reflections;
+  private final ImmutableList<ClassInfo> classInfos;
   @Nullable private final LogCollector<?> log;
   private final boolean warnUnmatchedTypes;
   private final ImmutableSet<PluginType> pluginTypes;
@@ -42,28 +46,34 @@ public class AnnotatedPluginClassProvider implements PluginClassProvider {
    * @param pluginTypes The types of plugin to allow.
    */
   public AnnotatedPluginClassProvider(
-      Reflections reflections,
+      List<ClassInfo> classInfos,
       @Nullable LogCollector<?> log,
       boolean warnUnmatchedTypes,
       PluginType... pluginTypes) {
-    this.reflections = reflections;
+    this.classInfos = ImmutableList.copyOf(classInfos);
     this.log = log;
     this.warnUnmatchedTypes = warnUnmatchedTypes;
     this.pluginTypes = ImmutableSet.copyOf(pluginTypes);
   }
 
   @Override
-  public Set<Class<?>> getPluginClasses() {
-    return reflections.getTypesAnnotatedWith(Plugin.class).stream()
-        .filter(
-            aClass ->
-                checkPluginType(
-                    aClass,
-                    clazz -> clazz.getDeclaredAnnotation(Plugin.class).type(),
-                    log,
-                    warnUnmatchedTypes,
-                    pluginTypes))
-        .collect(Collectors.toSet());
+  public Set<Class<?>> getPluginClasses() throws MobileHarnessException {
+    try {
+      return classInfos.stream()
+          .map(classInfo -> classInfo.loadClass(/* ignoreExceptions= */ false))
+          .filter(
+              aClass ->
+                  checkPluginType(
+                      aClass,
+                      clazz -> clazz.getDeclaredAnnotation(Plugin.class).type(),
+                      log,
+                      warnUnmatchedTypes,
+                      pluginTypes))
+          .collect(Collectors.toSet());
+    } catch (IllegalArgumentException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.PLUGIN_LOADER_FAILED_TO_LOAD_PLUGIN_CLASS, "Fail to load plugin class.", e);
+    }
   }
 
   static boolean checkPluginType(
