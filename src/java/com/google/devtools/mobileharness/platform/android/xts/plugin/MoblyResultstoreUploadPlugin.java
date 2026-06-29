@@ -17,12 +17,14 @@
 package com.google.devtools.mobileharness.platform.android.xts.plugin;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException.DesiredTestResult;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.testbed.mobly.MoblyConstant;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyPythonVenvUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
@@ -36,6 +38,7 @@ import com.google.wireless.qa.mobileharness.shared.controller.event.TestStarting
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin.PluginType;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.regex.Matcher;
@@ -59,9 +62,14 @@ public final class MoblyResultstoreUploadPlugin {
   private final MoblyPythonVenvUtil moblyPythonVenvUtil;
   private final CommandExecutor commandExecutor;
   private final LocalFileUtil localFileUtil;
+  private final AndroidAdbUtil androidAdbUtil;
 
   public MoblyResultstoreUploadPlugin() {
-    this(new MoblyPythonVenvUtil(), new CommandExecutor(), new LocalFileUtil());
+    this(
+        new MoblyPythonVenvUtil(),
+        new CommandExecutor(),
+        new LocalFileUtil(),
+        new AndroidAdbUtil());
   }
 
   @VisibleForTesting
@@ -69,9 +77,19 @@ public final class MoblyResultstoreUploadPlugin {
       MoblyPythonVenvUtil moblyPythonVenvUtil,
       CommandExecutor commandExecutor,
       LocalFileUtil localFileUtil) {
+    this(moblyPythonVenvUtil, commandExecutor, localFileUtil, new AndroidAdbUtil());
+  }
+
+  @VisibleForTesting
+  MoblyResultstoreUploadPlugin(
+      MoblyPythonVenvUtil moblyPythonVenvUtil,
+      CommandExecutor commandExecutor,
+      LocalFileUtil localFileUtil,
+      AndroidAdbUtil androidAdbUtil) {
     this.moblyPythonVenvUtil = moblyPythonVenvUtil;
     this.commandExecutor = commandExecutor;
     this.localFileUtil = localFileUtil;
+    this.androidAdbUtil = androidAdbUtil;
   }
 
   @Subscribe
@@ -156,6 +174,10 @@ public final class MoblyResultstoreUploadPlugin {
       if (moduleName != null) {
         uploadCmd = uploadCmd.argsAppended("--label", moduleName);
       }
+      String fingerprint = getDeviceFingerprint(event);
+      if (fingerprint != null && !fingerprint.isEmpty()) {
+        uploadCmd = uploadCmd.argsAppended("--label", fingerprint);
+      }
       try {
         String stdout = commandExecutor.run(uploadCmd);
         logger.atInfo().log("Resultstore upload stdout: %s", stdout);
@@ -190,6 +212,30 @@ public final class MoblyResultstoreUploadPlugin {
           .alsoTo(logger)
           .log("Failed to set up Python venv and install packages for result uploading.");
     }
+  }
+
+  @Nullable
+  private String getDeviceFingerprint(TestEndingEvent event) throws InterruptedException {
+    TestInfo testInfo = event.getTest();
+    for (DeviceLocator device : event.getAllocation().getAllDeviceLocators()) {
+      try {
+        String fingerprint =
+            androidAdbUtil.getProperty(
+                device.getSerial(), ImmutableList.of("ro.build.fingerprint"));
+        if (fingerprint != null && !fingerprint.trim().isEmpty()) {
+          return fingerprint.trim();
+        }
+      } catch (MobileHarnessException e) {
+        testInfo
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .log(
+                "Failed to get device build fingerprint from %s: %s",
+                device.getSerial(), e.getMessage());
+      }
+    }
+    return null;
   }
 
   @Nullable
