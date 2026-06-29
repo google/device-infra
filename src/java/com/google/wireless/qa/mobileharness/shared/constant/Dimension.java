@@ -242,8 +242,6 @@ public final class Dimension {
     CHROME_VERSION,
     /** The current development codename, or the string "REL" if this is a release build. */
     CODENAME,
-    /** Max CPU frequency in Ghz. Precision is 1 decimal place. */
-    CPU_FREQ_IN_GHZ,
     /** The DDR size of the device. */
     DDR_SIZE,
     /** The display panel vendor of the device. */
