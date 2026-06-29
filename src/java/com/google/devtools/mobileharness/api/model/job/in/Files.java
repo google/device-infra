@@ -49,23 +49,24 @@ public class Files {
   /** File Info. */
   @AutoValue
   public abstract static class FileInfo {
-    public static FileInfo create(String path, @Nullable String checksum) {
-      return new AutoValue_Files_FileInfo(path, Optional.ofNullable(checksum), Optional.empty());
+    public static FileInfo create(String path, @Nullable String fingerprint) {
+      return new AutoValue_Files_FileInfo(path, Optional.ofNullable(fingerprint), Optional.empty());
     }
 
-    public static FileInfo create(String path, @Nullable String checksum, @Nullable String spec) {
+    public static FileInfo create(
+        String path, @Nullable String fingerprint, @Nullable String spec) {
       return new AutoValue_Files_FileInfo(
-          path, Optional.ofNullable(checksum), Optional.ofNullable(spec));
+          path, Optional.ofNullable(fingerprint), Optional.ofNullable(spec));
     }
 
     public abstract String path();
 
     /**
-     * The checksum of the file.
+     * The fingerprint of the file.
      *
-     * <p>Different file/dir types can have different checksum formats.
+     * <p>Different file/dir types can have different fingerprint formats.
      */
-    public abstract Optional<String> checksum();
+    public abstract Optional<String> fingerprint();
 
     /**
      * The spec of the file.

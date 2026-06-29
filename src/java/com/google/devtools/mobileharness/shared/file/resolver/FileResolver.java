@@ -64,20 +64,20 @@ public interface FileResolver {
   @AutoValue
   abstract class ResolvedFile {
 
-    public static ResolvedFile create(String path, @Nullable String checksum) {
+    public static ResolvedFile create(String path, @Nullable String fingerprint) {
       return new AutoValue_FileResolver_ResolvedFile(
-          path, Optional.ofNullable(checksum), Optional.empty());
+          path, Optional.ofNullable(fingerprint), Optional.empty());
     }
 
     public static ResolvedFile create(
-        String path, @Nullable String checksum, @Nullable String spec) {
+        String path, @Nullable String fingerprint, @Nullable String spec) {
       return new AutoValue_FileResolver_ResolvedFile(
-          path, Optional.ofNullable(checksum), Optional.ofNullable(spec));
+          path, Optional.ofNullable(fingerprint), Optional.ofNullable(spec));
     }
 
     public abstract String path();
 
-    public abstract Optional<String> checksum();
+    public abstract Optional<String> fingerprint();
 
     public abstract Optional<String> spec();
   }
