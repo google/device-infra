@@ -26,6 +26,7 @@
           [attr.aria-label]="placeholder"
           [(ngModel)]="entry"
           [matChipInputFor]="chipGrid"
+          (keydown.enter)="add(); $event.preventDefault()"
         />
       </mat-form-field>
       <button class="add-button" (click)="add()"> Add </button>
