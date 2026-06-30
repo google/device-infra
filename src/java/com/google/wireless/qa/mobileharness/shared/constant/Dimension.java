@@ -48,6 +48,8 @@ public final class Dimension {
     COMMUNICATION_TYPE,
     /** The control id of the device. */
     CONTROL_ID,
+    /** The DAB MQTT broker URI. */
+    /** The DAB Device ID. */
     /**
      * The device name.
      *
@@ -72,6 +74,10 @@ public final class Dimension {
      * devices only.
      */
     DEVKEY_ALLOW,
+    /** The URL suffix for DIAL app. */
+    DIAL_APP_URL_SUFFIX,
+    /** The URL suffix for DIAL rest. */
+    DIAL_REST_URL_SUFFIX,
     /** The disk type. The value can be one of [SSD, HDD, UNKNOWN]. */
     DISK_TYPE,
     /** The type of the DeviceManager. The value can be one of [fusion, mh, mtaas]. */
@@ -152,11 +158,6 @@ public final class Dimension {
     POOL,
     /** Whether the device is reachable from the host via ping. */
     /** Whether the device is reachable from the host via DIAL. */
-    /** The URL suffix for DIAL app. */
-    DIAL_APP_URL_SUFFIX,
-    /** The URL suffix for DIAL rest. */
-    DIAL_REST_URL_SUFFIX,
-    /** Whether the device has the YouTube app installed. */
     /** The release version of the device. */
     RELEASE_VERSION,
     /**
@@ -202,6 +203,7 @@ public final class Dimension {
     UUID,
     /** Whether the uuid is volatile. */
     UUID_VOLATILE,
+    /** Whether the device has the YouTube app installed. */
     /** IMEI of the device. */
     IMEI,
     /** Type of the power switch supplying power to the device. */
