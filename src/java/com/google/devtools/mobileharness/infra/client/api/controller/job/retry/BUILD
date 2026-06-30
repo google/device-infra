@@ -38,11 +38,22 @@ java_library(
 )
 
 java_library(
+    name = "flaky_test_retry_constants",
+    srcs = [
+        "FlakyTestRetryConstants.java",
+    ],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/testresult:__subpackages__",
+    ],
+)
+
+java_library(
     name = "flaky_test_retry_strategy",
     srcs = [
         "FlakyTestRetryStrategy.java",
     ],
     deps = [
+        ":flaky_test_retry_constants",
         ":retry_strategy",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
