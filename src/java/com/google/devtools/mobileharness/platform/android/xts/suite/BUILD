@@ -213,7 +213,10 @@ java_library(
     srcs = ["TestSuiteVersionUtil.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
     ],
     deps = [

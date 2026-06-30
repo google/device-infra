@@ -856,6 +856,11 @@ public class Flags {
   public static final Flag<Boolean> enableWranglerAgentDummyAllocation = Flag.value(false);
 
   @FlagSpec(
+      name = "enable_xts_device_compatibility_check",
+      help = "Whether to enable xTS device compatibility check. Default is false.")
+  public static final Flag<Boolean> enableXtsDeviceCompatibilityCheck = Flag.value(false);
+
+  @FlagSpec(
       name = "enable_xts_dynamic_downloader",
       help = "Whether to enable xts dynamic downloader. Default is false.")
   public static final Flag<Boolean> enableXtsDynamicDownloader = Flag.value(false);

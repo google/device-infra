@@ -194,6 +194,7 @@ public abstract class XtsJobCreator {
             sessionRequestInfo.hasDeviceInfo()
                 ? sessionRequestInfo.getDeviceInfo().getSupportedAbiList()
                 : "");
+    injectSuiteVersion(sessionRequestInfo, extraJobProperties);
     if (sessionRequestInfo.hasAndroidXtsZipPassword()
         && !sessionRequestInfo.getAndroidXtsZipPassword().isEmpty()) {
       extraJobProperties.put(
@@ -524,6 +525,7 @@ public abstract class XtsJobCreator {
     }
 
     ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties = ImmutableMap.builder();
+    injectSuiteVersion(sessionRequestInfo, extraJobProperties);
     SubPlan subPlan = null;
     if (SessionRequestHandlerUtil.isRunRetry(testPlan)) {
       extraJobProperties.put(Job.IS_RUN_RETRY, "true");
@@ -815,6 +817,15 @@ public abstract class XtsJobCreator {
           extraJobProperties.getOrDefault(Job.PREV_SESSION_XTS_TEST_PLAN, ""));
     } else {
       return CTS_TEST_PLANS.contains(extraJobProperties.getOrDefault(Job.XTS_TEST_PLAN, ""));
+    }
+  }
+
+  private void injectSuiteVersion(
+      SessionRequestInfo sessionRequestInfo,
+      ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties) {
+    if (sessionRequestInfo.hasTestSuiteInfo()) {
+      extraJobProperties.put(
+          Job.XTS_SUITE_VERSION, sessionRequestInfo.getTestSuiteInfo().getVersion());
     }
   }
 

@@ -58,5 +58,8 @@ public interface XtsPropertyName extends PropertyName {
 
     /** Password for encrypted xTS zip file. */
     XTS_ZIP_FILE_PASSWORD,
+
+    /** The version of the xTS suite. */
+    XTS_SUITE_VERSION,
   }
 }

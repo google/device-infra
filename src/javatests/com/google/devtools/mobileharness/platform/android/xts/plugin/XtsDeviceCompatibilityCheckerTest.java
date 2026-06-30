@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdb
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.DeviceBuildInfo;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartedEvent;
 import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -56,6 +57,7 @@ public final class XtsDeviceCompatibilityCheckerTest {
   private static final String DEVICE_ID_2 = "DEVICE_ID_2";
 
   @Rule public final MockitoRule rule = MockitoJUnit.rule();
+  @Rule public final SetFlags flags = new SetFlags();
 
   @Mock private JobInfo jobInfo;
   @Mock private TestInfo testInfo;
@@ -79,6 +81,7 @@ public final class XtsDeviceCompatibilityCheckerTest {
     when(testInfo.jobInfo()).thenReturn(jobInfo);
     when(testInfo.log()).thenReturn(testLog);
     when(testLog.atInfo()).thenReturn(atInfo);
+    when(testLog.atWarning()).thenReturn(atInfo);
     when(atInfo.alsoTo(any(FluentLogger.class))).thenReturn(atInfo);
     when(testInfo.locator()).thenReturn(testLocator);
     when(event.getTest()).thenReturn(testInfo);
@@ -90,8 +93,14 @@ public final class XtsDeviceCompatibilityCheckerTest {
     when(androidAdbInternalUtil.getDeviceSerialsByState(/* deviceState= */ null))
         .thenReturn(ImmutableSet.of(DEVICE_ID_1, DEVICE_ID_2));
 
+    when(androidAdbUtil.getProperty(DEVICE_ID_1, DeviceBuildInfo.VERSION_SDK_FULL.getPropNames()))
+        .thenReturn("36");
+    when(androidAdbUtil.getProperty(DEVICE_ID_2, DeviceBuildInfo.VERSION_SDK_FULL.getPropNames()))
+        .thenReturn("36");
+
     xtsDeviceCompatibilityChecker =
         new XtsDeviceCompatibilityChecker(androidAdbUtil, androidAdbInternalUtil);
+    flags.set("enable_xts_device_compatibility_check", "true");
   }
 
   @Test
@@ -260,5 +269,82 @@ public final class XtsDeviceCompatibilityCheckerTest {
                 .errorId())
         .isEqualTo(AndroidErrorId.XTS_DEVICE_COMPAT_CHECKER_DEVICE_BUILDS_NOT_THE_SAME);
     assertThat(properties.getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)).isTrue();
+  }
+
+  @Test
+  public void deviceToolCompatibility_olderSdk_skipChecking() throws Exception {
+    properties.add(Job.XTS_SUITE_VERSION, "16.1_r1");
+    // Device 1 has SDK 29 (Android 10), which is <= 32. Compatibility check should be skipped.
+    when(androidAdbUtil.getProperty(DEVICE_ID_1, DeviceBuildInfo.VERSION_SDK_FULL.getPropNames()))
+        .thenReturn("29");
+
+    xtsDeviceCompatibilityChecker.onTestStarted(event);
+
+    assertThat(properties.getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)).isFalse();
+  }
+
+  @Test
+  public void deviceToolCompatibility_compatible_success() throws Exception {
+    properties.add(Job.XTS_SUITE_VERSION, "16.1_r1");
+    when(androidAdbUtil.getProperty(DEVICE_ID_1, DeviceBuildInfo.VERSION_SDK_FULL.getPropNames()))
+        .thenReturn("36.1");
+
+    xtsDeviceCompatibilityChecker.onTestStarted(event);
+
+    assertThat(properties.getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)).isFalse();
+  }
+
+  @Test
+  public void deviceToolCompatibility_minorMismatch_throwsSkipTestException() throws Exception {
+    properties.add(Job.XTS_SUITE_VERSION, "16.1_r1");
+    // Device 1 is incompatible (SDK 36.0 < Tool 16.1)
+    when(androidAdbUtil.getProperty(DEVICE_ID_1, DeviceBuildInfo.VERSION_SDK_FULL.getPropNames()))
+        .thenReturn("36.0");
+
+    assertThat(
+            assertThrows(
+                    SkipTestException.class,
+                    () -> xtsDeviceCompatibilityChecker.onTestStarted(event))
+                .errorId())
+        .isEqualTo(AndroidErrorId.XTS_DEVICE_COMPAT_CHECKER_DEVICE_AND_TOOL_INCOMPATIBLE);
+    assertThat(properties.getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)).isTrue();
+  }
+
+  @Test
+  public void deviceToolCompatibility_majorMismatch_throwsSkipTestException() throws Exception {
+    properties.add(Job.XTS_SUITE_VERSION, "17.0_r1");
+    when(androidAdbUtil.getProperty(DEVICE_ID_1, DeviceBuildInfo.VERSION_SDK_FULL.getPropNames()))
+        .thenReturn("36"); // Tool 17 vs Device 16
+
+    assertThat(
+            assertThrows(
+                    SkipTestException.class,
+                    () -> xtsDeviceCompatibilityChecker.onTestStarted(event))
+                .errorId())
+        .isEqualTo(AndroidErrorId.XTS_DEVICE_COMPAT_CHECKER_DEVICE_AND_TOOL_INCOMPATIBLE);
+    assertThat(properties.getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)).isTrue();
+  }
+
+  @Test
+  public void deviceToolCompatibility_flagDisabled_skipChecking() throws Exception {
+    flags.set("enable_xts_device_compatibility_check", "false");
+    properties.add(Job.XTS_SUITE_VERSION, "16.1_r1");
+    when(androidAdbUtil.getProperty(DEVICE_ID_1, DeviceBuildInfo.VERSION_SDK_FULL.getPropNames()))
+        .thenReturn("36.0"); // Incompatible with 16.1
+
+    xtsDeviceCompatibilityChecker.onTestStarted(event);
+
+    assertThat(properties.getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)).isFalse();
+  }
+
+  @Test
+  public void deviceToolCompatibility_deviceSdkInvalid_skipChecking() throws Exception {
+    properties.add(Job.XTS_SUITE_VERSION, "16.1_r1");
+    when(androidAdbUtil.getProperty(DEVICE_ID_1, DeviceBuildInfo.VERSION_SDK_FULL.getPropNames()))
+        .thenReturn("Baklava");
+
+    xtsDeviceCompatibilityChecker.onTestStarted(event);
+
+    assertThat(properties.getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)).isFalse();
   }
 }
