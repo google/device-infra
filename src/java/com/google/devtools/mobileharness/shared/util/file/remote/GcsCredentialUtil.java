@@ -17,12 +17,15 @@
 package com.google.devtools.mobileharness.shared.util.file.remote;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.shared.util.auth.CredentialFileUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import javax.annotation.Nullable;
 
 /** Utility for getting GCS credential type. */
 public final class GcsCredentialUtil {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private GcsCredentialUtil() {}
 
@@ -34,7 +37,11 @@ public final class GcsCredentialUtil {
   public static GcsUtil.CredentialType getFileTransferCredentialType(String bucketName) {
     String credentialFile =
         CredentialFileUtil.getFileTransferCredentialFile(bucketName).orElse(null);
-    return getCredentialType(null, credentialFile, new SystemUtil());
+    GcsUtil.CredentialType credentialType =
+        getCredentialType(null, credentialFile, new SystemUtil());
+    logger.atInfo().log(
+        "Using GCS credential type for file transfer: %s", credentialType.getType());
+    return credentialType;
   }
 
   /**
@@ -45,13 +52,19 @@ public final class GcsCredentialUtil {
   public static GcsUtil.CredentialType getGcsResolverCredentialType(
       @Nullable String serviceAccount) {
     String credentialFile = CredentialFileUtil.getGcsResolverCredentialFile().orElse(null);
-    return getCredentialType(serviceAccount, credentialFile, new SystemUtil());
+    GcsUtil.CredentialType credentialType =
+        getCredentialType(serviceAccount, credentialFile, new SystemUtil());
+    logger.atInfo().log("Using GCS credential type for resolver: %s", credentialType.getType());
+    return credentialType;
   }
 
   /** Gets the default GCS credential type. */
   public static GcsUtil.CredentialType getDefaultCredentialType() {
     String credentialFile = CredentialFileUtil.getDefaultGcsCredentialFile().orElse(null);
-    return getCredentialType(null, credentialFile, new SystemUtil());
+    GcsUtil.CredentialType credentialType =
+        getCredentialType(null, credentialFile, new SystemUtil());
+    logger.atInfo().log("Using default GCS credential type: %s", credentialType.getType());
+    return credentialType;
   }
 
   /**
