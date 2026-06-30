@@ -63,8 +63,8 @@ public final class FeatureReadinessTest {
   }
 
   @Test
-  public void isDeviceRemoteControlReady_returnsFalse() {
-    assertThat(featureReadiness.isDeviceRemoteControlReady()).isFalse();
+  public void isDeviceRemoteControlReady_returnsTrue() {
+    assertThat(featureReadiness.isDeviceRemoteControlReady()).isTrue();
   }
 
   @Test
