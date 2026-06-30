@@ -91,6 +91,7 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
                   addAttribute(hostEntry, property.getKey(), Optional.of(property.getValue())));
       record.setHostEntry(hostEntry.build());
       for (DeviceInfo deviceInfo : labData.getDeviceList().getDeviceInfoList()) {
+
         DeviceCompositeDimension compositeDimension =
             deviceInfo.getDeviceFeature().getCompositeDimension();
         ImmutableList<DeviceDimension> dimensionList =
