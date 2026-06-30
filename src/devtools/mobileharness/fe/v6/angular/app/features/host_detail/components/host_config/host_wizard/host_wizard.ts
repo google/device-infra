@@ -19,8 +19,7 @@ import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {finalize} from 'rxjs/operators';
 
 import {DEFAULT_HOST_CONFIG} from '../../../../../core/constants/host_config_constants';
-import {HostConfig, HostConfigSection} from '../../../../../core/models/host_config_models';
-import {ConfigSection as DeviceConfigSection} from '../../../../../core/models/device_config_models';
+import {HostConfig} from '../../../../../core/models/host_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {Environment} from '../../../../../core/services/environment';
 import {normalizeHostConfig} from '../../../../../core/utils/host_config_utils';
@@ -183,7 +182,9 @@ export class HostWizard implements OnInit {
         {
           type: 'data',
           feature: 'Host Admins',
-          value: (this.hostConfig().permissions?.hostAdmins || []).join(', ') || 'None',
+          value:
+            (this.hostConfig().permissions?.hostAdmins || []).join(', ') ||
+            'None',
         },
       );
     }
@@ -219,7 +220,7 @@ export class HostWizard implements OnInit {
       {
         type: 'data',
         feature: 'Type',
-        value: (!wifiType || wifiType === 'none') ? 'None' : wifiType,
+        value: !wifiType || wifiType === 'none' ? 'None' : wifiType,
       },
       {
         type: 'data',
@@ -240,16 +241,6 @@ export class HostWizard implements OnInit {
       const requiredDimensions = (
         this.hostConfig().deviceConfig?.dimensions?.required || []
       ).filter((item) => !(!item.name && !item.value));
-
-      const overSshDevices = (
-        this.hostConfig().deviceDiscovery?.overSshDevices || []
-      ).filter(
-        (v) =>
-          !(!v.ipAddress && !v.username && !v.password && !v.sshDeviceType),
-      );
-      const manekiSpecs = (
-        this.hostConfig().deviceDiscovery?.manekiSpecs || []
-      ).filter((v) => !(!v.type && !v.macAddress));
 
       const hostProperties = (this.hostConfig().hostProperties || []).filter(
         (v) => !(!v.key && !v.value),
@@ -293,36 +284,9 @@ export class HostWizard implements OnInit {
           },
           {
             type: 'data',
-            feature: 'Monitored Device UUIDs',
-            value: this.hostConfig().deviceDiscovery.monitoredDeviceUuids.length > 0 ? this.hostConfig().deviceDiscovery.monitoredDeviceUuids.join(', ') : 'None',
-          },
-          {
-            type: 'data',
-            feature: 'Testbed UUIDs',
-            value: this.hostConfig().deviceDiscovery.testbedUuids.length > 0 ? this.hostConfig().deviceDiscovery.testbedUuids.join(', ') : 'None',
-          },
-          {
-            type: 'data',
-            feature: 'Misc Device UUIDs',
-            value: this.hostConfig().deviceDiscovery.miscDeviceUuids.length > 0 ? this.hostConfig().deviceDiscovery.miscDeviceUuids.join(', ') : 'None',
-          },
-          {
-            type: 'data',
-            feature: 'Over TCP IPs',
-            value: this.hostConfig().deviceDiscovery.overTcpIps,
-            valueType: 'string-list',
-          },
-          {
-            type: 'data',
-            feature: 'Over SSH Devices',
-            value: overSshDevices,
-            valueType: 'ssh-devices',
-          },
-          {
-            type: 'data',
-            feature: 'Maneki Specs',
-            value: manekiSpecs,
-            valueType: 'maneki-specs',
+            feature: 'Status',
+            value:
+              'Ignored (host-specific configurations are not transferred during copy)',
           },
           {
             type: 'title',
@@ -343,7 +307,7 @@ export class HostWizard implements OnInit {
 
   submit(overrideSelfLockout = false) {
     const wifi = this.hostConfig().deviceConfig?.wifi;
-    const finalWifi = (!wifi || wifi.type === 'none') ? undefined : wifi;
+    const finalWifi = !wifi || wifi.type === 'none' ? undefined : wifi;
     const requestConfig: HostConfig = {
       ...this.hostConfig(),
       deviceConfig: {
@@ -364,13 +328,36 @@ export class HostWizard implements OnInit {
       this.stepper()?.verifying.set(true);
     }
 
+    // Define FieldMask paths corresponding to sections that require updates.
+    // ATS environment only supports mode and basic config updates, while standard
+    // environments also update permissions, properties, and optionally device discovery.
+    let paths: string[];
+    if (!this.isGoogleInternal) {
+      paths = ['device_config_mode', 'device_config'];
+    } else {
+      paths =
+        this.data.source === 'copy'
+          ? [
+              'permissions',
+              'device_config_mode',
+              'device_config',
+              'host_properties',
+            ]
+          : [
+              'permissions',
+              'device_config_mode',
+              'device_config',
+              'host_properties',
+              'device_discovery',
+            ];
+    }
+
     this.configService
       .updateHostConfig({
         hostName: this.data.hostName,
         config: requestConfig,
         scope: {
-          section: HostConfigSection.ALL,
-          deviceConfigSection: DeviceConfigSection.ALL,
+          updateMask: {paths},
         },
         options: {overrideSelfLockout},
       })

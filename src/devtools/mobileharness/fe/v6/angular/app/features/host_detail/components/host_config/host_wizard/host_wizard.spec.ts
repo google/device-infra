@@ -11,7 +11,6 @@ import {
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
 import {of} from 'rxjs';
-
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {Environment} from '../../../../../core/services/environment';
 import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/confirm_dialog';
@@ -287,6 +286,124 @@ describe('HostWizard Component', () => {
     expect(updateSpy).toHaveBeenCalled();
     const updateRequest = updateSpy.calls.mostRecent().args[0];
     expect(updateRequest.config.deviceConfig?.wifi).toBeUndefined();
+  });
+
+  it('should call updateHostConfig with copy scope when source is copy', async () => {
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostWizard, {
+        data: {
+          hostName: 'test-host',
+          source: 'copy',
+          config: {
+            permissions: {hostAdmins: ['admin']},
+          },
+        },
+      }),
+    ) as ComponentFixture<MatTestDialogOpener<HostWizard>>;
+    dialogOpener.detectChanges();
+    await dialogOpener.whenStable();
+
+    const comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    const configService = TestBed.inject(CONFIG_SERVICE);
+    const updateSpy = spyOn(
+      configService,
+      'updateHostConfig',
+    ).and.callThrough();
+
+    comp.submit();
+
+    expect(updateSpy).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        scope: {
+          updateMask: {
+            paths: [
+              'permissions',
+              'device_config_mode',
+              'device_config',
+              'host_properties',
+            ],
+          },
+        },
+      }),
+    );
+  });
+
+  it('should call updateHostConfig with new host scope when source is new', async () => {
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostWizard, {
+        data: {
+          hostName: 'test-host',
+          source: 'new',
+          config: {
+            permissions: {hostAdmins: ['admin']},
+          },
+        },
+      }),
+    ) as ComponentFixture<MatTestDialogOpener<HostWizard>>;
+    dialogOpener.detectChanges();
+    await dialogOpener.whenStable();
+
+    const comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    const configService = TestBed.inject(CONFIG_SERVICE);
+    const updateSpy = spyOn(
+      configService,
+      'updateHostConfig',
+    ).and.callThrough();
+
+    comp.submit();
+
+    expect(updateSpy).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        scope: {
+          updateMask: {
+            paths: [
+              'permissions',
+              'device_config_mode',
+              'device_config',
+              'host_properties',
+              'device_discovery',
+            ],
+          },
+        },
+      }),
+    );
+  });
+
+  it('should call updateHostConfig with ATS scope when running in ATS env', async () => {
+    mockEnvironment.isGoogleInternal.and.returnValue(false); // Mock ATS env
+
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostWizard, {
+        data: {
+          hostName: 'test-host',
+          source: 'new',
+          config: {
+            permissions: {hostAdmins: ['admin']},
+          },
+        },
+      }),
+    ) as ComponentFixture<MatTestDialogOpener<HostWizard>>;
+    dialogOpener.detectChanges();
+    await dialogOpener.whenStable();
+
+    const comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    const configService = TestBed.inject(CONFIG_SERVICE);
+    const updateSpy = spyOn(
+      configService,
+      'updateHostConfig',
+    ).and.callThrough();
+
+    comp.submit();
+
+    expect(updateSpy).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        scope: {
+          updateMask: {
+            paths: ['device_config_mode', 'device_config'],
+          },
+        },
+      }),
+    );
   });
 
   it('should close dialog ref on successful config submit in copy flow', async () => {

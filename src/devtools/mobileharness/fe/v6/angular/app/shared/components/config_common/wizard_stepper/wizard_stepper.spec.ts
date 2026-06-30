@@ -43,6 +43,10 @@ describe('WizardStepper Component', () => {
     expect(component).toBeTruthy();
   });
 
+  interface WizardStepperWithPrivate {
+    syncStepIndex(): void;
+  }
+
   it('should find and set step index by currentStep ID on init', () => {
     component.WIZARD_STEPS = [
       {
@@ -78,11 +82,11 @@ describe('WizardStepper Component', () => {
       },
     ];
     component.currentStep = 'step2';
-    (component as unknown as {syncStepIndex: () => void}).syncStepIndex();
+    (component as unknown as WizardStepperWithPrivate).syncStepIndex();
     expect(component.currentStepIndex()).toBe(1);
 
     component.currentStep = 'step1';
-    (component as unknown as {syncStepIndex: () => void}).syncStepIndex();
+    (component as unknown as WizardStepperWithPrivate).syncStepIndex();
     expect(component.currentStepIndex()).toBe(0);
     expect(component.subtitle()).toBe('Step 1 of 2: Step 1');
   });
@@ -91,7 +95,7 @@ describe('WizardStepper Component', () => {
     component.WIZARD_STEPS = undefined as unknown as WizardStep[];
     component.currentStep = 'test';
     expect(() => {
-      (component as unknown as {syncStepIndex: () => void}).syncStepIndex();
+      (component as unknown as WizardStepperWithPrivate).syncStepIndex();
     }).not.toThrow();
   });
 });

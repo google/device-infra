@@ -27,6 +27,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.DetectorSpecs;
@@ -42,7 +43,6 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimens
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.PermissionInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfigMode;
-import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfigSection;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceDiscoverySettings;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostConfigSection;
@@ -64,6 +64,7 @@ import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.protobuf.FieldMask;
 import com.google.protobuf.Int32Value;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -143,10 +144,7 @@ public final class UpdateHostConfigHandlerTest {
             .setHostName(hostName)
             .setUniverse(universe)
             .setConfig(feConfig)
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.HOST_PROPERTIES)
-                    .build())
+            .setScope(createScope("host_properties"))
             .build();
 
     LabConfig existingConfig =
@@ -191,10 +189,7 @@ public final class UpdateHostConfigHandlerTest {
             .setHostName(hostName)
             .setUniverse(universe)
             .setConfig(feConfig)
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.HOST_PROPERTIES)
-                    .build())
+            .setScope(createScope("host_properties"))
             .build();
 
     LabConfig existingConfig = LabConfig.newBuilder().setHostName(hostName).build();
@@ -237,11 +232,7 @@ public final class UpdateHostConfigHandlerTest {
             .setHostName(hostName)
             .setUniverse(universe)
             .setConfig(incomingConfig)
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.HOST_CONFIG_SECTION_ALL)
-                    .setDeviceConfigSection(DeviceConfigSection.ALL)
-                    .build())
+            .setScope(HostConfigUpdateScope.newBuilder().build())
             .build();
 
     // Old existing config in DB
@@ -324,10 +315,7 @@ public final class UpdateHostConfigHandlerTest {
             .setHostName(hostName)
             .setUniverse(universe)
             .setConfig(feConfig)
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.HOST_PROPERTIES)
-                    .build())
+            .setScope(createScope("host_properties"))
             .build();
 
     LabConfig existingConfig =
@@ -368,10 +356,7 @@ public final class UpdateHostConfigHandlerTest {
         UpdateHostConfigRequest.newBuilder()
             .setHostName("test_host")
             .setUniverse("oss")
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.HOST_PROPERTIES)
-                    .build())
+            .setScope(createScope("host_properties"))
             .build();
 
     UpdateHostConfigResponse response =
@@ -379,8 +364,7 @@ public final class UpdateHostConfigHandlerTest {
 
     assertThat(response.getSuccess()).isFalse();
     assertThat(response.getError().getMessage())
-        .contains(
-            "Configuration section 'HOST_PROPERTIES' is not supported in the ATS environment.");
+        .contains("Configuration path 'host_properties' is not supported in the ATS environment.");
   }
 
   @Test
@@ -390,10 +374,7 @@ public final class UpdateHostConfigHandlerTest {
     UpdateHostConfigRequest request =
         UpdateHostConfigRequest.newBuilder()
             .setHostName(hostName)
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.HOST_CONFIG_SECTION_ALL)
-                    .build())
+            .setScope(HostConfigUpdateScope.newBuilder().build())
             .build();
 
     when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
@@ -417,10 +398,7 @@ public final class UpdateHostConfigHandlerTest {
     UpdateHostConfigRequest request =
         UpdateHostConfigRequest.newBuilder()
             .setHostName(hostName)
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.DEVICE_CONFIG_MODE)
-                    .build())
+            .setScope(createScope("device_config_mode"))
             .build();
 
     when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
@@ -464,10 +442,11 @@ public final class UpdateHostConfigHandlerTest {
             .setUniverse(universe)
             .setConfig(feConfig)
             .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.DEVICE_CONFIG)
-                    .setDeviceConfigSection(DeviceConfigSection.ALL)
-                    .build())
+                createScope(
+                    "device_config.permissions",
+                    "device_config.wifi",
+                    "device_config.dimensions",
+                    "device_config.settings"))
             .build();
 
     when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
@@ -511,11 +490,7 @@ public final class UpdateHostConfigHandlerTest {
             .setHostName(hostName)
             .setUniverse(universe)
             .setConfig(feConfig)
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.DEVICE_CONFIG)
-                    .setDeviceConfigSection(DeviceConfigSection.PERMISSIONS)
-                    .build())
+            .setScope(createScope("device_config.permissions"))
             .build();
 
     LabConfig existingConfig =
@@ -552,10 +527,7 @@ public final class UpdateHostConfigHandlerTest {
         UpdateHostConfigRequest.newBuilder()
             .setHostName(hostName)
             .setConfig(feConfig)
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.HOST_PERMISSIONS)
-                    .build())
+            .setScope(createScope("permissions"))
             .build();
 
     when(groupMembershipProvider.isMemberOfAny(eq(user), any())).thenReturn(immediateFuture(false));
@@ -579,10 +551,7 @@ public final class UpdateHostConfigHandlerTest {
         UpdateHostConfigRequest.newBuilder()
             .setHostName(hostName)
             .setConfig(feConfig)
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.HOST_CONFIG_SECTION_ALL)
-                    .build())
+            .setScope(HostConfigUpdateScope.newBuilder().build())
             .build();
 
     when(groupMembershipProvider.isMemberOfAny(eq(user), any())).thenReturn(immediateFuture(false));
@@ -606,10 +575,7 @@ public final class UpdateHostConfigHandlerTest {
         UpdateHostConfigRequest.newBuilder()
             .setHostName(hostName)
             .setConfig(feConfig)
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.HOST_CONFIG_SECTION_UNSPECIFIED)
-                    .build())
+            .setScope(HostConfigUpdateScope.newBuilder().build())
             .build();
 
     when(groupMembershipProvider.isMemberOfAny(eq(user), any())).thenReturn(immediateFuture(false));
@@ -633,10 +599,7 @@ public final class UpdateHostConfigHandlerTest {
         UpdateHostConfigRequest.newBuilder()
             .setHostName(hostName)
             .setConfig(feConfig)
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.HOST_PERMISSIONS)
-                    .build())
+            .setScope(createScope("permissions"))
             .setOptions(UpdateOptions.newBuilder().setOverrideSelfLockout(true).build())
             .build();
 
@@ -657,10 +620,7 @@ public final class UpdateHostConfigHandlerTest {
         UpdateHostConfigRequest.newBuilder()
             .setHostName(hostName)
             .setConfig(feConfig)
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.DEVICE_CONFIG_MODE)
-                    .build())
+            .setScope(createScope("device_config_mode"))
             .build();
 
     updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
@@ -683,10 +643,7 @@ public final class UpdateHostConfigHandlerTest {
         UpdateHostConfigRequest.newBuilder()
             .setHostName(hostName)
             .setConfig(feConfig)
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.DEVICE_DISCOVERY)
-                    .build())
+            .setScope(createScope("device_discovery"))
             .build();
 
     updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
@@ -714,11 +671,7 @@ public final class UpdateHostConfigHandlerTest {
         UpdateHostConfigRequest.newBuilder()
             .setHostName(hostName)
             .setConfig(feConfig)
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.DEVICE_CONFIG)
-                    .setDeviceConfigSection(DeviceConfigSection.STABILITY)
-                    .build())
+            .setScope(createScope("device_config.settings"))
             .build();
 
     updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
@@ -755,10 +708,11 @@ public final class UpdateHostConfigHandlerTest {
             .setHostName(hostName)
             .setConfig(feConfig)
             .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.DEVICE_CONFIG)
-                    .setDeviceConfigSection(DeviceConfigSection.ALL)
-                    .build())
+                createScope(
+                    "device_config.permissions",
+                    "device_config.wifi",
+                    "device_config.dimensions",
+                    "device_config.settings"))
             .build();
 
     updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
@@ -798,10 +752,7 @@ public final class UpdateHostConfigHandlerTest {
         UpdateHostConfigRequest.newBuilder()
             .setHostName(hostName)
             .setConfig(feConfig)
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.DEVICE_DISCOVERY)
-                    .build())
+            .setScope(createScope("device_discovery"))
             .build();
 
     updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
@@ -854,10 +805,7 @@ public final class UpdateHostConfigHandlerTest {
         UpdateHostConfigRequest.newBuilder()
             .setHostName(hostName)
             .setConfig(feConfig)
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.DEVICE_DISCOVERY)
-                    .build())
+            .setScope(createScope("device_discovery"))
             .build();
 
     updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
@@ -874,10 +822,7 @@ public final class UpdateHostConfigHandlerTest {
     UpdateHostConfigRequest request =
         UpdateHostConfigRequest.newBuilder()
             .setHostName("host")
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.HOST_PROPERTIES)
-                    .build())
+            .setScope(createScope("host_properties"))
             .build();
     updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.of("user")).get();
     verify(configurationProvider)
@@ -890,10 +835,7 @@ public final class UpdateHostConfigHandlerTest {
     UpdateHostConfigRequest request =
         UpdateHostConfigRequest.newBuilder()
             .setHostName("host")
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.HOST_PERMISSIONS)
-                    .build())
+            .setScope(createScope("permissions"))
             .setConfig(
                 HostConfig.newBuilder()
                     .setPermissions(HostPermissions.newBuilder().addHostAdmins(user).build())
@@ -905,15 +847,12 @@ public final class UpdateHostConfigHandlerTest {
   }
 
   @Test
-  public void updateHostConfig_unspecifiedSection_success() throws Exception {
+  public void updateHostConfig_emptyScope_success() throws Exception {
     String hostName = "host";
     UpdateHostConfigRequest request =
         UpdateHostConfigRequest.newBuilder()
             .setHostName(hostName)
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.HOST_CONFIG_SECTION_ALL)
-                    .build())
+            .setScope(HostConfigUpdateScope.newBuilder().build())
             .setConfig(
                 HostConfig.newBuilder()
                     .setDeviceConfigMode(DeviceConfigMode.SHARED)
@@ -931,10 +870,7 @@ public final class UpdateHostConfigHandlerTest {
     UpdateHostConfigRequest request =
         UpdateHostConfigRequest.newBuilder()
             .setHostName("host")
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.HOST_PERMISSIONS)
-                    .build())
+            .setScope(createScope("permissions"))
             .setConfig(HostConfig.getDefaultInstance())
             .build();
     updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
@@ -948,11 +884,7 @@ public final class UpdateHostConfigHandlerTest {
     UpdateHostConfigRequest request =
         UpdateHostConfigRequest.newBuilder()
             .setHostName("host")
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.DEVICE_CONFIG)
-                    .setDeviceConfigSection(DeviceConfigSection.PERMISSIONS)
-                    .build())
+            .setScope(createScope("device_config.permissions"))
             .setConfig(
                 HostConfig.newBuilder()
                     .setDeviceConfig(
@@ -974,11 +906,7 @@ public final class UpdateHostConfigHandlerTest {
     UpdateHostConfigRequest request =
         UpdateHostConfigRequest.newBuilder()
             .setHostName("host")
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.DEVICE_CONFIG)
-                    .setDeviceConfigSection(DeviceConfigSection.WIFI)
-                    .build())
+            .setScope(createScope("device_config.wifi"))
             .setConfig(
                 HostConfig.newBuilder()
                     .setDeviceConfig(
@@ -1001,11 +929,7 @@ public final class UpdateHostConfigHandlerTest {
     UpdateHostConfigRequest request =
         UpdateHostConfigRequest.newBuilder()
             .setHostName("host")
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.DEVICE_CONFIG)
-                    .setDeviceConfigSection(DeviceConfigSection.DIMENSIONS)
-                    .build())
+            .setScope(createScope("device_config.dimensions"))
             .setConfig(
                 HostConfig.newBuilder()
                     .setDeviceConfig(
@@ -1052,10 +976,7 @@ public final class UpdateHostConfigHandlerTest {
         UpdateHostConfigRequest.newBuilder()
             .setHostName(hostName)
             .setConfig(HostConfig.newBuilder().setDeviceConfigMode(DeviceConfigMode.SHARED).build())
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.DEVICE_CONFIG_MODE)
-                    .build())
+            .setScope(createScope("device_config_mode"))
             .build();
 
     updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
@@ -1091,10 +1012,7 @@ public final class UpdateHostConfigHandlerTest {
             .setHostName(hostName)
             .setConfig(
                 HostConfig.newBuilder().setDeviceConfigMode(DeviceConfigMode.PER_DEVICE).build())
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.DEVICE_CONFIG_MODE)
-                    .build())
+            .setScope(createScope("device_config_mode"))
             .build();
 
     updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
@@ -1111,10 +1029,7 @@ public final class UpdateHostConfigHandlerTest {
     UpdateHostConfigRequest request =
         UpdateHostConfigRequest.newBuilder()
             .setHostName(hostName)
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.HOST_PERMISSIONS)
-                    .build())
+            .setScope(createScope("permissions"))
             .setConfig(
                 HostConfig.newBuilder()
                     .setPermissions(HostPermissions.newBuilder().addHostAdmins("admin1").build())
@@ -1130,7 +1045,7 @@ public final class UpdateHostConfigHandlerTest {
   }
 
   @Test
-  public void updateHostConfig_sectionAll_success() throws Exception {
+  public void updateHostConfig_fullUpdate_success() throws Exception {
     String hostName = "test_host";
     String universe = "google_1p";
     HostConfig feConfig =
@@ -1147,11 +1062,7 @@ public final class UpdateHostConfigHandlerTest {
             .setHostName(hostName)
             .setUniverse(universe)
             .setConfig(feConfig)
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.HOST_CONFIG_SECTION_ALL)
-                    .setDeviceConfigSection(DeviceConfigSection.ALL)
-                    .build())
+            .setScope(HostConfigUpdateScope.newBuilder().build())
             .build();
 
     when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
@@ -1184,11 +1095,7 @@ public final class UpdateHostConfigHandlerTest {
             .setHostName(hostName)
             .setUniverse(universe)
             .setConfig(feConfig)
-            .setScope(
-                HostConfigUpdateScope.newBuilder()
-                    .setSection(HostConfigSection.DEVICE_CONFIG)
-                    .setDeviceConfigSection(DeviceConfigSection.WIFI)
-                    .build())
+            .setScope(createScope("device_config.wifi"))
             .build();
 
     LabConfig existingConfig =
@@ -1218,5 +1125,11 @@ public final class UpdateHostConfigHandlerTest {
         .updateLabConfig(eq(hostName), captor.capture(), eq(SELF_UNIVERSE));
     LabConfig updatedConfig = captor.getValue();
     assertThat(updatedConfig.getDefaultDeviceConfig().hasDefaultWifi()).isFalse();
+  }
+
+  private static HostConfigUpdateScope createScope(String... paths) {
+    return HostConfigUpdateScope.newBuilder()
+        .setUpdateMask(FieldMask.newBuilder().addAllPaths(ImmutableList.copyOf(paths)).build())
+        .build();
   }
 }

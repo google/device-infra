@@ -77,6 +77,14 @@
     (onPermissionChange)="applyChangesDisabled.set(!$event.hasPermission)"
   >
     <main class="step-content">
+      @if (isGoogleInternal) {
+        <div class="copy-warning-banner">
+          <mat-icon>warning</mat-icon>
+          <div>
+            <strong>Note:</strong> Host-specific configurations (such as Device Discovery) are ignored during copy.
+          </div>
+        </div>
+      }
       <app-review-table
         title="Review & Submit"
         description="You are about to apply a copied configuration. Please review the settings below before

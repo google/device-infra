@@ -183,15 +183,17 @@ export enum HostConfigSection {
   DEVICE_CONFIG = 'DEVICE_CONFIG',
   HOST_PROPERTIES = 'HOST_PROPERTIES',
   DEVICE_DISCOVERY = 'DEVICE_DISCOVERY',
-  ALL = 'HOST_CONFIG_SECTION_ALL',
 }
 
 /**
  * Defines the scope of a partial update.
  */
 export declare interface HostConfigUpdateScope {
-  section: HostConfigSection;
-  deviceConfigSection?: DeviceConfigSection; // Relevant only if section is DEVICE_CONFIG or ALL
+  /** @deprecated Use updateMask instead. */
+  section?: HostConfigSection;
+  /** @deprecated Use updateMask instead. */
+  deviceConfigSection?: DeviceConfigSection;
+  updateMask?: {paths: string[]};
 }
 
 /**

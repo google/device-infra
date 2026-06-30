@@ -24,10 +24,7 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 import {of, throwError} from 'rxjs';
 import {concatMap, finalize} from 'rxjs/operators';
 
-import {
-  ConfigSection,
-  type DeviceConfig,
-} from '../../../../../core/models/device_config_models';
+import {type DeviceConfig} from '../../../../../core/models/device_config_models';
 import {
   type Editability,
   type HostConfig,
@@ -811,22 +808,15 @@ export class HostSettings implements OnInit {
       return;
     }
 
-    const requestSectionMap: Record<string, HostConfigSection> = {
-      'host-permissions': HostConfigSection.HOST_PERMISSIONS,
-      'config-mode': HostConfigSection.DEVICE_CONFIG_MODE,
-      'permissions': HostConfigSection.DEVICE_CONFIG,
-      'wifi': HostConfigSection.DEVICE_CONFIG,
-      'dimensions': HostConfigSection.DEVICE_CONFIG,
-      'stability': HostConfigSection.DEVICE_CONFIG,
-      'device-discovery': HostConfigSection.DEVICE_DISCOVERY,
-      'host-properties': HostConfigSection.HOST_PROPERTIES,
-    };
-
-    const deviceConfigSectionMap: Record<string, ConfigSection> = {
-      'permissions': ConfigSection.PERMISSIONS,
-      'wifi': ConfigSection.WIFI,
-      'dimensions': ConfigSection.DIMENSIONS,
-      'stability': ConfigSection.STABILITY,
+    const requestPathsMap: Record<string, string[]> = {
+      'host-permissions': ['permissions'],
+      'config-mode': ['device_config_mode'],
+      'permissions': ['device_config.permissions'],
+      'wifi': ['device_config.wifi'],
+      'dimensions': ['device_config.dimensions'],
+      'stability': ['device_config.settings'],
+      'device-discovery': ['device_discovery'],
+      'host-properties': ['host_properties'],
     };
 
     if (
@@ -850,8 +840,7 @@ export class HostSettings implements OnInit {
       hostName: this.hostName,
       config: requestConfig,
       scope: {
-        section: requestSectionMap[section],
-        deviceConfigSection: deviceConfigSectionMap[section],
+        updateMask: {paths: requestPathsMap[section]},
       },
       options: {overrideSelfLockout: selfLockout},
     };

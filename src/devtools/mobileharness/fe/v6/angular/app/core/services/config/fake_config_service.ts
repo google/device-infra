@@ -14,7 +14,6 @@ import {
 import {
   CheckHostWritePermissionResult,
   GetHostConfigResult,
-  HostConfigSection,
   UnlockHostPropertiesResponse,
   UpdateHostConfigRequest,
   UpdateHostConfigResult,
@@ -277,51 +276,37 @@ export class FakeConfigService extends ConfigService {
       updatedConfig = deepCopy(updatedConfig);
     }
 
-    if (
-      !request.scope?.section ||
-      request.scope.section === HostConfigSection.ALL
-    ) {
+    const paths = request.scope?.updateMask?.paths || [];
+
+    if (paths.length === 0) {
       // Full update
       updatedConfig = deepCopy(request.config);
     } else {
-      switch (request.scope?.section) {
-        case HostConfigSection.HOST_PERMISSIONS:
-          if (
-            !request.config.permissions.hostAdmins.includes(CURRENT_USER) &&
-            !request.options?.overrideSelfLockout
-          ) {
-            return of<UpdateHostConfigResult>({
-              success: false,
-              error: {code: 'SELF_LOCKOUT_DETECTED'},
-            }).pipe(delay(1000));
-          }
-          updatedConfig.permissions = deepCopy(request.config.permissions);
-          break;
-        case HostConfigSection.DEVICE_CONFIG_MODE:
-          updatedConfig.deviceConfigMode = request.config.deviceConfigMode;
-          break;
-        case HostConfigSection.DEVICE_CONFIG:
-          // Further handling for deviceConfigSection would be needed here
-          updatedConfig.deviceConfig = deepCopy(request.config.deviceConfig);
-          break;
-        case HostConfigSection.HOST_PROPERTIES:
-          updatedConfig.hostProperties = deepCopy(
-            request.config.hostProperties,
-          );
-          break;
-        case HostConfigSection.DEVICE_DISCOVERY:
-          updatedConfig.deviceDiscovery = deepCopy(
-            request.config.deviceDiscovery,
-          );
-          break;
-        default:
+      if (paths.includes('permissions')) {
+        if (
+          !request.config.permissions.hostAdmins.includes(CURRENT_USER) &&
+          !request.options?.overrideSelfLockout
+        ) {
           return of<UpdateHostConfigResult>({
             success: false,
-            error: {
-              code: 'VALIDATION_ERROR',
-              message: 'Unknown host config section',
-            },
+            error: {code: 'SELF_LOCKOUT_DETECTED'},
           }).pipe(delay(1000));
+        }
+        updatedConfig.permissions = deepCopy(request.config.permissions);
+      }
+      if (paths.includes('device_config_mode')) {
+        updatedConfig.deviceConfigMode = request.config.deviceConfigMode;
+      }
+      if (paths.some((p) => p.startsWith('device_config'))) {
+        updatedConfig.deviceConfig = deepCopy(request.config.deviceConfig);
+      }
+      if (paths.includes('host_properties')) {
+        updatedConfig.hostProperties = deepCopy(request.config.hostProperties);
+      }
+      if (paths.includes('device_discovery')) {
+        updatedConfig.deviceDiscovery = deepCopy(
+          request.config.deviceDiscovery,
+        );
       }
     }
 

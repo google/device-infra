@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package devtools.mobileharness.fe.v6.service.proto.config;
 
+import "google/protobuf/field_mask.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/common/common_resources.proto";
 
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.config";
@@ -218,15 +219,15 @@ enum HostConfigSection {
   DEVICE_CONFIG = 3;
   HOST_PROPERTIES = 4;
   DEVICE_DISCOVERY = 5;
-  HOST_CONFIG_SECTION_ALL = 6;
+  reserved 6;
 }
 
 // Defines the scope of a partial update.
 message HostConfigUpdateScope {
-  HostConfigSection section = 1;
-  DeviceConfigSection device_config_section =
-      2;  // Relevant only if section is DEVICE_CONFIG or
-          // HOST_CONFIG_SECTION_ALL
+  HostConfigSection section = 1 [deprecated = true];
+  DeviceConfigSection device_config_section = 2 [deprecated = true];
+
+  google.protobuf.FieldMask update_mask = 3;
 }
 
 // Options for the update request.
