@@ -25,6 +25,7 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.net.InetAddresses;
@@ -36,6 +37,7 @@ import com.google.devtools.mobileharness.platform.android.lightning.shared.Share
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.PackageType;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidSvc;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DumpSysType;
@@ -241,6 +243,10 @@ public class AndroidConnectivityUtil {
   @VisibleForTesting
   static final String SAVED_SSIDS_PSKS_WIFI_CONFIG_FILE_PATH =
       "/data/misc/wifi/WifiConfigStore.xml";
+
+  /** Device models that require masked SSID matching behavior. */
+  private static final ImmutableSet<String> MASKED_SSID_SUPPORTED_MODELS =
+      ImmutableSet.of("rmx2103", "rmx3231");
 
   /** {@code TimeSource} for getting current system time. */
   private final Clock clock;
@@ -947,8 +953,17 @@ public class AndroidConnectivityUtil {
     int sdkVersion = utilArgs.sdkVersion().getAsInt();
     try {
       List<String> currentSsidList = getNetworkSsidList(serial, sdkVersion);
-      if (!currentSsidList.isEmpty() && (ssid == null || currentSsidList.contains(ssid))) {
-        return true;
+      if (!currentSsidList.isEmpty()) {
+        if (ssid == null) {
+          return true;
+        }
+        if (currentSsidList.contains(ssid)) {
+          return true;
+        }
+        if (MASKED_SSID_SUPPORTED_MODELS.contains(
+            adbUtil.getProperty(serial, AndroidProperty.MODEL))) {
+          return isSsidMatch(currentSsidList, ssid);
+        }
       }
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
@@ -961,6 +976,32 @@ public class AndroidConnectivityUtil {
           serial, ie.getMessage());
       Thread.currentThread().interrupt();
     }
+    return false;
+  }
+
+  /**
+   * Returns {@code true} if any of the current SSIDs matches the expected SSID.
+   *
+   * <p>Supports masked SSIDs where the middle part is replaced by "***" (e.g., "wl***ab" matching
+   * "wl-android-org-namaste-lab", because some OEM devices won't print the full SSID in some
+   * cases).
+   */
+  static boolean isSsidMatch(List<String> currentSsids, String expectedSsid) {
+    for (String currentSsid : currentSsids) {
+      if (expectedSsid.equals(currentSsid)) {
+        return true;
+      }
+      // Handle masked SSID like "wl***ab"
+      if (currentSsid.contains("***")) {
+        int maskIndex = currentSsid.indexOf("***");
+        String prefix = currentSsid.substring(0, maskIndex);
+        String suffix = currentSsid.substring(maskIndex + 3);
+        if (expectedSsid.startsWith(prefix) && expectedSsid.endsWith(suffix)) {
+          return true;
+        }
+      }
+    }
+
     return false;
   }
 
