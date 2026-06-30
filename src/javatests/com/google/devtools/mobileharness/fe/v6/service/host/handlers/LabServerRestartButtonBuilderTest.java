@@ -114,8 +114,9 @@ public final class LabServerRestartButtonBuilderTest {
   }
 
   @Test
-  public void build_daemonNotRunning_returnsInvisible() {
+  public void build_daemonNotRunning_returnsVisibleAndDisabled() {
     when(mockFeatureManager.isLabServerRestartFeatureEnabled()).thenReturn(true);
+    when(mockFeatureReadiness.isLabServerRestartReady()).thenReturn(true);
 
     HostConnectivityStatus runningStatus =
         HostConnectivityStatus.newBuilder().setState(HostConnectivityStatus.State.RUNNING).build();
@@ -124,6 +125,7 @@ public final class LabServerRestartButtonBuilderTest {
     LabServerInfo.Activity startedActivity =
         LabServerInfo.Activity.newBuilder().setState(LabServerInfo.ActivityState.STARTED).build();
 
+    // Visible because the activity is a valid Restart target; disabled because daemon is missing.
     var result =
         labServerRestartButtonBuilder.build(
             UNIVERSE,
@@ -133,7 +135,8 @@ public final class LabServerRestartButtonBuilderTest {
             runningStatus,
             daemonNotRunning);
 
-    assertThat(result.getVisible()).isFalse();
+    assertThat(result.getVisible()).isTrue();
+    assertThat(result.getEnabled()).isFalse();
   }
 
   @Test

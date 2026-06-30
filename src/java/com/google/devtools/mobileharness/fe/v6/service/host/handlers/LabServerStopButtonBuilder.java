@@ -18,10 +18,12 @@ package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.HostTypes;
+import com.google.devtools.mobileharness.fe.v6.service.host.util.LabServerActionAvailabilities;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostConnectivityStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.LifecycleActionType;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
@@ -51,8 +53,6 @@ public class LabServerStopButtonBuilder {
       HostConnectivityStatus connectivityStatus,
       DaemonServerInfo.Status daemonStatus) {
 
-    // TODO: Refactor this logic into a shared util class when it is needed by 2 consumers (e.g.,
-    // for the preflight request).
     if (!featureManagerFactory.create(universe).isLabServerStopFeatureEnabled()) {
       return ActionButtonState.newBuilder().setVisible(false).build();
     }
@@ -63,23 +63,19 @@ public class LabServerStopButtonBuilder {
       return ActionButtonState.newBuilder().setVisible(false).build();
     }
 
-    boolean daemonRunning = daemonStatus.getState() == DaemonServerInfo.State.RUNNING;
-
-    boolean isTargetActivityState =
-        activity.getState() == LabServerInfo.ActivityState.STARTED
-            || activity.getState() == LabServerInfo.ActivityState.STARTED_BUT_DISCONNECTED
-            || activity.getState() == LabServerInfo.ActivityState.ERROR;
-
-    boolean visibleCondition = daemonRunning && isTargetActivityState;
+    // Visible when the activity is a valid Stop target; daemon state decides enabled.
+    boolean visibleCondition =
+        LabServerActionAvailabilities.isTargetActivity(LifecycleActionType.STOP, activity);
 
     if (!visibleCondition) {
       return ActionButtonState.newBuilder().setVisible(false).build();
     }
 
+    boolean daemonRunning = daemonStatus.getState() == DaemonServerInfo.State.RUNNING;
     boolean isReady = featureReadiness.isLabServerStopReady();
     return ActionButtonState.newBuilder()
         .setVisible(true)
-        .setEnabled(true)
+        .setEnabled(daemonRunning)
         .setIsReady(isReady)
         .setTooltip("Drains running tests, then stops the lab server via Legislator rollout.")
         .build();

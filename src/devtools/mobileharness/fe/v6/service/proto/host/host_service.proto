@@ -299,18 +299,19 @@ message PreflightLabServerReleaseResponse {
   }
 }
 
+// The type of lab server lifecycle action.
+enum LifecycleActionType {
+  LIFECYCLE_ACTION_TYPE_UNSPECIFIED = 0;
+  START = 1;
+  RESTART = 2;
+  STOP = 3;
+}
+
 // Request message for PreflightLabServerLifecycle.
 message PreflightLabServerLifecycleRequest {
   string host_name = 1;
 
-  // The type of lifecycle action to preflight.
-  enum ActionType {
-    ACTION_TYPE_UNSPECIFIED = 0;
-    START = 1;
-    RESTART = 2;
-    STOP = 3;
-  }
-  ActionType action = 2;
+  LifecycleActionType action = 2;
 
   // The Activity currently displayed on the Lab Server card in the frontend.
   // Used to detect stale page state (e.g. "RUNNING", "STOPPED").
