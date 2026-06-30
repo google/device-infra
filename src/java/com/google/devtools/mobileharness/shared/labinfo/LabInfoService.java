@@ -28,14 +28,21 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.Page;
+import com.google.devtools.mobileharness.shared.labinfo.diagnostic.MasterLabAssessment;
+import com.google.devtools.mobileharness.shared.labinfo.diagnostic.MasterLabReport;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceGrpc;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DiagnoseJobRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DiagnoseJobResponse;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DiagnoseJobSpec;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import io.grpc.stub.StreamObserver;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -77,6 +84,57 @@ public class LabInfoService extends LabInfoServiceGrpc.LabInfoServiceImplBase {
         this::doGetLabInfo,
         LabInfoServiceGrpc.getServiceDescriptor(),
         LabInfoServiceGrpc.getGetLabInfoMethod());
+  }
+
+  @Override
+  public void diagnoseJob(
+      DiagnoseJobRequest request, StreamObserver<DiagnoseJobResponse> responseObserver) {
+    GrpcServiceUtil.invoke(
+        request,
+        responseObserver,
+        this::doDiagnoseJob,
+        LabInfoServiceGrpc.getServiceDescriptor(),
+        LabInfoServiceGrpc.getDiagnoseJobMethod());
+  }
+
+  @VisibleForTesting
+  DiagnoseJobResponse doDiagnoseJob(DiagnoseJobRequest request) throws MobileHarnessException {
+    DiagnoseJobSpec spec = request.getSpec();
+    logger.atInfo().log("Diagnose job, req=[%s]", shortDebugString(request));
+
+    // Builds a lab/device snapshot from the provider, the same way GetLabInfo does.
+    LabQueryResult labQueryResult =
+        createNewLabQueryResult(LabQuery.getDefaultInstance(), labInfoProvider);
+    List<LabData> labs = labQueryResult.getLabView().getLabDataList();
+
+    MasterLabReport report = new MasterLabReport(spec);
+    for (LabData labData : labs) {
+      if (labData.getDeviceList().getDeviceInfoCount()
+          < spec.getDeviceRequirements().getDeviceRequirementCount()) {
+        continue;
+      }
+      MasterLabAssessment labAssessment = new MasterLabAssessment(spec).addResource(labData);
+      report.addLabAssessment(labAssessment, /* isFirstRound= */ true);
+    }
+
+    MasterLabReport.Result result = report.getResult();
+
+    DiagnoseJobResponse.ErrorType protoErrorType;
+    switch (result.errorType()) {
+      case INFRA_ERROR:
+        protoErrorType = DiagnoseJobResponse.ErrorType.INFRA_ERROR;
+        break;
+      case USER_CONFIG_ERROR:
+        protoErrorType = DiagnoseJobResponse.ErrorType.USER_CONFIG_ERROR;
+        break;
+      default:
+        protoErrorType = DiagnoseJobResponse.ErrorType.UNKNOWN;
+    }
+
+    return DiagnoseJobResponse.newBuilder()
+        .setReadableReport(result.readableReport())
+        .setErrorType(protoErrorType)
+        .build();
   }
 
   @VisibleForTesting

@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -36,10 +38,16 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.control
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabInfoGrpcStub;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoService;
+import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import io.grpc.BindableService;
+import io.grpc.ManagedChannel;
+import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -108,6 +116,17 @@ public class AtsMode implements ExecMode, ServiceProvider {
   @Override
   public DeviceQuerier createDeviceQuerier() {
     return deviceQuerier;
+  }
+
+  @Override
+  public Optional<LabInfoStub> createLabInfoStub() {
+    // Diagnosis goes over the in-process OLC channel to the local LabInfoService.
+    ManagedChannel channel =
+        ChannelFactory.createLocalChannel(Flags.olcServerPort.getNonNull(), directExecutor());
+    return Optional.of(
+        new LabInfoGrpcStub(
+            LabInfoGrpcStub.newBlockingInterface(channel),
+            LabInfoGrpcStub.newFutureInterface(channel)));
   }
 
   @Override
