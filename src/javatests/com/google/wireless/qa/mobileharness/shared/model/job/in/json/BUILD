@@ -14,23 +14,30 @@
 #
 
 load("@rules_java//java:defs.bzl", "java_library")
+load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
-package(default_applicable_licenses = ["//:license"])
+package(
+    default_applicable_licenses = ["//:license"],
+    default_testonly = 1,
+)
 
 java_library(
-    name = "v2_api",
-    srcs = [
-        "ProtocolMessageOrBuilderJsonSerializer.java",
-    ],
-    visibility = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/jobconfig:__pkg__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in:__pkg__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/shared/model/job/in/json:__pkg__",
-    ],
+    name = "json_tests",
+    srcs = glob(["*.java"]),
     deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/json:v2_api",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_file_puller_decorator_spec_java_proto",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_code_gson_gson",
-        "@maven//:com_google_errorprone_error_prone_annotations",
-        "@maven//:com_google_guava_guava",
+        "@maven//:junit_junit",
         "@protobuf//:protobuf_java",
     ],
+)
+
+junit_test_suites(
+    name = "gen_tests",
+    sizes = [
+        "small",
+    ],
+    deps = [":json_tests"],
 )

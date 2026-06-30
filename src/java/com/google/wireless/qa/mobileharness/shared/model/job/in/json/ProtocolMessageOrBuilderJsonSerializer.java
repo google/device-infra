@@ -248,11 +248,26 @@ public class ProtocolMessageOrBuilderJsonSerializer
       if (desc.isRepeated()) {
         List<?> fieldList = (List<?>) fieldPair.getValue();
         if (!fieldList.isEmpty()) {
-          JsonArray array = new JsonArray();
-          for (Object o : fieldList) {
-            array.add(serializeValue(o, desc, context));
+          if (desc.isMapField()) {
+            JsonObject mapObj = new JsonObject();
+            for (Object o : fieldList) {
+              Message mapEntry = (Message) o;
+              Descriptors.FieldDescriptor keyDesc =
+                  mapEntry.getDescriptorForType().findFieldByName("key");
+              Descriptors.FieldDescriptor valueDesc =
+                  mapEntry.getDescriptorForType().findFieldByName("value");
+              Object key = mapEntry.getField(keyDesc);
+              Object value = mapEntry.getField(valueDesc);
+              mapObj.add(key.toString(), serializeValue(value, valueDesc, context));
+            }
+            ret.add(getFieldName(desc), mapObj);
+          } else {
+            JsonArray array = new JsonArray();
+            for (Object o : fieldList) {
+              array.add(serializeValue(o, desc, context));
+            }
+            ret.add(getFieldName(desc), array);
           }
-          ret.add(getFieldName(desc), array);
         }
 
         // Not a repeated field
@@ -372,7 +387,20 @@ public class ProtocolMessageOrBuilderJsonSerializer
           if (prop.isJsonNull()) {
             // skip nulls entirely; the closest equivalent in proto is field absence.
           } else if (desc.isRepeated()) {
-            if (!prop.isJsonArray()) {
+            if (desc.isMapField() && prop.isJsonObject()) {
+              Descriptors.Descriptor mapEntryDesc = desc.getMessageType();
+              Descriptors.FieldDescriptor keyDesc = mapEntryDesc.findFieldByName("key");
+              Descriptors.FieldDescriptor valueDesc = mapEntryDesc.findFieldByName("value");
+              for (Map.Entry<String, JsonElement> entry : prop.getAsJsonObject().entrySet()) {
+                Message.Builder entryBuilder = resultBuilder.newBuilderForField(desc);
+                entryBuilder.setField(
+                    keyDesc,
+                    deserializeElement(new JsonPrimitive(entry.getKey()), keyDesc, context));
+                entryBuilder.setField(
+                    valueDesc, deserializeElement(entry.getValue(), valueDesc, context));
+                resultBuilder.addRepeatedField(desc, entryBuilder.build());
+              }
+            } else if (!prop.isJsonArray()) {
               // if the field is not an array, add it as a single item into the repeated field.
               resultBuilder.addRepeatedField(desc, deserializeElement(prop, desc, context));
             } else {
