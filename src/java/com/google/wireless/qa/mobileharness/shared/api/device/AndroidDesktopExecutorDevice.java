@@ -174,13 +174,19 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
                 /* usbkey= */ false,
                 /* clearRepairRequests= */ false);
           } else {
+            testInfo.properties().add("post_run_health_check_triggered", "true");
             testInfo
                 .log()
                 .atInfo()
                 .alsoTo(logger)
-                .log(
-                    "Test failed. Running health check. Result: %s",
-                    androidDesktopDeviceHelper.isDeviceHealthy(getDeviceId()));
+                .log("Test failed. Triggering post-run health check.");
+            boolean isHealthy = androidDesktopDeviceHelper.isDeviceHealthy(getDeviceId());
+            testInfo.properties().add("post_run_health_check_result", String.valueOf(isHealthy));
+            testInfo
+                .log()
+                .atInfo()
+                .alsoTo(logger)
+                .log("Post-run health check finished. Result: %s", isHealthy);
           }
         } else {
           testInfo.log().atInfo().alsoTo(logger).log("Test passed, skipping health check.");
