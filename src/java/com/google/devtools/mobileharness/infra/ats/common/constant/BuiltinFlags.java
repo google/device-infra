@@ -62,6 +62,7 @@ public final class BuiltinFlags {
           .put("enable_device_system_settings_change", "false")
           .put("enable_fastboot_detector", "false")
           .put("enable_root_device", "false")
+          .put("external_adb_initializer_template", "true")
           .put("ignore_check_device_failure", "true")
           .put("mute_android", "false")
           .put("olc_server_max_started_running_session_num", "30")

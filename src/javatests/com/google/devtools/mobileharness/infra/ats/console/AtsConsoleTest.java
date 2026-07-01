@@ -112,7 +112,6 @@ public final class AtsConsoleTest {
             // keep-sorted start
             .put("ats_console_olc_server_path", olcServerBinary.toString())
             .put("detect_adb_device", "false")
-            .put("external_adb_initializer_template", "true")
             .put("olc_server_port", Integer.toString(olcServerPort))
             .put("public_dir", publicDirPath)
             .put("tmp_dir_root", tmpDirPath)
