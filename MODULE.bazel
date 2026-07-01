@@ -230,6 +230,9 @@ maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
     ]]
 ]
 
+# If updating Maven artifacts below, regenerate and update the maven_install.json lockfile (must submit the generated maven_install.json in the same CL).
+# For instructions, see:
+# https://github.com/bazelbuild/rules_jvm_external#pinning-artifacts-and-integration-with-bazels-downloader
 maven.install(
     artifacts = [
         "androidx.annotation:annotation:1.2.0",
