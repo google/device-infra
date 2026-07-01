@@ -4199,7 +4199,7 @@
     ]
   },
   "repositories": {
-    "https://maven.google.com/": [
+    "https://repo1.maven.org/maven2/": [
       "androidx.annotation:annotation",
       "androidx.annotation:annotation-experimental:aar",
       "androidx.arch.core:core-common",
@@ -4356,7 +4356,7 @@
       "org.yaml:snakeyaml",
       "xmlpull:xmlpull"
     ],
-    "https://repo1.maven.org/maven2/": [
+    "https://maven.google.com/": [
       "androidx.annotation:annotation",
       "androidx.annotation:annotation-experimental:aar",
       "androidx.arch.core:core-common",

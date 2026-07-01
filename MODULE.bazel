@@ -203,6 +203,9 @@ use_repo(oci, "distroless_static", "distroless_static_linux_amd64")
 #########
 # Maven #
 #########
+# If updating Maven below, regenerate and update the maven_install.json lockfile (must submit the generated maven_install.json in the same CL).
+# For instructions, see:
+# https://github.com/bazelbuild/rules_jvm_external#pinning-artifacts-and-integration-with-bazels-downloader
 maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
 
 # Test only artifacts
@@ -230,7 +233,7 @@ maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
     ]]
 ]
 
-# If updating Maven artifacts below, regenerate and update the maven_install.json lockfile (must submit the generated maven_install.json in the same CL).
+# If updating Maven below, regenerate and update the maven_install.json lockfile (must submit the generated maven_install.json in the same CL).
 # For instructions, see:
 # https://github.com/bazelbuild/rules_jvm_external#pinning-artifacts-and-integration-with-bazels-downloader
 maven.install(
@@ -289,8 +292,8 @@ maven.install(
     ],
     lock_file = "//:maven_install.json",
     repositories = [
-        "https://maven.google.com",
         "https://repo1.maven.org/maven2",
+        "https://maven.google.com",
         "https://repository.mulesoft.org/nexus/content/repositories/public",
     ],
 )
