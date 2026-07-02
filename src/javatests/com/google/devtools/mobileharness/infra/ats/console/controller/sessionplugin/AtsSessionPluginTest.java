@@ -37,6 +37,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionNotificationEvent;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
@@ -107,6 +108,50 @@ public final class AtsSessionPluginTest {
     atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
 
     verify(sessionInfo).putSessionProperty(SessionProperties.PROPERTY_KEY_COMMAND_ID, "1");
+  }
+
+  @Test
+  public void onSessionStarted_tradefedJobCreated_addsTradefedJobToSession() throws Exception {
+    RunCommand runCommand = RunCommand.getDefaultInstance();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
+                .build());
+    atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    JobInfo tfJob = mock(JobInfo.class);
+    when(tfJob.locator()).thenReturn(new JobLocator("tf_job_id", "tf_job_name"));
+    when(runCommandHandler.createTradefedJobs(runCommand)).thenReturn(ImmutableList.of(tfJob));
+    when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
+
+    atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+
+    verify(sessionInfo).addJob(tfJob);
+  }
+
+  @Test
+  public void onSessionStarted_noTradefedJobCreated_fallsBackToAddNonTradefedJob()
+      throws Exception {
+    RunCommand runCommand = RunCommand.getDefaultInstance();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
+                .build());
+    atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    JobInfo nonTfJob = mock(JobInfo.class);
+    when(nonTfJob.locator()).thenReturn(new JobLocator("non_tf_job_id", "non_tf_job_name"));
+    when(runCommandHandler.createTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
+    when(runCommandHandler.createNonTradefedJobs(runCommand))
+        .thenReturn(ImmutableList.of(nonTfJob));
+
+    atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+
+    verify(sessionInfo).addJob(nonTfJob);
   }
 
   @Test
