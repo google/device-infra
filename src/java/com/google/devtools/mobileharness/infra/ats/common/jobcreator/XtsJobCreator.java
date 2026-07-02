@@ -589,7 +589,7 @@ public abstract class XtsJobCreator {
    */
   private JobInfo createSetUpJob(JsonObject specJson, SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
-    String name = "setup";
+    String name = XtsConstants.SETUP_JOB_NAME;
     ImmutableList<SubDeviceSpec> subDeviceSpecList =
         sessionRequestHandlerUtil
             .getSessionSubDeviceSpecList(sessionRequestInfo, /* forMultiDeviceJob= */ true)

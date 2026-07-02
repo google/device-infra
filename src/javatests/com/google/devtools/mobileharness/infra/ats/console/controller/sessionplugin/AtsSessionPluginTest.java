@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.sessionpl
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -42,6 +43,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache;
+import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
@@ -93,6 +95,7 @@ public final class AtsSessionPluginTest {
 
   @Before
   public void setUp() {
+    AtsSessionPlugin.NEXT_RUN_COMMAND_ID.set(1);
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
   }
 
@@ -145,6 +148,8 @@ public final class AtsSessionPluginTest {
 
     JobInfo nonTfJob = mock(JobInfo.class);
     when(nonTfJob.locator()).thenReturn(new JobLocator("non_tf_job_id", "non_tf_job_name"));
+    Properties properties = new Properties(new Timing());
+    when(nonTfJob.properties()).thenReturn(properties);
     when(runCommandHandler.createTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
     when(runCommandHandler.createNonTradefedJobs(runCommand))
         .thenReturn(ImmutableList.of(nonTfJob));
@@ -415,5 +420,135 @@ public final class AtsSessionPluginTest {
                 .setKillTradefedSignal(9)
                 .setCancelReason("Reason 2")
                 .build());
+  }
+
+  @Test
+  public void onSessionStarted_setupJobPresent_scheduledFirstAndMainJobsDeferred()
+      throws Exception {
+    RunCommand runCommand = RunCommand.getDefaultInstance();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
+                .build());
+    atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    JobInfo setupJob = mock(JobInfo.class);
+    when(setupJob.locator())
+        .thenReturn(new JobLocator("setup_job_id", XtsConstants.SETUP_JOB_NAME));
+    when(setupJob.properties()).thenReturn(new Properties(new Timing()));
+
+    JobInfo tfJob = mock(JobInfo.class);
+    when(tfJob.locator()).thenReturn(new JobLocator("tf_job_id", "tf_job"));
+    when(tfJob.properties()).thenReturn(new Properties(new Timing()));
+
+    when(runCommandHandler.createTradefedJobs(runCommand)).thenReturn(ImmutableList.of(tfJob));
+    when(runCommandHandler.createNonTradefedJobs(runCommand))
+        .thenReturn(ImmutableList.of(setupJob));
+
+    atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+
+    verify(sessionInfo).addJob(setupJob);
+    verify(sessionInfo, never()).addJob(tfJob);
+  }
+
+  @Test
+  public void onJobEnd_setupJobEnds_schedulesDeferredTradefedJobs() throws Exception {
+    RunCommand runCommand = RunCommand.getDefaultInstance();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
+                .build());
+    atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    JobInfo setupJob = mock(JobInfo.class);
+    when(setupJob.locator())
+        .thenReturn(new JobLocator("setup_job_id", XtsConstants.SETUP_JOB_NAME));
+    Properties setupProperties = new Properties(new Timing());
+    when(setupJob.properties()).thenReturn(setupProperties);
+
+    JobInfo tfJob = mock(JobInfo.class);
+    when(tfJob.locator()).thenReturn(new JobLocator("tf_job_id", "tf_job"));
+    when(tfJob.properties()).thenReturn(new Properties(new Timing()));
+
+    when(runCommandHandler.createTradefedJobs(runCommand)).thenReturn(ImmutableList.of(tfJob));
+    when(runCommandHandler.createNonTradefedJobs(runCommand))
+        .thenReturn(ImmutableList.of(setupJob));
+
+    atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+
+    verify(sessionInfo).addJob(setupJob);
+    verify(sessionInfo, never()).addJob(tfJob);
+
+    atsSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
+
+    verify(sessionInfo).addJob(tfJob);
+  }
+
+  @Test
+  public void onJobEnd_setupJobEnds_noTradefedJobs_schedulesRemainingNonTradefedJobs()
+      throws Exception {
+    RunCommand runCommand = RunCommand.getDefaultInstance();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
+                .build());
+    atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    JobInfo setupJob = mock(JobInfo.class);
+    when(setupJob.locator())
+        .thenReturn(new JobLocator("setup_job_id", XtsConstants.SETUP_JOB_NAME));
+    Properties setupProperties = new Properties(new Timing());
+    when(setupJob.properties()).thenReturn(setupProperties);
+
+    JobInfo nonTfJob = mock(JobInfo.class);
+    when(nonTfJob.locator()).thenReturn(new JobLocator("nontf_job_id", "nontf_job"));
+    when(nonTfJob.properties()).thenReturn(new Properties(new Timing()));
+
+    when(runCommandHandler.createTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
+    when(runCommandHandler.createNonTradefedJobs(runCommand))
+        .thenReturn(ImmutableList.of(setupJob, nonTfJob));
+
+    atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+
+    verify(sessionInfo).addJob(setupJob);
+    verify(sessionInfo, never()).addJob(nonTfJob);
+
+    atsSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
+
+    verify(sessionInfo).addJob(nonTfJob);
+  }
+
+  @Test
+  public void onSessionStarted_noSetupJobPresent_schedulesMainJobsImmediately() throws Exception {
+    RunCommand runCommand = RunCommand.getDefaultInstance();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
+                .build());
+    atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    JobInfo tfJob = mock(JobInfo.class);
+    when(tfJob.locator()).thenReturn(new JobLocator("tf_job_id", "tf_job"));
+    when(tfJob.properties()).thenReturn(new Properties(new Timing()));
+    JobInfo nonTfJob = mock(JobInfo.class);
+    when(nonTfJob.locator()).thenReturn(new JobLocator("nontf_job_id", "nontf_job"));
+    when(nonTfJob.properties()).thenReturn(new Properties(new Timing()));
+
+    when(runCommandHandler.createTradefedJobs(runCommand)).thenReturn(ImmutableList.of(tfJob));
+    when(runCommandHandler.createNonTradefedJobs(runCommand))
+        .thenReturn(ImmutableList.of(nonTfJob));
+
+    atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+
+    verify(sessionInfo).addJob(tfJob);
+    verify(sessionInfo, never()).addJob(nonTfJob);
   }
 }

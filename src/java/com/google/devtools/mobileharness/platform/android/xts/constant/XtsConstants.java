@@ -79,6 +79,9 @@ public class XtsConstants {
   /** The job name of static xTS job. */
   public static final String STATIC_XTS_JOB_NAME = "STATIC_XTS";
 
+  /** The job name of xTS setup job. */
+  public static final String SETUP_JOB_NAME = "SETUP";
+
   /**
    * MH test property key for the a tradefed test's filtered expanded module names (e.g. arm64-v8a
    * CtsBatteryHealthTestCases).

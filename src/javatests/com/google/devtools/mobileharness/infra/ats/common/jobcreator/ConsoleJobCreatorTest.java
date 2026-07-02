@@ -39,6 +39,7 @@ import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.DeviceInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
+import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader.TradefedResultFilesBundle;
@@ -693,7 +694,7 @@ public final class ConsoleJobCreatorTest {
     ImmutableList<JobInfo> jobs = jobCreator.createXtsNonTradefedJobs(sessionRequestInfo);
 
     assertThat(jobs).hasSize(2);
-    assertThat(jobs.get(0).locator().getName()).isEqualTo("setup");
+    assertThat(jobs.get(0).locator().getName()).isEqualTo(XtsConstants.SETUP_JOB_NAME);
     assertThat(jobs.get(0).type().getDriver()).isEqualTo("NoOpDriver");
     DeviceInfoCollectorDecoratorSpec spec =
         jobs.get(0)

@@ -30,6 +30,8 @@ import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toPro
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
 import static java.util.Arrays.stream;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.Subscribe;
@@ -41,6 +43,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionF
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
@@ -126,7 +129,7 @@ public class AtsSessionPlugin {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final AtomicInteger NEXT_RUN_COMMAND_ID = new AtomicInteger(1);
+  @VisibleForTesting static final AtomicInteger NEXT_RUN_COMMAND_ID = new AtomicInteger(1);
 
   private final Object testCancellationLock = new Object();
   private final Object runningTestsLock = new Object();
@@ -173,7 +176,13 @@ public class AtsSessionPlugin {
   /** Set in {@link #onSessionStarting}. */
   private volatile AtsSessionPluginConfig config;
 
-  private ImmutableList<JobInfo> nonTradefedJobs = ImmutableList.of();
+  private volatile ImmutableList<JobInfo> tradefedJobs = ImmutableList.of();
+  private volatile ImmutableList<JobInfo> nonTradefedJobs = ImmutableList.of();
+
+  private final Object setupJobLock = new Object();
+
+  @GuardedBy("setupJobLock")
+  private Optional<String> runningSetupJobId = Optional.empty();
 
   @Inject
   AtsSessionPlugin(
@@ -293,7 +302,6 @@ public class AtsSessionPlugin {
       runCommandHandler.initialize(runCommand);
 
       // Create tradefed jobs.
-      ImmutableList<JobInfo> tradefedJobs;
       try {
         tradefedJobs = runCommandHandler.createTradefedJobs(runCommand);
       } catch (MobileHarnessException e) {
@@ -332,44 +340,12 @@ public class AtsSessionPlugin {
             /* cause= */ null);
       }
 
-      boolean startedTfJobs = false;
-      if (tradefedJobs.size() <= 1) {
-        startedTfJobs = addAndTrackTradefedJobs(tradefedJobs);
+      Optional<JobInfo> setupJobOpt = nonTradefedJobs.stream().filter(this::isSetupJob).findFirst();
+
+      if (setupJobOpt.isPresent()) {
+        addSetupJob(setupJobOpt.get());
       } else {
-        // If there are multiple tradefed jobs, add them to the session sequentially.
-        // Prioritize static XTS jobs. Other jobs are added to additional tradefed jobs list.
-        List<JobInfo> staticXtsJobs = new ArrayList<>();
-
-        synchronized (additionalTradefedJobs) {
-          tradefedJobs.forEach(
-              tradefedJob -> {
-                if (tradefedJob.locator().getName().contains(XtsConstants.STATIC_XTS_JOB_NAME)) {
-                  staticXtsJobs.add(tradefedJob);
-                } else {
-                  additionalTradefedJobs.add(tradefedJob);
-                }
-              });
-        }
-
-        if (!staticXtsJobs.isEmpty()) {
-          startedTfJobs = addAndTrackTradefedJobs(staticXtsJobs);
-        } else {
-          // No static XTS jobs found, add the first of the additional jobs.
-          synchronized (additionalTradefedJobs) {
-            if (!additionalTradefedJobs.isEmpty()) {
-              startedTfJobs =
-                  addAndTrackTradefedJobs(ImmutableList.of(additionalTradefedJobs.remove(0)));
-            }
-          }
-        }
-      }
-
-      if (!startedTfJobs) {
-        logger.atInfo().log(
-            "On session [%s] starting, no tradefed job was added, try add non-tradefed jobs if"
-                + " needed.",
-            sessionInfo.getSessionId());
-        addJobsToSession(nonTradefedJobs);
+        addMainJobs();
       }
 
       // Starts TF runtime info updater.
@@ -443,8 +419,21 @@ public class AtsSessionPlugin {
       }
     }
 
+    String jobId = currentJob.locator().getId();
+    boolean isSetupJobEnd = false;
+    synchronized (setupJobLock) {
+      if (runningSetupJobId.isPresent() && runningSetupJobId.get().equals(jobId)) {
+        runningSetupJobId = Optional.empty();
+        isSetupJobEnd = true;
+      }
+    }
+    if (isSetupJobEnd) {
+      logger.atInfo().log("Setup job [%s] ended, starting main jobs.", jobId);
+      addMainJobs();
+      return;
+    }
+
     synchronized (runningTradefedJobs) {
-      String jobId = currentJob.locator().getId();
       if (!runningTradefedJobs.containsKey(jobId)) {
         return;
       }
@@ -825,6 +814,78 @@ public class AtsSessionPlugin {
     for (SubDeviceSpec subDeviceSpec : subDeviceSpecs) {
       String deviceId = deviceIdIterator.next();
       subDeviceSpec.dimensions().add(Name.ID.lowerCaseName(), deviceId);
+    }
+  }
+
+  private boolean isSetupJob(JobInfo jobInfo) {
+    return Ascii.equalsIgnoreCase(jobInfo.locator().getName(), XtsConstants.SETUP_JOB_NAME)
+        || Ascii.equalsIgnoreCase(
+            jobInfo.properties().getOptional(SessionHandlerHelper.XTS_MODULE_NAME_PROP).orElse(""),
+            XtsConstants.SETUP_JOB_NAME);
+  }
+
+  /**
+   * Adds the ATS setup job to the session and records its execution ID in {@code
+   * runningSetupJobId}.
+   */
+  private void addSetupJob(JobInfo setupJob) {
+    nonTradefedJobs =
+        nonTradefedJobs.stream().filter(job -> !job.equals(setupJob)).collect(toImmutableList());
+    ImmutableList<String> setupJobIds = addJobsToSession(ImmutableList.of(setupJob));
+    if (!setupJobIds.isEmpty()) {
+      synchronized (setupJobLock) {
+        runningSetupJobId = Optional.of(setupJobIds.get(0));
+      }
+    }
+  }
+
+  /**
+   * Adds main Tradefed jobs to the session.
+   *
+   * <p>If multiple Tradefed jobs exist, they are partitioned:
+   *
+   * <ul>
+   *   <li><b>Static xTS jobs</b> are prioritized and added immediately to run concurrently.
+   *   <li><b>Additional Tradefed jobs</b> are queued in {@code additionalTradefedJobs} to execute
+   *       sequentially as previous jobs finish in {@link #onJobEnd}.
+   * </ul>
+   *
+   * <p>If no Tradefed jobs could be started, falls back to adding non-Tradefed jobs.
+   */
+  private void addMainJobs() {
+    boolean startedTfJobs = false;
+    if (tradefedJobs.size() <= 1) {
+      startedTfJobs = addAndTrackTradefedJobs(tradefedJobs);
+    } else {
+      List<JobInfo> staticXtsJobs = new ArrayList<>();
+      synchronized (additionalTradefedJobs) {
+        tradefedJobs.forEach(
+            tradefedJob -> {
+              if (tradefedJob.locator().getName().contains(XtsConstants.STATIC_XTS_JOB_NAME)) {
+                staticXtsJobs.add(tradefedJob);
+              } else {
+                additionalTradefedJobs.add(tradefedJob);
+              }
+            });
+      }
+      if (!staticXtsJobs.isEmpty()) {
+        startedTfJobs = addAndTrackTradefedJobs(staticXtsJobs);
+      } else {
+        synchronized (additionalTradefedJobs) {
+          if (!additionalTradefedJobs.isEmpty()) {
+            startedTfJobs =
+                addAndTrackTradefedJobs(ImmutableList.of(additionalTradefedJobs.remove(0)));
+          }
+        }
+      }
+    }
+
+    if (!startedTfJobs) {
+      logger.atInfo().log(
+          "On session [%s] starting, no tradefed job was added, try add non-tradefed jobs if"
+              + " needed.",
+          sessionInfo.getSessionId());
+      addJobsToSession(nonTradefedJobs);
     }
   }
 
