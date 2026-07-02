@@ -1406,6 +1406,7 @@ public class JobRunner implements Runnable {
               break;
             case ERROR:
             case TIMEOUT:
+            case ABORT:
             case UNKNOWN:
               hasErrorTests = true;
               testIdForDisplayMhfeLink = testInfo.locator().getId();
