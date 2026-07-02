@@ -22,7 +22,7 @@ import junit.framework.TestCase;
 public class PathUtilTest extends TestCase {
 
   public void testJoin() throws Exception {
-    assertEquals("", PathUtil.join());
+    assertEquals("fail_simulation", PathUtil.join());
     assertEquals("/a", PathUtil.join("/a"));
     assertEquals("a", PathUtil.join("a"));
     assertEquals("a/b/c", PathUtil.join("a", "b", "c"));
