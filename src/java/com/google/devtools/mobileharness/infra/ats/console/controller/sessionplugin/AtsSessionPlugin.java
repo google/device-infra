@@ -29,6 +29,7 @@ import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJav
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
 import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.partitioningBy;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
@@ -109,8 +110,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.UnaryOperator;
@@ -170,8 +173,7 @@ public class AtsSessionPlugin {
   @GuardedBy("addingJobLock")
   private boolean sessionEnded;
 
-  @GuardedBy("itself")
-  private final List<JobInfo> additionalTradefedJobs = new ArrayList<>();
+  private final Queue<JobInfo> additionalTradefedJobs = new ConcurrentLinkedQueue<>();
 
   /** Set in {@link #onSessionStarting}. */
   private volatile AtsSessionPluginConfig config;
@@ -179,10 +181,7 @@ public class AtsSessionPlugin {
   private volatile ImmutableList<JobInfo> tradefedJobs = ImmutableList.of();
   private volatile ImmutableList<JobInfo> nonTradefedJobs = ImmutableList.of();
 
-  private final Object setupJobLock = new Object();
-
-  @GuardedBy("setupJobLock")
-  private Optional<String> runningSetupJobId = Optional.empty();
+  private final AtomicReference<String> runningSetupJobId = new AtomicReference<>();
 
   @Inject
   AtsSessionPlugin(
@@ -420,13 +419,7 @@ public class AtsSessionPlugin {
     }
 
     String jobId = currentJob.locator().getId();
-    boolean isSetupJobEnd = false;
-    synchronized (setupJobLock) {
-      if (runningSetupJobId.isPresent() && runningSetupJobId.get().equals(jobId)) {
-        runningSetupJobId = Optional.empty();
-        isSetupJobEnd = true;
-      }
-    }
+    boolean isSetupJobEnd = runningSetupJobId.compareAndSet(jobId, null);
     if (isSetupJobEnd) {
       logger.atInfo().log("Setup job [%s] ended, starting main jobs.", jobId);
       addMainJobs();
@@ -440,35 +433,14 @@ public class AtsSessionPlugin {
       runningTradefedJobs.put(jobId, false);
 
       // Add the additional tradefed jobs if needed.
-      synchronized (additionalTradefedJobs) {
-        if (!additionalTradefedJobs.isEmpty()) {
-          ImmutableSet<String> devicesOfCurrentJob = getDeviceSerials(currentJob);
-          JobInfo nextJobToAdd = additionalTradefedJobs.remove(0);
-          // Add the device ids of the current job to the sub device specs of the next tradefed job.
-          addDeviceIdsToSubDeviceSpecs(
-              nextJobToAdd.subDeviceSpecs().getAllSubDevices(), devicesOfCurrentJob);
-          if (nextJobToAdd
-              .properties()
-              .getBoolean(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED)
-              .orElse(false)) {
-            // Copy test properties needed by xTS dynamic download jobs from the current test to
-            // the next tests.
-            currentJob.tests().getAll().values().stream()
-                .findFirst()
-                .ifPresent(
-                    currentTest ->
-                        nextJobToAdd
-                            .tests()
-                            .getAll()
-                            .values()
-                            .forEach(
-                                nextTest ->
-                                    copyTestPropertiesForDynamicDownloadJobs(
-                                        currentTest, nextTest)));
-          }
-
-          addAndTrackTradefedJobs(ImmutableList.of(nextJobToAdd));
-        }
+      JobInfo nextJobToAdd = additionalTradefedJobs.poll();
+      if (nextJobToAdd != null) {
+        ImmutableSet<String> devicesOfCurrentJob = getDeviceSerials(currentJob);
+        // Add the device ids of the current job to the sub device specs of the next tradefed job.
+        addDeviceIdsToSubDeviceSpecs(
+            nextJobToAdd.subDeviceSpecs().getAllSubDevices(), devicesOfCurrentJob);
+        copyDynamicDownloadProperties(currentJob, nextJobToAdd);
+        addAndTrackTradefedJobs(ImmutableList.of(nextJobToAdd));
       }
 
       if (runningTradefedJobs.values().stream().noneMatch(running -> running)) {
@@ -717,6 +689,7 @@ public class AtsSessionPlugin {
     synchronized (addingJobLock) {
       this.sessionCancellation = sessionCancellation;
     }
+    additionalTradefedJobs.clear();
 
     int killTradefedSignal;
     if (sessionCancellation.hasSignal()) {
@@ -833,9 +806,7 @@ public class AtsSessionPlugin {
         nonTradefedJobs.stream().filter(job -> !job.equals(setupJob)).collect(toImmutableList());
     ImmutableList<String> setupJobIds = addJobsToSession(ImmutableList.of(setupJob));
     if (!setupJobIds.isEmpty()) {
-      synchronized (setupJobLock) {
-        runningSetupJobId = Optional.of(setupJobIds.get(0));
-      }
+      runningSetupJobId.set(setupJobIds.get(0));
     }
   }
 
@@ -857,25 +828,21 @@ public class AtsSessionPlugin {
     if (tradefedJobs.size() <= 1) {
       startedTfJobs = addAndTrackTradefedJobs(tradefedJobs);
     } else {
-      List<JobInfo> staticXtsJobs = new ArrayList<>();
-      synchronized (additionalTradefedJobs) {
-        tradefedJobs.forEach(
-            tradefedJob -> {
-              if (tradefedJob.locator().getName().contains(XtsConstants.STATIC_XTS_JOB_NAME)) {
-                staticXtsJobs.add(tradefedJob);
-              } else {
-                additionalTradefedJobs.add(tradefedJob);
-              }
-            });
-      }
+      Map<Boolean, List<JobInfo>> partitionedJobs =
+          tradefedJobs.stream()
+              .collect(
+                  partitioningBy(
+                      job -> job.locator().getName().contains(XtsConstants.STATIC_XTS_JOB_NAME)));
+
+      List<JobInfo> staticXtsJobs = partitionedJobs.get(true);
+      additionalTradefedJobs.addAll(partitionedJobs.get(false));
+
       if (!staticXtsJobs.isEmpty()) {
         startedTfJobs = addAndTrackTradefedJobs(staticXtsJobs);
       } else {
-        synchronized (additionalTradefedJobs) {
-          if (!additionalTradefedJobs.isEmpty()) {
-            startedTfJobs =
-                addAndTrackTradefedJobs(ImmutableList.of(additionalTradefedJobs.remove(0)));
-          }
+        JobInfo nextJob = additionalTradefedJobs.poll();
+        if (nextJob != null) {
+          startedTfJobs = addAndTrackTradefedJobs(ImmutableList.of(nextJob));
         }
       }
     }
@@ -886,6 +853,25 @@ public class AtsSessionPlugin {
               + " needed.",
           sessionInfo.getSessionId());
       addJobsToSession(nonTradefedJobs);
+    }
+  }
+
+  private static void copyDynamicDownloadProperties(JobInfo currentJob, JobInfo nextJob) {
+    if (nextJob
+        .properties()
+        .getBoolean(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED)
+        .orElse(false)) {
+      currentJob.tests().getAll().values().stream()
+          .findFirst()
+          .ifPresent(
+              currentTest ->
+                  nextJob
+                      .tests()
+                      .getAll()
+                      .values()
+                      .forEach(
+                          nextTest ->
+                              copyTestPropertiesForDynamicDownloadJobs(currentTest, nextTest)));
     }
   }
 
