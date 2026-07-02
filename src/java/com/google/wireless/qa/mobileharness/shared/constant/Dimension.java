@@ -46,6 +46,8 @@ public final class Dimension {
      * saved in device properties.
      */
     COMMUNICATION_TYPE,
+    /** The connected display of the device. */
+    CONNECTED_DISPLAY,
     /** The control id of the device. */
     CONTROL_ID,
     /** The DAB MQTT broker URI. */
@@ -76,12 +78,18 @@ public final class Dimension {
     DEVKEY_ALLOW,
     /** The URL suffix for DIAL app. */
     DIAL_APP_URL_SUFFIX,
+    /** The dummy param used for DIAL checks. */
+    DIAL_DUMMY_PARAM,
     /** The URL suffix for DIAL rest. */
     DIAL_REST_URL_SUFFIX,
     /** The disk type. The value can be one of [SSD, HDD, UNKNOWN]. */
     DISK_TYPE,
+    /** The display type of the device. */
+    DISPLAY_TYPE,
     /** The type of the DeviceManager. The value can be one of [fusion, mh, mtaas]. */
     DM_TYPE,
+    /** The firmware build. */
+    FIRMWARE_BUILD,
     /** The id of the device. */
     ID,
     /** Hinge angle of the foldable device. */
@@ -151,6 +159,8 @@ public final class Dimension {
     PING_GOOGLE_STABILITY,
     /** The average ping time of the device. */
     /** The max ping time of the device. */
+    /** The performance test platform name. */
+    PLATFORM,
     /**
      * Device pool name. Values include:
      * shared/shared_without_recovery/group_shared/partner_shared/dedicated.
@@ -197,12 +207,18 @@ public final class Dimension {
     TRADEFED_VIRTUAL_DEVICE_ID,
     /** Type, usually the product code, e.g., 'shamu', 'marlin'. */
     TYPE,
-    /** The wifi strength of the device. */
-    WIFI_RSSI,
+    /** The duration of uptime since boot. */
+    UPTIME_SINCE,
     /** The uuid of the device. */
     UUID,
     /** Whether the uuid is volatile. */
     UUID_VOLATILE,
+    /** Whether the device supports webdriver. */
+    WEBDRIVER_SUPPORT,
+    /** The LG WebOS CLI device name. */
+    WEBOS_CLI_DEVICE_NAME,
+    /** The wifi strength of the device. */
+    WIFI_RSSI,
     /** Whether the device has the YouTube app installed. */
     /** IMEI of the device. */
     IMEI,
