@@ -332,8 +332,9 @@ public class AtsSessionPlugin {
             /* cause= */ null);
       }
 
+      boolean startedTfJobs = false;
       if (tradefedJobs.size() <= 1) {
-        addJobListToSession(tradefedJobs);
+        startedTfJobs = addAndTrackTradefedJobs(tradefedJobs);
       } else {
         // If there are multiple tradefed jobs, add them to the session sequentially.
         // Prioritize static XTS jobs. Other jobs are added to additional tradefed jobs list.
@@ -351,15 +352,24 @@ public class AtsSessionPlugin {
         }
 
         if (!staticXtsJobs.isEmpty()) {
-          addJobListToSession(staticXtsJobs);
+          startedTfJobs = addAndTrackTradefedJobs(staticXtsJobs);
         } else {
           // No static XTS jobs found, add the first of the additional jobs.
           synchronized (additionalTradefedJobs) {
             if (!additionalTradefedJobs.isEmpty()) {
-              addJobListToSession(ImmutableList.of(additionalTradefedJobs.remove(0)));
+              startedTfJobs =
+                  addAndTrackTradefedJobs(ImmutableList.of(additionalTradefedJobs.remove(0)));
             }
           }
         }
+      }
+
+      if (!startedTfJobs) {
+        logger.atInfo().log(
+            "On session [%s] starting, no tradefed job was added, try add non-tradefed jobs if"
+                + " needed.",
+            sessionInfo.getSessionId());
+        addJobsToSession(nonTradefedJobs);
       }
 
       // Starts TF runtime info updater.
@@ -468,7 +478,7 @@ public class AtsSessionPlugin {
                                         currentTest, nextTest)));
           }
 
-          addJobListToSession(ImmutableList.of(nextJobToAdd));
+          addAndTrackTradefedJobs(ImmutableList.of(nextJobToAdd));
         }
       }
 
@@ -693,20 +703,16 @@ public class AtsSessionPlugin {
   @CanIgnoreReturnValue
   private ImmutableList<String> addJobsToSession(ImmutableList<JobInfo> jobInfos) {
     synchronized (addingJobLock) {
-      if (sessionCancellation != null) {
+      if (sessionCancellation != null || sessionEnded) {
         logger.atInfo().log(
-            "Skip adding jobs to session due to [%s]", shortDebugString(sessionCancellation));
-        return ImmutableList.of();
-      }
-      if (sessionEnded) {
-        logger.atInfo().log("Skip adding jobs to session because session ended");
+            "Skip adding jobs to session (cancelled: [%s], ended: [%b])",
+            sessionCancellation != null ? shortDebugString(sessionCancellation) : "null",
+            sessionEnded);
         return ImmutableList.of();
       }
 
       // Adds jobs to session.
-      for (JobInfo jobInfo : jobInfos) {
-        sessionInfo.addJob(jobInfo);
-      }
+      jobInfos.forEach(sessionInfo::addJob);
     }
 
     return jobInfos.stream().map(jobInfo -> jobInfo.locator().getId()).collect(toImmutableList());
@@ -822,21 +828,21 @@ public class AtsSessionPlugin {
     }
   }
 
-  private void addJobListToSession(List<JobInfo> jobInfos) {
-    ImmutableList<String> tradefedJobIds = addJobsToSession(ImmutableList.copyOf(jobInfos));
+  /**
+   * Adds Tradefed jobs to the session and records them in {@code runningTradefedJobs}.
+   *
+   * @return true if at least one Tradefed job was added and tracked; false otherwise
+   */
+  @CanIgnoreReturnValue
+  private boolean addAndTrackTradefedJobs(List<JobInfo> tradefedJobs) {
+    ImmutableList<String> tradefedJobIds = addJobsToSession(ImmutableList.copyOf(tradefedJobs));
     if (!tradefedJobIds.isEmpty()) {
       synchronized (runningTradefedJobs) {
-        for (String tradefedJobId : tradefedJobIds) {
-          runningTradefedJobs.putIfAbsent(tradefedJobId, true);
-        }
+        tradefedJobIds.forEach(id -> runningTradefedJobs.putIfAbsent(id, true));
       }
-    } else {
-      logger.atInfo().log(
-          "On session [%s] starting, no tradefed job was added, try add non-tradefed jobs if"
-              + " needed.",
-          sessionInfo.getSessionId());
-      addJobsToSession(nonTradefedJobs);
+      return true;
     }
+    return false;
   }
 
   private class RunningTradefedTest {
