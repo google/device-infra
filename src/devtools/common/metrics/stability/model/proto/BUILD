@@ -28,6 +28,8 @@ package(
     default_visibility = DEFAULT_VISIBILITY,
 )
 
+licenses(["notice"])
+
 proto_library(
     name = "error_proto",
     srcs = [
