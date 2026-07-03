@@ -16,20 +16,12 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.util;
 
-import javax.inject.Inject;
 import javax.inject.Singleton;
 
 // TODO: Add test coverage for this file.
 /** Concrete class for checking if a feature is ready for use. Unready features return false. */
 @Singleton
 public class FeatureReadiness {
-
-  private final Environment environment;
-
-  @Inject
-  FeatureReadiness(Environment environment) {
-    this.environment = environment;
-  }
 
   public boolean isDeviceFlashingReady() {
     return true;
@@ -60,7 +52,7 @@ public class FeatureReadiness {
   }
 
   public boolean isDeviceDecommissionReady() {
-    return false;
+    return true;
   }
 
   public boolean isLabServerStartReady() {
@@ -88,11 +80,11 @@ public class FeatureReadiness {
   }
 
   public boolean isHostConfigurationReady() {
-    return !environment.isGoogleInternal();
+    return true;
   }
 
   public boolean isDeviceConfigurationReady() {
-    return !environment.isGoogleInternal();
+    return true;
   }
 
   public boolean isAdvancedOperationsReady() {
