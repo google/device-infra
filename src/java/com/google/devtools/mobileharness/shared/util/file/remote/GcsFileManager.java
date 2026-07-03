@@ -425,7 +425,8 @@ public class GcsFileManager {
             localFileUtil.removeFileOrDir(zipInfo.zipFilePath());
             return executionInfo;
           } else if (fileExists(fileOrDir)) {
-            String decodedChecksum = checksum.orElse(gcsUtil.calculateChecksum(fileOrDir));
+            String decodedChecksum =
+                checksum.isPresent() ? checksum.get() : gcsUtil.calculateChecksum(fileOrDir);
             long fileSize = gcsUtil.getFileSize(fileOrDir);
             return ExecutionInfo.create(
                 fileSize,
@@ -535,7 +536,8 @@ public class GcsFileManager {
           zipTimeout.map(Timeout::fixed).orElse(null),
           /* keepLocalSourceRootBaseName= */ false,
           /* keepFileMetadata= */ false);
-      String decodedChecksum = checksum.orElse(gcsUtil.calculateChecksum(tmpZipFile));
+      String decodedChecksum =
+          checksum.isPresent() ? checksum.get() : gcsUtil.calculateChecksum(tmpZipFile);
       String crc32cChecksum = gcsUtil.decodeCrc32c(gcsUtil.calculateCrc32c(tmpZipFile));
       logger.atInfo().log(
           "Compressed: directory %s to tmp file %s. checksum: %s. crc32c checksum: %s;"
