@@ -28,4 +28,12 @@ public interface ErrorId {
   ErrorType type();
 
   Namespace namespace();
+
+  /**
+   * Whether the error should be skipped for retry even if the retry setting is enabled. This is
+   * used to identify the errors that the retry won't help.
+   */
+  default boolean skipRetry() {
+    return false;
+  }
 }

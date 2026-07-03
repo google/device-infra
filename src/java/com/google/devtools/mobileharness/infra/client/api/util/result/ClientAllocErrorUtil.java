@@ -43,15 +43,6 @@ public final class ClientAllocErrorUtil {
     return false;
   }
 
-  public static boolean isTestAllocError(TestInfo testInfo) {
-    if (testInfo.resultWithCause().get().type() == Test.TestResult.ERROR
-        && testInfo.resultWithCause().get().causeException().isPresent()) {
-      ErrorId errorId = testInfo.resultWithCause().get().causeException().get().getErrorId();
-      return errorId.equals(InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR);
-    }
-    return false;
-  }
-
   public static boolean isTestAllocFail(TestInfo testInfo) {
     if (testInfo.resultWithCause().get().type() == Test.TestResult.ERROR
         && testInfo.resultWithCause().get().causeException().isPresent()) {

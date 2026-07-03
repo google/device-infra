@@ -311,12 +311,12 @@ public enum InfraErrorId implements ErrorId {
   CLIENT_JR_MNM_ALLOC_INFRA_ERROR(49_402, ErrorType.INFRA_ISSUE),
   CLIENT_JR_MNM_ALLOC_DEVICE_NOT_AVAILABLE(49_403, ErrorType.INFRA_ISSUE),
   CLIENT_JR_MNM_ALLOC_DEVICE_EXCEEDS_CEILING(49_404, ErrorType.CUSTOMER_ISSUE),
-  CLIENT_JR_MNM_ALLOC_DEVICE_NOT_SATISFY_SLO(49_405, ErrorType.INFRA_ISSUE),
+  CLIENT_JR_MNM_ALLOC_DEVICE_NOT_SATISFY_SLO(49_405, ErrorType.INFRA_ISSUE, /* skipRetry= */ true),
 
   // Satellite Lab
   CLIENT_JR_ALLOC_UNKNOWN_ERROR(49_461, ErrorType.UNDETERMINED),
-  CLIENT_JR_ALLOC_INFRA_ERROR(49_462, ErrorType.INFRA_ISSUE),
-  CLIENT_JR_ALLOC_USER_CONFIG_ERROR(49_463, ErrorType.CUSTOMER_ISSUE),
+  CLIENT_JR_ALLOC_INFRA_ERROR(49_462, ErrorType.INFRA_ISSUE, /* skipRetry= */ true),
+  CLIENT_JR_ALLOC_USER_CONFIG_ERROR(49_463, ErrorType.CUSTOMER_ISSUE, /* skipRetry= */ true),
   CLIENT_JR_ALLOC_DIAGNOSTIC_ERROR(49_464, ErrorType.INFRA_ISSUE),
   CLIENT_JR_ALLOC_DEVICE_NOT_FOUND(49_465, ErrorType.CUSTOMER_ISSUE),
   // 49_466 ~ 49_469 is the fine-grained classification of 49_463
@@ -646,13 +646,19 @@ public enum InfraErrorId implements ErrorId {
 
   private final int code;
   private final ErrorType type;
+  private final boolean skipRetry;
 
   InfraErrorId(int code, ErrorType type) {
+    this(code, type, false);
+  }
+
+  InfraErrorId(int code, ErrorType type, boolean skipRetry) {
     Preconditions.checkArgument(code >= MIN_CODE);
     Preconditions.checkArgument(code <= MAX_CODE);
     Preconditions.checkArgument(type != ErrorType.UNCLASSIFIED);
     this.code = code;
     this.type = type;
+    this.skipRetry = skipRetry;
   }
 
   @Override
@@ -668,5 +674,10 @@ public enum InfraErrorId implements ErrorId {
   @Override
   public String toString() {
     return ErrorIdFormatter.formatErrorId(this);
+  }
+
+  @Override
+  public boolean skipRetry() {
+    return skipRetry;
   }
 }

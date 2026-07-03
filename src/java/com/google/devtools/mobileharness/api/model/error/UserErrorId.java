@@ -36,13 +36,19 @@ public enum UserErrorId implements ErrorId {
 
   private final int code;
   private final ErrorType type;
+  private final boolean skipRetry;
 
   UserErrorId(int code, ErrorType type) {
+    this(code, type, false);
+  }
+
+  UserErrorId(int code, ErrorType type, boolean skipRetry) {
     Preconditions.checkArgument(code >= MIN_CODE);
     Preconditions.checkArgument(code <= MAX_CODE);
     Preconditions.checkArgument(type == ErrorType.CUSTOMER_ISSUE);
     this.code = code;
     this.type = type;
+    this.skipRetry = skipRetry;
   }
 
   @Override
@@ -58,5 +64,10 @@ public enum UserErrorId implements ErrorId {
   @Override
   public String toString() {
     return ErrorIdFormatter.formatErrorId(this);
+  }
+
+  @Override
+  public boolean skipRetry() {
+    return skipRetry;
   }
 }

@@ -32,8 +32,12 @@ public abstract class DeserializedErrorId implements ErrorId {
         errorIdProto.getCode(),
         errorIdProto.getName(),
         errorIdProto.getType(),
-        errorIdProto.getNamespace());
+        errorIdProto.getNamespace(),
+        errorIdProto.getSkipRetry());
   }
+
+  @Override
+  public abstract boolean skipRetry();
 
   @Override
   @Memoized

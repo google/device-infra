@@ -21,6 +21,7 @@ import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
@@ -31,7 +32,6 @@ import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.D
 import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.FlakyTestRetryStrategy;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.RetryStrategy;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.RetryStrategy.RetryInfo;
-import com.google.devtools.mobileharness.infra.client.api.util.result.ClientAllocErrorUtil;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
@@ -159,18 +159,6 @@ public class TestRetryHandler {
       return;
     }
 
-    // Don't retry the test if fails to allocate device because the start timeout already expires.
-    if (ClientAllocErrorUtil.isTestAllocError(currentTestInfo)
-        || ClientAllocErrorUtil.isTestAllocFail(currentTestInfo)) {
-      currentTestInfo
-          .log()
-          .atInfo()
-          .alsoTo(logger)
-          .log("Do not retry test for allocation failure [%s]", currentTestResult);
-      addFinalAttemptProperty(currentTestInfo);
-      return;
-    }
-
     // Do not retry if the job is timeout
     if (jobInfo.timer().isExpired()) {
       addFinalAttemptProperty(currentTestInfo);
@@ -185,6 +173,22 @@ public class TestRetryHandler {
     if (currentTestInfo.properties().getBoolean(Test.HALT_RETRY).orElse(false)) {
       addFinalAttemptProperty(currentTestInfo);
       return;
+    }
+
+    // Do not retry if any error ID in the cause chain has skip_retry set to true .
+    Optional<ExceptionDetail> causeProto = currentTestInfo.resultWithCause().get().causeProto();
+    if (causeProto.isPresent()) {
+      ExceptionDetail current = causeProto.get();
+      while (true) {
+        if (current.getSummary().getErrorId().getSkipRetry()) {
+          addFinalAttemptProperty(currentTestInfo);
+          return;
+        }
+        if (!current.hasCause()) {
+          break;
+        }
+        current = current.getCause();
+      }
     }
 
     RetryInfo retryInfo = getRetryStrategy(jobInfo).decideRetryOnTestEnd(currentTestInfo);
