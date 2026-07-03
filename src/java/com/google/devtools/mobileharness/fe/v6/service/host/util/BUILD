@@ -60,6 +60,15 @@ java_library(
 )
 
 java_library(
+    name = "lab_server_action_availabilities",
+    srcs = ["LabServerActionAvailabilities.java"],
+    deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/host:host_service_java_proto",
+    ],
+)
+
+java_library(
     name = "host_version_util",
     srcs = ["HostVersionUtil.java"],
     deps = [
