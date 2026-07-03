@@ -95,6 +95,15 @@ class LocalTestBuiltinPlugins {
                   "com.google.devtools.mobileharness.platform.android.xts.plugin.MoblyResultstoreUploadPlugin"),
               EventScope.INTERNAL_PLUGIN));
     }
+    // Dynamically loads the SLATE to AOA script conversion lab plugin when enabled by job
+    // configuration.
+    if (isSlate2AoaScriptGenerationEnabled(testInfo.jobInfo())) {
+      builtinPluginsBuilder.add(
+          PluginItem.create(
+              createBuiltinPlugin(
+                  "com.google.devtools.mobileharness.platform.android.slate.plugin.Slate2AoaScriptGeneratorPlugin"),
+              EventScope.INTERNAL_PLUGIN));
+    }
 
     ImmutableList<PluginItem<?>> builtinPlugins = builtinPluginsBuilder.build();
     for (PluginItem<?> pluginItem : builtinPlugins) {
@@ -150,6 +159,15 @@ class LocalTestBuiltinPlugins {
             .getBoolean(XtsConstants.IS_MOBLY_RESULTSTORE_UPLOAD_ENABLED)
             .orElse(false)
         || jobInfo.params().getBool(XtsConstants.IS_MOBLY_RESULTSTORE_UPLOAD_ENABLED, false);
+  }
+
+  /**
+   * Checks whether Slate2AoaScriptGeneratorPlugin is enabled by inspecting job properties and
+   * params.
+   */
+  private static boolean isSlate2AoaScriptGenerationEnabled(JobInfo jobInfo) {
+    return jobInfo.properties().getBoolean("enable_slate2aoa_script_generation").orElse(false)
+        || jobInfo.params().getBool("enable_slate2aoa_script_generation", false);
   }
 
   private static boolean isAtsFileServerUploaderEnabled(TestInfo testInfo) {
