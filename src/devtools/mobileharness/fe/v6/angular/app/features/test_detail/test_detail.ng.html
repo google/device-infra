@@ -1,0 +1,222 @@
+<div class="test-detail-container">
+  @let data = testPageData();
+  @if (data && data.error) {
+    <div class="error-message">
+      <mat-icon class="error-icon">error_outline</mat-icon>
+      <p>{{ data.error }}</p>
+      <a routerLink="/dev/device-harness" queryParamsHandling="merge" class="m3-button">Back to Harness</a>
+    </div>
+  } @else if (data && data.testOverviewData; as test) {
+    <div class="main-card">
+        <!-- Breadcrumb Navigation -->
+        <header class="card-header">
+          <div class="header-device-id">
+            @if (test.job; as job) {
+              <a app-nav-link
+                [config]="{type: 'job', jobId: job.id}"
+                queryParamsHandling="merge"
+                class="host-link"
+                title="Navigate to job: {{ job.id }}"
+              >
+                {{ job.id }}
+              </a>
+              <mat-icon class="chevron-icon">chevron_right</mat-icon>
+            }
+            <span class="device-id-text monospaced-text" title="Test ID: {{ test.id }}">{{ test.id }}</span>
+          </div>
+        </header>
+
+        <div class="card-body">
+          <!-- Test Title Bar -->
+          <div class="device-title-bar">
+              <div class="title-left-section">
+                <div class="title-text-wrapper">
+                  <div class="title-label">Test Name</div>
+                  <h1 class="device-title" [matTooltip]="test.name">{{ test.name }}</h1>
+
+                  <div class="metadata-grid">
+                    <!-- Row 1: Test ID -->
+                    <span class="metadata-label">Test ID:</span>
+                    <div class="metadata-value font-mono bg-gray-box">
+                      <span class="value-text" [matTooltip]="test.id">{{ test.id }}</span>
+                      <button (click)="copyToClipboard(test.id)" class="inline-copy-button" matTooltip="Copy Test ID">
+                        <mat-icon>content_copy</mat-icon>
+                      </button>
+                    </div>
+
+                    <div class="vertical-separator"></div>
+
+                    <div class="status-indicator">
+                      <mat-icon
+                        [class]="'status-' + (resultDisplay()?.cssClass || statusDisplay().cssClass) + '-icon'"
+                        [class.spin-animation]="statusDisplay().isSpinning"
+                      >
+                        {{ resultDisplay()?.icon || statusDisplay().icon }}
+                      </mat-icon>
+
+                      <span class="status-pill"
+                        [class]="'status-' + statusDisplay().cssClass + '-pill'"
+                      >Status: {{ statusDisplay().label }}</span>
+
+                      @if (resultDisplay(); as result) {
+                        <span class="status-pill"
+                          [class]="'result-' + result.cssClass + '-pill'"
+                        >Result: {{ result.label }}</span>
+                      }
+                    </div>
+
+                    <!-- Row 2: Part of Job -->
+                    @if (test.job; as job) {
+                      <span class="metadata-label">Part of Job:</span>
+                      <div class="metadata-value font-mono bg-gray-box">
+                        <div class="job-hover-container">
+                          <a app-nav-link
+                            [config]="{type: 'job', jobId: job.id}"
+                            queryParamsHandling="merge"
+                            class="job-link-value"
+                          >
+                            {{ job.id }}
+                          </a>
+                          <div class="job-details-panel">
+                            <div class="panel-section-title">Job Name</div>
+                            <div class="panel-section-value font-sans">{{ job.name }}</div>
+
+                            @if (job.status) {
+                              <div class="panel-row-grid mt-2">
+                                <div class="panel-grid-item">
+                                  <div class="panel-section-title">Status</div>
+                                  <div class="panel-section-value font-sans"
+                                    [class.text-green]="job.status === 'JOB_STATUS_DONE'"
+                                    [class.text-blue]="job.status === 'JOB_STATUS_RUNNING'"
+                                  >{{ job.status.replace('JOB_STATUS_', '') }}</div>
+                                </div>
+                                @if (job.result) {
+                                  <div class="panel-grid-item">
+                                    <div class="panel-section-title">Result</div>
+                                    <div class="panel-section-value font-sans"
+                                      [class.text-green]="job.result === 'JOB_RESULT_PASS'"
+                                      [class.text-red]="job.result === 'JOB_RESULT_FAIL' || job.result === 'JOB_RESULT_ERROR'"
+                                    >{{ job.result.replace('JOB_RESULT_', '') }}</div>
+                                  </div>
+                                }
+                              </div>
+                            }
+                            <div class="panel-footer-links mt-2">
+                              <a [href]="job.spongeLink || 'http://sponge/mock-job-link'" target="_blank" class="sponge-link">
+                                <span>View on Sponge</span>
+                                <mat-icon>open_in_new</mat-icon>
+                              </a>
+                            </div>
+                            <div class="panel-arrow"></div>
+                          </div>
+                        </div>
+                        <button (click)="copyToClipboard(job.id)" class="inline-copy-button" matTooltip="Copy Job ID">
+                          <mat-icon>content_copy</mat-icon>
+                        </button>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+
+               <div class="executed-on-card">
+                <div class="executed-on-title">Executed on</div>
+                <div class="executed-on-grid">
+                  <span class="grid-label">Device</span>
+                  @if (test.host && test.host.name && test.host.ip) {
+                    <div class="grid-value value-stack-container">
+                      @for (dev of test.devices?.device; track dev.id) {
+                        <a app-nav-link
+                          [config]="{type: 'device', hostName: test.host.name, hostIp: test.host.ip, deviceId: dev.id}"
+                          queryParamsHandling="merge"
+                          class="grid-link-value font-mono"
+                          [matTooltip]="'View Device Details: ' + dev.id"
+                          >{{ dev.id }}</a
+                        >
+                      }
+                    </div>
+                  } @else {
+                    <div class="grid-value value-stack-container font-mono">
+                      @for (dev of test.devices?.device; track dev.id) {
+                        <span>{{ dev.id }}</span>
+                      }
+                    </div>
+                  }
+
+                  @if (test.host && test.host.name && test.host.ip) {
+                    <div class="grid-divider"></div>
+
+                    <span class="grid-label">Host</span>
+                    <div class="grid-value font-mono">
+                      <a app-nav-link
+                        [config]="{type: 'host', hostName: test.host.name, hostIp: test.host.ip}"
+                        queryParamsHandling="merge"
+                        class="grid-link-value"
+                        [matTooltip]="test.host.name"
+                        >{{ test.host.name }}</a
+                      >
+                      <div class="host-ip-text">{{ test.host.ip }}</div>
+                    </div>
+                  }
+                </div>
+              </div>
+          </div>
+
+          <!-- Tabs -->
+          <div class="tabs-container">
+            <nav class="tabs-nav">
+              <button (click)="setActiveTab('overview')" [class.active]="activeTab() === 'overview'" class="tab-link">Overview</button>
+              <button (click)="setActiveTab('timeline')" [class.active]="activeTab() === 'timeline'" class="tab-link">Timeline</button>
+              <button (click)="setActiveTab('log')" [class.active]="activeTab() === 'log'" class="tab-link">
+                <span class="tab-link-content">
+                  <span>Test Log</span>
+                  @if (statusDisplay().label === 'RUNNING') {
+                    <span class="live-badge">
+                      <span class="live-dot"></span>
+                      <span>LIVE</span>
+                    </span>
+                  }
+                </span>
+              </button>
+            </nav>
+          </div>
+
+          <!-- Tab Content -->
+          <div class="tab-content-container">
+            <!-- Overview Tab -->
+            @if (activeTab() === 'overview') {
+              <div class="tab-content">
+                <app-test-overview-tab [test]="test"></app-test-overview-tab>
+              </div>
+            }
+
+            <!-- Timeline Tab -->
+            @if (activeTab() === 'timeline') {
+              <div class="tab-content">
+                @defer {
+                  <app-test-timeline-tab [timingBreakdown]="test.timingBreakdown"></app-test-timeline-tab>
+                } @placeholder {
+                  <div class="tab-loading-placeholder">Loading timeline...</div>
+                }
+              </div>
+            }
+
+            <!-- Test Log Tab -->
+            @if (activeTab() === 'log') {
+              <div class="tab-content">
+                @defer {
+                  <app-test-log-tab [testId]="test.id"></app-test-log-tab>
+                } @placeholder {
+                  <div class="tab-loading-placeholder">Loading logs...</div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="loading-message">
+        <p>Loading test details...</p>
+      </div>
+    }
+</div>

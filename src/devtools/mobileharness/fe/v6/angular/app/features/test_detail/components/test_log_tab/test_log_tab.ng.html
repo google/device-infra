@@ -1,0 +1,17 @@
+<div class="log-tab-card">
+  <div class="log-card-header">
+    <h3 class="log-card-title">Test Log</h3>
+    <a [href]="cloudLogLink()" target="_blank" class="cloud-log-link" matTooltip="Open Cloud Logs Explorer">
+      <span>Lab Server Logs on Cloud Logs Explorer</span>
+      <mat-icon>open_in_new</mat-icon>
+    </a>
+  </div>
+  <div class="log-divider"></div>
+  <div class="log-viewer-container">
+    <div class="log-viewer-viewport" [style.height.px]="viewportHeight()" #logViewport>
+      @for (line of logLines(); track $index) {
+        <div class="log-line">{{ line }}</div>
+      }
+    </div>
+  </div>
+</div>

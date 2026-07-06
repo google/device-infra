@@ -1,0 +1,22 @@
+<button
+  type="button"
+  [id]="effectiveTriggerId()"
+  class="accordion-trigger"
+  [attr.aria-expanded]="expanded()"
+  [attr.aria-controls]="effectivePanelId()"
+  (click)="toggle()"
+>
+  <span class="item-title">{{ title() }}</span>
+  <mat-icon class="arrow-icon">expand_more</mat-icon>
+</button>
+
+@if (expanded()) {
+  <div
+    [id]="effectivePanelId()"
+    class="accordion-panel"
+    role="region"
+    [attr.aria-labelledby]="effectiveTriggerId()"
+  >
+    <ng-content></ng-content>
+  </div>
+}

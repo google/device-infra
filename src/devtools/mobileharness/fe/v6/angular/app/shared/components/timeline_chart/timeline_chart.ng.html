@@ -1,0 +1,112 @@
+<div class="timeline-tab-card">
+  @let rows = stageRows();
+  @if (rows && rows.length > 0) {
+    <div class="timeline-container">
+      <div class="timeline-wrapper">
+          <!-- Visual gridlines behind the Gantt chart tracks -->
+          <div class="timeline-grid">
+            <div class="grid-line" style="left: 0%"></div>
+            <div class="grid-line" style="left: 25%"></div>
+            <div class="grid-line" style="left: 50%"></div>
+            <div class="grid-line" style="left: 75%"></div>
+            <div class="grid-line" style="left: 100%"></div>
+          </div>
+
+          <div class="rows-container" #rowsContainer>
+            @let totalSec = totalDuration();
+            @for (row of rows; track row.stageName) {
+              @let eventCount = row.rowCount;
+              <div class="stage-row" [style.height.px]="eventCount * 28 + 12">
+                <div class="stage-label">{{ row.stageName }}</div>
+                <div class="stage-track">
+                  @for (track of row.tracks; track track) {
+                    <div class="track-bg-line" [style.top.px]="track * 28 + 6"></div>
+                  }
+                  @for (
+                    event of row.events;
+                    track event.label + '_' + event.offset + '_' + $index
+                  ) {
+                    @let offsetPercent = (event.offset / totalSec) * 100;
+                    @let widthPercent = (event.duration / totalSec) * 100;
+                    @let topOffset = event.trackIndex * 28 + 6;
+                    <div class="timeline-bar tooltip-container"
+                         [class.pulse-animation]="event.inProgress"
+                         [class.has-tag]="!!event.label"
+                         [class.theme-blue]="theme() === 'blue'"
+                         [class.theme-green]="theme() === 'green'"
+                         [style.left.%]="offsetPercent"
+                         [style.width.%]="widthPercent"
+                         [style.top.px]="topOffset"
+                         (mouseenter)="showTooltip($event, event, row.stageName)"
+                         (mouseleave)="hideTooltip()">
+                      <span class="bar-text">
+                        {{ event.label ? event.label : row.stageName }}
+                      </span>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Single Shared Tooltip Panel -->
+            @if (hoveredEvent(); as hover) {
+              <div class="timeline-tooltip-panel"
+                   [class.placement-right]="hover.placement === 'right'"
+                   [class.placement-left]="hover.placement === 'left'"
+                   [style.top.px]="hover.top"
+                   [style.left.px]="hover.left">
+                <div class="panel-section">
+                  <div class="panel-title-upper">Stage Name</div>
+                  <div class="panel-value">{{ hover.rowName }}</div>
+                </div>
+                @if (hover.event.label) {
+                  <div class="panel-section">
+                    <div class="panel-title-upper">Context</div>
+                    <div class="panel-value">{{ hover.event.label }}</div>
+                  </div>
+                }
+                <div class="panel-row-grid">
+                  <div class="panel-grid-item">
+                    <div class="panel-title-upper">Duration</div>
+                    <div class="panel-value">{{ hover.event.duration | number:'1.2-2' }}s</div>
+                  </div>
+                  <div class="panel-grid-item">
+                    <div class="panel-title-upper">Time</div>
+                    <div class="panel-value">
+                      @if (hover.event.endTime) {
+                        {{ hover.event.startTime | date:'HH:mm:ss' }} - {{ hover.event.endTime | date:'HH:mm:ss z' }}
+                      } @else {
+                        {{ hover.event.startTime | date:'HH:mm:ss z' }} (In progress)
+                      }
+                    </div>
+                  </div>
+                </div>
+                <div class="panel-arrow"></div>
+              </div>
+            }
+          </div>
+
+          <div class="timeline-scale">
+            <div class="scale-ticks">
+              @let ticks = timelineTicks();
+              @if (ticks.length === 5) {
+                <span class="scale-tick" style="left: 0%">{{ ticks[0] | date:'HH:mm:ss z' }}</span>
+                <span class="scale-tick" style="left: 25%">{{ ticks[1] | date:'HH:mm:ss z' }}</span>
+                <span class="scale-tick" style="left: 50%">{{ ticks[2] | date:'HH:mm:ss z' }}</span>
+                <span class="scale-tick" style="left: 75%">{{ ticks[3] | date:'HH:mm:ss z' }}</span>
+                <span class="scale-tick" style="left: 100%">{{ ticks[4] | date:'HH:mm:ss z' }}</span>
+              }
+            </div>
+          </div>
+        </div>
+
+        @if (timingBreakdown(); as breakdown) {
+          <div class="timeline-baseline">
+            * Baseline (0s) started at {{ breakdown.createTime | date:'yyyy-MM-dd HH:mm:ss' }}
+          </div>
+        }
+      </div>
+  } @else {
+    <p class="no-data-text">No timeline data available.</p>
+  }
+</div>
