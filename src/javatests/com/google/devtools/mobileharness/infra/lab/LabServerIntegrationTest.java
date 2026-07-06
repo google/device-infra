@@ -43,9 +43,6 @@ import com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsModeModule;
 import com.google.devtools.mobileharness.shared.usmf.UsmfBinary;
 import com.google.devtools.mobileharness.shared.usmf.UsmfEnvironment;
-import com.google.devtools.mobileharness.shared.usmf.UsmfRule;
-import com.google.devtools.mobileharness.shared.usmf.UsmfRule.CommandBehavior;
-import com.google.devtools.mobileharness.shared.usmf.UsmfRule.CommandCondition;
 import com.google.devtools.mobileharness.shared.util.base.StackTraceExtractor;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.command.Command;
@@ -140,66 +137,71 @@ public class LabServerIntegrationTest {
     mockAdb =
         usmfEnvironment
             .createBinary("adb")
-            .addRule(
-                UsmfRule.builder()
-                    .addCondition(CommandCondition.prefixMatch("devices"))
-                    .setBehavior(
-                        CommandBehavior.stdout(
-                                """
-                                List of devices attached
-                                HT8420M00155\tdevice\tproduct:real_device_model
-                                """)
-                            .build())
-                    .build())
-            .addRule(
-                UsmfRule.builder()
-                    .addCondition(CommandCondition.prefixMatch("version"))
-                    .setBehavior(
-                        CommandBehavior.stdout("Android Debug Bridge version 1.0.41\n").build())
-                    .build())
-            .addRule(
-                UsmfRule.builder()
-                    .addCondition(CommandCondition.regexMatch(".*?get-state"))
-                    .setBehavior(CommandBehavior.stdout("device\n").build())
-                    .build())
-            .addRule(
-                UsmfRule.builder()
-                    .addCondition(CommandCondition.regexMatch(".*?wait-for-device"))
-                    .setBehavior(CommandBehavior.exitCode(0).build())
-                    .build())
-            .addRule(
-                UsmfRule.builder()
-                    .addCondition(CommandCondition.regexMatch(".*?am\\s+get-current-user"))
-                    .setBehavior(CommandBehavior.stdout("0\n").build())
-                    .build())
-            .addRule(
-                UsmfRule.builder()
-                    .addCondition(CommandCondition.regexMatch(".*?install.*"))
-                    .setBehavior(CommandBehavior.stdout("Success\n").build())
-                    .build())
-            .addRule(
-                UsmfRule.builder()
-                    .addCondition(CommandCondition.regexMatch(".*?uninstall.*"))
-                    .setBehavior(CommandBehavior.stdout("Success\n").build())
-                    .build())
-            .addRule(
-                UsmfRule.builder()
-                    .addCondition(CommandCondition.regexMatch(".*?getprop.*ro\\.product\\.model"))
-                    .setBehavior(CommandBehavior.stdout("real_device_model\n").build())
-                    .build())
-            .addRule(
-                UsmfRule.builder()
-                    .addCondition(
-                        CommandCondition.regexMatch(".*?getprop.*ro\\.build\\.version\\.sdk"))
-                    .setBehavior(CommandBehavior.stdout("29\n").build())
-                    .build())
-            .addRule(
-                UsmfRule.builder()
-                    .addCondition(
-                        CommandCondition.regexMatch(
-                            ".*?cat\\s+/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq"))
-                    .setBehavior(CommandBehavior.stdout("2400000\n").build())
-                    .build())
+            .setRules(
+                """
+                def handle_devices(ctx):
+                    if "devices" in ctx.args:
+                        return Result(stdout="List of devices attached\\nHT8420M00155\\tdevice\\tproduct:real_device_model\\n")
+                    return None
+
+                def handle_version(ctx):
+                    if "version" in ctx.args:
+                        return Result(stdout="Android Debug Bridge version 1.0.41\\n")
+                    return None
+
+                def handle_get_state(ctx):
+                    if re_search(r"get-state", ctx.command):
+                        return Result(stdout="device\\n")
+                    return None
+
+                def handle_wait_for_device(ctx):
+                    if re_search(r"wait-for-device", ctx.command):
+                        return Result(exit_code=0)
+                    return None
+
+                def handle_get_current_user(ctx):
+                    if re_search(r"am\\s+get-current-user", ctx.command):
+                        return Result(stdout="0\\n")
+                    return None
+
+                def handle_install(ctx):
+                    if re_search(r"install", ctx.command):
+                        return Result(stdout="Success\\n")
+                    return None
+
+                def handle_uninstall(ctx):
+                    if re_search(r"uninstall", ctx.command):
+                        return Result(stdout="Success\\n")
+                    return None
+
+                def handle_getprop_model(ctx):
+                    if re_search(r"getprop.*ro\\.product\\.model", ctx.command):
+                        return Result(stdout="real_device_model\\n")
+                    return None
+
+                def handle_getprop_sdk(ctx):
+                    if re_search(r"getprop.*ro\\.build\\.version\\.sdk", ctx.command):
+                        return Result(stdout="29\\n")
+                    return None
+
+                def handle_cpu_freq(ctx):
+                    if re_search(r"cat\\s+/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq", ctx.command):
+                        return Result(stdout="2400000\\n")
+                    return None
+
+                usmf_rules = [
+                    handle_devices,
+                    handle_version,
+                    handle_get_state,
+                    handle_wait_for_device,
+                    handle_get_current_user,
+                    handle_install,
+                    handle_uninstall,
+                    handle_getprop_model,
+                    handle_getprop_sdk,
+                    handle_cpu_freq,
+                ]
+                """)
             .buildAndDeploy();
 
     UsmfBinary mockAapt = usmfEnvironment.createBinary("aapt").buildAndDeploy();

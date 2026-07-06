@@ -5,24 +5,439 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"math"
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
+
+	"go.starlark.net/starlark"
 )
 
-// Global patterns
-var (
-	innermostPattern = regexp.MustCompile(`\$\{([^{}]+?)\}`)
-	fmtPattern       = regexp.MustCompile(`(?s):\s*(['"])(.*?)(['"])\s*$`)
-	coalPattern      = regexp.MustCompile(`(?s)\?\s*(['"])(.*?)(['"])\s*$`)
-	rootExprPattern  = regexp.MustCompile(`(#[CSV])(\s*\[.*)?`)
-)
+// MatchVal implements starlark.Value, starlark.Indexable, and starlark.Mapping.
+type MatchVal struct {
+	FullMatch   string
+	Groups      []string
+	NamedGroups map[string]string
+}
+
+func (m *MatchVal) String() string { return fmt.Sprintf("Match(%q)", m.FullMatch) }
+
+// Type returns the type name of the MatchVal.
+func (m *MatchVal) Type() string { return "Match" }
+
+// Freeze freezes the MatchVal.
+func (m *MatchVal) Freeze() {}
+
+// Truth returns the truth value of the MatchVal.
+func (m *MatchVal) Truth() starlark.Bool { return true }
+
+// Hash returns a hash value for the MatchVal.
+func (m *MatchVal) Hash() (uint32, error) { return 0, fmt.Errorf("unhashable Match") }
+
+// Len returns the length of the MatchVal.
+func (m *MatchVal) Len() int {
+	return 1 + len(m.Groups)
+}
+
+// Index returns the element at index i of the MatchVal.
+func (m *MatchVal) Index(i int) starlark.Value {
+	if i < 0 || i >= m.Len() {
+		return starlark.None
+	}
+	if i == 0 {
+		return starlark.String(m.FullMatch)
+	}
+	return starlark.String(m.Groups[i-1])
+}
+
+// Get returns the value matching the key from the MatchVal.
+func (m *MatchVal) Get(key starlark.Value) (starlark.Value, bool, error) {
+	switch k := key.(type) {
+	case starlark.String:
+		val, ok := m.NamedGroups[string(k)]
+		if !ok {
+			return starlark.None, true, nil
+		}
+		return starlark.String(val), true, nil
+	case starlark.Int:
+		i64, ok := k.Int64()
+		if !ok {
+			return starlark.None, false, nil
+		}
+		idx := int(i64)
+		if idx < 0 || idx >= m.Len() {
+			return starlark.None, true, nil
+		}
+		return m.Index(idx), true, nil
+	}
+	return starlark.None, false, nil
+}
+
+// CreateDirVal represents a directory creation side effect.
+type CreateDirVal struct {
+	TargetPath string
+}
+
+func (c *CreateDirVal) String() string { return fmt.Sprintf("CreateDir(%q)", c.TargetPath) }
+
+// Type returns the type name of the CreateDirVal.
+func (c *CreateDirVal) Type() string { return "CreateDir" }
+
+// Freeze freezes the CreateDirVal.
+func (c *CreateDirVal) Freeze() {}
+
+// Truth returns the truth value of the CreateDirVal.
+func (c *CreateDirVal) Truth() starlark.Bool { return true }
+
+// Hash returns a hash value for the CreateDirVal.
+func (c *CreateDirVal) Hash() (uint32, error) { return 0, fmt.Errorf("unhashable CreateDir") }
+
+// WriteFileVal represents a file write side effect.
+type WriteFileVal struct {
+	TargetPath string
+	Content    string
+}
+
+func (w *WriteFileVal) String() string {
+	return fmt.Sprintf("WriteFile(%q, %q)", w.TargetPath, w.Content)
+}
+
+// Type returns the type name of the WriteFileVal.
+func (w *WriteFileVal) Type() string { return "WriteFile" }
+
+// Freeze freezes the WriteFileVal.
+func (w *WriteFileVal) Freeze() {}
+
+// Truth returns the truth value of the WriteFileVal.
+func (w *WriteFileVal) Truth() starlark.Bool { return true }
+
+// Hash returns a hash value for the WriteFileVal.
+func (w *WriteFileVal) Hash() (uint32, error) { return 0, fmt.Errorf("unhashable WriteFile") }
+
+// ResultVal defines the outcome of a matched rule.
+type ResultVal struct {
+	Stdout      string
+	Stderr      string
+	ExitCode    int
+	SleepMs     int
+	SideEffects []starlark.Value
+}
+
+func (r *ResultVal) String() string {
+	return fmt.Sprintf("Result(stdout=%q, stderr=%q, exit_code=%d, sleep_ms=%d)", r.Stdout, r.Stderr, r.ExitCode, r.SleepMs)
+}
+
+// Type returns the type name of the ResultVal.
+func (r *ResultVal) Type() string { return "Result" }
+
+// Freeze freezes the ResultVal.
+func (r *ResultVal) Freeze() {}
+
+// Truth returns the truth value of the ResultVal.
+func (r *ResultVal) Truth() starlark.Bool { return true }
+
+// Hash returns a hash value for the ResultVal.
+func (r *ResultVal) Hash() (uint32, error) { return 0, fmt.Errorf("unhashable Result") }
+
+// ContextVal defines the Starlark execution context structure (ctx).
+type ContextVal struct {
+	Command string
+	Args    *starlark.List
+	State   *starlark.Dict
+}
+
+func (c *ContextVal) String() string { return "<context>" }
+
+// Type returns the type name of the ContextVal.
+func (c *ContextVal) Type() string { return "Context" }
+
+// Freeze freezes the ContextVal.
+func (c *ContextVal) Freeze() {}
+
+// Truth returns the truth value of the ContextVal.
+func (c *ContextVal) Truth() starlark.Bool { return true }
+
+// Hash returns a hash value for the ContextVal.
+func (c *ContextVal) Hash() (uint32, error) { return 0, fmt.Errorf("unhashable Context") }
+
+// Attr returns the value of Starlark attribute with given name.
+func (c *ContextVal) Attr(name string) (starlark.Value, error) {
+	switch name {
+	case "command":
+		return starlark.String(c.Command), nil
+	case "args":
+		return c.Args, nil
+	case "state":
+		return c.State, nil
+	}
+	return nil, nil // Attribute not found.
+}
+
+// AttrNames returns the list of names of the Starlark attributes of ContextVal.
+func (c *ContextVal) AttrNames() []string {
+	return []string{"command", "args", "state"}
+}
+
+// Builtins implementation.
+
+func makeResult(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	stdout := ""
+	stderr := ""
+	var exitCode int
+	var sleepMs int
+	var sideEffects *starlark.List = starlark.NewList(nil)
+
+	if err := starlark.UnpackArgs(
+		b.Name(), args, kwargs,
+		"stdout?", &stdout,
+		"stderr?", &stderr,
+		"exit_code?", &exitCode,
+		"sleep_ms?", &sleepMs,
+		"side_effects?", &sideEffects,
+	); err != nil {
+		return nil, err
+	}
+
+	var effects []starlark.Value
+	if sideEffects != nil {
+		for i := 0; i < sideEffects.Len(); i++ {
+			effects = append(effects, sideEffects.Index(i))
+		}
+	}
+
+	return &ResultVal{
+		Stdout:      stdout,
+		Stderr:      stderr,
+		ExitCode:    exitCode,
+		SleepMs:     sleepMs,
+		SideEffects: effects,
+	}, nil
+}
+
+func makeCreateDir(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	var targetPath string
+	if err := starlark.UnpackArgs(b.Name(), args, kwargs, "target_path", &targetPath); err != nil {
+		return nil, err
+	}
+	return &CreateDirVal{TargetPath: targetPath}, nil
+}
+
+func makeWriteFile(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	var targetPath, content string
+	if err := starlark.UnpackArgs(b.Name(), args, kwargs, "target_path", &targetPath, "content", &content); err != nil {
+		return nil, err
+	}
+	return &WriteFileVal{TargetPath: targetPath, Content: content}, nil
+}
+
+func reSearch(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	var pattern, text string
+	if err := starlark.UnpackArgs(b.Name(), args, kwargs, "pattern", &pattern, "text", &text); err != nil {
+		return nil, err
+	}
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, err
+	}
+	loc := re.FindStringSubmatchIndex(text)
+	if loc == nil {
+		return starlark.None, nil
+	}
+	fullMatch := text[loc[0]:loc[1]]
+
+	groups := []string{}
+	for idx := 1; idx < len(loc)/2; idx++ {
+		start, end := loc[2*idx], loc[2*idx+1]
+		if start >= 0 && end >= 0 {
+			groups = append(groups, text[start:end])
+		} else {
+			groups = append(groups, "")
+		}
+	}
+
+	namedGroups := make(map[string]string)
+	subnames := re.SubexpNames()
+	for idx, name := range subnames {
+		if name != "" && idx < len(loc)/2 {
+			start, end := loc[2*idx], loc[2*idx+1]
+			if start >= 0 && end >= 0 {
+				namedGroups[name] = text[start:end]
+			}
+		}
+	}
+
+	return &MatchVal{
+		FullMatch:   fullMatch,
+		Groups:      groups,
+		NamedGroups: namedGroups,
+	}, nil
+}
+
+// Convert native Go maps/slices representation to Starlark values.
+func jsonToStarlark(v any) starlark.Value {
+	if v == nil {
+		return starlark.None
+	}
+	switch val := v.(type) {
+	case bool:
+		return starlark.Bool(val)
+	case float64:
+		return starlark.Float(val)
+	case int:
+		return starlark.MakeInt(val)
+	case int64:
+		return starlark.MakeInt64(val)
+	case string:
+		return starlark.String(val)
+	case []any:
+		list := starlark.NewList(nil)
+		for _, elem := range val {
+			list.Append(jsonToStarlark(elem))
+		}
+		return list
+	case map[string]any:
+		dict := starlark.NewDict(len(val))
+		for k, elem := range val {
+			dict.SetKey(starlark.String(k), jsonToStarlark(elem))
+		}
+		return dict
+	default:
+		return starlark.String(fmt.Sprintf("%v", val))
+	}
+}
+
+// Convert Starlark values back to JSON-compatible Go maps/slices.
+func starlarkToJSON(v starlark.Value) (any, error) {
+	if v == nil || v == starlark.None {
+		return nil, nil
+	}
+	switch val := v.(type) {
+	case starlark.Bool:
+		return bool(val), nil
+	case starlark.Int:
+		if i, ok := val.Int64(); ok {
+			return i, nil
+		}
+		return val.Float(), nil
+	case starlark.Float:
+		return float64(val), nil
+	case starlark.String:
+		return string(val), nil
+	case *starlark.List:
+		res := make([]any, val.Len())
+		for i := 0; i < val.Len(); i++ {
+			elem, err := starlarkToJSON(val.Index(i))
+			if err != nil {
+				return nil, err
+			}
+			res[i] = elem
+		}
+		return res, nil
+	case *starlark.Dict:
+		res := make(map[string]any)
+		for _, item := range val.Items() {
+			kVal := item[0]
+			vVal := item[1]
+			kStr, ok := kVal.(starlark.String)
+			if !ok {
+				return nil, fmt.Errorf("dict keys must be strings for JSON serialization, got: %T", kVal)
+			}
+			elem, err := starlarkToJSON(vVal)
+			if err != nil {
+				return nil, err
+			}
+			res[string(kStr)] = elem
+		}
+		return res, nil
+	default:
+		return nil, fmt.Errorf("unsupported type for state JSON: %T", v)
+	}
+}
+
+func deepCopyValue(v any) any {
+	if v == nil {
+		return nil
+	}
+	switch val := v.(type) {
+	case map[string]any:
+		return deepCopyMap(val)
+	case []any:
+		return deepCopySlice(val)
+	default:
+		return val
+	}
+}
+
+func deepCopyMap(m map[string]any) map[string]any {
+	res := make(map[string]any, len(m))
+	for k, v := range m {
+		res[k] = deepCopyValue(v)
+	}
+	return res
+}
+
+func deepCopySlice(s []any) []any {
+	res := make([]any, len(s))
+	for i, v := range s {
+		res[i] = deepCopyValue(v)
+	}
+	return res
+}
+
+func loadState(stateFile string) map[string]any {
+	state := make(map[string]any)
+	if stateFile == "" {
+		return state
+	}
+	data, err := os.ReadFile(stateFile)
+	if err != nil {
+		return state
+	}
+	_ = json.Unmarshal(data, &state)
+	return state
+}
+
+func writeJSONAtomic(file string, data any) {
+	if file == "" {
+		return
+	}
+	tmpFile := file + ".tmp"
+	_ = os.MkdirAll(filepath.Dir(file), 0755)
+	payload, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return
+	}
+	if err := os.WriteFile(tmpFile, payload, 0644); err == nil {
+		_ = os.Rename(tmpFile, file)
+	}
+}
+
+func writeHistoryStatus(logFile string, args []string, status string, startTime time.Time, ruleName string, result map[string]any, errors []string) {
+	if logFile == "" {
+		return
+	}
+	data := map[string]any{
+		"args":          args,
+		"status":        status,
+		"start_time_ms": startTime.UnixNano() / 1000000,
+		"errors":        errors,
+	}
+	if ruleName != "" {
+		data["rule_name"] = ruleName
+	}
+	if result != nil {
+		data["result"] = result
+	}
+	writeJSONAtomic(logFile, data)
+}
+
+func pseudoUUID() string {
+	b := make([]byte, 16)
+	_, _ = rand.Read(b)
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+}
 
 var unsafeCharPattern = regexp.MustCompile(`[^A-Za-z0-9_@%+=:,./-]`)
 
@@ -44,775 +459,6 @@ func shellJoin(args []string) string {
 	return strings.Join(quoted, " ")
 }
 
-// valToString converts a dynamic value to its string representation without using
-// reflection for common primitive types, avoiding allocation overhead.
-func valToString(val any) string {
-	if val == nil {
-		return ""
-	}
-	switch v := val.(type) {
-	case string:
-		return v
-	case float64:
-		return strconv.FormatFloat(v, 'f', -1, 64)
-	case bool:
-		if v {
-			return "true"
-		}
-		return "false"
-	case int:
-		return strconv.Itoa(v)
-	case int64:
-		return strconv.FormatInt(v, 10)
-	default:
-		return fmt.Sprintf("%v", val)
-	}
-}
-
-// Condition defines a matching rule based on commands or states.
-type Condition struct {
-	Type string `json:"type"`
-	// Command Condition properties (Flat)
-	MatchType string  `json:"match_type"`
-	Expected  []any   `json:"expected"`
-	Regex     *string `json:"regex"`
-	// State Condition properties (Flat)
-	StateNode     string `json:"state_node"`
-	Op            string `json:"op"`
-	ExpectedValue any    `json:"expected_value"`
-}
-
-// StateMutation defines changes to the state tree.
-type StateMutation struct {
-	StateNode string `json:"state_node"`
-	Op        string `json:"op"`
-	Value     any    `json:"value"`
-}
-
-// SideEffect defines dynamic filesystem operations.
-type SideEffect struct {
-	Type       string  `json:"type"`
-	Op         string  `json:"op"`
-	TargetPath *string `json:"target_path"`
-	Content    *string `json:"content"`
-}
-
-// Behavior holds outcome actions of a rule.
-type Behavior struct {
-	StateMutations []StateMutation `json:"state_mutations"`
-	SideEffects    []SideEffect    `json:"side_effects"`
-	Stdout         any             `json:"stdout"`
-	Stderr         any             `json:"stderr"`
-	ExitCode       any             `json:"exit_code"`
-	SleepMs        any             `json:"sleep_ms"`
-}
-
-// Rule couples match conditions with behaviors.
-type Rule struct {
-	Conditions []Condition `json:"conditions"`
-	Behavior   Behavior    `json:"behavior"`
-}
-
-// RulesConfig governs sandbox rules and variables.
-type RulesConfig struct {
-	Rules     []Rule         `json:"rules"`
-	Variables map[string]any `json:"variables"`
-}
-
-func tryParseNumber(val any) (any, bool) {
-	if val == nil {
-		return nil, false
-	}
-	switch v := val.(type) {
-	case int:
-		return float64(v), true
-	case int64:
-		return float64(v), true
-	case float64:
-		return v, true
-	case bool:
-		return nil, false
-	case string:
-		if f, err := strconv.ParseFloat(v, 64); err == nil {
-			return f, true
-		}
-	}
-	return nil, false
-}
-
-func parseBool(val any) bool {
-	if val == nil {
-		return false
-	}
-	if b, ok := val.(bool); ok {
-		return b
-	}
-	s := strings.TrimSpace(strings.ToLower(valToString(val)))
-	return s == "true" || s == "1" || s == "yes"
-}
-
-func coerceToSameType(val1, val2 any) (any, any) {
-	if _, ok1 := val1.(bool); ok1 {
-		return parseBool(val1), parseBool(val2)
-	}
-	if _, ok2 := val2.(bool); ok2 {
-		return parseBool(val1), parseBool(val2)
-	}
-	n1, ok1 := tryParseNumber(val1)
-	n2, ok2 := tryParseNumber(val2)
-	if ok1 && ok2 {
-		return n1, n2
-	}
-	return valToString(val1), valToString(val2)
-}
-
-func evaluatePath(exprStr string, captures, state, variables map[string]any, isMutationTarget bool, errors *[]string) (parent any, lastKey any, value any, err error) {
-	exprStr = strings.TrimSpace(exprStr)
-	match := rootExprPattern.FindStringSubmatch(exprStr)
-	if len(match) == 0 {
-		return nil, nil, nil, fmt.Errorf("USMF SyntaxError: target must be a mutable state node/Literal strings must be quoted: %s", exprStr)
-	}
-	rootName := match[1]
-	rem := strings.TrimSpace(match[2])
-
-	var current any
-	if rootName == "#C" {
-		current = captures
-	} else if rootName == "#S" {
-		current = state
-	} else if rootName == "#V" {
-		current = variables
-	} else {
-		return nil, nil, nil, fmt.Errorf("Unknown context root: %s", rootName)
-	}
-
-	keys := []string{}
-	// Scan brackets using nested balancer and inQuote detection
-	start := -1
-	bracketCount := 0
-	var inQuote rune = 0
-	escaped := false
-	for idx, r := range rem {
-		if escaped {
-			escaped = false
-			continue
-		}
-		if r == '\\' {
-			escaped = true
-			continue
-		}
-		if inQuote != 0 {
-			if r == inQuote {
-				inQuote = 0
-			}
-			continue
-		}
-		if r == '\'' || r == '"' {
-			inQuote = r
-			continue
-		}
-		if r == '[' {
-			if bracketCount == 0 {
-				start = idx + 1
-			}
-			bracketCount++
-		} else if r == ']' {
-			bracketCount--
-			if bracketCount == 0 && start != -1 {
-				rawKey := rem[start:idx]
-				rawKey = strings.TrimSpace(rawKey)
-				if len(rawKey) >= 2 && ((rawKey[0] == '\'' && rawKey[len(rawKey)-1] == '\'') || (rawKey[0] == '"' && rawKey[len(rawKey)-1] == '"')) {
-					rawKey = rawKey[1 : len(rawKey)-1]
-				} else {
-					if len(rawKey) == 0 || rawKey[0] != '#' {
-						return nil, nil, nil, fmt.Errorf("USMF Syntax Error: Literal strings must be quoted (target must be a mutable state node): %s", rawKey)
-					}
-				}
-				keys = append(keys, rawKey)
-				start = -1
-			}
-		}
-	}
-
-	if bracketCount != 0 {
-		return nil, nil, nil, fmt.Errorf("USMF SyntaxError: target must be a mutable state node/Literal strings must be quoted: %s", exprStr)
-	}
-
-	// Double check Remains
-	cleanRem := ""
-	bracketCount2 := 0
-	var inQuote2 rune = 0
-	escaped2 := false
-	for _, r := range rem {
-		if escaped2 {
-			escaped2 = false
-			continue
-		}
-		if r == '\\' {
-			escaped2 = true
-			continue
-		}
-		if inQuote2 != 0 {
-			if r == inQuote2 {
-				inQuote2 = 0
-			}
-			continue
-		}
-		if r == '\'' || r == '"' {
-			inQuote2 = r
-			continue
-		}
-		if r == '[' {
-			bracketCount2++
-		} else if r == ']' {
-			bracketCount2--
-		} else {
-			if bracketCount2 == 0 {
-				cleanRem += string(r)
-			}
-		}
-	}
-	if len(strings.TrimSpace(cleanRem)) > 0 {
-		return nil, nil, nil, fmt.Errorf("USMF SyntaxError: target must be a mutable state node/Literal strings must be quoted: %s", exprStr)
-	}
-
-	if len(keys) == 0 {
-		return nil, nil, current, nil
-	}
-
-	parent = nil
-	var curKey any = nil
-	for _, key := range keys {
-		if current == nil {
-			return nil, nil, nil, nil
-		}
-		parent = current
-
-		var actualKey any = key
-		if len(key) > 0 && key[0] == '#' {
-			v, err := evaluateExpression(key, captures, state, variables, errors)
-			if err != nil {
-				return nil, nil, nil, err
-			}
-			actualKey = v
-		}
-		if actualKey == nil {
-			return nil, nil, nil, nil
-		}
-		curKey = actualKey
-
-		// Check if list index
-		var isIdx = false
-		var idxVal = -1
-		actualKeyStr := valToString(actualKey)
-		if f, err := strconv.ParseFloat(actualKeyStr, 64); err == nil {
-			isIdx = true
-			idxVal = int(math.Round(f))
-		}
-
-		if m, ok := current.(map[string]any); ok {
-			if isMutationTarget && rootName == "#S" && !isIdx {
-				if _, existed := m[actualKeyStr]; !existed {
-					m[actualKeyStr] = make(map[string]any)
-				}
-			}
-			current = m[actualKeyStr]
-		} else if lst, ok := current.([]any); ok && isIdx {
-			if idxVal >= 0 && idxVal < len(lst) {
-				current = lst[idxVal]
-				curKey = idxVal
-			} else {
-				return nil, nil, nil, fmt.Errorf("Index out of bounds (target must be a mutable state node)")
-			}
-		} else {
-			return nil, nil, nil, fmt.Errorf("Invalid type access (target must be a mutable state node)")
-		}
-	}
-	return parent, curKey, current, nil
-}
-
-func evaluateExpression(exprStr string, captures, state, variables map[string]any, errors *[]string) (any, error) {
-	exprStr = strings.TrimSpace(exprStr)
-	if len(exprStr) >= 2 && ((exprStr[0] == '\'' && exprStr[len(exprStr)-1] == '\'') || (exprStr[0] == '"' && exprStr[len(exprStr)-1] == '"')) {
-		return exprStr[1 : len(exprStr)-1], nil
-	}
-
-	var coalescingVal *string
-	var formattingVal *string
-
-	if fmtMatch := fmtPattern.FindStringSubmatchIndex(exprStr); len(fmtMatch) > 0 {
-		if exprStr[fmtMatch[2]:fmtMatch[3]] == exprStr[fmtMatch[6]:fmtMatch[7]] {
-			fmtStr := exprStr[fmtMatch[4]:fmtMatch[5]]
-			formattingVal = &fmtStr
-			exprStr = strings.TrimSpace(exprStr[:fmtMatch[0]])
-		}
-	}
-
-	if coalMatch := coalPattern.FindStringSubmatchIndex(exprStr); len(coalMatch) > 0 {
-		if exprStr[coalMatch[2]:coalMatch[3]] == exprStr[coalMatch[6]:coalMatch[7]] {
-			coalStr := exprStr[coalMatch[4]:coalMatch[5]]
-			coalescingVal = &coalStr
-			exprStr = strings.TrimSpace(exprStr[:coalMatch[0]])
-		}
-	}
-
-	_, _, value, err := evaluatePath(exprStr, captures, state, variables, false, errors)
-	if err != nil {
-		if coalescingVal != nil {
-			return *coalescingVal, nil
-		}
-		return nil, err
-	}
-
-	if value == nil && coalescingVal != nil {
-		value = *coalescingVal
-	}
-
-	if value != nil && formattingVal != nil {
-		value = formatValue(value, *formattingVal)
-	}
-
-	return value, nil
-}
-
-func formatValue(val any, fmtStr string) string {
-	if val == nil {
-		return ""
-	}
-	if lst, ok := val.([]any); ok {
-		itemStrings := []string{}
-		for _, item := range lst {
-			itemStrings = append(itemStrings, formatValue(item, fmtStr))
-		}
-		return strings.Join(itemStrings, "")
-	}
-
-	sVal := ""
-	if fmtStr == "%s" || fmtStr == "" {
-		if f, ok := val.(float64); ok {
-			sVal = strconv.FormatFloat(f, 'f', -1, 64)
-		} else {
-			sVal = valToString(val)
-		}
-	} else {
-		sVal = valToString(val)
-	}
-
-	// Simple format matching
-	if strings.Contains(fmtStr, "%") && fmtStr != "%s" {
-		// Coerce float if needed
-		if f, err := strconv.ParseFloat(sVal, 64); err == nil {
-			if strings.ContainsAny(fmtStr, "doxX") {
-				return fmt.Sprintf(fmtStr, int(f))
-			}
-			if strings.Contains(fmtStr, "%s") {
-				return fmt.Sprintf(fmtStr, sVal)
-			}
-			return fmt.Sprintf(fmtStr, f)
-		}
-		return fmt.Sprintf(fmtStr, sVal)
-	}
-	return sVal
-}
-
-func resolveString(text string, captures, state, variables map[string]any, errors *[]string) string {
-	replaceFunc := func(match string) string {
-		exprStr := match[2 : len(match)-1]
-		val, err := evaluateExpression(exprStr, captures, state, variables, errors)
-		if err != nil {
-			if errors != nil {
-				*errors = append(*errors, fmt.Sprintf("Expression evaluation error: %v", err))
-			}
-			if strings.Contains(err.Error(), "Invalid expression") || strings.Contains(err.Error(), "Literal strings must be quoted") {
-				return match
-			}
-			return ""
-		}
-		if lst, ok := val.([]any); ok {
-			strItems := []string{}
-			for _, item := range lst {
-				strItems = append(strItems, valToString(item))
-			}
-			return strings.Join(strItems, ", ")
-		}
-		if val == nil {
-			return ""
-		}
-		return valToString(val)
-	}
-
-	for i := 0; i < 5; i++ {
-		reconstructed := innermostPattern.ReplaceAllStringFunc(text, replaceFunc)
-		if reconstructed == text {
-			break
-		}
-		text = reconstructed
-	}
-	return text
-}
-
-func interpolateValue(val any, captures, state, variables map[string]any, errors *[]string) any {
-	if s, ok := val.(string); ok {
-		return resolveString(s, captures, state, variables, errors)
-	}
-	if lst, ok := val.([]any); ok {
-		res := make([]any, len(lst))
-		for idx, item := range lst {
-			res[idx] = interpolateValue(item, captures, state, variables, errors)
-		}
-		return res
-	}
-	if m, ok := val.(map[string]any); ok {
-		res := make(map[string]any)
-		for k, v := range m {
-			ik := valToString(interpolateValue(k, captures, state, variables, errors))
-			res[ik] = interpolateValue(v, captures, state, variables, errors)
-		}
-		return res
-	}
-	return val
-}
-
-func compareState(actual any, op string, expected any) bool {
-	if actual == nil && op == "contains" {
-		return false
-	}
-	if actual == nil || expected == nil {
-		if op == "eq" {
-			return actual == expected
-		}
-		if op == "contains" {
-			if lst, ok := actual.([]any); ok {
-				for _, item := range lst {
-					if item == nil {
-						return true
-					}
-				}
-			}
-			if m, ok := actual.(map[string]any); ok {
-				for k := range m {
-					if k == "" {
-						return true
-					}
-				}
-			}
-			return false
-		}
-		return false
-	}
-
-	if op == "contains" {
-		if lst, ok := actual.([]any); ok {
-			for _, item := range lst {
-				cItem, cExp := coerceToSameType(item, expected)
-				if cItem == cExp {
-					return true
-				}
-			}
-			return false
-		}
-		if m, ok := actual.(map[string]any); ok {
-			for k := range m {
-				cItem, cExp := coerceToSameType(k, expected)
-				if cItem == cExp {
-					return true
-				}
-			}
-			return false
-		}
-		return strings.Contains(valToString(actual), valToString(expected))
-	}
-
-	cActual, cExpected := coerceToSameType(actual, expected)
-	switch op {
-	case "eq":
-		return cActual == cExpected
-	case "gt":
-		if f1, ok1 := cActual.(float64); ok1 {
-			if f2, ok2 := cExpected.(float64); ok2 {
-				return f1 > f2
-			}
-		}
-		return valToString(cActual) > valToString(cExpected)
-	case "gte":
-		if f1, ok1 := cActual.(float64); ok1 {
-			if f2, ok2 := cExpected.(float64); ok2 {
-				return f1 >= f2
-			}
-		}
-		return valToString(cActual) >= valToString(cExpected)
-	case "lt":
-		if f1, ok1 := cActual.(float64); ok1 {
-			if f2, ok2 := cExpected.(float64); ok2 {
-				return f1 < f2
-			}
-		}
-		return valToString(cActual) < valToString(cExpected)
-	case "lte":
-		if f1, ok1 := cActual.(float64); ok1 {
-			if f2, ok2 := cExpected.(float64); ok2 {
-				return f1 <= f2
-			}
-		}
-		return valToString(cActual) <= valToString(cExpected)
-	}
-	return false
-}
-
-func evaluateRule(rule Rule, actualArgs []string, contextS, contextV map[string]any, errors *[]string) (bool, map[string]any) {
-	contextC := make(map[string]any)
-
-	// Check condition categories
-	for _, cond := range rule.Conditions {
-		if cond.Type != "command" && cond.Type != "state" {
-			return false, nil
-		}
-	}
-
-	// Check commands
-	for _, cond := range rule.Conditions {
-		if cond.Type != "command" {
-			continue
-		}
-		matchType := cond.MatchType
-		expected := cond.Expected
-		if matchType == "exact" {
-			if len(expected) != len(actualArgs) {
-				return false, nil
-			}
-			for i, val := range expected {
-				if valToString(val) != actualArgs[i] {
-					return false, nil
-				}
-			}
-		} else if matchType == "prefix" {
-			if len(actualArgs) < len(expected) {
-				return false, nil
-			}
-			for i, val := range expected {
-				if valToString(val) != actualArgs[i] {
-					return false, nil
-				}
-			}
-		} else if matchType == "regex" {
-			if cond.Regex == nil {
-				return false, nil
-			}
-			joinedCmd := shellJoin(actualArgs)
-			re, err := regexp.Compile(*cond.Regex)
-			if err != nil {
-				*errors = append(*errors, fmt.Sprintf("Regex compile error: %v", err))
-				return false, nil
-			}
-			loc := re.FindStringSubmatchIndex(joinedCmd)
-			if len(loc) == 0 || loc[0] != 0 {
-				return false, nil
-			}
-			subnames := re.SubexpNames()
-			for idx, name := range subnames {
-				if name != "" && idx < len(loc)/2 {
-					start := loc[2*idx]
-					end := loc[2*idx+1]
-					if start >= 0 && end >= 0 {
-						contextC[name] = joinedCmd[start:end]
-					}
-				}
-			}
-		} else {
-			return false, nil
-		}
-	}
-
-	// Check states
-	for _, cond := range rule.Conditions {
-		if cond.Type != "state" {
-			continue
-		}
-		resNode := resolveString(cond.StateNode, contextC, contextS, contextV, errors)
-		_, _, actualValue, err := evaluatePath(resNode, contextC, contextS, contextV, false, errors)
-		if err != nil {
-			*errors = append(*errors, fmt.Sprintf("USMF SyntaxError: State node evaluation error: %v", err))
-			return false, nil
-		}
-		expectedVal := interpolateValue(cond.ExpectedValue, contextC, contextS, contextV, errors)
-		if !compareState(actualValue, cond.Op, expectedVal) {
-			return false, nil
-		}
-	}
-
-	return true, contextC
-}
-
-func applyStateMutations(mutations []StateMutation, state, captures, variables map[string]any, errors *[]string) {
-	for _, mutation := range mutations {
-		if mutation.StateNode == "" {
-			continue
-		}
-		resNode := resolveString(mutation.StateNode, captures, state, variables, errors)
-		parent, lastKey, _, err := evaluatePath(resNode, captures, state, variables, true, errors)
-		if err != nil {
-			*errors = append(*errors, fmt.Sprintf("USMF Mutation error: %v", err))
-			continue
-		}
-
-		interpValue := interpolateValue(mutation.Value, captures, state, variables, errors)
-		op := mutation.Op
-
-		if m, ok := parent.(map[string]any); ok {
-			keyStr := valToString(lastKey)
-			if op == "set" {
-				m[keyStr] = interpValue
-			} else if op == "plus" {
-				cur := m[keyStr]
-				cNum, _ := tryParseNumber(cur)
-				if cNum == nil {
-					cNum = 0.0
-				}
-				vNum, _ := tryParseNumber(interpValue)
-				if vNum != nil {
-					m[keyStr] = cNum.(float64) + vNum.(float64)
-				}
-			} else if op == "add_to_list" || op == "add_to_set" {
-				lst, ok := m[keyStr].([]any)
-				if !ok {
-					m[keyStr] = []any{interpValue}
-				} else {
-					if op == "add_to_list" {
-						m[keyStr] = append(lst, interpValue)
-					} else { // add_to_set
-						found := false
-						for _, item := range lst {
-							if item == interpValue {
-								found = true
-								break
-							}
-						}
-						if !found {
-							m[keyStr] = append(lst, interpValue)
-						}
-					}
-				}
-			}
-		} else if lst, ok := parent.([]any); ok {
-			idxVal, ok := lastKey.(int)
-			if !ok || idxVal < 0 || idxVal >= len(lst) {
-				*errors = append(*errors, fmt.Sprintf("USMF Mutation error: Invalid list index (target must be a mutable state node): %v", lastKey))
-				continue
-			}
-			if op == "set" {
-				lst[idxVal] = interpValue
-			} else if op == "plus" {
-				cNum, _ := tryParseNumber(lst[idxVal])
-				if cNum == nil {
-					cNum = 0.0
-				}
-				vNum, _ := tryParseNumber(interpValue)
-				if vNum != nil {
-					lst[idxVal] = cNum.(float64) + vNum.(float64)
-				}
-			} else if op == "add_to_list" || op == "add_to_set" {
-				subLst, ok := lst[idxVal].([]any)
-				if !ok {
-					lst[idxVal] = []any{interpValue}
-				} else {
-					if op == "add_to_list" {
-						lst[idxVal] = append(subLst, interpValue)
-					} else {
-						found := false
-						for _, item := range subLst {
-							if item == interpValue {
-								found = true
-								break
-							}
-						}
-						if !found {
-							lst[idxVal] = append(subLst, interpValue)
-						}
-					}
-				}
-			}
-		} else {
-			*errors = append(*errors, "USMF Mutation error: target must be a mutable state node")
-		}
-	}
-}
-
-func executeSideEffects(sideEffects []SideEffect, errors *[]string) {
-	for _, effect := range sideEffects {
-		if effect.Type != "file" || effect.TargetPath == nil {
-			continue
-		}
-		path := *effect.TargetPath
-		if effect.Op == "write_file" {
-			content := ""
-			if effect.Content != nil {
-				content = *effect.Content
-			}
-			if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-				*errors = append(*errors, fmt.Sprintf("USMF SideEffect error (Fake USMF Side-Effect Exec Error): %v", err))
-				continue
-			}
-			if err := ioutil.WriteFile(path, []byte(content), 0644); err != nil {
-				*errors = append(*errors, fmt.Sprintf("USMF SideEffect error (Fake USMF Side-Effect Exec Error): %v", err))
-			}
-		} else if effect.Op == "create_dir" {
-			if err := os.MkdirAll(path, 0755); err != nil {
-				*errors = append(*errors, fmt.Sprintf("USMF SideEffect error (Fake USMF Side-Effect Exec Error): %v", err))
-			}
-		}
-	}
-}
-
-func loadState(stateFile string) map[string]any {
-	state := make(map[string]any)
-	if stateFile == "" {
-		return state
-	}
-	data, err := ioutil.ReadFile(stateFile)
-	if err != nil {
-		return state
-	}
-	_ = json.Unmarshal(data, &state)
-	return state
-}
-
-func writeJSONAtomic(file string, data any) {
-	if file == "" {
-		return
-	}
-	tmpFile := file + ".tmp"
-	_ = os.MkdirAll(filepath.Dir(file), 0755)
-	payload, err := json.MarshalIndent(data, "", "  ")
-	if err != nil {
-		return
-	}
-	if err := ioutil.WriteFile(tmpFile, payload, 0644); err == nil {
-		_ = os.Rename(tmpFile, file)
-	}
-}
-
-func writeHistoryStatus(logFile string, args []string, status string, startTime time.Time, result map[string]any, errors []string) {
-	if logFile == "" {
-		return
-	}
-	data := map[string]any{
-		"args":          args,
-		"status":        status,
-		"start_time_ms": startTime.UnixNano() / 1000000,
-		"errors":        errors,
-	}
-	if result != nil {
-		data["result"] = result
-	}
-	writeJSONAtomic(logFile, data)
-}
-
-func pseudoUUID() string {
-	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
-}
-
 func executeStub(rulesFile, stateFile, logDir string, actualArgs []string) int {
 	startTime := time.Now()
 	var logFile string
@@ -820,27 +466,61 @@ func executeStub(rulesFile, stateFile, logDir string, actualArgs []string) int {
 		logFile = filepath.Join(logDir, fmt.Sprintf("history_%s.json", pseudoUUID()))
 	}
 
-	errors := []string{}
+	var errors []string
 
-	var config RulesConfig
+	// 1. Context Preparation
+	predeclared := starlark.StringDict{
+		"Result":    starlark.NewBuiltin("Result", makeResult),
+		"CreateDir": starlark.NewBuiltin("CreateDir", makeCreateDir),
+		"WriteFile": starlark.NewBuiltin("WriteFile", makeWriteFile),
+		"re_search": starlark.NewBuiltin("re_search", reSearch),
+	}
+
+	thread := &starlark.Thread{Name: "usmf"}
+
+	var globals starlark.StringDict
+	var err error
 	if rulesFile != "" {
-		if data, err := ioutil.ReadFile(rulesFile); err == nil {
-			if parseErr := json.Unmarshal(data, &config); parseErr != nil {
-				_, _ = fmt.Fprintf(os.Stderr, "Mock USMF JSON Error for rules file: %v\n", parseErr)
+		if _, statErr := os.Stat(rulesFile); statErr == nil {
+			//lint:ignore SA1019 ExecFile is fine to use here
+			globals, err = starlark.ExecFile(thread, rulesFile, nil, predeclared)
+			if err != nil {
+				errMsg := fmt.Sprintf("Starlark compilation/execution error: %v", err)
+				_, _ = fmt.Fprintln(os.Stderr, errMsg)
+				errors = append(errors, errMsg)
 				if logFile != "" {
-					errors = append(errors, fmt.Sprintf("USMF Syntax Error / SyntaxError: Mock USMF JSON Error for rules file: %v (target must be a mutable state node / Literal strings must be quoted)", parseErr))
-					dummyRes := map[string]any{"exit_code": 1, "stdout": "", "stderr": ""}
-					writeHistoryStatus(logFile, actualArgs, "FINISHED", startTime, dummyRes, errors)
+					dummyRes := map[string]any{"exit_code": 1, "stdout": "", "stderr": errMsg}
+					writeHistoryStatus(logFile, actualArgs, "FINISHED", startTime, "", dummyRes, errors)
 				}
 				return 1
 			}
 		}
 	}
 
-	state := make(map[string]any)
-	var matchedRule *Rule
-	var captures map[string]any
+	var rulesList []starlark.Callable
+	if globals != nil {
+		if rulesVal, ok := globals["usmf_rules"]; ok {
+			if listVal, ok := rulesVal.(*starlark.List); ok {
+				for i := 0; i < listVal.Len(); i++ {
+					if fn, ok := listVal.Index(i).(starlark.Callable); ok {
+						rulesList = append(rulesList, fn)
+					}
+				}
+			} else if tupleVal, ok := rulesVal.(starlark.Tuple); ok {
+				for i := 0; i < tupleVal.Len(); i++ {
+					if fn, ok := tupleVal.Index(i).(starlark.Callable); ok {
+						rulesList = append(rulesList, fn)
+					}
+				}
+			}
+		}
+	}
 
+	currentState := make(map[string]any)
+	var matchedRuleName string
+	var finalResult *ResultVal
+
+	// Lock and load state database
 	if stateFile != "" {
 		func() {
 			lockFile := stateFile + ".lock"
@@ -852,105 +532,141 @@ func executeStub(rulesFile, stateFile, logDir string, actualArgs []string) int {
 					_ = f.Close()
 				}()
 			}
-			state = loadState(stateFile)
-			for _, r := range config.Rules {
-				if ok, caps := evaluateRule(r, actualArgs, state, config.Variables, &errors); ok {
-					ruleCopy := r
-					matchedRule = &ruleCopy
-					captures = caps
+			currentState = loadState(stateFile)
+
+			// Process Match-and-Route with dynamic state copy
+			for _, fn := range rulesList {
+				clonedState := deepCopyMap(currentState)
+				stateDict := jsonToStarlark(clonedState).(*starlark.Dict)
+
+				argsList := starlark.NewList(nil)
+				for _, arg := range actualArgs {
+					argsList.Append(starlark.String(arg))
+				}
+
+				ctx := &ContextVal{
+					Command: shellJoin(actualArgs),
+					Args:    argsList,
+					State:   stateDict,
+				}
+
+				resVal, runErr := starlark.Call(thread, fn, starlark.Tuple{ctx}, nil)
+				if runErr != nil {
+					errMsg := fmt.Sprintf("Starlark execution exception in %s: %v", fn.Name(), runErr)
+					_, _ = fmt.Fprintln(os.Stderr, errMsg)
+					errors = append(errors, errMsg)
+					continue
+				}
+
+				if resVal == nil || resVal == starlark.None {
+					// Modifications are discarded on None
+					continue
+				}
+
+				if res, ok := resVal.(*ResultVal); ok {
+					finalResult = res
+					matchedRuleName = fn.Name()
+
+					// Commit modifications
+					mutatedState, convErr := starlarkToJSON(stateDict)
+					if convErr == nil {
+						if ms, ok := mutatedState.(map[string]any); ok {
+							currentState = ms
+						}
+					} else {
+						errors = append(errors, fmt.Sprintf("Failed to convert state: %v", convErr))
+					}
+					writeJSONAtomic(stateFile, currentState)
 					break
 				}
 			}
-
-			if matchedRule != nil && len(matchedRule.Behavior.StateMutations) > 0 {
-				applyStateMutations(matchedRule.Behavior.StateMutations, state, captures, config.Variables, &errors)
-				writeJSONAtomic(stateFile, state)
-			}
 		}()
 	} else {
-		for _, r := range config.Rules {
-			if ok, caps := evaluateRule(r, actualArgs, state, config.Variables, &errors); ok {
-				ruleCopy := r
-				matchedRule = &ruleCopy
-				captures = caps
+		for _, fn := range rulesList {
+			clonedState := deepCopyMap(currentState)
+			stateDict := jsonToStarlark(clonedState).(*starlark.Dict)
+
+			argsList := starlark.NewList(nil)
+			for _, arg := range actualArgs {
+				argsList.Append(starlark.String(arg))
+			}
+
+			ctx := &ContextVal{
+				Command: shellJoin(actualArgs),
+				Args:    argsList,
+				State:   stateDict,
+			}
+
+			resVal, runErr := starlark.Call(thread, fn, starlark.Tuple{ctx}, nil)
+			if runErr != nil {
+				errMsg := fmt.Sprintf("Starlark execution exception in %s: %v", fn.Name(), runErr)
+				_, _ = fmt.Fprintln(os.Stderr, errMsg)
+				errors = append(errors, errMsg)
+				continue
+			}
+
+			if resVal == nil || resVal == starlark.None {
+				continue
+			}
+
+			if res, ok := resVal.(*ResultVal); ok {
+				finalResult = res
+				matchedRuleName = fn.Name()
 				break
 			}
 		}
 	}
 
-	for _, e := range errors {
-		if strings.Contains(e, "Regex compile error") {
-			_, _ = fmt.Fprintln(os.Stderr, e)
-			if logFile != "" {
-				dummyRes := map[string]any{"exit_code": 1, "stdout": "", "stderr": e}
-				writeHistoryStatus(logFile, actualArgs, "FINISHED", startTime, dummyRes, errors)
-			}
-			return 1
-		}
-	}
+	exitCode := 0
+	stdout := ""
+	stderr := ""
+	sleepMs := 0
+	var sideEffects []starlark.Value
 
-	var behavior Behavior
-	if matchedRule != nil {
-		behavior = matchedRule.Behavior
-	}
-
-	// Resolve output values
-	out := valToString(interpolateValue(behavior.Stdout, captures, state, config.Variables, &errors))
-	if behavior.Stdout == nil || out == "<nil>" {
-		out = ""
-	}
-	errOut := valToString(interpolateValue(behavior.Stderr, captures, state, config.Variables, &errors))
-	if behavior.Stderr == nil || errOut == "<nil>" {
-		errOut = ""
-	}
-
-	var exitCode int
-	if behavior.ExitCode != nil {
-		if f, ok := tryParseNumber(behavior.ExitCode); ok {
-			exitCode = int(f.(float64))
-		}
-	}
-
-	var sleepMs int
-	if behavior.SleepMs != nil {
-		if f, ok := tryParseNumber(behavior.SleepMs); ok {
-			sleepMs = int(f.(float64))
-		}
+	if finalResult != nil {
+		exitCode = finalResult.ExitCode
+		stdout = finalResult.Stdout
+		stderr = finalResult.Stderr
+		sleepMs = finalResult.SleepMs
+		sideEffects = finalResult.SideEffects
 	}
 
 	if sleepMs > 0 {
 		if logFile != "" {
-			writeHistoryStatus(logFile, actualArgs, "RUNNING", startTime, nil, errors)
+			writeHistoryStatus(logFile, actualArgs, "RUNNING", startTime, matchedRuleName, nil, errors)
 		}
 		time.Sleep(time.Duration(sleepMs) * time.Millisecond)
 	}
 
-	resolvedEffects := []SideEffect{}
-	for _, effect := range behavior.SideEffects {
-		eff := effect
-		if effect.TargetPath != nil {
-			t := resolveString(*effect.TargetPath, captures, state, config.Variables, &errors)
-			eff.TargetPath = &t
+	// Physical host-side effects
+	for _, effect := range sideEffects {
+		switch eff := effect.(type) {
+		case *CreateDirVal:
+			if err := os.MkdirAll(eff.TargetPath, 0755); err != nil {
+				errors = append(errors, fmt.Sprintf("USMF SideEffect error (Fake USMF Side-Effect Exec Error): %v", err))
+			}
+		case *WriteFileVal:
+			if err := os.MkdirAll(filepath.Dir(eff.TargetPath), 0755); err != nil {
+				errors = append(errors, fmt.Sprintf("USMF SideEffect error (Fake USMF Side-Effect Exec Error): %v", err))
+				continue
+			}
+			if err := os.WriteFile(eff.TargetPath, []byte(eff.Content), 0644); err != nil {
+				errors = append(errors, fmt.Sprintf("USMF SideEffect error (Fake USMF Side-Effect Exec Error): %v", err))
+			}
 		}
-		if effect.Content != nil {
-			c := resolveString(*effect.Content, captures, state, config.Variables, &errors)
-			eff.Content = &c
-		}
-		resolvedEffects = append(resolvedEffects, eff)
 	}
-	executeSideEffects(resolvedEffects, &errors)
 
-	fmt.Print(out)
-	_, _ = fmt.Fprint(os.Stderr, errOut)
+	fmt.Print(stdout)
+	_, _ = fmt.Fprint(os.Stderr, stderr)
 
 	if logFile != "" {
 		result := map[string]any{
 			"exit_code":   exitCode,
-			"stdout":      out,
-			"stderr":      errOut,
+			"stdout":      stdout,
+			"stderr":      stderr,
 			"end_time_ms": time.Now().UnixNano() / 1000000,
 		}
-		writeHistoryStatus(logFile, actualArgs, "FINISHED", startTime, result, errors)
+		writeHistoryStatus(logFile, actualArgs, "FINISHED", startTime, matchedRuleName, result, errors)
 	}
 
 	return exitCode

@@ -24,13 +24,13 @@ package(
 go_binary(
     name = "usmf_stub",
     srcs = ["usmf_stub.go"],
+    deps = ["@net_starlark_go//starlark"],
 )
 
 java_library(
     name = "usmf",
     srcs = [
         "UsmfBinary.java",
-        "UsmfRule.java",
     ],
     resources = [
         ":usmf_stub",

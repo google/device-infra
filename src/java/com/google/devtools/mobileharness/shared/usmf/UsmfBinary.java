@@ -21,14 +21,10 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.google.gson.annotations.SerializedName;
 import java.io.IOException;
@@ -49,53 +45,42 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 /**
- * Represents a mocked command binary (e.g., {@code adb}, {@code fastboot}) deployed within a
- * hermetic sandbox directory.
+ * Represents a mocked command binary deployed within a hermetic sandbox directory.
  *
  * <p>A {@code UsmfBinary} intercepts CLI process invocations and delegates them to an embedded
- * execution stub. Its core execution lifecycle operates as follows:
- *
- * <ul>
- *   <li><b>Rule Matching</b>: The stub evaluates incoming arguments and state variables
- *       sequentially against each configured {@link UsmfRule} in the order they were registered.
- *   <li><b>First-Match-Win</b>: The evaluation halts immediately at the first matching rule, which
- *       then executes its associated behavior (e.g., producing {@code stdout}/{@code stderr}
- *       streams, exit codes, state mutations, and host side effects).
- *   <li><b>Fallback Behavior</b>: If no rules match the command (or if zero rules are configured),
- *       the mock binary silently returns a successful exit code of {@code 0} with empty outputs,
- *       without forwarding the call to the real system binary.
- *   <li><b>Execution Auditing</b>: During execution, the mock binary logs running and completion
- *       audit records to log files containing trace details (argument parameters, exit code, and
- *       start/end timestamps). Applications can inspect these chronological {@link
- *       CommandInvocation} records to assert on invocation history at the end of tests.
- * </ul>
- *
- * <p>Instances are configured and deployed using {@link UsmfBinary.Builder}.
- *
- * @see UsmfRule
+ * execution stub that evaluates Python-like Starlark scripting rules.
  */
 public final class UsmfBinary {
 
   private static final String BIN_DIR_NAME = "bin";
   static final String LOGS_DIR_NAME = "logs";
   private static final String RULES_DIR_NAME = "rules";
-  private static final String STATES_DIR_NAME = "states";
+  private static final String STATE_DIR_NAME = "state";
 
   private static final String STUB_FILE_NAME = "usmf_stub";
   private static final String STUB_RESOURCE_PATH = "usmf_stub_/usmf_stub";
-  private static final String RULES_FILE_NAME = "mock_rules.json";
-  private static final String STATES_FILE_NAME = "states.json";
+  private static final String RULES_FILE_NAME = "rules.star";
+  private static final String STATE_FILE_NAME = "state.json";
   private static final String HISTORY_FILE_PREFIX = "history_";
   private static final String JSON_FILE_EXTENSION = ".json";
+  private static final String EMPTY_RULES_CONTENT = "usmf_rules = []\n";
 
   private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
   private final Path binaryFile;
   private final Path sandboxDir;
-  private final ImmutableList<JsonObject> rules;
-  private final JsonObject variables;
+  private final String rulesContent;
   private final Path logsDir;
-  private final Path statesFile;
+  private final Path stateFile;
+
+  private UsmfBinary(
+      Path binaryFile, Path sandboxDir, String rulesContent, Path logsDir, Path stateFile) {
+    this.binaryFile = binaryFile;
+    this.sandboxDir = sandboxDir;
+    this.rulesContent = rulesContent;
+    this.logsDir = logsDir;
+    this.stateFile = stateFile;
+  }
 
   /**
    * Creates a {@link Builder} to configure a mock binary sandbox.
@@ -112,36 +97,31 @@ public final class UsmfBinary {
   /**
    * Deploys the mock binary sandbox environment and initializes all associated files.
    *
-   * <p>This method creates the sandbox directories, writes configuration rules, deploys the mock
-   * execution stub, and generates the wrapper shell script under the target executable path.
-   *
    * @throws IllegalStateException if the configured sandbox directory already exists
    * @throws IOException if any I/O errors occur during file deployment or directory creation
    */
   public void deploy() throws IOException {
-    // 1. Verify the sandbox directory is clean and create the sandbox directory structure.
     checkState(!Files.exists(sandboxDir), "Sandbox directory already exists at [%s]", sandboxDir);
     Files.createDirectories(sandboxDir);
 
     Path binDir = sandboxDir.resolve(BIN_DIR_NAME);
     Path logsDir = sandboxDir.resolve(LOGS_DIR_NAME);
     Path rulesDir = sandboxDir.resolve(RULES_DIR_NAME);
-    Path statesDir = sandboxDir.resolve(STATES_DIR_NAME);
+    Path stateDir = sandboxDir.resolve(STATE_DIR_NAME);
 
     Files.createDirectories(binDir);
     Files.createDirectories(logsDir);
     Files.createDirectories(rulesDir);
-    Files.createDirectories(statesDir);
+    Files.createDirectories(stateDir);
 
-    // 2. Initialize the default empty state repository.
-    writeStateJson(new JsonObject());
+    // Initialize default empty state database.
+    writeState(new JsonObject());
 
-    // 3. Serialize rule configurations to JSON and save it under the rules directory.
+    // Write the Starlark rules configuration file.
     Path rulesFile = rulesDir.resolve(RULES_FILE_NAME);
-    ImmutableMap<String, Object> config = ImmutableMap.of("rules", rules, "variables", variables);
-    Files.writeString(rulesFile, gson.toJson(config));
+    Files.writeString(rulesFile, rulesContent);
 
-    // 4. Write the Go execution stub into the bin directory and make it executable.
+    // Deploy the Go execution stub.
     Path stubPath = binDir.resolve(STUB_FILE_NAME);
     try (InputStream inputStream =
         checkNotNull(
@@ -152,7 +132,7 @@ public final class UsmfBinary {
     }
     stubPath.toFile().setExecutable(true);
 
-    // 5. Write the wrapper script at the target binary path and make it executable.
+    // Write wrapper script.
     String shellWrapper =
         String.format(
             """
@@ -164,18 +144,13 @@ public final class UsmfBinary {
             """,
             rulesFile.toAbsolutePath(),
             logsDir.toAbsolutePath(),
-            statesFile.toAbsolutePath(),
+            stateFile.toAbsolutePath(),
             stubPath.toAbsolutePath());
     Files.writeString(binaryFile, shellWrapper);
     binaryFile.toFile().setExecutable(true);
   }
 
-  /**
-   * Returns the absolute path of the generated mock binary executable wrapper.
-   *
-   * <p>Note that this is the path to the executable shell script wrapper that intercepts target CLI
-   * commands, not the root path of the sandbox directory.
-   */
+  /** Returns the absolute path of the generated mock binary executable wrapper. */
   public String getPath() {
     return binaryFile.toAbsolutePath().toString();
   }
@@ -186,10 +161,8 @@ public final class UsmfBinary {
   }
 
   /**
-   * Reads the list of all captured command invocations on this mock sandbox, sorted chronologically
-   * by their start time.
+   * Reads all command execution logs from this mock sandbox, sorted chronologically.
    *
-   * @return the list of command invocations, sorted by start time
    * @throws IOException if fails to read logs from the file system
    */
   public ImmutableList<CommandInvocation> readCommandInvocations() throws IOException {
@@ -217,49 +190,29 @@ public final class UsmfBinary {
   }
 
   /**
-   * Reads the entire central state database JSON content inside the mock sandbox workspace.
+   * Reads the active state database inside the mock sandbox workspace.
    *
-   * @return the raw JSON content of the active state database
    * @throws IOException if fails to read state from the file system
    */
-  public JsonObject readStateJson() throws IOException {
-    return JsonParser.parseString(Files.readString(statesFile)).getAsJsonObject();
+  public JsonObject readState() throws IOException {
+    return JsonParser.parseString(Files.readString(stateFile)).getAsJsonObject();
   }
 
   /**
-   * Overwrites the entire central state database JSON content inside the mock sandbox workspace.
+   * Overwrites the active state database inside the mock sandbox workspace.
    *
-   * @param json the raw JSON content to overwrite in the active state database
    * @throws IOException if fails to write state to the file system
    */
-  public void writeStateJson(JsonObject json) throws IOException {
-    Path lockFile = statesFile.resolveSibling(statesFile.getFileName() + ".lock");
+  public void writeState(JsonObject json) throws IOException {
+    Path lockFile = stateFile.resolveSibling(stateFile.getFileName() + ".lock");
     try (FileChannel channel =
             FileChannel.open(lockFile, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
         FileLock lock = channel.lock()) {
-      Path tempFile = statesFile.resolveSibling(statesFile.getFileName() + ".tmp");
+      Path tempFile = stateFile.resolveSibling(stateFile.getFileName() + ".tmp");
       Files.writeString(tempFile, gson.toJson(json));
       Files.move(
-          tempFile,
-          statesFile,
-          StandardCopyOption.REPLACE_EXISTING,
-          StandardCopyOption.ATOMIC_MOVE);
+          tempFile, stateFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
     }
-  }
-
-  private UsmfBinary(
-      Path binaryFile,
-      Path sandboxDir,
-      ImmutableList<JsonObject> rules,
-      JsonObject variables,
-      Path logsDir,
-      Path statesFile) {
-    this.binaryFile = binaryFile;
-    this.sandboxDir = sandboxDir;
-    this.rules = rules;
-    this.variables = variables;
-    this.logsDir = logsDir;
-    this.statesFile = statesFile;
   }
 
   /** Builder class to configure {@link UsmfBinary} instances. */
@@ -268,8 +221,7 @@ public final class UsmfBinary {
     private final Path sandboxDirParentDir;
     private final String sandboxDirName;
     @Nullable private Path binaryFileParentDir;
-    private final List<JsonObject> rules = new ArrayList<>();
-    private JsonObject variables = new JsonObject();
+    private String rulesContent = EMPTY_RULES_CONTENT;
     @Nullable private Consumer<UsmfBinary> buildCallback;
 
     private Builder(String binaryFileName, Path sandboxDirParentDir, String sandboxDirName) {
@@ -278,124 +230,52 @@ public final class UsmfBinary {
       this.sandboxDirName = checkNotNull(sandboxDirName);
     }
 
+    /** Sets the Starlark inline rules script content. */
     @CanIgnoreReturnValue
-    Builder setBuildCallback(Consumer<UsmfBinary> buildCallback) {
-      this.buildCallback = checkNotNull(buildCallback);
+    public Builder setRules(String content) {
+      this.rulesContent = checkNotNull(content);
       return this;
     }
 
-    /**
-     * Sets global mapping variables configuration.
-     *
-     * @param variables the predefined mappings of rule variables
-     * @return this builder instance
-     */
+    /** Sets the Starlark rules script content by reading from a file path. */
     @CanIgnoreReturnValue
-    public Builder setVariables(JsonObject variables) {
-      this.variables = checkNotNull(variables);
+    public Builder setRules(Path filepath) throws IOException {
+      this.rulesContent = Files.readString(checkNotNull(filepath));
       return this;
     }
 
-    /**
-     * Adds an execution rule. Rules are evaluated sequentially at runtime in the order they are
-     * added. The evaluation halts immediately at the first matching rule.
-     *
-     * @param rule the rule to be added
-     * @return this builder instance
-     */
-    @CanIgnoreReturnValue
-    public Builder addRule(UsmfRule rule) {
-      checkNotNull(rule);
-      return addRule(gson.toJsonTree(rule).getAsJsonObject());
-    }
-
-    /**
-     * Adds an execution rule from a JSON object. The JSON object must satisfy the format and
-     * serialization structure of {@link UsmfRule}. Rules are evaluated sequentially at runtime in
-     * the order they are added. The evaluation halts immediately at the first matching rule.
-     *
-     * @param jsonRule the JSON rule object satisfying the {@link UsmfRule} format to be added
-     * @return this builder instance
-     */
-    @CanIgnoreReturnValue
-    public Builder addRule(JsonObject jsonRule) {
-      this.rules.add(checkNotNull(jsonRule));
-      return this;
-    }
-
-    /**
-     * Adds execution rules from a JSON rules file. The file must contain a JSON array (list) of
-     * rules, where each rule is a JSON object satisfying the format and serialization structure of
-     * {@link UsmfRule}. Rules are evaluated sequentially at runtime in the order they are added.
-     * The evaluation halts immediately at the first matching rule.
-     *
-     * @param jsonRulesFile the path to the JSON rules file (containing a JSON array of rules
-     *     satisfying the {@link UsmfRule} format) to be added
-     * @return this builder instance
-     * @throws IOException if any I/O error occurs while reading the rule file
-     */
-    @CanIgnoreReturnValue
-    public Builder addRules(Path jsonRulesFile) throws IOException {
-      String content = Files.readString(checkNotNull(jsonRulesFile));
-      JsonElement json = JsonParser.parseString(content);
-      if (json.isJsonArray()) {
-        JsonArray array = json.getAsJsonArray();
-        for (JsonElement element : array) {
-          addRule(element.getAsJsonObject());
-        }
-        return this;
-      }
-      throw new JsonParseException("Expected a JSON array of rules in the file: " + jsonRulesFile);
-    }
-
-    /**
-     * Overrides the parent directory of the generated mock binary executable wrapper.
-     *
-     * <p>If this method is not called, the executable wrapper will be generated directly under the
-     * sandbox's {@code bin} subdirectory by default. Overriding this can be useful when you need
-     * the mock binary to be written to a specific external directory (e.g., a system path or a path
-     * that matches other execution tools).
-     *
-     * @param binaryFileParentDir the custom parent directory for the mock binary wrapper
-     * @return this builder instance
-     */
+    /** Overrides the parent directory of the generated mock binary executable wrapper. */
     @CanIgnoreReturnValue
     public Builder overrideBinaryFileParentDir(Path binaryFileParentDir) {
       this.binaryFileParentDir = checkNotNull(binaryFileParentDir);
       return this;
     }
 
+    @CanIgnoreReturnValue
+    Builder setBuildCallback(Consumer<UsmfBinary> buildCallback) {
+      this.buildCallback = checkNotNull(buildCallback);
+      return this;
+    }
+
+    /** Builds the configured {@link UsmfBinary} instance. */
     public UsmfBinary build() {
       Path sandboxDir = sandboxDirParentDir.resolve(sandboxDirName);
       Path binDir = sandboxDir.resolve(BIN_DIR_NAME);
       Path logsDir = sandboxDir.resolve(LOGS_DIR_NAME);
-      Path statesDir = sandboxDir.resolve(STATES_DIR_NAME);
-      Path statesFile = statesDir.resolve(STATES_FILE_NAME);
+      Path stateDir = sandboxDir.resolve(STATE_DIR_NAME);
+      Path stateFile = stateDir.resolve(STATE_FILE_NAME);
 
       Path targetDir = binaryFileParentDir != null ? binaryFileParentDir : binDir;
       Path binaryFile = targetDir.resolve(binaryFileName);
 
-      UsmfBinary binary =
-          new UsmfBinary(
-              binaryFile, sandboxDir, ImmutableList.copyOf(rules), variables, logsDir, statesFile);
+      UsmfBinary binary = new UsmfBinary(binaryFile, sandboxDir, rulesContent, logsDir, stateFile);
       if (buildCallback != null) {
         buildCallback.accept(binary);
       }
       return binary;
     }
 
-    /**
-     * Builds and deploys the configured {@link UsmfBinary} instance in one step.
-     *
-     * <p>This is a helper method that initializes the {@code UsmfBinary} instance and immediately
-     * invokes {@link UsmfBinary#deploy()} to draft all sandbox configurations and write the stub to
-     * the file system.
-     *
-     * @return the deployed {@code UsmfBinary} instance
-     * @throws IllegalStateException if the configured sandbox directory already exists
-     * @throws IOException if any I/O errors occur during file deployment or directory creation
-     * @see UsmfBinary#deploy()
-     */
+    /** Builds and deploys the configured {@link UsmfBinary} instance in one step. */
     public UsmfBinary buildAndDeploy() throws IOException {
       UsmfBinary binary = build();
       binary.deploy();
@@ -403,19 +283,7 @@ public final class UsmfBinary {
     }
   }
 
-  /**
-   * Represents an audit record of a captured command invocation on the mocked binary.
-   *
-   * <p>A {@code CommandInvocation} provides metadata about a process run, including its arguments,
-   * start timestamp, and execution {@link Status} (either {@code RUNNING} or {@code FINISHED}).
-   *
-   * <p>If the invocation is finished, detailed outcome telemetry (such as the exit code,
-   * stdout/stderr streams, and end timestamp) is nested and accessible via {@link #getResult()} or
-   * {@link #getResultNonEmpty()}.
-   *
-   * <p>Any non-fatal error messages encountered during intercept execution (such as rules loading
-   * failures or side-effect execution issues) are captured and accessible via {@link #getErrors()}.
-   */
+  /** Represents an audit record of a captured command invocation on the mocked binary. */
   public static final class CommandInvocation {
     @SerializedName("args")
     private final List<String> args;
@@ -425,6 +293,10 @@ public final class UsmfBinary {
 
     @SerializedName("start_time_ms")
     private final long startTimeMs;
+
+    @SerializedName("rule_name")
+    @Nullable
+    private final String ruleName;
 
     @SerializedName("result")
     @Nullable
@@ -438,11 +310,13 @@ public final class UsmfBinary {
         List<String> args,
         Status status,
         long startTimeMs,
+        @Nullable String ruleName,
         @Nullable Result result,
         List<String> errors) {
       this.args = args;
       this.status = status;
       this.startTimeMs = startTimeMs;
+      this.ruleName = ruleName;
       this.result = result;
       this.errors = errors;
     }
@@ -457,6 +331,10 @@ public final class UsmfBinary {
 
     public Instant getStartInstant() {
       return Instant.ofEpochMilli(startTimeMs);
+    }
+
+    public Optional<String> getRuleName() {
+      return Optional.ofNullable(ruleName);
     }
 
     public Optional<Result> getResult() {
@@ -477,13 +355,7 @@ public final class UsmfBinary {
       FINISHED
     }
 
-    /**
-     * Represents the execution outcome details of a finished mock command invocation.
-     *
-     * <p>Once the command is completed (its status is {@link Status#FINISHED}), all outcome
-     * properties (such as the exit code, stdout, stderr, and end timestamp) are guaranteed to be
-     * fully populated and accessible.
-     */
+    /** Represents the execution outcome details of a finished mock command invocation. */
     public static final class Result {
       @SerializedName("exit_code")
       private final int exitCode;
