@@ -164,6 +164,13 @@ public class DeviceCacheManager {
     }
   }
 
+  public boolean isCached(CacheType cacheType, String deviceControlId) {
+    synchronized (cachesByCacheType) {
+      Map<String, CacheInfo> caches = cachesByCacheType.get(cacheType);
+      return caches != null && caches.containsKey(deviceControlId);
+    }
+  }
+
   /** Invalidate both container and general device cache. */
   public void invalidateGeneralAndContainerCaches(String deviceControlId) {
     invalidate(CacheType.GENERAL, deviceControlId, /* leaseId= */ null);

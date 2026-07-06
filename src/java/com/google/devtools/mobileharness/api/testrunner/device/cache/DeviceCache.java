@@ -88,4 +88,12 @@ public abstract class DeviceCache {
    */
   @CanIgnoreReturnValue
   public abstract boolean invalidateCache(String deviceControlId);
+
+  /**
+   * Checks whether a device with ID {@code deviceControlId} is cached.
+   *
+   * @param deviceControlId device ID to check
+   * @return boolean to indicate whether the device is currently cached
+   */
+  public abstract boolean isCached(String deviceControlId);
 }

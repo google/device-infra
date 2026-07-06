@@ -43,4 +43,9 @@ public class XtsDeviceCache extends DeviceCache {
     return DeviceCacheManager.getInstance()
         .invalidate(CACHE_TYPE, deviceControlId, /* leaseId= */ null);
   }
+
+  @Override
+  public boolean isCached(String deviceControlId) {
+    return DeviceCacheManager.getInstance().isCached(CACHE_TYPE, deviceControlId);
+  }
 }
