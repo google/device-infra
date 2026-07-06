@@ -90,6 +90,7 @@ public final class DriverDecoratorSpecMapper {
     builder.put(
         "AndroidNetworkActivityLoggingDecorator", "AndroidNetworkActivityLoggingDecoratorSpec");
     builder.put("AndroidRuntimeStatsDecorator", "AndroidRuntimeStatsDecoratorSpec");
+    builder.put("AndroidSetWifiDecorator", "AndroidSetWifiDecoratorSpec");
     builder.put(
         "AndroidShippingApiLevelCheckDecorator", "AndroidShippingApiLevelCheckDecoratorSpec");
     builder.put("AndroidShowInstructionDecorator", "AndroidShowInstructionDecoratorSpec");

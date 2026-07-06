@@ -100,6 +100,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_emulator_video_decorator_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_logcat_monitoring_decorator_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_runtime_stats_decorator_spec_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_set_wifi_decorator_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:apk_precondition_check_decorator_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:device_info_collector_decorator_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:python_version_check_decorator_spec_java_proto",

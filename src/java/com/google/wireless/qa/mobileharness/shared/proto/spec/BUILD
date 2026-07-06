@@ -46,6 +46,7 @@ proto_library(
         ":android_network_activity_logging_decorator_spec_proto",
         ":android_robo_test_spec_proto",
         ":android_runtime_stats_decorator_spec_proto",
+        ":android_set_wifi_decorator_spec_proto",
         ":android_show_instruction_decorator_spec_proto",
         ":android_switch_language_decorator_spec_proto",
         ":android_switch_user_decorator_spec_proto",
@@ -296,6 +297,19 @@ proto_library(
 java_proto_library(
     name = "android_network_activity_logging_decorator_spec_java_proto",
     deps = [":android_network_activity_logging_decorator_spec_proto"],
+)
+
+proto_library(
+    name = "android_set_wifi_decorator_spec_proto",
+    srcs = ["decorator/android_set_wifi_decorator_spec.proto"],
+    deps = [
+        ":base_spec_proto",
+    ],
+)
+
+java_proto_library(
+    name = "android_set_wifi_decorator_spec_java_proto",
+    deps = [":android_set_wifi_decorator_spec_proto"],
 )
 
 proto_library(

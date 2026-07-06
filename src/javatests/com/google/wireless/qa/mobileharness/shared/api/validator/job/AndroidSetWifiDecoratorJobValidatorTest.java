@@ -17,15 +17,13 @@
 package com.google.wireless.qa.mobileharness.shared.api.validator.job;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.mockito.Mockito.doThrow;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
-import com.google.common.collect.Iterables;
-import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidSetWifiDecoratorSpec;
+import com.google.common.collect.ImmutableList;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidSetWifiDecoratorSpec;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -38,28 +36,35 @@ import org.mockito.junit.MockitoRule;
 /** Unit tests for {@link AndroidSetWifiDecoratorJobValidator}. */
 @RunWith(JUnit4.class)
 public class AndroidSetWifiDecoratorJobValidatorTest {
+
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
-  @Mock private Params params;
+
   @Mock private JobInfo jobInfo;
-  private final AndroidSetWifiDecoratorJobValidator validator =
-      new AndroidSetWifiDecoratorJobValidator();
+
+  private AndroidSetWifiDecoratorJobValidator validator;
 
   @Before
-  public void setUp() throws Exception {
-    when(jobInfo.params()).thenReturn(params);
+  public void setUp() {
+    validator = new AndroidSetWifiDecoratorJobValidator();
   }
 
   @Test
   public void testvalidateJob_useDefaultSsid_pass() throws Exception {
-    when(params.get(AndroidSetWifiDecoratorSpec.PARAM_USE_DEFAULT_SSID)).thenReturn("true");
+    AndroidSetWifiDecoratorSpec spec =
+        AndroidSetWifiDecoratorSpec.newBuilder().setUseDefaultSsid(true).build();
+    when(jobInfo.combinedSpecForDevices(eq(validator), any())).thenReturn(ImmutableList.of(spec));
 
     assertThat(validator.validate(jobInfo)).isEmpty();
   }
 
   @Test
   public void testvalidateJob_useDefaultSsidAndCustomSsid_fail() throws Exception {
-    when(params.isTrue(AndroidSetWifiDecoratorSpec.PARAM_USE_DEFAULT_SSID)).thenReturn(true);
-    when(params.get(AndroidSetWifiDecoratorSpec.PARAM_WIFI_SSID)).thenReturn("ssid");
+    AndroidSetWifiDecoratorSpec spec =
+        AndroidSetWifiDecoratorSpec.newBuilder()
+            .setUseDefaultSsid(true)
+            .setWifiSsid("ssid")
+            .build();
+    when(jobInfo.combinedSpecForDevices(eq(validator), any())).thenReturn(ImmutableList.of(spec));
 
     assertThat(validator.validate(jobInfo))
         .containsExactly("Please leave wifi_ssid empty when use_default_ssid is true.");
@@ -67,49 +72,54 @@ public class AndroidSetWifiDecoratorJobValidatorTest {
 
   @Test
   public void testvalidateJob_useCustomSsid_pass() throws Exception {
-    when(params.isTrue(AndroidSetWifiDecoratorSpec.PARAM_USE_DEFAULT_SSID)).thenReturn(false);
-    when(params.get(AndroidSetWifiDecoratorSpec.PARAM_WIFI_SSID)).thenReturn("ssid");
+    AndroidSetWifiDecoratorSpec spec =
+        AndroidSetWifiDecoratorSpec.newBuilder().setWifiSsid("ssid").setWifiPsk("psk").build();
+    when(jobInfo.combinedSpecForDevices(eq(validator), any())).thenReturn(ImmutableList.of(spec));
 
     assertThat(validator.validate(jobInfo)).isEmpty();
   }
 
   @Test
-  public void testvalidateJob_missingCustomSsid_fail() throws Exception {
-    when(params.isTrue(AndroidSetWifiDecoratorSpec.PARAM_USE_DEFAULT_SSID)).thenReturn(false);
-    doThrow(new MobileHarnessException(BasicErrorId.JOB_PARAM_VALUE_NOT_FOUND, "ssid is empty"))
-        .when(params)
-        .checkExist(AndroidSetWifiDecoratorSpec.PARAM_WIFI_SSID);
+  public void testvalidateJob_notSpecifySsid_fail() throws Exception {
+    AndroidSetWifiDecoratorSpec spec = AndroidSetWifiDecoratorSpec.getDefaultInstance();
+    when(jobInfo.combinedSpecForDevices(eq(validator), any())).thenReturn(ImmutableList.of(spec));
 
-    assertThat(validator.validate(jobInfo)).hasSize(1);
+    assertThat(validator.validate(jobInfo))
+        .containsExactly("Param \"wifi_ssid\" is not found or empty.");
   }
 
   @Test
-  public void testvalidateJob_tooLargeRetryNum_fail() throws Exception {
-    when(params.isTrue(AndroidSetWifiDecoratorSpec.PARAM_USE_DEFAULT_SSID)).thenReturn(true);
-    when(params.has(AndroidSetWifiDecoratorSpec.PARAM_WIFI_RETRY_NUM)).thenReturn(true);
-    doThrow(new MobileHarnessException(BasicErrorId.JOB_PARAM_VALUE_NOT_FOUND, "ssid is empty"))
-        .when(params)
-        .checkInt(AndroidSetWifiDecoratorSpec.PARAM_WIFI_RETRY_NUM, 0, 5);
-
-    assertThat(Iterables.getOnlyElement(validator.validate(jobInfo)))
-        .contains("Please set wifi_retry_num within [0, 5].");
-  }
-
-  @Test
-  public void testValidate_missingSsid_wifiSsidOptional_passes() throws Exception {
-    when(params.isTrue(AndroidSetWifiDecoratorSpec.PARAM_USE_DEFAULT_SSID)).thenReturn(false);
-    when(params.getBool(AndroidSetWifiDecoratorSpec.PARAM_WIFI_SSID_OPTIONAL, false))
-        .thenReturn(true);
+  public void testvalidateJob_specifyRetryNum_pass() throws Exception {
+    AndroidSetWifiDecoratorSpec spec =
+        AndroidSetWifiDecoratorSpec.newBuilder()
+            .setWifiSsid("ssid")
+            .setWifiPsk("psk")
+            .setWifiRetryNum(3)
+            .build();
+    when(jobInfo.combinedSpecForDevices(eq(validator), any())).thenReturn(ImmutableList.of(spec));
 
     assertThat(validator.validate(jobInfo)).isEmpty();
   }
 
   @Test
-  public void testValidate_hasSsid_wifiSsidOptional_passes() throws Exception {
-    when(params.isTrue(AndroidSetWifiDecoratorSpec.PARAM_USE_DEFAULT_SSID)).thenReturn(false);
-    when(params.getBool(AndroidSetWifiDecoratorSpec.PARAM_WIFI_SSID_OPTIONAL, false))
-        .thenReturn(true);
-    when(params.get(AndroidSetWifiDecoratorSpec.PARAM_WIFI_SSID)).thenReturn("ssid");
+  public void testvalidateJob_specifyInvalidRetryNum_fail() throws Exception {
+    AndroidSetWifiDecoratorSpec spec =
+        AndroidSetWifiDecoratorSpec.newBuilder()
+            .setWifiSsid("ssid")
+            .setWifiPsk("psk")
+            .setWifiRetryNum(10)
+            .build();
+    when(jobInfo.combinedSpecForDevices(eq(validator), any())).thenReturn(ImmutableList.of(spec));
+
+    assertThat(validator.validate(jobInfo))
+        .containsExactly("Please set wifi_retry_num within [0, 5].");
+  }
+
+  @Test
+  public void testvalidateJob_wifiSsidOptionalTrue_missingSsid_pass() throws Exception {
+    AndroidSetWifiDecoratorSpec spec =
+        AndroidSetWifiDecoratorSpec.newBuilder().setWifiSsidOptional(true).build();
+    when(jobInfo.combinedSpecForDevices(eq(validator), any())).thenReturn(ImmutableList.of(spec));
 
     assertThat(validator.validate(jobInfo)).isEmpty();
   }

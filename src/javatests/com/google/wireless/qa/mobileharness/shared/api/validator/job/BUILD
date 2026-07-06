@@ -27,7 +27,6 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_install_mainline_modules_decorator_spec",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_set_wifi_decorator_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:mobly_aosp_test_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:tradefed_test_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_emulator_video_decorator_job_validator",
@@ -50,6 +49,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_network_activity_logging_decorator_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_robo_test_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_runtime_stats_decorator_spec_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_set_wifi_decorator_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_test_loop_test_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:job_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:tradefed_test_spec_java_proto",

@@ -27,15 +27,16 @@ import com.google.devtools.mobileharness.platform.android.lightning.networkconne
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
-import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidSetWifiDecoratorSpec;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
-import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidSetWifiDecoratorSpec;
 import java.time.Duration;
 
 /** Driver decorator for setting Wifi SSID on the device. */
 @DecoratorAnnotation(help = "For setting the device wifi ssid before the test is run.")
-public class AndroidSetWifiDecorator extends BaseDecorator implements AndroidSetWifiDecoratorSpec {
+public class AndroidSetWifiDecorator extends BaseDecorator
+    implements SpecConfigable<AndroidSetWifiDecoratorSpec> {
 
   /** The waiting time of timeout to connect to the ssid. */
   protected static final Duration TIMEOUT_SSID_CONNECTION_TIME = Duration.ofMinutes(2);
@@ -59,13 +60,13 @@ public class AndroidSetWifiDecorator extends BaseDecorator implements AndroidSet
   public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     Device device = getDevice();
     String deviceId = device.getDeviceId();
-    JobInfo jobInfo = testInfo.jobInfo();
+    AndroidSetWifiDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this, deviceId);
     String wifiSsid;
     String wifiPsk;
     boolean wifiScanSsid = false;
-    int retryNum = jobInfo.params().getInt(PARAM_WIFI_RETRY_NUM, DEFAULT_RETRY_NUM);
-    boolean wifiSsidOptional = jobInfo.params().getBool(PARAM_WIFI_SSID_OPTIONAL, false);
-    if (jobInfo.params().isTrue(PARAM_USE_DEFAULT_SSID)) {
+    int retryNum = spec.hasWifiRetryNum() ? spec.getWifiRetryNum() : 0;
+    boolean wifiSsidOptional = spec.getWifiSsidOptional();
+    if (spec.getUseDefaultSsid()) {
       // Get the wifi config from the device property.
       wifiSsid =
           device.getProperty(
@@ -102,8 +103,8 @@ public class AndroidSetWifiDecorator extends BaseDecorator implements AndroidSet
         }
       }
     } else {
-      // Get the wifi config from the job params.
-      wifiSsid = jobInfo.params().get(PARAM_WIFI_SSID);
+      // Get the wifi config from the spec.
+      wifiSsid = spec.getWifiSsid();
 
       if (Strings.isNullOrEmpty(wifiSsid)) {
         if (!wifiSsidOptional) {
@@ -122,8 +123,8 @@ public class AndroidSetWifiDecorator extends BaseDecorator implements AndroidSet
         }
       }
 
-      wifiPsk = jobInfo.params().get(PARAM_WIFI_PSK);
-      wifiScanSsid = jobInfo.params().isTrue(PARAM_WIFI_SCAN_SSID);
+      wifiPsk = spec.getWifiPsk();
+      wifiScanSsid = spec.getWifiScanSsid();
     }
     WifiConnectArgs connectArgs =
         WifiConnectArgs.builder()

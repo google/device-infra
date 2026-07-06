@@ -128,14 +128,6 @@ java_library(
 )
 
 java_library(
-    name = "android_set_wifi_decorator_spec",
-    srcs = ["AndroidSetWifiDecoratorSpec.java"],
-    deps = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
-    ],
-)
-
-java_library(
     name = "composite_device_decorator_adapter_spec",
     srcs = ["CompositeDeviceDecoratorAdapterSpec.java"],
     deps = ["//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:basic_annotation"],

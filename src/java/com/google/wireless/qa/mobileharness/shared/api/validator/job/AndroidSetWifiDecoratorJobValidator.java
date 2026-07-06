@@ -16,42 +16,49 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.validator.job;
 
-import com.google.common.base.Strings;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidSetWifiDecoratorSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidSetWifiDecoratorSpec;
 import java.util.ArrayList;
 import java.util.List;
 
 /** Job validator for the {@code AndroidSetWifiDecorator} driver decorator. */
-public class AndroidSetWifiDecoratorJobValidator implements JobValidator {
+public class AndroidSetWifiDecoratorJobValidator
+    implements JobValidator, SpecConfigable<AndroidSetWifiDecoratorSpec> {
 
   @Override
-  public List<String> validate(JobInfo job) {
+  public List<String> validate(JobInfo job) throws InterruptedException {
     List<String> errors = new ArrayList<>();
-    boolean useDefaultSsid =
-        job.params().isTrue(AndroidSetWifiDecoratorSpec.PARAM_USE_DEFAULT_SSID);
-    boolean wifiSsidOptional =
-        job.params().getBool(AndroidSetWifiDecoratorSpec.PARAM_WIFI_SSID_OPTIONAL, false);
+    List<AndroidSetWifiDecoratorSpec> specs;
+    try {
+      specs =
+          job.combinedSpecForDevices(
+              this,
+              subDeviceSpec ->
+                  subDeviceSpec.decorators().getAll().contains("AndroidSetWifiDecorator"));
+    } catch (MobileHarnessException ex) {
+      errors.add("Error getting combined spec: " + ex.getErrorId());
+      return errors;
+    }
+    for (AndroidSetWifiDecoratorSpec spec : specs) {
+      boolean useDefaultSsid = spec.getUseDefaultSsid();
+      boolean wifiSsidOptional = spec.getWifiSsidOptional();
 
-    if (useDefaultSsid) {
-      if (!Strings.isNullOrEmpty(job.params().get(AndroidSetWifiDecoratorSpec.PARAM_WIFI_SSID))) {
-        errors.add("Please leave wifi_ssid empty when use_default_ssid is true.");
-      }
-    } else {
-      if (!wifiSsidOptional) {
-        try {
-          job.params().checkExist(AndroidSetWifiDecoratorSpec.PARAM_WIFI_SSID);
-        } catch (MobileHarnessException e) {
-          errors.add(e.getMessage());
+      if (useDefaultSsid) {
+        if (!spec.getWifiSsid().isEmpty()) {
+          errors.add("Please leave wifi_ssid empty when use_default_ssid is true.");
+        }
+      } else {
+        if (!wifiSsidOptional && spec.getWifiSsid().isEmpty()) {
+          errors.add("Param \"wifi_ssid\" is not found or empty.");
         }
       }
-    }
-    if (job.params().has(AndroidSetWifiDecoratorSpec.PARAM_WIFI_RETRY_NUM)) {
-      try {
-        job.params().checkInt(AndroidSetWifiDecoratorSpec.PARAM_WIFI_RETRY_NUM, 0, 5);
-      } catch (MobileHarnessException e) {
-        errors.add("Please set wifi_retry_num within [0, 5].");
+      if (spec.hasWifiRetryNum()) {
+        int retryNum = spec.getWifiRetryNum();
+        if (retryNum < 0 || retryNum > 5) {
+          errors.add("Please set wifi_retry_num within [0, 5].");
+        }
       }
     }
     return errors;
