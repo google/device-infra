@@ -37,16 +37,11 @@ public interface ExternalDeviceManager extends DrainHandler {
    * @param deviceTypes the device types to be reserved
    * @param maxWaitTime the max wait time for the reservation to succeed. The actual max wait time
    *     can be a little longer than the assigned value depending on the implementation.
-   * @param allowUnavailableDevice whether to allow the device to be unavailable.
    * @return the DeviceReservation object representing a reservation.
    * @throws MobileHarnessException if failed to reserve a device.
    */
   DeviceReservation reserveDevice(
-      String deviceId,
-      String deviceClass,
-      Set<String> deviceTypes,
-      Duration maxWaitTime,
-      boolean allowUnavailableDevice)
+      String deviceId, String deviceClass, Set<String> deviceTypes, Duration maxWaitTime)
       throws MobileHarnessException, InterruptedException;
 
   /**

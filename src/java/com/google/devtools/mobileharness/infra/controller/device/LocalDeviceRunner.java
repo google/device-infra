@@ -261,13 +261,21 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
         logger.atWarning().log("Device config is not synced");
       }
       extendExpireTime(Duration.ofDays(1));
-      deviceReservation =
-          externalDeviceManager.reserveDevice(
-              device.getDeviceId(),
-              device.getClass().getSimpleName(),
-              device.getDeviceTypes(),
-              Duration.ofDays(1).minusMinutes(1),
-              /* allowUnavailableDevice= */ true);
+      try {
+        deviceReservation =
+            externalDeviceManager.reserveDevice(
+                device.getDeviceId(),
+                device.getClass().getSimpleName(),
+                device.getDeviceTypes(),
+                Duration.ofDays(1).minusMinutes(1));
+      } catch (MobileHarnessException e) {
+        if (e.getErrorId() == InfraErrorId.LAB_EXTERNAL_DEVICE_MANAGER_DEVICE_UNAVAILABLE_IN_TF
+            || e.getErrorId()
+                == InfraErrorId.LAB_EXTERNAL_DEVICE_MANAGER_RESERVE_RPC_DEADLINE_EXCEEDED) {
+          transformToFailedDevice();
+        }
+        throw e;
+      }
       prepareDevice();
       // Release the reservation if it can be successfully initialized.
       if (deviceReservation != null) {
@@ -285,8 +293,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
                   device.getDeviceId(),
                   device.getClass().getSimpleName(),
                   device.getDeviceTypes(),
-                  Duration.ofSeconds(5),
-                  /* allowUnavailableDevice= */ false);
+                  Duration.ofSeconds(5));
           if (!deviceReservation.getReservationId().isEmpty()) {
             device
                 .info()
@@ -308,7 +315,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
           }
         } catch (MobileHarnessException e) {
           // Need to quit the loop when it's draining; Otherwise, just log the warning.
-          if (e.getErrorId() == InfraErrorId.LAB_EXTERNAL_DEVICE_MANAGER_RESERVE_ERROR) {
+          if (e.getErrorId() != InfraErrorId.LAB_EXTERNAL_DEVICE_MANAGER_RESERVE_FAIL_WHEN_DRAIN) {
             logger.atWarning().withCause(e).log(
                 "Failed to reserve device %s or run test.", device.getDeviceId());
           } else {
@@ -364,8 +371,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
                   device.getDeviceId(),
                   device.getClass().getSimpleName(),
                   device.getDeviceTypes(),
-                  Duration.between(clock.instant(), expireTime),
-                  /* allowUnavailableDevice= */ false)) {
+                  Duration.between(clock.instant(), expireTime))) {
         device.tearDown();
 
         needReboot = needReboot && !disableDeviceReboot();
@@ -689,9 +695,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
       logger.atWarning().withCause(e).log("Failed to initialize device");
       initialized = false;
       postDeviceErrorEvent(e);
-      if (DeviceUtil.isFailedDeviceCreationEnabled()) {
-        transformToFailedDevice();
-      }
+      transformToFailedDevice();
       throw e;
     }
     initialized = true;
@@ -722,9 +726,11 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
 
   /** Turn this device into a FailedDevice waiting for recovery job. */
   void transformToFailedDevice() {
-    // After adding the device id to the FailedDeviceTable, this runner will be soon killed by the
-    // manager and be replaced by another runner with a new FailedDevice.
-    FailedDeviceTable.getInstance().add(device.getDeviceControlId());
+    if (DeviceUtil.isFailedDeviceCreationEnabled()) {
+      // After adding the device id to the FailedDeviceTable, this runner will be soon killed by the
+      // manager and be replaced by another runner with a new FailedDevice.
+      FailedDeviceTable.getInstance().add(device.getDeviceControlId());
+    }
   }
 
   /** Updates the device status and billing statistic. */
