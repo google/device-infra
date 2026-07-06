@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -445,5 +446,21 @@ public final class UsmfTest {
     assertThat(val2).isAtLeast(0.0);
     assertThat(val2).isLessThan(1.0);
     assertThat(val1).isNotEqualTo(val2);
+  }
+
+  @Test
+  public void deploy_withInvalidStarlarkRules_throwsIOException() throws Exception {
+    UsmfBinary.Builder builder =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_invalid_rules")
+            .setRules(
+                """
+                def rule(ctx)  # Missing colon
+                    return None
+                """);
+    IOException exception = assertThrows(IOException.class, () -> builder.buildAndDeploy());
+    assertThat(exception)
+        .hasMessageThat()
+        .matches(
+            "Failed to validate Starlark rules script: .*rules.star:2:1: got newline, want ':'");
   }
 }

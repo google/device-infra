@@ -21,6 +21,10 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.shared.util.command.Command;
+import com.google.devtools.mobileharness.shared.util.command.CommandException;
+import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -59,6 +63,8 @@ public final class UsmfBinary {
 
   private static final String STUB_FILE_NAME = "usmf_stub";
   private static final String STUB_RESOURCE_PATH = "usmf_stub_/usmf_stub";
+  private static final String VALIDATOR_FILE_NAME = "usmf_validator";
+  private static final String VALIDATOR_RESOURCE_PATH = "usmf_validator_/usmf_validator";
   private static final String RULES_FILE_NAME = "rules.star";
   private static final String STATE_FILE_NAME = "state.json";
   private static final String HISTORY_FILE_PREFIX = "history_";
@@ -131,6 +137,37 @@ public final class UsmfBinary {
       Files.copy(inputStream, stubPath);
     }
     stubPath.toFile().setExecutable(true);
+
+    // Deploy the Go validation stub.
+    Path validatorPath = binDir.resolve(VALIDATOR_FILE_NAME);
+    try (InputStream inputStream =
+        checkNotNull(
+            UsmfBinary.class.getResourceAsStream(VALIDATOR_RESOURCE_PATH),
+            "Resource %s not found in classpath",
+            VALIDATOR_RESOURCE_PATH)) {
+      Files.copy(inputStream, validatorPath);
+    }
+    validatorPath.toFile().setExecutable(true);
+
+    // Validate Starlark rules syntax.
+    CommandExecutor commandExecutor = new CommandExecutor();
+    try {
+      CommandResult result =
+          commandExecutor.exec(
+              Command.of(
+                      validatorPath.toAbsolutePath().toString(),
+                      rulesFile.toAbsolutePath().toString())
+                  .successExitCodes(0, 1));
+      if (result.exitCode() == 1) {
+        throw new IOException(
+            "Failed to validate Starlark rules script: " + result.stdout().trim());
+      }
+    } catch (CommandException e) {
+      throw new IOException("Failed to run rules validator", e);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IOException("Starlark rules validation interrupted", e);
+    }
 
     // Write wrapper script.
     String shellWrapper =

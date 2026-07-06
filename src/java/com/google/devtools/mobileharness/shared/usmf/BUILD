@@ -27,6 +27,12 @@ go_binary(
     deps = ["@net_starlark_go//starlark"],
 )
 
+go_binary(
+    name = "usmf_validator",
+    srcs = ["usmf_validator.go"],
+    deps = ["@net_starlark_go//starlark"],
+)
+
 java_library(
     name = "usmf",
     srcs = [
@@ -34,8 +40,10 @@ java_library(
     ],
     resources = [
         ":usmf_stub",
+        ":usmf_validator",
     ],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_errorprone_error_prone_annotations",
