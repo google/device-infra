@@ -53,6 +53,7 @@ public final class UsmfTest {
 
   private Path tempDir;
   private CommandExecutor executor;
+  private final InstantSource clock = InstantSource.system();
 
   @Before
   public void setUp() {
@@ -74,9 +75,9 @@ public final class UsmfTest {
                 """)
             .buildAndDeploy();
 
-    Instant start = Instant.now();
+    Instant start = clock.instant();
     String stdout = executor.run(Command.of(mockCmd.getPath(), "say", "hello", "world"));
-    Duration duration = Duration.between(start, Instant.now());
+    Duration duration = Duration.between(start, clock.instant());
     logger.atInfo().log("Executed mock command say hello world in %d ms", duration.toMillis());
     assertThat(stdout).isEqualTo("Hello, Earth!\n");
 
@@ -84,7 +85,7 @@ public final class UsmfTest {
     assertThat(invocations).hasSize(1);
     CommandInvocation invocation = invocations.get(0);
     assertThat(invocation.getArgs()).containsExactly("say", "hello", "world");
-    assertThat(invocation.getRuleName().orElse("")).isEqualTo("rule");
+    assertThat(invocation.getRuleName()).hasValue("rule");
   }
 
   @Test
@@ -119,9 +120,9 @@ public final class UsmfTest {
                 """)
             .buildAndDeploy();
 
-    long startTime = InstantSource.system().instant().toEpochMilli();
+    long startTime = clock.instant().toEpochMilli();
     String stdout = executor.run(Command.of(mockCmd.getPath(), "slow"));
-    long elapsedMs = Instant.now().minusMillis(startTime).toEpochMilli();
+    long elapsedMs = clock.instant().toEpochMilli() - startTime;
 
     assertThat(stdout).isEqualTo("Slow Response\n");
     assertThat(elapsedMs).isAtLeast(300);
@@ -393,5 +394,56 @@ public final class UsmfTest {
     } finally {
       process.kill();
     }
+  }
+
+  @Test
+  public void nowMs_exposesCurrentTimeMs() throws Exception {
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox")
+            .setRules(
+                """
+                def rule(ctx):
+                    if "time" in ctx.args:
+                        # Return current time as stdout string
+                        return Result(stdout=str(ctx.now_ms) + "\\n")
+                    return None
+                usmf_rules = [rule]
+                """)
+            .buildAndDeploy();
+
+    long timeBeforeRun = clock.instant().toEpochMilli();
+    String stdout = executor.run(Command.of(mockCmd.getPath(), "time"));
+    long timeAfterRun = clock.instant().toEpochMilli();
+
+    long reportedTime = Long.parseLong(stdout.trim());
+    assertThat(reportedTime).isAtLeast(timeBeforeRun - 1000);
+    assertThat(reportedTime).isAtMost(timeAfterRun + 1000);
+  }
+
+  @Test
+  public void rand_generatesDoubleBetweenZeroAndOne() throws Exception {
+    UsmfBinary mockCmd =
+        UsmfBinary.builder("mock_cmd", tempDir, "mock_cmd_sandbox")
+            .setRules(
+                """
+                def rule(ctx):
+                    if "rand" in ctx.args:
+                        return Result(stdout=str(rand()) + "\\n")
+                    return None
+                usmf_rules = [rule]
+                """)
+            .buildAndDeploy();
+
+    String stdout1 = executor.run(Command.of(mockCmd.getPath(), "rand"));
+    String stdout2 = executor.run(Command.of(mockCmd.getPath(), "rand"));
+
+    double val1 = Double.parseDouble(stdout1.trim());
+    double val2 = Double.parseDouble(stdout2.trim());
+
+    assertThat(val1).isAtLeast(0.0);
+    assertThat(val1).isLessThan(1.0);
+    assertThat(val2).isAtLeast(0.0);
+    assertThat(val2).isLessThan(1.0);
+    assertThat(val1).isNotEqualTo(val2);
   }
 }

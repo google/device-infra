@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	mrand "math/rand"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -146,6 +147,7 @@ type ContextVal struct {
 	Command string
 	Args    *starlark.List
 	State   *starlark.Dict
+	NowMs   int64
 }
 
 func (c *ContextVal) String() string { return "<context>" }
@@ -171,13 +173,15 @@ func (c *ContextVal) Attr(name string) (starlark.Value, error) {
 		return c.Args, nil
 	case "state":
 		return c.State, nil
+	case "now_ms":
+		return starlark.MakeInt64(c.NowMs), nil
 	}
 	return nil, nil // Attribute not found.
 }
 
 // AttrNames returns the list of names of the Starlark attributes of ContextVal.
 func (c *ContextVal) AttrNames() []string {
-	return []string{"command", "args", "state"}
+	return []string{"command", "args", "state", "now_ms"}
 }
 
 // Builtins implementation.
@@ -273,6 +277,13 @@ func reSearch(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple,
 		Groups:      groups,
 		NamedGroups: namedGroups,
 	}, nil
+}
+
+func scriptRand(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	if err := starlark.UnpackArgs(b.Name(), args, kwargs); err != nil {
+		return nil, err
+	}
+	return starlark.Float(mrand.Float64()), nil
 }
 
 // Convert native Go maps/slices representation to Starlark values.
@@ -461,6 +472,8 @@ func shellJoin(args []string) string {
 
 func executeStub(rulesFile, stateFile, logDir string, actualArgs []string) int {
 	startTime := time.Now()
+	mrand.Seed(startTime.UnixNano())
+	nowMs := startTime.UnixNano() / 1000000
 	var logFile string
 	if logDir != "" {
 		logFile = filepath.Join(logDir, fmt.Sprintf("history_%s.json", pseudoUUID()))
@@ -474,6 +487,7 @@ func executeStub(rulesFile, stateFile, logDir string, actualArgs []string) int {
 		"CreateDir": starlark.NewBuiltin("CreateDir", makeCreateDir),
 		"WriteFile": starlark.NewBuiltin("WriteFile", makeWriteFile),
 		"re_search": starlark.NewBuiltin("re_search", reSearch),
+		"rand":      starlark.NewBuiltin("rand", scriptRand),
 	}
 
 	thread := &starlark.Thread{Name: "usmf"}
@@ -548,6 +562,7 @@ func executeStub(rulesFile, stateFile, logDir string, actualArgs []string) int {
 					Command: shellJoin(actualArgs),
 					Args:    argsList,
 					State:   stateDict,
+					NowMs:   nowMs,
 				}
 
 				resVal, runErr := starlark.Call(thread, fn, starlark.Tuple{ctx}, nil)
@@ -595,6 +610,7 @@ func executeStub(rulesFile, stateFile, logDir string, actualArgs []string) int {
 				Command: shellJoin(actualArgs),
 				Args:    argsList,
 				State:   stateDict,
+				NowMs:   nowMs,
 			}
 
 			resVal, runErr := starlark.Call(thread, fn, starlark.Tuple{ctx}, nil)

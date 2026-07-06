@@ -177,6 +177,8 @@ context: `def rule_handler(ctx)`
 *   `ctx.args`: A Starlark list of strings representing the CLI arguments.
 *   `ctx.state`: A mutable Starlark dictionary representing the persistent state
     database.
+*   `ctx.now_ms`: An integer representing the current host system time in
+    milliseconds since epoch.
 
 ### 5.2. Return Outcome Contract (`Result` Type)
 
@@ -225,6 +227,15 @@ dictionaries, USMF exposes the following Starlark constructors:
 *   `WriteFile(target_path, content)`: Declares a file writing operation.
     *   `target_path`: The path of the file to write to.
     *   `content`: The string content to write into the file.
+
+### 5.5. Random Number Generator Utility (`rand`)
+
+To perform stochastic simulations (such as network packet loss or execution
+jitter), a built-in utility `rand()` is provided:
+
+*   **Signature**: `rand()`
+*   **Return Value**: Returns a pseudo-random float value in the range `[0.0,
+    1.0)`.
 
 --------------------------------------------------------------------------------
 
