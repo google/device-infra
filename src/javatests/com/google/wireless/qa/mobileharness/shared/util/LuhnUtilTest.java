@@ -16,8 +16,7 @@
 
 package com.google.wireless.qa.mobileharness.shared.util;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static com.google.common.truth.Truth.assertThat;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -29,11 +28,11 @@ public class LuhnUtilTest {
 
   @Test
   public void testCorrectSequence() {
-    assertTrue(LuhnUtil.checkSequence("867981021893899"));
+    assertThat(LuhnUtil.checkSequence("867981021893899")).isTrue();
   }
 
   @Test
   public void testIncorrectSequence() {
-    assertFalse(LuhnUtil.checkSequence("867981021893898"));
+    assertThat(LuhnUtil.checkSequence("867981021893898")).isFalse();
   }
 }

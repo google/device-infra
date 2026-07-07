@@ -16,6 +16,7 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
+import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -39,7 +40,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log.Api;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidAflagsDecoratorSpec;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -280,8 +280,8 @@ public final class AndroidAflagsDecoratorTest {
         assertThrows(
             MobileHarnessException.class,
             () -> new AndroidAflagsDecorator.DeviceFeatureFlag("invalid_flag_without_equals"));
-    Assert.assertEquals(
-        AndroidErrorId.ANDROID_AFLAGS_DECORATOR_FLAG_OVERRIDE_FORMAT_INVALID, e.getErrorId());
+    assertThat(e.getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_AFLAGS_DECORATOR_FLAG_OVERRIDE_FORMAT_INVALID);
   }
 
   @Test
@@ -290,8 +290,8 @@ public final class AndroidAflagsDecoratorTest {
         assertThrows(
             MobileHarnessException.class,
             () -> new AndroidAflagsDecorator.AFlagsFeatureFlag("not_enough_parts"));
-    Assert.assertEquals(
-        AndroidErrorId.ANDROID_AFLAGS_DECORATOR_FLAG_LIST_FORMAT_INVALID, e.getErrorId());
+    assertThat(e.getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_AFLAGS_DECORATOR_FLAG_LIST_FORMAT_INVALID);
   }
 
   private void mockSpec(AndroidAflagsDecoratorSpec spec) throws Exception {

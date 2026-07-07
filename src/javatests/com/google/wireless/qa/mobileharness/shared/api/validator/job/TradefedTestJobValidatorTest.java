@@ -142,8 +142,7 @@ public final class TradefedTestJobValidatorTest {
                 .build());
 
     List<String> errors = validator.validate(mockJobInfo);
-    assertThat(errors).hasSize(1);
-    assertThat(errors).contains("An xTS test plan must be specified.");
+    assertThat(errors).containsExactly("An xTS test plan must be specified.");
   }
 
   @Test
@@ -206,8 +205,7 @@ public final class TradefedTestJobValidatorTest {
             TradefedTestDriverSpec.newBuilder().setXtsType("cts").setXtsTestPlan("cts").build());
 
     List<String> errors = validator.validate(mockJobInfo);
-    assertThat(errors).hasSize(1);
     assertThat(errors)
-        .contains("At least one of the xts_root_dir, android_xts_zip must be specified.");
+        .containsExactly("At least one of the xts_root_dir, android_xts_zip must be specified.");
   }
 }
