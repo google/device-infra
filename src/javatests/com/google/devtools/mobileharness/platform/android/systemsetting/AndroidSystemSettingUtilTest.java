@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.platform.android.systemsetting;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.fail;
 import static org.mockito.AdditionalMatchers.aryEq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -223,15 +222,14 @@ public class AndroidSystemSettingUtilTest {
     when(adb.runShell(DEVICE_ID, AndroidSystemSettingUtil.ADB_SHELL_DISABLE_SETUP_WIZARD))
         .thenReturn("Error");
 
-    try {
-      settingUtil.disableSetupWizard(DEVICE_ID);
-      fail(
-          String.format(
-              "skipSetupWizard() should failed if cmd \"%s\" failed",
-              AndroidSystemSettingUtil.ADB_SHELL_DISABLE_SETUP_WIZARD));
-    } catch (MobileHarnessException e) {
-      assertThat(e.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SETTING_ERROR);
-    }
+    MobileHarnessException e =
+        assertThrows(
+            String.format(
+                "skipSetupWizard() should failed if cmd \"%s\" failed",
+                AndroidSystemSettingUtil.ADB_SHELL_DISABLE_SETUP_WIZARD),
+            MobileHarnessException.class,
+            () -> settingUtil.disableSetupWizard(DEVICE_ID));
+    assertThat(e.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SETTING_ERROR);
   }
 
   @Test

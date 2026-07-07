@@ -17,7 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.api.validator.env;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.when;
 
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
@@ -55,12 +55,9 @@ public class AndroidScreenshotDecoratorEnvValidatorTest {
     when(realDevice.getSdkVersion())
         .thenReturn(AndroidScreenshotDecoratorEnvValidator.VERSION_REQUIREMENT - 1);
     when(realDevice.isRooted()).thenReturn(true);
-    try {
-      validator.validate(realDevice);
-      fail("shouldn't be here.");
-    } catch (MobileHarnessException e) {
-      assertThat(e.getErrorId())
-          .isEqualTo(AndroidErrorId.ANDROID_DEVICE_VERSION_ENV_VALIDATOR_VERSION_TOO_LOW);
-    }
+    MobileHarnessException e =
+        assertThrows(MobileHarnessException.class, () -> validator.validate(realDevice));
+    assertThat(e.getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_DEVICE_VERSION_ENV_VALIDATOR_VERSION_TOO_LOW);
   }
 }

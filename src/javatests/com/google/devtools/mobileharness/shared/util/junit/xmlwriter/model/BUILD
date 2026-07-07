@@ -24,6 +24,7 @@ java_library(
     srcs = glob(["*.java"]),
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/junit/xmlwriter/model",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
     ],

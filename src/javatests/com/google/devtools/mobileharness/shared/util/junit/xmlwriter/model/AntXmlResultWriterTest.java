@@ -16,9 +16,8 @@
 
 package com.google.devtools.mobileharness.shared.util.junit.xmlwriter.model;
 
+import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
@@ -52,7 +51,7 @@ public final class AntXmlResultWriterTest {
   public void writeTestSuites_includesTestSuitesRootNodeByDefault() throws Exception {
     new AntXmlResultWriter().writeTestSuites(xmlWriter, testResultWithOneTest);
 
-    assertTrue(outputStream.toString(UTF_8).contains("<testsuites>"));
+    assertThat(outputStream.toString(UTF_8)).contains("<testsuites>");
   }
 
   @Test
@@ -60,13 +59,13 @@ public final class AntXmlResultWriterTest {
       throws Exception {
     new AntXmlResultWriter(true).writeTestSuites(xmlWriter, testResultWithOneTest);
 
-    assertFalse(outputStream.toString(UTF_8).contains("<testsuites>"));
+    assertThat(outputStream.toString(UTF_8)).doesNotContain("<testsuites>");
   }
 
   @Test
   public void writeTestSuites_optionalTestSuitesRoot_hasTimestampInISOFormat() throws Exception {
     new AntXmlResultWriter(true).writeTestSuites(xmlWriter, testResultWithOneTest);
 
-    assertTrue(outputStream.toString(UTF_8).contains("timestamp='2021-09-01T01:30:15'"));
+    assertThat(outputStream.toString(UTF_8)).contains("timestamp='2021-09-01T01:30:15'");
   }
 }

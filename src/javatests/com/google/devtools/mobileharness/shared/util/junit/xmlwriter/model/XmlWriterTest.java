@@ -16,8 +16,8 @@
 
 package com.google.devtools.mobileharness.shared.util.junit.xmlwriter.model;
 
+import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.junit.Assert.assertEquals;
 
 import com.google.common.base.Joiner;
 import java.io.ByteArrayOutputStream;
@@ -221,6 +221,6 @@ public class XmlWriterTest {
   private void assertHasContents(String... contents) throws UnsupportedEncodingException {
     Object[] expected = contents;
 
-    assertEquals(LINE_JOINER.join(expected).trim(), outputStream.toString(UTF_8).trim());
+    assertThat(outputStream.toString(UTF_8).trim()).isEqualTo(LINE_JOINER.join(expected).trim());
   }
 }
