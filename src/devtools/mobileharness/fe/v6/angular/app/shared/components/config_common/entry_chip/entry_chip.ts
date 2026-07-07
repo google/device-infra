@@ -54,9 +54,15 @@ export class EntryChip implements OnInit {
   }
 
   add(): void {
-    const entry = this.entry.trim();
-    if (entry && !this.entries.includes(entry)) {
-      this.entries.push(entry);
+    const rawEntry = this.entry;
+    if (rawEntry) {
+      const newEntries = rawEntry.split(',');
+      for (let entry of newEntries) {
+        entry = entry.trim();
+        if (entry && !this.entries.includes(entry)) {
+          this.entries.push(entry);
+        }
+      }
     }
 
     this.entry = '';

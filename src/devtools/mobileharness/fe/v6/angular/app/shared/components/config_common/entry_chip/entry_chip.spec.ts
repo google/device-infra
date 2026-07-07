@@ -32,6 +32,50 @@ describe('UserAdd Component', () => {
     expect(component.entries[0]).toBe('test_user');
   });
 
+  it('should add multiple comma-separated entries correctly', () => {
+    component.entry = 'user1,user2';
+    component.add();
+    fixture.detectChanges();
+    expect(component.entries).toEqual(['user1', 'user2']);
+  });
+
+  it('should trim whitespace from entries', () => {
+    component.entry = ' user1 ,  user2 ';
+    component.add();
+    fixture.detectChanges();
+    expect(component.entries).toEqual(['user1', 'user2']);
+  });
+
+  it('should de-duplicate entries within the input', () => {
+    component.entry = 'user1,user2,user1';
+    component.add();
+    fixture.detectChanges();
+    expect(component.entries).toEqual(['user1', 'user2']);
+  });
+
+  it('should de-duplicate against existing entries', () => {
+    component.entries = ['user1'];
+    component.entry = 'user1,user2';
+    component.add();
+    fixture.detectChanges();
+    expect(component.entries).toEqual(['user1', 'user2']);
+  });
+
+  it('should add entry on Enter keypress', () => {
+    const inputEl = fixture.nativeElement.querySelector('input');
+    inputEl.value = 'test_user';
+    inputEl.dispatchEvent(new Event('input')); // Update ngModel
+    fixture.detectChanges();
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'Enter'
+    });
+    inputEl.dispatchEvent(event);
+    fixture.detectChanges();
+
+    expect(component.entries).toContain('test_user');
+  });
+
   it('should remove a entry correctly', () => {
     component.entries = ['test_user_1', 'test_user_2'];
     fixture.detectChanges();
