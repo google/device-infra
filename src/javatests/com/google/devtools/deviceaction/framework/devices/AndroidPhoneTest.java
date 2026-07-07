@@ -624,7 +624,7 @@ public class AndroidPhoneTest {
     } else {
       assertThat(disconnectTimeCaptor.getValue()).isEqualTo(DEFAULT_AWAIT_FOR_DISCONNECT);
     }
-    if (!mode.equals(RebootMode.BOOTLOADER)) {
+    if (!mode.equals(RebootMode.BOOTLOADER) && !mode.equals(RebootMode.FASTBOOT)) {
       verify(mockSystemStateUtil)
           .waitForState(eq(UUID), eq(mode.getTargetState()), waitTimeCaptor.capture());
       if (spec.hasRebootTimeout()) {
@@ -727,7 +727,7 @@ public class AndroidPhoneTest {
     Duration timeout = Duration.ofSeconds(10);
     device.waitUntilReady(mode, timeout);
 
-    if (!mode.equals(RebootMode.BOOTLOADER)) {
+    if (!mode.equals(RebootMode.BOOTLOADER) && !mode.equals(RebootMode.FASTBOOT)) {
       verify(mockSystemStateUtil).waitForState(UUID, mode.getTargetState(), timeout);
     }
     if (mode.equals(RebootMode.SYSTEM_IMAGE)) {
