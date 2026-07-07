@@ -70,6 +70,16 @@ message AndroidFilePullerDecoratorSpec {
   ];
 
   map<string, string> property = 7 [(field_detail) = {
-    help: "Only pull files if the device properties match the specified values. If a property does not match, file pulling is skipped but the test still runs. Map of property key to expected value."
+    help: "Only pull files if the device properties match the specified values."
+          " If a property does not match, file pulling is skipped but the test "
+          "still runs. Map of property key to expected value."
   }];
+
+  optional bool ignore_removing_files_error = 8 [
+    default = false,
+    (field_detail) = {
+      help: "Whether to ignore errors when removing files on device before "
+            "the test."
+    }
+  ];
 }

@@ -107,8 +107,20 @@ public class AndroidFilePullerDecorator extends BaseDecorator
     }
     if (removeFilesBeforeTest) {
       for (String path : fileOrDirPathsOnDevice) {
-        androidFileUtil.removeFiles(deviceId, path);
-        testInfo.log().atInfo().alsoTo(logger).log("Remove file/dir in device: %s", path);
+        try {
+          androidFileUtil.removeFiles(deviceId, path);
+          testInfo.log().atInfo().alsoTo(logger).log("Remove file/dir in device: %s", path);
+        } catch (MobileHarnessException e) {
+          testInfo
+              .log()
+              .atWarning()
+              .alsoTo(logger)
+              .withCause(e)
+              .log("Failed to remove file/dir %s on device before test.", path);
+          if (!spec.getIgnoreRemovingFilesError()) {
+            throw e;
+          }
+        }
       }
     }
     boolean ignoreFilesNotExist = true;
