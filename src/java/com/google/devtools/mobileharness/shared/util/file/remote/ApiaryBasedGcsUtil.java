@@ -405,7 +405,8 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
         || errorMessage.contains("Remote host closed connection during handshake") /* b/111562372 */
         || errorMessage.contains("Error writing request body to server") /* b/111561615 */
         || errorMessage.contains("Connection closed prematurely") /* b/123259718 */
-        || errorMessage.contains("Premature EOF"); /* b/521500478 */
+        || errorMessage.contains("Premature EOF") /* b/521500478 */
+        || errorMessage.contains("Invalid JWT Signature.");
   }
 
   private static boolean isObjectNoFound(IOException e) {
