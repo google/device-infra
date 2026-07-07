@@ -44,6 +44,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
+import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageSend;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
@@ -53,16 +54,14 @@ import com.google.devtools.mobileharness.api.model.job.TestLocator;
 import com.google.devtools.mobileharness.api.model.job.out.ResultInternalUtil;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Job.AllocationExitStrategy;
+import com.google.devtools.mobileharness.api.model.proto.Job.JobFeature;
 import com.google.devtools.mobileharness.api.model.proto.Test;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.AllocationWithStats;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
-import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.AllocationDiagnostician;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.DeviceFilter;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.DeviceFilter.FilterType;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.Report;
-import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.multidevice.MultiDeviceDiagnostician;
-import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.singledevice.SingleDeviceDiagnostician;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.JobCancelledException;
@@ -75,7 +74,11 @@ import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerS
 import com.google.devtools.mobileharness.infra.controller.test.manager.DirectTestRunnerUtil;
 import com.google.devtools.mobileharness.infra.controller.test.manager.TestManager;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub;
 import com.google.devtools.mobileharness.shared.constant.closeable.MobileHarnessAutoCloseable;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DiagnoseJobRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DiagnoseJobResponse;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DiagnoseJobSpec;
 import com.google.devtools.mobileharness.shared.util.algorithm.GraphMatching;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
@@ -84,6 +87,7 @@ import com.google.devtools.mobileharness.shared.util.event.EventBus.SubscriberEx
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.AbstractModule;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
@@ -228,9 +232,6 @@ public class JobRunner implements Runnable {
   private final PendingTestPrinter pendingTestPrinter;
   @Nullable private final SuitableDeviceChecker suitableDeviceChecker;
 
-  /** Util for diagnostic the reasons when the job fails to allocate devices. */
-  private volatile AllocationDiagnostician allocDiagnostician;
-
   private int diagnosticTimes = 0;
 
   /** The test message subscribers of the job. */
@@ -244,6 +245,12 @@ public class JobRunner implements Runnable {
   private final JobChecker jobChecker;
 
   @Nullable private final DeviceQuerier deviceQuerier;
+
+  /**
+   * Stub for diagnosing allocation failures via the remote (internal) or in-process (OSS) {@code
+   * LabInfoService}. Null if the exec mode does not support diagnosis.
+   */
+  @Nullable private final LabInfoStub labInfoStub;
 
   private final ImmutableList<DeviceQueryFilter> deviceQueryFilters;
 
@@ -300,6 +307,7 @@ public class JobRunner implements Runnable {
       this.deviceQuerier = execMode.createDeviceQuerier();
       this.suitableDeviceChecker = new SuitableDeviceChecker();
     }
+    this.labInfoStub = execMode.createLabInfoStub().orElse(null);
     this.threadPool = threadPool;
     this.testManager = testManager;
     this.pendingTestPrinter = new PendingTestPrinter(clock, jobInfo);
@@ -1325,9 +1333,7 @@ public class JobRunner implements Runnable {
               MobileHarnessException cause = null;
               if (diagnosticReport.isPresent()) {
                 errorId = diagnosticReport.get().getResult().errorId();
-                if (errorId == InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR) {
-                  allocDiagnostician.logExtraInfo();
-                }
+
                 String diagnosticResult = diagnosticReport.get().getResult().readableReport();
                 if (errorId == InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR) {
                   hasAllocFailTests = true;
@@ -1572,75 +1578,86 @@ public class JobRunner implements Runnable {
   @CanIgnoreReturnValue
   private Optional<Report> diagnose(boolean noPerfectCandidate) throws InterruptedException {
     diagnosticTimes++;
-    if (deviceQuerier == null) {
-      logger.atInfo().log("DeviceQuerier is disabled, skip diagnose.");
+
+    if (labInfoStub == null) {
+      logger.atInfo().log(
+          "No LabInfoStub available for the current exec mode, skip remote diagnose of allocation"
+              + " failure.");
       return Optional.empty();
     }
 
     try {
-      if (allocDiagnostician == null) {
-        allocDiagnostician = createAllocationDiagnostician(jobInfo, deviceQuerier);
-      }
-      if (allocDiagnostician != null) {
-        // Double check to guarantee result accurate if previous check finds max score device.
-        // b/64825449
-        if (allocDiagnostician.getLastReport().isEmpty()
-            || (allocDiagnostician.getLastReport().get().hasPerfectMatch()
-                && diagnosticTimes < MAX_ALLOCATION_DIAGNOSE_TIMES)) {
-          jobInfo
-              .log()
-              .atInfo()
-              .alsoTo(logger)
-              .log("Diagnose allocation failure of job %s...", jobInfo.locator().getId());
-          // TODO: after the long-term solution is launched, always generate
-          // diagnostic.
-          if (Runtime.getRuntime().maxMemory()
-              <= Flags.lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnostic.getNonNull()) {
-            String message =
-                String.format(
-                    "Current max memory is set as %d, less than %d. To avoid OOM when querying all"
-                        + " devices, we stop the diagnose.",
-                    Runtime.getRuntime().maxMemory(),
-                    Flags.lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnostic.getNonNull());
-            jobInfo
-                .warnings()
-                .addAndLog(
-                    createExceptionWithoutStackTrace(
-                        InfraErrorId.CLIENT_JR_ALLOC_DIAGNOSTIC_ERROR, message),
-                    logger);
-            return Optional.empty();
-          } else {
-            allocDiagnostician.diagnoseJob(noPerfectCandidate);
-            jobInfo
-                .log()
-                .atInfo()
-                .alsoTo(logger)
-                .log(
-                    "Successfully generated allocation diagnostic report for job %s",
-                    jobInfo.locator().getId());
-          }
-        }
-        return allocDiagnostician.getLastReport();
-      }
-    } catch (MobileHarnessException e) {
+      jobInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("Diagnose allocation failure of job %s via Master...", jobInfo.locator().getId());
+
+      JobFeature feature = jobInfo.toFeature();
+      DiagnoseJobSpec spec =
+          DiagnoseJobSpec.newBuilder()
+              .setUser(feature.getUser())
+              .setDriver(feature.getDriver())
+              .setDeviceRequirements(feature.getDeviceRequirements())
+              .setStartTimeout(
+                  TimeUtils.toProtoDuration(
+                      Duration.ofMillis(jobInfo.setting().getTimeout().getStartTimeoutMs())))
+              .build();
+
+      DiagnoseJobRequest request =
+          DiagnoseJobRequest.newBuilder().setJobId(jobInfo.locator().getId()).setSpec(spec).build();
+
+      DiagnoseJobResponse response = labInfoStub.diagnoseJob(request);
+
+      jobInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "Successfully generated allocation diagnostic report for job %s via Master",
+              jobInfo.locator().getId());
+
+      return Optional.of(new MasterDiagnosticReport(response));
+    } catch (RpcExceptionWithErrorId e) {
       jobInfo
           .warnings()
           .addAndLog(
               createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_ALLOC_DIAGNOSTIC_ERROR,
-                  "Failed to diagnose the allocation failure",
+                  "Failed to diagnose the allocation failure via Master",
                   e),
               logger);
     }
     return Optional.empty();
   }
 
-  @VisibleForTesting
-  AllocationDiagnostician createAllocationDiagnostician(
-      JobInfo jobInfo, DeviceQuerier deviceQuerier) {
-    return jobInfo.subDeviceSpecs().hasMultipleDevices()
-        ? new MultiDeviceDiagnostician(jobInfo, deviceQuerier)
-        : new SingleDeviceDiagnostician(jobInfo, deviceQuerier);
+  private static class MasterDiagnosticReport implements Report {
+    private final DiagnoseJobResponse response;
+
+    MasterDiagnosticReport(DiagnoseJobResponse response) {
+      this.response = response;
+    }
+
+    @Override
+    public boolean hasPerfectMatch() {
+      return response.getErrorType() == DiagnoseJobResponse.ErrorType.INFRA_ERROR;
+    }
+
+    @Override
+    public Result getResult() {
+      ErrorId errorId;
+      switch (response.getErrorType()) {
+        case INFRA_ERROR:
+          errorId = InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR;
+          break;
+        case USER_CONFIG_ERROR:
+          errorId = InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR;
+          break;
+        default:
+          errorId = InfraErrorId.CLIENT_JR_ALLOC_UNKNOWN_ERROR;
+      }
+      return Result.create(errorId, response.getReadableReport(), /* cause= */ null);
+    }
   }
 
   /**
