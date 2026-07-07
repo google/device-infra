@@ -1,4 +1,8 @@
-import {ChangeDetectionStrategy, Component} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+} from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {By} from '@angular/platform-browser';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
@@ -144,7 +148,9 @@ describe('DeviceOverviewTab Component', () => {
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(TestHostComponent);
-    fixture.componentInstance.device = mockDevice;
+    fixture.componentInstance.device = JSON.parse(
+      JSON.stringify(mockDevice),
+    ) as DeviceOverview;
     fixture.detectChanges();
     component = fixture.debugElement.query(
       By.directive(DeviceOverviewTab),
@@ -354,5 +360,30 @@ describe('DeviceOverviewTab Component', () => {
       By.css('#overview-subdevices .operation-button'),
     );
     expect(button.nativeElement.classList.contains('disabled')).toBeFalse();
+  });
+
+  it('should hide battery if device is a testbed', () => {
+    // Clear subDevices to simulate a standard physical device.
+    const originalSubDevices = component.device.subDevices;
+    expect(originalSubDevices?.length).toBe(2);
+
+    component.device.subDevices = undefined;
+    fixture.detectChanges();
+
+    let batteryEl = fixture.debugElement.query(By.css('dt[title="Battery"]'));
+    expect(batteryEl).toBeTruthy();
+
+    // Make it a testbed (has subDevices)
+    component.device.subDevices = [];
+
+    // Explicitly mark for check since component is OnPush
+    const cdr = fixture.debugElement
+      .query(By.directive(DeviceOverviewTab))
+      .injector.get(ChangeDetectorRef);
+    cdr.markForCheck();
+    fixture.detectChanges();
+
+    batteryEl = fixture.debugElement.query(By.css('dt[title="Battery"]'));
+    expect(batteryEl).toBeFalsy();
   });
 });

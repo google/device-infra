@@ -163,7 +163,7 @@
             <dd [title]="device.basicInfo.os">{{ device.basicInfo.os || 'N/A' }}</dd>
           }
 
-          @if (device.isAndroid || (device.basicInfo.batteryLevel !== null && device.basicInfo.batteryLevel !== undefined && device.basicInfo.batteryLevel !== -1)) {
+          @if ((device.isAndroid || (device.basicInfo.batteryLevel !== null && device.basicInfo.batteryLevel !== undefined && device.basicInfo.batteryLevel !== -1)) && !device.subDevices) {
             <dt title="Battery">Battery</dt>
             <dd>
               @if (device.basicInfo.batteryLevel === -1) {
@@ -452,7 +452,7 @@
             *ngTemplateOutlet="
               dimensionsContent;
               context: {
-                type: 'supported',
+                type: DIMENSION_TYPE_SUPPORTED,
                 title: 'Supported Dimensions',
                 data: groupedSupportedDimensions()
               }
@@ -464,7 +464,7 @@
               *ngTemplateOutlet="
                 dimensionsContent;
                 context: {
-                  type: 'required',
+                  type: DIMENSION_TYPE_REQUIRED,
                   title: 'Required Dimensions',
                   data: groupedRequiredDimensions()
                 }

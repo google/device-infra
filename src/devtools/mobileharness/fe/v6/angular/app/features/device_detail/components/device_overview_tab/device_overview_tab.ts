@@ -107,6 +107,9 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
   flatDimensions: DimensionItem[] = [];
   filteredDimensions = signal<DimensionItem[]>([]);
 
+  readonly DIMENSION_TYPE_SUPPORTED = 'supported';
+  readonly DIMENSION_TYPE_REQUIRED = 'required';
+
   readonly groupedSupportedDimensions = computed(() =>
     this.getGroupedData('supported'),
   );

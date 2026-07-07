@@ -383,6 +383,58 @@ public final class GetDeviceOverviewHandlerTest {
   }
 
   @Test
+  public void getDeviceOverview_dimensions_filtersSubdeviceDimensions() throws Exception {
+    DeviceDimension subdeviceDim =
+        DeviceDimension.newBuilder().setName("subdevice_dimensions").setValue("val").build();
+    DeviceInfo deviceInfoWithSubdevice =
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceFeature(
+                DEFAULT_DEVICE_INFO.getDeviceFeature().toBuilder()
+                    .setCompositeDimension(
+                        DEFAULT_DEVICE_INFO.getDeviceFeature().getCompositeDimension().toBuilder()
+                            .addSupportedDimension(subdeviceDim)))
+            .build();
+    mockDeviceInfo(deviceInfoWithSubdevice);
+
+    ListenableFuture<DeviceOverviewPageData> responseFuture =
+        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE);
+    DeviceOverview response = responseFuture.get().getOverview();
+
+    DimensionSourceGroup detectedGroup =
+        response.getDimensions().getSupportedMap().get("Detected by OmniLab");
+    assertThat(detectedGroup.getDimensionsList())
+        .doesNotContain(
+            com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
+                .newBuilder()
+                .setName("subdevice_dimensions")
+                .setValue("val")
+                .build());
+  }
+
+  @Test
+  public void getDeviceOverview_dimensions_filtersSubdeviceDimensionsFromConfig() throws Exception {
+    DeviceDimension subdeviceDim =
+        DeviceDimension.newBuilder().setName("subdevice_dimensions").setValue("val").build();
+    DeviceConfig deviceConfig =
+        DeviceConfig.newBuilder()
+            .setBasicConfig(
+                BasicDeviceConfig.newBuilder()
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder().addSupportedDimension(subdeviceDim)))
+            .build();
+    when(configurationProvider.getDeviceConfig(anyString(), any(UniverseScope.class)))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(deviceConfig))));
+
+    ListenableFuture<DeviceOverviewPageData> responseFuture =
+        getDeviceOverviewHandler.getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE);
+    DeviceOverview response = responseFuture.get().getOverview();
+
+    DimensionSourceGroup configGroup =
+        response.getDimensions().getSupportedMap().get("From Device Config");
+    assertThat(configGroup.getDimensionsList()).isEmpty();
+  }
+
+  @Test
   public void getDeviceOverview_dimensions_withHostConfig() throws Exception {
     LabConfig labConfig =
         LabConfig.newBuilder()

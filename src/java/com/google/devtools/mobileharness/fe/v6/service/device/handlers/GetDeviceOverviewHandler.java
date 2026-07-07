@@ -74,6 +74,7 @@ public final class GetDeviceOverviewHandler {
   private static final String DIMENSION_SOURCE_DEVICE_CONFIG = "From Device Config";
   private static final String DIMENSION_SOURCE_HOST_CONFIG = "From Host Config";
   private static final String DIMENSION_SOURCE_UNKNOWN = "Unknown";
+  private static final String SUBDEVICE_DIMENSIONS = "subdevice_dimensions";
 
   private final DeviceDataLoader deviceDataLoader;
   private final ListeningExecutorService executor;
@@ -291,7 +292,10 @@ public final class GetDeviceOverviewHandler {
         };
 
     if (config.hasBasicConfig()) {
-      configSupported = config.getBasicConfig().getCompositeDimension().getSupportedDimensionList();
+      configSupported =
+          config.getBasicConfig().getCompositeDimension().getSupportedDimensionList().stream()
+              .filter(d -> !d.getName().equals(SUBDEVICE_DIMENSIONS))
+              .collect(toImmutableList());
       configRequired = config.getBasicConfig().getCompositeDimension().getRequiredDimensionList();
     }
 
@@ -314,7 +318,9 @@ public final class GetDeviceOverviewHandler {
                 .collect(toImmutableSet());
 
     List<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension> allSupported =
-        deviceInfo.getDeviceFeature().getCompositeDimension().getSupportedDimensionList();
+        deviceInfo.getDeviceFeature().getCompositeDimension().getSupportedDimensionList().stream()
+            .filter(d -> !d.getName().equals(SUBDEVICE_DIMENSIONS))
+            .collect(toImmutableList());
     List<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension> allRequired =
         deviceInfo.getDeviceFeature().getCompositeDimension().getRequiredDimensionList();
 
