@@ -8,6 +8,8 @@ import {firstValueFrom, of, timer} from 'rxjs';
 import {DeviceOverview} from '../../../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
 
+import {DeviceActionService} from '../../../../shared/services/device_action_service';
+import {RemoteControlService} from '../../../../shared/services/remote_control_service';
 import {DeviceOverviewTab} from './device_overview_tab';
 
 @Component({
@@ -130,6 +132,14 @@ describe('DeviceOverviewTab Component', () => {
           useValue: {
             getTestbedConfig: () => of({yamlContent: '', codeSearchLink: ''}),
           },
+        },
+        {
+          provide: DeviceActionService,
+          useValue: {},
+        },
+        {
+          provide: RemoteControlService,
+          useValue: {},
         },
       ],
     }).compileComponents();

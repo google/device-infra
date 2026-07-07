@@ -35,6 +35,13 @@ export function useDeviceActions() {
     return comp;
   };
 
+  /**
+   * Wraps an Observable stream with loading state management. i.e. sets the
+   * loading state to true when the stream starts and sets it to false when the
+   * stream ends (either successfully or with an error). This is useful for
+   * tracking loading states in the UI, e.g. disable the button while the action
+   * is running, like for the getLogcat/getScreenshot actions.
+   */
   const runAction = <T>(
     action: string,
     stream$: Observable<T>,

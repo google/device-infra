@@ -19,8 +19,10 @@ import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatIconModule} from '@angular/material/icon';
 import {MatInputModule} from '@angular/material/input';
 import {MatTooltipModule} from '@angular/material/tooltip';
+import {ActivatedRoute} from '@angular/router';
 import {Subject} from 'rxjs';
 import {debounceTime, distinctUntilChanged, takeUntil} from 'rxjs/operators';
+import type {ActionButtonState} from '../../../../core/models/action_common';
 import type {DeviceOverview} from '../../../../core/models/device_overview';
 import {
   DeviceDimension,
@@ -36,6 +38,7 @@ import {
   MasterDetailLayout,
   NavItem,
 } from '../../../../shared/components/master_detail_layout/master_detail_layout';
+import {useDeviceActions} from '../../../../shared/composables/device_actions';
 import {dateUtils} from '../../../../shared/utils/date_utils';
 import {objectUtils} from '../../../../shared/utils/object_utils';
 import {TestbedConfigViewer} from '../testbed_config_viewer/testbed_config_viewer';
@@ -84,8 +87,13 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
   private readonly dialog = inject(MatDialog);
   private readonly deviceService = inject(DEVICE_SERVICE);
   private readonly environment = inject(Environment);
+  private readonly route = inject(ActivatedRoute);
+
+  protected readonly deviceActions = useDeviceActions();
+
   @Input({required: true}) device!: DeviceOverview;
   @Input() isGoogle1p = true;
+  @Input() configurationAction?: ActionButtonState;
 
   navList: NavItem[] = [];
 
@@ -458,5 +466,19 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
 
   getStackdriverLogUrl(): string {
     return '';
+  }
+
+  get universe() {
+    return this.route.snapshot.queryParamMap.get('universe') || '';
+  }
+
+  onEditPermission(event: MouseEvent) {
+    event.stopPropagation();
+    this.deviceActions.configureDevice(
+      this.device.id,
+      this.device.host.name,
+      this.device.host.ip,
+      this.universe,
+    );
   }
 }
