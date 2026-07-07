@@ -20,10 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.devtools.deviceaction.framework.devices.AndroidPhone.DEFAULT_AWAIT_FOR_DISCONNECT;
 import static com.google.devtools.deviceaction.framework.devices.AndroidPhone.DEFAULT_DEVICE_READY_TIMEOUT;
 import static com.google.devtools.deviceaction.framework.devices.AndroidPhone.DEFAULT_REBOOT_TIMEOUT;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -254,14 +251,14 @@ public class AndroidPhoneTest {
   public void isUserdebug_returnFalse() throws Exception {
     when(mockAdbUtil.getProperty(UUID, AndroidProperty.BUILD_TYPE)).thenReturn("user");
 
-    assertFalse(device.isUserdebug());
+    assertThat(device.isUserdebug()).isFalse();
   }
 
   @Test
   public void isUserdebug_returnTrue() throws Exception {
     when(mockAdbUtil.getProperty(UUID, AndroidProperty.BUILD_TYPE)).thenReturn("userdebug");
 
-    assertTrue(device.isUserdebug());
+    assertThat(device.isUserdebug()).isTrue();
   }
 
   @Test
@@ -385,7 +382,7 @@ public class AndroidPhoneTest {
       assertThat(durationArgumentCaptor.getValue())
           .isEqualTo(Duration.ofSeconds(spec.getExtraWaitForStaging().getSeconds()));
     } else {
-      assertNull(durationArgumentCaptor.getValue());
+      assertThat(durationArgumentCaptor.getValue()).isNull();
     }
   }
 
@@ -425,7 +422,7 @@ public class AndroidPhoneTest {
     when(mockBundletoolUtil.installMultiApks(eq(UUID), eq(packages), any(String[].class)))
         .thenReturn(cmdOutput);
 
-    assertTrue(device.installBundledPackages(packages, "--enable-rollback"));
+    assertThat(device.installBundledPackages(packages, "--enable-rollback")).isTrue();
 
     verify(mockBundletoolUtil)
         .installMultiApks(eq(UUID), eq(packages), stringArrayCaptor.capture());
@@ -453,7 +450,7 @@ public class AndroidPhoneTest {
     when(mockBundletoolUtil.installMultiApks(eq(UUID), eq(packages), any(String[].class)))
         .thenReturn(cmdOutput);
 
-    assertFalse(device.installBundledPackages(packages, "--enable-rollback"));
+    assertThat(device.installBundledPackages(packages, "--enable-rollback")).isFalse();
 
     verify(mockBundletoolUtil)
         .installMultiApks(eq(UUID), eq(packages), stringArrayCaptor.capture());
@@ -530,7 +527,7 @@ public class AndroidPhoneTest {
     when(mockBundletoolUtil.installApksZip(eq(UUID), eq(train), any(String[].class)))
         .thenReturn(cmdOutput);
 
-    assertTrue(device.installZippedTrain(train, "--enable-rollback"));
+    assertThat(device.installZippedTrain(train, "--enable-rollback")).isTrue();
 
     verify(mockBundletoolUtil).installApksZip(eq(UUID), eq(train), stringArrayCaptor.capture());
     assertThat(stringArrayCaptor.getValue())
@@ -661,7 +658,7 @@ public class AndroidPhoneTest {
       assertThat(captor1.getValue())
           .isEqualTo(Duration.ofSeconds(spec.getTestharnessBootAwait().getSeconds()));
     } else {
-      assertNull(captor1.getValue());
+      assertThat(captor1.getValue()).isNull();
     }
     verify(mockSystemStateUtil).waitUntilReady(eq(UUID), captor2.capture());
     if (spec.hasTestharnessBootTimeout()) {

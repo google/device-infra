@@ -81,6 +81,6 @@ public final class CommandHistoryWriterTest {
     assertThat(cmdHistory.exists()).isTrue();
     assertThat(Files.size(cmdHistory.toPath())).isEqualTo(0);
     writer.onAddCommandResult(commandRecord, FakeCommandResult.of("pass", "", 0));
-    assertThat(Files.readAllLines(cmdHistory.toPath())).hasSize(0);
+    assertThat(Files.readAllLines(cmdHistory.toPath())).isEmpty();
   }
 }

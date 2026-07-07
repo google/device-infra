@@ -17,7 +17,6 @@
 package com.google.devtools.deviceaction.framework;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.when;
 
 import com.google.devtools.deviceaction.common.utils.ResourceHelper;
@@ -81,7 +80,7 @@ public final class DeviceActionModuleTest {
     Actions actions = injector.getInstance(Actions.class);
     ActionConfigurer actionConfigurer = injector.getInstance(ActionConfigurer.class);
 
-    assertNotNull(actions);
+    assertThat(actions).isNotNull();
     assertThat(actionConfigurer).isInstanceOf(MergingDeviceConfigurer.class);
   }
 }

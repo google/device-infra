@@ -20,9 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.devtools.deviceaction.common.utils.Constants.DEVICE_CONFIG_KEY;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
 
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.ActionOptions;
@@ -203,9 +201,9 @@ public final class ProtoHelperTest {
             ActionSpec.newBuilder().setUnary(INSTALL_MAINLINE).build(),
             DEVICE_CONFIG);
 
-    assertTrue(actionSpec.hasUnary());
+    assertThat(actionSpec.hasUnary()).isTrue();
     assertThat(actionSpec.getUnary().getFirst()).isEqualTo(DEVICE_1);
-    assertTrue(actionSpec.getUnary().hasExtension(InstallMainlineSpec.ext));
+    assertThat(actionSpec.getUnary().hasExtension(InstallMainlineSpec.ext)).isTrue();
     assertThat(actionSpec.getUnary().getExtension(InstallMainlineSpec.ext))
         .ignoringRepeatedFieldOrder()
         .isEqualTo(
@@ -263,12 +261,14 @@ public final class ProtoHelperTest {
         ProtoHelper.getDeviceConfigFromTextproto(textproto, Command.INSTALL_MAINLINE);
 
     assertThat(deviceConfig).isEqualTo(DEVICE_CONFIG_FOR_INSTALL_MAINLINE);
-    assertTrue(
-        deviceConfig.getExtension(InstallMainlineSpec.installMainlineSpec).getEnableRollback());
-    assertFalse(
-        deviceConfig.getExtension(InstallMainlineSpec.installMainlineSpec).getDevKeySigned());
-    assertTrue(
-        deviceConfig.getExtension(InstallMainlineSpec.installMainlineSpec).getCheckRollback());
+    assertThat(
+            deviceConfig.getExtension(InstallMainlineSpec.installMainlineSpec).getEnableRollback())
+        .isTrue();
+    assertThat(deviceConfig.getExtension(InstallMainlineSpec.installMainlineSpec).getDevKeySigned())
+        .isFalse();
+    assertThat(
+            deviceConfig.getExtension(InstallMainlineSpec.installMainlineSpec).getCheckRollback())
+        .isTrue();
   }
 
   @Test

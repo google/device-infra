@@ -17,8 +17,6 @@
 package com.google.devtools.deviceaction.common.utils;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.AdditionalMatchers.not;
 import static org.mockito.AdditionalMatchers.or;
 import static org.mockito.ArgumentMatchers.any;
@@ -120,8 +118,8 @@ public final class GCSResolverTest {
 
   @Test
   public void appliesTo_expectedResult() {
-    assertTrue(resolver.appliesTo(GCS_FILE));
-    assertFalse(resolver.appliesTo(LOCAL_FILE));
+    assertThat(resolver.appliesTo(GCS_FILE)).isTrue();
+    assertThat(resolver.appliesTo(LOCAL_FILE)).isFalse();
   }
 
   @Test

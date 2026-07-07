@@ -21,7 +21,6 @@ import static com.google.devtools.deviceaction.common.utils.ResourceUtil.createS
 import static com.google.devtools.deviceaction.common.utils.ResourceUtil.filterExistingFile;
 import static com.google.devtools.deviceaction.common.utils.ResourceUtil.getExistingDir;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
 
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import java.io.File;
@@ -67,8 +66,8 @@ public final class ResourceUtilTest {
     Path random1 = createSessionDir(folder1.toPath());
     Path random2 = createSessionDir(folder2.toPath());
 
-    assertTrue(random1.toFile().isDirectory());
-    assertTrue(random2.toFile().isDirectory());
+    assertThat(random1.toFile().isDirectory()).isTrue();
+    assertThat(random2.toFile().isDirectory()).isTrue();
     assertThat(random1.getFileName()).isEqualTo(random2.getFileName());
   }
 }

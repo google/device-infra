@@ -19,7 +19,6 @@ package com.google.devtools.deviceaction.framework.operations;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -213,7 +212,7 @@ public final class ModulePusherTest {
 
     PackageInfo info = modulePusher.pushModule(sourcePackage, targetPackage, tmpDir.toPath());
 
-    assertTrue(fakeApex.exists());
+    assertThat(fakeApex.exists()).isTrue();
     ArgumentCaptor<Path> source = ArgumentCaptor.forClass(Path.class);
     ArgumentCaptor<Path> target = ArgumentCaptor.forClass(Path.class);
     verify(mockDevice).push(source.capture(), target.capture());
@@ -393,22 +392,22 @@ public final class ModulePusherTest {
   }
 
   private static void assertIsDirectoryAndEndWith(Path filePath, String endWith) {
-    assertTrue(filePath.toFile().isDirectory());
+    assertThat(filePath.toFile().isDirectory()).isTrue();
     assertThat(filePath.toString()).endsWith(endWith);
   }
 
   private static void assertIsFileAndEndWith(Path filePath, String endWith) {
-    assertTrue(filePath.toFile().isFile());
+    assertThat(filePath.toFile().isFile()).isTrue();
     assertThat(filePath.toString()).endsWith(endWith);
   }
 
   private void verifyAllFilesExistAndPushedAndFolderOnDeviceRemoved()
       throws DeviceActionException, InterruptedException {
-    assertTrue(fakeApex.exists());
-    assertTrue(fakeApk.exists());
-    assertTrue(fakeSplitDir.exists());
-    assertTrue(fakeBaseApk.exists());
-    assertTrue(fakeHdpiApk.exists());
+    assertThat(fakeApex.exists()).isTrue();
+    assertThat(fakeApk.exists()).isTrue();
+    assertThat(fakeSplitDir.exists()).isTrue();
+    assertThat(fakeBaseApk.exists()).isTrue();
+    assertThat(fakeHdpiApk.exists()).isTrue();
     verify(mockDevice).removeFiles(DATA_APP_SPLIT_APK_FOLDER);
     verify(mockDevice, times(3)).reboot();
   }
