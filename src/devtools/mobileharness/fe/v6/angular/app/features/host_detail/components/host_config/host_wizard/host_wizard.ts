@@ -18,7 +18,6 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {finalize} from 'rxjs/operators';
 
-import {DEFAULT_HOST_CONFIG} from '../../../../../core/constants/host_config_constants';
 import {HostConfig} from '../../../../../core/models/host_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {Environment} from '../../../../../core/services/environment';
@@ -127,9 +126,7 @@ export class HostWizard implements OnInit {
   currentStep = signal('host-permissions');
 
   readonly hostConfig = signal<HostConfig>(
-    this.data.config
-      ? normalizeHostConfig(this.data.config)
-      : DEFAULT_HOST_CONFIG,
+    normalizeHostConfig(this.data.config || null),
   );
 
   // used for review & submit step

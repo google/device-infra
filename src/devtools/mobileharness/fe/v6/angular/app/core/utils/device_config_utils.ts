@@ -17,32 +17,33 @@ import {
 export function normalizeDeviceConfig(
   config: Partial<DeviceConfig> | null,
 ): DeviceConfig {
+  const defaultConfig = structuredClone(DEFAULT_DEVICE_CONFIG);
   if (!config) {
-    return DEFAULT_DEVICE_CONFIG;
+    return defaultConfig;
   }
   return {
-    ...DEFAULT_DEVICE_CONFIG,
+    ...defaultConfig,
     ...config,
     permissions: {
-      ...DEFAULT_DEVICE_CONFIG.permissions,
+      ...defaultConfig.permissions,
       ...(config.permissions || {}),
     },
     wifi: {
-      ...DEFAULT_DEVICE_CONFIG.wifi,
+      ...defaultConfig.wifi,
       ...(config.wifi || {}),
     } as WifiConfig,
     dimensions: {
-      ...DEFAULT_DEVICE_CONFIG.dimensions,
+      ...defaultConfig.dimensions,
       ...(config.dimensions || {}),
     },
     settings: {
       maxConsecutiveFail:
         config.settings?.maxConsecutiveFail ??
-        DEFAULT_DEVICE_CONFIG.settings?.maxConsecutiveFail ??
+        defaultConfig.settings?.maxConsecutiveFail ??
         5,
       maxConsecutiveTest:
         config.settings?.maxConsecutiveTest ??
-        DEFAULT_DEVICE_CONFIG.settings?.maxConsecutiveTest ??
+        defaultConfig.settings?.maxConsecutiveTest ??
         10000,
     } as StabilitySettings,
   };

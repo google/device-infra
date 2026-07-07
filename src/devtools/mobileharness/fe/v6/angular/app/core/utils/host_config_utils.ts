@@ -9,14 +9,15 @@ import {normalizeDeviceConfig} from './device_config_utils';
 export function normalizeHostConfig(
   config: Partial<HostConfig> | null,
 ): HostConfig {
+  const defaultConfig = structuredClone(DEFAULT_HOST_CONFIG);
   if (!config) {
-    return DEFAULT_HOST_CONFIG;
+    return defaultConfig;
   }
   const normalized = {
-    ...DEFAULT_HOST_CONFIG,
+    ...defaultConfig,
     ...config,
     permissions: {
-      ...DEFAULT_HOST_CONFIG.permissions,
+      ...defaultConfig.permissions,
       ...(config.permissions || {}),
     },
     // We handle deviceConfigMode normalization: if it's UNSPECIFIED,
@@ -24,11 +25,11 @@ export function normalizeHostConfig(
     deviceConfigMode:
       config.deviceConfigMode === 'DEVICE_CONFIG_MODE_UNSPECIFIED' ||
       !config.deviceConfigMode
-        ? DEFAULT_HOST_CONFIG.deviceConfigMode
+        ? defaultConfig.deviceConfigMode
         : config.deviceConfigMode,
     deviceConfig: normalizeDeviceConfig(config.deviceConfig || null),
     deviceDiscovery: {
-      ...DEFAULT_HOST_CONFIG.deviceDiscovery,
+      ...defaultConfig.deviceDiscovery,
       ...(config.deviceDiscovery || {}),
     },
     hostProperties: config.hostProperties || [],

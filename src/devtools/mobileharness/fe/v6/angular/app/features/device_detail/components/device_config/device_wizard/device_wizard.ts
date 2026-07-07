@@ -130,7 +130,7 @@ export class DeviceWizard implements OnInit {
 
   currentStep = signal<string>('permissions');
 
-  config: DeviceConfig = DEFAULT_DEVICE_CONFIG;
+  config: DeviceConfig = structuredClone(DEFAULT_DEVICE_CONFIG);
 
   // used for dimensions step duplicate check
   hasError = false;
