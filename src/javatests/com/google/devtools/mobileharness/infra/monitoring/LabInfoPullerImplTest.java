@@ -268,7 +268,7 @@ public final class LabInfoPullerImplTest {
                         .setName("olc_github_version")
                         .setValue(OLC_GITHUB_VERSION))
                 .build());
-    assertThat(monitoredRecord.getDeviceEntryList().size()).isEqualTo(2);
+    assertThat(monitoredRecord.getDeviceEntryList()).hasSize(2);
     assertThat(monitoredRecord.getDeviceEntryList())
         .containsExactly(
             MonitoredEntry.newBuilder()

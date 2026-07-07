@@ -55,7 +55,7 @@ public class BuiltinFlagsTest {
   public void atsConsoleFlags_notEmpty() {
     assertThat(BuiltinFlags.atsConsoleFlags()).isNotEmpty();
     assertThat(BuiltinFlags.atsConsoleFlagMap()).isNotEmpty();
-    assertThat(BuiltinFlags.atsConsoleFlagMap().get("simplified_log_format")).isEqualTo("true");
+    assertThat(BuiltinFlags.atsConsoleFlagMap()).containsEntry("simplified_log_format", "true");
     assertThat(BuiltinFlags.atsConsoleFlagMap())
         .containsEntry("external_adb_initializer_template", "true");
   }

@@ -107,8 +107,7 @@ public final class MySqlDeviceTableClientTest {
     Optional<DeviceCondition> result =
         mySqlDeviceTableClient.getDeviceCondition(DEVICE_LOCATOR, mockConnection);
 
-    assertThat(result).isPresent();
-    assertThat(result.get()).isEqualTo(DEVICE_CONDITION);
+    assertThat(result).hasValue(DEVICE_CONDITION);
     verify(mockPreparedStatement).setString(1, LAB_ID);
     verify(mockPreparedStatement).setString(2, DEVICE_ID);
   }

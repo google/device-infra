@@ -511,7 +511,7 @@ public final class ServerJobCreatorTest {
     RetryArgs retryArgs = retryArgsCaptor.getValue();
     assertThat(retryArgs.previousSessionId()).hasValue("previous_session_id");
     assertThat(retryArgs.resultsDir().toString()).isEqualTo("/retry/result/dir");
-    assertThat(retryArgs.previousSessionIndex().isEmpty()).isTrue();
+    assertThat(retryArgs.previousSessionIndex()).isEmpty();
 
     verify(sessionRequestHandlerUtil)
         .initializeJobConfig(
@@ -687,7 +687,7 @@ public final class ServerJobCreatorTest {
     RetryArgs retryArgs = retryArgsCaptor.getValue();
     assertThat(retryArgs.previousSessionId()).hasValue("previous_session_id");
     assertThat(retryArgs.resultsDir().toString()).isEqualTo("/retry/result/dir");
-    assertThat(retryArgs.previousSessionIndex().isEmpty()).isTrue();
+    assertThat(retryArgs.previousSessionIndex()).isEmpty();
   }
 
   @Test

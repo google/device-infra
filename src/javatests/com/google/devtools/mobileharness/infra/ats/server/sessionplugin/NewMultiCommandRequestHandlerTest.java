@@ -889,11 +889,6 @@ public final class NewMultiCommandRequestHandlerTest {
             sessionRequestInfo.hasRetrySessionId()
                 ? Optional.of(sessionRequestInfo.getRetrySessionId())
                 : Optional.empty())
-        .isPresent();
-    assertThat(
-            sessionRequestInfo.hasRetrySessionId()
-                ? Optional.of(sessionRequestInfo.getRetrySessionId())
-                : Optional.empty())
         .hasValue(sessionRequestInfo.getRetrySessionId());
     assertThat(
             sessionRequestInfo.hasRetryResultDir()
