@@ -153,6 +153,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:dynamic_config",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:dynamic_config_handler",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",

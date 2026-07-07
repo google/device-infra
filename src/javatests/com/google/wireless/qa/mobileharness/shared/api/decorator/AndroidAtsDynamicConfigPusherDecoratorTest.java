@@ -18,12 +18,14 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
 import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
@@ -168,5 +170,59 @@ public final class AndroidAtsDynamicConfigPusherDecoratorTest {
 
     verify(androidFileUtil).removeFiles("device_id", "device_path");
     verify(apkInstaller).uninstallApk(eq(device), eq("content_provider_pkg"), eq(true), any());
+  }
+
+  @Test
+  public void skippableSetUp_extractFromResource_resourceNotFound_throwsException()
+      throws Exception {
+    spec =
+        AndroidAtsDynamicConfigPusherDecoratorSpec.newBuilder()
+            .setExtractFromResource(true)
+            .setConfigFilename("cts")
+            .setTarget(TestTarget.DEVICE)
+            .setCleanup(true)
+            .build();
+    when(jobInfo.combinedSpec(
+            ArgumentMatchers.<SpecConfigable<AndroidAtsDynamicConfigPusherDecoratorSpec>>any(),
+            eq("device_id")))
+        .thenReturn(spec);
+
+    MobileHarnessException exception =
+        assertThrows(MobileHarnessException.class, () -> decorator.skippableSetUp(testInfo));
+    assertThat(exception).hasMessageThat().contains("Fail to find 'cts.dynamic' in tradefed jar");
+  }
+
+  @Test
+  public void skippableSetUp_emptyXtsSuiteInfo_success() throws Exception {
+    spec =
+        AndroidAtsDynamicConfigPusherDecoratorSpec.newBuilder()
+            .setTarget(TestTarget.DEVICE)
+            .setCleanup(true)
+            .setHasServerSideConfig(false)
+            .setConfigFilename("cts")
+            .build();
+    when(jobInfo.combinedSpec(
+            ArgumentMatchers.<SpecConfigable<AndroidAtsDynamicConfigPusherDecoratorSpec>>any(),
+            eq("device_id")))
+        .thenReturn(spec);
+
+    when(resUtil.getResourceFile(any(), any())).thenReturn("apk_path");
+    when(apkInstaller.installApkIfNotExist(any(), any(), any())).thenReturn("content_provider_pkg");
+
+    File tempDir = Files.createTempDirectory("test").toFile();
+    File configFile = new File(tempDir, "cts.dynamic");
+    configFile.createNewFile();
+    try (Writer writer = Files.newBufferedWriter(configFile.toPath(), UTF_8)) {
+      writer.write("<dynamicConfig></dynamicConfig>");
+    }
+    configFile.deleteOnExit();
+    tempDir.deleteOnExit();
+    List<File> files = new ArrayList<>();
+    files.add(configFile);
+    when(localFileUtil.listFiles(any(), eq(true))).thenReturn(files);
+
+    decorator.skippableSetUp(testInfo);
+
+    verify(androidFileUtil).push(eq("device_id"), anyInt(), any(), any());
   }
 }

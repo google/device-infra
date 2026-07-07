@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.DynamicConfig;
 import com.google.devtools.mobileharness.platform.android.xts.config.DynamicConfigHandler;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -42,14 +43,20 @@ import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidA
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidAtsDynamicConfigPusherDecoratorSpec.TestTarget;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.xmlpull.v1.XmlPullParserException;
@@ -102,22 +109,25 @@ public class AndroidAtsDynamicConfigPusherDecorator extends StepSkippableLifecyc
     AndroidAtsDynamicConfigPusherDecoratorSpec spec =
         testInfo.jobInfo().combinedSpec(this, deviceId);
 
-    Map<String, String> xtsSuiteInfoMap = xtsSuiteInfoSplitter.split(spec.getXtsSuiteInfo());
+    Map<String, String> xtsSuiteInfoMap =
+        spec.getXtsSuiteInfo().isEmpty()
+            ? new HashMap<>()
+            : xtsSuiteInfoSplitter.split(spec.getXtsSuiteInfo());
     String suiteName = xtsSuiteInfoMap.get("suite_name");
-    if (suiteName == null) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_INVALID_PARAMETER,
-          "suite_name is missing from xtsSuiteInfo");
-    }
     String suiteVersion = xtsSuiteInfoMap.getOrDefault("suite_version", "");
     if (spec.getConfigFilename().isEmpty()) {
+      if (suiteName == null) {
+        throw new MobileHarnessException(
+            AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_INVALID_PARAMETER,
+            "suite_name is missing from xtsSuiteInfo");
+      }
       spec = spec.toBuilder().setConfigFilename(Ascii.toLowerCase(suiteName)).build();
     }
     if (spec.getVersion().isEmpty()) {
       spec = spec.toBuilder().setVersion(suiteVersion).build();
     }
 
-    File localConfigFile = getLocalConfigFile(spec);
+    File localConfigFile = getLocalConfigFile(spec, suiteName);
     String apfeConfig = fetchApfeConfig(spec, xtsSuiteInfoMap);
     File hostFile = mergeConfigFiles(spec, localConfigFile, apfeConfig);
     if (spec.getTarget().equals(TestTarget.DEVICE)) {
@@ -171,30 +181,66 @@ public class AndroidAtsDynamicConfigPusherDecorator extends StepSkippableLifecyc
     }
   }
 
-  private File getLocalConfigFile(AndroidAtsDynamicConfigPusherDecoratorSpec spec)
+  /**
+   * Gets the local config file.
+   *
+   * <p>If {@code extractFromResource} is true, it attempts to extract the dynamic config file from
+   * the suite's tradefed JAR.
+   *
+   * <p>If {@code extractFromResource} is false, it searches for the dynamic config file directly in
+   * the XTS test directory.
+   */
+  private File getLocalConfigFile(
+      AndroidAtsDynamicConfigPusherDecoratorSpec spec, @Nullable String suiteName)
       throws MobileHarnessException {
-    if (spec.getExtractFromResource()) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_PARAM_NOT_SUPPORTED,
-          "Extract from resource is not supported yet.");
-    }
-
     String lookupName =
-        String.format(
-            "%s.dynamic",
-            spec.getDynamicConfigName().isEmpty()
+        spec.getExtractFromResource()
+            ? (spec.getDynamicResourceName().isEmpty()
+                ? spec.getConfigFilename()
+                : spec.getDynamicResourceName())
+            : (spec.getDynamicConfigName().isEmpty()
                 ? spec.getConfigFilename()
                 : spec.getDynamicConfigName());
+    String fileName = String.format("%s.dynamic", lookupName);
+
+    if (spec.getExtractFromResource()) {
+      if (suiteName != null && !spec.getXtsTestDir().isEmpty()) {
+        Path xtsRootDir = Path.of(spec.getXtsTestDir()).getParent().getParent();
+        File toolsDir = XtsDirUtil.getXtsToolsDir(xtsRootDir, suiteName).toFile();
+        File tradefedJar = new File(toolsDir, Ascii.toLowerCase(suiteName) + "-tradefed.jar");
+        if (tradefedJar.exists()) {
+          try (ZipFile zipFile = new ZipFile(tradefedJar)) {
+            ZipEntry entry = zipFile.getEntry(fileName);
+            if (entry != null) {
+              try (InputStream inputStream = zipFile.getInputStream(entry)) {
+                File localConfigFile = File.createTempFile(lookupName, ".dynamic");
+                Files.copy(
+                    inputStream, localConfigFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                return localConfigFile;
+              }
+            }
+          } catch (IOException e) {
+            logger.atWarning().withCause(e).log(
+                "Failed to read from %s", tradefedJar.getAbsolutePath());
+          }
+        }
+      }
+
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_LOCAL_CONFIG_NOT_FOUND,
+          String.format("Fail to find '%s' in tradefed jar", fileName));
+    }
+
     List<File> files = localFileUtil.listFiles(spec.getXtsTestDir(), /* recursively= */ true);
     return files.stream()
-        .filter(file -> file.getName().equals(lookupName))
+        .filter(file -> file.getName().equals(fileName))
         .findFirst()
         .orElseThrow(
             () ->
                 new MobileHarnessException(
                     AndroidErrorId
                         .ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_LOCAL_CONFIG_NOT_FOUND,
-                    String.format("Config file %s not found.", lookupName)));
+                    String.format("Config file %s not found.", fileName)));
   }
 
   @Nullable
@@ -204,13 +250,19 @@ public class AndroidAtsDynamicConfigPusherDecorator extends StepSkippableLifecyc
     if (!spec.getHasServerSideConfig()) {
       return null;
     }
+    String suiteName = xtsSuiteInfoMap.get("suite_name");
+    if (suiteName == null) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_INVALID_PARAMETER,
+          "suite_name is missing from xtsSuiteInfo");
+    }
 
     try {
       // TODO: Support to read URL from UrlReplacement.xml. More context in
       // com.android.compatibility.common.util.UrlReplacement.java
       String requestUrl =
           spec.getConfigUrl()
-              .replace("{suite-name}", xtsSuiteInfoMap.get("suite_name").toUpperCase(Locale.ROOT))
+              .replace("{suite-name}", suiteName.toUpperCase(Locale.ROOT))
               .replace("{module}", spec.getConfigFilename())
               .replace("{version}", spec.getVersion())
               .replace("{api-key}", spec.getApiKey());
