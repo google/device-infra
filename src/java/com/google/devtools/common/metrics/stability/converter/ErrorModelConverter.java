@@ -90,6 +90,7 @@ public class ErrorModelConverter {
         .setName(errorId.name())
         .setType(errorId.type())
         .setNamespace(errorId.namespace())
+        .setSkipRetry(errorId.skipRetry())
         .build();
   }
 

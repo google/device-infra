@@ -32,7 +32,7 @@ public enum BasicErrorId implements ErrorId {
   // ***********************************************************************************************
   JOB_PARAM_VALUE_FORMAT_ERROR(20_101, ErrorType.UNDETERMINED),
   JOB_PARAM_VALUE_NOT_FOUND(20_102, ErrorType.UNDETERMINED),
-  JOB_TIMEOUT(20_103, ErrorType.UNDETERMINED),
+  JOB_TIMEOUT(20_103, ErrorType.UNDETERMINED, /* skipRetry= */ true),
   JOB_GET_EXPIRE_TIME_ERROR_BEFORE_START(20_104, ErrorType.UNDETERMINED),
   JOB_TYPE_AND_FIRST_DEVICE_DO_NOT_MATCH(20_105, ErrorType.CUSTOMER_ISSUE),
   JOB_SET_JOB_SCOPED_SPECS_ERROR_IN_LAB(20_106, ErrorType.UNDETERMINED),
@@ -545,13 +545,19 @@ public enum BasicErrorId implements ErrorId {
 
   private final int code;
   private final ErrorType type;
+  private final boolean skipRetry;
 
   BasicErrorId(int code, ErrorType type) {
+    this(code, type, false);
+  }
+
+  BasicErrorId(int code, ErrorType type, boolean skipRetry) {
     Preconditions.checkArgument(code >= MIN_CODE);
     Preconditions.checkArgument(code <= MAX_CODE);
     Preconditions.checkArgument(code == MIN_CODE || type != ErrorType.UNCLASSIFIED);
     this.code = code;
     this.type = type;
+    this.skipRetry = skipRetry;
   }
 
   @Override
@@ -567,5 +573,10 @@ public enum BasicErrorId implements ErrorId {
   @Override
   public String toString() {
     return ErrorIdFormatter.formatErrorId(this);
+  }
+
+  @Override
+  public boolean skipRetry() {
+    return skipRetry;
   }
 }

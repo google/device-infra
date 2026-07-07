@@ -33,4 +33,6 @@ message ErrorId {
   ErrorType type = 3;
   // Required.
   Namespace namespace = 4;
+  // Optional.
+  bool skip_retry = 5;
 }
