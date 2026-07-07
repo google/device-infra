@@ -29,55 +29,55 @@ import junit.framework.TestCase;
 public class ShellUtilsTest extends TestCase {
 
   public void testShellEscape() throws Exception {
-    assertEquals("''", shellEscape(""));
-    assertEquals("foo", shellEscape("foo"));
-    assertEquals("'foo bar'", shellEscape("foo bar"));
-    assertEquals("''\\''foo'\\'''", shellEscape("'foo'"));
-    assertEquals("'\\'\\''foo\\'\\'''", shellEscape("\\'foo\\'"));
-    assertEquals("'${filename%.c}.o'", shellEscape("${filename%.c}.o"));
-    assertEquals("'<html!>'", shellEscape("<html!>"));
+    assertThat(shellEscape("")).isEqualTo("''");
+    assertThat(shellEscape("foo")).isEqualTo("foo");
+    assertThat(shellEscape("foo bar")).isEqualTo("'foo bar'");
+    assertThat(shellEscape("'foo'")).isEqualTo("''\\''foo'\\'''");
+    assertThat(shellEscape("\\'foo\\'")).isEqualTo("'\\'\\''foo\\'\\'''");
+    assertThat(shellEscape("${filename%.c}.o")).isEqualTo("'${filename%.c}.o'");
+    assertThat(shellEscape("<html!>")).isEqualTo("'<html!>'");
   }
 
   public void testShellEscapeIfNotQuoted() throws Exception {
     // Already quoted
-    assertEquals("'foo bar'", ShellUtils.shellEscapeIfNotQuoted("'foo bar'"));
-    assertEquals("\"foo bar\"", ShellUtils.shellEscapeIfNotQuoted("\"foo bar\""));
-    assertEquals("'foo\"bar\"'", ShellUtils.shellEscapeIfNotQuoted("'foo\"bar\"'"));
-    assertEquals("''", ShellUtils.shellEscapeIfNotQuoted("''"));
-    assertEquals("\"\"", ShellUtils.shellEscapeIfNotQuoted("\"\""));
+    assertThat(ShellUtils.shellEscapeIfNotQuoted("'foo bar'")).isEqualTo("'foo bar'");
+    assertThat(ShellUtils.shellEscapeIfNotQuoted("\"foo bar\"")).isEqualTo("\"foo bar\"");
+    assertThat(ShellUtils.shellEscapeIfNotQuoted("'foo\"bar\"'")).isEqualTo("'foo\"bar\"'");
+    assertThat(ShellUtils.shellEscapeIfNotQuoted("''")).isEqualTo("''");
+    assertThat(ShellUtils.shellEscapeIfNotQuoted("\"\"")).isEqualTo("\"\"");
 
     // Escaped quotes within quotes
-    assertEquals("'a'\\''b'", ShellUtils.shellEscapeIfNotQuoted("'a'\\''b'"));
-    assertEquals("\"a\\\"b\"", ShellUtils.shellEscapeIfNotQuoted("\"a\\\"b\""));
+    assertThat(ShellUtils.shellEscapeIfNotQuoted("'a'\\''b'")).isEqualTo("'a'\\''b'");
+    assertThat(ShellUtils.shellEscapeIfNotQuoted("\"a\\\"b\"")).isEqualTo("\"a\\\"b\"");
 
     // Multiple quoted segments forming one token
-    assertEquals("'a'\"b\"'c'", ShellUtils.shellEscapeIfNotQuoted("'a'\"b\"'c'"));
+    assertThat(ShellUtils.shellEscapeIfNotQuoted("'a'\"b\"'c'")).isEqualTo("'a'\"b\"'c'");
 
     // Quoted special characters
-    assertEquals("'*'", ShellUtils.shellEscapeIfNotQuoted("'*'"));
-    assertEquals("\"?\"", ShellUtils.shellEscapeIfNotQuoted("\"?\""));
+    assertThat(ShellUtils.shellEscapeIfNotQuoted("'*'")).isEqualTo("'*'");
+    assertThat(ShellUtils.shellEscapeIfNotQuoted("\"?\"")).isEqualTo("\"?\"");
 
     // Strings that look quoted but aren't (multiple tokens)
-    assertEquals("'\"a\" \"b\"'", ShellUtils.shellEscapeIfNotQuoted("\"a\" \"b\""));
-    assertEquals("'\"a\" '", ShellUtils.shellEscapeIfNotQuoted("\"a\" "));
+    assertThat(ShellUtils.shellEscapeIfNotQuoted("\"a\" \"b\"")).isEqualTo("'\"a\" \"b\"'");
+    assertThat(ShellUtils.shellEscapeIfNotQuoted("\"a\" ")).isEqualTo("'\"a\" '");
 
     // Not quoted as a whole / Mix of quoted and unquoted parts
-    assertEquals("'foo bar'", ShellUtils.shellEscapeIfNotQuoted("foo bar"));
-    assertEquals("'foo'\\''bar'\\'''", ShellUtils.shellEscapeIfNotQuoted("foo'bar'"));
-    assertEquals("'\"foo bar\" '", ShellUtils.shellEscapeIfNotQuoted("\"foo bar\" "));
+    assertThat(ShellUtils.shellEscapeIfNotQuoted("foo bar")).isEqualTo("'foo bar'");
+    assertThat(ShellUtils.shellEscapeIfNotQuoted("foo'bar'")).isEqualTo("'foo'\\''bar'\\'''");
+    assertThat(ShellUtils.shellEscapeIfNotQuoted("\"foo bar\" ")).isEqualTo("'\"foo bar\" '");
 
     // Invalid quotes
-    assertEquals("'\"foo bar'", ShellUtils.shellEscapeIfNotQuoted("\"foo bar"));
-    assertEquals("'foo bar\"'", ShellUtils.shellEscapeIfNotQuoted("foo bar\""));
+    assertThat(ShellUtils.shellEscapeIfNotQuoted("\"foo bar")).isEqualTo("'\"foo bar'");
+    assertThat(ShellUtils.shellEscapeIfNotQuoted("foo bar\"")).isEqualTo("'foo bar\"'");
   }
 
   public void testPrettyPrintArgv() {
-    assertEquals("echo '$US' 100", prettyPrintArgv(Arrays.asList("echo", "$US", "100")));
+    assertThat(prettyPrintArgv(Arrays.asList("echo", "$US", "100"))).isEqualTo("echo '$US' 100");
   }
 
   private void assertTokenize(String copts, String... expectedTokens) throws Exception {
     ImmutableList<String> actualTokens = tokenize(copts);
-    assertEquals(Arrays.asList(expectedTokens), actualTokens);
+    assertThat(actualTokens).isEqualTo(Arrays.asList(expectedTokens));
   }
 
   public void testTokenizeOnSimpleCopts() throws Exception {

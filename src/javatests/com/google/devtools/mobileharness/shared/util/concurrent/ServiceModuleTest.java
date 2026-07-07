@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.shared.util.concurrent;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import com.google.common.util.concurrent.ServiceManager;
 import com.google.inject.Guice;
 import com.google.inject.Key;
@@ -63,7 +65,7 @@ public class ServiceModuleTest extends TestCase {
                 })
             .getInstance(Key.get(ServiceManager.class, ExternalServiceManager.class));
     manager.startAsync().awaitHealthy();
-    assertEquals(1, listener.healthyCalled);
+    assertThat(listener.healthyCalled).isEqualTo(1);
   }
 
   public void testServiceManagerListener_withCustomExecutor() {
@@ -77,8 +79,8 @@ public class ServiceModuleTest extends TestCase {
                 })
             .getInstance(Key.get(ServiceManager.class, ExternalServiceManager.class));
     manager.startAsync().awaitHealthy();
-    assertEquals(1, listener.healthyCalled);
-    assertNotNull(executor.command);
+    assertThat(listener.healthyCalled).isEqualTo(1);
+    assertThat(executor.command).isNotNull();
   }
 
   public void testServiceManagerListener_duplicateListeners() {
@@ -93,7 +95,7 @@ public class ServiceModuleTest extends TestCase {
                 })
             .getInstance(Key.get(ServiceManager.class, ExternalServiceManager.class));
     manager.startAsync().awaitHealthy();
-    assertEquals(2, listener.healthyCalled);
+    assertThat(listener.healthyCalled).isEqualTo(2);
   }
 
   public void testServiceManagerListener_multipleModules() {
@@ -113,7 +115,7 @@ public class ServiceModuleTest extends TestCase {
                 })
             .getInstance(Key.get(ServiceManager.class, ExternalServiceManager.class));
     manager.startAsync().awaitHealthy();
-    assertEquals(2, listener.healthyCalled);
+    assertThat(listener.healthyCalled).isEqualTo(2);
   }
 
   public void testServiceManagerListener_explicitBinding() {

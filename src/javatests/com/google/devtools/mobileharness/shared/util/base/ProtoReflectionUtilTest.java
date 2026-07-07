@@ -16,7 +16,7 @@
 
 package com.google.devtools.mobileharness.shared.util.base;
 
-import static org.junit.Assert.assertEquals;
+import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
 import com.google.devtools.mobileharness.shared.util.base.TestDataProto.Bar;
@@ -32,9 +32,8 @@ public final class ProtoReflectionUtilTest {
   public void newInstance_returnsBuilder() {
     Foo.Builder builder = ProtoReflectionUtil.newInstance(Foo.class, Foo.Builder.class);
 
-    assertEquals(
-        Foo.newBuilder().setBar(Bar.newBuilder().setBaz("baz").build()).build(),
-        builder.setBar(Bar.newBuilder().setBaz("baz").build()).build());
+    assertThat(builder.setBar(Bar.newBuilder().setBaz("baz").build()).build())
+        .isEqualTo(Foo.newBuilder().setBar(Bar.newBuilder().setBaz("baz").build()).build());
   }
 
   @Test

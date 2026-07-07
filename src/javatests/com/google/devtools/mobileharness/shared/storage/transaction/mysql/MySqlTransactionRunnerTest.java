@@ -117,7 +117,7 @@ public final class MySqlTransactionRunnerTest {
     assertThat(thrown.getErrorId()).isEqualTo(ERROR_ID);
     assertThat(((MobileHarnessException) thrown.getCause()).getErrorId())
         .isEqualTo(BasicErrorId.DATABASE_TABLE_READ_ERROR);
-    assertThat(thrown.getCause()).hasCauseThat().isEqualTo(causeException);
+    assertThat(thrown).hasCauseThat().hasCauseThat().isEqualTo(causeException);
     InOrder inOrder = inOrder(connection, worker);
     inOrder.verify(connection).setAutoCommit(false);
     inOrder.verify(worker).doWork(any(MySqlTransactionContext.class));

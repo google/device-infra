@@ -89,7 +89,7 @@ public class SignalsTest {
     assertThat(commandProcess.isAlive()).isFalse();
     CommandResult commandResult = commandProcess.await();
     assertThat(commandResult.exitCode()).isEqualTo(130);
-    assertThat(commandResult.stdout()).isEqualTo("");
+    assertThat(commandResult.stdout()).isEmpty();
     assertThat(Splitter.on('\n').splitToList(commandResult.stderr()))
         .comparingElementsUsing(Correspondences.contains())
         .contains("Receive signal [SIGINT], terminating...");
@@ -123,7 +123,7 @@ public class SignalsTest {
     assertThat(commandProcess.isAlive()).isFalse();
     CommandResult commandResult = commandProcess.await();
     assertThat(commandResult.exitCode()).isEqualTo(130);
-    assertThat(commandResult.stdout()).isEqualTo("");
+    assertThat(commandResult.stdout()).isEmpty();
     assertThat(commandResult.stderr()).doesNotContain("Receive signal");
   }
 }
