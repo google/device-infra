@@ -112,7 +112,7 @@ public class CloudOrchestratorClientTest {
 
     MobileHarnessException e = assertThrows(MobileHarnessException.class, () -> client.listHosts());
 
-    assertThat(e.getCause()).isInstanceOf(HttpResponseException.class);
+    assertThat(e).hasCauseThat().isInstanceOf(HttpResponseException.class);
     HttpResponseException httpEx = (HttpResponseException) e.getCause();
     assertThat(httpEx.getStatusCode()).isEqualTo(500);
     assertThat(httpEx.getContent()).contains("internal error");
@@ -181,7 +181,7 @@ public class CloudOrchestratorClientTest {
                     "host-1", "op-retry", Operation.class, 20, Duration.ofMillis(1)));
 
     assertThat(e.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_CLOUD_ORCHESTRATOR_OPERATION_ERROR);
-    assertThat(e.getMessage()).contains("Failed to wait for operation");
+    assertThat(e).hasMessageThat().contains("Failed to wait for operation");
     assertThat(server.getRequestCount()).isEqualTo(20);
   }
 
@@ -281,7 +281,7 @@ public class CloudOrchestratorClientTest {
             MobileHarnessException.class,
             () -> client.createHostAndWait(new CreateHostRequest(new HostInstance("host-1"))));
 
-    assertThat(e.getMessage()).contains("Host created but not found");
+    assertThat(e).hasMessageThat().contains("Host created but not found");
   }
 
   @Test
@@ -366,7 +366,7 @@ public class CloudOrchestratorClientTest {
     MobileHarnessException e = assertThrows(MobileHarnessException.class, () -> client.listHosts());
 
     assertThat(server.getRequestCount()).isEqualTo(3);
-    assertThat(e.getCause()).isInstanceOf(HttpResponseException.class);
+    assertThat(e).hasCauseThat().isInstanceOf(HttpResponseException.class);
     HttpResponseException httpEx = (HttpResponseException) e.getCause();
     assertThat(httpEx.getStatusCode()).isEqualTo(502);
   }
@@ -407,7 +407,7 @@ public class CloudOrchestratorClientTest {
 
     MobileHarnessException e =
         assertThrows(MobileHarnessException.class, () -> client.deleteHost("host-fail"));
-    assertThat(e.getCause()).isInstanceOf(HttpResponseException.class);
+    assertThat(e).hasCauseThat().isInstanceOf(HttpResponseException.class);
     HttpResponseException httpEx = (HttpResponseException) e.getCause();
     assertThat(httpEx.getStatusCode()).isEqualTo(502);
   }
@@ -508,7 +508,7 @@ public class CloudOrchestratorClientTest {
                     "host-1", "op-401", Operation.class, 20, Duration.ofMillis(1)));
 
     assertThat(e.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_CLOUD_ORCHESTRATOR_OPERATION_ERROR);
-    assertThat(e.getCause()).isInstanceOf(HttpResponseException.class);
+    assertThat(e).hasCauseThat().isInstanceOf(HttpResponseException.class);
     assertThat(((HttpResponseException) e.getCause()).getStatusCode()).isEqualTo(401);
     assertThat(server.getRequestCount()).isEqualTo(1);
   }
@@ -536,7 +536,7 @@ public class CloudOrchestratorClientTest {
 
     assertThat(e.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_CLOUD_ORCHESTRATOR_OPERATION_ERROR);
     assertThat(server.getRequestCount()).isEqualTo(1);
-    assertThat(e.getCause()).isInstanceOf(HttpResponseException.class);
+    assertThat(e).hasCauseThat().isInstanceOf(HttpResponseException.class);
     HttpResponseException httpEx = (HttpResponseException) e.getCause();
     assertThat(httpEx.getStatusCode()).isEqualTo(400);
     assertThat(httpEx.getContent()).contains("bad request");
@@ -554,7 +554,7 @@ public class CloudOrchestratorClientTest {
 
     assertThat(e.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_CLOUD_ORCHESTRATOR_OPERATION_ERROR);
     assertThat(server.getRequestCount()).isEqualTo(1);
-    assertThat(e.getCause()).isInstanceOf(HttpResponseException.class);
+    assertThat(e).hasCauseThat().isInstanceOf(HttpResponseException.class);
     HttpResponseException httpEx = (HttpResponseException) e.getCause();
     assertThat(httpEx.getStatusCode()).isEqualTo(500);
     assertThat(httpEx.getContent()).contains("internal server error");
@@ -576,7 +576,7 @@ public class CloudOrchestratorClientTest {
 
     assertThat(e.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_CLOUD_ORCHESTRATOR_OPERATION_ERROR);
     assertThat(server.getRequestCount()).isEqualTo(maxRetries);
-    assertThat(e.getCause()).isInstanceOf(HttpResponseException.class);
+    assertThat(e).hasCauseThat().isInstanceOf(HttpResponseException.class);
     HttpResponseException httpEx = (HttpResponseException) e.getCause();
     assertThat(httpEx.getStatusCode()).isEqualTo(502);
     assertThat(httpEx.getContent()).contains("bad gateway");

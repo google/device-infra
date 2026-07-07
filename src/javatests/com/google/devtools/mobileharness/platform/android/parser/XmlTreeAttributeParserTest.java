@@ -17,8 +17,6 @@
 package com.google.devtools.mobileharness.platform.android.parser;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableSet;
 import java.util.regex.Pattern;
@@ -95,7 +93,7 @@ public class XmlTreeAttributeParserTest {
             + " \".lifecycle-process\")";
     LineParser parser = XmlTreeAttributeParser.newBuilder().build();
 
-    assertTrue(parser.parse(xmlOutput));
+    assertThat(parser.parse(xmlOutput)).isTrue();
   }
 
   @Test
@@ -117,7 +115,7 @@ public class XmlTreeAttributeParserTest {
                     .build())
             .build();
 
-    assertTrue(parser.parse(""));
+    assertThat(parser.parse("")).isTrue();
     assertThat(builder.build()).isEmpty();
   }
 
@@ -421,7 +419,7 @@ public class XmlTreeAttributeParserTest {
                     .build())
             .build();
 
-    assertFalse(parser.parse(xmlOutput));
+    assertThat(parser.parse(xmlOutput)).isFalse();
     assertThat(builder.build()).isEmpty();
   }
 
@@ -468,7 +466,7 @@ public class XmlTreeAttributeParserTest {
                     .build())
             .build();
 
-    assertFalse(parser.parse(xmlOutput));
+    assertThat(parser.parse(xmlOutput)).isFalse();
     assertThat(builder.build()).isEmpty();
   }
 }

@@ -279,7 +279,6 @@ public final class MoblyTestInfoMapHelperTest {
     assertThat(subTestInfo.locator().getName()).isEqualTo(SUBTEST_NAME);
     assertThat(subTestInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
     assertThat(subTestInfo.status().get()).isEqualTo(TestStatus.DONE);
-    assertThat(subTestInfo.properties().get(MoblyConstant.TestProperty.TEST_TYPE_KEY)).isNotNull();
     assertThat(subTestInfo.properties().get(MoblyConstant.TestProperty.TEST_TYPE_KEY))
         .isEqualTo(MoblyConstant.TestProperty.MOBLY_TEST_VALUE);
     assertThat(subTestInfo.properties().get("mobly_begin_time")).isEqualTo("10");

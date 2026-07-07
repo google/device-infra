@@ -112,7 +112,9 @@ public final class MoblyTestLoaderTest {
             MobileHarnessException.class,
             () -> moblyTestLoader.getTestNamesInModule(MODULE_CONFIG_PATH, MODULE_CONFIG));
     assertThat(mhException.getErrorId()).isEqualTo(InfraErrorId.ATSC_LOAD_MOBLY_TEST_NAMES_ERROR);
-    assertThat(mhException.getMessage()).contains("Failed to get test cases from the mobly binary");
+    assertThat(mhException)
+        .hasMessageThat()
+        .contains("Failed to get test cases from the mobly binary");
   }
 
   @Test
@@ -124,7 +126,9 @@ public final class MoblyTestLoaderTest {
             MobileHarnessException.class,
             () -> moblyTestLoader.getTestNamesInModule(MODULE_CONFIG_PATH, MODULE_CONFIG));
     assertThat(mhException.getErrorId()).isEqualTo(InfraErrorId.ATSC_LOAD_MOBLY_TEST_NAMES_ERROR);
-    assertThat(mhException.getMessage()).contains("Failed to get test cases from the mobly binary");
+    assertThat(mhException)
+        .hasMessageThat()
+        .contains("Failed to get test cases from the mobly binary");
   }
 
   @Test
@@ -137,7 +141,9 @@ public final class MoblyTestLoaderTest {
             MobileHarnessException.class,
             () -> moblyTestLoader.getTestNamesInModule(MODULE_CONFIG_PATH, MODULE_CONFIG));
     assertThat(mhException.getErrorId()).isEqualTo(InfraErrorId.ATSC_LOAD_MOBLY_TEST_NAMES_ERROR);
-    assertThat(mhException.getMessage()).contains("Failed to get test cases from the mobly binary");
+    assertThat(mhException)
+        .hasMessageThat()
+        .contains("Failed to get test cases from the mobly binary");
   }
 
   @Test
@@ -149,7 +155,8 @@ public final class MoblyTestLoaderTest {
             MobileHarnessException.class,
             () -> moblyTestLoader.getTestNamesInModule(MODULE_CONFIG_PATH, MODULE_CONFIG));
     assertThat(mhException.getErrorId()).isEqualTo(InfraErrorId.ATSC_LOAD_MOBLY_TEST_NAMES_ERROR);
-    assertThat(mhException.getMessage())
+    assertThat(mhException)
+        .hasMessageThat()
         .contains("The mobly binary does not exist in directory or sub-directory of /path/to");
   }
 }
