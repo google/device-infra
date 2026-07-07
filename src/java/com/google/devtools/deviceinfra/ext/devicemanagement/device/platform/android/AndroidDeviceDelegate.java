@@ -494,6 +494,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidAccountDecorator");
     device.addSupportedDecorator("AndroidAdbShellDecorator");
     device.addSupportedDecorator("AndroidAtsDynamicConfigPusherDecorator");
+    device.addSupportedDecorator("AndroidBugreportDecorator");
     device.addSupportedDecorator("AndroidBusinessLogicSkipModuleDecorator");
     device.addSupportedDecorator("AndroidCleanAppsDecorator");
     device.addSupportedDecorator("AndroidDeviceFeaturesCheckDecorator");
@@ -501,6 +502,7 @@ public abstract class AndroidDeviceDelegate {
     // settings may not be supported for emulators.
     device.addSupportedDecorator("AndroidDeviceSettingsDecorator");
     device.addSupportedDecorator("AndroidDisplayDeviceInfoDecorator");
+    device.addSupportedDecorator("AndroidDumpSysDecorator");
     device.addSupportedDecorator("AndroidFilePullerDecorator");
     device.addSupportedDecorator("AndroidFilePusherDecorator");
     device.addSupportedDecorator("AndroidInstallAppsDecorator");
@@ -512,6 +514,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidNetworkActivityLoggingDecorator");
     device.addSupportedDecorator("AndroidOrientationDecorator");
     device.addSupportedDecorator("AndroidRuntimeStatsDecorator");
+    device.addSupportedDecorator("AndroidScreenshotDecorator");
     device.addSupportedDecorator("AndroidShippingApiLevelCheckDecorator");
     device.addSupportedDecorator("AndroidShowInstructionDecorator");
     device.addSupportedDecorator("AndroidStartAppsDecorator");
@@ -536,6 +539,7 @@ public abstract class AndroidDeviceDelegate {
   private void additionalAndroidDeviceConfiguration(boolean fullStackFeaturesEnabled)
       throws InterruptedException {
     device.addSupportedDecorator("NoOpDecorator");
+    device.addSupportedDecorator("AndroidInstallMainlineModulesDecorator");
     // *********************************************************************************************
     // The following features are only enabled in full stack labs or Local Mode.
     // *********************************************************************************************
