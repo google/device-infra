@@ -94,7 +94,7 @@ public class AndroidFilePullerDecorator extends BaseDecorator
     }
 
     ImmutableList<String> fileOrDirPathsOnDevice =
-        Splitter.onPattern(PATH_DELIMITER)
+        Splitter.on(PATH_DELIMITER)
             .splitToStream(spec.getFilePathOnDevice())
             .map(String::trim)
             .collect(toImmutableList());
@@ -133,13 +133,28 @@ public class AndroidFilePullerDecorator extends BaseDecorator
     } finally {
       // Pulls the device files to PUBLIC_TMP dir of the test. MobileHarness client will get and
       // send them to Sponge automatically.
-      String targetRootDir;
-      if (spec.getPulledFileDir().isEmpty()) {
-        targetRootDir = testInfo.getGenFileDir();
-      } else {
-        targetRootDir = PathUtil.join(testInfo.getGenFileDir(), spec.getPulledFileDir());
+      ImmutableList<String> pulledFilePaths = ImmutableList.of();
+      if (spec.hasPulledFilePaths()) {
+        pulledFilePaths =
+            Splitter.on(PATH_DELIMITER)
+                .trimResults()
+                .splitToStream(spec.getPulledFilePaths())
+                .collect(toImmutableList());
       }
-      for (String path : fileOrDirPathsOnDevice) {
+      for (int i = 0; i < fileOrDirPathsOnDevice.size(); i++) {
+        String path = fileOrDirPathsOnDevice.get(i);
+        String targetRootDirOrPath;
+        if (!pulledFilePaths.isEmpty()) {
+          String pulledPath = i < pulledFilePaths.size() ? pulledFilePaths.get(i) : "";
+          targetRootDirOrPath =
+              pulledPath.isEmpty()
+                  ? testInfo.getGenFileDir()
+                  : PathUtil.join(testInfo.getGenFileDir(), pulledPath);
+        } else if (!spec.getPulledFileDir().isEmpty()) {
+          targetRootDirOrPath = PathUtil.join(testInfo.getGenFileDir(), spec.getPulledFileDir());
+        } else {
+          targetRootDirOrPath = testInfo.getGenFileDir();
+        }
         String noPathLog =
             "Skip pulling file/dir because directory [" + path + "] does not exist in the device. ";
         boolean isPathExist = false;
@@ -171,7 +186,9 @@ public class AndroidFilePullerDecorator extends BaseDecorator
         // Now pull existing files from device.
         try {
           String targetPath =
-              spec.getPreserveAbsolutePath() ? PathUtil.join(targetRootDir, path) : targetRootDir;
+              spec.getPreserveAbsolutePath()
+                  ? PathUtil.join(targetRootDirOrPath, path)
+                  : targetRootDirOrPath;
           localFileUtil.prepareParentDir(targetPath);
           String info = androidFileUtil.pull(deviceId, path, targetPath);
           testInfo.log().atInfo().alsoTo(logger).log("%s", info);

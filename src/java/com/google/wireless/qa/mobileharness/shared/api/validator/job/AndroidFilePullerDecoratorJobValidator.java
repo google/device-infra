@@ -47,6 +47,12 @@ public class AndroidFilePullerDecoratorJobValidator
     }
 
     for (AndroidFilePullerDecoratorSpec spec : specs) {
+      if (spec.hasPulledFileDir() && spec.hasPulledFilePaths()) {
+        errors.add(
+            "Parameters [pulled_file_dir] and [pulled_file_paths] are mutually exclusive for"
+                + " AndroidFilePullerDecorator");
+      }
+
       String commaSeparatedPaths = spec.getFilePathOnDevice();
       if (Strings.isNullOrEmpty(commaSeparatedPaths)) {
         errors.add(
@@ -64,6 +70,19 @@ public class AndroidFilePullerDecoratorJobValidator
                       + " between them. Or you may accidently add a demiliter '%s' at the"
                       + " beginning or end of the value.",
                   AndroidFilePullerSpec.PATH_DELIMITER, AndroidFilePullerSpec.PATH_DELIMITER));
+        }
+      }
+
+      if (spec.hasPulledFilePaths()) {
+        List<String> pulledPaths =
+            Splitter.on(AndroidFilePullerSpec.PATH_DELIMITER)
+                .splitToList(spec.getPulledFilePaths());
+        if (pulledPaths.size() != paths.size()) {
+          errors.add(
+              String.format(
+                  "The number of paths in pulled_file_paths (%d) does not match the number of paths"
+                      + " in file_path_on_device (%d) for AndroidFilePullerDecorator.",
+                  pulledPaths.size(), paths.size()));
         }
       }
     }

@@ -62,6 +62,14 @@ message AndroidFilePullerDecoratorSpec {
           "file directory."
   }];
 
+  optional string pulled_file_paths = 9 [(field_detail) = {
+    help: "The comma separated list of target paths relative to the test's gen "
+          "file directory to pull the files to. Each path maps 1-to-1 to the "
+          "corresponding path in file_path_on_device. If an element in the "
+          "list is empty, the corresponding file will be pulled directly to the"
+          " test's gen file directory. Mutually exclusive with pulled_file_dir."
+  }];
+
   optional bool preserve_absolute_path = 6 [
     default = false,
     (field_detail) = {
