@@ -26,7 +26,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
@@ -104,10 +103,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   // release version.
   private static final Pattern VERSIONCODE_PATTERN_V3 =
       Pattern.compile("(3[7-9]|[4-9]\\d)(?!(00|99))\\d[05]\\d{5}");
-
-  // Add the versioncode from
-  // android/platform/superproject/main/+/main:build/release/flag_declarations/RELEASE_DEFAULT_UPDATABLE_MODULE_VERSION.textproto
-  private static final ImmutableSet<String> AOSP_VERSIONCODE_LIST = ImmutableSet.of("352090000");
+  private static final Pattern VERSIONCODE_PATTERN_V3P1 =
+      Pattern.compile("(3[8-9]|[4-9]\\d)(?!(00|99))\\d[0459]\\d{5}");
 
   // Add the initial release versioncode for Android SDK release which we don't need to download
   // the MCTS files.
@@ -122,7 +119,11 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           "37.1",
               ImmutableList.of(
                   "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07",
-                  "2026-08"));
+                  "2026-08"),
+          "38.0", ImmutableList.of("2027-01", "2027-02", "2027-03", "2027-04"),
+          "38.1",
+              ImmutableList.of(
+                  "2027-01", "2027-02", "2027-03", "2027-04", "2027-05", "2027-06", "2027-07"));
 
   private static final String MAINLINE_AOSP_VERSION_KEY = "AOSP";
 
@@ -142,7 +143,9 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   // In version scheme v3 we need both the year and month of the first release to calculate the
   // month of the train release.
   private static final ImmutableMap<Integer, SdkReleaseMonth> SDK_LEVEL_TO_RELEASE_MONTH =
-      ImmutableMap.of(37, new SdkReleaseMonth(2026, 5));
+      ImmutableMap.of(
+          37, new SdkReleaseMonth(2026, 5),
+          38, new SdkReleaseMonth(2027, 4));
 
   // For CTS, there's no diff between arm64 and arm.
   private static final ImmutableMap<String, String> DEVICE_ABI_MAP =
@@ -523,8 +526,10 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       year = sdkReleaseMonth.year();
       int mission = Integer.parseInt(versionCode, 2, 4, 10);
       if (mission > 0) {
-        // Mission numbers increase by 5 for each month, starting at 05.
-        int monthsSinceSdkBump = (mission / 5) - 1;
+        // Mission numbers increase by 5 for each month, starting at 05 (or 04 for FRC in v3.1).
+        // Adding +1 groups the FRC mission (e.g., 04, 09) and Monthly mission (e.g., 05, 10) of
+        // the same month into the same integer division bucket (e.g., both 04 and 05 map to 0).
+        int monthsSinceSdkBump = ((mission + 1) / 5) - 1;
         month = sdkReleaseMonth.month() + monthsSinceSdkBump;
       } else {
         // If the mission is 0 then it's the aosp version.
@@ -747,14 +752,25 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
         (d) -> adbUtil.getProperty(d, AndroidProperty.ABI));
   }
 
+  private static boolean isProductionReleaseVersion(String moduleVersionNumber) {
+    if (VERSIONCODE_PATTERN_V2.matcher(moduleVersionNumber).matches()
+        && !PLATFORM_BETA_VERSIONCODE_PATTERN_V2.matcher(moduleVersionNumber).matches()) {
+      return true;
+    }
+    if (VERSIONCODE_PATTERN_V3.matcher(moduleVersionNumber).matches()) {
+      return true;
+    }
+    if (VERSIONCODE_PATTERN_V3P1.matcher(moduleVersionNumber).matches()) {
+      return true;
+    }
+    return false;
+  }
+
   @VisibleForTesting
   String processModuleVersion(
       String moduleVersionNumber, String moduleName, String defaultVersion, String aospVersion)
       throws MobileHarnessException {
-    if (((VERSIONCODE_PATTERN_V2.matcher(moduleVersionNumber).matches()
-                && !PLATFORM_BETA_VERSIONCODE_PATTERN_V2.matcher(moduleVersionNumber).matches())
-            || VERSIONCODE_PATTERN_V3.matcher(moduleVersionNumber).matches())
-        && !AOSP_VERSIONCODE_LIST.contains(moduleVersionNumber)) {
+    if (isProductionReleaseVersion(moduleVersionNumber)) {
       String preloadVersion = getPreloadedMainlineVersion(moduleVersionNumber, moduleName);
       ImmutableList<String> versionCodes = INITIAL_RELEASE_VERSIONCODE_MAP.get(aospVersion);
       if (versionCodes != null && versionCodes.contains(preloadVersion)) {
