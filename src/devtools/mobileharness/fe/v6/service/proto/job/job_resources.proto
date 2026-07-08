@@ -1,0 +1,146 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package devtools.mobileharness.fe.v6.service.proto.job;
+
+import "google/protobuf/timestamp.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/common/common_resources.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/test/test_resources.proto";
+
+option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.job";
+option java_multiple_files = true;
+option java_outer_classname = "JobResourcesProto";
+
+// ---------- List item types ----------
+
+// One non-fatal warning surfaced during job execution.
+message JobWarning {
+  // Short summary shown when collapsed (e.g. the first line).
+  string message = 1;
+  // Full detail shown when expanded.
+  string trace = 2;
+}
+
+// One error that contributed to a non-passing job result.
+message JobError {
+  // Short summary shown when collapsed (e.g. the first line).
+  string message = 1;
+  // Full detail, including the complete stack trace.
+  string trace = 2;
+}
+
+// ---------- List wrapper types ----------
+// Each list lives in its own message (a single repeated field) so JobDetail
+// stays flat and every list can be extended independently.
+
+message JobWarnings {
+  repeated JobWarning warning = 1;
+}
+
+message JobErrors {
+  repeated JobError error = 1;
+}
+
+// ---------- Reference / grouping types ----------
+
+// Minimal reference to the parent session, holding only what the job-detail
+// view needs.
+message ParentSessionInfo {
+  string id = 1;
+  string title = 2;
+}
+
+// The target environment a job requests for its tests (device requirements,
+// not the devices actually allocated).
+message TargetEnvironment {
+  string device_type = 1;
+  string driver = 2;
+  repeated string decorators = 3;
+}
+
+// Execution details mapped to the "Execution Details" UI card.
+message JobExecutionDetails {
+  string run_as = 1;
+  string actual_user = 2;
+  string sponge_link = 3;
+  google.protobuf.Timestamp create_time = 4;
+  google.protobuf.Timestamp start_time = 5;
+  google.protobuf.Timestamp end_time = 6;
+}
+
+// Configuration details mapped to the configuration section.
+message JobConfig {
+  map<string, string> params = 1;
+  map<string, string> dimensions = 2;
+  map<string, string> files = 3;  // tag -> location
+}
+
+// Troubleshooting details (warnings & errors) mapped to the troubleshooting
+// card.
+message JobTroubleshooting {
+  JobWarnings warnings = 1;
+  JobErrors result_cause = 2;
+}
+
+// ---------- Top-level ----------
+
+message JobSummary {
+  string id = 1;
+  string name = 2;
+  .devtools.mobileharness.fe.v6.service.proto.common.JobStatus status = 3;
+  .devtools.mobileharness.fe.v6.service.proto.common.JobResult result = 4;
+  google.protobuf.Timestamp start_time = 5;
+  google.protobuf.Timestamp end_time = 6;
+}
+
+// Wrapper for a list of child jobs (e.g. the jobs of a session).
+message JobSummaries {
+  repeated JobSummary job = 1;
+}
+
+message JobDetail {
+  string id = 1;
+  string name = 2;
+  .devtools.mobileharness.fe.v6.service.proto.common.JobStatus status = 3;
+  .devtools.mobileharness.fe.v6.service.proto.common.JobResult result = 4;
+
+  // Target environment (device requirements for the job's tests).
+  TargetEnvironment target_environment = 5;
+
+  // Execution details card.
+  JobExecutionDetails execution_details = 6;
+
+  // Configuration.
+  JobConfig config = 7;
+
+  // Properties.
+  map<string, string> properties = 8;
+
+  // Parent session (minimal reference).
+  ParentSessionInfo session = 9;
+
+  // Child tests.
+  .devtools.mobileharness.fe.v6.service.proto.test.TestSummaries tests = 10;
+
+  // Troubleshooting card (warnings & errors).
+  JobTroubleshooting troubleshooting = 11;
+
+  // Detailed execution phase timelines for Gantt rendering.
+  .devtools.mobileharness.fe.v6.service.proto.common.TimeBreakdown
+      timing_breakdown = 12;
+}
