@@ -391,6 +391,12 @@ public interface PropertyName {
     /** Session id of the test. Value type is string. */
     SESSION_ID,
 
+    /** The total number of shards for test sharding. */
+    SHARD_COUNT,
+
+    /** The index of the current shard. */
+    SHARD_INDEX,
+
     /** Delay time between start() and execute() of the test runner in milliseconds. */
     START_DELAY_MS,
 

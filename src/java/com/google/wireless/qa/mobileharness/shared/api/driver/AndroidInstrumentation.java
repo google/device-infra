@@ -17,11 +17,11 @@
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
-import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_SHARD_COUNT;
-import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_SHARD_INDEX;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_END_EPOCH_MS;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_START_EPOCH_MS;
+import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.SHARD_COUNT;
+import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.SHARD_INDEX;
 import static java.lang.String.format;
 
 import com.google.common.base.Ascii;
@@ -916,8 +916,7 @@ public class AndroidInstrumentation extends BaseDriver
   }
 
   private boolean isUniformSharding(TestInfo testInfo) {
-    return testInfo.properties().has(ANDROID_INSTRUMENTATION_SHARD_INDEX)
-        && testInfo.properties().has(ANDROID_INSTRUMENTATION_SHARD_COUNT);
+    return false;
   }
 
   private void postAppInstallFinishEvent(TestInfo testInfo, String packageName) {
@@ -988,8 +987,8 @@ public class AndroidInstrumentation extends BaseDriver
   @SuppressWarnings("ReferenceEquality")
   private void populateOptionMapsForUniformSharding(
       TestInfo testInfo, List<Map<String, String>> optionMaps) {
-    String shardIndex = testInfo.properties().get(ANDROID_INSTRUMENTATION_SHARD_INDEX);
-    String shardCount = testInfo.properties().get(ANDROID_INSTRUMENTATION_SHARD_COUNT);
+    String shardIndex = testInfo.properties().get(SHARD_INDEX);
+    String shardCount = testInfo.properties().get(SHARD_COUNT);
     if (!isNullOrEmpty(shardIndex) && !isNullOrEmpty(shardCount)) {
       for (Map<String, String> optionMap : optionMaps) {
         if (optionMap != SKIPPED_OPTION_MAP) {
