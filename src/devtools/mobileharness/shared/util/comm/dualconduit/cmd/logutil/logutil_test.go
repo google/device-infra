@@ -6,21 +6,14 @@ import (
 	"encoding/json"
 	"log/slog"
 	"testing"
+	"time"
 )
 
 func TestFlatteningHandler(t *testing.T) {
 	var buf bytes.Buffer
 
 	opts := &slog.HandlerOptions{
-		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-			if a.Key == slog.MessageKey {
-				return slog.Attr{
-					Key:   "message",
-					Value: a.Value,
-				}
-			}
-			return a
-		},
+		ReplaceAttr: replaceAttr,
 	}
 
 	jsonHandler := slog.NewJSONHandler(&buf, opts)
@@ -51,5 +44,31 @@ func TestFlatteningHandler(t *testing.T) {
 	}
 	if _, exists := data["b"]; exists {
 		t.Errorf("flatteningHandler.Handle(ctx, Record{Message: \"hello\", Attrs: [a=1, b=two]}) has key %q = true, want false", "b")
+	}
+
+	// Check timestamp format
+	tsStr, ok := data["timestamp"].(string)
+	if !ok {
+		t.Fatalf("timestamp key missing or not a string in JSON: %s", buf.String())
+	}
+	if _, err := time.Parse(TimestampLayout, tsStr); err != nil {
+		t.Errorf("timestamp %q does not match expected layout %q: %v", tsStr, TimestampLayout, err)
+	}
+}
+
+func TestReplaceAttr(t *testing.T) {
+	testTime := time.Date(2026, 7, 8, 12, 34, 56, 789000000, time.FixedZone("TEST", -7*3600))
+	attr := slog.Attr{
+		Key:   slog.TimeKey,
+		Value: slog.TimeValue(testTime),
+	}
+
+	replaced := replaceAttr(nil, attr)
+	if replaced.Key != "timestamp" {
+		t.Errorf("replaceAttr key = %q, want %q", replaced.Key, "timestamp")
+	}
+	wantVal := "2026-07-08T12:34:56.789-0700"
+	if replaced.Value.String() != wantVal {
+		t.Errorf("replaceAttr value = %q, want %q", replaced.Value.String(), wantVal)
 	}
 }

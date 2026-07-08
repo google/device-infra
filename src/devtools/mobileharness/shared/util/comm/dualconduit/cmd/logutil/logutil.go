@@ -11,6 +11,10 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
+// TimestampLayout defines the standard timestamp layout (%Y-%m-%dT%H:%M:%S.%L%z)
+// used for fluentbit compatibility.
+const TimestampLayout = "2006-01-02T15:04:05.000-0700"
+
 type flatteningHandler struct {
 	slog.Handler
 }
@@ -33,6 +37,42 @@ func (h *flatteningHandler) Handle(ctx context.Context, r slog.Record) error {
 	return h.Handler.Handle(ctx, newRecord)
 }
 
+func replaceAttr(groups []string, a slog.Attr) slog.Attr {
+	switch a.Key {
+	case slog.LevelKey:
+		if level, ok := a.Value.Any().(slog.Level); ok {
+			levelStr := level.String()
+			if level == slog.LevelWarn {
+				levelStr = "WARNING"
+			}
+			return slog.Attr{
+				Key:   "severity",
+				Value: slog.StringValue(levelStr),
+			}
+		}
+		return slog.Attr{
+			Key:   "severity",
+			Value: a.Value,
+		}
+	case slog.MessageKey:
+		return slog.Attr{
+			Key:   "message",
+			Value: a.Value,
+		}
+	case slog.TimeKey:
+		val := a.Value
+		if a.Value.Kind() == slog.KindTime {
+			val = slog.StringValue(a.Value.Time().Format(TimestampLayout))
+		}
+		return slog.Attr{
+			Key:   "timestamp",
+			Value: val,
+		}
+	default:
+		return a
+	}
+}
+
 // Setup configures the default slog logger to write to both os.Stderr
 // and a rotating file at the specified path.
 func Setup(logPath string) {
@@ -47,37 +87,7 @@ func Setup(logPath string) {
 	mw := io.MultiWriter(os.Stderr, rotator)
 
 	opts := &slog.HandlerOptions{
-		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-			switch a.Key {
-			case slog.LevelKey:
-				if level, ok := a.Value.Any().(slog.Level); ok {
-					levelStr := level.String()
-					if level == slog.LevelWarn {
-						levelStr = "WARNING"
-					}
-					return slog.Attr{
-						Key:   "severity",
-						Value: slog.StringValue(levelStr),
-					}
-				}
-				return slog.Attr{
-					Key:   "severity",
-					Value: a.Value,
-				}
-			case slog.MessageKey:
-				return slog.Attr{
-					Key:   "message",
-					Value: a.Value,
-				}
-			case slog.TimeKey:
-				return slog.Attr{
-					Key:   "timestamp",
-					Value: a.Value,
-				}
-			default:
-				return a
-			}
-		},
+		ReplaceAttr: replaceAttr,
 	}
 
 	jsonHandler := slog.NewJSONHandler(mw, opts)

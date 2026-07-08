@@ -54,7 +54,6 @@ func handleIngressConnection(c *Conduit, conn net.Conn) {
 	} else {
 		remoteAddr = "<nil>"
 	}
-	slog.Info("Conduit handling ingress connection", "id", c.ID, "remote_addr", remoteAddr)
 	rc, err := rxconn.New(conn)
 	if err != nil {
 		slog.Error("rxconn.New error", "id", c.ID, "error", err)
@@ -87,7 +86,6 @@ func handleIngressConnection(c *Conduit, conn net.Conn) {
 // AcceptStream handles an incoming RSocket channel, dials the target service, and bridges the streams.
 // This implements the Responder Role.
 func AcceptStream(c *Conduit, destEndpoint string, downstream flux.Flux) flux.Flux {
-	slog.Info("Conduit AcceptStream: Dialing backend", "id", c.ID, "backend", destEndpoint)
 	conn, err := net.Dial("tcp", destEndpoint)
 	if err != nil {
 		slog.Error("Conduit AcceptStream: Dial backend failed", "id", c.ID, "backend", destEndpoint, "error", err)

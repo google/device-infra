@@ -59,7 +59,7 @@ func main() {
 	flag.DurationVar(&retryMaxInterval, "retry_max_interval", 10*time.Second, "Maximum interval for exponential retry backoff")
 	flag.Float64Var(&retryMultiplier, "retry_multiplier", 2.0, "Multiplier for exponential retry backoff")
 	flag.IntVar(&retryMaxAttempts, "retry_max_attempts", 0, "Maximum retry attempts (0 for infinite, 1 for no retry)")
-	flag.DurationVar(&keepAliveTickPeriod, "keep_alive_tick_period", 60*time.Second, "Keep-alive tick period for the dialer connection")
+	flag.DurationVar(&keepAliveTickPeriod, "keep_alive_tick_period", 20*time.Second, "Keep-alive tick period for the dialer connection")
 
 	flag.Parse()
 
