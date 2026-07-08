@@ -84,6 +84,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
@@ -110,6 +112,8 @@ public class AndroidInstrumentation extends BaseDriver
 
   /** An entry in the sequence option maps, to skip the run of the option entry. */
   private static final ImmutableMap<String, String> SKIPPED_OPTION_MAP = ImmutableMap.of();
+
+  private static final Pattern UNIFORM_SHARD_PATTERN = Pattern.compile("shard_(\\d+)_of_(\\d+)");
 
   /** {@code AndroidInstrumentationUtil} fir instrument test on device. */
   private final AndroidInstrumentationUtil androidInstrumentationUtil;
@@ -888,7 +892,21 @@ public class AndroidInstrumentation extends BaseDriver
   private String getTestTarget(TestInfo testInfo, List<Map<String, String>> optionMaps) {
     String testName = testInfo.locator().getName();
     String testTarget;
-    if (Ascii.equalsIgnoreCase(testName, AndroidInstrumentationDriverSpec.TEST_NAME_ALL)) {
+    Matcher matcher = UNIFORM_SHARD_PATTERN.matcher(testName);
+    if (matcher.matches()) {
+      testTarget = null;
+      String shardIndex = matcher.group(1);
+      String numShard = matcher.group(2);
+      for (Map<String, String> optionMap : optionMaps) {
+        optionMap.put("shardIndex", shardIndex);
+        optionMap.put("numShard", numShard);
+      }
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("Running uniform shard %s of %s", shardIndex, numShard);
+    } else if (Ascii.equalsIgnoreCase(testName, AndroidInstrumentationDriverSpec.TEST_NAME_ALL)) {
       testTarget = null;
       testInfo.log().atInfo().alsoTo(logger).log("Running all tests");
     } else if (isUniformSharding(testInfo)) {
