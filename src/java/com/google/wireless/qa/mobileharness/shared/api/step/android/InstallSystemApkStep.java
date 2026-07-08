@@ -146,8 +146,6 @@ public class InstallSystemApkStep {
         replaceSystemPackage(
             deviceId, systemApks.get(i), replaceApkPaths.get(i), allowReplaceOfNotInstalled);
       }
-      rebootDevice(deviceId, deviceClassName, deviceRebootType);
-      systemStateUtil.waitUntilReady(deviceId);
     } else {
       // Check the SDK version to determine where to push the system apps.
       String pathOnDevice = SYSTEM_APP_PATH;
@@ -191,15 +189,29 @@ public class InstallSystemApkStep {
       for (int i = 0; i < permissionFiles.size(); ++i) {
         String permissionFile = permissionFiles.get(i);
         String permissionFileInDevice = permissionFilesInDevice.get(i);
+        String destDir = permissionFileInDevice;
+        if (permissionFileInDevice.endsWith(".xml")) {
+          int lastSlashIndex = permissionFileInDevice.lastIndexOf('/');
+          if (lastSlashIndex > 0) {
+            destDir = permissionFileInDevice.substring(0, lastSlashIndex);
+          }
+        }
+        fileUtil.makeDirectory(deviceId, destDir);
         logger.atInfo().log("Pushing %s to %s.", permissionFile, permissionFileInDevice);
         fileUtil.push(deviceId, sdkVersion, permissionFile, permissionFileInDevice, null);
       }
     } else if (permissionFiles != null) {
       // Push the permission files to default path.
       for (String permissionFile : permissionFiles) {
+        fileUtil.makeDirectory(deviceId, PERMISSIONS_FILE_PATH);
         logger.atInfo().log("Pushing %s to %s.", permissionFile, PERMISSIONS_FILE_PATH);
         fileUtil.push(deviceId, sdkVersion, permissionFile, PERMISSIONS_FILE_PATH, null);
       }
+    }
+
+    if (replaceApkPaths != null && !replaceApkPaths.isEmpty()) {
+      rebootDevice(deviceId, deviceClassName, deviceRebootType);
+      systemStateUtil.waitUntilReady(deviceId);
     }
 
     if (forceInstallation) {
@@ -299,6 +311,11 @@ public class InstallSystemApkStep {
     }
 
     fileUtil.removeFiles(deviceId, destApkPath);
+    int lastSlashIndex = destApkPath.lastIndexOf('/');
+    if (lastSlashIndex > 0) {
+      String destDir = destApkPath.substring(0, lastSlashIndex);
+      fileUtil.makeDirectory(deviceId, destDir);
+    }
     logger.atInfo().log("Pushing %s to %s.", sourceApk, destApkPath);
     fileUtil.push(deviceId, sdkVersion, sourceApk, destApkPath, null);
   }
