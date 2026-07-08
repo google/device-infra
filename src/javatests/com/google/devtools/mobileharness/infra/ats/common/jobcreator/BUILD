@@ -52,6 +52,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/out",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_config_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_file_puller_decorator_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:device_info_collector_decorator_spec_java_proto",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",

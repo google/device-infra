@@ -90,7 +90,7 @@ public class SessionResultHandlerUtil {
 
   // Mobly result directories that are copied to the root result dir.
   private static final ImmutableSet<String> MOBLY_ROOT_TEST_RESULT_DIR_NAMES =
-      ImmutableSet.of("report-log-files", "device-info-files");
+      ImmutableSet.of("report-log-files", "device-info-files", "vintf-files");
 
   private static final ImmutableSet<String> EXCLUDED_TF_GEN_RESULT_FILES =
       ImmutableSet.of(

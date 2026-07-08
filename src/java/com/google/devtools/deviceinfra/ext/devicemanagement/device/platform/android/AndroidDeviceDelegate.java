@@ -515,6 +515,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidOrientationDecorator");
     device.addSupportedDecorator("AndroidRuntimeStatsDecorator");
     device.addSupportedDecorator("AndroidScreenshotDecorator");
+    device.addSupportedDecorator("AndroidSetWifiDecorator");
     device.addSupportedDecorator("AndroidShippingApiLevelCheckDecorator");
     device.addSupportedDecorator("AndroidShowInstructionDecorator");
     device.addSupportedDecorator("AndroidStartAppsDecorator");
@@ -523,6 +524,8 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("ApkPreconditionCheckDecorator");
     device.addSupportedDecorator("DeviceInfoCollectorDecorator");
     device.addSupportedDecorator("PythonVersionCheckDecorator");
+    device.addSupportedDecorator("ReportIntegrityCollectorDecorator");
+    device.addSupportedDecorator("ReportLogCollectorDecorator");
     // keep-sorted end
   }
 

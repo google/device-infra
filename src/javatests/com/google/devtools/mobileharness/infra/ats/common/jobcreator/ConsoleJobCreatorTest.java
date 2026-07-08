@@ -57,6 +57,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidFilePullerDecoratorSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.DeviceInfoCollectorDecoratorSpec;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -676,6 +677,11 @@ public final class ConsoleJobCreatorTest {
               + "        <option name=\"src_dir\" value=\"/sdcard/device-info-files/\"/>\n"
               + "        <option name=\"dest_dir\" value=\"device-info-files/\"/>\n"
               + "    </target_preparer>\n"
+              + "    <target_preparer"
+              + " class=\"com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidFilePullerDecorator\">\n"
+              + "        <option name=\"file_path_on_device\" value=\"/sys/fs/selinux/policy\"/>\n"
+              + "        <option name=\"pulled_file_dir\" value=\"vintf-files/sepolicy\"/>\n"
+              + "    </target_preparer>\n"
               + "</configuration>";
       zos.write(xml.getBytes(UTF_8));
       zos.closeEntry();
@@ -696,6 +702,9 @@ public final class ConsoleJobCreatorTest {
     assertThat(jobs).hasSize(2);
     assertThat(jobs.get(0).locator().getName()).isEqualTo(XtsConstants.SETUP_JOB_NAME);
     assertThat(jobs.get(0).type().getDriver()).isEqualTo("NoOpDriver");
+    assertThat(jobs.get(0).subDeviceSpecs().getAllSubDevices().get(0).decorators().getAll())
+        .containsExactly("DeviceInfoCollectorDecorator", "AndroidFilePullerDecorator")
+        .inOrder();
     DeviceInfoCollectorDecoratorSpec spec =
         jobs.get(0)
             .subDeviceSpecs()
@@ -706,5 +715,16 @@ public final class ConsoleJobCreatorTest {
             .asMessage(DeviceInfoCollectorDecoratorSpec.class);
     assertThat(spec).isNotNull();
     assertThat(spec.getApk()).isEqualTo("CtsDeviceInfo.apk");
+    AndroidFilePullerDecoratorSpec pullerSpec =
+        jobs.get(0)
+            .subDeviceSpecs()
+            .getAllSubDevices()
+            .get(0)
+            .scopedSpecs()
+            .get("AndroidFilePullerDecoratorSpec")
+            .asMessage(AndroidFilePullerDecoratorSpec.class);
+    assertThat(pullerSpec).isNotNull();
+    assertThat(pullerSpec.getFilePathOnDevice()).isEqualTo("/sys/fs/selinux/policy");
+    assertThat(pullerSpec.getPulledFileDir()).isEqualTo("vintf-files/sepolicy");
   }
 }

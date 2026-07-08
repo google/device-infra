@@ -43,7 +43,6 @@ import com.google.devtools.mobileharness.platform.android.xts.config.Configurati
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationXmlParser;
 import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
-import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.TargetPreparer;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
@@ -62,7 +61,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.DeviceList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.Driver;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringList;
-import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -251,7 +249,7 @@ public abstract class XtsJobCreator {
 
     boolean enableModuleSharding =
         SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo);
-    ImmutableList<SubDeviceSpec> subDeviceSpecList =
+    ImmutableList<JobConfig.SubDeviceSpec> subDeviceSpecList =
         sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
             sessionRequestInfo, /* forMultiDeviceJob= */ !enableModuleSharding);
     logger.atInfo().log("Get the sub device spec list: %s", subDeviceSpecList);
@@ -563,34 +561,30 @@ public abstract class XtsJobCreator {
       }
     }
 
-    // In Tradefed sessions, device info collection (the device-info-files dir) is naturally
-    // handled by Tradefed target preparers. For Mobly-only sessions, this is missing.
-    // Therefore, we inject a synthetic setup job running NoOpDriver with the
-    // DeviceInfoCollectorDecorator to manually gather the device info files.
-    if (hasNonTradefedJobs && !hasTradefedJobs) {
-      Optional<JsonObject> specOpt = parseDeviceInfoCollectorSpec(sessionRequestInfo);
-      if (specOpt.isPresent()) {
-        JobInfo setUpJob = createSetUpJob(specOpt.get(), sessionRequestInfo);
+    boolean hasOnlyMoblyJobs = hasNonTradefedJobs && !hasTradefedJobs;
+
+    // We'll create a setup job to run precondition decorators (Tradefed's target preparers
+    // equivalents) when the session contains only Mobly modules.
+    if (hasOnlyMoblyJobs) {
+      ImmutableList<PreconditionDecorator> preconditionDecorators =
+          parsePreconditionDecorators(sessionRequestInfo);
+      if (!preconditionDecorators.isEmpty()) {
+        JobInfo setUpJob = createSetUpJob(sessionRequestInfo, preconditionDecorators);
         nonTfJobs = ImmutableList.<JobInfo>builder().add(setUpJob).addAll(nonTfJobs).build();
-      } else {
-        logger.atWarning().log(
-            "Could not parse DeviceInfoCollectorDecorator config from %s-preconditions.configv2."
-                + " Skipping adding the setup job.",
-            sessionRequestInfo.getXtsType());
       }
     }
     return nonTfJobs;
   }
 
   /**
-   * Creates a synthetic job solely responsible for running the DeviceInfoCollectorDecorator. This
-   * is necessary for Mobly-only xTS sessions, ensuring the device-info-files directory is collected
-   * and included in the final results directory.
+   * Creates a synthetic job responsible for running all precondition decorators (equivalent to
+   * Tradefed's target preparers).
    */
-  private JobInfo createSetUpJob(JsonObject specJson, SessionRequestInfo sessionRequestInfo)
+  private JobInfo createSetUpJob(
+      SessionRequestInfo sessionRequestInfo, ImmutableList<PreconditionDecorator> decorators)
       throws MobileHarnessException, InterruptedException {
     String name = XtsConstants.SETUP_JOB_NAME;
-    ImmutableList<SubDeviceSpec> subDeviceSpecList =
+    ImmutableList<JobConfig.SubDeviceSpec> subDeviceSpecList =
         sessionRequestHandlerUtil
             .getSessionSubDeviceSpecList(sessionRequestInfo, /* forMultiDeviceJob= */ true)
             .stream()
@@ -599,8 +593,14 @@ public abstract class XtsJobCreator {
                     spec.toBuilder()
                         .setDecorators(
                             spec.getDecorators().toBuilder()
-                                .addContent(
-                                    Driver.newBuilder().setName("DeviceInfoCollectorDecorator")))
+                                .addAllContent(
+                                    decorators.stream()
+                                        .map(
+                                            d ->
+                                                Driver.newBuilder()
+                                                    .setName(d.getDecoratorName())
+                                                    .build())
+                                        .collect(toImmutableList())))
                         .build())
             .collect(toImmutableList());
 
@@ -630,14 +630,22 @@ public abstract class XtsJobCreator {
         .subDeviceSpecs()
         .getAllSubDevices()
         .forEach(
-            subDevice -> subDevice.scopedSpecs().add("DeviceInfoCollectorDecoratorSpec", specJson));
+            subDevice ->
+                decorators.stream()
+                    .filter(d -> d.getSpecName().isPresent() && d.getSpecJson().isPresent())
+                    .forEach(
+                        d -> {
+                          subDevice.scopedSpecs().add(d.getSpecName().get(), d.getSpecJson().get());
+                        }));
+
     jobInfo.properties().add(SessionHandlerHelper.XTS_MODULE_NAME_PROP, name);
     jobInfo.properties().add(Job.IS_XTS_NON_TF_JOB, "true");
 
     return jobInfo;
   }
 
-  private Optional<JsonObject> parseDeviceInfoCollectorSpec(SessionRequestInfo sessionRequestInfo) {
+  private ImmutableList<PreconditionDecorator> parsePreconditionDecorators(
+      SessionRequestInfo sessionRequestInfo) {
     String xtsType = sessionRequestInfo.getXtsType().toLowerCase(Locale.ROOT);
     Path toolsDir =
         XtsDirUtil.getXtsToolsDir(
@@ -646,7 +654,7 @@ public abstract class XtsJobCreator {
     if (!localFileUtil.isFileExist(tradefedJar)) {
       logger.atWarning().log(
           "Tradefed jar not found for %s at %s", xtsType, tradefedJar.toAbsolutePath());
-      return Optional.empty();
+      return ImmutableList.of();
     }
 
     String configFileName = xtsType + "-preconditions.configv2";
@@ -661,43 +669,53 @@ public abstract class XtsJobCreator {
       if (entryOpt.isEmpty()) {
         logger.atWarning().log(
             "Config file %s not found in %s", configFileName, tradefedJar.toAbsolutePath());
-        return Optional.empty();
+        return ImmutableList.of();
       }
       JarEntry entry = entryOpt.get();
 
       try (InputStream is = jarFile.getInputStream(entry)) {
         Configuration configuration = ConfigurationXmlParser.parse(is, configFileName);
-        Optional<TargetPreparer> deviceInfoPreparer =
-            configuration.getTargetPreparersList().stream()
-                .filter(
-                    preparer ->
-                        ConfigurationUtil.getSimpleClassName(preparer.getClazz())
-                            .equals("DeviceInfoCollectorDecorator"))
-                .findFirst();
-
-        if (deviceInfoPreparer.isPresent()) {
+        ImmutableList.Builder<PreconditionDecorator> decorators = ImmutableList.builder();
+        for (var preparer : configuration.getTargetPreparersList()) {
+          String decoratorName = ConfigurationUtil.getSimpleClassName(preparer.getClazz());
           Optional<Map.Entry<String, JsonObject>> scopedSpec =
               ModuleConfigurationHelper.convertOptionsToScopedSpec(
-                  "DeviceInfoCollectorDecorator", deviceInfoPreparer.get().getOptionsList());
-          if (scopedSpec.isPresent()) {
-            JsonObject specJson = scopedSpec.get().getValue();
+                  decoratorName, preparer.getOptionsList());
+          String specKey = scopedSpec.map(Map.Entry::getKey).orElse(null);
+          JsonObject specJson = scopedSpec.map(Map.Entry::getValue).orElse(null);
+
+          // For certain decorators, we need to manually set up some additional properties that
+          // can't be statically configured in the config file.
+          if ((decoratorName.equals("DeviceInfoCollectorDecorator")
+                  || decoratorName.equals("AndroidAtsDynamicConfigPusherDecorator")
+                  || decoratorName.equals("ApkPreconditionCheckDecorator"))
+              && specJson != null) {
             specJson.addProperty(
                 "xts_test_dir",
                 XtsDirUtil.getXtsTestCasesDir(
                         Path.of(sessionRequestInfo.getXtsRootDir()),
                         sessionRequestInfo.getXtsType())
                     .toString());
-            return Optional.of(specJson);
           }
+          if (decoratorName.equals("AndroidAtsDynamicConfigPusherDecorator")) {
+            specJson.addProperty(
+                "xts_suite_info",
+                String.format(
+                    "suite_name=%s,suite_version=%s",
+                    sessionRequestInfo.getTestSuiteInfo().getXtsType(),
+                    sessionRequestInfo.getTestSuiteInfo().getVersion()));
+          }
+          decorators.add(new PreconditionDecorator(decoratorName, specKey, specJson));
         }
+        return decorators.build();
       }
     } catch (Exception e) {
       logger.atWarning().withCause(e).log(
           "Failed to parse %s from %s", configFileName, tradefedJar);
     }
 
-    logger.atWarning().log("Failed to parse DeviceInfoCollectorDecoratorSpec from %s", tradefedJar);
-    return Optional.empty();
+    logger.atWarning().log("Failed to parse precondition decorators from %s", tradefedJar);
+    return ImmutableList.of();
   }
 
   /** Validates a sub plan for a non-tradefed job. */
@@ -917,4 +935,29 @@ public abstract class XtsJobCreator {
 
   protected abstract SubPlan prepareRunRetrySubPlan(
       SessionRequestInfo sessionRequestInfo, boolean forTf) throws MobileHarnessException;
+
+  private static class PreconditionDecorator {
+    private final String decoratorName;
+    @Nullable private final String specName;
+    @Nullable private final JsonObject specJson;
+
+    PreconditionDecorator(
+        String decoratorName, @Nullable String specName, @Nullable JsonObject specJson) {
+      this.decoratorName = decoratorName;
+      this.specName = specName;
+      this.specJson = specJson;
+    }
+
+    String getDecoratorName() {
+      return decoratorName;
+    }
+
+    Optional<String> getSpecName() {
+      return Optional.ofNullable(specName);
+    }
+
+    Optional<JsonObject> getSpecJson() {
+      return Optional.ofNullable(specJson);
+    }
+  }
 }
