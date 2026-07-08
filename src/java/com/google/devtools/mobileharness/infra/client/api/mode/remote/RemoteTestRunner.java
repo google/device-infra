@@ -409,6 +409,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
         .alsoTo(logger)
         .log("========= Client: PostRunTest (%s) =========", testInfo.locator().getId());
 
+    RuntimeException runtimeExceptionToThrow = null;
     try {
       if (testKickedOff) {
         if (Flags.enableClientFileTransfer.getNonNull()) {
@@ -434,44 +435,67 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
               PropertyName.Test.REMOTE_EXECUTION_TIME_MS,
               Long.toString(Duration.between(executeInstant, clock.instant()).toMillis()));
     } finally {
-      // Notify lab server that client side postRunTest().Exceptions should be tolerated since the
-      // test has been marked DONE already.
-      PrepareTestServiceProto.CloseTestRequest req =
-          PrepareTestServiceProto.CloseTestRequest.newBuilder()
-              .setJobId(testInfo.jobInfo().locator().getId())
-              .setTestId(testInfo.locator().getId())
-              .build();
-      PrepareTestStub prepareTestStub = getPrepareTestStub();
+      boolean interrupted = Thread.interrupted();
       try {
-        longevityTestHelper.persistentJobInfoIfNeeded(testInfo.jobInfo());
+        // Notify lab server that client side postRunTest().Exceptions should be tolerated since the
+        // test has been marked DONE already.
+        PrepareTestServiceProto.CloseTestRequest req =
+            PrepareTestServiceProto.CloseTestRequest.newBuilder()
+                .setJobId(testInfo.jobInfo().locator().getId())
+                .setTestId(testInfo.locator().getId())
+                .build();
+        PrepareTestStub prepareTestStub = getPrepareTestStub();
+        try {
+          longevityTestHelper.persistentJobInfoIfNeeded(testInfo.jobInfo());
 
-        PrepareTestServiceProto.CloseTestResponse response =
-            prepareTestStub.closeTest(req, impersonationUser);
-        TestRunnerTiming testTiming = response.getTestTiming();
-        if (testTiming.hasStartTimestamp() && testTiming.hasExecuteTimestamp()) {
+          PrepareTestServiceProto.CloseTestResponse response =
+              prepareTestStub.closeTest(req, impersonationUser);
+          TestRunnerTiming testTiming = response.getTestTiming();
+          if (testTiming.hasStartTimestamp() && testTiming.hasExecuteTimestamp()) {
+            testInfo
+                .properties()
+                .add(
+                    PropertyName.Test.REMOTE_START_DELAY_MS,
+                    Long.toString(
+                        Timestamps.toMillis(testTiming.getExecuteTimestamp())
+                            - Timestamps.toMillis(testTiming.getStartTimestamp())));
+          }
+          if (testTiming.hasTestEngineSetupTime()) {
+            testInfo
+                .properties()
+                .add(
+                    PropertyName.Test.REMOTE_TEST_ENGINE_SETUP_TIME_MS,
+                    Long.toString(Durations.toMillis(testTiming.getTestEngineSetupTime())));
+          }
+        } catch (RpcExceptionWithErrorId e) {
           testInfo
-              .properties()
-              .add(
-                  PropertyName.Test.REMOTE_START_DELAY_MS,
-                  Long.toString(
-                      Timestamps.toMillis(testTiming.getExecuteTimestamp())
-                          - Timestamps.toMillis(testTiming.getStartTimestamp())));
+              .log()
+              .atInfo()
+              .alsoTo(logger)
+              .withCause(e)
+              .log("Failed to close test but ignore it since the test has been done");
+        } catch (RuntimeException e) {
+          if (e.getClass().getName().equals("com.google.common.base.InterruptedRuntimeException")) {
+            testInfo
+                .log()
+                .atInfo()
+                .alsoTo(logger)
+                .withCause(e)
+                .log("Interrupted when closing test, but ignore it since the test has been done");
+            interrupted = true;
+          } else {
+            runtimeExceptionToThrow = e;
+          }
         }
-        if (testTiming.hasTestEngineSetupTime()) {
-          testInfo
-              .properties()
-              .add(
-                  PropertyName.Test.REMOTE_TEST_ENGINE_SETUP_TIME_MS,
-                  Long.toString(Durations.toMillis(testTiming.getTestEngineSetupTime())));
+      } finally {
+        if (interrupted) {
+          Thread.currentThread().interrupt();
         }
-      } catch (RpcExceptionWithErrorId e) {
-        testInfo
-            .log()
-            .atInfo()
-            .alsoTo(logger)
-            .withCause(e)
-            .log("Failed to close test but ignore it since the test has been done");
       }
+    }
+
+    if (runtimeExceptionToThrow != null) {
+      throw runtimeExceptionToThrow;
     }
 
     // Returns REBOOT to let DeviceAllocator always treat the device as dirty at client side.
