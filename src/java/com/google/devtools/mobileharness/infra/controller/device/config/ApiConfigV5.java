@@ -318,6 +318,11 @@ public class ApiConfigV5 implements ApiConfig {
   }
 
   @Override
+  public Optional<DeviceConfig> getDeviceConfig(String deviceControlId) {
+    return Optional.ofNullable(deviceConfigs.get(deviceControlId));
+  }
+
+  @Override
   public Optional<DeviceConfig> getDeviceConfigToStore(String deviceControlId) {
     DeviceConfig deviceConfig = deviceConfigs.get(deviceControlId);
     if (deviceConfig != null) {
