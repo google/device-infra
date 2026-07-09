@@ -313,9 +313,11 @@ message PreflightLabServerLifecycleRequest {
 
   LifecycleActionType action = 2;
 
-  // The Activity currently displayed on the Lab Server card in the frontend.
-  // Used to detect stale page state (e.g. "RUNNING", "STOPPED").
-  string expected_activity = 3;
+  // Field 3 was a previously-planned `expected_activity` for stale-page
+  // detection. The backend determines availability from the freshly-fetched
+  // actual_activity instead, so the field was removed.
+  reserved 3;
+  reserved "expected_activity";
 
   // The universe of the host.
   string universe = 4;
