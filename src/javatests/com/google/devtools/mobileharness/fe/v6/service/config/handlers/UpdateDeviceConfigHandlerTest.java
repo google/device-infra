@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.config.handlers;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
@@ -654,5 +655,49 @@ public final class UpdateDeviceConfigHandlerTest {
     com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig updatedConfig =
         captor.getValue();
     assertThat(updatedConfig.getBasicConfig().hasDefaultWifi()).isFalse();
+  }
+
+  @Test
+  public void updateDeviceConfig_providerFails_returnsErrorResponse() throws Exception {
+    String deviceId = "test_device";
+    DeviceConfig feConfig =
+        DeviceConfig.newBuilder()
+            .setPermissions(PermissionInfo.newBuilder().addOwners("owner1").addExecutors("exec1"))
+            .build();
+    UpdateDeviceConfigRequest request =
+        UpdateDeviceConfigRequest.newBuilder()
+            .setId(deviceId)
+            .setConfig(feConfig)
+            .setSection(DeviceConfigSection.PERMISSIONS)
+            .build();
+
+    Device.DeviceConfig existingConfig =
+        Device.DeviceConfig.newBuilder()
+            .setUuid(deviceId)
+            .setBasicConfig(BasicDeviceConfig.newBuilder().addOwner("owner1"))
+            .build();
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
+        .thenReturn(
+            immediateFuture(
+                DeviceData.create(
+                    DeviceInfo.getDefaultInstance(),
+                    existingConfig,
+                    ManagementMode.PER_DEVICE,
+                    Optional.empty(),
+                    Optional.of(existingConfig))));
+    when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
+    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
+        .thenReturn(
+            immediateFailedFuture(new IllegalStateException("Failed to update config: IAM error")));
+
+    UpdateDeviceConfigResponse response =
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.of("owner1"))
+            .get();
+
+    assertThat(response.getSuccess()).isFalse();
+    assertThat(response.getError().getCode()).isEqualTo(UpdateError.Code.UNKNOWN);
+    assertThat(response.getError().getMessage()).contains("Failed to save device configuration");
   }
 }

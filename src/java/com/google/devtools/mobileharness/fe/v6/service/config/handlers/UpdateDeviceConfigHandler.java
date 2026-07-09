@@ -162,26 +162,40 @@ public final class UpdateDeviceConfigHandler {
 
   private ListenableFuture<UpdateDeviceConfigResponse> saveUpdatedConfig(
       UpdateDeviceConfigRequest request, UniverseScope universe, BasicDeviceConfig incoming) {
-    return Futures.transformAsync(
-        configurationProvider.getDeviceConfig(request.getId(), universe),
-        deviceConfigResult -> {
-          Optional<DeviceConfig> existingConfigOpt = deviceConfigResult.config();
-          DeviceConfig.Builder configToUpdate =
-              existingConfigOpt.isPresent()
-                  ? existingConfigOpt.get().toBuilder()
-                  : DeviceConfig.newBuilder().setUuid(request.getId());
+    return FluentFuture.from(configurationProvider.getDeviceConfig(request.getId(), universe))
+        .transformAsync(
+            deviceConfigResult -> {
+              Optional<DeviceConfig> existingConfigOpt = deviceConfigResult.config();
+              DeviceConfig.Builder configToUpdate =
+                  existingConfigOpt.isPresent()
+                      ? existingConfigOpt.get().toBuilder()
+                      : DeviceConfig.newBuilder().setUuid(request.getId());
 
-          BasicDeviceConfig updatedBasicConfig =
-              updateBasicConfig(configToUpdate.getBasicConfig(), request, incoming);
-          configToUpdate.setBasicConfig(updatedBasicConfig);
+              BasicDeviceConfig updatedBasicConfig =
+                  updateBasicConfig(configToUpdate.getBasicConfig(), request, incoming);
+              configToUpdate.setBasicConfig(updatedBasicConfig);
 
-          return Futures.transform(
-              configurationProvider.updateDeviceConfig(
-                  request.getId(), configToUpdate.build(), universe),
-              unused -> UpdateDeviceConfigResponse.newBuilder().setSuccess(true).build(),
-              executor);
-        },
-        executor);
+              return Futures.transform(
+                  configurationProvider.updateDeviceConfig(
+                      request.getId(), configToUpdate.build(), universe),
+                  unused -> UpdateDeviceConfigResponse.newBuilder().setSuccess(true).build(),
+                  executor);
+            },
+            executor)
+        .catching(
+            Exception.class,
+            e -> {
+              logger.atWarning().withCause(e).log(
+                  "Failed to save device configuration for %s", request.getId());
+              return UpdateDeviceConfigResponse.newBuilder()
+                  .setSuccess(false)
+                  .setError(
+                      UpdateError.newBuilder()
+                          .setCode(UpdateError.Code.UNKNOWN)
+                          .setMessage("Failed to save device configuration."))
+                  .build();
+            },
+            executor);
   }
 
   private BasicDeviceConfig updateBasicConfig(

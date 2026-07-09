@@ -20,6 +20,7 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -41,6 +42,7 @@ import javax.inject.Inject;
 
 /** Unified implementation of {@link ConfigurationProvider}. */
 public class ConfigurationProviderImpl implements ConfigurationProvider {
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final DeviceConfigStub deviceConfigStub;
   private final ListeningExecutorService executor;
@@ -126,7 +128,24 @@ public class ConfigurationProviderImpl implements ConfigurationProvider {
             .build();
     return Futures.transform(
         deviceConfigStub.updateDeviceConfigsAsync(request, useClientRpcAuthority),
-        response -> null,
+        response -> {
+          // The server only adds a map entry when the update for that device FAILED, so the
+          // presence of the key (not the message content) is the failure signal. Checking
+          // containsKey() also correctly treats an empty error message as a failure.
+          if (response.getErrorMessageMap().containsKey(deviceId)) {
+            String errorMessage = response.getErrorMessageMap().get(deviceId);
+            logger.atWarning().log(
+                "Device config service returned error for %s: %s", deviceId, errorMessage);
+            // TODO: Throw a typed exception (e.g. DeviceConfigUpdateException carrying
+            // deviceId + errorMessage) instead of a generic IllegalStateException, so callers can
+            // catch this specific failure and surface the server-provided error detail rather than
+            // a generic message. Apply the same pattern to updateLabConfig(), which has the same
+            // latent error_message handling gap.
+            throw new IllegalStateException(
+                String.format("Failed to update config of device %s: %s", deviceId, errorMessage));
+          }
+          return null;
+        },
         executor);
   }
 
