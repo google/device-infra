@@ -315,14 +315,28 @@ public abstract class AndroidDeviceDelegate {
         boolean enableDexPreVerification =
             testInfo.jobInfo().params().isTrue(PARAM_DEX_PRE_VERIFICATION);
         // Set dex pre-verification only for rooted device.
-        androidSystemSettingUtil.setDexPreVerification(deviceId, enableDexPreVerification);
-        testInfo
-            .log()
-            .atInfo()
-            .alsoTo(logger)
-            .log(
-                "%s device %s dex pre-verification",
-                enableDexPreVerification ? "Enabled" : "Disabled", deviceId);
+        try {
+          androidSystemSettingUtil.setDexPreVerification(deviceId, enableDexPreVerification);
+          testInfo
+              .log()
+              .atInfo()
+              .alsoTo(logger)
+              .log(
+                  "%s device %s dex pre-verification",
+                  enableDexPreVerification ? "Enabled" : "Disabled", deviceId);
+        } catch (MobileHarnessException e) {
+          if (isKomodo()) {
+            testInfo
+                .log()
+                .atInfo()
+                .alsoTo(logger)
+                .log(
+                    "Failed to set dex pre-verification on komodo device %s, ignoring: %s",
+                    deviceId, e.getMessage());
+          } else {
+            throw e;
+          }
+        }
       }
 
       stopUnexpectedProcessOnDevice(testInfo);
@@ -608,5 +622,9 @@ public abstract class AndroidDeviceDelegate {
    * differently for different labs types, for example, Satellite Lab, Local Mode and OSS Lab enable
    * full stack features, and only Core Lab enables part of them.
    */
+  private boolean isKomodo() {
+    return device.getDimension(Dimension.Name.DEVICE).stream().anyMatch(d -> d.contains("komodo"));
+  }
+
   protected abstract boolean ifEnableFullStackFeatures();
 }
