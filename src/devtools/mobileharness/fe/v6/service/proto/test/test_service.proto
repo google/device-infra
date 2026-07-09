@@ -41,6 +41,11 @@ message GetTestRequest {
   // root_test_id set to test_id). This mirrors FE v5's ?sub_test= param.
   // TODO: b/529253317 - Implement sub-test detail support in the backend.
   string sub_test_id = 2;
+
+  // The ID of the parent job. The backend requires both job_id and test_id
+  // to fetch test details. The frontend has this from the navigation context
+  // (the Test Detail page URL includes the job ID).
+  string job_id = 3;
 }
 
 message GetTestResponse {
@@ -55,6 +60,9 @@ message GetTestLogRequest {
 
   // The maximum number of bytes to read.
   int32 length = 3;
+
+  // The ID of the parent job.
+  string job_id = 4;
 }
 
 message GetTestLogResponse {
