@@ -400,6 +400,25 @@ public class CloudOrchestratorClientTest {
   }
 
   @Test
+  public void createCvdWithEnvConfigAndWait_x86Target_setsVhostUserVsock() throws Exception {
+    server.enqueue(new MockResponse().setBody("{\"name\": \"op-123\", \"done\": true}"));
+    server.enqueue(
+        new MockResponse()
+            .setBody("{\"cvds\": [{\"webrtc_device_id\": \"cvd-1\"}]}")
+            .addHeader("Content-Type", "application/json"));
+
+    var cvd =
+        client.createCvdWithEnvConfigAndWait(
+            "host-1", "cvd-1", "branch-1", "aosp_cf_x86_64_only_phone-userdebug");
+
+    assertThat(cvd.webrtcDeviceId).isEqualTo("cvd-1");
+    var req = server.takeRequest();
+    assertThat(req.getMethod()).isEqualTo("POST");
+    String body = req.getBody().readUtf8();
+    assertThat(body).contains("\"vhost_user_vsock\":\"true\"");
+  }
+
+  @Test
   public void delete_retriesAndThrows() throws Exception {
     server.enqueue(new MockResponse().setResponseCode(502));
     server.enqueue(new MockResponse().setResponseCode(502));
@@ -668,6 +687,25 @@ public class CloudOrchestratorClientTest {
     String body = req.getBody().readUtf8();
     assertThat(body).contains("\"host_package\":\"@image_dirs/dir-host\"");
     assertThat(body).contains("\"default_build\":\"@image_dirs/dir-device\"");
+  }
+
+  @Test
+  public void createCvdWithLocalImageAndWait_x86Target_setsVhostUserVsock() throws Exception {
+    server.enqueue(new MockResponse().setBody("{\"name\": \"op-123\", \"done\": true}"));
+    server.enqueue(
+        new MockResponse()
+            .setBody("{\"cvds\": [{\"webrtc_device_id\": \"cvd-1\"}]}")
+            .addHeader("Content-Type", "application/json"));
+
+    var cvd =
+        client.createCvdWithLocalImageAndWait(
+            "host-1", "cvd-1", "dir-host", "dir-device", "aosp_cf_x86_64_only_phone-userdebug");
+
+    assertThat(cvd.webrtcDeviceId).isEqualTo("cvd-1");
+    var req = server.takeRequest();
+    assertThat(req.getMethod()).isEqualTo("POST");
+    String body = req.getBody().readUtf8();
+    assertThat(body).contains("\"vhost_user_vsock\":\"true\"");
   }
 
   @Test

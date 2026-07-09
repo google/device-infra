@@ -417,6 +417,9 @@ public class CloudOrchestratorClient {
     vm.put("memory_mb", 8192);
     vm.put("setupwizard_mode", "OPTIONAL");
     vm.put("cpus", 4);
+    if (isX86Target(target)) {
+      vm.put("vhost_user_vsock", "true");
+    }
     instance.put("vm", vm);
     Map<String, Object> disk = new HashMap<>();
     disk.put("default_build", buildStr);
@@ -451,6 +454,17 @@ public class CloudOrchestratorClient {
   public Cvd createCvdWithLocalImageAndWait(
       String hostId, String cvdId, String hostImageDirId, String deviceImageDirId)
       throws MobileHarnessException, InterruptedException {
+    return createCvdWithLocalImageAndWait(hostId, cvdId, hostImageDirId, deviceImageDirId, null);
+  }
+
+  /** Creates a CVD using local images. */
+  public Cvd createCvdWithLocalImageAndWait(
+      String hostId,
+      String cvdId,
+      String hostImageDirId,
+      String deviceImageDirId,
+      @Nullable String target)
+      throws MobileHarnessException, InterruptedException {
     Map<String, Object> envConfig = new HashMap<>();
     Map<String, Object> common = new HashMap<>();
     common.put("host_package", "@image_dirs/" + hostImageDirId);
@@ -464,6 +478,9 @@ public class CloudOrchestratorClient {
     vm.put("memory_mb", 8192);
     vm.put("setupwizard_mode", "OPTIONAL");
     vm.put("cpus", 4);
+    if (isX86Target(target)) {
+      vm.put("vhost_user_vsock", "true");
+    }
     instance.put("vm", vm);
     Map<String, Object> disk = new HashMap<>();
     disk.put("default_build", "@image_dirs/" + deviceImageDirId);
@@ -798,6 +815,14 @@ public class CloudOrchestratorClient {
     } finally {
       response.disconnect();
     }
+  }
+
+  private static boolean isX86Target(@Nullable String target) {
+    if (target == null) {
+      return false;
+    }
+    String lowercaseTarget = target.toLowerCase();
+    return lowercaseTarget.contains("x86") || lowercaseTarget.contains("i686");
   }
 
   @VisibleForTesting
