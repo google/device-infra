@@ -19,6 +19,7 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:deviceinfra_all_pkg",
+        "//third_party/py/multitest_transport:__subpackages__",
     ],
 )
 
