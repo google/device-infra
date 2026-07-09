@@ -26,6 +26,7 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Multimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
@@ -36,6 +37,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidPro
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.UsbDeviceLocator;
 import com.google.devtools.mobileharness.platform.android.shared.constant.Splitters;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.AndroidEmulatorIds;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.proto.AndroidDeviceSpec.Abi;
 import com.google.wireless.qa.mobileharness.shared.util.LuhnUtil;
 import java.util.HashSet;
@@ -713,6 +715,20 @@ public class AndroidSystemSpecUtil {
       throws MobileHarnessException, InterruptedException {
     return adbUtil.getProperty(serial, AndroidProperty.HARDWARE_TYPE).equals(AUTOMOTIVE_TYPE)
         || getSystemFeatures(serial).contains(FEATURE_AUTOMOTIVE);
+  }
+
+  /**
+   * Checks whether a device is automotive by checking its dimensions.
+   *
+   * @param deviceDimensions the dimensions of the device
+   * @return true if device is automotive, false otherwise
+   */
+  public static boolean isAutomotiveDeviceByCheckingDimensions(
+      Multimap<String, String> deviceDimensions) {
+    return deviceDimensions.get("hardware_type").stream().anyMatch(h -> h.contains("automotive"))
+        || deviceDimensions.get("characteristics").stream().anyMatch(c -> c.contains("automotive"))
+        || deviceDimensions.get(Dimension.Name.FEATURE.lowerCaseName()).stream()
+            .anyMatch(f -> f.contains("automotive"));
   }
 
   /** See {@link #isAndroidEmulator(String)}. */
