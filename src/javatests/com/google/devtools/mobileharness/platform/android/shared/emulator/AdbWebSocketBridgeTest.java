@@ -63,6 +63,11 @@ public class AdbWebSocketBridgeTest {
         public void onMessage(WebSocket webSocket, ByteString bytes) {
           receivedMessages.add(bytes);
         }
+
+        @Override
+        public void onClosing(WebSocket webSocket, int code, String reason) {
+          webSocket.close(1000, "Closing response");
+        }
       };
 
   @Before
