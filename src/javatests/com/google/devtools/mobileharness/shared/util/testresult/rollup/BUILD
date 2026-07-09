@@ -36,6 +36,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/testresult/rollup:test_result",
         "//src/java/com/google/devtools/mobileharness/shared/util/testresult/rollup:test_suite_overview",
         "//src/java/com/google/devtools/mobileharness/shared/util/testresult/rollup:test_suite_overview_converter",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",

@@ -49,7 +49,10 @@ public class TestRetryHandler {
 
   private static final ImmutableSet<String> INHERITED_TEST_PROPERTIES =
       ImmutableSet.of(
-          Ascii.toLowerCase(Test._DRAIN_TIMEOUT_RETRY_ATTEMPTS.name()), PROPERTY_REPEAT_INDEX);
+          Ascii.toLowerCase(Test.SHARD_COUNT.name()),
+          Ascii.toLowerCase(Test.SHARD_INDEX.name()),
+          Ascii.toLowerCase(Test._DRAIN_TIMEOUT_RETRY_ATTEMPTS.name()),
+          PROPERTY_REPEAT_INDEX);
 
   private final DeviceAllocator deviceAllocator;
   private final RetryStrategy defaultRetryStrategy;

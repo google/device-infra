@@ -54,6 +54,7 @@ public final class JobResultUtilTest {
     TestInfo runShard0Test1 =
         mockTestRun(
             "test_shard_0",
+            "0",
             com.google.devtools.mobileharness.api.model.proto.Test.TestResult.FAIL,
             /* flakyAttemptIndex= */ 0,
             /* errorAttemptIndex= */ 0,
@@ -66,6 +67,7 @@ public final class JobResultUtilTest {
     TestInfo runShard0Test2 =
         mockTestRun(
             "test_shard_0",
+            "0",
             com.google.devtools.mobileharness.api.model.proto.Test.TestResult.PASS,
             /* flakyAttemptIndex= */ 1,
             /* errorAttemptIndex= */ 0,
@@ -78,6 +80,7 @@ public final class JobResultUtilTest {
     TestInfo runShard1Test1 =
         mockTestRun(
             "test_shard_1",
+            "1",
             com.google.devtools.mobileharness.api.model.proto.Test.TestResult.PASS,
             /* flakyAttemptIndex= */ 0,
             /* errorAttemptIndex= */ 0,
@@ -126,6 +129,7 @@ public final class JobResultUtilTest {
     TestInfo testA =
         mockTestRun(
             "test_shard_0",
+            "0",
             com.google.devtools.mobileharness.api.model.proto.Test.TestResult.PASS,
             /* flakyAttemptIndex= */ 0,
             /* errorAttemptIndex= */ 0,
@@ -139,6 +143,7 @@ public final class JobResultUtilTest {
     TestInfo testB =
         mockTestRun(
             "test_shard_1",
+            "1",
             com.google.devtools.mobileharness.api.model.proto.Test.TestResult.PASS,
             /* flakyAttemptIndex= */ 0,
             /* errorAttemptIndex= */ 0,
@@ -208,6 +213,7 @@ public final class JobResultUtilTest {
     TestInfo testA =
         mockTestRun(
             "test_shard_0",
+            "0",
             com.google.devtools.mobileharness.api.model.proto.Test.TestResult.FAIL,
             /* flakyAttemptIndex= */ 0,
             /* errorAttemptIndex= */ 0,
@@ -221,6 +227,7 @@ public final class JobResultUtilTest {
     TestInfo testB =
         mockTestRun(
             "test_shard_0",
+            "0",
             com.google.devtools.mobileharness.api.model.proto.Test.TestResult.PASS,
             /* flakyAttemptIndex= */ 1,
             /* errorAttemptIndex= */ 0,
@@ -234,6 +241,7 @@ public final class JobResultUtilTest {
     TestInfo testX =
         mockTestRun(
             "test_shard_1",
+            "1",
             com.google.devtools.mobileharness.api.model.proto.Test.TestResult.ERROR,
             /* flakyAttemptIndex= */ 0,
             /* errorAttemptIndex= */ 0,
@@ -244,6 +252,7 @@ public final class JobResultUtilTest {
     TestInfo testY =
         mockTestRun(
             "test_shard_1",
+            "1",
             com.google.devtools.mobileharness.api.model.proto.Test.TestResult.PASS,
             /* flakyAttemptIndex= */ 0,
             /* errorAttemptIndex= */ 1,
@@ -302,6 +311,7 @@ public final class JobResultUtilTest {
     TestInfo testA =
         mockTestRun(
             "test_shard_0",
+            "0",
             com.google.devtools.mobileharness.api.model.proto.Test.TestResult.FAIL,
             /* flakyAttemptIndex= */ 0,
             /* errorAttemptIndex= */ 0,
@@ -315,6 +325,7 @@ public final class JobResultUtilTest {
     TestInfo testB =
         mockTestRun(
             "test_shard_0",
+            "0",
             com.google.devtools.mobileharness.api.model.proto.Test.TestResult.FAIL,
             /* flakyAttemptIndex= */ 1,
             /* errorAttemptIndex= */ 0,
@@ -328,6 +339,7 @@ public final class JobResultUtilTest {
     TestInfo testC =
         mockTestRun(
             "test_shard_0",
+            "0",
             com.google.devtools.mobileharness.api.model.proto.Test.TestResult.PASS,
             /* flakyAttemptIndex= */ 2,
             /* errorAttemptIndex= */ 0,
@@ -342,6 +354,7 @@ public final class JobResultUtilTest {
     TestInfo testX =
         mockTestRun(
             "test_shard_1",
+            "1",
             com.google.devtools.mobileharness.api.model.proto.Test.TestResult.FAIL,
             /* flakyAttemptIndex= */ 0,
             /* errorAttemptIndex= */ 0,
@@ -355,6 +368,7 @@ public final class JobResultUtilTest {
     TestInfo testY =
         mockTestRun(
             "test_shard_1",
+            "1",
             com.google.devtools.mobileharness.api.model.proto.Test.TestResult.FAIL,
             /* flakyAttemptIndex= */ 1,
             /* errorAttemptIndex= */ 0,
@@ -368,6 +382,7 @@ public final class JobResultUtilTest {
     TestInfo testZ =
         mockTestRun(
             "test_shard_1",
+            "1",
             com.google.devtools.mobileharness.api.model.proto.Test.TestResult.FAIL,
             /* flakyAttemptIndex= */ 2,
             /* errorAttemptIndex= */ 0,
@@ -423,6 +438,7 @@ public final class JobResultUtilTest {
     TestInfo testA =
         mockTestRun(
             "test_shard_0",
+            "0",
             com.google.devtools.mobileharness.api.model.proto.Test.TestResult.FAIL,
             /* flakyAttemptIndex= */ 0,
             /* errorAttemptIndex= */ 0,
@@ -435,6 +451,7 @@ public final class JobResultUtilTest {
     TestInfo testX =
         mockTestRun(
             "test_shard_1",
+            "1",
             com.google.devtools.mobileharness.api.model.proto.Test.TestResult.FAIL,
             /* flakyAttemptIndex= */ 0,
             /* errorAttemptIndex= */ 0,
@@ -489,6 +506,7 @@ public final class JobResultUtilTest {
     TestInfo testA =
         mockTestRun(
             "test_shard_0",
+            "0",
             com.google.devtools.mobileharness.api.model.proto.Test.TestResult.PASS,
             /* flakyAttemptIndex= */ 0,
             /* errorAttemptIndex= */ 0,
@@ -501,6 +519,7 @@ public final class JobResultUtilTest {
     TestInfo testX =
         mockTestRun(
             "test_shard_1",
+            "1",
             com.google.devtools.mobileharness.api.model.proto.Test.TestResult.ERROR,
             /* flakyAttemptIndex= */ 0,
             /* errorAttemptIndex= */ 0,
@@ -536,6 +555,7 @@ public final class JobResultUtilTest {
     TestInfo testA =
         mockTestRun(
             "test_shard_0",
+            "0",
             com.google.devtools.mobileharness.api.model.proto.Test.TestResult.PASS,
             /* flakyAttemptIndex= */ 0,
             /* errorAttemptIndex= */ 0,
@@ -546,6 +566,7 @@ public final class JobResultUtilTest {
     TestInfo testB =
         mockTestRun(
             "test_shard_1",
+            "1",
             com.google.devtools.mobileharness.api.model.proto.Test.TestResult.FAIL,
             /* flakyAttemptIndex= */ 0,
             /* errorAttemptIndex= */ 0,
@@ -582,6 +603,7 @@ public final class JobResultUtilTest {
 
   private TestInfo mockTestRun(
       String shardName,
+      String shardIndex,
       com.google.devtools.mobileharness.api.model.proto.Test.TestResult mockResult,
       int flakyAttemptIndex,
       int errorAttemptIndex,
@@ -596,6 +618,11 @@ public final class JobResultUtilTest {
     Properties properties = new Properties(new Timing());
     properties.add("flaky_attempt_index", String.valueOf(flakyAttemptIndex));
     properties.add("error_attempt_index", String.valueOf(errorAttemptIndex));
+    if (shardIndex != null) {
+      properties.add(
+          com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.SHARD_INDEX,
+          shardIndex);
+    }
     when(testInfo.properties()).thenReturn(properties);
 
     when(testInfo.locator().getName()).thenReturn(shardName);

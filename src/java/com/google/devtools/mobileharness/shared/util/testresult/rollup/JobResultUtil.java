@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.testresult.rollup.Outcome.OutcomeSummary;
 import com.google.protobuf.ExtensionRegistryLite;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.ArrayList;
@@ -65,8 +66,8 @@ public final class JobResultUtil {
     }
 
     ImmutableList.Builder<TestResult> shardResultsOfJobRunBuilder = ImmutableList.builder();
-    for (String name : groupedTestRunsByShard.keySet()) {
-      ImmutableList<TestInfo> attemptsForOneShard = groupedTestRunsByShard.get(name);
+    for (String shardIndex : groupedTestRunsByShard.keySet()) {
+      ImmutableList<TestInfo> attemptsForOneShard = groupedTestRunsByShard.get(shardIndex);
       List<TestResult> rerunShardTestResults = new ArrayList<>();
       for (TestInfo attempt : attemptsForOneShard) {
         rerunShardTestResults.add(loadTestResult(attempt));
@@ -88,17 +89,16 @@ public final class JobResultUtil {
    */
   private static ImmutableListMultimap<String, TestInfo> groupTestRunsByShard(
       List<TestInfo> testInfoList) {
-    // Use test name as key to group tests by shard, i.e., tests with same name are considered for
-    // the same shard. We may need shard index in the future to identify tests for the same shard,
-    // and update TestRetryHandler accordingly.
-    ImmutableListMultimap<String, TestInfo> testNameToTestInfoList =
-        Multimaps.index(testInfoList, t -> t.locator().getName());
+    ImmutableListMultimap<String, TestInfo> shardIndexToTestInfoList =
+        Multimaps.index(
+            testInfoList, t -> t.properties().getOptional(Test.SHARD_INDEX).orElse("0"));
 
     ImmutableListMultimap.Builder<String, TestInfo> testRunsByShard =
         ImmutableListMultimap.builder();
 
-    for (String testName : testNameToTestInfoList.keySet()) {
-      ImmutableList<TestInfo> testRunsForShard = testNameToTestInfoList.get(testName);
+    for (String shardIndex : shardIndexToTestInfoList.keySet()) {
+      ImmutableList<TestInfo> testRunsForShard = shardIndexToTestInfoList.get(shardIndex);
+      logger.atInfo().log("Found %s test runs for shard %s", testRunsForShard.size(), shardIndex);
       boolean hasPassOrFail = testRunsForShard.stream().anyMatch(JobResultUtil::isPassOrFail);
 
       if (hasPassOrFail) {
@@ -115,10 +115,11 @@ public final class JobResultUtil {
         for (ImmutableList<TestInfo> testsFromSameFlakyAttempt :
             flakyAttemptIndexToTestInfoList.values()) {
           findLastPassOrFailRun(testsFromSameFlakyAttempt)
-              .ifPresent(passOrFailTest -> testRunsByShard.put(testName, passOrFailTest));
+              .ifPresent(passOrFailTest -> testRunsByShard.put(shardIndex, passOrFailTest));
         }
       } else {
-        findLastRun(testRunsForShard).ifPresent(lastRun -> testRunsByShard.put(testName, lastRun));
+        findLastRun(testRunsForShard)
+            .ifPresent(lastRun -> testRunsByShard.put(shardIndex, lastRun));
       }
     }
 
