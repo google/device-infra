@@ -22,9 +22,11 @@ import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorS
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.fe.v6.service.device.provider.DeviceOpsStubProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.builder.RemoteControlUrlBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLabServerLifecycleActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLabServerReleaseActionHelper;
@@ -36,6 +38,9 @@ import com.google.devtools.mobileharness.fe.v6.service.host.handlers.Troubleshoo
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.UpdatePassThroughFlagsActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostLatestVersionProvider;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.CommandResult;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDebugInfoRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostDebugInfoResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostHeaderInfoRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.PreflightLabServerReleaseRequest;
@@ -52,11 +57,14 @@ import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
+import com.google.devtools.mobileharness.infra.lab.rpc.stub.DeviceOpsStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabSyncStub;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.protobuf.util.Timestamps;
+import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ;
 import java.time.InstantSource;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
@@ -96,6 +104,8 @@ public final class HostServiceLogicImplTest {
   @Bind @Mock private StopLabServerActionHelper stopLabServerActionHelper;
   @Bind @Mock private UpdatePassThroughFlagsActionHelper updatePassThroughFlagsActionHelper;
   @Bind @Mock private TroubleshootScriptHandler troubleshootScriptHandler;
+  @Bind @Mock private DeviceOpsStubProvider deviceOpsStubProvider;
+  @Mock private DeviceOpsStub deviceOpsStub;
   @Mock private FeatureManager featureManager;
 
   private HostServiceLogicImpl hostServiceLogicImpl;
@@ -108,6 +118,7 @@ public final class HostServiceLogicImplTest {
         .thenReturn(immediateFuture(GetLabInfoResponse.getDefaultInstance()));
     when(hostAuxiliaryInfoProvider.getHostReleaseInfo(anyString(), any()))
         .thenReturn(immediateFuture(Optional.empty()));
+    when(deviceOpsStubProvider.createStub(anyString(), any())).thenReturn(deviceOpsStub);
     hostServiceLogicImpl =
         Guice.createInjector(BoundFieldModule.of(this)).getInstance(HostServiceLogicImpl.class);
   }
@@ -229,6 +240,54 @@ public final class HostServiceLogicImplTest {
         assertThrows(
             ExecutionException.class,
             () -> hostServiceLogicImpl.runTroubleshootScript(request).get());
+    assertThat(e).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void getHostDebugInfo_success() throws Exception {
+    GetHostDebugInfoRequest request =
+        GetHostDebugInfoRequest.newBuilder().setHostName("host").setUniverse("universe").build();
+
+    DeviceOpsServ.GetDeviceDebugInfoResponse labResponse =
+        DeviceOpsServ.GetDeviceDebugInfoResponse.newBuilder()
+            .addDeviceDebugInfo(
+                DeviceOpsServ.CommandExecutionResult.newBuilder()
+                    .setCommand("lsusb")
+                    .setStdout("stdout")
+                    .setStderr("stderr")
+                    .build())
+            .build();
+
+    when(deviceOpsStub.getDeviceDebugInfoAsync(any(), eq(true)))
+        .thenReturn(immediateFuture(labResponse));
+    when(instantSource.millis()).thenReturn(123456L);
+
+    GetHostDebugInfoResponse actualResponse = hostServiceLogicImpl.getHostDebugInfo(request).get();
+
+    GetHostDebugInfoResponse expectedResponse =
+        GetHostDebugInfoResponse.newBuilder()
+            .addResults(
+                CommandResult.newBuilder()
+                    .setCommand("lsusb")
+                    .setStdout("stdout")
+                    .setStderr("stderr")
+                    .build())
+            .setTimestamp(Timestamps.fromMillis(123456L))
+            .build();
+
+    assertThat(actualResponse).isEqualTo(expectedResponse);
+  }
+
+  @Test
+  public void getHostDebugInfo_invalidUniverse_fails() throws Exception {
+    GetHostDebugInfoRequest request =
+        GetHostDebugInfoRequest.newBuilder().setUniverse("invalid").build();
+
+    when(universeFactory.create("invalid")).thenThrow(new IllegalArgumentException("invalid"));
+
+    ExecutionException e =
+        assertThrows(
+            ExecutionException.class, () -> hostServiceLogicImpl.getHostDebugInfo(request).get());
     assertThat(e).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
   }
 }

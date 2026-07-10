@@ -22,6 +22,7 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.CheckRemoteControlEligibilityHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.DecommissionMissingDevicesHandler;
+import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostDebugInfoHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostDeviceSummariesHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostHeaderInfoHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.GetHostOverviewHandler;
@@ -94,6 +95,7 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   private final StopLabServerHandler stopLabServerHandler;
   private final UpdatePassThroughFlagsHandler updatePassThroughFlagsHandler;
   private final TroubleshootScriptHandler troubleshootScriptHandler;
+  private final GetHostDebugInfoHandler getHostDebugInfoHandler;
   private final UniverseFactory universeFactory;
 
   @Inject
@@ -112,6 +114,7 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
       StopLabServerHandler stopLabServerHandler,
       UpdatePassThroughFlagsHandler updatePassThroughFlagsHandler,
       TroubleshootScriptHandler troubleshootScriptHandler,
+      GetHostDebugInfoHandler getHostDebugInfoHandler,
       UniverseFactory universeFactory) {
     this.getHostOverviewHandler = getHostOverviewHandler;
     this.getHostDeviceSummariesHandler = getHostDeviceSummariesHandler;
@@ -127,6 +130,7 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
     this.stopLabServerHandler = stopLabServerHandler;
     this.updatePassThroughFlagsHandler = updatePassThroughFlagsHandler;
     this.troubleshootScriptHandler = troubleshootScriptHandler;
+    this.getHostDebugInfoHandler = getHostDebugInfoHandler;
     this.universeFactory = universeFactory;
   }
 
@@ -167,11 +171,13 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
   @Override
   public ListenableFuture<GetHostDebugInfoResponse> getHostDebugInfo(
       GetHostDebugInfoRequest request) {
-    // TODO: Use the universe parameter.
-    @SuppressWarnings("unused")
-    String universe = request.getUniverse();
-    // TODO: Implement this method.
-    return immediateFuture(GetHostDebugInfoResponse.getDefaultInstance());
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return getHostDebugInfoHandler.getHostDebugInfo(request, universe);
   }
 
   @Override

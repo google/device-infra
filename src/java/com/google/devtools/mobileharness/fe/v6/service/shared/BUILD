@@ -46,7 +46,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:device_model_java_proto",
         "@maven//:com_google_guava_guava",
-        "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
         "@protobuf//:protobuf_java",
     ],

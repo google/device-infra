@@ -57,5 +57,6 @@ java_library(
         "@grpc-java//core",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
+        "@protobuf//:protobuf_java_util",
     ],
 )
