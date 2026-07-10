@@ -35,22 +35,6 @@ message TestDevice {
   string type = 2;
 }
 
-// One non-fatal warning surfaced during execution (does NOT fail the test).
-message TestWarning {
-  // Short summary shown when collapsed (e.g. the first line).
-  string message = 1;
-  // Full detail shown when expanded.
-  string trace = 2;
-}
-
-// One error that contributed to a non-passing test result.
-message TestError {
-  // Short summary shown when collapsed (e.g. the first line).
-  string message = 1;
-  // Full detail, including the complete stack trace.
-  string trace = 2;
-}
-
 // A lightweight summary of a test. Used as a list row in two contexts:
 //  - TestDetail.sub_tests: nested sub-tests within a parent test.
 //  - JobDetail.tests (in job_resources.proto): the child tests of a job.
@@ -70,14 +54,6 @@ message TestSummary {
 
 message TestDevices {
   repeated TestDevice device = 1;
-}
-
-message TestWarnings {
-  repeated TestWarning warning = 1;
-}
-
-message TestErrors {
-  repeated TestError error = 1;
 }
 
 message TestSummaries {
@@ -107,28 +83,10 @@ message HostInfo {
   string universe = 3;
 }
 
-// Execution details mapped to the "Execution Details" UI card.
-message ExecutionDetails {
-  string user = 1;
-  string actual_user = 2;
-  string cloud_log_link = 3;
-  google.protobuf.Timestamp create_time = 4;
-  google.protobuf.Timestamp start_time = 5;
-  google.protobuf.Timestamp end_time = 6;
-  google.protobuf.Timestamp last_update_time = 7;
-}
-
 // Configuration details mapped to the configuration section.
 message TestConfig {
   map<string, string> params = 1;
   map<string, string> dimensions = 2;
-}
-
-// Troubleshooting details (warnings & errors) mapped to the troubleshooting
-// card.
-message Troubleshooting {
-  TestWarnings warnings = 1;
-  TestErrors result_cause = 2;
 }
 
 // Nested sub-tests list details.
@@ -156,8 +114,9 @@ message TestDetail {
   TestDevices devices = 6;
   HostInfo host = 7;
 
-  // Execution details card.
-  ExecutionDetails execution_details = 8;
+  // Execution details card (shared layout).
+  .devtools.mobileharness.fe.v6.service.proto.common.ExecutionDetails
+      execution_details = 8;
 
   // Configuration.
   TestConfig config = 9;
@@ -165,8 +124,9 @@ message TestDetail {
   // Properties.
   map<string, string> properties = 10;
 
-  // Troubleshooting card (warnings & errors).
-  Troubleshooting troubleshooting = 11;
+  // Troubleshooting card (warnings & errors) (shared layout).
+  .devtools.mobileharness.fe.v6.service.proto.common.Troubleshooting
+      troubleshooting = 11;
 
   // Sub / nested tests info.
   SubTestsInfo sub_tests_info = 12;

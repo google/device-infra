@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package devtools.mobileharness.fe.v6.service.proto.common;
 
+import "google/protobuf/timestamp.proto";
+
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.common";
 option java_multiple_files = true;
 option java_outer_classname = "CommonResourcesProto";
@@ -130,5 +132,44 @@ message ActionButtonState {
 
 // Detailed timing breakdown for Gantt chart / timeline rendering.
 message TimeBreakdown {
-  // TODO: Define the fields when implementing the timeline breakdown feature.
+  // TODO: Define the fields when implementing the timeline
+  // breakdown feature.
+}
+
+// Representing a single error with its trace.
+message ErrorInfo {
+  string message = 1;
+  string trace = 2;
+}
+
+// Representing a single warning trace log.
+message WarningInfo {
+  string message = 1;
+  string trace = 2;
+}
+
+message Errors {
+  repeated ErrorInfo error = 1;
+}
+
+message Warnings {
+  repeated WarningInfo warning = 1;
+}
+
+// Troubleshooting details (warnings & errors).
+message Troubleshooting {
+  Warnings warnings = 1;
+  Errors result_cause = 2;
+}
+
+// Shared execution details.
+message ExecutionDetails {
+  string user = 1;
+  string actual_user = 2;
+  string cloud_log_link = 3;
+
+  google.protobuf.Timestamp create_time = 4;
+  google.protobuf.Timestamp start_time = 5;
+  google.protobuf.Timestamp end_time = 6;
+  google.protobuf.Timestamp update_time = 7;
 }

@@ -24,6 +24,9 @@ package(
 proto_library(
     name = "common_resources_proto",
     srcs = ["common_resources.proto"],
+    deps = [
+        "@protobuf//:timestamp_proto",
+    ],
 )
 
 java_proto_library(

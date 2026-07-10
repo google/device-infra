@@ -1,0 +1,62 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package devtools.mobileharness.fe.v6.service.proto.job;
+
+import "src/devtools/mobileharness/fe/v6/service/proto/job/job_resources.proto";
+
+option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.job";
+option java_multiple_files = true;
+option java_outer_classname = "JobServiceProto";
+
+service JobService {
+  // Retrieves the detailed Job overview by its ID.
+  rpc GetJob(GetJobRequest) returns (GetJobResponse) {}
+
+  // Streams or paginates log chunks of a running/completed Job.
+  rpc GetJobLog(GetJobLogRequest) returns (GetJobLogResponse) {}
+}
+
+message GetJobRequest {
+  string job_id = 1;
+}
+
+message GetJobResponse {
+  JobDetail job = 1;
+}
+
+message GetJobLogRequest {
+  string job_id = 1;
+
+  // The starting byte offset to read from.
+  int64 offset = 2;
+
+  // The maximum number of bytes to read.
+  int32 length = 3;
+}
+
+message GetJobLogResponse {
+  // The retrieved log content chunk.
+  string log_content = 1;
+
+  // The offset to be used for the next read request.
+  int64 next_offset = 2;
+
+  // Whether there are more log contents to be read.
+  bool has_more = 3;
+}
