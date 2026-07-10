@@ -28,8 +28,6 @@ import java.util.Optional;
 public class FlakyTestRetryStrategy implements RetryStrategy {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  public static final String PARAM_FLAKY_TEST_ATTEMPTS = "flaky_test_attempts";
-
   static final String TEST_PROP_FLAKY_ATTEMPT_INDEX =
       FlakyTestRetryConstants.TEST_PROP_FLAKY_ATTEMPT_INDEX;
 
@@ -50,10 +48,14 @@ public class FlakyTestRetryStrategy implements RetryStrategy {
 
     // Check if flaky_test_attempts is set and valid.
     int flakyTestAttempts =
-        currentTestInfo.jobInfo().params().getInt(PARAM_FLAKY_TEST_ATTEMPTS, -1);
+        currentTestInfo
+            .jobInfo()
+            .params()
+            .getInt(FlakyTestRetryConstants.PARAM_FLAKY_TEST_ATTEMPTS, -1);
     if (flakyTestAttempts <= 0) {
       logger.atInfo().log(
-          "flaky_test_attempts is not set or not positive, skipping flaky test retry strategy.");
+          "%s is not set or not positive, skipping flaky test retry strategy.",
+          FlakyTestRetryConstants.PARAM_FLAKY_TEST_ATTEMPTS);
       return NO_RETRY;
     }
 

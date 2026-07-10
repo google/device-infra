@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.DefaultRetryStrategy;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.FlakyTestRetryConstants;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.FlakyTestRetryStrategy;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.RetryStrategy;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.RetryStrategy.RetryInfo;
@@ -253,16 +254,17 @@ public class TestRetryHandler {
   }
 
   private RetryStrategy getRetryStrategy(JobInfo jobInfo) {
-    int flakyTestAttempts = jobInfo.params().getInt("flaky_test_attempts", -1);
+    int flakyTestAttempts =
+        jobInfo.params().getInt(FlakyTestRetryConstants.PARAM_FLAKY_TEST_ATTEMPTS, -1);
     if (flakyTestAttempts >= 1) {
       jobInfo
           .log()
           .atInfo()
           .alsoTo(logger)
           .log(
-              "flaky_test_attempt is set to %d. Using FlakyTestRetryStrategy. All"
-                  + " retry_level/test_attempts args will be ignored.",
-              flakyTestAttempts);
+              "%s is set to %d. Using FlakyTestRetryStrategy. All retry_level/test_attempts args"
+                  + " will be ignored.",
+              FlakyTestRetryConstants.PARAM_FLAKY_TEST_ATTEMPTS, flakyTestAttempts);
       return flakyTestRetryStrategy;
     }
     jobInfo

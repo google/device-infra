@@ -43,6 +43,7 @@ java_library(
         "FlakyTestRetryConstants.java",
     ],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/plugin:__pkg__",
         "//src/java/com/google/devtools/mobileharness/shared/util/testresult:__subpackages__",
     ],
 )

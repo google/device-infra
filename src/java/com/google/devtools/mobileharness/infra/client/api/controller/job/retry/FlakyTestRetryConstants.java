@@ -21,5 +21,7 @@ public final class FlakyTestRetryConstants {
   public static final String TEST_PROP_FLAKY_ATTEMPT_INDEX = "flaky_attempt_index";
   public static final String TEST_PROP_ERROR_ATTEMPT_INDEX = "error_attempt_index";
 
+  public static final String PARAM_FLAKY_TEST_ATTEMPTS = "flaky_test_attempts";
+
   private FlakyTestRetryConstants() {}
 }
