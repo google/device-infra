@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:defs.bzl", "java_import", "java_library")
 
 package(default_applicable_licenses = ["//:license"])
 
@@ -122,4 +122,54 @@ java_library(
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
+)
+
+# DDM utility that encapsulates DDMLib usage for capturing memory heap info.
+# Depends on a customized, shaded ddmlib_jarjared target to avoid classpath collision.
+java_library(
+    name = "ddm_util",
+    srcs = ["DdmUtil.java"],
+    visibility = ["//:deviceinfra_all_pkg"],
+    deps = [
+        ":ddmlib_jarjared",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+# Imports the jarjared DDMLib jar into the build graph so ddm_util can depend on it natively.
+java_import(
+    name = "ddmlib_jarjared",
+    jars = [":ddmlib_jarjar"],
+    tags = [
+    ],
+    visibility = ["//src/javatests/com/google/wireless/qa/mobileharness/shared/android:__pkg__"],
+)
+
+# Packages raw DDMLib into an executable deploy jar so it can be shaded via the jarjar tool.
+java_binary(
+    name = "ddmlib_pre_jarjar",
+    main_class = "none",
+    visibility = ["//visibility:private"],
+    runtime_deps = [
+        "@maven//:com_android_tools_common",
+        "@maven//:com_android_tools_ddms_ddmlib",
+    ],
+)
+
+# Runs the jarjar tool on the packaged DDMLib to produce the shaded jar.
+genrule(
+    name = "ddmlib_jarjar",
+    srcs = [
+        ":ddmlib_pre_jarjar_deploy.jar",
+        "ddmlib_jarjar_config.txt",
+    ],
+    outs = ["ddmlib_jarjar.jar"],
+    cmd = "$(location //:jarjar_bin) process $(location ddmlib_jarjar_config.txt) $(location :ddmlib_pre_jarjar_deploy.jar) $@",
+    tools = ["//:jarjar_bin"],
 )

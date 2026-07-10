@@ -25,16 +25,23 @@ java_library(
     name = "android",
     srcs = glob(["*.java"]),
     deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:aapt",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/android:ddm_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/android:ddmlib_jarjared",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
 )
 
 junit_test_suites(
     name = "gen_tests",
     sizes = [
+        "medium",
         "small",
     ],
     deps = [":android"],
