@@ -552,6 +552,12 @@ describe('HostWizard Component', () => {
     );
 
     comp.currentStep.set('review-and-submit');
+    comp.hostConfig.set({
+      ...comp.hostConfig(),
+      permissions: {
+        hostAdmins: ['admin'],
+      },
+    });
     comp.submit();
 
     expect(dialogSpy).toHaveBeenCalled();
@@ -570,5 +576,76 @@ describe('HostWizard Component', () => {
     const comp = dialogOpener.componentInstance.dialogRef.componentInstance;
     comp.onCurrentStepChange('device-config-mode');
     expect(comp.currentStep()).toBe('device-config-mode');
+  });
+
+  it('should return to host-permissions step when canceling empty owner warning', async () => {
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostWizard, {
+        data: {hostName: 'test-host', source: 'new'},
+      }),
+    ) as ComponentFixture<MatTestDialogOpener<HostWizard>>;
+    dialogOpener.detectChanges();
+    await dialogOpener.whenStable();
+
+    const comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    const dialog = TestBed.inject(MatDialog);
+    const confirmDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    confirmDialogRefSpy.afterClosed.and.returnValue(of('secondary')); // clicks "Go Back"
+    const dialogSpy = spyOn(dialog, 'open').and.returnValue(
+      confirmDialogRefSpy,
+    );
+
+    comp.currentStep.set('review-and-submit');
+    comp.hostConfig.set({
+      ...comp.hostConfig(),
+      permissions: {
+        hostAdmins: [],
+      },
+    });
+    comp.submit();
+
+    expect(dialogSpy).toHaveBeenCalled();
+    expect(comp.currentStep()).toBe('host-permissions');
+  });
+
+  it('should retry submit with override self lockout set when empty owner warning is confirmed', async () => {
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostWizard, {
+        data: {hostName: 'test-host', source: 'new'},
+      }),
+    ) as ComponentFixture<MatTestDialogOpener<HostWizard>>;
+    dialogOpener.detectChanges();
+    await dialogOpener.whenStable();
+
+    const comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    const configService = TestBed.inject(CONFIG_SERVICE);
+    const updateSpy = spyOn(configService, 'updateHostConfig').and.returnValue(
+      of({success: true, uiStatus: {}}),
+    );
+
+    const dialog = TestBed.inject(MatDialog);
+    const confirmDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    confirmDialogRefSpy.afterClosed.and.returnValue(of('primary')); // Proceed anyway
+    const dialogSpy = spyOn(dialog, 'open').and.returnValue(
+      confirmDialogRefSpy,
+    );
+
+    comp.currentStep.set('review-and-submit');
+    comp.hostConfig.set({
+      ...comp.hostConfig(),
+      permissions: {
+        hostAdmins: [],
+      },
+    });
+    comp.submit();
+
+    expect(dialogSpy).toHaveBeenCalledTimes(2);
+    expect(updateSpy).toHaveBeenCalledTimes(1);
+    const callArgs = updateSpy.calls.first().args[0];
+    expect(callArgs.options?.overrideSelfLockout).toBeTrue();
   });
 });

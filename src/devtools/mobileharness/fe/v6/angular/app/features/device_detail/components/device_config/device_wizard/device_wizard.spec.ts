@@ -269,6 +269,7 @@ describe('Device Wizard Component', () => {
           deviceId: 'test-id',
           source: 'copy',
           config: {
+            permissions: {owners: ['owner1']},
             wifi: {type: 'none', ssid: 'dummy'},
           },
         },
@@ -377,6 +378,7 @@ describe('Device Wizard Component', () => {
     );
 
     component.currentStep.set('review-and-submit');
+    component.config.permissions = {owners: ['user1'], executors: []};
     component.submit();
 
     expect(dialogSpy).toHaveBeenCalled();
@@ -421,6 +423,7 @@ describe('Device Wizard Component', () => {
     confirmDialogRefSpy.afterClosed.and.returnValue(of('primary')); // Proceed anyway
     spyOn(dialog, 'open').and.returnValue(confirmDialogRefSpy);
 
+    component.config.permissions = {owners: ['user1'], executors: []};
     component.submit();
 
     expect(updateSpy).toHaveBeenCalledTimes(2);
@@ -428,5 +431,71 @@ describe('Device Wizard Component', () => {
     const secondCallArgs = updateSpy.calls.mostRecent().args[0];
     expect(firstCallArgs.options?.overrideSelfLockout).toBeFalse();
     expect(secondCallArgs.options?.overrideSelfLockout).toBeTrue();
+  });
+
+  it('should return to permissions step when canceling empty owner warning', async () => {
+    const fixture = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(DeviceWizard, {
+        data: {
+          deviceId: 'test-id',
+          source: 'new',
+        },
+      }),
+    );
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const component = fixture.componentInstance.dialogRef.componentInstance;
+    const confirmDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    confirmDialogRefSpy.afterClosed.and.returnValue(of('secondary')); // clicks "Go Back"
+    const dialogSpy = spyOn(MatDialog.prototype, 'open').and.returnValue(
+      confirmDialogRefSpy,
+    );
+
+    component.currentStep.set('review-and-submit');
+    component.config.permissions = {owners: [], executors: []};
+    component.submit();
+
+    expect(dialogSpy).toHaveBeenCalled();
+    expect(component.currentStep()).toBe('permissions');
+  });
+
+  it('should retry submit with override self lockout set when empty owner warning is confirmed', async () => {
+    const fixture = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(DeviceWizard, {
+        data: {
+          deviceId: 'test-id',
+          source: 'new',
+        },
+      }),
+    );
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const component = fixture.componentInstance.dialogRef.componentInstance;
+    const configService = TestBed.inject(CONFIG_SERVICE);
+    const updateSpy = spyOn(
+      configService,
+      'updateDeviceConfig',
+    ).and.returnValue(of({success: true, deviceConfig: {}, uiStatus: {}}));
+
+    const dialog = TestBed.inject(MatDialog);
+    const confirmDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    confirmDialogRefSpy.afterClosed.and.returnValue(of('primary')); // Proceed anyway
+    const dialogSpy = spyOn(dialog, 'open').and.returnValue(
+      confirmDialogRefSpy,
+    );
+
+    component.config.permissions = {owners: [], executors: []};
+    component.submit();
+
+    expect(dialogSpy).toHaveBeenCalledTimes(2);
+    expect(updateSpy).toHaveBeenCalledTimes(1);
+    const callArgs = updateSpy.calls.first().args[0];
+    expect(callArgs.options?.overrideSelfLockout).toBeTrue();
   });
 });

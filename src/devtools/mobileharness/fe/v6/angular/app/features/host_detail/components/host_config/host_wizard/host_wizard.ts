@@ -75,7 +75,7 @@ export class HostWizard implements OnInit {
       this.currentStep.set('host-permissions');
     },
     onSubmitOverride: () => {
-      this.submit(true);
+      this.submit(true, true);
     },
   });
 
@@ -302,14 +302,25 @@ export class HostWizard implements OnInit {
     this.dataSource = dataSource;
   }
 
-  submit(overrideSelfLockout = false) {
+  submit(overrideSelfLockout = false, bypassOwnerCheck = false) {
+    const hostAdmins = this.hostConfig().permissions?.hostAdmins || [];
+    if (!bypassOwnerCheck && hostAdmins.length === 0) {
+      this.dialogActions.emptyOwnerWarning('host', () => {
+        this.submit(
+          /* overrideSelfLockout= */ true,
+          /* bypassOwnerCheck= */ true,
+        );
+      });
+      return;
+    }
+
     const wifi = this.hostConfig().deviceConfig?.wifi;
     const finalWifi = !wifi || wifi.type === 'none' ? undefined : wifi;
     const requestConfig: HostConfig = {
       ...this.hostConfig(),
       deviceConfig: {
         permissions: {
-          owners: this.hostConfig().permissions.hostAdmins,
+          owners: hostAdmins,
           executors:
             this.hostConfig().deviceConfig?.permissions?.executors || [],
         },

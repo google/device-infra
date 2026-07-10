@@ -97,9 +97,43 @@ export function useConfigDialogActions<T>(
     });
   };
 
+  /** Handles empty owner warning by showing a confirmation dialog. */
+  const emptyOwnerWarning = (
+    configType: 'device' | 'host',
+    onConfirm: () => void,
+    onCancel?: () => void,
+  ) => {
+    const dialogData = {
+      title: 'Security Warning',
+      content:
+        configType === 'device'
+          ? 'No owners are set for this device configuration. This device will be public, allowing anyone to view and edit it. Are you sure you want to proceed?'
+          : 'No host admins are set for this host configuration. This host will be public, allowing anyone to view and edit it. Are you sure you want to proceed?',
+      type: 'warning',
+      primaryButtonLabel: 'Proceed anyway',
+      secondaryButtonLabel: 'Go back',
+    };
+    dialog
+      .open(ConfirmDialog, {
+        data: dialogData,
+        disableClose: true,
+      })
+      .afterClosed()
+      .subscribe((result) => {
+        if (result === 'secondary') {
+          (onCancel || options.onCancelSelfLockout)();
+          return;
+        }
+        if (result === 'primary') {
+          onConfirm();
+        }
+      });
+  };
+
   return {
     success,
     error,
     selfLockout,
+    emptyOwnerWarning,
   };
 }

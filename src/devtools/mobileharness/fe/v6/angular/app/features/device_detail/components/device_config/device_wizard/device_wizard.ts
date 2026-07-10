@@ -87,7 +87,7 @@ export class DeviceWizard implements OnInit {
     },
     onSubmitOverride: () => {
       // If user proceeds anyway, force-save with selfLockout override enabled.
-      this.submit(true);
+      this.submit(true, true);
     },
   });
   readonly isGoogleInternal = this.environment.isGoogleInternal();
@@ -241,8 +241,18 @@ export class DeviceWizard implements OnInit {
     }
   }
 
-  // used for apply changes button
-  submit(overrideSelfLockout = false) {
+  submit(overrideSelfLockout = false, bypassOwnerCheck = false) {
+    const owners = this.config.permissions?.owners || [];
+    if (!bypassOwnerCheck && owners.length === 0) {
+      this.dialogActions.emptyOwnerWarning('device', () => {
+        this.submit(
+          /* overrideSelfLockout= */ true,
+          /* bypassOwnerCheck= */ true,
+        );
+      });
+      return;
+    }
+
     if (this.data.source === 'copy') {
       this.verifying.set(true);
     } else {

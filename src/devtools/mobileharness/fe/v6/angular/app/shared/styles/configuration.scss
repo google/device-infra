@@ -1,4 +1,5 @@
 @use '@angular/material' as mat;
+@use 'common';
 
 $labconsole-font: Roboto, sans-serif;
 
@@ -183,6 +184,7 @@ h1, h2, h3, h4, h5, h6, p {
 .config-content {
   padding: 1.5rem;
   overflow-y: auto;
+  @include common.shared-scrollbar-style();
 
   .empty-config-title {
     font-size: 0.875rem;
@@ -343,6 +345,7 @@ h1, h2, h3, h4, h5, h6, p {
   flex-grow: 1;
   min-height: 0;
   overflow-y: auto;
+  @include common.shared-scrollbar-style();
   padding: 1.5rem;
 }
 
@@ -350,6 +353,7 @@ h1, h2, h3, h4, h5, h6, p {
 .config-wizard-step-content {
   padding: 1.5rem;
   overflow-y: auto;
+  @include common.shared-scrollbar-style();
   flex-grow: 1;
   min-height: 0px;
   max-height: calc(90vh - 99px - 85px - 56px);
