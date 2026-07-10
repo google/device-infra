@@ -25,6 +25,8 @@ import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServicePr
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingDevicesRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingDevicesResponse;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingHostRequest;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingHostResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignOutDeviceRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignOutDeviceResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest;
@@ -94,6 +96,22 @@ public class LabSyncGrpcStub implements LabSyncStub {
           "useClientRpcAuthority is not supported in gRPC stub");
     }
     return removeMissingDevices(request);
+  }
+
+  @Override
+  public ListenableFuture<RemoveMissingHostResponse> removeMissingHost(
+      RemoveMissingHostRequest request) {
+    return asyncStub.removeMissingHost(request);
+  }
+
+  @Override
+  public ListenableFuture<RemoveMissingHostResponse> removeMissingHost(
+      RemoveMissingHostRequest request, boolean useClientRpcAuthority) {
+    if (useClientRpcAuthority) {
+      throw new UnsupportedOperationException(
+          "useClientRpcAuthority is not supported in gRPC stub");
+    }
+    return removeMissingHost(request);
   }
 
   @Override
