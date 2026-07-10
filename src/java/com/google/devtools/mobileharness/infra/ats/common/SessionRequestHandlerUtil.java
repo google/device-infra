@@ -367,21 +367,26 @@ public class SessionRequestHandlerUtil {
     int attempt = 0;
 
     while (!missingSerials.isEmpty() && attempt < GET_DEVICE_FOR_ATS_SERVER_MAX_RETRY_ATTEMPTS) {
-      ImmutableSet<String> currentDeviceIds =
+      ImmutableSet<String> onlineDeviceIds =
           atsMasterUtil.queryAndroidDevicesFromMaster().stream()
+              .filter(
+                  deviceInfo ->
+                      Ascii.equalsIgnoreCase(deviceInfo.getStatus(), DeviceStatus.BUSY.name())
+                          || Ascii.equalsIgnoreCase(
+                              deviceInfo.getStatus(), DeviceStatus.IDLE.name()))
               .map(
                   com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo
                       ::getId)
               .collect(toImmutableSet());
       missingSerials.clear();
       missingSerials.addAll(requestedSerials);
-      missingSerials.removeAll(currentDeviceIds);
+      missingSerials.removeAll(onlineDeviceIds);
 
       if (!missingSerials.isEmpty()) {
         attempt++;
         if (attempt < GET_DEVICE_FOR_ATS_SERVER_MAX_RETRY_ATTEMPTS) {
           logger.atWarning().log(
-              "Devices %s not found, retry attempt %d/%d in %s...",
+              "Devices %s not found or not ready, retry attempt %d/%d in %s...",
               missingSerials,
               attempt,
               GET_DEVICE_FOR_ATS_SERVER_MAX_RETRY_ATTEMPTS,
@@ -393,7 +398,7 @@ public class SessionRequestHandlerUtil {
 
     if (!missingSerials.isEmpty()) {
       logger.atWarning().log(
-          "Devices %s are still missing after %d attempts.",
+          "Devices %s are still missing or not ready after %d attempts.",
           missingSerials, GET_DEVICE_FOR_ATS_SERVER_MAX_RETRY_ATTEMPTS);
     }
   }

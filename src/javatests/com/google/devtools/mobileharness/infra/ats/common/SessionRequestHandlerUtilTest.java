@@ -1797,4 +1797,91 @@ public final class SessionRequestHandlerUtilTest {
     // waitForRequestedDevicesToBeReady and 1 time in getDeviceInfoFromMaster.
     verify(atsMasterUtil, times(4)).queryAndroidDevicesFromMaster();
   }
+
+  @Test
+  public void getDeviceInfo_atsServerRequest_deviceDying_waitForDevices() throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .setIsAtsServerRequest(true)
+                .addAllDeviceSerials(ImmutableList.of("device_id_1")));
+
+    when(atsMasterUtil.queryAndroidDevicesFromMaster())
+        .thenReturn(
+            ImmutableList.of(
+                DeviceInfo.newBuilder()
+                    .setId("device_id_1")
+                    .addDimension(Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("DYING")
+                    .build())) // First call, device is DYING
+        .thenReturn(
+            ImmutableList.of(
+                DeviceInfo.newBuilder()
+                    .setId("device_id_1")
+                    .addDimension(Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("DYING")
+                    .build())) // Second call, device is still DYING
+        .thenReturn(
+            ImmutableList.of(
+                DeviceInfo.newBuilder()
+                    .setId("device_id_1")
+                    .addDimension(Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("IDLE")
+                    .build())); // Third call, device is IDLE
+
+    var unused = sessionRequestHandlerUtil.getDeviceInfo(sessionRequestInfo);
+
+    verify(sleeper, times(2)).sleep(Duration.ofSeconds(30));
+    verify(atsMasterUtil, times(4)).queryAndroidDevicesFromMaster();
+  }
+
+  @Test
+  public void
+      getSessionSubDeviceSpecList_atsServerRequestWithDeviceSerials_deviceDying_retryAndSucceedsOnThirdAttempt()
+          throws Exception {
+    when(atsMasterUtil.queryAndroidDevicesFromMaster())
+        .thenReturn(
+            ImmutableList.of(
+                DeviceInfo.newBuilder()
+                    .setId("device_id_1")
+                    .addDimension(Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("DYING")
+                    .build())) // First call, device is DYING
+        .thenReturn(
+            ImmutableList.of(
+                DeviceInfo.newBuilder()
+                    .setId("device_id_1")
+                    .addDimension(Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("DYING")
+                    .build())) // Second call, device is still DYING
+        .thenReturn(
+            ImmutableList.of(
+                DeviceInfo.newBuilder()
+                    .setId("device_id_1")
+                    .addDimension(Dimension.newBuilder().setName("uuid").setValue("device_id_1"))
+                    .addType("AndroidOnlineDevice")
+                    .setStatus("IDLE")
+                    .build())); // Third call, device is IDLE
+
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .setIsAtsServerRequest(true)
+                .addAllDeviceSerials(ImmutableList.of("device_id_1")));
+
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo,
+            !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo));
+
+    assertThat(subDeviceSpecs).hasSize(1);
+    assertThat(subDeviceSpecs.get(0).getDimensions().getContentMap())
+        .containsEntry("uuid", "device_id_1");
+    verify(sleeper, times(2)).sleep(Duration.ofSeconds(30));
+  }
 }
