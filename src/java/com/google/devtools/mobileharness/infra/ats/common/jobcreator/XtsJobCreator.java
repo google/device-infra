@@ -561,11 +561,13 @@ public abstract class XtsJobCreator {
       }
     }
 
+    boolean isModuleSharding =
+        SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo);
     boolean hasOnlyMoblyJobs = hasNonTradefedJobs && !hasTradefedJobs;
 
     // We'll create a setup job to run precondition decorators (Tradefed's target preparers
-    // equivalents) when the session contains only Mobly modules.
-    if (hasOnlyMoblyJobs) {
+    // equivalents) when the session has module sharding enabled or contains only Mobly modules.
+    if (isModuleSharding || hasOnlyMoblyJobs) {
       ImmutableList<PreconditionDecorator> preconditionDecorators =
           parsePreconditionDecorators(sessionRequestInfo);
       if (!preconditionDecorators.isEmpty()) {
@@ -625,6 +627,8 @@ public abstract class XtsJobCreator {
             /* nonstandardFlags= */ ImmutableList.of(),
             sessionRequestHandlerUtil.createJobGenDir(name).toString(),
             sessionRequestHandlerUtil.createJobTmpDir(name).toString());
+
+    jobInfo.properties().add("step_skippable_lifecycle_decorator_execution_mode", "SETUP_ONLY");
 
     jobInfo
         .subDeviceSpecs()
