@@ -74,13 +74,13 @@ public final class LocalFileStorageClient implements StorageClient {
   @Override
   public void upsertDeviceConfig(DeviceConfig deviceConfig) throws MobileHarnessException {
     String path = getDeviceConfigPath(deviceConfig.getUuid());
-    localFileUtil.writeToFile(path, deviceConfig.toString());
+    localFileUtil.writeToFile(path, TextFormat.printer().printToString(deviceConfig));
   }
 
   @Override
   public void upsertLabConfig(LabConfig labConfig) throws MobileHarnessException {
     String path = getLabConfigPath(labConfig.getHostName());
-    localFileUtil.writeToFile(path, labConfig.toString());
+    localFileUtil.writeToFile(path, TextFormat.printer().printToString(labConfig));
   }
 
   @Override
