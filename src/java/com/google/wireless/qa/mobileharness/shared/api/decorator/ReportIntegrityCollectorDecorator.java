@@ -24,7 +24,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidRemoteProvisioningUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.AbstractLifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.Base64;
@@ -34,7 +34,7 @@ import javax.inject.Inject;
 
 /** A decorator that collects data from devices to validate report integrity. */
 @DecoratorAnnotation(help = "Collects data from devices to validate report integrity.")
-public class ReportIntegrityCollectorDecorator extends AbstractLifecycleDecorator {
+public class ReportIntegrityCollectorDecorator extends LifecycleDecorator {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
   private static final String VB_META_DIGEST = "ro.boot.vbmeta.digest";

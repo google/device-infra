@@ -26,10 +26,10 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
  * A generic base decorator class that provides native, framework-level enforcement of the setup and
  * teardown lifecycle steps.
  */
-public abstract class AbstractLifecycleDecorator extends BaseDecorator {
+public abstract class LifecycleDecorator extends BaseDecorator {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  protected AbstractLifecycleDecorator(Driver decorated, TestInfo testInfo) {
+  protected LifecycleDecorator(Driver decorated, TestInfo testInfo) {
     super(decorated, testInfo);
   }
 

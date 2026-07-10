@@ -26,7 +26,7 @@ java_library(
     srcs = glob(["*.java"]),
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:abstract_lifecycle_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:lifecycle_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:step_skippable_lifecycle_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",

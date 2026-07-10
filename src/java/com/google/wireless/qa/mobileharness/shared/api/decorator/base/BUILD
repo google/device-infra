@@ -23,8 +23,8 @@ package(
 )
 
 java_library(
-    name = "abstract_lifecycle_decorator",
-    srcs = ["AbstractLifecycleDecorator.java"],
+    name = "lifecycle_decorator",
+    srcs = ["LifecycleDecorator.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
@@ -38,7 +38,7 @@ java_library(
     name = "step_skippable_lifecycle_decorator",
     srcs = ["StepSkippableLifecycleDecorator.java"],
     deps = [
-        ":abstract_lifecycle_decorator",
+        ":lifecycle_decorator",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/util:step_skippable_lifecycle_decorator_util",

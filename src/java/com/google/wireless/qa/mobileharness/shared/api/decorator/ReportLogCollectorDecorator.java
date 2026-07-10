@@ -22,7 +22,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.AbstractLifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.util.ReportLogCollectorUtil;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -34,7 +34,7 @@ import javax.inject.Inject;
 
 /** A decorator that prepares and pulls report logs. */
 @DecoratorAnnotation(help = "Prepares and pulls report logs.")
-public class ReportLogCollectorDecorator extends AbstractLifecycleDecorator
+public class ReportLogCollectorDecorator extends LifecycleDecorator
     implements SpecConfigable<ReportLogCollectorDecoratorSpec> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();

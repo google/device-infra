@@ -26,7 +26,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.Optional;
 
 /**
- * A step-skippable decorator extending {@link AbstractLifecycleDecorator}.
+ * A step-skippable decorator extending {@link LifecycleDecorator}.
  *
  * <p>Reads an execution mode string from job properties to conditionally skip the decorator's setup
  * or teardown step.
@@ -36,7 +36,7 @@ import java.util.Optional;
  * teardown steps, it should use the {@link #setState} and {@link #getState} methods, instead of
  * using class member variables, or arbitrary job or test properties.
  */
-public abstract class StepSkippableLifecycleDecorator extends AbstractLifecycleDecorator {
+public abstract class StepSkippableLifecycleDecorator extends LifecycleDecorator {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   public static final String PROP_EXECUTION_MODE =

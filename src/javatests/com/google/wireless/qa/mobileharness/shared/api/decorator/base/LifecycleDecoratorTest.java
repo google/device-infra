@@ -42,7 +42,7 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
-public final class AbstractLifecycleDecoratorTest {
+public final class LifecycleDecoratorTest {
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
@@ -52,7 +52,7 @@ public final class AbstractLifecycleDecoratorTest {
 
   private TestLifecycleDecorator decorator;
 
-  private static class TestLifecycleDecorator extends AbstractLifecycleDecorator {
+  private static class TestLifecycleDecorator extends LifecycleDecorator {
     private TestLifecycleDecorator(Driver decorated, TestInfo testInfo) {
       super(decorated, testInfo);
     }
