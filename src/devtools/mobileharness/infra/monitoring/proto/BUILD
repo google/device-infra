@@ -27,6 +27,7 @@ package(
         "//wireless/android/pixel/testing/labs/metrics:__subpackages__",
         "//wireless/android/sdlc:__subpackages__",
         "//wireless/android/test_tools/dual_home_lab/monarch_proxy:__subpackages__",
+        "//wireless/dspa/pixel/dbr/data/plx/pts_lab:__subpackages__",
     ],
 )
 
