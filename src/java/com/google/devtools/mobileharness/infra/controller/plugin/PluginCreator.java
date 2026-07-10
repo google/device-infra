@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.stream.Collectors.groupingBy;
 
+import com.google.common.cache.Cache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
@@ -46,6 +47,7 @@ import io.github.classgraph.ScanResult;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
@@ -250,6 +252,7 @@ public class PluginCreator implements AutoCloseable {
         scanResult = null;
       }
       if (classLoader != null) {
+        clearEventBusSubscriberCache(classLoader);
         try {
           if (classLoader instanceof Closeable) {
             ((Closeable) classLoader).close();
@@ -259,6 +262,50 @@ public class PluginCreator implements AutoCloseable {
           logWarning("Failed to close plugin class loader for %s", jarUris);
         }
       }
+    }
+  }
+
+  /**
+   * Evicts plugin classes loaded by the given {@code classLoader} from Guava's static {@link
+   * com.google.common.eventbus.EventBus} subscriber cache ({@code
+   * SubscriberRegistry.subscriberMethodsCache}).
+   *
+   * <p>The cache uses weak keys, but each cached {@link java.lang.reflect.Method} value strongly
+   * references its declaring class (the key). This forms a reference cycle that prevents the plugin
+   * {@link ClassLoader} from being garbage collected after the plugin is unloaded, causing a memory
+   * leak on long-running lab servers (b/530756464). Explicitly invalidating the entries for classes
+   * loaded by this class loader breaks the cycle so the class loader can be reclaimed.
+   *
+   * <p>This uses reflection because {@code SubscriberRegistry} and its cache field are
+   * package-private. Any failure is logged and swallowed so it never disrupts plugin unloading.
+   */
+  private static void clearEventBusSubscriberCache(ClassLoader classLoader) {
+    try {
+      Class<?> registryClass = Class.forName("com.google.common.eventbus.SubscriberRegistry");
+      Field field = registryClass.getDeclaredField("subscriberMethodsCache");
+      field.setAccessible(true);
+      // The field's runtime type is Cache<Class<?>, ImmutableList<Method>>; the value type is
+      // irrelevant here so the unchecked cast to a wildcard value type is safe.
+      @SuppressWarnings("unchecked")
+      Cache<Class<?>, ?> cache = (Cache<Class<?>, ?>) field.get(null);
+      // Class loaders are intentionally compared by identity: evict only the classes defined by
+      // this plugin's own class loader, leaving other plugins' and system classes untouched.
+      long sizeBefore = cache.size();
+      @SuppressWarnings("ReferenceEquality")
+      boolean evicted =
+          cache
+              .asMap()
+              .keySet()
+              .removeIf(key -> key != null && key.getClassLoader() == classLoader);
+      if (evicted) {
+        logger.atInfo().log(
+            "Evicted entries from EventBus subscriber cache for class loader %s,"
+                + " cache size: %d -> %d",
+            classLoader, sizeBefore, cache.size());
+      }
+    } catch (ReflectiveOperationException | RuntimeException | Error e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to clear EventBus subscriber cache for class loader %s", classLoader);
     }
   }
 
