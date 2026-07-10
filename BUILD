@@ -80,9 +80,9 @@ package_group(
 # This is needed for Bazel because the Maven artifact does not have a main manifest attribute.
 java_binary(
     name = "jarjar_bin",
-    main_class = "org.pantsbuild.jarjar.Main",
+    main_class = "com.eed3si9n.jarjar.Main",
     visibility = ["//visibility:public"],
-    runtime_deps = ["@maven//:org_pantsbuild_jarjar"],
+    runtime_deps = ["@maven//:com_eed3si9n_jarjar_jarjar_assembly"],
 )
 
 kt_kotlinc_options(

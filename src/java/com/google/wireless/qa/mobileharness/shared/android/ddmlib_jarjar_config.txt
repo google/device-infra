@@ -1,0 +1,3 @@
+rule com.google.protobuf.** com.google.android.sdk.protobuf.@1
+# Relocate com.android packages to avoid one-version violations with tools.common.jar from Android SDK.
+rule com.android.** com.google.devtools.mobileharness.shared.android.shaded.@1

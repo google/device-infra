@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:defs.bzl", "java_binary", "java_import", "java_library")
 
 package(default_applicable_licenses = ["//:license"])
 
@@ -121,5 +121,62 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "ddm_util",
+    srcs = ["DdmUtil.java"],
+    visibility = ["//:deviceinfra_all_pkg"],
+    deps = [
+        ":ddmlib_jarjared",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+# Imports the JarJared (shaded) ddmlib jar.
+# Shading is necessary to avoid java-one-version conflicts (especially with protobuf)
+# when integrated into other environments that might use different versions of these deps.
+java_import(
+    name = "ddmlib_jarjared",
+    jars = [":ddmlib_shaded.jar"],
+    visibility = ["//:deviceinfra_all_pkg"],
+    deps = [
+        "@maven//:com_google_guava_guava",
+        "@maven//:net_java_dev_jna_jna",
+        "@maven//:net_sf_kxml_kxml2",
+        "@maven//:org_jetbrains_kotlin_kotlin_stdlib",
+    ],
+)
+
+# Runs JarJar to repackage ddmlib classes (and its bundled dependencies)
+# using the rules in ddmlib_jarjar_config.txt, producing ddmlib_shaded.jar.
+# This shades the dependencies to avoid one-version conflicts in the classpath.
+genrule(
+    name = "shade_ddmlib_rule",
+    srcs = [
+        ":ddmlib_pre_jarjar_deploy.jar",
+        ":ddmlib_jarjar_config.txt",
+    ],
+    outs = ["ddmlib_shaded.jar"],
+    cmd = "$(location //:jarjar_bin) process $(location :ddmlib_jarjar_config.txt) $(location :ddmlib_pre_jarjar_deploy.jar) $@",
+    tools = ["//:jarjar_bin"],
+)
+
+# Helper target to package ddmlib and its dependencies into a single "deploy jar" (fat jar)
+# so it can be processed by jarjar in the shade_ddmlib_rule genrule.
+java_binary(
+    name = "ddmlib_pre_jarjar",
+    main_class = "none",
+    visibility = ["//visibility:private"],
+    runtime_deps = [
+        "@maven//:com_android_tools_common",
+        "@maven//:com_android_tools_ddms_ddmlib",
     ],
 )
