@@ -446,19 +446,18 @@ public class AndroidPackageManagerUtil {
                 AndroidSettings.NameSpace.GLOBAL,
                 ADB_SHELL_SETTINGS_PACKAGE_VERIFIER_INCLUDE_ADB);
         String value = adbUtil.settings(utilArgs, querySpec);
-        if (Objects.equals(value, "1") || Ascii.equalsIgnoreCase("null", value)) {
+        String trimmedValue = value == null ? "" : value.trim();
+        if (Objects.equals(trimmedValue, "0")) {
+          logger.atInfo().log("Package verifier option disabled, skipped");
+        } else {
           AndroidSettings.Spec putSpec =
               AndroidSettings.Spec.create(
                   AndroidSettings.Command.PUT,
                   AndroidSettings.NameSpace.GLOBAL,
                   ADB_SHELL_SETTINGS_PACKAGE_VERIFIER_INCLUDE_ADB + " 0");
-          logger.atInfo().log("Disable package verifier option");
+          logger.atInfo().log("Disable package verifier option (current value: %s)", trimmedValue);
           adbUtil.settings(utilArgs, putSpec);
           logger.atInfo().log("Package verifier is disabled");
-        } else if (Objects.equals(value, "0")) {
-          logger.atInfo().log("Package verifier option disabled, skipped");
-        } else {
-          logger.atWarning().log("Failed to find package verifier option, aborted");
         }
       }
     } catch (MobileHarnessException e) {
