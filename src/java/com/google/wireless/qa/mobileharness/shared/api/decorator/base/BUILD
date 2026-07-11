@@ -27,6 +27,7 @@ java_library(
     srcs = ["LifecycleDecorator.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:base_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",

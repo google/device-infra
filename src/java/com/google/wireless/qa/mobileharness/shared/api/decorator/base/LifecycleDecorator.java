@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator.base;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.BaseDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -28,6 +29,8 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
  */
 public abstract class LifecycleDecorator extends BaseDecorator {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private final String classSimpleName = getClass().getSimpleName();
 
   protected LifecycleDecorator(Driver decorated, TestInfo testInfo) {
     super(decorated, testInfo);
@@ -41,18 +44,56 @@ public abstract class LifecycleDecorator extends BaseDecorator {
 
   @Override
   public final void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
-    String className = getClass().getSimpleName();
+    executePhase(testInfo, "setup", this::setUp, /* decoratedRunException= */ null);
 
-    testInfo.log().atInfo().alsoTo(logger).log("Decorator %s setup starting.", className);
-    setUp(testInfo);
-    testInfo.log().atInfo().alsoTo(logger).log("Decorator %s setup finished.", className);
-
+    Throwable decoratedRunException = null;
     try {
       getDecorated().run(testInfo);
+    } catch (Throwable e) {
+      decoratedRunException = e;
+      throw e;
     } finally {
-      testInfo.log().atInfo().alsoTo(logger).log("Decorator %s teardown starting.", className);
-      tearDown(testInfo);
-      testInfo.log().atInfo().alsoTo(logger).log("Decorator %s teardown finished.", className);
+      executePhase(testInfo, "teardown", this::tearDown, decoratedRunException);
     }
+  }
+
+  @FunctionalInterface
+  private interface LifecyclePhase {
+    void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException;
+  }
+
+  private void executePhase(
+      TestInfo testInfo, String phaseName, LifecyclePhase phase, Throwable decoratedRunException)
+      throws MobileHarnessException, InterruptedException {
+    testInfo
+        .log()
+        .atInfo()
+        .alsoTo(logger)
+        .log("Decorator [%s] %s starting.", classSimpleName, phaseName);
+    Throwable phaseError = null;
+    try {
+      phase.run(testInfo);
+    } catch (Throwable e) {
+      phaseError = e;
+      if (decoratedRunException != null) {
+        decoratedRunException.addSuppressed(e);
+      } else {
+        throw e;
+      }
+    } finally {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "Decorator [%s] %s finished%s.",
+              classSimpleName, phaseName, getFailureSuffix(phaseError));
+    }
+  }
+
+  private static String getFailureSuffix(Throwable error) {
+    return error == null
+        ? ""
+        : String.format(" with failure [%s]", MoreThrowables.shortDebugString(error));
   }
 }
