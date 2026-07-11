@@ -432,18 +432,39 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
     return isAvailable;
   }
 
-  /** If the device is IDLE in external device manager, it's of course available in external DM. */
-  private boolean isAvailableInExternalDeviceManager() {
+  /**
+   * Returns whether the device is available in the external device manager (e.g., Tradefed).
+   *
+   * <p>Both {@link ExternalDeviceManager.DeviceStatus#IDLE} and {@link
+   * ExternalDeviceManager.DeviceStatus#RESERVED_BY_MH} indicate that the device is available in
+   * external DM from MobileHarness's perspective:
+   *
+   * <ul>
+   *   <li>{@code IDLE}: The device is completely unallocated in the external DM and ready for MH to
+   *       reserve.
+   *   <li>{@code RESERVED_BY_MH}: The external DM has already allocated or reserved this device
+   *       specifically for MobileHarness (either during an active test, across reservations, or
+   *       during the transition period after reservation release). From the external DM's
+   *       perspective, MobileHarness owns and has permission to use this device.
+   * </ul>
+   *
+   * <p>Only when the external DM reports {@code RESERVED_BY_EXTERNAL_DM} or {@code UNAVAILABLE} is
+   * the device considered unavailable/prepping in external DM.
+   */
+  private boolean isAvailableOrReservedByMhInExternalDeviceManager() {
     ExternalDeviceManager.DeviceStatus deviceStatus =
         externalDeviceManager.getDeviceStatus(
             device.getDeviceId(), device.getClass().getSimpleName(), device.getDeviceTypes());
-    boolean isAvailable = deviceStatus.equals(ExternalDeviceManager.DeviceStatus.IDLE);
-    if (!isAvailable) {
+    boolean isAvailableOrReservedByMh =
+        deviceStatus.equals(ExternalDeviceManager.DeviceStatus.IDLE)
+            || deviceStatus.equals(ExternalDeviceManager.DeviceStatus.RESERVED_BY_MH);
+    if (!isAvailableOrReservedByMh) {
       logger.atInfo().atMostEvery(10, SECONDS).log(
-          "Device %s is NOT available in external device manager: deviceStatus=%s",
+          "Device %s is NOT available or reserved by MH in external device manager:"
+              + " deviceStatus=%s",
           device.getDeviceId(), deviceStatus);
     }
-    return isAvailable;
+    return isAvailableOrReservedByMh;
   }
 
   /**
@@ -508,15 +529,16 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
             || !device.getDimension(Dimension.Name.CLOUDRPC_FAILURE).isEmpty()
             || !device.getDimension(Dimension.Name.GCS_FAILURE).isEmpty()
             || !device.getDimension(Dimension.Name.LAB_FILE_SYSTEM_IO_ERROR).isEmpty()
-            || !isAvailableInExternalDeviceManager();
+            || !isAvailableOrReservedByMhInExternalDeviceManager();
     if (isPrepping) {
       logger.atInfo().atMostEvery(10, SECONDS).log(
-          "Device %s is PREPPING: Device.isPrepping=%s, isAvailableInExternalDeviceManager=%s,"
+          "Device %s is PREPPING: Device.isPrepping=%s,"
+              + " isAvailableOrReservedByMhInExternalDeviceManager=%s,"
               + " alert_lab_disk_usable_size=%s, cloudrpc_failure=%s, gcs_failure=%s,"
               + " lab_file_system_io_error=%s",
           device.getDeviceId(),
           device.isPrepping(),
-          isAvailableInExternalDeviceManager(),
+          isAvailableOrReservedByMhInExternalDeviceManager(),
           device.getDimension(Dimension.Name.ALERT_LAB_DISK_USABLE_SIZE),
           device.getDimension(Dimension.Name.CLOUDRPC_FAILURE),
           device.getDimension(Dimension.Name.GCS_FAILURE),
