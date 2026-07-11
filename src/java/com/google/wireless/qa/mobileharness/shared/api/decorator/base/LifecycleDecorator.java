@@ -37,10 +37,12 @@ public abstract class LifecycleDecorator extends BaseDecorator {
   }
 
   /** Invoked before the decorated driver executes. */
-  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {}
+  protected abstract void setUp(TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException;
 
   /** Invoked after the decorated driver executes, regardless of success or failure. */
-  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {}
+  protected abstract void tearDown(TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException;
 
   @Override
   public final void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
