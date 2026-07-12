@@ -17,6 +17,7 @@ load("@protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
 load("@protobuf//bazel:java_proto_library.bzl", "java_proto_library")
 load("@protobuf//bazel:proto_library.bzl", "proto_library")
 load("@protobuf//bazel:py_proto_library.bzl", "py_proto_library")
+load("@protobuf//build_defs:kt_jvm_proto_library.bzl", "kt_jvm_proto_library")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -38,6 +39,11 @@ proto_library(
 
 java_proto_library(
     name = "device_query_java_proto",
+    deps = [":device_query_proto"],
+)
+
+kt_jvm_proto_library(
+    name = "device_query_kt_proto",
     deps = [":device_query_proto"],
 )
 
