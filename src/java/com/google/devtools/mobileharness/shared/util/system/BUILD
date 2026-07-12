@@ -57,6 +57,7 @@ java_library(
         "//:deviceinfra_all_pkg",
     ],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",

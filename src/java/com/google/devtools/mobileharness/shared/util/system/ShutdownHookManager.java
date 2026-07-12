@@ -20,9 +20,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import java.io.InterruptedIOException;
-import java.nio.channels.ClosedByInterruptException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
@@ -215,7 +214,7 @@ public class ShutdownHookManager {
         hook.task.run();
         logger.atInfo().log("Finished shutdown task [%s]", hook.name);
       } catch (Exception | Error e) {
-        if (isInterruption(e)) {
+        if (MoreThrowables.isInterruption(e)) {
           logger.atInfo().log("Shutdown task [%s] is interrupted", hook.name);
           Thread.currentThread().interrupt();
         } else {
@@ -231,12 +230,6 @@ public class ShutdownHookManager {
     List<Hook> result = new ArrayList<>(hooks);
     result.sort(Comparator.comparing(hook -> hook.priority));
     return result;
-  }
-
-  private static boolean isInterruption(Throwable e) {
-    return e instanceof InterruptedException
-        || e instanceof ClosedByInterruptException
-        || e instanceof InterruptedIOException;
   }
 
   /**
