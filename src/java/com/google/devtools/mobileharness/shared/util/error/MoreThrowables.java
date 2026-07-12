@@ -20,6 +20,8 @@ import static java.util.Arrays.stream;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.joining;
 
+import java.io.InterruptedIOException;
+import java.nio.channels.ClosedByInterruptException;
 import java.util.Map.Entry;
 import java.util.stream.Stream;
 
@@ -197,6 +199,31 @@ public class MoreThrowables {
         .limit(maxLength <= 0 ? Long.MAX_VALUE : maxLength)
         .map(StackTraceElement::toString)
         .collect(joining("  <--  ", "[", "]"));
+  }
+
+  /** Checks if the given exception is a thread interruption. */
+  public static boolean isInterruption(Throwable e) {
+    return e instanceof InterruptedException
+        || e instanceof ClosedByInterruptException
+        || e instanceof InterruptedIOException;
+  }
+
+  /**
+   * Runs the given runnable and suppresses any thrown exception into the primary exception.
+   *
+   * <p>If the thrown exception is a thread interruption, it also restores the thread's interrupted
+   * status.
+   */
+  public static void runAndSuppressException(
+      Throwable primaryException, ThrowingRunnable runnable) {
+    try {
+      runnable.run();
+    } catch (Throwable t) {
+      primaryException.addSuppressed(t);
+      if (isInterruption(t)) {
+        Thread.currentThread().interrupt();
+      }
+    }
   }
 
   private MoreThrowables() {}

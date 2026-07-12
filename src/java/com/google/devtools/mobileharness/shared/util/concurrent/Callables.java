@@ -23,6 +23,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.ArrayList;
 import java.util.List;
@@ -109,7 +110,7 @@ public final class Callables {
         }
       } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
         errors.add(e);
-        if (isInterruptedException(e)) {
+        if (MoreThrowables.isInterruption(e)) {
           interrupted = true;
         }
       }
@@ -123,7 +124,7 @@ public final class Callables {
       error = errors.get(0);
       errors.stream().skip(1L).forEach(error::addSuppressed);
     }
-    if (interrupted && !isInterruptedException(error)) {
+    if (interrupted && !MoreThrowables.isInterruption(error)) {
       Thread.currentThread().interrupt();
     }
 
@@ -224,10 +225,6 @@ public final class Callables {
       return;
     }
     Throwables.throwIfUnchecked(error);
-  }
-
-  private static boolean isInterruptedException(Throwable e) {
-    return e instanceof InterruptedException;
   }
 
   /**

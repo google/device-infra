@@ -40,4 +40,12 @@ java_library(
 java_library(
     name = "more_throwables",
     srcs = ["MoreThrowables.java"],
+    deps = [
+        ":throwing_runnable",
+    ],
+)
+
+java_library(
+    name = "throwing_runnable",
+    srcs = ["ThrowingRunnable.java"],
 )
