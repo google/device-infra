@@ -21,6 +21,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.StepAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.step.android.InstallApkStep;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
@@ -38,7 +39,7 @@ import javax.inject.Inject;
     help =
         "For installing apks. "
             + "Use this decorator \"outside\" of the other decorators that rely on the apks.")
-public class AndroidInstallAppsDecorator extends BaseDecorator
+public class AndroidInstallAppsDecorator extends LifecycleDecorator
     implements SpecConfigable<InstallApkStepSpec> {
 
   @StepAnnotation private final InstallApkStep installApkStep;
@@ -47,6 +48,9 @@ public class AndroidInstallAppsDecorator extends BaseDecorator
 
   /** Util for sending progress report messages. */
   private final TestMessageUtil testMessageUtil;
+
+  private InstallApkStepSpec spec;
+  private List<String> packagesOfInstalledApks;
 
   @Inject
   AndroidInstallAppsDecorator(
@@ -60,13 +64,12 @@ public class AndroidInstallAppsDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     Instant startTime = Instant.now();
     // Installs APKs.
     sendProgressReportMessage(testInfo, "Install apks");
-    InstallApkStepSpec spec = testInfo.jobInfo().combinedSpec(this, getDevice().getDeviceId());
-    List<String> packagesOfInstalledApks =
-        installApkStep.installBuildApks(getDevice(), testInfo, spec);
+    spec = testInfo.jobInfo().combinedSpec(this, getDevice().getDeviceId());
+    packagesOfInstalledApks = installApkStep.installBuildApks(getDevice(), testInfo, spec);
 
     Instant endTime = Instant.now();
     long runTimeMs = Duration.between(startTime, endTime).toMillis();
@@ -75,10 +78,11 @@ public class AndroidInstallAppsDecorator extends BaseDecorator
         .add(
             PropertyName.Test.PREFIX_DECORATOR_RUN_TIME_MS + getClass().getSimpleName(),
             Long.toString(runTimeMs));
+  }
 
-    try {
-      getDecorated().run(testInfo);
-    } finally {
+  @Override
+  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    if (spec != null && packagesOfInstalledApks != null) {
       postRun(spec, testInfo, packagesOfInstalledApks);
     }
   }

@@ -24,6 +24,7 @@ import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller
 import com.google.devtools.mobileharness.platform.android.process.AndroidProcessUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.Optional;
@@ -37,7 +38,7 @@ import javax.inject.Inject;
     help =
         "Decorator for displaying device info and preventing orientation switch by installing and"
             + " starting the Bootstrap app.")
-public class AndroidDisplayDeviceInfoDecorator extends BaseDecorator {
+public class AndroidDisplayDeviceInfoDecorator extends LifecycleDecorator {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -65,7 +66,7 @@ public class AndroidDisplayDeviceInfoDecorator extends BaseDecorator {
   }
 
   @Override
-  public void run(TestInfo testInfo) throws InterruptedException, MobileHarnessException {
+  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     String serial = getDevice().getDeviceId();
 
     String apkPath;
@@ -104,11 +105,10 @@ public class AndroidDisplayDeviceInfoDecorator extends BaseDecorator {
           "Failed to start the bootstrap app.",
           e);
     }
+  }
 
-    try {
-      getDecorated().run(testInfo);
-    } finally {
-      apkInstaller.uninstallApk(getDevice(), BACKDROP_PKG, true, testInfo.log());
-    }
+  @Override
+  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    apkInstaller.uninstallApk(getDevice(), BACKDROP_PKG, true, testInfo.log());
   }
 }

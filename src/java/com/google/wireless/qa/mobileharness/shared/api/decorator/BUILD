@@ -308,13 +308,13 @@ java_library(
     resources = [
     ],
     deps = [
-        ":base_decorator",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller",
         "//src/java/com/google/devtools/mobileharness/platform/android/process:android_process_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:lifecycle_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:javax_inject_jsr330_api",
@@ -412,10 +412,10 @@ java_library(
     name = "android_install_apps_decorator",
     srcs = ["AndroidInstallAppsDecorator.java"],
     deps = [
-        ":base_decorator",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:lifecycle_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/step/android:install_apk_step",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message",
@@ -762,7 +762,6 @@ java_library(
     name = "android_switch_user_decorator",
     srcs = ["AndroidSwitchUserDecorator.java"],
     deps = [
-        ":base_decorator",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/app/devicedaemon:device_daemon_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemstate",
@@ -774,6 +773,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:lifecycle_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job/android:android_user_type",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",

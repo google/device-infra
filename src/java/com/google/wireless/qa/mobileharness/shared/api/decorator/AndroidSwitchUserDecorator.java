@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.platform.android.user.AndroidUserState;
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.validator.job.android.AndroidUserType;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
@@ -56,7 +57,7 @@ import javax.inject.Inject;
             + "\nNote that for satellite labs it is advisable to ensure this decorator is"
             + " always used or set dimension 'recovery' = 'wipe'."
             + "\nThis decorator only supports Android P or higher (sdk>=28).")
-public class AndroidSwitchUserDecorator extends BaseDecorator
+public class AndroidSwitchUserDecorator extends LifecycleDecorator
     implements SpecConfigable<AndroidSwitchUserDecoratorSpec> {
 
   // TODO: gather data on how long this is supposed to take
@@ -79,6 +80,7 @@ public class AndroidSwitchUserDecorator extends BaseDecorator
   @VisibleForTesting State state = null;
   private AndroidUserType userType = null;
   private AndroidUserState waitState = null;
+  private AndroidSwitchUserDecoratorSpec spec = null;
 
   @Inject
   AndroidSwitchUserDecorator(
@@ -100,22 +102,21 @@ public class AndroidSwitchUserDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     String deviceId = getDevice().getDeviceId();
-    AndroidSwitchUserDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this, deviceId);
+    spec = testInfo.jobInfo().combinedSpec(this, deviceId);
     int sdkVersion = systemSettingUtil.getDeviceSdkVersion(deviceId);
     if (spec.getSwitchToTestUser()) {
       switchToTestUser(spec, deviceId, sdkVersion, testInfo);
     } else {
       switchToSelectedUser(spec, deviceId, sdkVersion, testInfo);
     }
+  }
 
-    try {
-      getDecorated().run(testInfo);
-    } finally {
-      if (state != null) {
-        performCleanup(testInfo, spec);
-      }
+  @Override
+  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    if (state != null && spec != null) {
+      performCleanup(testInfo, spec);
     }
   }
 
