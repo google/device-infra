@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.CrosDecoratorSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -26,48 +27,23 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
  * Base decorator for ChromeOS devices. This class provides common functionality for interacting
  * with ChromeOS devices and the inventory system.
  */
-public abstract class CrosBaseDecorator extends BaseDecorator implements CrosDecoratorSpec {
+public abstract class CrosBaseDecorator extends LifecycleDecorator implements CrosDecoratorSpec {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   public CrosBaseDecorator(Driver decoratedDriver, TestInfo testInfo) {
     super(decoratedDriver, testInfo);
   }
 
-  /**
-   * Executes the decorator logic. This method prepares the decorator, runs the decorated driver,
-   * and then tears down the decorator. The {@code inventoryClient} is closed automatically after
-   * the execution.
-   *
-   * @param testInfo The test information.
-   * @throws MobileHarnessException if a MobileHarness error occurs.
-   * @throws InterruptedException if the thread is interrupted.
-   */
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected final void tearDown(TestInfo testInfo) throws InterruptedException {
     try {
-      // Prepare the decorator.
-      prepare(testInfo);
-      // Pass the control to the driver.
-      getDecorated().run(testInfo);
-    } finally {
-      // Clean up decorator.
-      try {
-        tearDown(testInfo);
-      } catch (MobileHarnessException e) {
-        getTest()
-            .log()
-            .atWarning()
-            .alsoTo(logger)
-            .withCause(e)
-            .log("Failed to tear down decorator.");
-      }
+      cleanUp(testInfo);
+    } catch (MobileHarnessException e) {
+      getTest().log().atWarning().alsoTo(logger).withCause(e).log("Failed to tear down decorator.");
     }
   }
 
-  protected abstract void prepare(TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException;
-
-  protected abstract void tearDown(TestInfo testInfo)
+  protected abstract void cleanUp(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException;
 
   protected String getInventoryServiceHostname() {

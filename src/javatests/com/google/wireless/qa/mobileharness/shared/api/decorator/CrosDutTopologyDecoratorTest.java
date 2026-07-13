@@ -105,7 +105,7 @@ public class CrosDutTopologyDecoratorTest {
     when(commandExecutor.exec(any(Command.class))).thenReturn(commandResult);
 
     // Act
-    decorator.prepare(testInfo);
+    decorator.setUp(testInfo);
 
     // Assert
     ArgumentCaptor<Command> commandCaptor = ArgumentCaptor.forClass(Command.class);
@@ -142,7 +142,7 @@ public class CrosDutTopologyDecoratorTest {
         .thenThrow(new InterruptedException("interrupted"));
 
     // Act & Assert
-    assertThrows(InterruptedException.class, () -> decorator.prepare(testInfo));
+    assertThrows(InterruptedException.class, () -> decorator.setUp(testInfo));
   }
 
   @Test

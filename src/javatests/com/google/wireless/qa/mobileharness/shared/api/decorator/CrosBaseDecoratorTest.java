@@ -39,6 +39,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log.Api;
+import java.util.Arrays;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -70,12 +71,12 @@ public class CrosBaseDecoratorTest {
     }
 
     @Override
-    protected void prepare(TestInfo testInfo) throws MobileHarnessException {
+    protected void setUp(TestInfo testInfo) throws MobileHarnessException {
       // Do nothing.
     }
 
     @Override
-    protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    protected void cleanUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
       // Do nothing.
     }
   }
@@ -98,9 +99,9 @@ public class CrosBaseDecoratorTest {
   public void run_successfulExecution_callsPrepareRunAndTearDown() throws Exception {
     decorator.run(testInfo);
 
-    verify(decorator).prepare(testInfo);
+    verify(decorator).setUp(testInfo);
     verify(decoratedDriver).run(testInfo);
-    verify(decorator).tearDown(testInfo);
+    verify(decorator).cleanUp(testInfo);
   }
 
   @Test
@@ -111,33 +112,33 @@ public class CrosBaseDecoratorTest {
 
     assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
 
-    verify(decorator).prepare(testInfo);
+    verify(decorator).setUp(testInfo);
     verify(decoratedDriver).run(testInfo);
-    verify(decorator).tearDown(testInfo);
+    verify(decorator).cleanUp(testInfo);
   }
 
   @Test
-  public void run_prepareThrowsException_callsTearDownAndDoesNotCallRun() throws Exception {
+  public void run_prepareThrowsException_doesNotCallCleanUpAndRun() throws Exception {
     doThrow(new MobileHarnessException(BasicErrorId.NON_MH_EXCEPTION, "test"))
         .when(decorator)
-        .prepare(testInfo);
+        .setUp(testInfo);
 
     assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
 
-    verify(decorator).prepare(testInfo);
-    verify(decorator).tearDown(testInfo);
+    verify(decorator).setUp(testInfo);
+    verify(decorator, never()).cleanUp(testInfo);
     verify(decoratedDriver, never()).run(testInfo);
   }
 
   @Test
   public void run_tearDownThrowsInterruptedException_propagatesException() throws Exception {
-    doThrow(new InterruptedException("test")).when(decorator).tearDown(testInfo);
+    doThrow(new InterruptedException("test")).when(decorator).cleanUp(testInfo);
 
     assertThrows(InterruptedException.class, () -> decorator.run(testInfo));
 
-    verify(decorator).prepare(testInfo);
+    verify(decorator).setUp(testInfo);
     verify(decoratedDriver).run(testInfo);
-    verify(decorator).tearDown(testInfo);
+    verify(decorator).cleanUp(testInfo);
     verify(testLogger, never()).atWarning();
   }
 
@@ -148,13 +149,13 @@ public class CrosBaseDecoratorTest {
             new MobileHarnessException(
                 BasicErrorId.NON_MH_EXCEPTION, "test", new InterruptedException("test")))
         .when(decorator)
-        .tearDown(testInfo);
+        .cleanUp(testInfo);
 
     decorator.run(testInfo);
 
-    verify(decorator).prepare(testInfo);
+    verify(decorator).setUp(testInfo);
     verify(decoratedDriver).run(testInfo);
-    verify(decorator).tearDown(testInfo);
+    verify(decorator).cleanUp(testInfo);
     verify(testLogger).atWarning();
   }
 
@@ -166,9 +167,9 @@ public class CrosBaseDecoratorTest {
 
     assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
 
-    verify(decorator).prepare(testInfo);
+    verify(decorator).setUp(testInfo);
     verify(decoratedDriver).run(testInfo);
-    verify(decorator).tearDown(testInfo);
+    verify(decorator).cleanUp(testInfo);
   }
 
   @Test
@@ -177,15 +178,16 @@ public class CrosBaseDecoratorTest {
         new MobileHarnessException(BasicErrorId.NON_MH_EXCEPTION, "driver_exception");
     InterruptedException tearDownException = new InterruptedException("teardown_exception");
     doThrow(driverException).when(decoratedDriver).run(testInfo);
-    doThrow(tearDownException).when(decorator).tearDown(testInfo);
+    doThrow(tearDownException).when(decorator).cleanUp(testInfo);
 
-    InterruptedException e =
-        assertThrows(InterruptedException.class, () -> decorator.run(testInfo));
-    assertThat(e).isEqualTo(tearDownException);
+    MobileHarnessException e =
+        assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
+    assertThat(e).isEqualTo(driverException);
+    assertThat(Arrays.asList(e.getSuppressed())).containsExactly(tearDownException);
 
-    verify(decorator).prepare(testInfo);
+    verify(decorator).setUp(testInfo);
     verify(decoratedDriver).run(testInfo);
-    verify(decorator).tearDown(testInfo);
+    verify(decorator).cleanUp(testInfo);
   }
 
   @Test
@@ -195,15 +197,15 @@ public class CrosBaseDecoratorTest {
     MobileHarnessException tearDownException =
         new MobileHarnessException(BasicErrorId.NON_MH_EXCEPTION, "teardown_exception");
     doThrow(driverException).when(decoratedDriver).run(testInfo);
-    doThrow(tearDownException).when(decorator).tearDown(testInfo);
+    doThrow(tearDownException).when(decorator).cleanUp(testInfo);
 
     MobileHarnessException e =
         assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
     assertThat(e).isEqualTo(driverException);
 
-    verify(decorator).prepare(testInfo);
+    verify(decorator).setUp(testInfo);
     verify(decoratedDriver).run(testInfo);
-    verify(decorator).tearDown(testInfo);
+    verify(decorator).cleanUp(testInfo);
     verify(testLogger).atWarning();
   }
 

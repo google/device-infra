@@ -62,7 +62,7 @@ public class CrossOverAndroidDesktopProvisionDecoratorTest {
 
   @Test
   public void prepare_success_logsMessage() throws Exception {
-    decorator.prepare(testInfo);
+    decorator.setUp(testInfo);
 
     verify(atInfo)
         .log(

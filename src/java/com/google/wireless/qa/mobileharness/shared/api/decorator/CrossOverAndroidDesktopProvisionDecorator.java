@@ -34,7 +34,7 @@ public class CrossOverAndroidDesktopProvisionDecorator extends CrosBaseDecorator
   }
 
   @Override
-  public void prepare(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     testInfo
         .log()
         .atInfo()
@@ -45,7 +45,7 @@ public class CrossOverAndroidDesktopProvisionDecorator extends CrosBaseDecorator
   }
 
   @Override
-  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void cleanUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     // Do nothing for now.
   }
 }

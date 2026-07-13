@@ -88,7 +88,7 @@ public class CrosLsNexusDecorator extends CrosBaseDecorator {
    * @throws InterruptedException if the thread is interrupted during service startup.
    */
   @Override
-  public void prepare(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     testInfo
         .log()
         .atInfo()
@@ -119,7 +119,7 @@ public class CrosLsNexusDecorator extends CrosBaseDecorator {
    * @param testInfo the context of the current test, used for logging service shutdown messages
    */
   @Override
-  protected void tearDown(TestInfo testInfo) {
+  protected void cleanUp(TestInfo testInfo) {
     for (Map.Entry<Integer, CommandProcess> entry : lsnexusServices.entrySet()) {
       final int port = entry.getKey();
       final CommandProcess process = entry.getValue();

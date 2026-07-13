@@ -50,7 +50,7 @@ public class CrosDutTopologyDecorator extends CrosBaseDecorator {
   }
 
   @Override
-  public void prepare(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     testInfo
         .log()
         .atInfo()
@@ -71,7 +71,7 @@ public class CrosDutTopologyDecorator extends CrosBaseDecorator {
   }
 
   @Override
-  protected void tearDown(TestInfo testInfo) {
+  protected void cleanUp(TestInfo testInfo) {
     // Do nothing.
   }
 
