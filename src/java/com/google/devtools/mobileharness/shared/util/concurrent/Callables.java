@@ -97,134 +97,33 @@ public final class Callables {
    */
   public static void callAll(MobileHarnessCallable<?>... callables)
       throws MobileHarnessException, InterruptedException {
-    boolean interrupted = false;
-    List<Throwable> errors = new ArrayList<>();
+    executeAll(callables);
+  }
 
-    // Calls each callable.
-    for (MobileHarnessCallable<?> callable : callables) {
-      interrupted |= Thread.interrupted();
-      try {
-        Object result = callable.call();
-        if (result != null) {
-          logger.atInfo().log("Callable [%s] returned [%s]", callable, result);
-        }
-      } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
-        errors.add(e);
-        if (MoreThrowables.isInterruption(e)) {
-          interrupted = true;
-        }
-      }
+  public static void runAll(Runnable... runnables) {
+    MobileHarnessCallable<?>[] callables = new MobileHarnessCallable<?>[runnables.length];
+    for (int i = 0; i < runnables.length; i++) {
+      callables[i] = new RunnableAdapter(runnables[i]);
     }
-
-    // Gets the error to throw if any.
-    Throwable error;
-    if (errors.isEmpty()) {
-      error = null;
-    } else {
-      error = errors.get(0);
-      errors.stream().skip(1L).forEach(error::addSuppressed);
+    try {
+      executeAll(callables);
+    } catch (MobileHarnessException | InterruptedException e) {
+      throw new AssertionError(e);
     }
-    if (interrupted && !MoreThrowables.isInterruption(error)) {
-      Thread.currentThread().interrupt();
-    }
-
-    // Throws the error if any.
-    if (error == null) {
-      return;
-    }
-    Throwables.throwIfInstanceOf(error, MobileHarnessException.class);
-    Throwables.throwIfInstanceOf(error, InterruptedException.class);
-    Throwables.throwIfUnchecked(error);
   }
 
   /**
-   * Executes all {@link Runnable}s in the given list sequentially. All runnables will be executed
-   * regardless of any {@link Throwable}s thrown by previous runnables.
-   *
-   * <p>This method will throw the first exception, and add the following exceptions as its
-   * suppressed exceptions, if any.
-   *
-   * <p>Before executing each runnable, the interrupted status of the current thread will be saved
-   * and cleared. Before this method returns, the status will be recovered.
-   *
-   * <p>This method can be used for simplifying code of executing multiple cleanup tasks in finally
-   * blocks. For example, from
-   *
-   * <pre>{@code
-   * try {
-   *   try {
-   *     try {
-   *       foo();
-   *     } finally {
-   *       cleanupTask1();
-   *     }
-   *   } finally {
-   *     cleanupTask2();
-   *   }
-   * } finally {
-   *   cleanupTask3();
-   * }
-   * }</pre>
-   *
-   * or
-   *
-   * <pre>{@code
-   * try {
-   *   foo();
-   * } finally {
-   *   try {
-   *     cleanupTask1();
-   *   } finally {
-   *     try {
-   *       cleanupTask2();
-   *     } finally {
-   *       cleanupTask3();
-   *     }
-   *   }
-   * }
-   * }</pre>
-   *
-   * to
-   *
-   * <pre>{@code
-   * try {
-   *   foo();
-   * } finally {
-   *   Callables.runAll(this::cleanupTask1, this::cleanupTask2, this::cleanupTask3);
-   * }
-   * }</pre>
+   * Calls each {@link MobileHarnessRunnable} sequentially and collects any thrown errors. If any
+   * errors occur, the first error is thrown and subsequent errors are added to it as suppressed
+   * exceptions.
    */
-  public static void runAll(Runnable... runnables) {
-    boolean interrupted = false;
-    List<Throwable> errors = new ArrayList<>();
-
-    // Calls each runnable.
-    for (Runnable runnable : runnables) {
-      interrupted |= Thread.interrupted();
-      try {
-        runnable.run();
-      } catch (RuntimeException | Error e) {
-        errors.add(e);
-      }
+  public static void runAll(MobileHarnessRunnable... runnables)
+      throws MobileHarnessException, InterruptedException {
+    MobileHarnessCallable<?>[] callables = new MobileHarnessCallable<?>[runnables.length];
+    for (int i = 0; i < runnables.length; i++) {
+      callables[i] = new MobileHarnessRunnableAdapter(runnables[i]);
     }
-
-    // Gets the error to throw if any.
-    Throwable error;
-    if (errors.isEmpty()) {
-      error = null;
-    } else {
-      error = errors.get(0);
-      errors.stream().skip(1L).forEach(error::addSuppressed);
-    }
-    if (interrupted) {
-      Thread.currentThread().interrupt();
-    }
-
-    // Throws the error if any.
-    if (error == null) {
-      return;
-    }
-    Throwables.throwIfUnchecked(error);
+    executeAll(callables);
   }
 
   /**
@@ -346,6 +245,72 @@ public final class Callables {
       return true;
     } catch (SecurityException e) {
       return false;
+    }
+  }
+
+  private static void executeAll(MobileHarnessCallable<?>... callables)
+      throws MobileHarnessException, InterruptedException {
+    boolean interrupted = false;
+    List<Throwable> errors = new ArrayList<>();
+
+    for (MobileHarnessCallable<?> callable : callables) {
+      interrupted |= Thread.interrupted();
+      try {
+        Object result = callable.call();
+        if (result != null) {
+          logger.atInfo().log("Callable [%s] returned [%s]", callable, result);
+        }
+      } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
+        errors.add(e);
+        if (MoreThrowables.isInterruption(e)) {
+          interrupted = true;
+        }
+      }
+    }
+
+    Throwable error = errors.isEmpty() ? null : errors.get(0);
+    if (error != null) {
+      errors.stream().skip(1L).forEach(error::addSuppressed);
+    }
+    if (interrupted && !MoreThrowables.isInterruption(error)) {
+      Thread.currentThread().interrupt();
+    }
+
+    if (error == null) {
+      return;
+    }
+    Throwables.throwIfInstanceOf(error, MobileHarnessException.class);
+    Throwables.throwIfInstanceOf(error, InterruptedException.class);
+    Throwables.throwIfUnchecked(error);
+  }
+
+  private static class MobileHarnessRunnableAdapter implements MobileHarnessCallable<Void> {
+
+    private final MobileHarnessRunnable runnable;
+
+    private MobileHarnessRunnableAdapter(MobileHarnessRunnable runnable) {
+      this.runnable = runnable;
+    }
+
+    @Override
+    public Void call() throws MobileHarnessException, InterruptedException {
+      runnable.run();
+      return null;
+    }
+  }
+
+  private static class RunnableAdapter implements MobileHarnessCallable<Void> {
+
+    private final Runnable runnable;
+
+    private RunnableAdapter(Runnable runnable) {
+      this.runnable = runnable;
+    }
+
+    @Override
+    public Void call() {
+      runnable.run();
+      return null;
     }
   }
 

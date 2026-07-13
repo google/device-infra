@@ -37,6 +37,7 @@ java_library(
     srcs = ["Callables.java"],
     deps = [
         ":mobile_harness_callable",
+        ":mobile_harness_runnable",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
@@ -63,7 +64,6 @@ java_library(
     name = "external_service_manager",
     srcs = ["ExternalServiceManager.java"],
     deps = [
-        "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
     ],
 )
@@ -71,6 +71,12 @@ java_library(
 java_library(
     name = "mobile_harness_callable",
     srcs = ["MobileHarnessCallable.java"],
+    deps = ["//src/java/com/google/devtools/mobileharness/api/model/error"],
+)
+
+java_library(
+    name = "mobile_harness_runnable",
+    srcs = ["MobileHarnessRunnable.java"],
     deps = ["//src/java/com/google/devtools/mobileharness/api/model/error"],
 )
 
