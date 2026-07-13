@@ -1264,10 +1264,16 @@ public class JobRunner implements Runnable {
       return;
     }
     if (jobInfo.properties().getBoolean(PropertyName.Job.MANUALLY_ABORTED).orElse(false)) {
+      Optional<String> abortReason =
+          jobInfo.properties().getOptional(PropertyName.Job.JOB_ABORT_REASON);
+      String abortMsg =
+          abortReason.isPresent()
+              ? String.format(
+                  "Job %s is manually aborted. Reason: %s",
+                  jobInfo.locator().getId(), abortReason.get())
+              : String.format("Job %s is manually aborted.", jobInfo.locator().getId());
       MobileHarnessException e =
-          createExceptionWithoutStackTrace(
-              InfraErrorId.CLIENT_JR_JOB_EXEC_INTERRUPTED,
-              String.format("Job %s is manually aborted.", jobInfo.locator().getId()));
+          createExceptionWithoutStackTrace(InfraErrorId.CLIENT_JR_JOB_EXEC_INTERRUPTED, abortMsg);
       ResultInternalUtil.setNonPassing(
           jobInfo.resultWithCause(), TestResult.ABORT, e, /* logStackTrace= */ false);
       // For tests that already have allocated device, it depends on the test runner to set the test

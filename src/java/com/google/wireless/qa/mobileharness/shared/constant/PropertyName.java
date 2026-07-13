@@ -82,6 +82,9 @@ public interface PropertyName {
     /** Whether the job is manually aborted. */
     MANUALLY_ABORTED,
 
+    /** The reason of the job abort. */
+    JOB_ABORT_REASON,
+
     /** The master spec. */
     MASTER_SPEC,
 

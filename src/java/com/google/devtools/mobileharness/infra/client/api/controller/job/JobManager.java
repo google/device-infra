@@ -162,9 +162,10 @@ public class JobManager implements Runnable, MessageSenderFinder {
    * Kills a job if the job exists and is running.
    *
    * @param isManuallyAborted whether the kill signal is due to manual abortion.
+   * @param abortReason the reason for the manual abort.
    */
   @SuppressWarnings("Interruption")
-  public void killJob(String jobId, boolean isManuallyAborted) {
+  public void killJob(String jobId, boolean isManuallyAborted, @Nullable String abortReason) {
     synchronized (jobRunners) {
       JobRunnerAndFuture runnerFuture = jobRunners.get(jobId);
       if (runnerFuture != null) {
@@ -174,6 +175,9 @@ public class JobManager implements Runnable, MessageSenderFinder {
         if (runner.isRunning() || !future.isDone()) {
           if (isManuallyAborted) {
             jobInfo.properties().add(PropertyName.Job.MANUALLY_ABORTED, "true");
+          }
+          if (abortReason != null) {
+            jobInfo.properties().add(PropertyName.Job.JOB_ABORT_REASON, abortReason);
           }
           // Interrupts test runner thread.
           try {
