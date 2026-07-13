@@ -92,6 +92,9 @@ enum AllocationWorkflowStatus {
 
   // The test has been released.
   RELEASED = 8;
+
+  // Waiting for test execution environment (e.g., Otter) to be ready.
+  PENDING_TEST_EXEC_ENV = 9;
 }
 
 // Contains all intermediate data generated during the allocation workflow.
@@ -131,8 +134,16 @@ message AllocationWorkflowContext {
     string network_zone = 4;
   }
 
+  // Information related to the Otter allocation step.
+  message OtterContext {
+    // The job ID returned by Otter when the test execution environment is
+    // allocated.
+    string otter_job_id = 1;
+  }
+
   OmnilabContext omnilab_context = 1;
   SchedukeContext scheduke_context = 2;
+  OtterContext otter_context = 3;
 }
 
 // Contains information about a failure in the allocation workflow.
