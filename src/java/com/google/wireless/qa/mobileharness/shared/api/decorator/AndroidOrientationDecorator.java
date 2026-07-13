@@ -22,6 +22,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.media.AndroidMediaUtil;
 import com.google.devtools.mobileharness.platform.android.media.ScreenOrientation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidOrientationDecoratorSpec;
@@ -31,7 +32,7 @@ import java.util.Locale;
 
 /** Decorator for setting the orientation of the device when the test starts. */
 @DecoratorAnnotation(help = "For setting screen orientation of the device when test starts.")
-public class AndroidOrientationDecorator extends BaseDecorator
+public class AndroidOrientationDecorator extends LifecycleDecorator
     implements AndroidOrientationDecoratorSpec {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -50,7 +51,7 @@ public class AndroidOrientationDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     Device device = getDevice();
     String deviceId = device.getDeviceId();
     JobInfo jobInfo = testInfo.jobInfo();
@@ -68,8 +69,8 @@ public class AndroidOrientationDecorator extends BaseDecorator
     androidMediaUtil.setAccelerometerRotation(deviceId, false);
     // Rotates to the target orientation.
     androidMediaUtil.rotateScreen(deviceId, orientation);
-
-    // Starts the actual tests.
-    getDecorated().run(testInfo);
   }
+
+  @Override
+  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {}
 }
