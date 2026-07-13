@@ -195,7 +195,8 @@
                     <mat-icon class="internet-icon">public</mat-icon>
                     <span class="font-medium">Internet access</span>
                   </div>
-                } @else if (device.basicInfo.network.hasInternet === false) {
+                } @else if (device.basicInfo.network.hasInternet === false || device.basicInfo.network.wifiRssi !== undefined) {
+                  <!-- Proto3 default boolean values (false) are omitted on the wire (represented as undefined on frontend). We treat both false and undefined as No internet access when we have signal/telemetry. -->
                   <div class="internet-status text-red-600">
                     <mat-icon class="internet-icon">public_off</mat-icon>
                     <span class="font-medium">No internet access</span>

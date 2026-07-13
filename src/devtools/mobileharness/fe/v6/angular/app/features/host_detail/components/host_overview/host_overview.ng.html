@@ -523,7 +523,7 @@
                                    }
                                    @if (sub.network?.hasInternet === true) {
                                      <mat-icon class="internet-icon text-green-600" title="Internet access">public</mat-icon>
-                                   } @else if (sub.network?.hasInternet === false) {
+                                   } @else if (!sub.network?.hasInternet && sub.network?.wifiRssi !== undefined) {
                                      <mat-icon class="internet-icon text-red-600" title="No internet access">public_off</mat-icon>
                                    } @else {
                                      <mat-icon class="wifi-icon" title="Unknown">signal_wifi_off</mat-icon>
