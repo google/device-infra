@@ -19,25 +19,28 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.Timer;
 import java.util.TimerTask;
 
 /** Decorator which runs timer task asynchronously during test running. */
-public abstract class AsyncTimerDecorator extends BaseDecorator {
+public abstract class AsyncTimerDecorator extends LifecycleDecorator {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private Timer timer;
 
   public AsyncTimerDecorator(Driver decorated, TestInfo testInfo) {
     super(decorated, testInfo);
   }
 
   @Override
-  public final void run(final TestInfo testInfo)
+  protected void setUp(final TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("Started");
     onStart(testInfo);
-    final Timer timer =
+    timer =
         new Timer(
             String.format("timer-%s-%s", getClass().getSimpleName(), testInfo.locator().getId()));
     long intervalMs = getIntervalMs(testInfo);
@@ -52,7 +55,9 @@ public abstract class AsyncTimerDecorator extends BaseDecorator {
             } catch (MobileHarnessException e) {
               testInfo.warnings().addAndLog(e, logger);
             } catch (InterruptedException e) {
-              timer.cancel();
+              if (timer != null) {
+                timer.cancel();
+              }
               Thread.currentThread().interrupt();
               logger.atWarning().log("%s", e.getMessage());
             }
@@ -64,17 +69,16 @@ public abstract class AsyncTimerDecorator extends BaseDecorator {
     } else {
       timer.schedule(timerTask, 0, intervalMs);
     }
+  }
 
-    try {
-      // Starts the actual tests.
-      getDecorated().run(testInfo);
-    } finally {
-      // Stops rotation after the test is finished.
+  @Override
+  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    if (timer != null) {
       timer.cancel();
       timer.purge();
-      onEnd(testInfo);
-      logger.atInfo().log("Stopped");
     }
+    onEnd(testInfo);
+    logger.atInfo().log("Stopped");
   }
 
   /** The interval time in milliseconds between two successive timer task executions. */

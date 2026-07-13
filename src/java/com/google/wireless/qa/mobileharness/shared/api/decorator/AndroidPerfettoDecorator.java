@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.StepAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.step.android.PerfettoStep;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -34,6 +35,7 @@ import java.io.File;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.function.Consumer;
 import javax.inject.Inject;
 
@@ -60,7 +62,7 @@ import javax.inject.Inject;
     help =
         "Runs Perfetto at the start of each test for a specified amount of time. "
             + "Includes the results of Perfetto as an html file in the test results.")
-public class AndroidPerfettoDecorator extends BaseDecorator {
+public class AndroidPerfettoDecorator extends LifecycleDecorator {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   @StepAnnotation private final PerfettoStep perfettoStep;
@@ -85,8 +87,12 @@ public class AndroidPerfettoDecorator extends BaseDecorator {
   private static final String OUTPUT_FILE_NAME_FORMAT = "perfetto.output";
 
   private final Clock clock;
-
   private final Sleeper sleeper;
+
+  private String mode;
+  private File outputFile;
+  private CommandProcess perfettoProcess;
+  private Instant asyncPerfettoStartTime;
 
   @Inject
   AndroidPerfettoDecorator(
@@ -102,54 +108,59 @@ public class AndroidPerfettoDecorator extends BaseDecorator {
   }
 
   @Override
-  public void run(final TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(final TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException {
     String deviceId = getDevice().getDeviceId();
     JobInfo jobInfo = testInfo.jobInfo();
 
-    String mode = jobInfo.params().get(PARAM_PERFETTO_RUNNING_MODE, BEFORE_TEST_RUNNING_MODE);
-    File outputFile = new File(testInfo.getGenFileDir(), OUTPUT_FILE_NAME_FORMAT);
+    mode = jobInfo.params().get(PARAM_PERFETTO_RUNNING_MODE, BEFORE_TEST_RUNNING_MODE);
+    outputFile = new File(testInfo.getGenFileDir(), OUTPUT_FILE_NAME_FORMAT);
 
-    if (AFTER_TEST_RUNNING_MODE.equals(mode)) {
-      runAfterTest(testInfo, outputFile, deviceId);
+    if (Objects.equals(mode, BEFORE_TEST_RUNNING_MODE)) {
+      setUpInBeforeTestMode(testInfo, outputFile, deviceId);
+    }
+  }
+
+  @Override
+  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    String deviceId = getDevice().getDeviceId();
+    if (Objects.equals(mode, AFTER_TEST_RUNNING_MODE)) {
+      tearDownInAfterTestMode(testInfo, outputFile, deviceId);
     } else {
-      runBeforeTest(testInfo, outputFile, deviceId);
+      tearDownInBeforeTestMode(testInfo);
     }
   }
 
-  private void runAfterTest(final TestInfo testInfo, File outputFile, String deviceId)
+  private void tearDownInAfterTestMode(final TestInfo testInfo, File outputFile, String deviceId)
       throws MobileHarnessException, InterruptedException {
+    testInfo.log().atInfo().alsoTo(logger).log("Starting sync perfetto");
     try {
-      getDecorated().run(testInfo);
-    } finally {
-      testInfo.log().atInfo().alsoTo(logger).log("Starting sync perfetto");
-      try {
-        String consoleOutput =
-            perfettoStep.startSyncPerfetto(
-                testInfo,
-                deviceId,
-                outputFile.getAbsolutePath(),
-                null,
-                () -> {
-                  testInfo.log().atInfo().alsoTo(logger).log("[perfetto onTimeout] ");
-                  testInfo
-                      .warnings()
-                      .addAndLog(
-                          new MobileHarnessException(
-                              AndroidErrorId.ANDROID_PERFETTO_DECORATOR_SYNC_EXCEED_TIMEOUT_LIMIT,
-                              "perfetto timeout"),
-                          logger);
-                },
-                LineCallback.does(
-                    line ->
-                        testInfo.log().atInfo().alsoTo(logger).log("[perfetto output] %s", line)));
-        testInfo.log().atInfo().log("Perfetto finished: %s", consoleOutput);
-      } catch (MobileHarnessException e) {
-        testInfo.warnings().addAndLog(e, logger);
-      }
+      String consoleOutput =
+          perfettoStep.startSyncPerfetto(
+              testInfo,
+              deviceId,
+              outputFile.getAbsolutePath(),
+              null,
+              () -> {
+                testInfo.log().atInfo().alsoTo(logger).log("[perfetto onTimeout] ");
+                testInfo
+                    .warnings()
+                    .addAndLog(
+                        new MobileHarnessException(
+                            AndroidErrorId.ANDROID_PERFETTO_DECORATOR_SYNC_EXCEED_TIMEOUT_LIMIT,
+                            "perfetto timeout"),
+                        logger);
+              },
+              LineCallback.does(
+                  line ->
+                      testInfo.log().atInfo().alsoTo(logger).log("[perfetto output] %s", line)));
+      testInfo.log().atInfo().log("Perfetto finished: %s", consoleOutput);
+    } catch (MobileHarnessException e) {
+      testInfo.warnings().addAndLog(e, logger);
     }
   }
 
-  private void runBeforeTest(final TestInfo testInfo, File outputFile, String deviceId)
+  private void setUpInBeforeTestMode(final TestInfo testInfo, File outputFile, String deviceId)
       throws MobileHarnessException, InterruptedException {
     // Run perfetto async, with a timeout equal to the test's remaining time (before timeout).
     // This is not how long perfetto is intended to run, however. Instead, perfetto is stopped
@@ -170,7 +181,7 @@ public class AndroidPerfettoDecorator extends BaseDecorator {
                     logger);
           }
         };
-    CommandProcess perfettoProcess =
+    perfettoProcess =
         perfettoStep.startAsyncPerfetto(
             testInfo,
             deviceId,
@@ -189,23 +200,25 @@ public class AndroidPerfettoDecorator extends BaseDecorator {
             },
             LineCallback.does(
                 line -> testInfo.log().atInfo().alsoTo(logger).log("[perfetto output] %s", line)));
-    Instant asyncPerfettoStartTime = clock.instant();
+    asyncPerfettoStartTime = clock.instant();
+  }
 
-    try {
-      getDecorated().run(testInfo);
-    } finally {
-      Instant now = clock.instant();
-      Instant earliestEndTime = asyncPerfettoStartTime.plusSeconds(5);
-      if (now.isBefore(earliestEndTime)) {
-        testInfo
-            .log()
-            .atInfo()
-            .alsoTo(logger)
-            .log("Wait for a short while before stopping async perfetto");
-        sleeper.sleep(Duration.between(now, earliestEndTime));
-      }
-
-      perfettoStep.stopAsyncPerfetto(perfettoProcess, testInfo);
+  private void tearDownInBeforeTestMode(final TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException {
+    if (perfettoProcess == null || asyncPerfettoStartTime == null) {
+      return;
     }
+    Instant now = clock.instant();
+    Instant earliestEndTime = asyncPerfettoStartTime.plusSeconds(5);
+    if (now.isBefore(earliestEndTime)) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("Wait for a short while before stopping async perfetto");
+      sleeper.sleep(Duration.between(now, earliestEndTime));
+    }
+
+    perfettoStep.stopAsyncPerfetto(perfettoProcess, testInfo);
   }
 }
