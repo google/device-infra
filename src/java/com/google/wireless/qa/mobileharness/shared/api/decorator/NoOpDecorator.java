@@ -20,6 +20,7 @@ import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -28,7 +29,7 @@ import javax.inject.Inject;
 
 /** Simple {@link Decorator} implementation for tests only. */
 @DecoratorAnnotation(help = "Do nothing in the decorator.")
-public class NoOpDecorator extends BaseDecorator implements SpecConfigable<NoOpDecoratorSpec> {
+public class NoOpDecorator extends LifecycleDecorator implements SpecConfigable<NoOpDecoratorSpec> {
 
   @Inject
   NoOpDecorator(Driver decoratedDriver, TestInfo testInfo) {
@@ -36,31 +37,30 @@ public class NoOpDecorator extends BaseDecorator implements SpecConfigable<NoOpD
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {}
+
+  @Override
+  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     NoOpDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this);
-    try {
-      getDecorated().run(testInfo);
-    } finally {
-      if (spec.hasExpectedResultBeforePostRun()) {
-        // Checks if expected result is matched.
-        TestResult expectedResult = spec.getExpectedResultBeforePostRun();
-        TestResult currentResult = testInfo.resultWithCause().get().type();
-        if (currentResult.equals(expectedResult)) {
-          testInfo.log().atInfo().log(
-              "NoOpDecorator got expected result [%s] before postRun(), set result to PASS",
-              expectedResult);
-          testInfo.resultWithCause().setPass();
-        } else {
-          MobileHarnessException e =
-              new MobileHarnessException(
-                  ExtErrorId.NO_OP_DECORATOR_TEST_FAILURE,
-                  String.format(
-                      "NoOpDecorator expected result [%s] before postRun() but got [%s],"
-                          + " set result to FAIL",
-                      expectedResult, currentResult));
-          testInfo.warnings().addAndLog(e);
-          testInfo.resultWithCause().setNonPassing(TestResult.FAIL, e);
-        }
+    if (spec.hasExpectedResultBeforePostRun()) {
+      // Checks if expected result is matched.
+      TestResult expectedResult = spec.getExpectedResultBeforePostRun();
+      TestResult currentResult = testInfo.resultWithCause().get().type();
+      if (currentResult.equals(expectedResult)) {
+        testInfo.log().atInfo().log(
+            "NoOpDecorator got expected result [%s] before tearDown(), set result to PASS",
+            expectedResult);
+        testInfo.resultWithCause().setPass();
+      } else {
+        MobileHarnessException e =
+            new MobileHarnessException(
+                ExtErrorId.NO_OP_DECORATOR_TEST_FAILURE,
+                String.format(
+                    "NoOpDecorator expected result [%s] before tearDown() but got [%s],"
+                        + " set result to FAIL",
+                    expectedResult, currentResult));
+        testInfo.warnings().addAndLog(e);
+        testInfo.resultWithCause().setNonPassing(TestResult.FAIL, e);
       }
     }
   }

@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidBugreportSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -45,7 +46,7 @@ import java.time.Duration;
         "For retrieving Android device bugreport of a test. It saves the file and "
             + "send to client"
             + " upon failure/error.")
-public class AndroidBugreportDecorator extends BaseDecorator implements AndroidBugreportSpec {
+public class AndroidBugreportDecorator extends LifecycleDecorator implements AndroidBugreportSpec {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -105,18 +106,9 @@ public class AndroidBugreportDecorator extends BaseDecorator implements AndroidB
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
-    JobInfo jobInfo = testInfo.jobInfo();
-    try {
-      preRun(jobInfo);
-      getDecorated().run(testInfo);
-    } finally {
-      postRun(testInfo);
-    }
-  }
-
-  private void preRun(JobInfo jobInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     String serial = getDevice().getDeviceId();
+    JobInfo jobInfo = testInfo.jobInfo();
     if (jobInfo.params().getBool(PARAM_NO_AUTO_RESET, false)) {
       try {
         androidSystemSettingUtil.setBatteryStatsNoAutoReset(serial, /* enable= */ true);
@@ -212,7 +204,8 @@ public class AndroidBugreportDecorator extends BaseDecorator implements AndroidB
     }
   }
 
-  private void postRun(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  @Override
+  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     JobInfo jobInfo = testInfo.jobInfo();
     String deviceId = getDevice().getDeviceId();
     try {
