@@ -40,9 +40,7 @@ java_library(
 java_library(
     name = "decorators",
     srcs = ["Decorators.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/model/job/in:__pkg__",
-    ],
+    visibility = ["//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/model/job/in:__pkg__"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
@@ -57,8 +55,7 @@ java_library(
         "DeviceSpec.java",
         "DeviceSpecs.java",
     ],
-    visibility = [
-    ],
+    visibility = ["//visibility:private"],
     deps = [
         ":decorators",
         ":dimensions",
@@ -117,9 +114,7 @@ java_library(
 java_library(
     name = "params",
     srcs = ["Params.java"],
-    visibility = [
-        "//java/com/google/devtools/mobileharness/api/model/job/in:__pkg__",
-    ],
+    visibility = ["//visibility:private"],
     deps = [
         "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
