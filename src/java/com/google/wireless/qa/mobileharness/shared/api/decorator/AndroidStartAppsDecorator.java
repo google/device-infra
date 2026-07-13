@@ -25,6 +25,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
@@ -37,7 +38,7 @@ import java.util.List;
 
 /** Driver decorator for starting applications on Android device. */
 @DecoratorAnnotation(help = "For starting apps. ")
-public class AndroidStartAppsDecorator extends BaseDecorator {
+public class AndroidStartAppsDecorator extends LifecycleDecorator {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -81,7 +82,7 @@ public class AndroidStartAppsDecorator extends BaseDecorator {
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     Instant startTime = clock.instant();
 
     JobInfo jobInfo = testInfo.jobInfo();
@@ -118,9 +119,10 @@ public class AndroidStartAppsDecorator extends BaseDecorator {
         .add(
             PropertyName.Test.PREFIX_DECORATOR_RUN_TIME_MS + getClass().getSimpleName(),
             Long.toString(runTimeMs));
-
-    getDecorated().run(testInfo);
   }
+
+  @Override
+  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {}
 
   /** Sends the progress report message. */
   private void sendProgressReportMessage(TestInfo testInfo, String progress) {

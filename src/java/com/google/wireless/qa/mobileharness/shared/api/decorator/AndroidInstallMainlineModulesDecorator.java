@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.platform.android.packagemanager.Package
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidInstallMainlineModulesDecoratorSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -50,7 +51,7 @@ import javax.inject.Inject;
  * version >= 29.
  */
 @DecoratorAnnotation(help = "Decorator that installs Android Mainline modules.")
-public class AndroidInstallMainlineModulesDecorator extends BaseDecorator
+public class AndroidInstallMainlineModulesDecorator extends LifecycleDecorator
     implements AndroidInstallMainlineModulesDecoratorSpec {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -80,15 +81,17 @@ public class AndroidInstallMainlineModulesDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     if (testInfo.jobInfo().files().isTagNotEmpty(TAG_BUNDLETOOL_FILE)) {
       bundletool =
           bundletool.withCustomBundletoolJar(
               Path.of(testInfo.jobInfo().files().getSingle(TAG_BUNDLETOOL_FILE)));
     }
     installModules(testInfo);
-    getDecorated().run(testInfo);
   }
+
+  @Override
+  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {}
 
   private void installModules(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {

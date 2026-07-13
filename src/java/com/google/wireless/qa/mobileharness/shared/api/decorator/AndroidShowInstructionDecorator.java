@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.platform.android.process.AndroidProcess
 import com.google.devtools.mobileharness.shared.util.command.linecallback.ScanSignalOutputCallback;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -41,7 +42,7 @@ import javax.inject.Inject;
         "Decorator for showing a setup instruction on the device for interactive tests. After the"
             + " user clicks the OK button or the timeout is reached, the dialog will be closed and"
             + " the test will continue.")
-public class AndroidShowInstructionDecorator extends BaseDecorator
+public class AndroidShowInstructionDecorator extends LifecycleDecorator
     implements SpecConfigable<AndroidShowInstructionDecoratorSpec> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -73,7 +74,7 @@ public class AndroidShowInstructionDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo) throws InterruptedException, MobileHarnessException {
+  protected void setUp(TestInfo testInfo) throws InterruptedException, MobileHarnessException {
     String serial = getDevice().getDeviceId();
     AndroidShowInstructionDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this, serial);
 
@@ -89,8 +90,10 @@ public class AndroidShowInstructionDecorator extends BaseDecorator
             .log("Failed to show the instruction. Continue the test.");
       }
     }
-    getDecorated().run(testInfo);
   }
+
+  @Override
+  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {}
 
   private void showInstruction(String serial, AndroidShowInstructionDecoratorSpec spec)
       throws MobileHarnessException, InterruptedException {

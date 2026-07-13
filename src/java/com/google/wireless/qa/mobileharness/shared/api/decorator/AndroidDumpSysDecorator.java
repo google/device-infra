@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.DumpSysTyp
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidDumpSysSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -67,7 +68,7 @@ import java.util.Locale;
 @DecoratorAnnotation(
     help =
         "For retrieving Android dumpsys log and send them back to client or test result service.")
-public final class AndroidDumpSysDecorator extends BaseDecorator {
+public final class AndroidDumpSysDecorator extends LifecycleDecorator {
 
   /** Template which adds header and footer to the dumpsys log. */
   private static final String LOG_TEMPLATE =
@@ -85,6 +86,9 @@ public final class AndroidDumpSysDecorator extends BaseDecorator {
 
   /** Logger for this device. */
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private ImmutableList<DumpSysCommandInfo> dumpSysCommands;
+  private boolean logToFile;
 
   /**
    * Constructor. Do NOT modify the parameter list. This constructor is required by the lab server
@@ -113,89 +117,87 @@ public final class AndroidDumpSysDecorator extends BaseDecorator {
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
-    String deviceId = getDevice().getDeviceId();
+  protected void setUp(TestInfo testInfo) {
     JobInfo jobInfo = testInfo.jobInfo();
-    boolean logToFile = jobInfo.params().isTrue(AndroidDumpSysSpec.PARAM_LOG_TO_FILE);
+    logToFile = jobInfo.params().isTrue(AndroidDumpSysSpec.PARAM_LOG_TO_FILE);
+    dumpSysCommands = makeDumpSysCommands(jobInfo);
+  }
 
-    ImmutableList<DumpSysCommandInfo> dumpSysCommands = makeDumpSysCommands(jobInfo);
-
+  @Override
+  protected void tearDown(TestInfo testInfo) throws InterruptedException {
+    String deviceId = getDevice().getDeviceId();
+    // Only invokes the dumpsys command when the device is detected.
+    MobileHarnessException deviceOnlineException = null;
+    boolean isDeviceOnline = false;
     try {
-      getDecorated().run(testInfo);
-    } finally {
-      // Only invokes the dumpsys command when the device is detected.
-      MobileHarnessException deviceOnlineException = null;
-      boolean isDeviceOnline = false;
-      try {
-        isDeviceOnline = systemStateManager.isOnline(deviceId);
-      } catch (MobileHarnessException e) {
-        deviceOnlineException = e;
-      }
+      isDeviceOnline = systemStateManager.isOnline(deviceId);
+    } catch (MobileHarnessException e) {
+      deviceOnlineException = e;
+    }
 
-      if (deviceOnlineException != null || !isDeviceOnline) {
-        testInfo
-            .warnings()
-            .addAndLog(
-                new MobileHarnessException(
-                    AndroidErrorId.ANDROID_DUMPSYS_DECORATOR_DEVICE_NOT_FOUND,
-                    "Skip dumpsys because the device is disconnected",
-                    deviceOnlineException),
-                logger);
-      } else {
-        testInfo.log().atInfo().alsoTo(logger).log("Start to dumpsys");
-        String rawLog = null;
-        MobileHarnessException dumpSysError = null;
-        for (DumpSysCommandInfo dumpSysCommand : dumpSysCommands) {
-          DumpSysType dumpSysType = dumpSysCommand.type();
-          String dumpSysTypeStr = dumpSysType.getTypeValue();
-          String dumpSysSuffix = dumpSysCommand.suffix();
-          String dumpSysLogName = dumpSysCommand.logName();
-          try {
-            // If type = none or all, suffix will be ignored.
-            if (dumpSysType.equals(DumpSysType.NONE) || dumpSysType.equals(DumpSysType.ALL)) {
-              rawLog = adbUtil.dumpSys(deviceId);
-            } else {
-              rawLog = adbUtil.dumpSys(deviceId, dumpSysType, dumpSysSuffix);
-            }
-          } catch (MobileHarnessException e) {
-            // Does NOT throw out the exception, otherwise the test will be marked as ERROR, which
-            // may already pass.
-            testInfo
-                .warnings()
-                .addAndLog(
-                    new MobileHarnessException(
-                        AndroidErrorId.ANDROID_DUMPSYS_DECORATOR_DUMPSYS_COMMAND_ERROR,
-                        String.format("Failed to run command dumpsys on device %s", deviceId),
-                        e),
-                    logger);
-            dumpSysError = e;
+    if (deviceOnlineException != null || !isDeviceOnline) {
+      testInfo
+          .warnings()
+          .addAndLog(
+              new MobileHarnessException(
+                  AndroidErrorId.ANDROID_DUMPSYS_DECORATOR_DEVICE_NOT_FOUND,
+                  "Skip dumpsys because the device is disconnected",
+                  deviceOnlineException),
+              logger);
+    } else {
+      testInfo.log().atInfo().alsoTo(logger).log("Start to dumpsys");
+      String rawLog = null;
+      MobileHarnessException dumpSysError = null;
+      for (DumpSysCommandInfo dumpSysCommand : dumpSysCommands) {
+        DumpSysType dumpSysType = dumpSysCommand.type();
+        String dumpSysTypeStr = dumpSysType.getTypeValue();
+        String dumpSysSuffix = dumpSysCommand.suffix();
+        String dumpSysLogName = dumpSysCommand.logName();
+        try {
+          // If type = none or all, suffix will be ignored.
+          if (dumpSysType.equals(DumpSysType.NONE) || dumpSysType.equals(DumpSysType.ALL)) {
+            rawLog = adbUtil.dumpSys(deviceId);
+          } else {
+            rawLog = adbUtil.dumpSys(deviceId, dumpSysType, dumpSysSuffix);
           }
-          if (dumpSysError == null) {
-            String fullLog = String.format(LOG_TEMPLATE, dumpSysTypeStr, dumpSysSuffix, rawLog);
-            if (logToFile) {
-              try {
-                // Logs to file only.
-                String logFilePath = testInfo.getGenFileDir() + "/" + dumpSysLogName;
-                testInfo.log().atInfo().log("Writing dumpsys log to file");
-                fileUtil.writeToFile(logFilePath, fullLog);
-                testInfo.log().atInfo().alsoTo(logger).log("Dumpsys log saved to %s", logFilePath);
-              } catch (MobileHarnessException e) {
-                testInfo
-                    .warnings()
-                    .addAndLog(
-                        new MobileHarnessException(
-                            AndroidErrorId.ANDROID_DUMPSYS_DECORATOR_WRITE_LOG_FILE_ERROR,
-                            "Failed to write dumpsys log to file.",
-                            e),
-                        logger);
-              }
-            } else {
-              // Logs in TestInfo only.
-              testInfo.log().atInfo().log("%s", fullLog);
-              logger.atInfo().log(
-                  "\n%s",
-                  String.format(LOG_TEMPLATE, dumpSysTypeStr, dumpSysSuffix, StrUtil.tail(rawLog)));
+        } catch (MobileHarnessException e) {
+          // Does NOT throw out the exception, otherwise the test will be marked as ERROR, which
+          // may already pass.
+          testInfo
+              .warnings()
+              .addAndLog(
+                  new MobileHarnessException(
+                      AndroidErrorId.ANDROID_DUMPSYS_DECORATOR_DUMPSYS_COMMAND_ERROR,
+                      String.format("Failed to run command dumpsys on device %s", deviceId),
+                      e),
+                  logger);
+          dumpSysError = e;
+        }
+        if (dumpSysError == null) {
+          String fullLog = String.format(LOG_TEMPLATE, dumpSysTypeStr, dumpSysSuffix, rawLog);
+          if (logToFile) {
+            try {
+              // Logs to file only.
+              String logFilePath = testInfo.getGenFileDir() + "/" + dumpSysLogName;
+              testInfo.log().atInfo().log("Writing dumpsys log to file");
+              fileUtil.writeToFile(logFilePath, fullLog);
+              testInfo.log().atInfo().alsoTo(logger).log("Dumpsys log saved to %s", logFilePath);
+            } catch (MobileHarnessException e) {
+              testInfo
+                  .warnings()
+                  .addAndLog(
+                      new MobileHarnessException(
+                          AndroidErrorId.ANDROID_DUMPSYS_DECORATOR_WRITE_LOG_FILE_ERROR,
+                          "Failed to write dumpsys log to file.",
+                          e),
+                      logger);
             }
+          } else {
+            // Logs in TestInfo only.
+            testInfo.log().atInfo().log("%s", fullLog);
+            logger.atInfo().log(
+                "\n%s",
+                String.format(LOG_TEMPLATE, dumpSysTypeStr, dumpSysSuffix, StrUtil.tail(rawLog)));
           }
         }
       }

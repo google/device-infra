@@ -39,6 +39,7 @@ import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.omnilab.deviceadmin.proto.NetworkEvent;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.ExtensionRegistry;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -77,7 +78,7 @@ import javax.inject.Inject;
  * <p>See https://developer.android.com/work/dpc/logging for more details about the network activity
  * logging feature.
  */
-public class AndroidNetworkActivityLoggingDecorator extends BaseDecorator
+public class AndroidNetworkActivityLoggingDecorator extends LifecycleDecorator
     implements SpecConfigable<AndroidNetworkActivityLoggingDecoratorSpec> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -101,6 +102,9 @@ public class AndroidNetworkActivityLoggingDecorator extends BaseDecorator
   private final AndroidSystemSettingUtil systemSettingUtil;
   private final Sleeper sleeper;
 
+  private boolean deviceAdminAvailable;
+  private AndroidNetworkActivityLoggingDecoratorSpec spec;
+
   @Inject
   AndroidNetworkActivityLoggingDecorator(
       Driver decorated,
@@ -123,29 +127,29 @@ public class AndroidNetworkActivityLoggingDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
-    AndroidNetworkActivityLoggingDecoratorSpec spec =
-        testInfo.jobInfo().combinedSpec(this, getDevice().getDeviceId());
+  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    spec = testInfo.jobInfo().combinedSpec(this, getDevice().getDeviceId());
 
-    boolean deviceAdminAvailable = checkDeviceAdminAvailability();
+    deviceAdminAvailable = checkDeviceAdminAvailability();
 
     if (deviceAdminAvailable) {
       enableLogging(testInfo);
       tryDismissNotification();
     }
+  }
 
-    try {
-      getDecorated().run(testInfo);
-    } finally {
-      if (deviceAdminAvailable) {
-        triggerLogDump(testInfo);
-        Path hostDumpFile = Path.of(testInfo.getTmpFileDir(), "network_events.dpb");
-        try {
-          pullDumpFile(testInfo, hostDumpFile);
+  @Override
+  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    if (deviceAdminAvailable) {
+      triggerLogDump(testInfo);
+      Path hostDumpFile = Path.of(testInfo.getTmpFileDir(), "network_events.dpb");
+      try {
+        pullDumpFile(testInfo, hostDumpFile);
+        if (spec != null) {
           writeReportFile(testInfo, hostDumpFile, spec);
-        } catch (MobileHarnessException e) {
-          logger.atWarning().withCause(e).log("Failed to process network logs.");
         }
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log("Failed to process network logs.");
       }
     }
   }
