@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidLogCatSpec;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
@@ -60,7 +61,7 @@ import javax.annotation.Nullable;
     help =
         "For retrieving Android device log of a test. It can save the device log "
             + "in file and send back to client or Sponge, or just merge into the test log.")
-public class AndroidLogCatDecorator extends BaseDecorator implements AndroidLogCatSpec {
+public class AndroidLogCatDecorator extends LifecycleDecorator implements AndroidLogCatSpec {
 
   public static final boolean DEFAULT_IGNORE_LOG_BUFFER_SIZE_SET_FAILURE = false;
 
@@ -90,6 +91,14 @@ public class AndroidLogCatDecorator extends BaseDecorator implements AndroidLogC
   private final AndroidSystemSettingUtil systemSettingUtil;
 
   private final SystemStateManager systemStateManager;
+
+  private String options;
+  private String filterSpecs;
+  private String logFilePath;
+  private boolean isAsyncLog;
+  private CommandProcess commandProcess;
+  private Writer logFileWriter;
+  private Stopwatch stopwatch;
 
   /**
    * Constructor. Do NOT modify the parameter list. This constructor is required by the lab server
@@ -122,7 +131,8 @@ public class AndroidLogCatDecorator extends BaseDecorator implements AndroidLogC
   }
 
   @Override
-  public void run(final TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(final TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException {
     String deviceId = getDevice().getDeviceId();
     JobInfo jobInfo = testInfo.jobInfo();
     String logcatSinceTime = null;
@@ -166,8 +176,8 @@ public class AndroidLogCatDecorator extends BaseDecorator implements AndroidLogC
     }
 
     // Filter specs and format could be null.
-    String filterSpecs = jobInfo.params().get(AndroidLogCatSpec.PARAM_LOG_FILTER_SPECS);
-    String options = jobInfo.params().get(AndroidLogCatSpec.PARAM_LOG_OPTIONS);
+    filterSpecs = jobInfo.params().get(AndroidLogCatSpec.PARAM_LOG_FILTER_SPECS);
+    options = jobInfo.params().get(AndroidLogCatSpec.PARAM_LOG_OPTIONS);
     if (!Strings.isNullOrEmpty(logcatSinceTime)) {
       options = String.format("%s -T '%s'", nullToEmpty(options), logcatSinceTime).trim();
     }
@@ -186,9 +196,10 @@ public class AndroidLogCatDecorator extends BaseDecorator implements AndroidLogC
           e);
     }
 
-    String logFilePath = null;
     if (jobInfo.params().isTrue(AndroidLogCatSpec.PARAM_LOG_TO_FILE)) {
       logFilePath = PathUtil.join(testInfo.getGenFileDir(), LOG_CAT_FILE_NAME);
+    } else {
+      logFilePath = null;
     }
     int sdkVersion = getDeviceSdkVersion(deviceId);
 
@@ -241,28 +252,28 @@ public class AndroidLogCatDecorator extends BaseDecorator implements AndroidLogC
       }
     }
 
-    if (jobInfo.params().isTrue(AndroidLogCatSpec.PARAM_ASYNC_LOG)) {
-      asyncRun(testInfo, sdkVersion, filterSpecs, options, logFilePath);
+    isAsyncLog = jobInfo.params().isTrue(AndroidLogCatSpec.PARAM_ASYNC_LOG);
+    if (isAsyncLog) {
+      startAsyncLog(testInfo, sdkVersion);
     } else {
-      Stopwatch stopwatch = Stopwatch.createStarted();
-      syncRun(testInfo, filterSpecs, options, logFilePath);
-      stopwatch.stop();
-      long runTimeMs = stopwatch.elapsed().toMillis();
-      testInfo
-          .properties()
-          .add(
-              Test.PREFIX_DECORATOR_RUN_TIME_MS + getClass().getSimpleName(),
-              Long.toString(runTimeMs));
+      stopwatch = Stopwatch.createStarted();
     }
   }
 
-  /** Runs logcat after the test is finished. Will block the current thread when dumping. */
-  private void syncRun(
-      final TestInfo testInfo, String filterSpecs, String options, @Nullable String logFilePath)
-      throws MobileHarnessException, InterruptedException {
-    try {
-      getDecorated().run(testInfo);
-    } finally {
+  @Override
+  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    if (isAsyncLog) {
+      stopAsyncLog(testInfo);
+    } else {
+      if (stopwatch != null) {
+        stopwatch.stop();
+        long runTimeMs = stopwatch.elapsed().toMillis();
+        testInfo
+            .properties()
+            .add(
+                Test.PREFIX_DECORATOR_RUN_TIME_MS + getClass().getSimpleName(),
+                Long.toString(runTimeMs));
+      }
       postSyncRun(testInfo, filterSpecs, options, logFilePath);
     }
   }
@@ -367,17 +378,12 @@ public class AndroidLogCatDecorator extends BaseDecorator implements AndroidLogC
   }
 
   /** Runs logcat asynchronously during the test is running. */
-  private void asyncRun(
-      final TestInfo testInfo,
-      final int sdkVersion,
-      String filterSpecs,
-      String options,
-      @Nullable String logFilePath)
+  private void startAsyncLog(final TestInfo testInfo, final int sdkVersion)
       throws MobileHarnessException, InterruptedException {
     String deviceId = getDevice().getDeviceId();
 
-    CommandProcess commandProcess = null;
-    Writer logFileWriter = null;
+    commandProcess = null;
+    logFileWriter = null;
     if (logFilePath != null) {
       testInfo
           .log()
@@ -437,31 +443,30 @@ public class AndroidLogCatDecorator extends BaseDecorator implements AndroidLogC
               LineCallback.does(
                   line -> testInfo.log().atInfo().alsoTo(logger).log("[logcat] %s", line)));
     }
+  }
 
-    try {
-      getDecorated().run(testInfo);
-    } finally {
-      if (commandProcess != null) {
-        testInfo.log().atInfo().alsoTo(logger).log("Stopping logcat for device %s...", deviceId);
-        commandProcess.stop();
-        commandProcess.await();
-        testInfo.log().atInfo().alsoTo(logger).log("Logcat stopped for device %s", deviceId);
-      }
-      // Closes file only after the command is stopped. Otherwise, the running command may fail to
-      // write to file. See b/17269603.
-      if (logFileWriter != null) {
-        try {
-          logFileWriter.close();
-        } catch (IOException e) {
-          testInfo
-              .warnings()
-              .addAndLog(
-                  new MobileHarnessException(
-                      AndroidErrorId.ANDROID_LOGCAT_DECORATOR_CLOSE_FILE_WRITER_ERROR,
-                      "Failed to close logcat file",
-                      e),
-                  logger);
-        }
+  private void stopAsyncLog(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    String deviceId = getDevice().getDeviceId();
+    if (commandProcess != null) {
+      testInfo.log().atInfo().alsoTo(logger).log("Stopping logcat for device %s...", deviceId);
+      commandProcess.stop();
+      commandProcess.await();
+      testInfo.log().atInfo().alsoTo(logger).log("Logcat stopped for device %s", deviceId);
+    }
+    // Closes file only after the command is stopped. Otherwise, the running command may fail to
+    // write to file. See b/17269603.
+    if (logFileWriter != null) {
+      try {
+        logFileWriter.close();
+      } catch (IOException e) {
+        testInfo
+            .warnings()
+            .addAndLog(
+                new MobileHarnessException(
+                    AndroidErrorId.ANDROID_LOGCAT_DECORATOR_CLOSE_FILE_WRITER_ERROR,
+                    "Failed to close logcat file",
+                    e),
+                logger);
       }
     }
   }

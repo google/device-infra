@@ -21,6 +21,7 @@ import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.runtimestats.proto.RuntimeStatsReport;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -37,7 +38,7 @@ import javax.inject.Inject;
  * directory. Collection of each stat is best effort. See {@link AndroidRuntimeStatsDecoratorSpec}
  * for supported stats.
  */
-public class AndroidRuntimeStatsDecorator extends BaseDecorator
+public class AndroidRuntimeStatsDecorator extends LifecycleDecorator
     implements SpecConfigable<AndroidRuntimeStatsDecoratorSpec> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -52,13 +53,7 @@ public class AndroidRuntimeStatsDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
-    collectAndWriteReport(testInfo);
-    getDecorated().run(testInfo);
-  }
-
-  private void collectAndWriteReport(TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException {
+  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     AndroidRuntimeStatsDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this);
     RuntimeStatsReport.Builder reportBuilder = RuntimeStatsReport.newBuilder();
     if (spec.getCpuInfo()) {
@@ -69,6 +64,9 @@ public class AndroidRuntimeStatsDecorator extends BaseDecorator
     }
     writeRuntimeStatsReport(testInfo, reportBuilder.build());
   }
+
+  @Override
+  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {}
 
   private void collectCpuInfo(TestInfo testInfo, RuntimeStatsReport.Builder reportBuilder)
       throws InterruptedException {

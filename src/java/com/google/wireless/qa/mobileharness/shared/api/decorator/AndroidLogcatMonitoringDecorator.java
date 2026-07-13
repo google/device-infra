@@ -55,6 +55,7 @@ import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidS
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -70,7 +71,7 @@ import javax.inject.Inject;
 
 /** Decorator for monitoring for crashes, ANRs and device events in logcat. */
 @DecoratorAnnotation(help = "Decorator to monitor logcat, report crashes  and specific events.")
-public class AndroidLogcatMonitoringDecorator extends BaseDecorator
+public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
     implements SpecConfigable<AndroidLogcatMonitoringDecoratorSpec> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -99,6 +100,10 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
 
   private ImmutableList<DeviceEvent> initialWifiChecks = ImmutableList.of();
 
+  private AndroidLogcatMonitoringDecoratorSpec spec;
+  private ExecutorService executorService;
+  private CommandProcess process;
+
   @Inject
   AndroidLogcatMonitoringDecorator(
       Driver decorated,
@@ -121,8 +126,8 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
-    AndroidLogcatMonitoringDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this);
+  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    spec = testInfo.jobInfo().combinedSpec(this);
     testInfo
         .log()
         .atInfo()
@@ -131,7 +136,7 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
 
     String deviceId = getDevice().getDeviceId();
 
-    ExecutorService executorService = Executors.newFixedThreadPool(3);
+    executorService = Executors.newFixedThreadPool(3);
 
     checkWifiStatus(deviceId);
 
@@ -160,25 +165,30 @@ public class AndroidLogcatMonitoringDecorator extends BaseDecorator
     deviceTimeOnStart = LocalDateTime.parse(timeOnDevice, DATE_TIME_FORMATTER);
     testInfo.log().atInfo().alsoTo(logger).log("---- Device time: %s ----\n", deviceTimeOnStart);
 
-    CommandProcess process =
+    process =
         adb.runShellAsync(
             getDevice().getDeviceId(),
             String.format("logcat -v threadtime -T \"%s\"", timeOnDevice),
             testInfo.jobInfo().timer().remainingTimeJava(),
             logcatLineProxy);
+  }
 
-    try {
-      getDecorated().run(testInfo);
-    } finally {
+  @Override
+  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    if (process != null) {
       process.killAndThenKillForcibly(Duration.ofSeconds(5));
-      writeMonitoringReport(testInfo);
-      writeUnparsedLogcatLines(testInfo);
-      extractDropboxEntries(testInfo);
-      checkForCrashDialog(testInfo, spec.getThrowExceptionOnCrashDialogDetection());
-      executorService.shutdown();
-      checkForOrchestratorConnectionErrors();
-      checkForInfraError();
     }
+    writeMonitoringReport(testInfo);
+    writeUnparsedLogcatLines(testInfo);
+    extractDropboxEntries(testInfo);
+    if (spec != null) {
+      checkForCrashDialog(testInfo, spec.getThrowExceptionOnCrashDialogDetection());
+    }
+    if (executorService != null) {
+      executorService.shutdown();
+    }
+    checkForOrchestratorConnectionErrors();
+    checkForInfraError();
   }
 
   private void writeMonitoringReport(TestInfo testInfo) throws MobileHarnessException {
