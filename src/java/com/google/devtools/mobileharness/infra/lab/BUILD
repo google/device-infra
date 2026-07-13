@@ -179,8 +179,8 @@ java_library(
 )
 
 java_library(
-    name = "lab_server_launcher",
-    srcs = ["LabServerLauncher.java"],
+    name = "base_lab_server_launcher",
+    srcs = ["BaseLabServerLauncher.java"],
     resources = [
     ],
     deps = [
@@ -194,12 +194,25 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:flags_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging/flogger:flogger_formatter",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/java/com/google/devtools/mobileharness/shared/util/system:shutdown_hook_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/system:system_properties_util",
         "//src/java/com/google/devtools/mobileharness/shared/version",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:exit_code",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+    ],
+)
+
+java_library(
+    name = "lab_server_launcher",
+    srcs = ["LabServerLauncher.java"],
+    deps = [
+        ":base_lab_server_launcher",
+        ":lab_server",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging/flogger:flogger_formatter",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
     ],
