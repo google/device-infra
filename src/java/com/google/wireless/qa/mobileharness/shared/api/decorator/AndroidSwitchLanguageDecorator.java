@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.android.AndroidPackages;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -54,7 +55,7 @@ import java.util.Map;
 /** Driver decorator for setting device language and country before running test. */
 @DecoratorAnnotation(
     help = "For switching device language and country before running test on rooted device.")
-public class AndroidSwitchLanguageDecorator extends BaseDecorator
+public class AndroidSwitchLanguageDecorator extends LifecycleDecorator
     implements SpecConfigable<AndroidSwitchLanguageDecoratorSpec> {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -106,6 +107,13 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
 
   private final Sleeper sleeper;
 
+  private String originalLanguage;
+  private String originalCountry;
+  private int sdkVersion;
+  private boolean switchRegion;
+  private Duration logSignalTimeout;
+  private boolean localeSwitchedByDecorator = false;
+
   /**
    * Constructor. Do NOT modify the parameter list. This constructor is required by the lab server
    * framework.
@@ -151,7 +159,7 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     Device device = getDevice();
     String deviceId = device.getDeviceId();
 
@@ -160,9 +168,9 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
     final String language = spec.getLanguage();
     final String country = spec.getCountry();
 
-    int sdkVersion = systemSettingManager.getDeviceSdkVersion(device);
-    final String originalLanguage = adbUtil.getProperty(deviceId, AndroidProperty.LANGUAGE);
-    final String originalCountry = adbUtil.getProperty(deviceId, AndroidProperty.REGION);
+    sdkVersion = systemSettingManager.getDeviceSdkVersion(device);
+    originalLanguage = adbUtil.getProperty(deviceId, AndroidProperty.LANGUAGE);
+    originalCountry = adbUtil.getProperty(deviceId, AndroidProperty.REGION);
 
     boolean skipSwitch =
         Ascii.equalsIgnoreCase(language, Strings.nullToEmpty(originalLanguage))
@@ -177,7 +185,7 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
           .log(
               "Device language is already %s_%s. Skipping language switch setup.",
               language, country);
-      getDecorated().run(testInfo);
+      localeSwitchedByDecorator = false;
       return;
     }
 
@@ -189,8 +197,8 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
             "Device locale is [%s_%s]. Target is [%s_%s]. Switching language...",
             originalLanguage, originalCountry, language, country);
 
-    final boolean switchRegion = !Strings.isNullOrEmpty(country);
-    final Duration logSignalTimeout = Duration.ofSeconds(spec.getLogSignalTimeoutSec());
+    switchRegion = !Strings.isNullOrEmpty(country);
+    logSignalTimeout = Duration.ofSeconds(spec.getLogSignalTimeoutSec());
 
     // Gets the resource file, installs the apk and gets the permission.
     String apkPath = resUtil.getResourceFile(getClass(), SWITCH_LANGUAGE_APK_RES_PATH);
@@ -211,24 +219,23 @@ public class AndroidSwitchLanguageDecorator extends BaseDecorator
         throw e;
       }
     }
+    localeSwitchedByDecorator = true;
+  }
 
-    try {
-      // Runs the actual tests after language and country switch.
-      getDecorated().run(testInfo);
-    } finally {
-      // Try to switch the language and country back to what they were originally. If this fails
-      // the test will still succeed.
+  @Override
+  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    if (localeSwitchedByDecorator && spec.getRestoreLanguageAfterTest()) {
+      String deviceId = getDevice().getDeviceId();
+      testInfo.log().atInfo().alsoTo(logger).log("Restoring language on device %s", deviceId);
       try {
-        if (spec.getRestoreLanguageAfterTest()) {
-          switchLocale(
-              testInfo,
-              sdkVersion,
-              deviceId,
-              originalLanguage,
-              originalCountry,
-              switchRegion,
-              logSignalTimeout);
-        }
+        switchLocale(
+            testInfo,
+            sdkVersion,
+            deviceId,
+            originalLanguage,
+            originalCountry,
+            switchRegion,
+            logSignalTimeout);
       } catch (MobileHarnessException e) {
         testInfo.warnings().addAndLog(e, logger);
       }

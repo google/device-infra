@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -64,7 +65,7 @@ import javax.inject.Inject;
  * <p>Example usage in ATP: {@code aflags_overrides=namespace/flag_name=true,other_flag=false}.
  */
 @DecoratorAnnotation(help = "For flipping read/write aflags on an Android device.")
-public class AndroidAflagsDecorator extends BaseDecorator
+public class AndroidAflagsDecorator extends LifecycleDecorator
     implements SpecConfigable<AndroidAflagsDecoratorSpec> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -75,6 +76,8 @@ public class AndroidAflagsDecorator extends BaseDecorator
   private final Adb adb;
   private final SystemStateManager systemStateManager;
 
+  private final Map<String, AFlagsFeatureFlag.State> flagsToRestore = new HashMap<>();
+
   @Inject
   AndroidAflagsDecorator(
       Driver decoratedDriver, TestInfo testInfo, Adb adb, SystemStateManager systemStateManager) {
@@ -84,7 +87,7 @@ public class AndroidAflagsDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     String deviceId = getDevice().getDeviceId();
     AndroidAflagsDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this, deviceId);
 
@@ -95,7 +98,6 @@ public class AndroidAflagsDecorator extends BaseDecorator
           .atInfo()
           .alsoTo(logger)
           .log("No aflags_overrides option provided, skipping AndroidAflagsDecorator.");
-      getDecorated().run(testInfo);
       return;
     }
 
@@ -108,7 +110,6 @@ public class AndroidAflagsDecorator extends BaseDecorator
     ImmutableMap<String, AFlagsFeatureFlag> initialFlags = listFlags(deviceId, testInfo);
 
     Map<String, AFlagsFeatureFlag.State> flagsToSet = new HashMap<>();
-    Map<String, AFlagsFeatureFlag.State> flagsToRestore = new HashMap<>();
 
     for (Map.Entry<String, AFlagsFeatureFlag.State> flag : targetFlags.entrySet()) {
       String flagName = flag.getKey();
@@ -158,23 +159,23 @@ public class AndroidAflagsDecorator extends BaseDecorator
           .alsoTo(logger)
           .log("No flags changed. Skipping reboot for device %s.", deviceId);
     }
+  }
 
-    try {
-      getDecorated().run(testInfo);
-    } finally {
-      if (!flagsToRestore.isEmpty()) {
-        testInfo.log().atInfo().alsoTo(logger).log("Restoring aflags on device %s", deviceId);
-        try {
-          systemStateManager.becomeRoot(getDevice());
-          updateFlags(deviceId, flagsToRestore, testInfo);
-          rebootDevice(testInfo);
-        } catch (MobileHarnessException e) {
-          testInfo
-              .log()
-              .atWarning()
-              .alsoTo(logger)
-              .log("Failed to restore flags on device %s: %s", deviceId, e.getMessage());
-        }
+  @Override
+  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    if (!flagsToRestore.isEmpty()) {
+      String deviceId = getDevice().getDeviceId();
+      testInfo.log().atInfo().alsoTo(logger).log("Restoring aflags on device %s", deviceId);
+      try {
+        systemStateManager.becomeRoot(getDevice());
+        updateFlags(deviceId, flagsToRestore, testInfo);
+        rebootDevice(testInfo);
+      } catch (MobileHarnessException e) {
+        testInfo
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .log("Failed to restore flags on device %s: %s", deviceId, e.getMessage());
       }
     }
   }

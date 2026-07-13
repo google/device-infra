@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.android.WifiUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidCleanAppsSpec;
@@ -68,7 +69,7 @@ import javax.inject.Inject;
             + "and cleaning system packages under tests before running test. Note you should use "
             + "this decorator \"outside\" of the other decorators need to install and use some "
             + "apks.")
-public class AndroidCleanAppsDecorator extends BaseDecorator implements AndroidCleanAppsSpec {
+public class AndroidCleanAppsDecorator extends LifecycleDecorator implements AndroidCleanAppsSpec {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -111,7 +112,7 @@ public class AndroidCleanAppsDecorator extends BaseDecorator implements AndroidC
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     Log testLog = testInfo.log();
     JobInfo jobInfo = testInfo.jobInfo();
     Params params = jobInfo.params();
@@ -179,8 +180,10 @@ public class AndroidCleanAppsDecorator extends BaseDecorator implements AndroidC
         cacheDeviceStateAndReboot(testInfo.log());
       }
     }
-    getDecorated().run(testInfo);
   }
+
+  @Override
+  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {}
 
   /** Cleans data of system apps that are being tested. */
   private void cleanApps(List<String> packagesToKeep, TestInfo testInfo)
