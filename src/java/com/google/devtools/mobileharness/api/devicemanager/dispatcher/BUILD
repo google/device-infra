@@ -140,6 +140,11 @@ java_library(
 java_library(
     name = "no_op_device",
     srcs = ["NoOpDeviceDispatcher.java"],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+        "//:deviceinfra_devicemanagement_pkg",
+        "//java/com/google/wireless/qa/mobileharness/lab:__pkg__",
+    ],
     deps = [
         ":base",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector/model",

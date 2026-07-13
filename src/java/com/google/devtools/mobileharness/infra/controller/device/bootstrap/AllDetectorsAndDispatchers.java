@@ -18,7 +18,9 @@ package com.google.devtools.mobileharness.infra.controller.device.bootstrap;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.devicemanager.detector.AdbDetector;
 import com.google.devtools.mobileharness.api.devicemanager.detector.Detector;
 import com.google.devtools.mobileharness.api.devicemanager.detector.FailedDeviceDetector;
@@ -33,10 +35,12 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.device.DispatcherManager;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
+import java.util.Optional;
 
 /** All detectors and dispatchers for {@link DetectorDispatcherSelector} in different components. */
 final class AllDetectorsAndDispatchers {
 
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
   private static final ReflectionUtil REFLECTION_UTIL = new ReflectionUtil();
 
   private AllDetectorsAndDispatchers() {}
@@ -64,7 +68,7 @@ final class AllDetectorsAndDispatchers {
 
     // Android Desktop Executor detector.
     if (Flags.androidDesktopExecutorDevicesNum.getNonNull() > 0) {
-      detectorCandidates.add(createDetector("AndroidDesktopExecutorDetector"));
+      addDetector(detectorCandidates, "AndroidDesktopExecutorDetector");
       return detectorCandidates.build();
     }
 
@@ -76,7 +80,7 @@ final class AllDetectorsAndDispatchers {
     // Android JIT emulator detector.
     if (Flags.enableEmulatorDetection.getNonNull()) {
       if (Flags.androidJitEmulatorNum.getNonNull() > 0) {
-        detectorCandidates.add(createDetector("AndroidJitEmulatorDetector"));
+        addDetector(detectorCandidates, "AndroidJitEmulatorDetector");
       }
     }
 
@@ -116,13 +120,13 @@ final class AllDetectorsAndDispatchers {
     // Android JIT emulator dispatcher.
     if (Flags.enableEmulatorDetection.getNonNull()) {
       if (Flags.androidJitEmulatorNum.getNonNull() > 0) {
-        dispatcherManager.add(loadDispatcherClass("AndroidJitEmulatorDispatcher"));
+        addDispatcher(dispatcherManager, "AndroidJitEmulatorDispatcher");
       }
     }
 
     // Android Desktop Executor dispatcher.
     if (Flags.androidDesktopExecutorDevicesNum.getNonNull() > 0) {
-      dispatcherManager.add(loadDispatcherClass("AndroidDesktopExecutorDeviceDispatcher"));
+      addDispatcher(dispatcherManager, "AndroidDesktopExecutorDeviceDispatcher");
     }
   }
 
@@ -142,6 +146,7 @@ final class AllDetectorsAndDispatchers {
     ImmutableList<Class<? extends Dispatcher>> dispatcherClasses =
         dispatcherNames.stream()
             .map(AllDetectorsAndDispatchers::loadDispatcherClass)
+            .flatMap(Optional::stream)
             .collect(toImmutableList());
     for (Class<? extends Dispatcher> dispatcherClass : dispatcherClasses) {
       dispatcherManager
@@ -156,28 +161,45 @@ final class AllDetectorsAndDispatchers {
     }
   }
 
-  private static Detector createDetector(String detectorClassSimpleName) {
+  @VisibleForTesting
+  static Optional<Detector> createDetector(String detectorClassSimpleName) {
     String detectorClassName = Detector.class.getPackageName() + "." + detectorClassSimpleName;
     try {
-      return REFLECTION_UTIL
-          .loadClass(
-              detectorClassName, Detector.class, AllDetectorsAndDispatchers.class.getClassLoader())
-          .getConstructor()
-          .newInstance();
+      return Optional.of(
+          REFLECTION_UTIL
+              .loadClass(
+                  detectorClassName,
+                  Detector.class,
+                  AllDetectorsAndDispatchers.class.getClassLoader())
+              .getConstructor()
+              .newInstance());
     } catch (MobileHarnessException | ReflectiveOperationException e) {
-      throw new IllegalStateException(
-          String.format("Detector class [%s] is not added as runtime_deps", detectorClassName), e);
+      logger.atFine().withCause(e).log(
+          "Detector class [%s] is not added as runtime_deps, skipping", detectorClassName);
+      return Optional.empty();
     }
   }
 
-  private static Class<? extends Dispatcher> loadDispatcherClass(String dispatcherClassSimpleName) {
+  private static void addDetector(
+      ImmutableList.Builder<Detector> detectorCandidates, String detectorClassSimpleName) {
+    createDetector(detectorClassSimpleName).ifPresent(detectorCandidates::add);
+  }
+
+  @VisibleForTesting
+  static Optional<Class<? extends Dispatcher>> loadDispatcherClass(
+      String dispatcherClassSimpleName) {
     try {
-      return ClassUtil.getDispatcherClass(dispatcherClassSimpleName);
+      return Optional.of(ClassUtil.getDispatcherClass(dispatcherClassSimpleName));
     } catch (MobileHarnessException e) {
-      throw new IllegalStateException(
-          String.format(
-              "Dispatcher class [%s] is not added as runtime_deps", dispatcherClassSimpleName),
-          e);
+      logger.atFine().withCause(e).log(
+          "Dispatcher class [%s] is not added as runtime_deps, skipping",
+          dispatcherClassSimpleName);
+      return Optional.empty();
     }
+  }
+
+  private static void addDispatcher(
+      DispatcherManager dispatcherManager, String dispatcherClassSimpleName) {
+    loadDispatcherClass(dispatcherClassSimpleName).ifPresent(dispatcherManager::add);
   }
 }

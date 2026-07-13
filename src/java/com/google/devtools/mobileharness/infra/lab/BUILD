@@ -47,8 +47,6 @@ java_library(
         "LabServer.java",
         "LabServerModule.java",
     ],
-    runtime_deps = [
-    ],
     deps = [
         ":annotations",
         ":lab_server_constants_module",
