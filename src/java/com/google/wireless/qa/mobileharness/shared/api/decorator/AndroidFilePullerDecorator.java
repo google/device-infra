@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdb
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidFilePullerSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -46,7 +47,7 @@ import java.util.Map;
  */
 @DecoratorAnnotation(
     help = "For pulling generated files on device and send them back to client or " + "Sponge.")
-public class AndroidFilePullerDecorator extends BaseDecorator
+public class AndroidFilePullerDecorator extends LifecycleDecorator
     implements AndroidFilePullerSpec, SpecConfigable<AndroidFilePullerDecoratorSpec> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -54,6 +55,11 @@ public class AndroidFilePullerDecorator extends BaseDecorator
   private final AndroidFileUtil androidFileUtil;
   private final LocalFileUtil localFileUtil;
   private final AndroidAdbUtil androidAdbUtil;
+
+  private AndroidFilePullerDecoratorSpec spec;
+  private ImmutableList<String> fileOrDirPathsOnDevice;
+  private boolean ignoreFilesNotExist = true;
+  private boolean needTeardown = false;
 
   /**
    * Constructor. Do NOT modify the parameter list. This constructor is required by the lab server
@@ -83,17 +89,18 @@ public class AndroidFilePullerDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     String deviceId = getDevice().getDeviceId();
     JobInfo jobInfo = testInfo.jobInfo();
-    AndroidFilePullerDecoratorSpec spec = jobInfo.combinedSpec(this, deviceId);
+    spec = jobInfo.combinedSpec(this, deviceId);
 
     if (!matchProperties(deviceId, spec.getPropertyMap(), testInfo)) {
-      getDecorated().run(testInfo);
+      needTeardown = false;
       return;
     }
+    needTeardown = true;
 
-    ImmutableList<String> fileOrDirPathsOnDevice =
+    fileOrDirPathsOnDevice =
         Splitter.on(PATH_DELIMITER)
             .splitToStream(spec.getFilePathOnDevice())
             .map(String::trim)
@@ -123,87 +130,84 @@ public class AndroidFilePullerDecorator extends BaseDecorator
         }
       }
     }
-    boolean ignoreFilesNotExist = true;
     if (spec.hasSkipPullingNonExistFiles()) {
       ignoreFilesNotExist = spec.getSkipPullingNonExistFiles();
     }
-    try {
-      // Runs "real" tests.
-      getDecorated().run(testInfo);
-    } finally {
-      // Pulls the device files to PUBLIC_TMP dir of the test. MobileHarness client will get and
-      // send them to Sponge automatically.
-      ImmutableList<String> pulledFilePaths = ImmutableList.of();
-      if (spec.hasPulledFilePaths()) {
-        pulledFilePaths =
-            Splitter.on(PATH_DELIMITER)
-                .trimResults()
-                .splitToStream(spec.getPulledFilePaths())
-                .collect(toImmutableList());
+  }
+
+  @Override
+  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    if (!needTeardown) {
+      return;
+    }
+    String deviceId = getDevice().getDeviceId();
+    // Pulls the device files to PUBLIC_TMP dir of the test. MobileHarness client will get and
+    // send them to Sponge automatically.
+    ImmutableList<String> pulledFilePaths = ImmutableList.of();
+    if (spec.hasPulledFilePaths()) {
+      pulledFilePaths =
+          Splitter.on(PATH_DELIMITER)
+              .trimResults()
+              .splitToStream(spec.getPulledFilePaths())
+              .collect(toImmutableList());
+    }
+    for (int i = 0; i < fileOrDirPathsOnDevice.size(); i++) {
+      String path = fileOrDirPathsOnDevice.get(i);
+      String targetRootDirOrPath;
+      if (!pulledFilePaths.isEmpty()) {
+        String pulledPath = i < pulledFilePaths.size() ? pulledFilePaths.get(i) : "";
+        targetRootDirOrPath =
+            pulledPath.isEmpty()
+                ? testInfo.getGenFileDir()
+                : PathUtil.join(testInfo.getGenFileDir(), pulledPath);
+      } else if (!spec.getPulledFileDir().isEmpty()) {
+        targetRootDirOrPath = PathUtil.join(testInfo.getGenFileDir(), spec.getPulledFileDir());
+      } else {
+        targetRootDirOrPath = testInfo.getGenFileDir();
       }
-      for (int i = 0; i < fileOrDirPathsOnDevice.size(); i++) {
-        String path = fileOrDirPathsOnDevice.get(i);
-        String targetRootDirOrPath;
-        if (!pulledFilePaths.isEmpty()) {
-          String pulledPath = i < pulledFilePaths.size() ? pulledFilePaths.get(i) : "";
-          targetRootDirOrPath =
-              pulledPath.isEmpty()
-                  ? testInfo.getGenFileDir()
-                  : PathUtil.join(testInfo.getGenFileDir(), pulledPath);
-        } else if (!spec.getPulledFileDir().isEmpty()) {
-          targetRootDirOrPath = PathUtil.join(testInfo.getGenFileDir(), spec.getPulledFileDir());
+      String noPathLog =
+          "Skip pulling file/dir because directory [" + path + "] does not exist in the device. ";
+      boolean isPathExist = false;
+
+      // First check if file existed on device.
+      try {
+        isPathExist = androidFileUtil.isFileOrDirExisted(deviceId, path);
+      } catch (MobileHarnessException e) {
+        testInfo.log().atInfo().alsoTo(logger).withCause(e).log("Failed to check if file existed");
+      }
+      if (!isPathExist) {
+        if (ignoreFilesNotExist) {
+          testInfo.log().atInfo().alsoTo(logger).log("%s", noPathLog);
         } else {
-          targetRootDirOrPath = testInfo.getGenFileDir();
-        }
-        String noPathLog =
-            "Skip pulling file/dir because directory [" + path + "] does not exist in the device. ";
-        boolean isPathExist = false;
-
-        // First check if file existed on device.
-        try {
-          isPathExist = androidFileUtil.isFileOrDirExisted(deviceId, path);
-        } catch (MobileHarnessException e) {
-          testInfo
-              .log()
-              .atInfo()
-              .alsoTo(logger)
-              .withCause(e)
-              .log("Failed to check if file existed");
-        }
-        if (!isPathExist) {
-          if (ignoreFilesNotExist) {
-            testInfo.log().atInfo().alsoTo(logger).log("%s", noPathLog);
-          } else {
-            MobileHarnessException exception =
-                new MobileHarnessException(
-                    AndroidErrorId.ANDROID_FILE_PULLER_DECORATOR_OUTPUT_FILE_NOT_FOUND, noPathLog);
-            testInfo.warnings().addAndLog(exception, logger);
-            testInfo.resultWithCause().setNonPassing(Test.TestResult.FAIL, exception);
-          }
-          continue;
-        }
-
-        // Now pull existing files from device.
-        try {
-          String targetPath =
-              spec.getPreserveAbsolutePath()
-                  ? PathUtil.join(targetRootDirOrPath, path)
-                  : targetRootDirOrPath;
-          localFileUtil.prepareParentDir(targetPath);
-          String info = androidFileUtil.pull(deviceId, path, targetPath);
-          testInfo.log().atInfo().alsoTo(logger).log("%s", info);
-        } catch (MobileHarnessException e) {
           MobileHarnessException exception =
               new MobileHarnessException(
-                  AndroidErrorId.ANDROID_FILE_PULLER_DECORATOR_PULL_FILE_ERROR,
-                  "Failed to pull file/dir from device directory [" + path + "]",
-                  e);
-          // Log the error message when failed to pull files.
+                  AndroidErrorId.ANDROID_FILE_PULLER_DECORATOR_OUTPUT_FILE_NOT_FOUND, noPathLog);
           testInfo.warnings().addAndLog(exception, logger);
-          if (!spec.getIgnorePullingExistFilesError()) {
-            testInfo.resultWithCause().setNonPassing(Test.TestResult.FAIL, exception);
-            break;
-          }
+          testInfo.resultWithCause().setNonPassing(Test.TestResult.FAIL, exception);
+        }
+        continue;
+      }
+
+      // Now pull existing files from device.
+      try {
+        String targetPath =
+            spec.getPreserveAbsolutePath()
+                ? PathUtil.join(targetRootDirOrPath, path)
+                : targetRootDirOrPath;
+        localFileUtil.prepareParentDir(targetPath);
+        String info = androidFileUtil.pull(deviceId, path, targetPath);
+        testInfo.log().atInfo().alsoTo(logger).log("%s", info);
+      } catch (MobileHarnessException e) {
+        MobileHarnessException exception =
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_FILE_PULLER_DECORATOR_PULL_FILE_ERROR,
+                "Failed to pull file/dir from device directory [" + path + "]",
+                e);
+        // Log the error message when failed to pull files.
+        testInfo.warnings().addAndLog(exception, logger);
+        if (!spec.getIgnorePullingExistFilesError()) {
+          testInfo.resultWithCause().setNonPassing(Test.TestResult.FAIL, exception);
+          break;
         }
       }
     }

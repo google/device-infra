@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.lightning.networkconnector.NetworkConnector;
 import com.google.devtools.mobileharness.platform.android.lightning.networkconnector.WifiConnectArgs;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
@@ -35,9 +36,8 @@ import java.time.Duration;
 
 /** Driver decorator for setting Wifi SSID on the device. */
 @DecoratorAnnotation(help = "For setting the device wifi ssid before the test is run.")
-public class AndroidSetWifiDecorator extends BaseDecorator
+public class AndroidSetWifiDecorator extends LifecycleDecorator
     implements SpecConfigable<AndroidSetWifiDecoratorSpec> {
-
   /** The waiting time of timeout to connect to the ssid. */
   protected static final Duration TIMEOUT_SSID_CONNECTION_TIME = Duration.ofMinutes(2);
 
@@ -57,7 +57,7 @@ public class AndroidSetWifiDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     Device device = getDevice();
     String deviceId = device.getDeviceId();
     AndroidSetWifiDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this, deviceId);
@@ -98,7 +98,6 @@ public class AndroidSetWifiDecorator extends BaseDecorator
                   "Could not get default ssid for the device %s from device properties. Skipping"
                       + " wifi setup.",
                   deviceId);
-          getDecorated().run(testInfo);
           return;
         }
       }
@@ -118,7 +117,6 @@ public class AndroidSetWifiDecorator extends BaseDecorator
               .alsoTo(logger)
               .log(
                   "SSID for the device %s is not present or empty. Skipping wifi setup.", deviceId);
-          getDecorated().run(testInfo);
           return;
         }
       }
@@ -135,7 +133,8 @@ public class AndroidSetWifiDecorator extends BaseDecorator
             .setRetryNum(retryNum)
             .build();
     networkConnector.connectToWifi(device, connectArgs, testInfo.log());
-    // Runs the actual test.
-    getDecorated().run(testInfo);
   }
+
+  @Override
+  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {}
 }

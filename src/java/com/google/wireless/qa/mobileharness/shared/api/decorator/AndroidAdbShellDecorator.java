@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceConn
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidAdbShellSpec;
@@ -52,7 +53,7 @@ import javax.inject.Inject;
             + "Commands that start with CACHE_DEVICE are executed without "
             + "interrupting the test due to potential device disconnection "
             + "caused by the command.")
-public class AndroidAdbShellDecorator extends BaseDecorator
+public class AndroidAdbShellDecorator extends LifecycleDecorator
     implements SpecConfigable<AndroidAdbShellDecoratorSpec> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -67,6 +68,11 @@ public class AndroidAdbShellDecorator extends BaseDecorator
 
   /** Timeout of probing device/emulator readiness. */
   private static final Duration DEVICE_READY_TIMEOUT = Duration.ofMinutes(5);
+
+  private final List<CommandProcess> asyncCommands = new ArrayList<>();
+
+  private AndroidAdbShellDecoratorSpec spec;
+  private Duration syncCommandTimeout;
 
   @Inject
   @VisibleForTesting
@@ -83,15 +89,10 @@ public class AndroidAdbShellDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     String deviceId = getDevice().getDeviceId();
-
-    AndroidAdbShellDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this, deviceId);
-
-    boolean ignoreError = spec.getAdbShellIgnoreError();
-
-    List<CommandProcess> asyncCommands = new ArrayList<>();
-    Duration syncCommandTimeout = Duration.ofSeconds(spec.getAdbShellSyncCommandTimeoutSec());
+    spec = testInfo.jobInfo().combinedSpec(this, deviceId);
+    syncCommandTimeout = Duration.ofSeconds(spec.getAdbShellSyncCommandTimeoutSec());
 
     Duration remainingTime = testInfo.timer().remainingTimeJava();
     if (syncCommandTimeout.compareTo(remainingTime) > 0) {
@@ -101,33 +102,48 @@ public class AndroidAdbShellDecorator extends BaseDecorator
     }
 
     try {
-      // Before test.
       Iterable<String> commandsBeforeTest =
           AndroidAdbShellSpec.parseCommands(spec.getAdbShellBeforeTest());
       asyncCommands.addAll(
-          runCommands(deviceId, commandsBeforeTest, testInfo, ignoreError, syncCommandTimeout));
-
-      try {
-        // Runs the actual test.
-        getDecorated().run(testInfo);
-      } finally {
-        // After test.
-        Iterable<String> commandsAfterTest =
-            AndroidAdbShellSpec.parseCommands(spec.getAdbShellAfterTest());
-        try {
-          asyncCommands.addAll(
-              runCommands(deviceId, commandsAfterTest, testInfo, ignoreError, syncCommandTimeout));
-        } catch (MobileHarnessException e) {
-          testInfo.warnings().addAndLog(e, logger);
-        }
-      }
-
-    } finally {
-      // After test completes stop all async commands.
-      for (CommandProcess commandProcess : asyncCommands) {
-        commandProcess.kill();
-      }
+          runCommands(
+              deviceId,
+              commandsBeforeTest,
+              testInfo,
+              spec.getAdbShellIgnoreError(),
+              syncCommandTimeout));
+    } catch (Throwable t) {
+      cleanupAsyncCommands();
+      throw t;
     }
+  }
+
+  @Override
+  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    try {
+      String deviceId = getDevice().getDeviceId();
+      Iterable<String> commandsAfterTest =
+          AndroidAdbShellSpec.parseCommands(spec.getAdbShellAfterTest());
+      try {
+        asyncCommands.addAll(
+            runCommands(
+                deviceId,
+                commandsAfterTest,
+                testInfo,
+                spec.getAdbShellIgnoreError(),
+                syncCommandTimeout));
+      } catch (MobileHarnessException e) {
+        testInfo.warnings().addAndLog(e, logger);
+      }
+    } finally {
+      cleanupAsyncCommands();
+    }
+  }
+
+  private void cleanupAsyncCommands() {
+    for (CommandProcess commandProcess : asyncCommands) {
+      commandProcess.kill();
+    }
+    asyncCommands.clear();
   }
 
   private ImmutableList<CommandProcess> runCommands(
