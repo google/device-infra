@@ -25,6 +25,9 @@ import com.google.devtools.mobileharness.platform.android.packagemanager.Package
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -38,7 +41,7 @@ import javax.inject.Inject;
     help =
         "Decorator for managing whether to run the test based on device preloaded mainline modules."
             + " See AndroidMainlineModulesCheckDecoratorSpec for more details.")
-public class AndroidMainlineModulesCheckDecorator extends BaseDecorator
+public class AndroidMainlineModulesCheckDecorator extends LifecycleDecorator
     implements SpecConfigable<AndroidMainlineModulesCheckDecoratorSpec> {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -54,7 +57,8 @@ public class AndroidMainlineModulesCheckDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     String deviceId = getDevice().getDeviceId();
 
     AndroidMainlineModulesCheckDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this, deviceId);
@@ -81,12 +85,13 @@ public class AndroidMainlineModulesCheckDecorator extends BaseDecorator
                   spec.getMainlineModulePackageNameList(), deviceId));
       testInfo.resultWithCause().setNonPassing(TestResult.SKIP, error);
       testInfo.getRootTest().resultWithCause().setNonPassing(TestResult.SKIP, error);
-      // Skips later decorators and driver execution because it wants to skip the test. Don't throw
-      // the exception out so to avoid the test result being overridden as FAIL/ERROR later.
-    } else {
-      getDecorated().run(testInfo);
+      throw error;
     }
   }
+
+  @Override
+  protected void tearDown(TeardownContext context)
+      throws MobileHarnessException, InterruptedException {}
 
   private boolean ifSkipTest(
       AndroidMainlineModulesCheckDecoratorSpec spec, TestInfo testInfo, String deviceId)

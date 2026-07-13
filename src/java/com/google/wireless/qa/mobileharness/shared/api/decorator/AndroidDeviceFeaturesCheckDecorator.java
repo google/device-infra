@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -38,7 +39,7 @@ import javax.inject.Inject;
     help =
         "Decorator for skipping the test based on device features (pm list features). See"
             + " AndroidDeviceFeaturesCheckDecoratorSpec for more details.")
-public class AndroidDeviceFeaturesCheckDecorator extends BaseDecorator
+public class AndroidDeviceFeaturesCheckDecorator extends LifecycleDecorator
     implements SpecConfigable<AndroidDeviceFeaturesCheckDecoratorSpec> {
 
   private static final String FEATURE_PREFIX = "feature:";
@@ -53,7 +54,8 @@ public class AndroidDeviceFeaturesCheckDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     String deviceId = getDevice().getDeviceId();
 
     AndroidDeviceFeaturesCheckDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this, deviceId);
@@ -77,26 +79,29 @@ public class AndroidDeviceFeaturesCheckDecorator extends BaseDecorator
 
     if (nonexistentRequiredFeatures.isEmpty() && existentForbiddenFeatures.isEmpty()) {
       // The check passes.
-      getDecorated().run(testInfo);
-    } else {
-      // The check fails.
-      MobileHarnessException error =
-          new MobileHarnessException(
-              AndroidErrorId.ANDROID_DEVICE_FEATURES_CHECK_DECORATOR_CEHCK_FAILURE,
-              String.format(
-                  "Skipped due to incompatible device features."
-                      + " nonexistent_required_features=%s, existent_forbidden_features=%s,"
-                      + " device_features=%s, device_id=%s",
-                  nonexistentRequiredFeatures,
-                  existentForbiddenFeatures,
-                  supportedFeatures,
-                  deviceId));
-      testInfo.resultWithCause().setNonPassing(TestResult.SKIP, error);
-      testInfo.getRootTest().resultWithCause().setNonPassing(TestResult.SKIP, error);
-      // Skips later decorators and driver execution because it wants to skip the test. Don't throw
-      // the exception out so to avoid the test result being overridden as FAIL/ERROR later.
+      return;
     }
+
+    // The check fails.
+    MobileHarnessException error =
+        new MobileHarnessException(
+            AndroidErrorId.ANDROID_DEVICE_FEATURES_CHECK_DECORATOR_CEHCK_FAILURE,
+            String.format(
+                "Skipped due to incompatible device features."
+                    + " nonexistent_required_features=%s, existent_forbidden_features=%s,"
+                    + " device_features=%s, device_id=%s",
+                nonexistentRequiredFeatures,
+                existentForbiddenFeatures,
+                supportedFeatures,
+                deviceId));
+    testInfo.resultWithCause().setNonPassing(TestResult.SKIP, error);
+    testInfo.getRootTest().resultWithCause().setNonPassing(TestResult.SKIP, error);
+    throw error;
   }
+
+  @Override
+  protected void tearDown(TeardownContext context)
+      throws MobileHarnessException, InterruptedException {}
 
   private static String formatFeature(String feature) {
     return feature.startsWith(FEATURE_PREFIX) ? feature : FEATURE_PREFIX + feature;
