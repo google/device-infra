@@ -63,44 +63,30 @@ public final class LabServerReleaseButtonBuilderTest {
 
     var result =
         labServerReleaseButtonBuilder.build(
-            UNIVERSE, Optional.empty(), Optional.empty(), true, DAEMON_RUNNING);
+            UNIVERSE, Optional.empty(), Optional.empty(), DAEMON_RUNNING);
 
     assertThat(result.getVisible()).isFalse();
   }
 
   @Test
-  public void build_noActionVisibleAndNotDaemonMissing_returnsInvisible() {
+  public void build_isCoreOrFusion_returnsInvisible() {
     when(mockFeatureManager.isLabServerReleaseFeatureEnabled()).thenReturn(true);
 
     var result =
         labServerReleaseButtonBuilder.build(
-            UNIVERSE, Optional.empty(), Optional.empty(), false, DAEMON_RUNNING);
+            UNIVERSE, Optional.empty(), Optional.of("FUSION_LAB"), DAEMON_RUNNING);
 
     assertThat(result.getVisible()).isFalse();
   }
 
   @Test
-  public void build_noActionVisibleButDaemonMissing_returnsVisibleAndDisabled() {
+  public void build_daemonRunning_returnsVisibleAndEnabled() {
     when(mockFeatureManager.isLabServerReleaseFeatureEnabled()).thenReturn(true);
     when(mockFeatureReadiness.isLabServerReleaseReady()).thenReturn(true);
 
     var result =
         labServerReleaseButtonBuilder.build(
-            UNIVERSE, Optional.empty(), Optional.empty(), false, DAEMON_MISSING);
-
-    assertThat(result.getVisible()).isTrue();
-    assertThat(result.getEnabled()).isFalse();
-    assertThat(result.getTooltip()).contains("daemon server is missing");
-  }
-
-  @Test
-  public void build_actionVisibleDaemonRunning_returnsVisibleAndEnabled() {
-    when(mockFeatureManager.isLabServerReleaseFeatureEnabled()).thenReturn(true);
-    when(mockFeatureReadiness.isLabServerReleaseReady()).thenReturn(true);
-
-    var result =
-        labServerReleaseButtonBuilder.build(
-            UNIVERSE, Optional.empty(), Optional.empty(), true, DAEMON_RUNNING);
+            UNIVERSE, Optional.empty(), Optional.empty(), DAEMON_RUNNING);
 
     assertThat(result.getVisible()).isTrue();
     assertThat(result.getEnabled()).isTrue();
@@ -108,13 +94,13 @@ public final class LabServerReleaseButtonBuilderTest {
   }
 
   @Test
-  public void build_actionVisibleButDaemonMissing_returnsVisibleAndDisabled() {
+  public void build_daemonMissing_returnsVisibleAndDisabled() {
     when(mockFeatureManager.isLabServerReleaseFeatureEnabled()).thenReturn(true);
     when(mockFeatureReadiness.isLabServerReleaseReady()).thenReturn(true);
 
     var result =
         labServerReleaseButtonBuilder.build(
-            UNIVERSE, Optional.empty(), Optional.empty(), true, DAEMON_MISSING);
+            UNIVERSE, Optional.empty(), Optional.empty(), DAEMON_MISSING);
 
     assertThat(result.getVisible()).isTrue();
     assertThat(result.getEnabled()).isFalse();

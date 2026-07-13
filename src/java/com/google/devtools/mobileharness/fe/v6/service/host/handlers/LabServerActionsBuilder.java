@@ -72,15 +72,8 @@ public class LabServerActionsBuilder {
     ActionButtonState advancedOperations =
         labServerAdvancedOperationsButtonBuilder.build(labInfoOpt, labTypeOpt);
 
-    boolean anyActionVisible =
-        start.getVisible()
-            || restart.getVisible()
-            || stop.getVisible()
-            || advancedOperations.getVisible();
-
     ActionButtonState release =
-        labServerReleaseButtonBuilder.build(
-            universe, labInfoOpt, labTypeOpt, anyActionVisible, daemonStatus);
+        labServerReleaseButtonBuilder.build(universe, labInfoOpt, labTypeOpt, daemonStatus);
 
     return LabServerActions.newBuilder()
         .setRelease(release)

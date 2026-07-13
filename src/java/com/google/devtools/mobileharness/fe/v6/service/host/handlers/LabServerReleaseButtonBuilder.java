@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
+import com.google.devtools.mobileharness.fe.v6.service.host.util.HostTypes;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
@@ -44,16 +45,13 @@ public class LabServerReleaseButtonBuilder {
       UniverseScope universe,
       Optional<LabInfo> labInfoOpt,
       Optional<String> labTypeOpt,
-      boolean anyActionVisible,
       DaemonServerInfo.Status daemonStatus) {
 
     if (!featureManagerFactory.create(universe).isLabServerReleaseFeatureEnabled()) {
       return ActionButtonState.newBuilder().setVisible(false).build();
     }
 
-    boolean daemonMissing = daemonStatus.getState() == DaemonServerInfo.State.MISSING;
-
-    if (!anyActionVisible && !daemonMissing) {
+    if (HostTypes.isCoreOrFusion(labInfoOpt, labTypeOpt)) {
       return ActionButtonState.newBuilder().setVisible(false).build();
     }
 

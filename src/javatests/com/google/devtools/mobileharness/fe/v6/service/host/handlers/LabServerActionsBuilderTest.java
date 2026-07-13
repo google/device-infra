@@ -70,9 +70,11 @@ public final class LabServerActionsBuilderTest {
   }
 
   @Test
-  public void build_calculatesAnyActionVisibleCorrectly_oneVisible() {
-    ActionButtonState invisible = ActionButtonState.newBuilder().setVisible(false).build();
-    ActionButtonState visible = ActionButtonState.newBuilder().setVisible(true).build();
+  public void build_returnsAllActions() {
+    ActionButtonState startState = ActionButtonState.newBuilder().setTooltip("Start").build();
+    ActionButtonState restartState = ActionButtonState.newBuilder().setTooltip("Restart").build();
+    ActionButtonState stopState = ActionButtonState.newBuilder().setTooltip("Stop").build();
+    ActionButtonState releaseState = ActionButtonState.newBuilder().setTooltip("Release").build();
 
     when(mockStartButtonBuilder.build(
             UNIVERSE,
@@ -81,7 +83,7 @@ public final class LabServerActionsBuilderTest {
             ACTIVITY,
             CONNECTIVITY_STATUS,
             DAEMON_STATUS))
-        .thenReturn(invisible);
+        .thenReturn(startState);
     when(mockRestartButtonBuilder.build(
             UNIVERSE,
             Optional.empty(),
@@ -89,7 +91,7 @@ public final class LabServerActionsBuilderTest {
             ACTIVITY,
             CONNECTIVITY_STATUS,
             DAEMON_STATUS))
-        .thenReturn(visible);
+        .thenReturn(restartState);
     when(mockStopButtonBuilder.build(
             UNIVERSE,
             Optional.empty(),
@@ -97,19 +99,10 @@ public final class LabServerActionsBuilderTest {
             ACTIVITY,
             CONNECTIVITY_STATUS,
             DAEMON_STATUS))
-        .thenReturn(invisible);
-
-    ActionButtonState releaseStateIfVisible =
-        ActionButtonState.newBuilder().setTooltip("Visible").build();
-    ActionButtonState releaseStateIfInvisible =
-        ActionButtonState.newBuilder().setTooltip("Invisible").build();
-
+        .thenReturn(stopState);
     when(mockReleaseButtonBuilder.build(
-            UNIVERSE, Optional.empty(), Optional.empty(), true, DAEMON_STATUS))
-        .thenReturn(releaseStateIfVisible);
-    when(mockReleaseButtonBuilder.build(
-            UNIVERSE, Optional.empty(), Optional.empty(), false, DAEMON_STATUS))
-        .thenReturn(releaseStateIfInvisible);
+            UNIVERSE, Optional.empty(), Optional.empty(), DAEMON_STATUS))
+        .thenReturn(releaseState);
 
     var result =
         labServerActionsBuilder.build(
@@ -120,59 +113,9 @@ public final class LabServerActionsBuilderTest {
             CONNECTIVITY_STATUS,
             DAEMON_STATUS);
 
-    assertThat(result.getRelease().getTooltip()).isEqualTo("Visible");
-  }
-
-  @Test
-  public void build_calculatesAnyActionVisibleCorrectly_noneVisible() {
-    ActionButtonState invisible = ActionButtonState.newBuilder().setVisible(false).build();
-
-    when(mockStartButtonBuilder.build(
-            UNIVERSE,
-            Optional.empty(),
-            Optional.empty(),
-            ACTIVITY,
-            CONNECTIVITY_STATUS,
-            DAEMON_STATUS))
-        .thenReturn(invisible);
-    when(mockRestartButtonBuilder.build(
-            UNIVERSE,
-            Optional.empty(),
-            Optional.empty(),
-            ACTIVITY,
-            CONNECTIVITY_STATUS,
-            DAEMON_STATUS))
-        .thenReturn(invisible);
-    when(mockStopButtonBuilder.build(
-            UNIVERSE,
-            Optional.empty(),
-            Optional.empty(),
-            ACTIVITY,
-            CONNECTIVITY_STATUS,
-            DAEMON_STATUS))
-        .thenReturn(invisible);
-
-    ActionButtonState releaseStateIfVisible =
-        ActionButtonState.newBuilder().setTooltip("Visible").build();
-    ActionButtonState releaseStateIfInvisible =
-        ActionButtonState.newBuilder().setTooltip("Invisible").build();
-
-    when(mockReleaseButtonBuilder.build(
-            UNIVERSE, Optional.empty(), Optional.empty(), true, DAEMON_STATUS))
-        .thenReturn(releaseStateIfVisible);
-    when(mockReleaseButtonBuilder.build(
-            UNIVERSE, Optional.empty(), Optional.empty(), false, DAEMON_STATUS))
-        .thenReturn(releaseStateIfInvisible);
-
-    var result =
-        labServerActionsBuilder.build(
-            UNIVERSE,
-            Optional.empty(),
-            Optional.empty(),
-            ACTIVITY,
-            CONNECTIVITY_STATUS,
-            DAEMON_STATUS);
-
-    assertThat(result.getRelease().getTooltip()).isEqualTo("Invisible");
+    assertThat(result.getStart()).isEqualTo(startState);
+    assertThat(result.getRestart()).isEqualTo(restartState);
+    assertThat(result.getStop()).isEqualTo(stopState);
+    assertThat(result.getRelease()).isEqualTo(releaseState);
   }
 }
