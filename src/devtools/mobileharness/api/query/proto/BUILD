@@ -41,6 +41,11 @@ java_proto_library(
     deps = [":device_query_proto"],
 )
 
+kt_jvm_proto_library(
+    name = "device_query_kt_proto",
+    deps = [":device_query_proto"],
+)
+
 proto_library(
     name = "filter_proto",
     srcs = ["filter.proto"],
