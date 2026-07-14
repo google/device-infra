@@ -5,28 +5,65 @@
       Rollout Error
     } @else {
       <mat-icon class="title-icon">info</mat-icon>
-      {{ isReady() ? 'Rollout In Progress' : 'Initializing Rollout...' }}
+      {{ isInitialized() ? 'Rollout In Progress' : 'Initializing Rollout...' }}
     }
   </h3>
 
   <div mat-dialog-content class="tracking-content">
     <p class="message">
-      Initializing deployment process for version <strong>{{ data.version }}</strong> to host <strong>{{ data.hostName }}</strong>.
+      @switch (data.operation) {
+        @case ('DEPLOY') {
+          @if (isInitialized()) {
+            The deployment for version <strong>{{ data.version }}</strong> to host <strong>{{ data.hostName }}</strong> has been initiated.
+          } @else {
+            Initializing deployment process for version <strong>{{ data.version }}</strong> to host <strong>{{ data.hostName }}</strong>.
+          }
+        }
+        @case ('START') {
+          @if (isInitialized()) {
+            The server start for host <strong>{{ data.hostName }}</strong> has been initiated.
+          } @else {
+            Initializing start process for host <strong>{{ data.hostName }}</strong>.
+          }
+        }
+        @case ('RESTART') {
+          @if (isInitialized()) {
+            The restart for host <strong>{{ data.hostName }}</strong> has been initiated.
+          } @else {
+            Initializing restart process for host <strong>{{ data.hostName }}</strong>.
+          }
+        }
+        @case ('STOP') {
+          @if (isInitialized()) {
+            The stop for host <strong>{{ data.hostName }}</strong> has been initiated.
+          } @else {
+            Initializing stop process for host <strong>{{ data.hostName }}</strong>.
+          }
+        }
+      }
     </p>
 
-    <div class="summary-box">
-      <div><strong>Version:</strong> {{ data.version }}</div>
-      @if (data.flags) {
+    @if (data.operation === 'DEPLOY') {
+      <div class="summary-box">
+        <div><strong>Version:</strong><br />{{ data.version }}</div>
         <div class="flags-section">
           <strong>Pass Through Flags:</strong>
-          <pre class="flags-text">{{ data.flags }}</pre>
+          @if (data.flags && data.flags.trim()) {
+            <pre class="flags-text">{{ data.flags }}</pre>
+          } @else {
+            <div class="flags-text">N/A</div>
+          }
         </div>
-      }
-    </div>
+      </div>
+    }
 
-    @if (!isReady() && !errorMessage()) {
+    @if (!isInitialized() && !errorMessage()) {
       <p class="hint">
         Generating Legislator tracking link. You can close this dialog; the operation will continue in the background.
+      </p>
+    } @else if (isInitialized() && !errorMessage() && trackingUrl()) {
+      <p class="hint">
+        Track progress with the link below. You can close this dialog; the operation will continue in the background.
       </p>
     }
 
@@ -36,7 +73,7 @@
           <mat-icon class="error-icon">error_outline</mat-icon>
           <span>{{ errorMessage() }}</span>
         </div>
-      } @else if (!isReady()) {
+      } @else if (!isInitialized()) {
         <div class="loading-state">
           <mat-icon class="spinner">sync</mat-icon>
           Generating link...
@@ -56,11 +93,11 @@
 
   <div mat-dialog-actions class="tracking-actions">
     <div class="action-group">
-      <button class="m3-button m3-button-text" (click)="copyLink()" [disabled]="!isReady() || !trackingUrl() || errorMessage()">
+      <button class="m3-button m3-button-text" (click)="copyLink()" [disabled]="!isInitialized() || !trackingUrl() || errorMessage()">
         <mat-icon>content_copy</mat-icon>
         Copy Link
       </button>
-      <button class="m3-button m3-button-text" (click)="openLink()" [disabled]="!isReady() || !trackingUrl() || errorMessage()">
+      <button class="m3-button m3-button-text" (click)="openLink()" [disabled]="!isInitialized() || !trackingUrl() || errorMessage()">
         <mat-icon>open_in_new</mat-icon>
         Open Link
       </button>

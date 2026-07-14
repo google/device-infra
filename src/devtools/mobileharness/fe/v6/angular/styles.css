@@ -12,6 +12,15 @@
   animation: spin 1.5s linear infinite;
 }
 
+/* Ensure all snackbars take precedence in z-index to appear on top of dialogs */
+.cdk-overlay-pane:has(.mat-mdc-snack-bar-container),
+.cdk-overlay-pane:has(.mat-snack-bar-container),
+.cdk-overlay-pane:has(mat-mdc-snack-bar-container),
+.cdk-overlay-pane:has(mat-snack-bar-container),
+.cdk-overlay-pane.custom-snackbar {
+  z-index: 10000 !important;
+}
+
 /* Base styles for all custom snackbars */
 .mat-mdc-snack-bar-container.custom-snackbar .mdc-snackbar__surface {
   padding: 0 16px; /* Adjust padding as Material defaults might be too large */
@@ -45,6 +54,15 @@
 }
 .snackbar-info .snackbar-content,
 .snackbar-info .snackbar-content mat-icon {
+  color: white !important;
+}
+
+/* Warning Type */
+.snackbar-warning .mdc-snackbar__surface {
+  background-color: #f57c00 !important;
+}
+.snackbar-warning .snackbar-content,
+.snackbar-warning .snackbar-content mat-icon {
   color: white !important;
 }
 

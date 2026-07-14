@@ -3,7 +3,7 @@ import {MAT_DIALOG_DATA} from '@angular/material/dialog';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {of, Subject} from 'rxjs';
 
-import {ReleaseLabServerResponse} from '@deviceinfra/app/core/models/host_action';
+import {RolloutResponse} from '@deviceinfra/app/core/models/host_action';
 import {SnackBarService} from '@deviceinfra/app/shared/services/snackbar_service';
 import {TrackingDialog, TrackingDialogData} from './tracking_dialog';
 
@@ -11,13 +11,14 @@ describe('TrackingDialog', () => {
   let component: TrackingDialog;
   let fixture: ComponentFixture<TrackingDialog>;
   let snackBarSpy: jasmine.SpyObj<SnackBarService>;
-  let responseSubject: Subject<ReleaseLabServerResponse>;
+  let responseSubject: Subject<RolloutResponse>;
 
   const dialogData: TrackingDialogData = {
     hostName: 'test-host',
     version: '2.0.0',
     flags: '--some_flag',
     response$: of(),
+    operation: 'DEPLOY',
   };
 
   beforeEach(async () => {
@@ -25,7 +26,7 @@ describe('TrackingDialog', () => {
       'showSuccess',
       'showError',
     ]);
-    responseSubject = new Subject<ReleaseLabServerResponse>();
+    responseSubject = new Subject<RolloutResponse>();
 
     // Bulletproof navigator.clipboard polyfill for Karma sandboxed headless Chrome
     if (!navigator.clipboard) {
@@ -58,35 +59,34 @@ describe('TrackingDialog', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
-    expect(component.isReady()).toBeFalse();
+    expect(component.isInitialized()).toBeFalse();
   });
 
   it('should handle successful release response', () => {
-    const mockResponse: ReleaseLabServerResponse = {
+    const mockResponse: RolloutResponse = {
       trackingUrl: 'http://rollout/track-123',
     };
 
     responseSubject.next(mockResponse);
     responseSubject.complete();
 
-    expect(component.isReady()).toBeTrue();
+    expect(component.isInitialized()).toBeTrue();
     expect(component.trackingUrl()).toEqual('http://rollout/track-123');
     expect(component.errorMessage()).toEqual('');
   });
 
   it('should handle successful release response with empty tracking URL', () => {
-    const mockResponse: ReleaseLabServerResponse = {
+    const mockResponse: RolloutResponse = {
       trackingUrl: '',
     };
 
     responseSubject.next(mockResponse);
     responseSubject.complete();
 
-    expect(component.isReady()).toBeTrue();
+    expect(component.isInitialized()).toBeTrue();
     expect(component.trackingUrl()).toEqual('');
     expect(component.errorMessage()).toEqual('');
   });
-
 
   it('should handle error release response', () => {
     const mockError = {
@@ -96,7 +96,7 @@ describe('TrackingDialog', () => {
 
     responseSubject.error(mockError);
 
-    expect(component.isReady()).toBeTrue();
+    expect(component.isInitialized()).toBeTrue();
     expect(component.trackingUrl()).toEqual('');
     expect(component.errorMessage()).toEqual('Internal Server Error');
   });
@@ -104,14 +104,14 @@ describe('TrackingDialog', () => {
   it('should fallback to message or generic error text on error release response', () => {
     responseSubject.error({message: 'Only message exists'});
 
-    expect(component.isReady()).toBeTrue();
+    expect(component.isInitialized()).toBeTrue();
     expect(component.errorMessage()).toEqual('Only message exists');
   });
 
   it('should fallback to default text if err details are empty', () => {
     responseSubject.error({});
 
-    expect(component.isReady()).toBeTrue();
+    expect(component.isInitialized()).toBeTrue();
     expect(component.errorMessage()).toEqual('Failed to generate link');
   });
 

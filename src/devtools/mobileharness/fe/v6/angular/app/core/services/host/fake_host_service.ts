@@ -34,6 +34,7 @@ import {MOCK_HOST_SCENARIOS} from '../mock_data';
 import {
   createDefaultReleaseResponse,
   createHostActions,
+  createLabServerActions,
 } from '../mock_data/hosts/ui_status_utils';
 import {HostService} from './host_service';
 
@@ -70,13 +71,32 @@ export class FakeHostService extends HostService {
     const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
     if (scenario && scenario.overview) {
       const actions = scenario.actions || createHostActions('RUNNING', false);
+      const overview = {...scenario.overview};
+
+      if (!overview.labServer.actions) {
+        const connectivityState =
+          overview.labServer.connectivity?.state || 'RUNNING';
+        const activityState = overview.labServer.activity?.state || 'STARTED';
+        const daemonState = overview.daemonServer?.status?.state || 'RUNNING';
+        const uiLabTypes = overview.uiLabTypes || [];
+
+        overview.labServer = {
+          ...overview.labServer,
+          actions: createLabServerActions(
+            connectivityState,
+            activityState,
+            daemonState,
+            uiLabTypes,
+          ),
+        };
+      }
 
       return of({
         headerInfo: {
           hostName,
           actions,
         },
-        overviewContent: scenario.overview,
+        overviewContent: overview,
       }).pipe(delay(1000));
     } else {
       return timer(1000).pipe(
@@ -325,10 +345,68 @@ TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0`,
     return of(preflightLabServerReleaseResponse).pipe(delay(1000));
   }
 
+  private preflightStopCallCount = 0;
+  private preflightStartCallCount = 0;
+  private preflightRestartCallCount = 0;
+
   override preflightLabServerLifecycle(
     hostName: string,
     action: LifecycleActionType,
   ): Observable<PreflightLabServerLifecycleResponse> {
+    let callCount = 0;
+    let actualActivityUnavailable = 'UNKNOWN';
+
+    // We use call counters and modulo operation to rotate through different fake responses.
+    // This allows testers to verify ALL branches of the workflow (Success, PermissionDenied, ActionUnavailable)
+    // by clicking the button multiple times, without needing to setup complex backend states.
+    if (action === 'STOP') {
+      this.preflightStopCallCount++;
+      callCount = this.preflightStopCallCount;
+      actualActivityUnavailable = 'STOPPED';
+    } else if (action === 'START') {
+      this.preflightStartCallCount++;
+      callCount = this.preflightStartCallCount;
+      actualActivityUnavailable = 'RUNNING';
+    } else if (action === 'RESTART') {
+      this.preflightRestartCallCount++;
+      callCount = this.preflightRestartCallCount;
+      actualActivityUnavailable = 'DRAINING';
+    }
+
+    const rotationIndex = (callCount - 1) % 4;
+
+    // for local testing only, don't remove/warm it, as this is what I want to test locally.
+    // return of({
+    //   versionIssue: {
+    //     type: 'CURRENT_VERSION_UNAVAILABLE' as const,
+    //     currentVersion: 'v4.200.0',
+    //     availableVersions: [],
+    //   },
+    // }).pipe(delay(1000));
+
+    if (rotationIndex === 1) {
+      return of({
+        permissionDenied: {
+          requiredPermission: 'ADMIN',
+        },
+      }).pipe(delay(1000));
+    } else if (rotationIndex === 2) {
+      return of({
+        actionUnavailable: {
+          actualActivity: actualActivityUnavailable,
+        },
+      }).pipe(delay(1000));
+    } else if (rotationIndex === 3) {
+      const releaseResponse = createDefaultReleaseResponse();
+      return of({
+        versionIssue: {
+          type: 'CURRENT_VERSION_UNAVAILABLE' as const,
+          currentVersion: 'v4.200.0',
+          availableVersions: releaseResponse.ready?.versions || [],
+        },
+      }).pipe(delay(1000));
+    }
+
     // Default fake: always return ready with a mock running activity.
     return of({
       ready: {
@@ -618,7 +696,7 @@ TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0`,
     return of({
       trackingUrl:
         'https://rollouts.corp.example.com/rollouts/prodchange-rollout/abc%2F123%2Frrui',
-    }).pipe(delay(1000));
+    }).pipe(delay(8000)); // Simulating realistic delay for Legislator rollout creation (~8s)
   }
 
   override startLabServer(
@@ -627,7 +705,7 @@ TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0`,
     return of({
       trackingUrl:
         'https://rollouts.corp.example.com/rollouts/prodchange-rollout/start%2F123',
-    }).pipe(delay(1000));
+    }).pipe(delay(8000));
   }
 
   override restartLabServer(
@@ -636,14 +714,14 @@ TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0`,
     return of({
       trackingUrl:
         'https://rollouts.corp.example.com/rollouts/prodchange-rollout/restart%2F123',
-    }).pipe(delay(1000));
+    }).pipe(delay(8000));
   }
 
   override stopLabServer(hostName: string): Observable<StopLabServerResponse> {
     return of({
       trackingUrl:
         'https://rollouts.corp.example.com/rollouts/prodchange-rollout/stop%2F123',
-    }).pipe(delay(1000));
+    }).pipe(delay(10000));
   }
 
   override runTroubleshootScript(

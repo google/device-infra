@@ -26,60 +26,11 @@ import {DeviceActionService} from '../../../../shared/services/device_action_ser
 import {RemoteControlService} from '../../../../shared/services/remote_control_service';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {HostOverviewPage} from './host_overview';
+import {LabServerActionService} from './lab_server_action_service';
 import {ReleaseDialog} from './release_dialog/release_dialog';
 
 describe('HostOverview Component', () => {
-  const mockHost: HostOverview = {
-    hostName: 'host-a-1.prod.example.com',
-    ip: '192.168.1.101',
-    labTypeDisplayNames: ['Core Lab'],
-    uiLabTypes: ['CORE'],
-    labServer: {
-      connectivity: {
-        state: 'RUNNING',
-        title: 'Running',
-        tooltip: 'The lab server is running.',
-      },
-      version: '4.175.0',
-      passThroughFlags: '--pass_through_flag_1=value_1',
-      actions: {
-        release: {visible: true, enabled: true, isReady: true, tooltip: ''},
-        restart: {visible: true, enabled: true, isReady: true, tooltip: ''},
-        start: {visible: false, enabled: false, isReady: false, tooltip: ''},
-        stop: {
-          visible: true,
-          enabled: false,
-          isReady: true,
-          tooltip: 'Already stopped',
-        },
-        advancedOperations: {
-          visible: true,
-          enabled: true,
-          isReady: true,
-          tooltip: '',
-        },
-      },
-    },
-    daemonServer: {
-      status: {
-        state: 'RUNNING',
-        title: 'Running',
-        tooltip: 'The daemon server is running.',
-      },
-      version: '4.175.0',
-    },
-    properties: {
-      'test-type': 'instrumentation',
-      'max-run-time': '3600',
-      'network-requirement': 'full',
-      'encryption-state': 'encrypted',
-    },
-    os: 'gLinux',
-    diagnosticLinks: [],
-    canUpgrade: false,
-    showPassThroughFlags: true,
-  };
-
+  let mockHost: HostOverview;
   let fixture: ComponentFixture<HostOverviewPage>;
   let component: HostOverviewPage;
   let dialogSpy: jasmine.SpyObj<MatDialog>;
@@ -88,10 +39,61 @@ describe('HostOverview Component', () => {
   let hostService: FakeHostService;
 
   beforeEach(async () => {
+    mockHost = {
+      hostName: 'host-a-1.prod.example.com',
+      ip: '192.168.1.101',
+      labTypeDisplayNames: ['Core Lab'],
+      uiLabTypes: ['CORE'],
+      labServer: {
+        connectivity: {
+          state: 'RUNNING',
+          title: 'Running',
+          tooltip: 'The lab server is running.',
+        },
+        version: '4.175.0',
+        passThroughFlags: '--pass_through_flag_1=value_1',
+        actions: {
+          release: {visible: true, enabled: true, isReady: true, tooltip: ''},
+          restart: {visible: true, enabled: true, isReady: true, tooltip: ''},
+          start: {visible: false, enabled: false, isReady: false, tooltip: ''},
+          stop: {
+            visible: true,
+            enabled: false,
+            isReady: true,
+            tooltip: 'Already stopped',
+          },
+          advancedOperations: {
+            visible: true,
+            enabled: true,
+            isReady: true,
+            tooltip: '',
+          },
+        },
+      },
+      daemonServer: {
+        status: {
+          state: 'RUNNING',
+          title: 'Running',
+          tooltip: 'The daemon server is running.',
+        },
+        version: '4.175.0',
+      },
+      properties: {
+        'test-type': 'instrumentation',
+        'max-run-time': '3600',
+        'network-requirement': 'full',
+        'encryption-state': 'encrypted',
+      },
+      os: 'gLinux',
+      diagnosticLinks: [],
+      canUpgrade: false,
+      showPassThroughFlags: true,
+    };
     dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
     snackBarSpy = jasmine.createSpyObj('SnackBarService', [
       'showError',
       'showSuccess',
+      'showWarning',
     ]);
     comingSoonServiceSpy = jasmine.createSpyObj('ComingSoonService', [
       'show',
@@ -126,7 +128,10 @@ describe('HostOverview Component', () => {
     })
       .overrideComponent(HostOverviewPage, {
         set: {
-          providers: [{provide: MatDialog, useValue: dialogSpy}],
+          providers: [
+            LabServerActionService,
+            {provide: MatDialog, useValue: dialogSpy},
+          ],
         },
       })
       .compileComponents();
@@ -326,28 +331,43 @@ describe('HostOverview Component', () => {
     );
   });
 
-  it('onStart should trigger startLabServer, show success snackbar on success', () => {
-    spyOn(hostService, 'startLabServer').and.returnValue(
-      of({trackingUrl: 'http://start-url'}),
+  it('onStart should trigger preflight, and open ConfirmDialog if ready', () => {
+    spyOn(hostService, 'preflightLabServerLifecycle').and.returnValue(
+      of({ready: {actualActivity: 'RUNNING'}}),
     );
 
     component.onStart();
 
-    expect(hostService.startLabServer).toHaveBeenCalledWith(mockHost.hostName);
-    expect(snackBarSpy.showSuccess).toHaveBeenCalledWith(
-      'Lab Server starting...',
+    expect(hostService.preflightLabServerLifecycle).toHaveBeenCalledWith(
+      mockHost.hostName,
+      'START',
+    );
+    expect(dialogSpy.open).toHaveBeenCalledWith(
+      ConfirmDialog,
+      jasmine.objectContaining({
+        data: jasmine.objectContaining({
+          title: 'Start Server?',
+          primaryButtonLabel: 'Start',
+        }),
+      }),
     );
   });
 
-  it('onStart should show error snackbar on startLabServer error', () => {
-    spyOn(hostService, 'startLabServer').and.returnValue(
-      throwError(() => new Error('Start failed')),
+  it('onStart should show No Access dialog when preflight returns permissionDenied', () => {
+    spyOn(hostService, 'preflightLabServerLifecycle').and.returnValue(
+      of({permissionDenied: {}}),
     );
 
     component.onStart();
 
-    expect(snackBarSpy.showError).toHaveBeenCalledWith(
-      'Failed to start: Start failed',
+    expect(dialogSpy.open).toHaveBeenCalledWith(
+      ConfirmDialog,
+      jasmine.objectContaining({
+        data: jasmine.objectContaining({
+          title: 'No Access',
+          type: 'error',
+        }),
+      }),
     );
   });
 
@@ -406,12 +426,6 @@ describe('HostOverview Component', () => {
         }),
       }),
     );
-  });
-
-  it('onDeploy should not show popup due to missing mapping', () => {
-    component.onDeploy();
-
-    expect(comingSoonServiceSpy.show).not.toHaveBeenCalled();
   });
 
   it('openFlagsDialog should open FlagsDialog and handle closed with valid flags', () => {
@@ -602,5 +616,96 @@ describe('HostOverview Component', () => {
       isReady: true,
       tooltip: 'Screenshot IT',
     });
+  });
+
+  it('onStop should trigger stop action', () => {
+    spyOn(hostService, 'preflightLabServerLifecycle').and.returnValue(
+      of({ready: {actualActivity: 'RUNNING'}}),
+    );
+    component.onStop();
+    expect(hostService.preflightLabServerLifecycle).toHaveBeenCalledWith(
+      mockHost.hostName,
+      'STOP',
+    );
+  });
+
+  it('onRestart should trigger preflight, and open ConfirmDialog if ready', () => {
+    spyOn(hostService, 'preflightLabServerLifecycle').and.returnValue(
+      of({ready: {actualActivity: 'RUNNING'}}),
+    );
+
+    component.onRestart();
+
+    expect(hostService.preflightLabServerLifecycle).toHaveBeenCalledWith(
+      mockHost.hostName,
+      'RESTART',
+    );
+    expect(dialogSpy.open).toHaveBeenCalledWith(
+      ConfirmDialog,
+      jasmine.objectContaining({
+        data: jasmine.objectContaining({
+          title: 'Restart Server?',
+          primaryButtonLabel: 'Restart',
+        }),
+      }),
+    );
+  });
+
+  it('handlePreflightLifecycle should open ReleaseDialog when versionIssue is present', () => {
+    const mockVersions = [
+      {
+        version: '2.0.0',
+        name: 'v2',
+        status: 'LATEST' as const,
+        buildTime: '2026-05-14',
+      },
+    ];
+    spyOn(hostService, 'preflightLabServerLifecycle').and.returnValue(
+      of({
+        versionIssue: {
+          type: 'CURRENT_VERSION_UNAVAILABLE',
+          currentVersion: 'v1.0.0',
+          availableVersions: mockVersions,
+        },
+      }),
+    );
+
+    component.onStart();
+
+    expect(dialogSpy.open).toHaveBeenCalledWith(ReleaseDialog, {
+      data: {
+        hostName: component.host.hostName,
+        releaseConfigs: mockVersions,
+        passThroughFlags: jasmine.anything(),
+      },
+      panelClass: 'release-dialog-panel',
+      disableClose: true,
+    });
+    expect(snackBarSpy.showWarning).toHaveBeenCalledWith(
+      'The current version is no longer supported or recognized: CURRENT_VERSION_UNAVAILABLE',
+    );
+  });
+
+  it('onAction should handle restart action', () => {
+    spyOn(component, 'onRestart');
+    component.onLabServerAction('restart');
+    expect(component.onRestart).toHaveBeenCalled();
+  });
+
+  it('onAction should handle stop action', () => {
+    spyOn(component, 'onStop');
+    component.onLabServerAction('stop');
+    expect(component.onStop).toHaveBeenCalled();
+  });
+
+  it('toggleRow should set expandedElement to element if not already expanded, or null if it is', () => {
+    const mockDevice = {id: 'device-1'} as unknown as DeviceSummary;
+    expect(component.expandedElement()).toBeNull();
+
+    component.toggleRow(mockDevice);
+    expect(component.expandedElement()).toBe(mockDevice);
+
+    component.toggleRow(mockDevice);
+    expect(component.expandedElement()).toBeNull();
   });
 });

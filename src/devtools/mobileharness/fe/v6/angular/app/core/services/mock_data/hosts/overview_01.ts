@@ -45,7 +45,7 @@ const overview: HostOverview = {
   os: 'gLinux',
   canUpgrade: false,
 
-  uiLabTypes: ['SATELLITE', 'SLAAS', 'CORE'],
+  uiLabTypes: ['SATELLITE', 'SLAAS'],
   labServer: {
     connectivity: {
       state: 'RUNNING',

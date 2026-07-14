@@ -26,6 +26,17 @@ export class SnackBarService {
     });
   }
 
+  /** Shows a warning snackbar message. */
+  showWarning(message: string, duration = SNACKBAR_DURATION_MS_DEFAULT) {
+    this.snackBar.openFromComponent(SnackBar, {
+      duration,
+      verticalPosition: 'bottom',
+      horizontalPosition: 'center',
+      panelClass: ['custom-snackbar', 'snackbar-warning'],
+      data: {message, icon: 'warning', type: 'warning'} as SnackBarData,
+    });
+  }
+
   /** Shows a success-themed snackbar message. */
   showSuccess(message: string, duration = SNACKBAR_DURATION_MS_DEFAULT) {
     this.snackBar.openFromComponent(SnackBar, {

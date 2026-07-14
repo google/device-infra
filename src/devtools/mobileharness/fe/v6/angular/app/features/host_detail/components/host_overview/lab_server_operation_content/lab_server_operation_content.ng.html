@@ -1,0 +1,82 @@
+<div class="operation-box">
+  <!-- Warning Bar if applicable -->
+  @if (isWarningState()) {
+    <div class="warning-bar">
+      <mat-icon class="warning-icon-small">warning</mat-icon>
+      <div class="warning-text">
+        <strong>Safety Warning:</strong> The server is already in <span>{{status}}</span> state. Are you sure you want to send the stop command again?
+      </div>
+    </div>
+  }
+
+  <p class="description">
+    @switch (operation) {
+      @case ('START') {
+        This action will start the lab server by deploying its configured version via Legislator on host:
+      }
+      @case ('RESTART') {
+        This action will restart the lab server by redeploying its current version via Legislator on host:
+      }
+      @case ('STOP') {
+        This action will first <strong>drain</strong> running tests (allowing them to complete) and then <strong>stop</strong> the lab server via Legislator on host:
+      }
+      @case ('DECOMMISSION') {
+        This host is reported as missing. Decommissioning it will delete its record permanently from MobileHarness for host:
+      }
+      @case ('DEPLOY') {
+        Ready to deploy version <strong>{{targetVersion}}</strong> (current: <strong>{{currentVersion}}</strong>) on host:
+      }
+    }
+  </p>
+
+  <!-- Structured Summary Card -->
+  <div class="summary-card">
+    <div class="summary-row">
+      <span class="summary-label">Target Host</span>
+      <span class="summary-value font-mono">{{hostName}}</span>
+    </div>
+    @if (operation === 'DEPLOY') {
+      <div class="summary-row">
+        <span class="summary-label">Target Version</span>
+        <span class="summary-value operation-badge">{{targetVersion}}</span>
+      </div>
+    } @else {
+      <div class="summary-row">
+        <span class="summary-label">Operation</span>
+        <span class="summary-value operation-badge">{{operation}}</span>
+      </div>
+    }
+  </div>
+
+  <!-- Info Message -->
+  <div class="info-message">
+    <div class="info-icon-container">
+      <mat-icon class="info-icon">lightbulb</mat-icon>
+    </div>
+    <div class="info-content">
+      <p class="info-title">Important Note</p>
+      <div class="info-text">
+        @switch (operation) {
+          @case ('START') {
+            This operation usually takes 5-15 minutes.
+          }
+          @case ('RESTART') {
+            This may involve a brief drain period. This operation usually takes 5-15 minutes.
+          }
+          @case ('STOP') {
+            The host will become unavailable for testing until it is started again. This operation usually takes 5-15 minutes.
+          }
+          @case ('DECOMMISSION') {
+            This action cannot be undone.
+          }
+          @case ('DEPLOY') {
+            This operation usually takes 5-15 minutes.
+          }
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation Question -->
+  <p class="confirmation-question">Are you sure you want to proceed?</p>
+</div>

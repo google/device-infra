@@ -35,6 +35,18 @@ describe('SnackBarService', () => {
     });
   });
 
+  it('should call MatSnackBar.openFromComponent with correct parameters for showWarning', () => {
+    const message = 'Warning message';
+    service.showWarning(message);
+    expect(snackBarSpy.openFromComponent).toHaveBeenCalledWith(SnackBar, {
+      duration: 4000,
+      verticalPosition: 'bottom',
+      horizontalPosition: 'center',
+      panelClass: ['custom-snackbar', 'snackbar-warning'],
+      data: {message, icon: 'warning', type: 'warning'},
+    });
+  });
+
   it('should call MatSnackBar.openFromComponent with correct parameters for showSuccess', () => {
     const message = 'Success message';
     service.showSuccess(message);

@@ -14,6 +14,7 @@ import {
   MAT_DIALOG_DATA,
   MatDialog,
   MatDialogModule,
+  MatDialogRef,
 } from '@angular/material/dialog';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatIconModule} from '@angular/material/icon';
@@ -73,6 +74,7 @@ export class ReleaseDialog implements OnInit {
   private readonly snackBar = inject(SnackBarService);
   private readonly dialog = inject(MatDialog);
   private readonly hostService = inject(HOST_SERVICE);
+  private readonly dialogRef = inject(MatDialogRef<ReleaseDialog>);
 
   readonly currentStep = signal<number>(1);
   readonly selectedVersion = signal<DeployableVersion | null>(null);
@@ -249,11 +251,13 @@ export class ReleaseDialog implements OnInit {
         version,
         flags: this.tempFlags(),
         response$,
+        operation: 'DEPLOY',
       },
       panelClass: 'tracking-dialog-panel',
       autoFocus: false,
     });
 
+    this.dialogRef.close();
     this.isDeploying.set(false);
   }
 

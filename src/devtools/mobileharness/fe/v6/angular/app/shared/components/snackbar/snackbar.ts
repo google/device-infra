@@ -8,7 +8,7 @@ import {MAT_SNACK_BAR_DATA, MatSnackBarRef} from '@angular/material/snack-bar';
 export interface SnackBarData {
   message: string;
   icon: string;
-  type: 'success' | 'error' | 'info' | 'inprogress';
+  type: 'success' | 'error' | 'info' | 'inprogress' | 'warning';
 }
 
 /** A component used to display snack bar notifications. */

@@ -7,6 +7,7 @@ import {
 import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   computed,
   DestroyRef,
@@ -30,7 +31,6 @@ import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatTableDataSource, MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
 
-import {Observable} from 'rxjs';
 import {map, tap} from 'rxjs/operators';
 import {ActionButton} from '../../../../shared/components/action_button/action_button';
 import {NavLink} from '../../../../shared/components/nav_link/nav_link';
@@ -83,10 +83,8 @@ import {ComingSoonService} from '../../../../shared/services/coming_soon_service
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 import {dateUtils} from '../../../../shared/utils/date_utils';
 import {objectUtils} from '../../../../shared/utils/object_utils';
-import {ActionNoPermissionContent} from './action_no_permission_content/action_no_permission_content';
 import {FlagsDialog} from './flags_dialog/flags_dialog';
-import {NoValidVersionsContent} from './release_dialog/no_valid_versions_content/no_valid_versions_content';
-import {ReleaseDialog} from './release_dialog/release_dialog';
+import {LabServerActionService} from './lab_server_action_service';
 
 const HEALTH_SEMANTIC_MAP: Record<
   string,
@@ -179,6 +177,7 @@ const STATUS_SEMANTIC_MAP: Record<string, {icon: string; colorClass: string}> =
     ActionButton,
     TooltipIfTruncatedDirective,
   ],
+  providers: [LabServerActionService],
 })
 export class HostOverviewPage implements OnChanges {
   private readonly dialog = inject(MatDialog);
@@ -186,9 +185,11 @@ export class HostOverviewPage implements OnChanges {
   protected readonly deviceActions = useDeviceActions();
   private readonly destroyRef = inject(DestroyRef);
   private readonly snackBar = inject(SnackBarService);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly envUniverseService = inject(EnvUniverseService);
   private readonly comingSoonService = inject(ComingSoonService);
   private readonly appData = inject(APP_DATA);
+  private readonly actionService = inject(LabServerActionService);
 
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
 
@@ -266,7 +267,7 @@ export class HostOverviewPage implements OnChanges {
     }
   }
 
-  readonly passThroughFlags = signal<string>('');
+  readonly passThroughFlags = this.actionService.passThroughFlags;
 
   deviceDataSource = new MatTableDataSource<DeviceSummary>();
   selection = new SelectionModel<DeviceSummary>(true, []);
@@ -287,16 +288,10 @@ export class HostOverviewPage implements OnChanges {
   deviceFilterValue = '';
   isDeviceLoading = signal(false);
   expandedElement = signal<DeviceSummary | null>(null);
-  readonly isOpeningReleaseDialog = computed(() => {
-    return (
-      this.isOpeningRelease() ||
-      this.isOpeningUpgrade() ||
-      this.isOpeningRedeploy()
-    );
-  });
-  isOpeningUpgrade = signal(false);
-  isOpeningRedeploy = signal(false);
-  isOpeningRelease = signal(false);
+
+  readonly isOpeningReleaseDialog = this.actionService.isOpeningReleaseDialog;
+  readonly isOpeningUpgrade = this.actionService.isOpeningUpgrade;
+  readonly isOpeningRelease = this.actionService.isOpeningRelease;
 
   // --- Dimensions Overlay State ---
   activeOverlay = signal<{
@@ -429,11 +424,15 @@ export class HostOverviewPage implements OnChanges {
     return baseItems;
   });
 
+  private handleHostDataChange() {
+    this.selection.clear();
+    this.passThroughFlags.set(this.host.labServer.passThroughFlags);
+    this.loadDevices();
+  }
+
   ngOnChanges(changes: SimpleChanges) {
     if (changes['host']) {
-      this.selection.clear();
-      this.passThroughFlags.set(this.host.labServer.passThroughFlags);
-      this.loadDevices();
+      this.handleHostDataChange();
 
       console.log('*** Current host data received by component:', this.host);
       console.log(
@@ -480,6 +479,10 @@ export class HostOverviewPage implements OnChanges {
     } else {
       this.showComingSoonPopup('Release');
     }
+  }
+
+  isActionLoading(actionId: keyof LabServerActions): boolean {
+    return this.actionService.isActionLoading(actionId);
   }
 
   onLabServerAction(actionId: keyof LabServerActions) {
@@ -567,139 +570,42 @@ export class HostOverviewPage implements OnChanges {
 
   preflightAndOpenRelease(
     options: {preSelectLatest?: boolean; preSelectCurrent?: boolean} = {},
-  ): Observable<void> {
-    const preSelectLatest = options.preSelectLatest ?? false;
-    const preSelectCurrent = options.preSelectCurrent ?? false;
-    if (preSelectLatest) {
-      this.isOpeningUpgrade.set(true);
-    } else if (preSelectCurrent) {
-      this.isOpeningRedeploy.set(true);
-    } else {
-      this.isOpeningRelease.set(true);
-    }
-    return this.hostService.preflightLabServerRelease(this.host.hostName).pipe(
-      takeUntilDestroyed(this.destroyRef),
-      tap({
-        next: (response) => {
-          this.isOpeningRelease.set(false);
-          this.isOpeningUpgrade.set(false);
-          this.isOpeningRedeploy.set(false);
-          if (response.permissionDenied) {
-            const dialogData = {
-              title: 'No Access',
-              contentComponent: ActionNoPermissionContent,
-              contentComponentInputs: {
-                'hostName': this.host.hostName,
-              },
-              type: 'error',
-              customIcon: 'lock_outline',
-              primaryButtonLabel: 'Close',
-            };
-
-            this.dialog.open(ConfirmDialog, {
-              data: dialogData,
-              panelClass: 'confirm-dialog-panel',
-            });
-
-            return;
-          }
-
-          const versions = response.ready?.versions;
-          if (!versions || versions.length === 0) {
-            const dialogData = {
-              title: 'No Valid Versions',
-              contentComponent: NoValidVersionsContent,
-              contentComponentInputs: {
-                'hostName': this.host.hostName,
-              },
-              type: 'warning',
-              customIcon: 'warning_amber',
-              primaryButtonLabel: 'Close',
-            };
-
-            this.dialog.open(ConfirmDialog, {
-              data: dialogData,
-              panelClass: 'confirm-dialog-panel',
-            });
-
-            return;
-          }
-
-          const releaseDialogRef = this.dialog.open(ReleaseDialog, {
-            data: {
-              hostName: this.host.hostName,
-              releaseConfigs: versions,
-              passThroughFlags: this.passThroughFlags,
-              preSelectLatest,
-              preSelectCurrent,
-            },
-            autoFocus: false,
-          });
-
-          releaseDialogRef
-            .afterClosed()
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe((result) => {
-              if (!result) {
-                return;
-              }
-            });
-        },
-        error: (err) => {
-          this.isOpeningRelease.set(false);
-          this.isOpeningUpgrade.set(false);
-          this.isOpeningRedeploy.set(false);
-          this.snackBar.showError(
-            `Failed to load release info: ${err.message}`,
-          );
-        },
-      }),
-      map(() => {}),
-    );
-  }
-
-  onDeploy() {
-    this.showComingSoonPopup('Deploy');
+  ) {
+    return this.actionService.preflightAndOpenRelease(this.host, options);
   }
 
   onStart() {
-    this.hostService
-      .startLabServer(this.host.hostName)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.snackBar.showSuccess('Lab Server starting...');
-        },
-        error: (err) => {
-          this.snackBar.showError(`Failed to start: ${err.message}`);
-        },
-      });
-  }
-
-  onRestart() {
-    this.hostService
-      .restartLabServer(this.host.hostName)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.snackBar.showSuccess('Lab Server restarting...');
-        },
-        error: (err) => {
-          this.snackBar.showError(`Failed to restart: ${err.message}`);
-        },
-      });
+    this.actionService.start(this.host, {
+      onActionUnavailable: this.triggerBackgroundRefresh.bind(this),
+    });
   }
 
   onStop() {
+    this.actionService.stop(this.host, {
+      onActionUnavailable: this.triggerBackgroundRefresh.bind(this),
+    });
+  }
+
+  onRestart() {
+    this.actionService.restart(this.host, {
+      onActionUnavailable: this.triggerBackgroundRefresh.bind(this),
+    });
+  }
+
+  private triggerBackgroundRefresh() {
+    this.snackBar.showInfo('Refreshing page data...');
     this.hostService
-      .stopLabServer(this.host.hostName)
+      .getHostOverview(this.host.hostName)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => {
-          this.snackBar.showSuccess('Lab Server stopping...');
+        next: (data) => {
+          this.host = data.overviewContent;
+          this.handleHostDataChange();
+          this.snackBar.showSuccess('Page data refreshed.');
+          this.cdr.markForCheck();
         },
         error: (err) => {
-          this.snackBar.showError(`Failed to stop: ${err.message}`);
+          this.snackBar.showError(`Failed to refresh: ${err.message}`);
         },
       });
   }

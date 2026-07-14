@@ -14,7 +14,13 @@ import {
   HostConfigUiStatus,
   PartStatus,
 } from '../../../models/host_config_models';
-import {HostOverview} from '../../../models/host_overview';
+import {
+  DaemonServerState,
+  HostConnectivityState,
+  HostOverview,
+  LabServerActivityState,
+  UiLabType,
+} from '../../../models/host_overview';
 
 const EDITABLE: Editability = {editable: true};
 const VISIBLE_EDITABLE: PartStatus = {visible: true, editability: EDITABLE};
@@ -460,66 +466,79 @@ export function createHostActions(
 
 /**
  * Creates LabServerActions based on the host state.
- * @param status The status of the lab server (RUNNING, STOPPED, MISSING, ERROR, etc.)
- * @param isCoreLab Whether the host belongs to a Shared/Core Lab.
+ * @param connectivityState The connectivity state of the lab server.
+ * @param activityState The activity state of the lab server.
+ * @param daemonState The state of the daemon server.
+ * @param uiLabTypes The types of the lab.
  */
 export function createLabServerActions(
-  status = 'RUNNING',
-  isCoreLab = false,
+  connectivityState: HostConnectivityState = 'RUNNING',
+  activityState: LabServerActivityState = 'STARTED',
+  daemonState: DaemonServerState = 'RUNNING',
+  uiLabTypes: UiLabType[] = ['SATELLITE'],
 ): LabServerActions {
-  const isMissing = status === 'MISSING';
-  const isRunning = status === 'RUNNING';
-  const actionEnabled = !isCoreLab;
+  const isCoreOrFusion =
+    uiLabTypes.includes('CORE') || uiLabTypes.includes('FUSION');
+  const daemonRunning = daemonState === 'RUNNING';
+
+  // sync the fake logic with the real backend logic at:
+  // third_party/deviceinfra/src/java/com/google/devtools/mobileharness/fe/v6/service/host/util/LabServerActionAvailabilities.java
+  const isStartTarget =
+    activityState === 'DRAINED' ||
+    activityState === 'STOPPED' ||
+    activityState === 'UNKNOWN';
+  const isRestartStopTarget =
+    activityState === 'STARTED' ||
+    activityState === 'STARTED_BUT_DISCONNECTED' ||
+    activityState === 'ERROR';
+
+  const canMutate = !isCoreOrFusion;
 
   return {
     release: {
-      enabled: !isMissing && actionEnabled,
-      visible: true,
-      tooltip: isMissing
-        ? 'Cannot release a missing host'
-        : isCoreLab
-          ? 'Cannot release in a Shared Lab'
+      enabled: daemonRunning && canMutate,
+      visible: canMutate,
+      tooltip: !daemonRunning
+        ? 'Daemon is not running'
+        : isCoreOrFusion
+          ? 'Cannot release in Fusion/Core Lab'
           : '',
       isReady: true,
     },
     start: {
-      enabled: !isRunning && !isMissing && actionEnabled,
-      visible: !isRunning && !isMissing,
-      tooltip: isRunning
-        ? 'Lab server is already running'
-        : isCoreLab
-          ? 'Cannot start in a Shared Lab'
+      enabled: daemonRunning && canMutate,
+      visible: isStartTarget && canMutate,
+      tooltip: !daemonRunning
+        ? 'Daemon is not running'
+        : isCoreOrFusion
+          ? 'Cannot start in Fusion/Core Lab'
           : '',
       isReady: true,
     },
     restart: {
-      enabled: isRunning && actionEnabled,
-      visible: true,
-      tooltip: !isRunning
-        ? 'Lab server must be running to restart'
-        : isCoreLab
-          ? 'Cannot restart in a Shared Lab'
+      enabled: daemonRunning && canMutate,
+      visible: isRestartStopTarget && canMutate,
+      tooltip: !daemonRunning
+        ? 'Daemon is not running'
+        : isCoreOrFusion
+          ? 'Cannot restart in Fusion/Core Lab'
           : '',
       isReady: true,
     },
     stop: {
-      enabled: isRunning && actionEnabled,
-      visible: true,
-      tooltip: !isRunning
-        ? 'Lab server is not running'
-        : isCoreLab
-          ? 'Cannot stop in a Shared Lab'
+      enabled: daemonRunning && canMutate,
+      visible: isRestartStopTarget && canMutate,
+      tooltip: !daemonRunning
+        ? 'Daemon is not running'
+        : isCoreOrFusion
+          ? 'Cannot stop in Fusion/Core Lab'
           : '',
       isReady: true,
     },
     advancedOperations: {
-      enabled: isRunning && actionEnabled,
-      visible: true,
-      tooltip: !isRunning
-        ? 'Lab server must be running to trigger advanced operations'
-        : isCoreLab
-          ? 'Cannot perform advanced operations in a Shared Lab'
-          : 'Advanced Operations',
+      enabled: true,
+      visible: uiLabTypes.includes('FUSION'),
+      tooltip: 'Advanced operations and diagnostics for Fusion hosts',
       isReady: true,
     },
   };
