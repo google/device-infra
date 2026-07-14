@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.BuildInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger.MergedResult;
@@ -416,5 +417,37 @@ public final class RetryReportMergerTest {
             /* passedInModules= */ ImmutableList.of(""));
 
     assertThat(mergedResult.mergedResult()).isEqualTo(expectedMergedReport);
+  }
+
+  @Test
+  public void mergeReports_emptyRetryResultBuildInfo_inheritsPreviousBuildInfo() throws Exception {
+    Result prevReport =
+        TextFormat.parse(localFileUtil.readFile(PREV_REPORT_SOME_FAILED_TEXTPROTO), Result.class);
+    Result retryReport =
+        TextFormat.parse(
+                localFileUtil.readFile(RETRY_REPORT_FOR_SOME_FAILED_TEXTPROTO), Result.class)
+            .toBuilder()
+            .setBuild(BuildInfo.getDefaultInstance())
+            .build();
+    when(previousResultLoader.loadPreviousResult(
+            RESULTS_DIR_PATH, 0, /* previousSessionResultDirName= */ null))
+        .thenReturn(prevReport);
+
+    SubPlan subPlan = new SubPlan();
+    subPlan.addIncludeFilter(
+        "arm64-v8a CtsAccelerationTestCases"
+            + " android.acceleration.cts.HardwareAccelerationTest#testIsHardwareAccelerated");
+    when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
+
+    MergedResult mergedResult =
+        retryReportMerger.mergeReports(
+            RESULTS_DIR_PATH,
+            0,
+            /* previousSessionResultDirName= */ null,
+            /* retryType= */ null,
+            retryReport,
+            /* passedInModules= */ ImmutableList.of());
+
+    assertThat(mergedResult.mergedResult().getBuild()).isEqualTo(prevReport.getBuild());
   }
 }

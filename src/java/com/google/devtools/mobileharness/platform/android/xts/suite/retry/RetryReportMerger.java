@@ -35,6 +35,7 @@ import com.google.common.primitives.Longs;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.BuildInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Metric;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
@@ -245,10 +246,13 @@ public class RetryReportMerger {
             .filter(attribute -> attribute.getKey().equals(XmlConstants.COMMAND_LINE_ARGS))
             .findFirst();
     commandLineArgs.ifPresent(attributes::add);
-    mergedResult
-        .setIsRetryResult(true)
-        .setBuild(retryResult.toBuilder().getBuildBuilder())
-        .addAllAttribute(attributes);
+    BuildInfo.Builder buildInfoBuilder =
+        (retryResult != null
+                && retryResult.hasBuild()
+                && retryResult.getBuild().getAttributeCount() > 0)
+            ? retryResult.toBuilder().getBuildBuilder()
+            : previousResult.toBuilder().getBuildBuilder();
+    mergedResult.setIsRetryResult(true).setBuild(buildInfoBuilder).addAllAttribute(attributes);
     addRunHistoryForRetry(mergedResult, previousResult);
 
     // Map of module id to module
