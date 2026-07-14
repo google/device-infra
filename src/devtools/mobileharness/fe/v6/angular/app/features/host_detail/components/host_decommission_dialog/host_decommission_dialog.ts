@@ -13,7 +13,6 @@ import {
 } from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
-import {Router} from '@angular/router';
 import {HOST_SERVICE} from '@deviceinfra/app/core/services/host/host_service';
 import {SnackBarService} from '@deviceinfra/app/shared/services/snackbar_service';
 import {take} from 'rxjs/operators';
@@ -45,9 +44,9 @@ export class HostDecommissionDialog {
   private readonly dialogRef = inject(MatDialogRef<HostDecommissionDialog>);
   private readonly hostService = inject(HOST_SERVICE);
   private readonly snackBar = inject(SnackBarService);
-  private readonly router = inject(Router);
 
   isDecommissioning = signal(false);
+  isDecommissioned = signal(false);
 
   onConfirm() {
     this.isDecommissioning.set(true);
@@ -56,11 +55,9 @@ export class HostDecommissionDialog {
       .pipe(take(1))
       .subscribe({
         next: () => {
-          this.snackBar.showInfo(
-            `Host ${this.data.hostName} successfully decommissioned.`,
-          );
-          this.router.navigate(['/'], {queryParamsHandling: 'preserve'});
-          this.dialogRef.close(true);
+          this.isDecommissioning.set(false);
+          this.isDecommissioned.set(true);
+          this.dialogRef.disableClose = true; // Prevent closing
         },
         error: (error: {message?: string}) => {
           this.snackBar.showError(

@@ -323,4 +323,25 @@ $labconsole-font: Roboto, sans-serif;
       background-color: #2563eb;
     }
   }
+
+  .error-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .error-details {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.25rem;
+    max-width: 100%;
+    overflow-x: auto;
+    text-align: left;
+    font-family: monospace;
+    font-size: 0.875rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
 }

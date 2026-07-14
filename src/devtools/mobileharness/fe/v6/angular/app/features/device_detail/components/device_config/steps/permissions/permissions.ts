@@ -30,7 +30,9 @@ export class Permissions {
   readonly workflow = input<'wizard' | 'settings'>('wizard');
   readonly uiStatus = input<PartStatus>({
     visible: true,
-    editability: {editable: true},
+    editability: {
+      editable: true,
+    },
   });
 
   readonly title = input<string>('');

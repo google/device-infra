@@ -40,7 +40,7 @@ export class Dialog implements OnInit {
   @Input() height = '';
   @Input() maxHeight = '';
 
-  @Input() title = '';
+  @Input() dialogTitle = '';
   @Input() subtitle = '';
 
   // used for footer type permission-check

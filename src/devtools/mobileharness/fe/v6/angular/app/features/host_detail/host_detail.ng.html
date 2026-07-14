@@ -4,7 +4,15 @@
       <div class="error-message">
         <mat-icon class="error-icon">error_outline</mat-icon>
         <p>{{ data.error }}</p>
-        <a routerLink="/dev/device-harness" class="m3-button">Back to Harness</a>
+        <div class="error-actions">
+          <button mat-stroked-button class="m3-button" (click)="toggleDetails()">
+            {{ showDetails ? 'Hide details' : 'Show details' }}
+          </button>
+          <button mat-stroked-button class="m3-button" (click)="reportBug(data.error || '', data.errorDetails || '')">Report Bug</button>
+        </div>
+        @if (showDetails) {
+          <pre class="error-details">{{ data.errorDetails }}</pre>
+        }
       </div>
     } @else if (data.hostOverviewPageData; as pageData) {
       @let host = pageData.overviewContent;

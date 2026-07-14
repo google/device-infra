@@ -38,6 +38,10 @@
   background-color: #fef2f2;
 }
 
+.success-icon-bg {
+  background-color: #f0fdf4;
+}
+
 .confirm-dialog-icon {
   font-size: 2.25rem;
   width: 2.25rem;
@@ -46,6 +50,10 @@
 
 .danger-icon {
   color: #dc2626;
+}
+
+.success-icon {
+  color: #16a34a;
 }
 
 .confirm-dialog-title-wrapper {
@@ -119,6 +127,10 @@
   font-size: 0.8125rem;
   line-height: 1.625;
   padding: 0 0.25rem;
+
+  &.centered {
+    align-items: center;
+  }
 }
 
 .info-message-icon-wrapper {

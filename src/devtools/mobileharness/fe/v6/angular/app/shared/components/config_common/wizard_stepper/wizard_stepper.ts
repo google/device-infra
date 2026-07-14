@@ -52,7 +52,7 @@ export interface WizardStep {
   ],
 })
 export class WizardStepper implements OnInit, OnChanges {
-  @Input() title = '';
+  @Input() dialogTitle = '';
   @Input() type: 'device' | 'host' = 'device';
   @Input() width = '72rem';
 

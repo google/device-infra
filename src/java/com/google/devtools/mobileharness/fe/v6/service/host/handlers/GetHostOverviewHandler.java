@@ -65,6 +65,7 @@ import javax.inject.Singleton;
 @Singleton
 public final class GetHostOverviewHandler {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  public static final String HOST_NOT_FOUND = "HOST_NOT_FOUND";
 
   private final LabInfoProvider labInfoProvider;
   private final HostAuxiliaryInfoProvider hostAuxiliaryInfoProvider;
@@ -136,6 +137,10 @@ public final class GetHostOverviewHandler {
                   labInfoResponse.getLabQueryResult().getLabView().getLabDataList().stream()
                       .map(LabData::getLabInfo)
                       .findFirst();
+
+              if (labInfoOpt.isEmpty() && hostReleaseInfoOpt.isEmpty()) {
+                throw new IllegalArgumentException(HOST_NOT_FOUND + ": " + hostName);
+              }
 
               Optional<String> currentVersionOpt =
                   HostVersionUtil.resolveCurrentVersion(labInfoOpt, hostReleaseInfoOpt);

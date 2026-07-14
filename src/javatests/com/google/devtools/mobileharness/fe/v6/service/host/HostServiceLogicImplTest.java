@@ -26,6 +26,10 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.fe.v6.service.device.provider.DeviceOpsStubProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.builder.RemoteControlUrlBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLabServerLifecycleActionHelper;
@@ -120,7 +124,17 @@ public final class HostServiceLogicImplTest {
     when(universeFactory.create(anyString())).thenReturn(new UniverseScope.SelfUniverse());
     when(featureManagerFactory.create(any())).thenReturn(featureManager);
     when(labInfoProvider.getLabInfoAsync(any(), any()))
-        .thenReturn(immediateFuture(GetLabInfoResponse.getDefaultInstance()));
+        .thenReturn(
+            immediateFuture(
+                GetLabInfoResponse.newBuilder()
+                    .setLabQueryResult(
+                        LabQueryResult.newBuilder()
+                            .setLabView(
+                                LabView.newBuilder()
+                                    .addLabData(
+                                        LabData.newBuilder()
+                                            .setLabInfo(LabInfo.getDefaultInstance()))))
+                    .build()));
     when(hostAuxiliaryInfoProvider.getHostReleaseInfo(anyString(), any()))
         .thenReturn(immediateFuture(Optional.empty()));
     when(deviceOpsStubProvider.createStub(anyString(), any())).thenReturn(deviceOpsStub);
