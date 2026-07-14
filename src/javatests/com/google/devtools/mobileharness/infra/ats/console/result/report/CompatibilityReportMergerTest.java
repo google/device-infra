@@ -21,6 +21,7 @@ import static org.junit.Assert.assertThrows;
 
 import com.android.tradefed.metrics.proto.MetricMeasurement.Measurements;
 import com.android.tradefed.metrics.proto.MetricMeasurement.Metric;
+import com.android.tradefed.result.proto.TestRecordProto.DebugInfo;
 import com.android.tradefed.result.proto.TestRecordProto.TestRecord;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -39,6 +40,7 @@ import com.google.devtools.mobileharness.infra.ats.console.util.TestRunfilesUtil
 import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.inject.Guice;
 import com.google.protobuf.TextFormat;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
@@ -605,5 +607,56 @@ public final class CompatibilityReportMergerTest {
     assertThat(updatedResult.getModuleInfo(1).getName()).isEqualTo("module2");
     assertThat(updatedResult.getModuleInfo(1).getAbi()).isEqualTo("abi2");
     assertThat(updatedResult.getModuleInfo(1).getDone()).isFalse();
+  }
+
+  @Test
+  public void parseResultBundles_harnessRuntimeException_insertsUnexecutedModules()
+      throws Exception {
+    String xmlContent =
+        "<?xml version='1.0' encoding='UTF-8' standalone='no' ?>\n"
+            + "<Result start=\"1678951330449\" end=\"1678951395733\">\n"
+            + "  <Summary pass=\"0\" failed=\"0\" warning=\"0\" modules_done=\"0\""
+            + " modules_total=\"0\" />\n"
+            + "</Result>";
+    Path xmlReportFile = Files.createTempFile("empty_cts_test_result", ".xml");
+    xmlReportFile.toFile().deleteOnExit();
+    Files.writeString(xmlReportFile, xmlContent);
+
+    TestRecord testRecord =
+        TestRecord.newBuilder()
+            .setDebugInfo(
+                DebugInfo.newBuilder()
+                    .setErrorMessage(
+                        "com.android.tradefed.error.HarnessRuntimeException[OPTION_CONFIGURATION_ERROR]")
+                    .setTrace(
+                        "com.android.tradefed.error.HarnessRuntimeException: Failed to parse"
+                            + " options"))
+            .build();
+    Path testRecordFile = Files.createTempFile("test_record", ".pb");
+    testRecordFile.toFile().deleteOnExit();
+    try (OutputStream outputStream = Files.newOutputStream(testRecordFile)) {
+      testRecord.writeDelimitedTo(outputStream);
+    }
+
+    List<ParseResult> res =
+        reportMerger.parseResultBundles(
+            ImmutableList.of(
+                TradefedResultBundle.of(
+                    xmlReportFile,
+                    Optional.of(testRecordFile),
+                    ImmutableList.of(
+                        TradefedResultBundle.ModuleInfo.of("arm64-v8a", "Module1"),
+                        TradefedResultBundle.ModuleInfo.of("armeabi-v7a", "Module2")))));
+
+    assertThat(res).hasSize(1);
+    assertThat(res.get(0).report()).isPresent();
+    Result report = res.get(0).report().get();
+    assertThat(report.getModuleInfoList()).hasSize(2);
+    assertThat(report.getModuleInfo(0).getName()).isEqualTo("Module1");
+    assertThat(report.getModuleInfo(0).getAbi()).isEqualTo("arm64-v8a");
+    assertThat(report.getModuleInfo(0).getDone()).isFalse();
+    assertThat(report.getModuleInfo(1).getName()).isEqualTo("Module2");
+    assertThat(report.getModuleInfo(1).getAbi()).isEqualTo("armeabi-v7a");
+    assertThat(report.getModuleInfo(1).getDone()).isFalse();
   }
 }
