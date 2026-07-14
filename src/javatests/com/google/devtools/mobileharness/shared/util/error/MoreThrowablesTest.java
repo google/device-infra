@@ -18,15 +18,121 @@ package com.google.devtools.mobileharness.shared.util.error;
 
 import static com.google.common.truth.Correspondence.transforming;
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import com.google.common.base.Function;
 import com.google.common.base.Splitter;
+import java.io.InterruptedIOException;
+import java.nio.channels.ClosedByInterruptException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class MoreThrowablesTest {
+
+  @Test
+  public void isInterruption_checksCorrectTypes() {
+    assertThat(MoreThrowables.isInterruption(new InterruptedException())).isTrue();
+    assertThat(MoreThrowables.isInterruption(new ClosedByInterruptException())).isTrue();
+    assertThat(MoreThrowables.isInterruption(new InterruptedIOException())).isTrue();
+
+    assertThat(MoreThrowables.isInterruption(new IllegalArgumentException())).isFalse();
+    assertThat(MoreThrowables.isInterruption(new Exception(new InterruptedException())))
+        .isFalse(); // only top level
+  }
+
+  @Test
+  public void runAndSuppressException_suppressesException() {
+    Exception primary = new Exception("Primary");
+    MoreThrowables.runAndSuppressException(
+        primary,
+        () -> {
+          throw new Exception("Secondary");
+        });
+
+    assertThat(primary.getSuppressed()).hasLength(1);
+    assertThat(primary.getSuppressed()[0]).hasMessageThat().contains("Secondary");
+  }
+
+  @Test
+  public void runAndSuppressException_handlesInterruptedExceptionAndRestoresStatus() {
+    Exception primary = new Exception("Primary");
+
+    // Ensure thread is not interrupted initially
+    Thread.interrupted();
+
+    MoreThrowables.runAndSuppressException(
+        primary,
+        () -> {
+          throw new InterruptedException("Interrupted");
+        });
+
+    assertThat(primary.getSuppressed()).hasLength(1);
+    assertThat(primary.getSuppressed()[0]).isInstanceOf(InterruptedException.class);
+
+    // Check that the interrupted status was restored
+    assertThat(Thread.interrupted()).isTrue();
+  }
+
+  @Test
+  public void runAndSuppressException_doesNotSuppressWhenSuccessful() {
+    Exception primary = new Exception("Primary");
+    MoreThrowables.runAndSuppressException(primary, () -> {});
+
+    assertThat(primary.getSuppressed()).isEmpty();
+  }
+
+  @Test
+  public void runAndSuppressException_primaryNull_throwsOriginalUncheckedException() {
+    RuntimeException expected = new RuntimeException("Unchecked");
+    RuntimeException thrown =
+        assertThrows(
+            RuntimeException.class,
+            () ->
+                MoreThrowables.runAndSuppressException(
+                    null,
+                    () -> {
+                      throw expected;
+                    }));
+    assertThat(thrown).isSameInstanceAs(expected);
+  }
+
+  @Test
+  public void runAndSuppressException_primaryNull_wrapsCheckedException() {
+    Exception checked = new Exception("Checked");
+    RuntimeException thrown =
+        assertThrows(
+            RuntimeException.class,
+            () ->
+                MoreThrowables.runAndSuppressException(
+                    null,
+                    () -> {
+                      throw checked;
+                    }));
+    assertThat(thrown.getCause()).isSameInstanceAs(checked);
+  }
+
+  @Test
+  public void runAndSuppressException_primaryNull_handlesInterruptedExceptionAndRestoresStatus() {
+    // Ensure thread is not interrupted initially
+    Thread.interrupted();
+
+    InterruptedException interrupted = new InterruptedException("Interrupted");
+    RuntimeException thrown =
+        assertThrows(
+            RuntimeException.class,
+            () ->
+                MoreThrowables.runAndSuppressException(
+                    null,
+                    () -> {
+                      throw interrupted;
+                    }));
+    assertThat(thrown.getCause()).isSameInstanceAs(interrupted);
+
+    // Check that the interrupted status was restored
+    assertThat(Thread.interrupted()).isTrue();
+  }
 
   @Test
   public void shortDebugCurrentStackTrace() throws Exception {
