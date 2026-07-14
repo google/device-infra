@@ -586,6 +586,42 @@ public final class MctsDynamicDownloadPluginTest {
   }
 
   @Test
+  public void processModuleVersion_calculateVersions_v3p1() throws Exception {
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "380500000", "some_module", "default", "38.0"))
+        .isEqualTo("default"); // Initial release version.
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "380400000", "some_module", "default", "38.0"))
+        .isEqualTo("default"); // FRC initial release version.
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "380400000", "some_module", "default", "other"))
+        .isEqualTo("2027-04"); // FRC release month when not in initial release map.
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "381000000", "some_module", "default", "38.0"))
+        .isEqualTo("2027-05"); // Monthly release May 2027.
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "380900000", "some_module", "default", "38.0"))
+        .isEqualTo("2027-05"); // FRC release May 2027.
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "380300000", "some_module", "default", "38.0"))
+        .isEqualTo("default"); // Platform beta mission.
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "380200000", "some_module", "default", "38.0"))
+        .isEqualTo("default"); // Mainline beta mission.
+    assertThat(
+            spyMctsDynamicDownloadPlugin.processModuleVersion(
+                "380000000", "some_module", "default", "38.0"))
+        .isEqualTo("default"); // AOSP version.
+  }
+
+  @Test
   public void processModuleVersion_calculateVersions_aosp() throws Exception {
     assertThat(
             spyMctsDynamicDownloadPlugin.processModuleVersion(
