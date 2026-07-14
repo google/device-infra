@@ -69,6 +69,19 @@ public class ErrorModelConverter {
     return result.build();
   }
 
+  /** Converts a {@link FlattenedExceptionDetail} to an {@link ExceptionDetail}. */
+  public static ExceptionDetail toExceptionDetail(FlattenedExceptionDetail exceptionDetail) {
+    ExceptionDetail.Builder root =
+        ExceptionDetail.newBuilder().setSummary(exceptionDetail.getSummary());
+    ExceptionDetail.Builder current = root;
+    for (ExceptionSummary causeSummary : exceptionDetail.getCauseList()) {
+      ExceptionDetail.Builder cause = ExceptionDetail.newBuilder().setSummary(causeSummary);
+      current.setCause(cause);
+      current = cause;
+    }
+    return root.build();
+  }
+
   /** Converts a {@link ExceptionDetail} to a {@link DeserializedException}. */
   public static DeserializedException toDeserializedException(ExceptionDetail exceptionDetail) {
     DeserializedException result = toSingleDeserializedException(exceptionDetail.getSummary());
@@ -81,6 +94,12 @@ public class ErrorModelConverter {
       result.addSuppressed(toDeserializedException(suppressed));
     }
     return result;
+  }
+
+  /** Converts a {@link FlattenedExceptionDetail} to a {@link DeserializedException}. */
+  public static DeserializedException toDeserializedException(
+      FlattenedExceptionDetail exceptionDetail) {
+    return toDeserializedException(toExceptionDetail(exceptionDetail));
   }
 
   /** Converts the Java ErrorId class to proto. */

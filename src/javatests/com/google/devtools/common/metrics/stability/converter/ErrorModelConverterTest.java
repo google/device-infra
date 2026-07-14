@@ -515,4 +515,29 @@ public class ErrorModelConverterTest {
             .build();
     assertThat(ErrorModelConverter.hasMhInfraIssue(error)).isTrue();
   }
+
+  @Test
+  public void toDeserializedException_fromFlattenedExceptionDetail() {
+    FlattenedExceptionDetail flattened =
+        ErrorModelConverter.toFlattenedExceptionDetail(DEVICE_INFRA_EXCEPTION_DETAIL);
+
+    DeserializedException deserialized = ErrorModelConverter.toDeserializedException(flattened);
+
+    assertThat(deserialized.getErrorId().code()).isEqualTo(4000001);
+    assertThat(deserialized.getCause()).isNotNull();
+    assertThat(((DeserializedException) deserialized.getCause()).getErrorId().code())
+        .isEqualTo(4000002);
+  }
+
+  @Test
+  public void toExceptionDetail_fromFlattenedExceptionDetail() {
+    FlattenedExceptionDetail flattened =
+        ErrorModelConverter.toFlattenedExceptionDetail(DEVICE_INFRA_EXCEPTION_DETAIL);
+
+    ExceptionDetail detail = ErrorModelConverter.toExceptionDetail(flattened);
+
+    assertThat(detail.getSummary().getErrorId().getCode()).isEqualTo(4000001);
+    assertThat(detail.hasCause()).isTrue();
+    assertThat(detail.getCause().getSummary().getErrorId().getCode()).isEqualTo(4000002);
+  }
 }
