@@ -40,6 +40,7 @@ import javax.inject.Singleton;
 @Singleton
 public class DeviceDataLoader {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  public static final String DEVICE_NOT_FOUND = "DEVICE_NOT_FOUND";
 
   private final LabInfoProvider labInfoProvider;
   private final ConfigurationProvider configurationProvider;
@@ -227,7 +228,7 @@ public class DeviceDataLoader {
                 .orElseThrow(
                     () ->
                         new RuntimeException(
-                            "Device not found: " + deviceId + " in universe: " + universe)),
+                            DEVICE_NOT_FOUND + ": " + deviceId + " in universe: " + universe)),
         executor);
   }
 

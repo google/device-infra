@@ -1,7 +1,7 @@
 @if (data.source === 'new') {
   <app-wizard-stepper
     #stepper
-    title="Host Configuration Guided Setup"
+    dialogTitle="Host Configuration Guided Setup"
     type="host"
     width="56rem"
     [param]="{deviceId: '', hostName: data.hostName}"
@@ -61,7 +61,7 @@
 
     <ng-template #review>
       <app-review-table
-        title="Review & Submit"
+        tableTitle="Review & Submit"
         description="Please review the configuration below. You can edit more advanced settings after the initial setup."
         [dataSource]="dataSource"
       ></app-review-table>
@@ -69,7 +69,7 @@
   </app-wizard-stepper>
 } @else {
   <app-dialog
-    title="Review Configuration"
+    dialogTitle="Review Configuration"
     subtitle="For host: {{ data.hostName }}"
     width="72rem"
     type="host"
@@ -86,7 +86,7 @@
         </div>
       }
       <app-review-table
-        title="Review & Submit"
+        tableTitle="Review & Submit"
         description="You are about to apply a copied configuration. Please review the settings below before
       applying them to this host."
         [dataSource]="dataSource"

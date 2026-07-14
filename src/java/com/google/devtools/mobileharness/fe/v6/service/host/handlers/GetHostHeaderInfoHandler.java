@@ -82,6 +82,11 @@ public class GetHostHeaderInfoHandler {
                       .map(LabData::getLabInfo)
                       .findFirst();
 
+              if (labInfoOpt.isEmpty() && hostReleaseInfoOpt.isEmpty()) {
+                throw new IllegalArgumentException(
+                    GetHostOverviewHandler.HOST_NOT_FOUND + ": " + hostName);
+              }
+
               Optional<String> labTypeOpt = hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType);
 
               Optional<HostReleaseInfo.ComponentInfo> daemonReleaseOpt =
@@ -94,7 +99,7 @@ public class GetHostHeaderInfoHandler {
             executor);
   }
 
-  private GetLabInfoRequest createGetLabInfoRequest(String hostName) {
+  private static GetLabInfoRequest createGetLabInfoRequest(String hostName) {
     return GetLabInfoRequest.newBuilder()
         .setLabQuery(
             LabQuery.newBuilder()

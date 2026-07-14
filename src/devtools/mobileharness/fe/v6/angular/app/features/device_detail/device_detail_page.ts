@@ -19,6 +19,7 @@ import {combineLatest, Observable, of, ReplaySubject} from 'rxjs';
 import {catchError, map, switchMap, takeUntil, tap} from 'rxjs/operators';
 
 import {dateUtils} from '@deviceinfra/app/shared/utils/date_utils';
+import {openInNewTab} from '@deviceinfra/app/shared/utils/safe_dom';
 import {APP_DATA, getLegacyFeUrl} from '../../core/models/app_data';
 import {DeviceOverviewPageData} from '../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../core/services/device/device_service';
@@ -33,6 +34,7 @@ import {HealthStatisticTab} from './components/health_statistic_tab/health_stati
 declare interface DevicePageData {
   pageData: DeviceOverviewPageData | null;
   error: string | null;
+  errorDetails?: string;
 }
 
 /**
@@ -82,6 +84,33 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
     'overview',
   );
   readonly isGoogle1p = this.envUniverseService.isGoogle1P();
+
+  showDetails = signal(false);
+
+  toggleDetails() {
+    this.showDetails.update((v) => !v);
+  }
+
+  reportBug(errorMessage: string, errorDetails: string) {
+    // TODO: refactor this with `third_party/deviceinfra/src/devtools/mobileharness/fe/v6/angular/app/shared/components/action_error_content/action_error_content.ng.html`
+    // to avoid duplication.
+    const maxDetailsLength = 1000;
+    let detailsForBug = errorDetails || '';
+    if (detailsForBug.length > maxDetailsLength) {
+      detailsForBug =
+        detailsForBug.substring(0, maxDetailsLength) +
+        '\n\n... (details truncated)';
+    }
+
+    const title = encodeURIComponent(
+      `[MHFE] Operation failed: ${errorMessage}`,
+    );
+    const body = encodeURIComponent(
+      `Operation failed.\n\nError: ${errorMessage}\n\nDetails:\n${detailsForBug}`,
+    );
+    const url = `https://issuetracker.google.com/issues/new?component=94628&title=${title}&description=${body}`;
+    openInNewTab(url);
+  }
 
   ngOnInit() {
     combineLatest([
@@ -133,11 +162,16 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
             })),
             catchError((err) => {
               console.error(`Error fetching device ${id}:`, err);
+              let errorMsg = `Failed to load device data for ID: ${id}.`;
+              if (err.message && err.message.includes('DEVICE_NOT_FOUND')) {
+                errorMsg = `Device not found: ${id}.`;
+              } else if (err.message) {
+                errorMsg += ` ${err.message}`;
+              }
               return of<DevicePageData>({
                 pageData: null,
-                error: `Failed to load device data for ID: ${id}. ${
-                  err.message || ''
-                }`,
+                error: errorMsg,
+                errorDetails: formatErrorDetails(err),
               });
             }),
             tap(() => {
@@ -200,4 +234,11 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
   getFormattedQuarantineExpiry(expiry: string): string {
     return dateUtils.format(expiry);
   }
+}
+
+function formatErrorDetails(err: unknown): string {
+  if (!err) return '';
+  if (err instanceof Error && err.stack) return err.stack;
+  if (typeof err === 'object') return JSON.stringify(err, null, 2);
+  return String(err);
 }

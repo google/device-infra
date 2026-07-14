@@ -24,6 +24,10 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostHeaderInfoRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
@@ -31,6 +35,8 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoP
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -66,6 +72,18 @@ public final class GetHostHeaderInfoHandlerTest {
 
   @Test
   public void getHostHeaderInfo_routedUniverse_returnsEmptyActions() throws Exception {
+    when(mockLabInfoProvider.getLabInfoAsync(any(), any()))
+        .thenReturn(
+            Futures.immediateFuture(
+                GetLabInfoResponse.newBuilder()
+                    .setLabQueryResult(
+                        LabQueryResult.newBuilder()
+                            .setLabView(
+                                LabView.newBuilder()
+                                    .addLabData(
+                                        LabData.newBuilder()
+                                            .setLabInfo(LabInfo.getDefaultInstance()))))
+                    .build()));
     GetHostHeaderInfoRequest request =
         GetHostHeaderInfoRequest.newBuilder().setHostName("my_host").build();
     UniverseScope universe = new UniverseScope.RoutedUniverse("");
@@ -78,6 +96,18 @@ public final class GetHostHeaderInfoHandlerTest {
 
   @Test
   public void getHostHeaderInfo_selfUniverse_returnsEmptyActions() throws Exception {
+    when(mockLabInfoProvider.getLabInfoAsync(any(), any()))
+        .thenReturn(
+            Futures.immediateFuture(
+                GetLabInfoResponse.newBuilder()
+                    .setLabQueryResult(
+                        LabQueryResult.newBuilder()
+                            .setLabView(
+                                LabView.newBuilder()
+                                    .addLabData(
+                                        LabData.newBuilder()
+                                            .setLabInfo(LabInfo.getDefaultInstance()))))
+                    .build()));
     GetHostHeaderInfoRequest request =
         GetHostHeaderInfoRequest.newBuilder().setHostName("my_host").build();
     UniverseScope universe = new UniverseScope.SelfUniverse();
@@ -86,5 +116,21 @@ public final class GetHostHeaderInfoHandlerTest {
 
     assertThat(info.getHostName()).isEqualTo("my_host");
     assertThat(info.getActions()).isEqualToDefaultInstance();
+  }
+
+  @Test
+  public void getHostHeaderInfo_noData_throwsException() throws Exception {
+    GetHostHeaderInfoRequest request =
+        GetHostHeaderInfoRequest.newBuilder().setHostName("my_host").build();
+    UniverseScope universe = new UniverseScope.SelfUniverse();
+
+    ExecutionException exception =
+        Assert.assertThrows(
+            ExecutionException.class, () -> handler.getHostHeaderInfo(request, universe).get());
+    assertThat(exception).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
+    assertThat(exception)
+        .hasCauseThat()
+        .hasMessageThat()
+        .contains(GetHostOverviewHandler.HOST_NOT_FOUND);
   }
 }

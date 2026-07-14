@@ -80,7 +80,7 @@ export type ReviewTableRow =
   imports: [CommonModule, MatTableModule, SafeHtmlPipe],
 })
 export class ReviewTable implements OnInit {
-  @Input() title = '';
+  @Input() tableTitle = '';
   @Input() description = '';
   @Input() dataSource: ReviewTableRow[] = [];
   displayedColumns = ['feature', 'value'];

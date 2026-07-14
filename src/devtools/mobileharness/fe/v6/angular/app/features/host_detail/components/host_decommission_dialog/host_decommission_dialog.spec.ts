@@ -70,18 +70,19 @@ describe('HostDecommissionDialog', () => {
     expect(hostNameElement?.textContent).toContain('test-host');
   });
 
-  it('should call decommissionHost and close with true when decommission button is clicked', () => {
+  it('should call decommissionHost and show success state when decommission button is clicked', () => {
     hostServiceSpy.decommissionHost.and.returnValue(of({}));
+
     const decommissionButton = document.querySelector(
       '.primary-button',
     ) as HTMLButtonElement;
     decommissionButton.click();
+
     expect(hostServiceSpy.decommissionHost).toHaveBeenCalledWith('test-host');
-    expect(snackBarServiceSpy.showInfo).toHaveBeenCalled();
-    expect(router.navigate).toHaveBeenCalledWith(['/'], {
-      queryParamsHandling: 'preserve',
-    });
-    expect(dialogRef.close).toHaveBeenCalledWith(true);
+    expect(component.isDecommissioned()).toBeTrue();
+    expect(dialogRef.disableClose).toBeTrue();
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(dialogRef.close).not.toHaveBeenCalled();
   });
 
   it('should close with false when cancel button is clicked', () => {

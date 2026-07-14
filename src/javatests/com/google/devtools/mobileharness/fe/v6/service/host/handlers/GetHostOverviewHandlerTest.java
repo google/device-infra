@@ -42,7 +42,6 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostLatestVersionProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostReleaseInfo;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DiagnosticLink;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DiagnosticLink.Category;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
@@ -61,7 +60,9 @@ import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import javax.inject.Inject;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -116,23 +117,17 @@ public final class GetHostOverviewHandlerTest {
   }
 
   @Test
-  public void getHostOverview_noData_returnsUnknown() throws Exception {
+  public void getHostOverview_noData_throwsException() throws Exception {
     ListenableFuture<HostOverviewPageData> result =
         getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE);
 
-    HostOverview overview = Futures.getDone(result).getOverviewContent();
-    assertThat(overview.getLabTypeDisplayNamesList()).isEmpty();
-    assertThat(overview.getUiLabTypesList()).isEmpty();
-    assertThat(overview.getHostName()).isEqualTo(HOST_NAME);
-
-    // Verify default states when release info is missing
-    assertThat(overview.getLabServer().getActivity().getState())
-        .isEqualTo(LabServerInfo.ActivityState.UNKNOWN);
-    assertThat(overview.getLabServer().getActivity().getTitle()).isEqualTo("Unknown");
-
-    assertThat(overview.getDaemonServer().getStatus().getState())
-        .isEqualTo(DaemonServerInfo.State.MISSING);
-    assertThat(overview.getDaemonServer().getStatus().getTitle()).isEqualTo("Missing");
+    ExecutionException exception =
+        Assert.assertThrows(ExecutionException.class, () -> Futures.getDone(result));
+    assertThat(exception).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
+    assertThat(exception)
+        .hasCauseThat()
+        .hasMessageThat()
+        .contains(GetHostOverviewHandler.HOST_NOT_FOUND);
   }
 
   @Test
@@ -354,6 +349,7 @@ public final class GetHostOverviewHandlerTest {
 
   @Test
   public void getHostOverview_withPassThroughFlags() throws Exception {
+    mockLabInfoWithIp("127.0.0.1");
     String passThroughFlags = "--some_flags";
     when(hostAuxiliaryInfoProvider.getPassThroughFlags(eq(HOST_NAME), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.of(passThroughFlags)));
@@ -570,6 +566,7 @@ public final class GetHostOverviewHandlerTest {
   @Test
   public void getHostOverview_routedUniverse_canUpgradeIsFalseAndNoLatestVersionFetch()
       throws Exception {
+    mockLabInfoWithIp("127.0.0.1");
     UniverseScope routedUniverse = new UniverseScope.RoutedUniverse("vivo");
 
     HostOverview overview =

@@ -231,6 +231,9 @@ public final class DeviceDataLoaderTest {
     ExecutionException exception =
         Assert.assertThrows(ExecutionException.class, () -> future.get());
     assertThat(exception).hasCauseThat().isInstanceOf(RuntimeException.class);
-    assertThat(exception).hasCauseThat().hasMessageThat().contains("Device not found");
+    assertThat(exception)
+        .hasCauseThat()
+        .hasMessageThat()
+        .contains(DeviceDataLoader.DEVICE_NOT_FOUND);
   }
 }

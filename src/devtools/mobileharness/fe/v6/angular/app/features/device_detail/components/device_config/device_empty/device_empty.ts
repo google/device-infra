@@ -65,7 +65,7 @@ export class DeviceEmpty implements OnInit {
   @Input() hostName = this.data.hostName;
   @Input() hostIp = this.data.hostIp;
   @Input() universe = this.data.universe;
-  @Input() title = this.data.title;
+  @Input() emptyTitle = this.data.title;
 
   hostMissing = signal(false);
 

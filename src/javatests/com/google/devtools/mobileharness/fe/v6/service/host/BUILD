@@ -25,6 +25,7 @@ java_library(
     testonly = 1,
     srcs = glob(["*.java"]),
     deps = [
+        "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/host:host_service_java_proto",
         "//src/devtools/mobileharness/infra/master/rpc/proto:lab_sync_service_java_proto",

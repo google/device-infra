@@ -1,7 +1,7 @@
 @if (data.source === 'new') {
   <app-wizard-stepper
     #stepper
-    title="Guided Setup"
+    dialogTitle="Guided Setup"
     [WIZARD_STEPS]="WIZARD_STEPS_NEW()"
     [nextStepDisabled]="hasError && errorStep === currentStep()"
     [currentStep]="currentStep()"
@@ -30,7 +30,7 @@
     </ng-template>
     <ng-template #review>
       <app-review-table
-        title="Review & Submit"
+        tableTitle="Review & Submit"
         description="Excellent! You've completed the initial setup. You can always edit this configuration later
       from the main settings page, which also contains more advanced options.<br /><br />Please
       review the configuration below, and click 'Apply Changes' to save."
@@ -40,7 +40,7 @@
   </app-wizard-stepper>
 } @else {
   <app-dialog
-    title="Review Configuration"
+    dialogTitle="Review Configuration"
     subtitle="For device: {{ data.deviceId }}"
     width="72rem"
     [param]="{deviceId: data.deviceId, hostName: '', universe: data.universe}"
@@ -48,7 +48,7 @@
   >
     <main class="step-content">
       <app-review-table
-        title="Review & Submit"
+        tableTitle="Review & Submit"
         description="You are about to apply a copied configuration. Please review the settings below before
       applying them to this device."
         [dataSource]="dataSource"
