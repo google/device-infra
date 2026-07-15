@@ -77,6 +77,12 @@ describe('HttpHostService', () => {
           tooltip: '',
           isReady: true,
         },
+        advancedOperations: {
+          enabled: false,
+          visible: false,
+          tooltip: '',
+          isReady: false,
+        },
       },
     };
     service.getHostHeaderInfo('test-host').subscribe((info) => {

@@ -8,6 +8,7 @@ export declare interface HostActions {
   readonly configuration: ActionButtonState;
   readonly debug: ActionButtonState;
   readonly decommission: ActionButtonState;
+  readonly advancedOperations: ActionButtonState;
 }
 
 /**
@@ -18,7 +19,6 @@ export declare interface LabServerActions {
   readonly start: ActionButtonState;
   readonly restart: ActionButtonState;
   readonly stop: ActionButtonState;
-  readonly advancedOperations: ActionButtonState;
 }
 
 /**

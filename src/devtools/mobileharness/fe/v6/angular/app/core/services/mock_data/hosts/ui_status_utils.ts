@@ -461,6 +461,12 @@ export function createHostActions(
         : '',
       isReady: true,
     },
+    advancedOperations: {
+      enabled: false,
+      visible: false,
+      tooltip: '',
+      isReady: false,
+    },
   };
 }
 
@@ -533,12 +539,6 @@ export function createLabServerActions(
         : isCoreOrFusion
           ? 'Cannot stop in Fusion/Core Lab'
           : '',
-      isReady: true,
-    },
-    advancedOperations: {
-      enabled: true,
-      visible: uiLabTypes.includes('FUSION'),
-      tooltip: 'Advanced operations and diagnostics for Fusion hosts',
       isReady: true,
     },
   };

@@ -48,6 +48,12 @@ describe('HostActionBar', () => {
           tooltip: 'Decommission tooltip',
           isReady: true,
         },
+        advancedOperations: {
+          enabled: false,
+          visible: false,
+          tooltip: '',
+          isReady: false,
+        },
       },
     },
     overviewContent: {

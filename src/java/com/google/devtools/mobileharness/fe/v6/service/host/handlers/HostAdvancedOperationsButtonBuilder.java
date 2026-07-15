@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.HostTypes;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostConnectivityStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UiLabType;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import java.util.Optional;
@@ -27,25 +28,36 @@ import javax.inject.Singleton;
 
 /** Utility class to build {@link ActionButtonState} for advanced operations entry button. */
 @Singleton
-public final class LabServerAdvancedOperationsButtonBuilder {
+public final class HostAdvancedOperationsButtonBuilder {
 
   private final FeatureReadiness featureReadiness;
 
   @Inject
-  LabServerAdvancedOperationsButtonBuilder(FeatureReadiness featureReadiness) {
+  HostAdvancedOperationsButtonBuilder(FeatureReadiness featureReadiness) {
     this.featureReadiness = featureReadiness;
   }
 
-  public ActionButtonState build(Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
+  public ActionButtonState build(
+      Optional<LabInfo> labInfoOpt,
+      Optional<String> labTypeOpt,
+      HostConnectivityStatus connectivityStatus) {
     boolean isFusion =
         HostTypes.determineUiLabTypes(labInfoOpt, labTypeOpt).contains(UiLabType.FUSION);
     boolean isReady = featureReadiness.isAdvancedOperationsReady();
 
+    // Advanced operations run against a live lab server, so they are only enabled when the lab
+    // server state shown in the lab server info card (its connectivity with the OmniLab master) is
+    // RUNNING, i.e. OmniLab is receiving heartbeats from the host.
+    boolean isRunning = connectivityStatus.getState() == HostConnectivityStatus.State.RUNNING;
+
     return ActionButtonState.newBuilder()
         .setVisible(isFusion)
-        .setEnabled(true)
+        .setEnabled(isRunning)
         .setIsReady(isReady)
-        .setTooltip("Advanced operations and diagnostics for Fusion hosts")
+        .setTooltip(
+            isRunning
+                ? "Advanced operations and diagnostics for Fusion hosts"
+                : "Advanced operations are only available when the lab server is Running.")
         .build();
   }
 }

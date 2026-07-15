@@ -62,12 +62,6 @@ describe('HostOverview Component', () => {
             isReady: true,
             tooltip: 'Already stopped',
           },
-          advancedOperations: {
-            visible: true,
-            enabled: true,
-            isReady: true,
-            tooltip: '',
-          },
         },
       },
       daemonServer: {
@@ -261,7 +255,6 @@ describe('HostOverview Component', () => {
           restart: mockHost.labServer.actions!.restart,
           start: mockHost.labServer.actions!.start,
           stop: mockHost.labServer.actions!.stop,
-          advancedOperations: mockHost.labServer.actions!.advancedOperations,
         },
       },
     };

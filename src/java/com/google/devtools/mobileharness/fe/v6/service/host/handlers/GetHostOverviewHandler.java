@@ -169,7 +169,12 @@ public final class GetHostOverviewHandler {
 
               HostHeaderInfo headerInfo =
                   hostHeaderInfoBuilder.build(
-                      hostName, universe, labInfoOpt, labTypeOpt, daemonStatus);
+                      hostName,
+                      universe,
+                      labInfoOpt,
+                      labTypeOpt,
+                      daemonStatus,
+                      labServerInfo.getConnectivity());
 
               return HostOverviewPageData.newBuilder()
                   .setHeaderInfo(headerInfo)

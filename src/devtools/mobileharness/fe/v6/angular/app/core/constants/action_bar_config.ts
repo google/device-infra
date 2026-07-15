@@ -224,6 +224,12 @@ export const HOST_ACTION_UI_CONFIG: Record<
     testIdPrefix: 'debug',
     feature: ActionBarAction.HOST_DEBUG,
   },
+  'advancedOperations': {
+    label: 'Advanced Operations',
+    icon: 'build_circle',
+    testIdPrefix: 'advancedOperations',
+    feature: ActionBarAction.HOST_ADVANCED_OPERATIONS,
+  },
 };
 
 /**
@@ -257,11 +263,5 @@ export const LAB_SERVER_ACTION_UI_CONFIG: Record<
     icon: 'stop_circle',
     testIdPrefix: 'stop',
     feature: ActionBarAction.HOST_STOP,
-  },
-  'advancedOperations': {
-    label: 'Advanced Operations',
-    icon: 'more_vert',
-    testIdPrefix: 'advancedOperations',
-    feature: ActionBarAction.HOST_ADVANCED_OPERATIONS,
   },
 };

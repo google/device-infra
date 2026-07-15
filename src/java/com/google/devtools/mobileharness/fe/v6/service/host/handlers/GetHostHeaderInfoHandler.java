@@ -30,8 +30,10 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostReleaseInfo;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.DaemonStatuses;
+import com.google.devtools.mobileharness.fe.v6.service.host.util.HostConnectivityStatuses;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostHeaderInfoRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostConnectivityStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
@@ -88,8 +90,14 @@ public class GetHostHeaderInfoHandler {
                   hostReleaseInfoOpt.flatMap(HostReleaseInfo::daemonServerReleaseInfo);
               DaemonServerInfo.Status daemonStatus = DaemonStatuses.create(daemonReleaseOpt);
 
+              // Compute lab server connectivity so that host-level actions (e.g. advanced
+              // operations) can be gated on it. This is the same "State" shown on the lab server
+              // info card.
+              HostConnectivityStatus connectivityStatus =
+                  HostConnectivityStatuses.create(labInfoOpt);
+
               return hostHeaderInfoBuilder.build(
-                  hostName, universe, labInfoOpt, labTypeOpt, daemonStatus);
+                  hostName, universe, labInfoOpt, labTypeOpt, daemonStatus, connectivityStatus);
             },
             executor);
   }

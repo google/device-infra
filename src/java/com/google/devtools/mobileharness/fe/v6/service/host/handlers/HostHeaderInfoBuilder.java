@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostActions;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostConnectivityStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.Optional;
@@ -32,15 +33,18 @@ public class HostHeaderInfoBuilder {
   private final HostConfigButtonBuilder hostConfigButtonBuilder;
   private final HostDebugButtonBuilder hostDebugButtonBuilder;
   private final HostDecommissionButtonBuilder hostDecommissionButtonBuilder;
+  private final HostAdvancedOperationsButtonBuilder hostAdvancedOperationsButtonBuilder;
 
   @Inject
   HostHeaderInfoBuilder(
       HostConfigButtonBuilder hostConfigButtonBuilder,
       HostDebugButtonBuilder hostDebugButtonBuilder,
-      HostDecommissionButtonBuilder hostDecommissionButtonBuilder) {
+      HostDecommissionButtonBuilder hostDecommissionButtonBuilder,
+      HostAdvancedOperationsButtonBuilder hostAdvancedOperationsButtonBuilder) {
     this.hostConfigButtonBuilder = hostConfigButtonBuilder;
     this.hostDebugButtonBuilder = hostDebugButtonBuilder;
     this.hostDecommissionButtonBuilder = hostDecommissionButtonBuilder;
+    this.hostAdvancedOperationsButtonBuilder = hostAdvancedOperationsButtonBuilder;
   }
 
   /** Builds {@link HostHeaderInfo} based on host name, universe and lab info. */
@@ -49,7 +53,8 @@ public class HostHeaderInfoBuilder {
       UniverseScope universe,
       Optional<LabInfo> labInfoOpt,
       Optional<String> labTypeOpt,
-      DaemonServerInfo.Status daemonStatus) {
+      DaemonServerInfo.Status daemonStatus,
+      HostConnectivityStatus connectivityStatus) {
     return HostHeaderInfo.newBuilder()
         .setHostName(hostName)
         .setActions(
@@ -59,7 +64,10 @@ public class HostHeaderInfoBuilder {
                     hostDebugButtonBuilder.build(universe, labInfoOpt, labTypeOpt, daemonStatus))
                 .setDecommission(
                     hostDecommissionButtonBuilder.build(
-                        universe, labInfoOpt, labTypeOpt, daemonStatus)))
+                        universe, labInfoOpt, labTypeOpt, daemonStatus))
+                .setAdvancedOperations(
+                    hostAdvancedOperationsButtonBuilder.build(
+                        labInfoOpt, labTypeOpt, connectivityStatus)))
         .build();
   }
 }

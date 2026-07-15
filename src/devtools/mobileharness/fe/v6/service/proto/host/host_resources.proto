@@ -99,6 +99,7 @@ message HostActions {
   common.ActionButtonState configuration = 1;
   common.ActionButtonState debug = 2;
   common.ActionButtonState decommission = 3;
+  common.ActionButtonState advanced_operations = 4;
 }
 
 // Represents the state of action buttons for a lab server.
@@ -107,9 +108,8 @@ message LabServerActions {
   common.ActionButtonState start = 3;
   common.ActionButtonState restart = 4;
   common.ActionButtonState stop = 5;
-  common.ActionButtonState advanced_operations = 7;
 
-  reserved 2, 6;
+  reserved 2, 6, 7;
 }
 
 // Result of a single diagnostic command.

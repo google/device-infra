@@ -60,5 +60,6 @@ export const SCENARIO_HOST_COMING_SOON: MockHostScenario = {
     configuration: {enabled: true, visible: true, tooltip: '', isReady: false},
     debug: {enabled: true, visible: true, tooltip: '', isReady: false},
     decommission: {enabled: true, visible: true, tooltip: '', isReady: false},
+    advancedOperations: {enabled: false, visible: false, tooltip: '', isReady: false},
   },
 };
