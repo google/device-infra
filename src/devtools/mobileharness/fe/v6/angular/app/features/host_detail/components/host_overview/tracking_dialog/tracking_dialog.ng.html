@@ -79,9 +79,9 @@
           Generating link...
         </div>
       } @else if (trackingUrl()) {
-        <div class="url-text">
+        <a class="url-text" [href]="trackingUrl()" target="_blank" rel="noopener noreferrer">
           {{ trackingUrl() }}
-        </div>
+        </a>
       } @else {
         <div class="no-link-state">
           <mat-icon class="warning-icon">info</mat-icon>

@@ -14,7 +14,10 @@ import {ClipboardService} from '@deviceinfra/app/shared/services/clipboard_servi
 import {SnackBarService} from '@deviceinfra/app/shared/services/snackbar_service';
 import {of, Subject, throwError} from 'rxjs';
 
-import {HostDebugDialog} from './host_debug_dialog';
+import {
+  HostDebugDialog,
+  normalizeHostDebugInfoResponse,
+} from './host_debug_dialog';
 
 describe('HostDebugDialog', () => {
   let component: HostDebugDialog;
@@ -336,5 +339,47 @@ describe('HostDebugDialog', () => {
 
     // scrollTop should be set to offsetTop - 16
     expect(mainContent.scrollTop).toBe(targetPanel.offsetTop - 16);
+  });
+});
+
+describe('normalizeHostDebugInfoResponse', () => {
+  it('should not change valid commands', () => {
+    const input: GetHostDebugInfoResponse = {
+      results: [
+        {command: 'lsusb', stdout: 'out1', stderr: 'err1'},
+        {command: 'dmesg', stdout: 'out2', stderr: 'err2'},
+      ],
+      timestamp: '2026-04-03T08:00:00Z',
+    };
+    const output = normalizeHostDebugInfoResponse(input);
+    expect(output).toEqual(input);
+  });
+
+  it('should normalize empty or whitespace commands', () => {
+    const input: GetHostDebugInfoResponse = {
+      results: [
+        {command: '', stdout: 'out1', stderr: 'err1'},
+        {command: '   ', stdout: 'out2', stderr: 'err2'},
+        {command: 'lsusb', stdout: 'out3', stderr: 'err3'},
+        {command: '', stdout: 'out4', stderr: 'err4'},
+      ],
+      timestamp: '2026-04-03T08:00:00Z',
+    };
+    const output = normalizeHostDebugInfoResponse(input);
+    expect(output.results[0].command).toBe('Unknown Command 1');
+    expect(output.results[1].command).toBe('Unknown Command 2');
+    expect(output.results[2].command).toBe('lsusb');
+    expect(output.results[3].command).toBe('Unknown Command 3');
+  });
+
+  it('should handle missing command field', () => {
+    const input = {
+      results: [{stdout: 'out1', stderr: 'err1'}],
+      timestamp: '2026-04-03T08:00:00Z',
+    };
+    const output = normalizeHostDebugInfoResponse(
+      input as unknown as GetHostDebugInfoResponse,
+    );
+    expect(output.results[0].command).toBe('Unknown Command 1');
   });
 });

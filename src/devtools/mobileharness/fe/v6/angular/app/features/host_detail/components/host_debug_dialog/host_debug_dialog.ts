@@ -104,7 +104,9 @@ export class HostDebugDialog implements OnInit {
       .pipe(take(1))
       .subscribe({
         next: (response) => {
-          this.debugInfo.set(response);
+          const normalizedResponse = normalizeHostDebugInfoResponse(response);
+
+          this.debugInfo.set(normalizedResponse);
           this.isLoading.set(false);
 
           if (isRefresh) {
@@ -114,7 +116,7 @@ export class HostDebugDialog implements OnInit {
           // Initialize all commands as expanded by default, and set default active tabs.
           const initialExpanded: Record<string, boolean> = {};
           const initialTabs: Record<string, 'stdout' | 'stderr'> = {};
-          for (const res of response.results) {
+          for (const res of normalizedResponse.results) {
             initialExpanded[res.command] = true;
             // Default to stdout if available, otherwise stderr
             if (res.stdout) {
@@ -264,4 +266,25 @@ export class HostDebugDialog implements OnInit {
   getSafeId(command: string): string {
     return command.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
   }
+}
+
+/**
+ * Normalizes the GetHostDebugInfoResponse by assigning a default command name
+ * to any result that has an empty or missing command field.
+ */
+export function normalizeHostDebugInfoResponse(
+  response: GetHostDebugInfoResponse,
+): GetHostDebugInfoResponse {
+  let unknownCount = 1;
+  const normalizedResults = response.results.map((res) => ({
+    ...res,
+    command:
+      res.command && res.command.trim() !== ''
+        ? res.command
+        : `Unknown Command ${unknownCount++}`,
+  }));
+  return {
+    ...response,
+    results: normalizedResults,
+  };
 }
