@@ -182,6 +182,10 @@ public class JobManager {
       return previous.testRunner;
     }
 
+    private synchronized void removeTest(String testId) {
+      tests.remove(testId);
+    }
+
     private synchronized void markTestClientPostRunDone(String testId) {
       TestLabExecutionUnit test = tests.get(testId);
       if (test != null) {
@@ -328,6 +332,11 @@ public class JobManager {
     TestLocator testLocator = testRunner.getTestExecutionUnit().locator();
     return getJobLabExecutionUnit(testLocator.jobLocator().id())
         .addTest(testLocator.id(), testRunner);
+  }
+
+  /** Removes a test from a job. */
+  public void removeTest(String jobId, String testId) throws MobileHarnessException {
+    getJobLabExecutionUnit(jobId).removeTest(testId);
   }
 
   /**

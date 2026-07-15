@@ -240,6 +240,13 @@ public class PrepareTestServiceImpl {
               + "See b/38099373 for more detail.",
           allocation);
     } catch (MobileHarnessException e) {
+      try {
+        jobManager.removeTest(req.getJob().getJobId(), req.getTest().getTestId());
+      } catch (MobileHarnessException e2) {
+        logger.atWarning().withCause(e2).log(
+            "Failed to remove failed start test %s from JobManager",
+            testExecutionUnit.locator().id());
+      }
       throw new MobileHarnessException(
           InfraErrorId.LAB_RPC_PREPARE_TEST_TEST_RUNNER_START_ERROR,
           String.format("Failed to start test %s", testExecutionUnit.locator().id()),
