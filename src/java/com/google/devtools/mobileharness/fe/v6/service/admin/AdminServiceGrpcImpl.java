@@ -17,7 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.admin;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
+import com.google.devtools.mobileharness.fe.v6.service.grpc.FeGrpcInvoker;
 import com.google.devtools.mobileharness.fe.v6.service.proto.admin.AdminServiceGrpc;
 import com.google.devtools.mobileharness.fe.v6.service.proto.admin.ListWifiCredentialsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.admin.ListWifiCredentialsResponse;
@@ -42,7 +42,7 @@ public final class AdminServiceGrpcImpl extends AdminServiceGrpc.AdminServiceImp
   public void setWifiCredentials(
       SetWifiCredentialsRequest request,
       StreamObserver<SetWifiCredentialsResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::setWifiCredentials,
@@ -55,7 +55,7 @@ public final class AdminServiceGrpcImpl extends AdminServiceGrpc.AdminServiceImp
   public void listWifiCredentials(
       ListWifiCredentialsRequest request,
       StreamObserver<ListWifiCredentialsResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::listWifiCredentials,

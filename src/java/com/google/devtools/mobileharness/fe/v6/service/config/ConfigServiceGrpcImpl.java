@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.config;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
+import com.google.devtools.mobileharness.fe.v6.service.grpc.FeGrpcInvoker;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionRequest;
@@ -58,7 +58,7 @@ public final class ConfigServiceGrpcImpl extends ConfigServiceGrpc.ConfigService
   @Override
   public void getDeviceConfig(
       GetDeviceConfigRequest request, StreamObserver<GetDeviceConfigResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::getDeviceConfig,
@@ -71,7 +71,7 @@ public final class ConfigServiceGrpcImpl extends ConfigServiceGrpc.ConfigService
   public void checkDeviceWritePermission(
       CheckDeviceWritePermissionRequest request,
       StreamObserver<CheckDeviceWritePermissionResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         req ->
@@ -86,7 +86,7 @@ public final class ConfigServiceGrpcImpl extends ConfigServiceGrpc.ConfigService
   public void updateDeviceConfig(
       UpdateDeviceConfigRequest request,
       StreamObserver<UpdateDeviceConfigResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         req -> logic.updateDeviceConfig(req, Optional.empty()),
@@ -99,7 +99,7 @@ public final class ConfigServiceGrpcImpl extends ConfigServiceGrpc.ConfigService
   public void getRecommendedWifi(
       GetRecommendedWifiRequest request,
       StreamObserver<GetRecommendedWifiResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::getRecommendedWifi,
@@ -112,7 +112,7 @@ public final class ConfigServiceGrpcImpl extends ConfigServiceGrpc.ConfigService
   public void getHostDefaultDeviceConfig(
       GetHostDefaultDeviceConfigRequest request,
       StreamObserver<GetHostDefaultDeviceConfigResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::getHostDefaultDeviceConfig,
@@ -124,7 +124,7 @@ public final class ConfigServiceGrpcImpl extends ConfigServiceGrpc.ConfigService
   @Override
   public void getHostConfig(
       GetHostConfigRequest request, StreamObserver<GetHostConfigResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::getHostConfig,
@@ -137,7 +137,7 @@ public final class ConfigServiceGrpcImpl extends ConfigServiceGrpc.ConfigService
   public void checkHostWritePermission(
       CheckHostWritePermissionRequest request,
       StreamObserver<CheckHostWritePermissionResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         req ->
@@ -151,7 +151,7 @@ public final class ConfigServiceGrpcImpl extends ConfigServiceGrpc.ConfigService
   @Override
   public void updateHostConfig(
       UpdateHostConfigRequest request, StreamObserver<UpdateHostConfigResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         req -> logic.updateHostConfig(req, Optional.empty()),
@@ -164,7 +164,7 @@ public final class ConfigServiceGrpcImpl extends ConfigServiceGrpc.ConfigService
   public void unlockHostProperties(
       UnlockHostPropertiesRequest request,
       StreamObserver<UnlockHostPropertiesResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         req -> logic.unlockHostProperties(req),

@@ -52,7 +52,7 @@ java_library(
         ":admin_service_logic",
         "//src/devtools/mobileharness/fe/v6/service/proto/admin:admin_service_java_grpc",
         "//src/devtools/mobileharness/fe/v6/service/proto/admin:admin_service_java_proto",
-        "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:service_util",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/grpc:fe_grpc_invoker",
         "@grpc-java//stub",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
