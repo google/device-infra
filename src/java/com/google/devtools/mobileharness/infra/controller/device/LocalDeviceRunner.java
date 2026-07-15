@@ -468,15 +468,19 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
   }
 
   /**
-   * @return whether the device is IDLE in external device manager
+   * Waits for the device to be available in the external device manager.
+   *
+   * <p>We allow the {@code RESERVED_BY_MH} state due to a race condition: MH's background runner
+   * loop periodically reserves the device in the external DM. If a test allocation occurs
+   * simultaneously, the device state might still be cached as {@code RESERVED_BY_MH}. Since
+   * MobileHarness itself owns the reservation, it is safe to proceed.
+   *
+   * @return whether the device is IDLE or RESERVED_BY_MH in external device manager
    */
   private boolean waitIdleInExternalDeviceManager(Duration timeout) {
     Instant expireTime = clock.instant().plus(timeout);
     while (clock.instant().isBefore(expireTime)) {
-      ExternalDeviceManager.DeviceStatus deviceStatus =
-          externalDeviceManager.getDeviceStatus(
-              device.getDeviceId(), device.getClass().getSimpleName(), device.getDeviceTypes());
-      if (deviceStatus.equals(ExternalDeviceManager.DeviceStatus.IDLE)) {
+      if (isAvailableOrReservedByMhInExternalDeviceManager()) {
         return true;
       }
       try {
