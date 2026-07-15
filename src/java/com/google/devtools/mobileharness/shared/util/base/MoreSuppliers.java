@@ -43,10 +43,27 @@ public class MoreSuppliers {
    * returned directly.
    */
   public static <T> ThrowingSupplier<T> memoize(ThrowingSupplier<T> delegate) {
+    return memoize(delegate, /* refreshIfLastRetrievalFailed= */ false);
+  }
+
+  /**
+   * Returns a supplier which caches the instance retrieved during the first call to {@code get()}
+   * and returns that value on subsequent calls to {@code get()}.
+   *
+   * <p>If the underlying delegate throws an exception, and {@code refreshIfLastRetrievalFailed} is
+   * true, the memoizing supplier propagates the exception and will keep delegating calls until it
+   * returns valid data. If {@code refreshIfLastRetrievalFailed} is false, the memoizing supplier
+   * will always return the same exception instance .
+   */
+  public static <T> ThrowingSupplier<T> memoize(
+      ThrowingSupplier<T> delegate, boolean refreshIfLastRetrievalFailed) {
     if (delegate instanceof MemoizingThrowingSupplier) {
-      return delegate;
+      MemoizingThrowingSupplier<?> memoized = (MemoizingThrowingSupplier<?>) delegate;
+      if (memoized.refreshIfLastRetrievalFailed == refreshIfLastRetrievalFailed) {
+        return delegate;
+      }
     }
-    return new MemoizingThrowingSupplier<>(delegate);
+    return new MemoizingThrowingSupplier<>(delegate, refreshIfLastRetrievalFailed);
   }
 
   /**
@@ -68,16 +85,34 @@ public class MoreSuppliers {
    */
   public static <T> ThrowingSupplier<T> memoizeWithExpiration(
       ThrowingSupplier<T> delegate, Duration duration) {
+    return memoizeWithExpiration(delegate, duration, /* refreshIfLastRetrievalFailed= */ false);
+  }
+
+  /**
+   * Returns a supplier which caches the instance retrieved during the first call to {@code get()}
+   * and removes the cached value after the specified time has passed. Subsequent calls to {@code
+   * get()} return the cached value if the expiration time has not passed. After the expiration
+   * time, a new value is retrieved, cached, and returned.
+   *
+   * <p>If the underlying delegate throws an exception during expiration/refresh, and {@code
+   * refreshIfLastRetrievalFailed} is true, the memoizing supplier propagates the exception and will
+   * keep delegating calls until it returns valid data. If {@code refreshIfLastRetrievalFailed} is
+   * false, the memoizing supplier caches the exception and will keep throwing it until expiration.
+   */
+  public static <T> ThrowingSupplier<T> memoizeWithExpiration(
+      ThrowingSupplier<T> delegate, Duration duration, boolean refreshIfLastRetrievalFailed) {
     checkNotNull(delegate);
     // The alternative of `duration.compareTo(Duration.ZERO) > 0` causes J2ObjC trouble.
     checkArgument(
         !duration.isNegative() && !duration.isZero(), "duration (%s) must be > 0", duration);
-    return new ExpiringMemoizingThrowingSupplier<>(delegate, duration);
+    return new ExpiringMemoizingThrowingSupplier<>(
+        delegate, duration, refreshIfLastRetrievalFailed);
   }
 
   private static class MemoizingThrowingSupplier<T> implements ThrowingSupplier<T> {
 
     private final ThrowingSupplier<T> delegate;
+    private final boolean refreshIfLastRetrievalFailed;
 
     private volatile boolean initialized;
 
@@ -85,8 +120,10 @@ public class MoreSuppliers {
     private volatile T value;
     private volatile Throwable error;
 
-    private MemoizingThrowingSupplier(ThrowingSupplier<T> delegate) {
+    private MemoizingThrowingSupplier(
+        ThrowingSupplier<T> delegate, boolean refreshIfLastRetrievalFailed) {
       this.delegate = delegate;
+      this.refreshIfLastRetrievalFailed = refreshIfLastRetrievalFailed;
     }
 
     @Override
@@ -97,11 +134,12 @@ public class MoreSuppliers {
             try {
               value = delegate.get();
               successful = true;
+              initialized = true;
             } catch (MobileHarnessException | RuntimeException | Error e) {
               error = e;
               successful = false;
+              initialized = !refreshIfLastRetrievalFailed;
             }
-            initialized = true;
           }
         }
       }
@@ -119,15 +157,18 @@ public class MoreSuppliers {
   private static class ExpiringMemoizingThrowingSupplier<T> implements ThrowingSupplier<T> {
     private final ThrowingSupplier<T> delegate;
     private final Duration duration;
+    private final boolean refreshIfLastRetrievalFailed;
 
     private volatile boolean successful;
     private volatile T value;
     private volatile Throwable error;
     private volatile Instant expirationTime;
 
-    ExpiringMemoizingThrowingSupplier(ThrowingSupplier<T> delegate, Duration duration) {
+    ExpiringMemoizingThrowingSupplier(
+        ThrowingSupplier<T> delegate, Duration duration, boolean refreshIfLastRetrievalFailed) {
       this.delegate = delegate;
       this.duration = duration;
+      this.refreshIfLastRetrievalFailed = refreshIfLastRetrievalFailed;
     }
 
     @Override
@@ -139,11 +180,16 @@ public class MoreSuppliers {
             try {
               value = delegate.get();
               successful = true;
+              expirationTime = now.plus(duration);
             } catch (MobileHarnessException | RuntimeException | Error e) {
               error = e;
               successful = false;
+              if (refreshIfLastRetrievalFailed) {
+                expirationTime = null;
+              } else {
+                expirationTime = now.plus(duration);
+              }
             }
-            expirationTime = now.plus(duration);
           }
         }
       }
