@@ -21,7 +21,10 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.joining;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -75,6 +78,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.stream.Stream;
@@ -98,10 +102,15 @@ public abstract class XtsJobCreator {
   private static final ImmutableSet<String> CTS_TEST_PLANS =
       ImmutableSet.of("cts", "cts-sim", "cts-system", "cts-validation", "incremental-deqp");
 
+  private static final String MOBLY_BINARY_HOST_TEST_CLASS =
+      "com.android.tradefed.testtype.mobly.MoblyBinaryHostTest";
+
   private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
   protected final LocalFileUtil localFileUtil;
   private final RetryGenerator retryGenerator;
   private final ModuleShardingArgsGenerator moduleShardingArgsGenerator;
+  private final AtomicReference<ImmutableSet<String>> staticMctsModulesCache =
+      new AtomicReference<>();
 
   protected XtsJobCreator(
       SessionRequestHandlerUtil sessionRequestHandlerUtil,
@@ -147,9 +156,21 @@ public abstract class XtsJobCreator {
             : ImmutableList.of(
                 XtsConstants.STATIC_XTS_JOB_NAME, XtsConstants.DYNAMIC_MCTS_JOB_NAME);
 
+    Supplier<Boolean> hasMoblySupplier =
+        Suppliers.memoize(() -> hasMoblyTests(sessionRequestInfo, tfModules));
+
     for (TradefedJobInfo tradefedJobInfo : tradefedJobInfoList) {
       if (shouldCreateDynamicDownloadJobs(tradefedJobInfo, sessionRequestInfo)) {
         for (String jobName : allDynamicDownloadJobNames) {
+          if (jobName.equals(XtsConstants.DYNAMIC_MCTS_JOB_NAME)) {
+            if (!hasMoblySupplier.get()) {
+              logger.atInfo().log(
+                  "Skip creating MCTS job because zero Mobly/multi-device tests were found for"
+                      + " modules: %s",
+                  tfModules);
+              continue;
+            }
+          }
           jobInfos.add(createDynamicJobInfo(sessionRequestInfo, tradefedJobInfo, jobName));
         }
       } else {
@@ -963,5 +984,51 @@ public abstract class XtsJobCreator {
     Optional<JsonObject> getSpecJson() {
       return Optional.ofNullable(specJson);
     }
+  }
+
+  private boolean hasMoblyTests(
+      SessionRequestInfo sessionRequestInfo, ImmutableList<String> tfModules) {
+    if (tfModules.isEmpty()) {
+      return false;
+    }
+
+    // 1. Direct check: Is any targeted module in the static MCTS modules list?
+    try {
+      ImmutableSet<String> staticMctsModules = getStaticMctsModules();
+      boolean matchesStaticMcts = tfModules.stream().anyMatch(staticMctsModules::contains);
+      if (matchesStaticMcts) {
+        return true;
+      }
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log("Failed to get static MCTS modules list");
+      return true; // Fallback to safe side
+    }
+
+    // 2. Filtered check: Does any target module's config specify a Mobly runner class?
+    ImmutableSet<String> tfModuleSet = ImmutableSet.copyOf(tfModules);
+    Optional<Configuration> matchedConfig =
+        sessionRequestInfo.getExpandedModulesMap().values().stream()
+            .filter(
+                config ->
+                    config.hasMetadata()
+                        && tfModuleSet.contains(config.getMetadata().getXtsModule()))
+            .filter(
+                config ->
+                    config.hasTest()
+                        && (config.getTest().getClazz().equals(MOBLY_BINARY_HOST_TEST_CLASS)
+                            || Ascii.toLowerCase(config.getTest().getClazz()).contains("mobly")))
+            .findFirst();
+
+    return matchedConfig.isPresent();
+  }
+
+  private ImmutableSet<String> getStaticMctsModules() throws MobileHarnessException {
+    ImmutableSet<String> cached = staticMctsModulesCache.get();
+    if (cached != null) {
+      return cached;
+    }
+    ImmutableSet<String> modules = sessionRequestHandlerUtil.getStaticMctsModules();
+    staticMctsModulesCache.compareAndSet(null, modules);
+    return staticMctsModulesCache.get();
   }
 }
