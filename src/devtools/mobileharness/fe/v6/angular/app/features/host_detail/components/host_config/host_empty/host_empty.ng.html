@@ -1,5 +1,5 @@
 <app-dialog
-  title="Configure Host"
+  dialogTitle="Configure Host"
   subtitle="Host Name: {{ hostName }}"
   type="host"
   [param]="{deviceId: '', hostName: hostName}"
@@ -7,7 +7,7 @@
 >
   <mat-dialog-content class="config-content">
     <div class="config-empty-container">
-      <h3 class="empty-config-title">{{ title }}</h3>
+      <h3 class="empty-config-title">{{ emptyTitle }}</h3>
       <div class="empty-config-grid">
         <button class="choice-card" (click)="startNewConfig()" [disabled]="!hasPermission()" [class.disabled]="!hasPermission()">
           <span mat-icon class="material-icons">add</span>

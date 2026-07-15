@@ -50,7 +50,7 @@ export class HostEmpty implements OnInit {
   private readonly dialogRef = inject(MatDialogRef<HostEmpty>);
 
   @Input() hostName = this.data.hostName;
-  @Input() title = this.data.title;
+  @Input() emptyTitle = this.data.title;
 
   copyFromAnother = signal(false);
   anotherHostName = signal('');

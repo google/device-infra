@@ -3,7 +3,7 @@
     <header class="config-header">
       <ng-content select="[header-prefix]"></ng-content>
       <div class="header-title-container">
-        <h2 class="config-title">{{ title }}</h2>
+        <h2 class="config-title">{{ dialogTitle }}</h2>
         @if (subtitle) {
           <p class="config-subtitle" [innerHTML]="subtitle | safeHtmlPipe"></p>
         }

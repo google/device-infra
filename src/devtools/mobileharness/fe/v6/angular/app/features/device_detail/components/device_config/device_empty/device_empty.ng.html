@@ -1,5 +1,5 @@
 <app-dialog
-  title="Configure Device"
+  dialogTitle="Configure Device"
   subtitle="Device ID: {{ deviceId }}"
   [param]="{deviceId: deviceId, hostName: hostName}"
 >
@@ -26,7 +26,7 @@
   } @else {
     <mat-dialog-content class="config-content">
       <div class="config-empty-container">
-        <h3 class="empty-config-title">{{ title }}</h3>
+        <h3 class="empty-config-title">{{ emptyTitle }}</h3>
         <div class="empty-config-grid">
           <button class="choice-card" (click)="startNewConfig()">
             <span mat-icon class="material-icons">add</span>
