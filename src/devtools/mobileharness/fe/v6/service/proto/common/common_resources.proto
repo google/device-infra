@@ -76,6 +76,7 @@ enum JobStatus {
   JOB_STATUS_RUNNING = 2;
   JOB_STATUS_DONE = 3;
   JOB_STATUS_SUSPENDED = 4;
+  JOB_STATUS_ASSIGNED = 5;
 }
 
 // gRPC-friendly result of a job.
