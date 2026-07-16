@@ -13,9 +13,9 @@ import {MatButtonModule} from '@angular/material/button';
 import {MatDialogModule} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 
-import {WritePermissionResult} from '../../../../core/models/action_common';
-import {SafeHtmlPipe} from '../../../pipes/safe_html_pipe';
-import {Footer} from '../footer/footer';
+import {WritePermissionResult} from '../../../core/models/action_common';
+import {SafeHtmlPipe} from '../../pipes/safe_html_pipe';
+import {Footer} from '../config_common/footer/footer';
 
 /**
  * The dialog component for common config.

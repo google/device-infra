@@ -18,7 +18,7 @@ import {MatDialogModule} from '@angular/material/dialog';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatStepperModule} from '@angular/material/stepper';
 
-import {Dialog} from '../dialog/dialog';
+import {Dialog} from '../../dialog/dialog';
 
 /**
  * Wizard step.

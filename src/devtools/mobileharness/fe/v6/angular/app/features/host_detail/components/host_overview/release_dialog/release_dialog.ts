@@ -28,7 +28,7 @@ import {
 import {HOST_SERVICE} from '@deviceinfra/app/core/services/host/host_service';
 import {FlagsDialog} from '@deviceinfra/app/features/host_detail/components/host_overview/flags_dialog/flags_dialog';
 import {TrackingDialog} from '@deviceinfra/app/features/host_detail/components/host_overview/tracking_dialog/tracking_dialog';
-import {Dialog} from '@deviceinfra/app/shared/components/config_common/dialog/dialog';
+import {Dialog} from '@deviceinfra/app/shared/components/dialog/dialog';
 import {SnackBarService} from '@deviceinfra/app/shared/services/snackbar_service';
 
 interface VersionDelta {

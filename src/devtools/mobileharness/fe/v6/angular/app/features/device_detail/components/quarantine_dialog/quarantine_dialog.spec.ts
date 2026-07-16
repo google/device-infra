@@ -20,7 +20,7 @@ import {
   DEVICE_SERVICE,
   DeviceService,
 } from '../../../../core/services/device/device_service';
-import {Dialog} from '../../../../shared/components/config_common/dialog/dialog';
+import {Dialog} from '../../../../shared/components/dialog/dialog';
 import {dateUtils} from '../../../../shared/utils/date_utils';
 import {QuarantineDialog} from './quarantine_dialog';
 

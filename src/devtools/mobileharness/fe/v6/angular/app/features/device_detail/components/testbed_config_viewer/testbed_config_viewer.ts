@@ -12,7 +12,7 @@ import {
   MatDialogRef,
 } from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
-import {Dialog} from '../../../../shared/components/config_common/dialog/dialog';
+import {Dialog} from '../../../../shared/components/dialog/dialog';
 import {openCodeSearch} from '../../../../shared/utils/safe_dom';
 
 /** Data for TestbedConfigViewer dialog. */

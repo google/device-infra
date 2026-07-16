@@ -224,12 +224,9 @@ export class HostOverviewPage implements OnChanges {
   ];
 
   protected readonly labServerActionUiConfig = LAB_SERVER_ACTION_UI_CONFIG;
-  protected readonly labServerActionsLayout: Array<keyof LabServerActions> = [
-    'release',
-    'restart',
-    'start',
-    'stop',
-  ];
+  protected readonly labServerActionsLayout: Array<
+    keyof typeof this.labServerActionUiConfig
+  > = ['release', 'restart', 'start', 'stop'];
 
   @Input({required: true}) host!: HostOverview;
   @Input() actions?: HostActions;
@@ -743,8 +740,9 @@ export class HostOverviewPage implements OnChanges {
       feature = this.actionUiConfig[actionId as keyof DeviceActions]?.feature;
     } else if (actionId in this.labServerActionUiConfig) {
       feature =
-        this.labServerActionUiConfig[actionId as keyof LabServerActions]
-          ?.feature;
+        this.labServerActionUiConfig[
+          actionId as keyof typeof this.labServerActionUiConfig
+        ]?.feature;
     } else {
       const legacyMap: Record<string, ActionBarAction> = {
         'Configure': ActionBarAction.DEVICE_CONFIGURATION,

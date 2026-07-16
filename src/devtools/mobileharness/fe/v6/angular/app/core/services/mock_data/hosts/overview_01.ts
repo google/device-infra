@@ -45,7 +45,7 @@ const overview: HostOverview = {
   os: 'gLinux',
   canUpgrade: false,
 
-  uiLabTypes: ['SATELLITE', 'SLAAS'],
+  uiLabTypes: ['SATELLITE', 'SLAAS', 'CORE'],
   labServer: {
     connectivity: {
       state: 'RUNNING',
@@ -261,5 +261,5 @@ export const OVERVIEW_01: MockHostScenario = {
     uiStatus: createDefaultUiStatus(),
   },
   defaultDeviceConfig: DEFAULT_DEVICE_CONFIG,
-  actions: createHostActions('RUNNING', false),
+  actions: createHostActions('RUNNING', false, true),
 };

@@ -165,7 +165,6 @@ export abstract class HostService {
   abstract runTroubleshootScript(
     hostName: string,
     script: string,
-    argumentsMap: {[key: string]: string},
     universe: string,
   ): Observable<RunTroubleshootScriptResponse>;
 

@@ -727,12 +727,18 @@ TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0`,
   override runTroubleshootScript(
     hostName: string,
     script: string,
-    argumentsMap: {[key: string]: string},
     universe: string,
   ): Observable<RunTroubleshootScriptResponse> {
+    if (hostName.toLowerCase().includes('host-a-1.example.com')) {
+      return of({
+        exitCode: 1,
+        stdout: '',
+        stderr: `[Fake Host Service Error] Failed to execute ${script} on ${hostName}.\nError: USB port reset operation timed out after 5000ms.\nDevice smart hub not responding on bus 001.`,
+      }).pipe(delay(1500));
+    }
     return of({
       exitCode: 0,
-      stdout: `[Fake Host Service] Successfully executed ${script} on ${hostName}.`,
+      stdout: `[Fake Host Service] Successfully executed ${script} on ${hostName}.\nAll 8 downstream USB ports enumerated successfully.`,
       stderr: '',
     }).pipe(delay(1500));
   }
@@ -741,6 +747,10 @@ TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0`,
     hostName: string,
     universe: string,
   ): Observable<ListTroubleshootScriptsResponse> {
+    const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    if (scenario && scenario.troubleshootScriptsResponse) {
+      return of(scenario.troubleshootScriptsResponse).pipe(delay(1000));
+    }
     return of({
       actions: [
         {

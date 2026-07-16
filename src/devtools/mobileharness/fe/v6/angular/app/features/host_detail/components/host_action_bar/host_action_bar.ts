@@ -26,6 +26,7 @@ import type {HostOverviewPageData} from '../../../../core/models/host_overview';
 import {Environment} from '../../../../core/services/environment';
 import {ActionButton} from '../../../../shared/components/action_button/action_button';
 import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
+import {HostAdvancedOpsDialog} from '../host_advanced_ops_dialog/host_advanced_ops_dialog';
 import {HostConfig} from '../host_config/host_config';
 import {HostEmpty} from '../host_config/host_empty/host_empty';
 import {HostSettings} from '../host_config/host_settings/host_settings';
@@ -82,6 +83,7 @@ export class HostActionBar implements OnInit {
     'configuration',
     'decommission',
     'debug',
+    'advancedOperations',
   ];
 
   protected readonly layoutXlDirect: Array<keyof HostActions> = [
@@ -91,6 +93,7 @@ export class HostActionBar implements OnInit {
   protected readonly layoutXlMenu: Array<keyof HostActions> = [
     'debug',
     'decommission',
+    'advancedOperations',
   ];
 
   protected readonly layoutSmDirect: Array<keyof HostActions> = [
@@ -100,6 +103,7 @@ export class HostActionBar implements OnInit {
   protected readonly layoutSmMenu: Array<keyof HostActions> = [
     'debug',
     'decommission',
+    'advancedOperations',
   ];
 
   onAction(actionId: keyof HostActions) {
@@ -112,6 +116,9 @@ export class HostActionBar implements OnInit {
         break;
       case 'decommission':
         this.onDecommission();
+        break;
+      case 'advancedOperations':
+        this.onAdvancedOperations();
         break;
       default:
         break;
@@ -250,6 +257,14 @@ export class HostActionBar implements OnInit {
 
   readonly onDecommission = () => {
     this.dialog.open(HostDecommissionDialog, {
+      data: {hostName: this.hostName()},
+      autoFocus: false,
+      disableClose: true,
+    });
+  };
+
+  readonly onAdvancedOperations = () => {
+    this.dialog.open(HostAdvancedOpsDialog, {
       data: {hostName: this.hostName()},
       autoFocus: false,
       disableClose: true,

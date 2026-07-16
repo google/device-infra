@@ -13,11 +13,13 @@ import {
 } from '../../../../core/models/host_overview';
 import {Environment} from '../../../../core/services/environment';
 import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
+import {HostAdvancedOpsDialog} from '../host_advanced_ops_dialog/host_advanced_ops_dialog';
 import {HostConfig} from '../host_config/host_config';
 import {HostEmpty} from '../host_config/host_empty/host_empty';
 import {HostSettings} from '../host_config/host_settings/host_settings';
 import {HostWizard} from '../host_config/host_wizard/host_wizard';
 import {HostDebugDialog} from '../host_debug_dialog/host_debug_dialog';
+import {HostDecommissionDialog} from '../host_decommission_dialog/host_decommission_dialog';
 import {HostActionBar} from './host_action_bar';
 
 describe('HostActionBar', () => {
@@ -49,10 +51,10 @@ describe('HostActionBar', () => {
           isReady: true,
         },
         advancedOperations: {
-          enabled: false,
-          visible: false,
-          tooltip: '',
-          isReady: false,
+          enabled: true,
+          visible: true,
+          tooltip: 'Advanced operations tooltip',
+          isReady: true,
         },
       },
     },
@@ -125,6 +127,32 @@ describe('HostActionBar', () => {
     debugButton.nativeElement.click();
     expect(dialog.open).toHaveBeenCalledWith(
       HostDebugDialog,
+      jasmine.objectContaining({
+        data: {hostName: 'test-host'},
+      }),
+    );
+  });
+
+  it('should open advanced operations dialog on action click', () => {
+    const advancedOpsButton = fixture.debugElement.query(
+      By.css('[data-testid="advancedOperations-button-2xl"]'),
+    );
+    advancedOpsButton.nativeElement.click();
+    expect(dialog.open).toHaveBeenCalledWith(
+      HostAdvancedOpsDialog,
+      jasmine.objectContaining({
+        data: {hostName: 'test-host'},
+      }),
+    );
+  });
+
+  it('should open decommission dialog on action click', () => {
+    const decommissionButton = fixture.debugElement.query(
+      By.css('[data-testid="decommission-button-2xl"]'),
+    );
+    decommissionButton.nativeElement.click();
+    expect(dialog.open).toHaveBeenCalledWith(
+      HostDecommissionDialog,
       jasmine.objectContaining({
         data: {hostName: 'test-host'},
       }),
@@ -259,6 +287,13 @@ describe('HostActionBar', () => {
       enabled: true,
       visible: true,
       tooltip: 'Debug tooltip',
+      isReady: true,
+    });
+
+    expect(component.getAction('advancedOperations')).toEqual({
+      enabled: true,
+      visible: true,
+      tooltip: 'Advanced operations tooltip',
       isReady: true,
     });
   });

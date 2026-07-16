@@ -15,7 +15,7 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatInputModule} from '@angular/material/input';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {FlashDialogData} from '../../../../core/models/device_action';
-import {Dialog} from '../../../../shared/components/config_common/dialog/dialog';
+import {Dialog} from '../../../../shared/components/dialog/dialog';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 
 /**

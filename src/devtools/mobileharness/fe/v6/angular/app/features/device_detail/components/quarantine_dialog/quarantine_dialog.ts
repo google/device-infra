@@ -28,7 +28,7 @@ import {
   QuarantineDialogData,
 } from '../../../../core/models/device_action';
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
-import {Dialog} from '../../../../shared/components/config_common/dialog/dialog';
+import {Dialog} from '../../../../shared/components/dialog/dialog';
 
 /**
  * Dialog for quarantining a device or updating its quarantine duration.

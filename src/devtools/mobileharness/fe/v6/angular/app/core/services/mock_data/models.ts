@@ -11,6 +11,7 @@ import {
 } from '../../models/device_stats';
 import {
   HostActions,
+  ListTroubleshootScriptsResponse,
   PreflightLabServerReleaseResponse,
 } from '../../models/host_action';
 import {GetHostConfigResult} from '../../models/host_config_models';
@@ -61,6 +62,7 @@ export interface MockHostScenario extends BaseMockScenario {
   deviceSummaries?: DeviceSummary[];
   readonly actions: HostActions;
   readonly releaseResponse?: PreflightLabServerReleaseResponse;
+  readonly troubleshootScriptsResponse?: ListTroubleshootScriptsResponse;
 }
 
 /**

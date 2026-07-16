@@ -81,7 +81,7 @@ describe('HttpHostService', () => {
           enabled: false,
           visible: false,
           tooltip: '',
-          isReady: false,
+          isReady: true,
         },
       },
     };

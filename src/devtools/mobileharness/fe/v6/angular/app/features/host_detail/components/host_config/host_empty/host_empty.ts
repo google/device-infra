@@ -19,7 +19,7 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatInputModule} from '@angular/material/input';
 
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
-import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
+import {Dialog} from '../../../../../shared/components/dialog/dialog';
 
 /**
  * Component for displaying the empty configuration of a host.

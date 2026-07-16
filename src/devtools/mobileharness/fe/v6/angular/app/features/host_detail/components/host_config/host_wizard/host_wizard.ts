@@ -25,7 +25,6 @@ import {normalizeHostConfig} from '../../../../../core/utils/host_config_utils';
 
 import {Permissions} from '../../../../../features/device_detail/components/device_config/steps/permissions/permissions';
 import {Wifi} from '../../../../../features/device_detail/components/device_config/steps/wifi/wifi';
-import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
 import {
   ReviewTable,
   type ReviewTableRow,
@@ -34,6 +33,7 @@ import {
   WizardStep,
   WizardStepper,
 } from '../../../../../shared/components/config_common/wizard_stepper/wizard_stepper';
+import {Dialog} from '../../../../../shared/components/dialog/dialog';
 import {useConfigDialogActions} from '../../../../../shared/composables/config_dialog_actions';
 import {ConfigMode} from '../steps/config_mode/config_mode';
 import {HostPermissionList} from '../steps/host_permissions/host_permissions';

@@ -1,0 +1,149 @@
+<app-dialog
+  [dialogTitle]="dialogTitle()"
+  height="60vh"
+  maxHeight="600px"
+  footerType="normal"
+>
+  <div header-prefix class="header-icon-wrapper">
+    <mat-icon>{{ currentStep() === 3 && selectedScript() ? 'terminal' : (selectedScript() ? getScriptIcon(selectedScript()!.script) : 'build_circle') }}</mat-icon>
+  </div>
+  <div subtitle class="header-subtitle">
+    Run troubleshooting scripts on <strong>{{ data.hostName }}</strong>
+  </div>
+
+  <!-- Body -->
+  <div class="dialog-content">
+    <!-- Step 1: Catalog -->
+    @if (currentStep() === 1) {
+      <div class="step-catalog">
+        <p class="catalog-desc">Select a dynamic troubleshooting utility below to configure and run.</p>
+
+        @if (isLoadingScripts()) {
+          <div class="loading">
+            <mat-spinner diameter="40"></mat-spinner>
+            <p>Loading available scripts...</p>
+          </div>
+        } @else {
+          <div class="scripts-list">
+            @for (script of scripts(); track script.script) {
+              <div
+                class="script-card"
+                [class.disabled]="!script.enabled"
+                [matTooltip]="!script.enabled ? script.constraintTooltip : ''"
+                (click)="selectScript(script)"
+                role="button"
+                tabindex="0"
+              >
+                <div class="script-icon-wrapper" [class.disabled]="!script.enabled">
+                  <mat-icon>{{ getScriptIcon(script.script) }}</mat-icon>
+                </div>
+                <div class="script-info">
+                  <h4 class="script-name">{{ script.displayName }}</h4>
+                  <p class="script-desc">{{ script.description }}</p>
+                </div>
+                <div class="script-action">
+                  @if (script.enabled) {
+                    <button class="dialog-button dialog-button-secondary" (click)="$event.stopPropagation(); selectScript(script)">Select</button>
+                  } @else {
+                    <span class="disabled-label">
+                      <mat-icon>block</mat-icon> Disabled
+                    </span>
+                  }
+                </div>
+              </div>
+            } @empty {
+              <div class="no-scripts">
+                <mat-icon>info_outline</mat-icon>
+                <p>No troubleshooting scripts available for this host.</p>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Step 2: Configuration & Confirmation -->
+    @if (currentStep() === 2 && selectedScript()) {
+      <div class="step-confirm">
+        <div class="warning-card">
+          <mat-icon class="warning-icon">warning</mat-icon>
+          <div class="warning-content">
+            <p class="warning-title">
+              <strong>Warning:</strong> You are about to run a troubleshooting script on host:
+            </p>
+            <div class="host-badge" [matTooltip]="data.hostName">
+              <mat-icon>dns</mat-icon>
+              <span class="host-name-text">{{ data.hostName }}</span>
+            </div>
+            <p class="warning-desc">
+              This operation may momentarily affect connected devices or cause brief unavailability.
+            </p>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Step 3: Execution Terminal -->
+    @if (currentStep() === 3) {
+      <div class="step-terminal">
+        <div class="terminal-container">
+          <div class="terminal-header-lines">
+            <div>[Lab Console] Starting Advanced Operation: {{ selectedScript()?.displayName || '' }}</div>
+            <div>[Lab Console] Target Host: {{ data.hostName }}</div>
+            <div>[Lab Console] Requesting execution. Please wait...</div>
+          </div>
+          @if (isExecuting()) {
+            <div class="terminal-loading">
+              <mat-icon class="sync-icon">sync</mat-icon>
+              <span>Executing operation...</span>
+            </div>
+          } @else if (executionResult()) {
+            <div class="terminal-output">
+              <div class="terminal-complete-line">[Lab Console] Execution completed.</div>
+              @if (executionResult()!.stdout) {
+                <div class="terminal-section">
+                  <div class="terminal-header">STDOUT</div>
+                  <pre class="terminal-content">{{ executionResult()!.stdout }}</pre>
+                </div>
+              }
+              @if (executionResult()!.stderr) {
+                <div class="terminal-section error">
+                  <div class="terminal-header">STDERR</div>
+                  <pre class="terminal-content">{{ executionResult()!.stderr }}</pre>
+                </div>
+              }
+              <div class="terminal-status" [class.success]="executionResult()!.exitCode === 0" [class.failure]="executionResult()!.exitCode !== 0">
+                Exit code: {{ executionResult()!.exitCode }}
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <ng-template #actionsTemplate>
+    @if (currentStep() === 3 && !isExecuting() && executionResult()) {
+      @if (executionResult()!.exitCode === 0) {
+        <span class="status-text success">
+          <mat-icon>check_circle</mat-icon> Operation completed successfully
+        </span>
+      } @else {
+        <span class="status-text error">
+          <mat-icon>error</mat-icon> Operation failed
+        </span>
+      }
+    }
+    @if (currentStep() === 1) {
+      <button class="dialog-button dialog-button-secondary" (click)="close()">Close</button>
+    }
+    @if (currentStep() === 2) {
+      <button class="dialog-button dialog-button-secondary" (click)="goBack()">Back</button>
+      <button class="dialog-button dialog-button-primary" (click)="runOperation()">Run Operation</button>
+    }
+    @if (currentStep() === 3 && !isExecuting()) {
+      <button class="dialog-button dialog-button-secondary" (click)="goBack()">Back to Operations</button>
+      <button class="dialog-button dialog-button-primary" (click)="close()">Close</button>
+    }
+  </ng-template>
+</app-dialog>

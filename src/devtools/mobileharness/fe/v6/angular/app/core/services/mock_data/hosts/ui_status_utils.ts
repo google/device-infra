@@ -433,10 +433,12 @@ export function createDeviceActions(
 export function createHostActions(
   status = 'RUNNING',
   isCoreLab = false,
+  isFusionLab = false,
 ): HostActions {
   const isMissing = status === 'MISSING';
   const manageHostEnabled = !isCoreLab;
   const removeEnabled = isMissing;
+  const isRunning = status === 'RUNNING';
 
   return {
     configuration: {
@@ -462,10 +464,14 @@ export function createHostActions(
       isReady: true,
     },
     advancedOperations: {
-      enabled: false,
-      visible: false,
-      tooltip: '',
-      isReady: false,
+      enabled: isRunning && isFusionLab,
+      visible: isFusionLab,
+      tooltip: !isRunning
+        ? 'Advanced operations are only available when the lab server is Started.'
+        : isFusionLab
+          ? 'Advanced operations and diagnostics for Fusion hosts'
+          : '',
+      isReady: true,
     },
   };
 }

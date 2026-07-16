@@ -29,8 +29,8 @@ import {
   UpdatePassThroughFlagsResponse,
 } from '../../../../../core/models/host_action';
 import {HOST_SERVICE} from '../../../../../core/services/host/host_service';
-import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
 import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/confirm_dialog';
+import {Dialog} from '../../../../../shared/components/dialog/dialog';
 import {SaveFlagsConfirmContent} from './save_flags_confirm_content/save_flags_confirm_content';
 
 /**

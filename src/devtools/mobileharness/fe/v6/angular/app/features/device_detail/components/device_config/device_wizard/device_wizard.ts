@@ -30,7 +30,6 @@ import {
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {Environment} from '../../../../../core/services/environment';
 import {normalizeDeviceConfig} from '../../../../../core/utils/device_config_utils';
-import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
 import {
   ReviewTable,
   type ReviewTableRow,
@@ -39,6 +38,7 @@ import {
   WizardStep,
   WizardStepper,
 } from '../../../../../shared/components/config_common/wizard_stepper/wizard_stepper';
+import {Dialog} from '../../../../../shared/components/dialog/dialog';
 import {useConfigDialogActions} from '../../../../../shared/composables/config_dialog_actions';
 import {Dimensions} from '../steps/dimensions/dimensions';
 import {Permissions} from '../steps/permissions/permissions';

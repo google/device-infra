@@ -11,7 +11,7 @@ import {MatDialogModule} from '@angular/material/dialog';
 import {RouterModule} from '@angular/router';
 import {DeviceConfig} from '../../../../../core/models/device_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
-import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
+import {Dialog} from '../../../../../shared/components/dialog/dialog';
 import {NavLink} from '../../../../../shared/components/nav_link/nav_link';
 
 /**

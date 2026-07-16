@@ -37,13 +37,16 @@ const HOST_CONFIG: HostConfig = {
 export const SCENARIO_HOST_BASIC_EDITABLE: MockHostScenario = {
   hostName: 'host-basic-editable.example.com',
   scenarioName: '2. Basic Editable',
-  overview: createDefaultHostOverview('host-basic-editable.example.com'),
+  overview: {
+    ...createDefaultHostOverview('host-basic-editable.example.com'),
+    uiLabTypes: ['FUSION'],
+  },
   deviceSummaries: [],
   hostConfigResult: {
     hostConfig: HOST_CONFIG,
     uiStatus: createDefaultUiStatus(),
   },
   defaultDeviceConfig: DEFAULT_DEVICE_CONFIG,
-  actions: createHostActions(),
+  actions: createHostActions('RUNNING', false, true),
   releaseResponse: createDefaultReleaseResponse(),
 };

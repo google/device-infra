@@ -56,13 +56,29 @@ const PREFLIGHT_RESPONSE: PreflightLabServerReleaseResponse = {
 export const SCENARIO_HOST_SHARED_MODE: MockHostScenario = {
   hostName: 'host-shared-mode.example.com',
   scenarioName: '3. Shared Mode',
-  overview: createDefaultHostOverview('host-shared-mode.example.com'),
+  overview: {
+    ...createDefaultHostOverview('host-shared-mode.example.com'),
+    uiLabTypes: ['FUSION'],
+  },
   deviceSummaries: [],
   hostConfigResult: {
     hostConfig: HOST_CONFIG,
     uiStatus: createDefaultUiStatus(),
   },
   defaultDeviceConfig: null, // No default in SHARED mode
-  actions: createHostActions('RUNNING', true),
+  actions: createHostActions('RUNNING', true, true),
   releaseResponse: PREFLIGHT_RESPONSE,
+  troubleshootScriptsResponse: {
+    actions: [
+      {
+        script: 'RESET_USB_HUB' as const,
+        displayName: 'Reset USB Hub',
+        description:
+          'Power cycle smart USB hub ports to recover missing devices.',
+        enabled: false,
+        constraintTooltip:
+          'USB hub reset is disabled while critical shared mode tasks are operating.',
+      },
+    ],
+  },
 };

@@ -44,9 +44,9 @@ import {
   normalizeDeviceConfig,
   normalizeDeviceConfigUiStatus,
 } from '../../../../../core/utils/device_config_utils';
-import {Dialog} from '../../../../../shared/components/config_common/dialog/dialog';
 import {Footer} from '../../../../../shared/components/config_common/footer/footer';
 import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/confirm_dialog';
+import {Dialog} from '../../../../../shared/components/dialog/dialog';
 import {useConfigDialogActions} from '../../../../../shared/composables/config_dialog_actions';
 import {useSaveInterceptors} from '../../../../../shared/composables/save_interceptors';
 import {objectUtils} from '../../../../../shared/utils/object_utils';

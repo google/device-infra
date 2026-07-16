@@ -210,7 +210,6 @@ export class HttpHostService extends HostService {
   override runTroubleshootScript(
     hostName: string,
     script: string,
-    argumentsMap: {[key: string]: string},
     universe: string,
   ): Observable<RunTroubleshootScriptResponse> {
     return this.http.post<RunTroubleshootScriptResponse>(
@@ -218,7 +217,6 @@ export class HttpHostService extends HostService {
       {
         hostName,
         script,
-        arguments: argumentsMap,
         universe,
       },
     );

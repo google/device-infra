@@ -19,7 +19,7 @@ import {
 } from '@deviceinfra/app/shared/utils/safe_dom';
 import {ScreenshotDialogData} from '../../../../core/models/device_action';
 import {DatetimeTrigger} from '../../../../shared/components/datetime_trigger/datetime_trigger';
-import {Dialog} from '../../../../shared/components/config_common/dialog/dialog';
+import {Dialog} from '../../../../shared/components/dialog/dialog';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
 
 /**
