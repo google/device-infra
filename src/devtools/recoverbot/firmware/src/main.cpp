@@ -71,11 +71,9 @@
 // - Adafruit BusIO (required by Adafruit PWM Servo Driver Library)
 // ============================================================================
 
-
 // ===== PCA9685 scan range =====
-// 0x40 is the PCA9685 base address when all address pins are low, but this
-// build reserves it for other CoreS3 modules on the same I2C bus.
-static const uint8_t PCA9685_SCAN_FIRST_ADDR = 0x41;
+// 0x40 is the PCA9685 base address when all address pins are low.
+static const uint8_t PCA9685_SCAN_FIRST_ADDR = 0x40;
 static const uint8_t PCA9685_SCAN_LAST_ADDR  = 0x47;
 
 // ===== RAW tick guard rails =====
