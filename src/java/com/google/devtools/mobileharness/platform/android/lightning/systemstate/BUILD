@@ -25,6 +25,7 @@ java_library(
     visibility = [
         "//:deviceinfra_all_pkg",
         "//:omnilab_fusion",
+        "//java/com/google/wireless/android/camera/g3agui/pixcamanalyzers/labplugin:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
