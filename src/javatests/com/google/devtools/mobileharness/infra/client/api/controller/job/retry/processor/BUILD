@@ -16,44 +16,35 @@
 load("@rules_java//java:defs.bzl", "java_library")
 load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
-package(default_applicable_licenses = ["//:license"])
-
-filegroup(
-    name = "testdata",
-    srcs = glob(["testdata/**/*"]),
+package(
+    default_applicable_licenses = ["//:license"],
+    default_testonly = 1,
 )
 
 java_library(
-    name = "result",
-    testonly = 1,
+    name = "processor",
     srcs = glob(["*.java"]),
-    data = [
-        ":testdata",
-    ],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/platform/android/instrumentation/result/proto:test_suite_result_java_proto",
-        "//src/java/com/google/devtools/mobileharness/platform/android/instrumentation/result:test_suite_result_converter",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job/retry/processor:android_instrumentation_test_retry_processor",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job/retry/processor:test_retry_processor",
         "//src/java/com/google/devtools/mobileharness/platform/android/instrumentation/result:test_suite_result_loader",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "//src/java/com/google/devtools/mobileharness/shared/util/junit/xmlwriter/model",
-        "//src/java/com/google/devtools/mobileharness/shared/util/path",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
-        "@maven//:com_google_protobuf_protobuf_java",
+        "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
-        "@protobuf//:protobuf_java",
-        "@protobuf//:protobuf_java_util",
+        "@maven//:org_mockito_mockito_core",
     ],
 )
 
 junit_test_suites(
     name = "gen_tests",
     sizes = [
-        "medium",
+        "small",
     ],
-    deps = [
-        ":result",
-    ],
+    deps = [":processor"],
 )

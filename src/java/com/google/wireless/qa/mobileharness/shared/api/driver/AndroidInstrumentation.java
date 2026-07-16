@@ -25,6 +25,7 @@ import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.
 import static java.lang.String.format;
 
 import com.google.common.base.Ascii;
+import com.google.common.base.Splitter;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -67,6 +68,7 @@ import com.google.wireless.qa.mobileharness.shared.api.spec.EntryDelimiterSpec;
 import com.google.wireless.qa.mobileharness.shared.api.step.android.InstallApkStep;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -105,6 +107,42 @@ public class AndroidInstrumentation extends BaseDriver
         EntryDelimiterSpec,
         SpecConfigable<AndroidInstrumentationSpec> {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  // Constants for supported instrumentation arguments
+  private static final String ARGUMENT_TEST_CLASS = "class";
+  private static final String ARGUMENT_NOT_TEST_CLASS = "notClass";
+  private static final String ARGUMENT_TEST_SIZE = "size";
+  private static final String ARGUMENT_ANNOTATION = "annotation";
+  private static final String ARGUMENT_NOT_ANNOTATION = "notAnnotation";
+  private static final String ARGUMENT_NUM_SHARDS = "numShards";
+  private static final String ARGUMENT_SHARD_INDEX = "shardIndex";
+  private static final String ARGUMENT_FILTER = "filter";
+  private static final String ARGUMENT_TEST_PACKAGE = "package";
+  private static final String ARGUMENT_NOT_TEST_PACKAGE = "notPackage";
+  private static final String ARGUMENT_TEST_FILE = "testFile";
+  private static final String ARGUMENT_NOT_TEST_FILE = "notTestFile";
+  private static final String ARGUMENT_TESTS_REGEX = "tests_regex";
+
+  /** Set of keys for specifying test target. */
+  private static final ImmutableSet<String> TEST_TARGET_KEYS =
+      ImmutableSet.of(
+          ARGUMENT_TEST_PACKAGE,
+          ARGUMENT_NOT_TEST_PACKAGE,
+          ARGUMENT_TEST_CLASS,
+          ARGUMENT_NOT_TEST_CLASS,
+          ARGUMENT_TEST_FILE,
+          ARGUMENT_NOT_TEST_FILE);
+
+  /** Set of test filter keys. */
+  private static final ImmutableSet<String> TEST_FILTER_KEYS =
+      ImmutableSet.of(
+          ARGUMENT_ANNOTATION,
+          ARGUMENT_NOT_ANNOTATION,
+          ARGUMENT_FILTER,
+          ARGUMENT_TEST_SIZE,
+          ARGUMENT_TESTS_REGEX,
+          ARGUMENT_NUM_SHARDS,
+          ARGUMENT_SHARD_INDEX);
 
   @StepAnnotation private final InstallApkStep installApkStep;
 
@@ -240,6 +278,13 @@ public class AndroidInstrumentation extends BaseDriver
     testInfo.properties().add(AndroidInstrumentationDriverSpec.PROPERTY_RUNNER, runnerName);
 
     populateOptionMapsForUniformSharding(testInfo, optionMaps);
+
+    if (hasRetryTestTargets(testInfo)) {
+      // If there are explicit retry test targets, we should just run those test targets, and in
+      // case the option maps provided by the user via the job params contain other test targets, or
+      // test filters, we need to clean them up.
+      cleanUpOptionMapsExplicitTestTargets(testInfo, optionMaps);
+    }
 
     if (optionMaps.size() == 1
         && job.params().get(AndroidInstrumentationDriverSpec.PARAM_OPTIONS + "_0") == null) {
@@ -884,8 +929,38 @@ public class AndroidInstrumentation extends BaseDriver
     return optionMaps;
   }
 
+  private void cleanUpOptionMapsExplicitTestTargets(
+      TestInfo testInfo, List<Map<String, String>> optionMaps) {
+    for (Map<String, String> optionMap : optionMaps) {
+      if (optionMap.isEmpty()) {
+        continue;
+      }
+      optionMap
+          .entrySet()
+          .removeIf(
+              entry -> {
+                String key = entry.getKey();
+                if (TEST_TARGET_KEYS.contains(key) || TEST_FILTER_KEYS.contains(key)) {
+                  testInfo
+                      .log()
+                      .atInfo()
+                      .alsoTo(logger)
+                      .log(
+                          "Removed test target/filter key %s (value = %s) from option map.",
+                          key, entry.getValue());
+                  return true;
+                }
+                return false;
+              });
+    }
+  }
+
   /** Get test target from either test name or user input. */
   private String getTestTarget(TestInfo testInfo, List<Map<String, String>> optionMaps) {
+    if (hasRetryTestTargets(testInfo)) {
+      return getTestTargetForRetryTest(testInfo);
+    }
+
     String testName = testInfo.locator().getName();
     String testTarget;
     if (Ascii.equalsIgnoreCase(testName, AndroidInstrumentationDriverSpec.TEST_NAME_ALL)) {
@@ -913,6 +988,29 @@ public class AndroidInstrumentation extends BaseDriver
       testTarget = testName;
     }
     return testTarget;
+  }
+
+  private String getTestTargetForRetryTest(TestInfo testInfo) {
+    String testName = testInfo.locator().getName();
+    String retryTestTargets =
+        testInfo
+            .properties()
+            .getOptional(Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_RETRY_TEST_TARGETS)
+            .orElse("");
+    testInfo
+        .log()
+        .atInfo()
+        .alsoTo(logger)
+        .log(
+            "Running test %s with retry test targets:\n%s",
+            testName, String.join("\n", Splitter.on(',').split(retryTestTargets)));
+    return retryTestTargets;
+  }
+
+  private boolean hasRetryTestTargets(TestInfo testInfo) {
+    return testInfo
+        .properties()
+        .has(Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_RETRY_TEST_TARGETS);
   }
 
   private boolean isUniformSharding(TestInfo testInfo) {

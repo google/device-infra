@@ -573,6 +573,9 @@ public interface PropertyName {
        * Instrumentation smart sharding.
        */
       ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES,
+
+      /** A comma separated list of test targets (package.class#method) to retry. */
+      ANDROID_INSTRUMENTATION_RETRY_TEST_TARGETS,
     }
 
     /** AndroidFlashstationDecorator property name constants. */

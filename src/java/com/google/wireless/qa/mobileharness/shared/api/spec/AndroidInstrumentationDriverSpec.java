@@ -109,6 +109,14 @@ public interface AndroidInstrumentationDriverSpec {
   @ParamAnnotation(
       required = false,
       help =
+          "Whether to enable retry for failed tests only in AndroidInstrumentation. By default,"
+              + " this is false.")
+  String PARAM_ENABLE_ANDROID_INSTRUMENTATION_FAILED_TESTS_ONLY_RETRY =
+      "enable_android_instrumentation_failed_tests_only_retry";
+
+  @ParamAnnotation(
+      required = false,
+      help =
           "Max execution time of the 'adb shell am instrument ...' command only. "
               + "No effect if large than test timeout setting.")
   String PARAM_INSTRUMENT_TIMEOUT_SEC = "instrument_timeout_sec";

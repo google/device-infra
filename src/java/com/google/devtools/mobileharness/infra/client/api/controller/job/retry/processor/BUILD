@@ -23,31 +23,27 @@ package(
 )
 
 java_library(
-    name = "test_suite_result_converter",
-    srcs = [
-        "TestSuiteResultConverter.java",
-    ],
+    name = "test_retry_processor",
+    srcs = ["TestRetryProcessor.java"],
     deps = [
-        "//src/devtools/mobileharness/platform/android/instrumentation/result/proto:test_suite_result_java_proto",
-        "//src/java/com/google/devtools/mobileharness/shared/util/junit/xmlwriter/model",
+        ":android_instrumentation_test_retry_processor",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_instrumentation_driver_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
-        "@maven//:com_google_protobuf_protobuf_java",
-        "@maven//:javax_inject_jsr330_api",
-        "@protobuf//:protobuf_java_util",
     ],
 )
 
 java_library(
-    name = "test_suite_result_loader",
-    srcs = ["TestSuiteResultLoader.java"],
+    name = "android_instrumentation_test_retry_processor",
+    srcs = ["AndroidInstrumentationTestRetryProcessor.java"],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/platform/android/instrumentation/result/proto:test_suite_result_java_proto",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/platform/android/instrumentation/result:test_suite_result_loader",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/path",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
-        "@protobuf//:protobuf_java",
     ],
 )

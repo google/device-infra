@@ -16,11 +16,13 @@
 
 package com.google.devtools.mobileharness.infra.client.api.controller.job.retry;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.processor.TestRetryProcessor;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.Optional;
 
@@ -41,6 +43,17 @@ public class FlakyTestRetryStrategy implements RetryStrategy {
 
   static final ImmutableSet<TestResult> TEST_RESULTS_OF_ERROR_ATTEMPTS =
       ImmutableSet.of(TestResult.ERROR, TestResult.TIMEOUT, TestResult.UNKNOWN);
+
+  private final TestRetryProcessor testRetryProcessor;
+
+  public FlakyTestRetryStrategy() {
+    this(new TestRetryProcessor());
+  }
+
+  @VisibleForTesting
+  FlakyTestRetryStrategy(TestRetryProcessor testRetryProcessor) {
+    this.testRetryProcessor = testRetryProcessor;
+  }
 
   @Override
   public RetryInfo decideRetryOnTestEnd(TestInfo currentTestInfo)
@@ -85,11 +98,11 @@ public class FlakyTestRetryStrategy implements RetryStrategy {
       } else {
         return new RetryInfo(
             Optional.of("TEST_FAIL"),
-            ImmutableMap.of(
-                TEST_PROP_ERROR_ATTEMPT_INDEX,
-                "0",
-                TEST_PROP_FLAKY_ATTEMPT_INDEX,
-                Integer.toString(currentFlakyAttemptIndex + 1)));
+            ImmutableMap.<String, String>builder()
+                .put(TEST_PROP_ERROR_ATTEMPT_INDEX, "0")
+                .put(TEST_PROP_FLAKY_ATTEMPT_INDEX, Integer.toString(currentFlakyAttemptIndex + 1))
+                .putAll(testRetryProcessor.generateRetryTestTargetsProperty(currentTestInfo))
+                .buildOrThrow());
       }
     }
 
@@ -101,9 +114,11 @@ public class FlakyTestRetryStrategy implements RetryStrategy {
       if (errorAttempts < MAX_ERROR_ATTEMPTS) {
         return new RetryInfo(
             Optional.of("TEST_" + testResult.name()),
-            ImmutableMap.of(
-                TEST_PROP_ERROR_ATTEMPT_INDEX, Integer.toString(errorAttempts),
-                TEST_PROP_FLAKY_ATTEMPT_INDEX, Integer.toString(currentFlakyAttemptIndex)));
+            ImmutableMap.<String, String>builder()
+                .put(TEST_PROP_ERROR_ATTEMPT_INDEX, Integer.toString(errorAttempts))
+                .put(TEST_PROP_FLAKY_ATTEMPT_INDEX, Integer.toString(currentFlakyAttemptIndex))
+                .putAll(testRetryProcessor.generateRetryTestTargetsProperty(currentTestInfo))
+                .buildOrThrow());
       }
     }
 

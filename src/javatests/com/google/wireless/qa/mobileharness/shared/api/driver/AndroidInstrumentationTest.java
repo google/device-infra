@@ -17,6 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_RETRY_TEST_TARGETS;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_END_EPOCH_MS;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_START_EPOCH_MS;
@@ -800,6 +801,76 @@ public class AndroidInstrumentationTest {
         mockInstrumentSetting(
             shardTestNames,
             OPTION_MAP,
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ false,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ true);
+    when(androidInstrumentationUtil.instrument(
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
+        .thenReturn(instrumentationLog);
+
+    driver.run(testInfo);
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+    verify(androidInstrumentationUtil)
+        .instrument(
+            eq(DEVICE_ID),
+            eq(DEFAULT_SDK_VERSION),
+            eq(setting),
+            eq(TEST_TIMEOUT),
+            ArgumentMatchers.isNull());
+  }
+
+  @Test
+  public void run_retryTestTargets_pass() throws Exception {
+    mockRunTestBasicSteps("retry_locator_name", OPTIONS, false, false);
+    String retryTestTargets =
+        "com.google.spinner.test.SpinnerTest#testText,com.google.spinner.test.SpinnerTest#testText2";
+    testInfo.properties().add(ANDROID_INSTRUMENTATION_RETRY_TEST_TARGETS, retryTestTargets);
+
+    String instrumentationLog = "OK (2 tests)";
+    AndroidInstrumentationSetting setting =
+        mockInstrumentSetting(
+            retryTestTargets,
+            OPTION_MAP,
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ false,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ true);
+    when(androidInstrumentationUtil.instrument(
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
+        .thenReturn(instrumentationLog);
+
+    driver.run(testInfo);
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+    verify(androidInstrumentationUtil)
+        .instrument(
+            eq(DEVICE_ID),
+            eq(DEFAULT_SDK_VERSION),
+            eq(setting),
+            eq(TEST_TIMEOUT),
+            ArgumentMatchers.isNull());
+  }
+
+  @Test
+  public void run_retryTestTargets_cleansUpOptions_pass() throws Exception {
+    mockRunTestBasicSteps(
+        "retry_locator_name",
+        "key1=value1,class=com.google.spinner.test.SpinnerTest,notAnnotation=MyNotAnnotation",
+        false,
+        false);
+    String retryTestTargets =
+        "com.google.spinner.test.SpinnerTest#testText,com.google.spinner.test.SpinnerTest#testText2";
+    testInfo.properties().add(ANDROID_INSTRUMENTATION_RETRY_TEST_TARGETS, retryTestTargets);
+
+    String instrumentationLog = "OK (2 tests)";
+    AndroidInstrumentationSetting setting =
+        mockInstrumentSetting(
+            retryTestTargets,
+            ImmutableMap.of("key1", "value1"),
             /* async= */ false,
             /* showRawResults= */ false,
             /* prefixAndroidTest= */ false,
