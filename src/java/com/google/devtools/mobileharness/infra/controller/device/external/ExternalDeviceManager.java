@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.infra.controller.device.external;
 
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.daemon.health.handler.DrainHandler;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import java.time.Duration;
 import java.util.Map;
@@ -27,7 +26,7 @@ import java.util.Set;
 /**
  * The device manager which can operate the devices controlled by non-MH lab server device manager.
  */
-public interface ExternalDeviceManager extends DrainHandler {
+public interface ExternalDeviceManager {
 
   /**
    * Reserves a device.
