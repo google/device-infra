@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaInstant;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.joining;
 
 import com.google.common.base.Ascii;
@@ -26,6 +27,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.TempDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import com.google.devtools.mobileharness.fe.v6.service.device.provider.RunningTestInfoProvider;
+import com.google.devtools.mobileharness.fe.v6.service.device.provider.RunningTestInfoProvider.RunningTestInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceType;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo.CurrentTask;
@@ -38,10 +41,20 @@ import java.time.Instant;
 import java.time.InstantSource;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.inject.Inject;
 
 /** Builder for the HealthAndActivityInfo proto. */
 public final class HealthAndActivityBuilder {
+
+  private static final Logger logger = Logger.getLogger(HealthAndActivityBuilder.class.getName());
+
+  /** Timeout for the MOSS running-test lookup (best-effort, non-blocking for the page). */
+  private static final Duration MOSS_LOOKUP_TIMEOUT = Duration.ofSeconds(5);
 
   private static final ImmutableSet<String> ABNORMAL_TYPE_KEYWORDS =
       ImmutableSet.of(
@@ -54,10 +67,13 @@ public final class HealthAndActivityBuilder {
           "FASTBOOTDMODE");
 
   private final InstantSource instantSource;
+  private final RunningTestInfoProvider runningTestInfoProvider;
 
   @Inject
-  HealthAndActivityBuilder(InstantSource instantSource) {
+  HealthAndActivityBuilder(
+      InstantSource instantSource, RunningTestInfoProvider runningTestInfoProvider) {
     this.instantSource = instantSource;
+    this.runningTestInfoProvider = runningTestInfoProvider;
   }
 
   public HealthAndActivityInfo buildHealthAndActivityInfo(DeviceInfo deviceInfo) {
@@ -247,6 +263,7 @@ public final class HealthAndActivityBuilder {
       boolean isRecovering = hasAbnormalTypes;
       currentTask.setType(isRecovering ? "Recovery Task" : "Test");
       if (deviceInfo.getDeviceCondition().hasAllocatedTestLocator()) {
+        // Integration-test path: allocated_test_locator is available.
         currentTask
             .setTaskId(deviceInfo.getDeviceCondition().getAllocatedTestLocator().getName())
             .setJobId(
@@ -255,6 +272,31 @@ public final class HealthAndActivityBuilder {
                     .getAllocatedTestLocator()
                     .getJobLocator()
                     .getName());
+      } else {
+        // Production path: allocated_test_locator is never written (b/479683265).
+        // Query MOSS for the running test by device serial.
+        try {
+          Optional<RunningTestInfo> runningTest =
+              runningTestInfoProvider
+                  .getRunningTest(deviceInfo.getDeviceLocator().getId())
+                  .get(MOSS_LOOKUP_TIMEOUT.toMillis(), MILLISECONDS);
+          runningTest.ifPresent(
+              info -> currentTask.setTaskId(info.testId()).setJobId(info.jobId()));
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          logger.log(
+              Level.WARNING,
+              "Interrupted looking up running test for BUSY device "
+                  + deviceInfo.getDeviceLocator().getId(),
+              e);
+        } catch (ExecutionException | TimeoutException e) {
+          // Best-effort: log and continue so the device detail page still renders.
+          logger.log(
+              Level.WARNING,
+              "Failed to look up running test for BUSY device "
+                  + deviceInfo.getDeviceLocator().getId(),
+              e);
+        }
       }
       builder.setCurrentTask(currentTask);
     }

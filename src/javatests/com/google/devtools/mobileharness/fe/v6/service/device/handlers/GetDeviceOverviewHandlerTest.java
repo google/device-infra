@@ -54,6 +54,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.DeviceView;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapability;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
+import com.google.devtools.mobileharness.fe.v6.service.device.provider.RunningTestInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverview;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
@@ -158,6 +159,7 @@ public final class GetDeviceOverviewHandlerTest {
   @Bind @Mock private DeviceHeaderInfoBuilder deviceHeaderInfoBuilder;
   @Bind @Mock private SubDeviceInfoListFactory subDeviceInfoListFactory;
   @Bind @Mock private Environment environment;
+  @Bind @Mock private RunningTestInfoProvider runningTestInfoProvider;
 
   @Bind private ListeningExecutorService executorService = newDirectExecutorService();
   @Bind private InstantSource instantSource = InstantSource.fixed(NOW);
@@ -171,6 +173,8 @@ public final class GetDeviceOverviewHandlerTest {
     // Default mock behaviors
     when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any(UniverseScope.class)))
         .thenReturn(immediateFuture(DEFAULT_LAB_INFO_RESPONSE));
+    when(runningTestInfoProvider.getRunningTest(anyString()))
+        .thenReturn(immediateFuture(Optional.empty()));
     when(configurationProvider.getDeviceConfig(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(ConfigResult.available(Optional.empty())));
     // By default, assume Config Service is available but returns nothing
