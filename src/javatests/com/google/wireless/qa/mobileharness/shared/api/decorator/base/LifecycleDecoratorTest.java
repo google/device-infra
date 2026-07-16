@@ -107,7 +107,7 @@ public final class LifecycleDecoratorTest {
   }
 
   @Test
-  public void run_setupThrowsException_doesNotRunDriverOrTeardownAndLogsFailure() throws Exception {
+  public void run_setupThrowsException_runsTeardownAndLogsFailure() throws Exception {
     MobileHarnessException exception =
         new MobileHarnessException(
             InfraErrorId.CLIENT_LOCAL_MODE_ALLOCATED_DEVICE_NOT_FOUND, "Setup failed");
@@ -118,7 +118,7 @@ public final class LifecycleDecoratorTest {
     assertThat(thrown).isSameInstanceAs(exception);
 
     verify(decorated, never()).run(testInfo);
-    verify(decorator, never()).tearDown(testInfo);
+    verify(decorator).tearDown(testInfo);
 
     assertThat(captureLogs.getLogs()).contains(logPrefix + "setup starting.");
     assertThat(captureLogs.getLogs())
@@ -127,6 +127,8 @@ public final class LifecycleDecoratorTest {
                 + "setup finished with failure ["
                 + MoreThrowables.shortDebugString(exception)
                 + "]");
+    assertThat(captureLogs.getLogs()).contains(logPrefix + "teardown starting.");
+    assertThat(captureLogs.getLogs()).contains(logPrefix + "teardown finished.");
   }
 
   @Test
@@ -177,5 +179,25 @@ public final class LifecycleDecoratorTest {
                 + "teardown finished with failure ["
                 + MoreThrowables.shortDebugString(teardownException)
                 + "]");
+  }
+
+  @Test
+  public void run_teardownThrowsInterruptedExceptionAndSuppressed_restoresInterruptedStatus()
+      throws Exception {
+    MobileHarnessException runException =
+        new MobileHarnessException(BasicErrorId.JOB_TIMEOUT, "Run failed");
+    InterruptedException teardownException = new InterruptedException("Teardown interrupted");
+    doThrow(runException).when(decorated).run(testInfo);
+    doThrow(teardownException).when(decorator).tearDown(testInfo);
+
+    try {
+      MobileHarnessException thrown =
+          assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
+      assertThat(thrown).isSameInstanceAs(runException);
+      assertThat(thrown.getSuppressed()).asList().containsExactly(teardownException);
+      assertThat(Thread.currentThread().isInterrupted()).isTrue();
+    } finally {
+      Thread.interrupted();
+    }
   }
 }

@@ -224,7 +224,7 @@ public class AndroidSwitchLanguageDecorator extends LifecycleDecorator
 
   @Override
   protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
-    if (localeSwitchedByDecorator && spec.getRestoreLanguageAfterTest()) {
+    if (localeSwitchedByDecorator && spec != null && spec.getRestoreLanguageAfterTest()) {
       String deviceId = getDevice().getDeviceId();
       testInfo.log().atInfo().alsoTo(logger).log("Restoring language on device %s", deviceId);
       try {

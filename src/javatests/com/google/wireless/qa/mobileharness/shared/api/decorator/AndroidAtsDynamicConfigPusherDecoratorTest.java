@@ -22,6 +22,7 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -36,6 +37,7 @@ import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
@@ -54,7 +56,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
@@ -86,8 +87,7 @@ public final class AndroidAtsDynamicConfigPusherDecoratorTest {
     when(decorated.getDevice()).thenReturn(device);
     when(device.getDeviceId()).thenReturn("device_id");
 
-    com.google.wireless.qa.mobileharness.shared.model.job.TestLocator mockLocator =
-        Mockito.mock(com.google.wireless.qa.mobileharness.shared.model.job.TestLocator.class);
+    TestLocator mockLocator = mock(TestLocator.class);
     when(mockLocator.getId()).thenReturn("test_id");
     when(testInfo.locator()).thenReturn(mockLocator);
 

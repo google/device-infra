@@ -16,6 +16,7 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.endsWith;
@@ -290,6 +291,14 @@ public final class AndroidDumpSysDecoratorTest {
     decorator.run(testInfo);
 
     verify(warnings).addAndLog(any(MobileHarnessException.class), any(FluentLogger.class));
+  }
+
+  @Test
+  public void run_tearDownWhenSetUpFailedEarly() throws Exception {
+    when(params.isTrue(AndroidDumpSysSpec.PARAM_LOG_TO_FILE))
+        .thenThrow(new RuntimeException("Params error"));
+
+    assertThrows(RuntimeException.class, () -> decorator.run(testInfo));
   }
 
   private void mockBasicSetup(boolean logToFile, String dumpsysType, String dumpsysSuffix)

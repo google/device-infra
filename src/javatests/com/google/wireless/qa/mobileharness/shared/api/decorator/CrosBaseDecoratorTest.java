@@ -118,7 +118,7 @@ public class CrosBaseDecoratorTest {
   }
 
   @Test
-  public void run_prepareThrowsException_doesNotCallCleanUpAndRun() throws Exception {
+  public void run_prepareThrowsException_callsCleanUpAndDoesNotCallRun() throws Exception {
     doThrow(new MobileHarnessException(BasicErrorId.NON_MH_EXCEPTION, "test"))
         .when(decorator)
         .setUp(testInfo);
@@ -126,7 +126,7 @@ public class CrosBaseDecoratorTest {
     assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
 
     verify(decorator).setUp(testInfo);
-    verify(decorator, never()).cleanUp(testInfo);
+    verify(decorator).cleanUp(testInfo);
     verify(decoratedDriver, never()).run(testInfo);
   }
 

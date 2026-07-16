@@ -125,6 +125,9 @@ public final class AndroidDumpSysDecorator extends LifecycleDecorator {
 
   @Override
   protected void tearDown(TestInfo testInfo) throws InterruptedException {
+    if (dumpSysCommands == null) {
+      return;
+    }
     String deviceId = getDevice().getDeviceId();
     // Only invokes the dumpsys command when the device is detected.
     MobileHarnessException deviceOnlineException = null;
