@@ -103,9 +103,11 @@ public final class GetHostOverviewHandlerTest {
     when(featureManagerFactory.create(any())).thenReturn(mockFeatureManager);
     when(mockFeatureManager.isLabServerReleaseFeatureEnabled()).thenReturn(true);
 
-    // Default empty responses
+    // A host that exists has a LabInfoService entry, so default to a present (minimal) LabInfo
+    // that models a real host. Tests that specifically exercise "host not found" override this
+    // with an empty response.
     when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
-        .thenReturn(immediateFuture(GetLabInfoResponse.getDefaultInstance()));
+        .thenReturn(immediateFuture(labInfoResponseWithHost()));
     when(hostAuxiliaryInfoProvider.getHostReleaseInfo(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.empty()));
     when(hostAuxiliaryInfoProvider.getPassThroughFlags(anyString(), any(UniverseScope.class)))
@@ -117,6 +119,10 @@ public final class GetHostOverviewHandlerTest {
 
   @Test
   public void getHostOverview_noData_returnsUnknown() throws Exception {
+    // No LabInfoService entry for this host.
+    when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
+        .thenReturn(immediateFuture(GetLabInfoResponse.getDefaultInstance()));
+
     ListenableFuture<HostOverviewPageData> result =
         getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE);
 
@@ -578,6 +584,16 @@ public final class GetHostOverviewHandlerTest {
 
     assertThat(overview.getCanUpgrade()).isFalse();
     verify(hostLatestVersionProvider, never()).getLatestVersion(any(), any());
+  }
+
+  private static GetLabInfoResponse labInfoResponseWithHost() {
+    return GetLabInfoResponse.newBuilder()
+        .setLabQueryResult(
+            LabQueryResult.newBuilder()
+                .setLabView(
+                    LabView.newBuilder()
+                        .addLabData(LabData.newBuilder().setLabInfo(LabInfo.getDefaultInstance()))))
+        .build();
   }
 
   private void mockLabInfoWithProperty(String key, String value) {
