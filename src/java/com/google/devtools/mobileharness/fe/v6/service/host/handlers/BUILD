@@ -37,6 +37,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/handlers",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/provider",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/errors",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/builder",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:daemon_statuses",

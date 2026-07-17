@@ -17,7 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.host;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
+import com.google.devtools.mobileharness.fe.v6.service.grpc.FeGrpcInvoker;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionHostRequest;
@@ -74,7 +74,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
   @Override
   public void getHostHeaderInfo(
       GetHostHeaderInfoRequest request, StreamObserver<HostHeaderInfo> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::getHostHeaderInfo,
@@ -86,7 +86,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
   @Override
   public void getHostOverview(
       GetHostOverviewRequest request, StreamObserver<HostOverviewPageData> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::getHostOverview,
@@ -99,7 +99,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
   public void getHostDeviceSummaries(
       GetHostDeviceSummariesRequest request,
       StreamObserver<GetHostDeviceSummariesResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::getHostDeviceSummaries,
@@ -111,7 +111,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
   @Override
   public void getHostDebugInfo(
       GetHostDebugInfoRequest request, StreamObserver<GetHostDebugInfoResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::getHostDebugInfo,
@@ -123,7 +123,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
   @Override
   public void getPopularFlags(
       GetPopularFlagsRequest request, StreamObserver<GetPopularFlagsResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::getPopularFlags,
@@ -136,7 +136,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
   public void updatePassThroughFlags(
       UpdatePassThroughFlagsRequest request,
       StreamObserver<UpdatePassThroughFlagsResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         req -> logic.updatePassThroughFlags(req),
@@ -149,7 +149,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
   public void preflightLabServerRelease(
       PreflightLabServerReleaseRequest request,
       StreamObserver<PreflightLabServerReleaseResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         req -> logic.preflightLabServerRelease(req, Optional.empty()),
@@ -162,7 +162,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
   public void preflightLabServerLifecycle(
       PreflightLabServerLifecycleRequest request,
       StreamObserver<PreflightLabServerLifecycleResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         req -> logic.preflightLabServerLifecycle(req, Optional.empty()),
@@ -175,7 +175,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
   public void decommissionMissingDevices(
       DecommissionMissingDevicesRequest request,
       StreamObserver<DecommissionMissingDevicesResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::decommissionMissingDevices,
@@ -188,7 +188,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
   public void checkRemoteControlEligibility(
       CheckRemoteControlEligibilityRequest request,
       StreamObserver<CheckRemoteControlEligibilityResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         req -> logic.checkRemoteControlEligibility(req, Optional.empty()),
@@ -201,7 +201,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
   public void remoteControlDevices(
       RemoteControlDevicesRequest request,
       StreamObserver<RemoteControlDevicesResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::remoteControlDevices,
@@ -213,7 +213,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
   @Override
   public void decommissionHost(
       DecommissionHostRequest request, StreamObserver<DecommissionHostResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::decommissionHost,
@@ -225,7 +225,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
   @Override
   public void releaseLabServer(
       ReleaseLabServerRequest request, StreamObserver<ReleaseLabServerResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::releaseLabServer,
@@ -237,7 +237,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
   @Override
   public void startLabServer(
       StartLabServerRequest request, StreamObserver<StartLabServerResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::startLabServer,
@@ -249,7 +249,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
   @Override
   public void restartLabServer(
       RestartLabServerRequest request, StreamObserver<RestartLabServerResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::restartLabServer,
@@ -261,7 +261,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
   @Override
   public void stopLabServer(
       StopLabServerRequest request, StreamObserver<StopLabServerResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::stopLabServer,
@@ -274,7 +274,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
   public void runTroubleshootScript(
       RunTroubleshootScriptRequest request,
       StreamObserver<RunTroubleshootScriptResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::runTroubleshootScript,
@@ -287,7 +287,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
   public void listTroubleshootScripts(
       ListTroubleshootScriptsRequest request,
       StreamObserver<ListTroubleshootScriptsResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::listTroubleshootScripts,
