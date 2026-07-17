@@ -412,7 +412,7 @@ public class GcsFileManager {
     Callable<ExecutionInfo> finalizedLoader =
         () -> {
           isCached.set(false);
-          if (localFileUtil.isDirExist(fileOrDir)) {
+          if (dirExists(fileOrDir)) {
             ZipInfo zipInfo = compressDirectory(fileOrDir, zipStoreOnly, zipTimeout, checksum);
             long fileSize = localFileUtil.getFileSize(zipInfo.zipFilePath());
             String decodedChecksum = zipInfo.decodedChecksum();
@@ -448,6 +448,10 @@ public class GcsFileManager {
 
   private boolean fileExists(Path fileOrDir) {
     return localFileUtil.isFileOrDirExist(fileOrDir);
+  }
+
+  private boolean dirExists(Path fileOrDir) {
+    return localFileUtil.isDirExist(fileOrDir);
   }
 
   /**
@@ -517,7 +521,7 @@ public class GcsFileManager {
   private ZipInfo compressDirectory(
       Path dir, boolean zipStoreOnly, Optional<Duration> zipTimeout, Optional<String> checksum)
       throws MobileHarnessException, InterruptedException {
-    if (!localFileUtil.isDirExist(dir)) {
+    if (!dirExists(dir)) {
       throw new MobileHarnessException(
           BasicErrorId.GCS_COMPRESS_DIRECTORY, String.format("Directory %s doesn't exist.", dir));
     }
