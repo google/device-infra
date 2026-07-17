@@ -193,6 +193,16 @@ java_library(
 )
 
 java_library(
+    name = "base_web_test_driver",
+    srcs = ["BaseWebTestDriver.java"],
+    deps = [
+        ":base_driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+    ],
+)
+
+java_library(
     name = "mobly_aosp_test",
     srcs = ["MoblyAospTest.java"],
     deps = [
@@ -396,6 +406,25 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:slate_driver_spec_java_proto",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "playwright_web_driver",
+    srcs = ["PlaywrightWebDriver.java"],
+    deps = [
+        ":base_web_test_driver",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/sponge:test_xml_parser",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],

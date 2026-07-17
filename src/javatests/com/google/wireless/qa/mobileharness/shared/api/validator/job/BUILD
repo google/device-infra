@@ -29,6 +29,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_install_mainline_modules_decorator_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:mobly_aosp_test_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:tradefed_test_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_cdp_decorator_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_emulator_video_decorator_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_install_mainline_modules_decorator_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_lab_test_support_settings_decorator_job_validator",
