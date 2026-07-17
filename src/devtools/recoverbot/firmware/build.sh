@@ -15,6 +15,9 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
+# Force pip to use the official global repository
+export PIP_INDEX_URL="https://pypi.org/simple"
+
 # Ensure the script executes from its own directory (firmware/)
 cd "$(dirname "$0")"
 
