@@ -482,6 +482,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDriver("AndroidTestLoopTest");
     device.addSupportedDriver("MoblyTest");
     device.addSupportedDriver("NoOpDriver");
+    device.addSupportedDriver("PlaywrightWebDriver");
     device.addSupportedDriver("SlateDriver");
     device.addSupportedDriver("TradefedTest");
     // keep-sorted end
@@ -496,6 +497,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidAtsDynamicConfigPusherDecorator");
     device.addSupportedDecorator("AndroidBugreportDecorator");
     device.addSupportedDecorator("AndroidBusinessLogicSkipModuleDecorator");
+    device.addSupportedDecorator("AndroidCdpDecorator");
     device.addSupportedDecorator("AndroidCleanAppsDecorator");
     device.addSupportedDecorator("AndroidDeviceFeaturesCheckDecorator");
     // Advanced device settings. This decorator is only full tested on AndroidRealDevice. Some
