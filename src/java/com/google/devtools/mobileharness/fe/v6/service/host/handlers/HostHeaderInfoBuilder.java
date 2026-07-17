@@ -60,8 +60,7 @@ public class HostHeaderInfoBuilder {
         .setActions(
             HostActions.newBuilder()
                 .setConfiguration(hostConfigButtonBuilder.build(universe, labInfoOpt, labTypeOpt))
-                .setDebug(
-                    hostDebugButtonBuilder.build(universe, labInfoOpt, labTypeOpt, daemonStatus))
+                .setDebug(hostDebugButtonBuilder.build(universe, labInfoOpt, labTypeOpt))
                 .setDecommission(
                     hostDecommissionButtonBuilder.build(
                         universe, labInfoOpt, labTypeOpt, daemonStatus))

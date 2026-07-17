@@ -21,7 +21,6 @@ import static org.mockito.Mockito.when;
 
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
@@ -47,10 +46,10 @@ public final class HostDebugButtonBuilderTest {
 
   private HostDebugButtonBuilder hostDebugButtonBuilder;
   private static final UniverseScope UNIVERSE = new UniverseScope.SelfUniverse();
-  private static final DaemonServerInfo.Status DAEMON_RUNNING =
-      DaemonServerInfo.Status.newBuilder().setState(DaemonServerInfo.State.RUNNING).build();
-  private static final DaemonServerInfo.Status DAEMON_MISSING =
-      DaemonServerInfo.Status.newBuilder().setState(DaemonServerInfo.State.MISSING).build();
+  private static final LabInfo LAB_RUNNING =
+      LabInfo.newBuilder().setLabStatus(LabStatus.LAB_RUNNING).build();
+  private static final LabInfo LAB_MISSING =
+      LabInfo.newBuilder().setLabStatus(LabStatus.LAB_MISSING).build();
 
   @Before
   public void setUp() {
@@ -63,8 +62,7 @@ public final class HostDebugButtonBuilderTest {
   public void build_debugFeatureDisabled_returnsInvisible() {
     when(mockFeatureManager.isHostDebugFeatureEnabled()).thenReturn(false);
 
-    var result =
-        hostDebugButtonBuilder.build(UNIVERSE, Optional.empty(), Optional.empty(), DAEMON_RUNNING);
+    var result = hostDebugButtonBuilder.build(UNIVERSE, Optional.empty(), Optional.empty());
 
     assertThat(result.getVisible()).isFalse();
   }
@@ -74,8 +72,7 @@ public final class HostDebugButtonBuilderTest {
     when(mockFeatureManager.isHostDebugFeatureEnabled()).thenReturn(true);
     when(mockFeatureReadiness.isHostDebugReady()).thenReturn(false);
 
-    var result =
-        hostDebugButtonBuilder.build(UNIVERSE, Optional.empty(), Optional.empty(), DAEMON_RUNNING);
+    var result = hostDebugButtonBuilder.build(UNIVERSE, Optional.of(LAB_RUNNING), Optional.empty());
 
     assertThat(result.getVisible()).isTrue();
     assertThat(result.getEnabled()).isTrue();
@@ -88,8 +85,7 @@ public final class HostDebugButtonBuilderTest {
     when(mockFeatureManager.isHostDebugFeatureEnabled()).thenReturn(true);
     when(mockFeatureReadiness.isHostDebugReady()).thenReturn(true);
 
-    var result =
-        hostDebugButtonBuilder.build(UNIVERSE, Optional.empty(), Optional.empty(), DAEMON_RUNNING);
+    var result = hostDebugButtonBuilder.build(UNIVERSE, Optional.of(LAB_RUNNING), Optional.empty());
 
     assertThat(result.getVisible()).isTrue();
     assertThat(result.getEnabled()).isTrue();
@@ -101,11 +97,7 @@ public final class HostDebugButtonBuilderTest {
     when(mockFeatureManager.isHostDebugFeatureEnabled()).thenReturn(true);
     when(mockFeatureReadiness.isHostDebugReady()).thenReturn(true);
 
-    LabInfo labInfo = LabInfo.newBuilder().setLabStatus(LabStatus.LAB_MISSING).build();
-
-    var result =
-        hostDebugButtonBuilder.build(
-            UNIVERSE, Optional.of(labInfo), Optional.empty(), DAEMON_MISSING);
+    var result = hostDebugButtonBuilder.build(UNIVERSE, Optional.of(LAB_MISSING), Optional.empty());
 
     assertThat(result.getVisible()).isTrue();
     assertThat(result.getEnabled()).isFalse();

@@ -16,10 +16,10 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 
+import com.google.devtools.mobileharness.api.model.proto.Lab.LabStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.HostTypes;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UiLabType;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
@@ -43,10 +43,7 @@ public class HostDebugButtonBuilder {
   }
 
   public ActionButtonState build(
-      UniverseScope universe,
-      Optional<LabInfo> labInfoOpt,
-      Optional<String> labTypeOpt,
-      DaemonServerInfo.Status daemonStatus) {
+      UniverseScope universe, Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
 
     if (!featureManagerFactory.create(universe).isHostDebugFeatureEnabled()) {
       return ActionButtonState.newBuilder().setVisible(false).build();
@@ -60,11 +57,12 @@ public class HostDebugButtonBuilder {
     }
 
     boolean isReady = featureReadiness.isHostDebugReady();
-    boolean daemonMissing = daemonStatus.getState() == DaemonServerInfo.State.MISSING;
+    boolean isLabRunning =
+        labInfoOpt.isPresent() && labInfoOpt.get().getLabStatus() == LabStatus.LAB_RUNNING;
 
     return ActionButtonState.newBuilder()
         .setVisible(true)
-        .setEnabled(!daemonMissing)
+        .setEnabled(isLabRunning)
         .setIsReady(isReady)
         .setTooltip("Debug the host")
         .build();

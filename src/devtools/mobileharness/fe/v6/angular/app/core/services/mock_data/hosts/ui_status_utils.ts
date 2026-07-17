@@ -450,9 +450,11 @@ export function createHostActions(
       isReady: true,
     },
     debug: {
-      enabled: true,
-      visible: true,
-      tooltip: 'Run and view live diagnostic commands on the host',
+      enabled: !isMissing,
+      visible: !isCoreLab,
+      tooltip: isMissing
+        ? 'Lab Server is not running'
+        : 'Run and view live diagnostic commands on the host',
       isReady: true,
     },
     decommission: {
