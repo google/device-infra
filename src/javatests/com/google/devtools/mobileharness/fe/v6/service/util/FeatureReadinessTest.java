@@ -69,23 +69,23 @@ public final class FeatureReadinessTest {
   }
 
   @Test
-  public void isLabServerStartReady_returnsFalse() {
-    assertThat(featureReadiness.isLabServerStartReady()).isFalse();
+  public void isLabServerStartReady_returnsTrue() {
+    assertThat(featureReadiness.isLabServerStartReady()).isTrue();
   }
 
   @Test
-  public void isLabServerRestartReady_returnsFalse() {
-    assertThat(featureReadiness.isLabServerRestartReady()).isFalse();
+  public void isLabServerRestartReady_returnsTrue() {
+    assertThat(featureReadiness.isLabServerRestartReady()).isTrue();
   }
 
   @Test
-  public void isLabServerStopReady_returnsFalse() {
-    assertThat(featureReadiness.isLabServerStopReady()).isFalse();
+  public void isLabServerStopReady_returnsTrue() {
+    assertThat(featureReadiness.isLabServerStopReady()).isTrue();
   }
 
   @Test
-  public void isLabServerUpdatePassThroughFlagsReady_returnsFalse() {
-    assertThat(featureReadiness.isLabServerUpdatePassThroughFlagsReady()).isFalse();
+  public void isLabServerUpdatePassThroughFlagsReady_returnsTrue() {
+    assertThat(featureReadiness.isLabServerUpdatePassThroughFlagsReady()).isTrue();
   }
 
   @Test
@@ -99,8 +99,8 @@ public final class FeatureReadinessTest {
   }
 
   @Test
-  public void isLabServerReleaseReady_returnsFalse() {
-    assertThat(featureReadiness.isLabServerReleaseReady()).isFalse();
+  public void isLabServerReleaseReady_returnsTrue() {
+    assertThat(featureReadiness.isLabServerReleaseReady()).isTrue();
   }
 
   @Test
