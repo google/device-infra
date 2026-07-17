@@ -42,11 +42,6 @@ export const SCENARIO_TEST_TIMEOUT: MockTestScenario = {
       user: 'dafeni',
       actualUser: 'dafeni@google.com',
     },
-    config: {
-      dimensions: {
-        'Device Type': 'AndroidRealDevice',
-      },
-    },
     properties: {},
     timingBreakdown: {
       createTime: '2025-07-09T10:20:00Z',

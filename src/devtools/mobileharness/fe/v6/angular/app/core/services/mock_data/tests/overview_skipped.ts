@@ -41,11 +41,6 @@ export const SCENARIO_TEST_SKIPPED: MockTestScenario = {
       user: 'dafeni',
       actualUser: 'dafeni@google.com',
     },
-    config: {
-      dimensions: {
-        'Device Type': 'AndroidRealDevice',
-      },
-    },
     properties: {},
     timingBreakdown: {
       createTime: '2025-07-09T10:11:15Z',

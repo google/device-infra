@@ -42,11 +42,6 @@ export const SCENARIO_TEST_WARNING: MockTestScenario = {
       user: 'dafeni',
       actualUser: 'dafeni@google.com',
     },
-    config: {
-      dimensions: {
-        'Device Type': 'AndroidRealDevice',
-      },
-    },
     properties: {
       'dimension_rooted': 'false',
     },

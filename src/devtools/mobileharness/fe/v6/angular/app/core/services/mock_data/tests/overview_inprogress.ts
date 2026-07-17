@@ -49,11 +49,6 @@ export const SCENARIO_TEST_IN_PROGRESS: MockTestScenario = {
       user: 'dafeni',
       actualUser: 'dafeni@google.com',
     },
-    config: {
-      dimensions: {
-        'Device Type': 'AndroidRealDevice',
-      },
-    },
     properties: {
       'infra_version': 'v6.2.1',
     },

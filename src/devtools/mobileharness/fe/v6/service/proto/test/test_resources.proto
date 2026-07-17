@@ -83,12 +83,6 @@ message HostInfo {
   string universe = 3;
 }
 
-// Configuration details mapped to the configuration section.
-message TestConfig {
-  map<string, string> params = 1;
-  map<string, string> dimensions = 2;
-}
-
 // Nested sub-tests list details.
 message SubTestsInfo {
   // Sub / nested tests. When a sub-test's full detail is requested (via
@@ -118,8 +112,7 @@ message TestDetail {
   .devtools.mobileharness.fe.v6.service.proto.common.ExecutionDetails
       execution_details = 8;
 
-  // Configuration.
-  TestConfig config = 9;
+  reserved 9;
 
   // Properties.
   map<string, string> properties = 10;

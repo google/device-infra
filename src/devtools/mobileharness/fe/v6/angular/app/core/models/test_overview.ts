@@ -103,12 +103,6 @@ export interface ExecutionDetails {
   lastUpdateTime?: string;
 }
 
-/** Configuration details. */
-export interface TestConfig {
-  params?: Record<string, string>;
-  dimensions?: Record<string, string>;
-}
-
 /** One non-fatal warning surfaced during execution. */
 export interface TestWarning {
   message: string;
@@ -169,7 +163,6 @@ export interface TestOverviewData {
   devices?: TestDevices;
   host?: HostInfo;
   executionDetails?: ExecutionDetails;
-  config?: TestConfig;
   properties?: Record<string, string>;
   troubleshooting?: Troubleshooting;
   subTestsInfo?: SubTestsInfo;

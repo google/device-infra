@@ -43,11 +43,6 @@ export const SCENARIO_TEST_FAILED: MockTestScenario = {
       user: 'dafeni',
       actualUser: 'dafeni@google.com',
     },
-    config: {
-      dimensions: {
-        'Device Type': 'AndroidRealDevice',
-      },
-    },
     properties: {
       'abi': 'arm64-v8a',
     },

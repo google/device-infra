@@ -40,11 +40,6 @@ export const SCENARIO_TEST_SUSPENDED: MockTestScenario = {
       user: 'blaze-user',
       actualUser: 'mobileharness-ci-runner',
     },
-    config: {
-      dimensions: {
-        'Device Type': 'AndroidRealDevice',
-      },
-    },
     properties: {},
     timingBreakdown: {
       createTime: '2025-07-09T11:40:00Z',

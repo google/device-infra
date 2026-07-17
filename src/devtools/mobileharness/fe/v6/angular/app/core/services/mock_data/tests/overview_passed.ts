@@ -42,11 +42,6 @@ export const SCENARIO_TEST_PASSED: MockTestScenario = {
       user: 'dafeni',
       actualUser: 'dafeni@google.com',
     },
-    config: {
-      dimensions: {
-        'Device Type': 'AndroidRealDevice',
-      },
-    },
     properties: {
       'dimension_rooted': 'false',
       'abibaseband_version': '0c-250327-250401-b-13296697,g5400c-25032',
