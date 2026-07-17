@@ -100,3 +100,11 @@ message TeardownSessionRequest {
 }
 
 message TeardownSessionResponse {}
+
+// Internal envelope wrapper for RSocket metadata passed during setup frame.
+message ConduitSetupMetadata {
+  EstablishConduitRequest request = 1;
+  // Key-value pairs encoding the W3C Trace Context (e.g., "traceparent",
+  // "tracestate").
+  map<string, string> trace_context = 2;
+}

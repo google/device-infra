@@ -9,6 +9,8 @@ import (
 	"github.com/rsocket/rsocket-go"
 
 	dconpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb"
+	"go.opentelemetry.io/otel/trace"
+	otelcodes "go.opentelemetry.io/otel/codes"
 )
 
 // Conduit represents a managed multiplexed tunnel. It bridges the IO pump (Go context)
@@ -23,6 +25,7 @@ type Conduit struct {
 	closeOnce   sync.Once
 	onRemove    func() // Callback to tell the Manager to drop this Conduit
 	beforeClose func() // Callback to handle signaling before close
+	span        trace.Span
 	// Tracks active logical connections in this conduit. For each accepted TCP
 	// connection or incoming RSocket channel, one connection is added.
 	activeConnections sync.WaitGroup
@@ -34,7 +37,7 @@ func (c *Conduit) Context() context.Context {
 }
 
 // New creates the tunnel and sets up the bidirectional lifecycle bridge.
-func New(ctx context.Context, id string, meta *dconpb.EstablishConduitRequest, rs rsocket.CloseableRSocket, onRemove func(), beforeClose func()) *Conduit {
+func New(ctx context.Context, id string, meta *dconpb.EstablishConduitRequest, rs rsocket.CloseableRSocket, onRemove func(), beforeClose func(), span trace.Span) *Conduit {
 	if meta != nil {
 		slog.Info("Creating Conduit", "id", id, "type", meta.Type, "destination", meta.DestinationEndpoint, "entry_port", meta.EntryPort)
 	} else {
@@ -49,6 +52,7 @@ func New(ctx context.Context, id string, meta *dconpb.EstablishConduitRequest, r
 		cancel:      cancel,
 		onRemove:    onRemove,
 		beforeClose: beforeClose,
+		span:        span,
 	}
 
 	// 1. Context -> RSocket: If the IO pump context is canceled (e.g., when the parent
@@ -64,6 +68,10 @@ func New(ctx context.Context, id string, meta *dconpb.EstablishConduitRequest, r
 		// we must cancel the IO pump context in a goroutine to prevent deadlocks during synchronous Close().
 		rs.OnClose(func(err error) {
 			slog.Info("Conduit underlying socket closed", "id", id, "error", err)
+			if err != nil && span != nil {
+				span.RecordError(err)
+				span.SetStatus(otelcodes.Error, err.Error())
+			}
 			go c.Close()
 		})
 	}
@@ -95,7 +103,11 @@ func (c *Conduit) Close() error {
 				slog.Error("Conduit failed to close underlying RSocket", "id", c.ID, "error", err)
 			}
 		}
-		// 4. Notify the Manager to remove this Conduit from its map
+		// 4. End OpenTelemetry span
+		if c.span != nil {
+			c.span.End()
+		}
+		// 5. Notify the Manager to remove this Conduit from its map
 		if c.onRemove != nil {
 			c.onRemove()
 		}

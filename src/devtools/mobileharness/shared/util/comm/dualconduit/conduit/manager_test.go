@@ -15,7 +15,7 @@ func TestManagerAddAndConduit(t *testing.T) {
 	m := NewManager()
 
 	var mockRS rsocket.CloseableRSocket
-	c, err := m.Add(t.Context(), "test-conduit", nil, mockRS, nil)
+	c, err := m.Add(t.Context(), "test-conduit", nil, mockRS, nil, nil)
 	if err != nil {
 		t.Fatalf("Add() err = %v, want nil", err)
 	}
@@ -41,13 +41,13 @@ func TestManagerAddDuplicate(t *testing.T) {
 	m := NewManager()
 
 	var mockRS rsocket.CloseableRSocket
-	c1, err := m.Add(t.Context(), "test-conduit", nil, mockRS, nil)
+	c1, err := m.Add(t.Context(), "test-conduit", nil, mockRS, nil, nil)
 	if err != nil {
 		t.Fatalf("Add() err = %v, want nil", err)
 	}
 
 	// Adding another conduit with the same ID should fail.
-	c2, err := m.Add(t.Context(), "test-conduit", nil, mockRS, nil)
+	c2, err := m.Add(t.Context(), "test-conduit", nil, mockRS, nil, nil)
 	if err != ErrAlreadyExists {
 		t.Errorf("Add() err = %v, want %v", err, ErrAlreadyExists)
 	}
@@ -76,7 +76,7 @@ func TestManagerRemove(t *testing.T) {
 	m := NewManager()
 
 	var mockRS rsocket.CloseableRSocket
-	c, err := m.Add(t.Context(), "test-conduit", nil, mockRS, nil)
+	c, err := m.Add(t.Context(), "test-conduit", nil, mockRS, nil, nil)
 	if err != nil {
 		t.Fatalf("Add() failed err = %v", err)
 	}
@@ -99,11 +99,11 @@ func TestManagerShutdown(t *testing.T) {
 	m := NewManager()
 
 	var mockRS rsocket.CloseableRSocket
-	c1, err := m.Add(t.Context(), "1", nil, mockRS, nil)
+	c1, err := m.Add(t.Context(), "1", nil, mockRS, nil, nil)
 	if err != nil {
 		t.Fatalf("Add() for c1 failed err = %v", err)
 	}
-	c2, err := m.Add(t.Context(), "2", nil, mockRS, nil)
+	c2, err := m.Add(t.Context(), "2", nil, mockRS, nil, nil)
 	if err != nil {
 		t.Fatalf("Add() for c2 failed err = %v", err)
 	}
@@ -141,7 +141,7 @@ func TestManagerConcurrent(t *testing.T) {
 
 				// Add
 				ctx := t.Context()
-				c, err := m.Add(ctx, id, nil, mockRS, nil)
+				c, err := m.Add(ctx, id, nil, mockRS, nil, nil)
 				if err != nil {
 					t.Errorf("Add(%q) failed: %v", id, err)
 					continue
@@ -191,7 +191,7 @@ func TestManagerSubscribeToRemove_Remove(t *testing.T) {
 		ServerName: "test-server",
 	}
 
-	_, err := m.Add(t.Context(), "conduit-1", meta, mockRS, nil)
+	_, err := m.Add(t.Context(), "conduit-1", meta, mockRS, nil, nil)
 	if err != nil {
 		t.Fatalf("Add() err = %v, want nil", err)
 	}
@@ -242,7 +242,7 @@ func TestManagerSubscribeToRemove_Close(t *testing.T) {
 		ServerName: "test-server",
 	}
 
-	c, err := m.Add(t.Context(), "conduit-2", meta, mockRS, nil)
+	c, err := m.Add(t.Context(), "conduit-2", meta, mockRS, nil, nil)
 	if err != nil {
 		t.Fatalf("Add() err = %v, want nil", err)
 	}
@@ -273,11 +273,11 @@ func TestManagerSubscribeToRemove_Shutdown(t *testing.T) {
 	})
 
 	var mockRS rsocket.CloseableRSocket
-	_, err := m.Add(t.Context(), "conduit-a", nil, mockRS, nil)
+	_, err := m.Add(t.Context(), "conduit-a", nil, mockRS, nil, nil)
 	if err != nil {
 		t.Fatalf("Add() err = %v, want nil", err)
 	}
-	_, err = m.Add(t.Context(), "conduit-b", nil, mockRS, nil)
+	_, err = m.Add(t.Context(), "conduit-b", nil, mockRS, nil, nil)
 	if err != nil {
 		t.Fatalf("Add() err = %v, want nil", err)
 	}
@@ -304,7 +304,7 @@ func TestManagerSubscribeToRemove_ContextCancel(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	var mockRS rsocket.CloseableRSocket
-	_, err := m.Add(ctx, "conduit-cancel", nil, mockRS, nil)
+	_, err := m.Add(ctx, "conduit-cancel", nil, mockRS, nil, nil)
 	if err != nil {
 		cancel()
 		t.Fatalf("Add() err = %v, want nil", err)

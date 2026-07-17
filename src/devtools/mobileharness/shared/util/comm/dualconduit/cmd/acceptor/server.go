@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/acceptor"
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/logutil"
+	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/otelutil"
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/mesh"
 	dcontransport "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/transport"
 	rsockettransport "github.com/rsocket/rsocket-go/core/transport"
@@ -32,6 +33,14 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// Initialize OpenTelemetry tracer provider
+	shutdownTracer, err := otelutil.InitTracerProvider(ctx, "dualconduit-acceptor")
+	if err != nil {
+		slog.Error("Failed to initialize OpenTelemetry tracer", "error", err)
+	} else {
+		defer shutdownTracer(ctx)
+	}
 
 	// Initialize mesh server (xDS server)
 	meshServer := mesh.New(ctx, *httpPort, *tcpPort, *clusterDiscoveryType)

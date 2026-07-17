@@ -17,6 +17,10 @@ import (
 
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/mesh"
 	dconpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb"
+	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 // Service represents the acceptor service for Dual Conduit.
@@ -74,16 +78,31 @@ func (s *Service) Run(ctx context.Context) error {
 			return s.handleProbe(), nil
 		}
 
-		req, err := s.parseSetupMetadata(setup)
+		req, traceContext, err := s.parseSetupMetadata(setup)
 		if err != nil {
 			return nil, err
 		}
 
 		slog.Info("RSocket Connection incoming", "id", conduitID, "metadata", req)
 
-		con, err := s.Manager.Add(ctx, conduitID, req, rs, nil)
+		// Extract parent context from W3C headers in traceContext
+		extractedCtx := otel.GetTextMapPropagator().Extract(ctx, propagation.MapCarrier(traceContext))
+
+		// Start OpenTelemetry span for acceptor side conduit lifecycle
+		tracer := otel.Tracer("dualconduit/conduit")
+		_, acceptorSpan := tracer.Start(extractedCtx, "conduit.lifecycle",
+			trace.WithAttributes(
+				attribute.String("conduit.id", conduitID),
+				attribute.String("conduit.destination", req.DestinationEndpoint),
+				attribute.Int("conduit.entry_port", int(req.EntryPort)),
+				attribute.String("conduit.type", req.Type.String()),
+			),
+		)
+
+		con, err := s.Manager.Add(ctx, conduitID, req, rs, nil, acceptorSpan)
 		if err != nil {
 			slog.Error("Failed to add conduit", "id", conduitID, "error", err)
+			acceptorSpan.End()
 			return nil, err
 		}
 
@@ -111,18 +130,24 @@ func (s *Service) handleProbe() rsocket.RSocket {
 	)
 }
 
-func (s *Service) parseSetupMetadata(setup payload.SetupPayload) (*dconpb.EstablishConduitRequest, error) {
+func (s *Service) parseSetupMetadata(setup payload.SetupPayload) (*dconpb.EstablishConduitRequest, map[string]string, error) {
 	metadata, ok := setup.Metadata()
 	if !ok {
 		slog.Error("Setup payload is missing metadata")
-		return nil, fmt.Errorf("setup payload is missing metadata")
+		return nil, nil, fmt.Errorf("setup payload is missing metadata")
 	}
+	setupMeta := &dconpb.ConduitSetupMetadata{}
+	if err := proto.Unmarshal(metadata, setupMeta); err == nil && setupMeta.Request != nil {
+		return setupMeta.Request, setupMeta.TraceContext, nil
+	}
+
+	// Fallback to unmarshaling directly as EstablishConduitRequest
 	req := &dconpb.EstablishConduitRequest{}
 	if err := proto.Unmarshal(metadata, req); err != nil {
 		slog.Error("Invalid setup metadata", "error", err)
-		return nil, err
+		return nil, nil, err
 	}
-	return req, nil
+	return req, nil, nil
 }
 
 func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, req *dconpb.EstablishConduitRequest, rs rsocket.CloseableRSocket, con *conduit.Conduit) (rsocket.RSocket, error) {

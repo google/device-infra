@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/flagutil"
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/logutil"
+	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/otelutil"
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/dialer"
 	dconpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb"
 	dconsvcpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconsvcpb"
@@ -109,6 +110,14 @@ func main() {
 	// 1. Perform pre-flight check
 	dialerCtx, dialerCancel := context.WithCancel(context.Background())
 	defer dialerCancel()
+
+	// Initialize OpenTelemetry tracer provider
+	shutdownTracer, err := otelutil.InitTracerProvider(dialerCtx, "dualconduit-dialer")
+	if err != nil {
+		slog.Error("Failed to initialize OpenTelemetry tracer", "error", err)
+	} else {
+		defer shutdownTracer(dialerCtx)
+	}
 	dialerSvc := dialer.New(dialerCtx, cfg.Hostname, cfg.ForwardAddress, newTransporter, policy, keepAliveTickPeriod)
 	if err := dialerSvc.CheckConnection(context.Background()); err != nil {
 		slog.Error("Pre-flight check failed", "error", err)

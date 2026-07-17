@@ -25,6 +25,10 @@ import (
 	dconpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb"
 	dconsvcpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconsvcpb"
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/session"
+	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 const (
@@ -100,9 +104,29 @@ func (s *Service) establishConduit(ctx context.Context, req *dconpb.EstablishCon
 	// 1. Generate unique conduit ID
 	id := uuid.NewString()
 
-	// 2. Marshal protobuf metadata for the SETUP frame
-	metadata, err := proto.Marshal(req)
+	// Start OpenTelemetry span for the conduit lifecycle on Dialer
+	tracer := otel.Tracer("dualconduit/conduit")
+	ctx, dialerSpan := tracer.Start(ctx, "conduit.lifecycle",
+		trace.WithAttributes(
+			attribute.String("conduit.id", id),
+			attribute.String("conduit.destination", req.DestinationEndpoint),
+			attribute.Int("conduit.entry_port", int(req.EntryPort)),
+			attribute.String("conduit.type", req.Type.String()),
+		),
+	)
+
+	// Inject W3C Trace Context headers into map carrier
+	traceContext := make(map[string]string)
+	otel.GetTextMapPropagator().Inject(ctx, propagation.MapCarrier(traceContext))
+
+	// 2. Marshal protobuf metadata envelope for the SETUP frame
+	setupMeta := &dconpb.ConduitSetupMetadata{
+		Request:      req,
+		TraceContext: traceContext,
+	}
+	metadata, err := proto.Marshal(setupMeta)
 	if err != nil {
+		dialerSpan.End()
 		return nil, status.Errorf(codes.Internal, "failed to marshal request: %v", err)
 	}
 	setup := payload.New([]byte(id), metadata)
@@ -113,6 +137,7 @@ func (s *Service) establishConduit(ctx context.Context, req *dconpb.EstablishCon
 
 	rsClient, err := s.startRSocketClient(id, req, setup, condReady, metadataPush)
 	if err != nil {
+		dialerSpan.End()
 		return nil, err
 	}
 
@@ -130,10 +155,11 @@ func (s *Service) establishConduit(ctx context.Context, req *dconpb.EstablishCon
 		}
 	}
 
-	// 4. Create Conduit in the Manager
-	con, err := s.Manager.Add(s.ServiceCtx, id, req, rsClient, beforeClose)
+	// 4. Create Conduit in the Manager (passes ownership of dialerSpan)
+	con, err := s.Manager.Add(s.ServiceCtx, id, req, rsClient, beforeClose, dialerSpan)
 	if err != nil {
 		rsClient.Close()
+		dialerSpan.End()
 		return nil, status.Errorf(codes.Internal, "failed to add conduit to manager: %v", err)
 	}
 	close(condReady)
