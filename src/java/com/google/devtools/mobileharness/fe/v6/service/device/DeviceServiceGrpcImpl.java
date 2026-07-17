@@ -17,7 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.device;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
+import com.google.devtools.mobileharness.fe.v6.service.grpc.FeGrpcInvoker;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceServiceGrpc;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHealthinessStatsRequest;
@@ -55,7 +55,7 @@ public final class DeviceServiceGrpcImpl extends DeviceServiceGrpc.DeviceService
   @Override
   public void getDeviceOverview(
       GetDeviceOverviewRequest request, StreamObserver<DeviceOverviewPageData> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::getDeviceOverview,
@@ -67,7 +67,7 @@ public final class DeviceServiceGrpcImpl extends DeviceServiceGrpc.DeviceService
   @Override
   public void getDeviceHealthinessStats(
       GetDeviceHealthinessStatsRequest request, StreamObserver<HealthinessStats> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::getDeviceHealthinessStats,
@@ -79,7 +79,7 @@ public final class DeviceServiceGrpcImpl extends DeviceServiceGrpc.DeviceService
   @Override
   public void getDeviceTestResultStats(
       GetDeviceTestResultStatsRequest request, StreamObserver<TestResultStats> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::getDeviceTestResultStats,
@@ -92,7 +92,7 @@ public final class DeviceServiceGrpcImpl extends DeviceServiceGrpc.DeviceService
   public void getDeviceRecoveryTaskStats(
       GetDeviceRecoveryTaskStatsRequest request,
       StreamObserver<RecoveryTaskStats> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::getDeviceRecoveryTaskStats,
@@ -104,7 +104,7 @@ public final class DeviceServiceGrpcImpl extends DeviceServiceGrpc.DeviceService
   @Override
   public void takeScreenshot(
       TakeScreenshotRequest request, StreamObserver<TakeScreenshotResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::takeScreenshot,
@@ -116,7 +116,7 @@ public final class DeviceServiceGrpcImpl extends DeviceServiceGrpc.DeviceService
   @Override
   public void getLogcat(
       GetLogcatRequest request, StreamObserver<GetLogcatResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::getLogcat,
@@ -128,7 +128,7 @@ public final class DeviceServiceGrpcImpl extends DeviceServiceGrpc.DeviceService
   @Override
   public void quarantineDevice(
       QuarantineDeviceRequest request, StreamObserver<QuarantineDeviceResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::quarantineDevice,
@@ -141,7 +141,7 @@ public final class DeviceServiceGrpcImpl extends DeviceServiceGrpc.DeviceService
   public void unquarantineDevice(
       UnquarantineDeviceRequest request,
       StreamObserver<UnquarantineDeviceResponse> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::unquarantineDevice,
@@ -153,7 +153,7 @@ public final class DeviceServiceGrpcImpl extends DeviceServiceGrpc.DeviceService
   @Override
   public void getTestbedConfig(
       GetTestbedConfigRequest request, StreamObserver<TestbedConfig> responseObserver) {
-    GrpcServiceUtil.invokeAsync(
+    FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
         logic::getTestbedConfig,
