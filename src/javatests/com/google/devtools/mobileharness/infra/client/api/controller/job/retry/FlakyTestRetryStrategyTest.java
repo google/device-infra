@@ -27,7 +27,6 @@ import com.google.devtools.common.metrics.stability.converter.ErrorModelConverte
 import com.google.devtools.common.metrics.stability.model.ErrorId;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionSummary;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
@@ -87,8 +86,7 @@ public class FlakyTestRetryStrategyTest {
   }
 
   @Test
-  public void decideRetryOnTestEnd_noRetry_noFlakyTestAttemptsParam()
-      throws MobileHarnessException, InterruptedException {
+  public void decideRetryOnTestEnd_noRetry_noFlakyTestAttemptsParam() throws Exception {
     TestInfo initAttempt = mockTestInfo("init_test_id", TestResult.FAIL);
     // No flaky_test_attempts param set, empty by default.
 
@@ -99,7 +97,7 @@ public class FlakyTestRetryStrategyTest {
 
   @Test
   public void decideRetryOnTestEnd_noRetry_invalidFlakyTestAttemptsParam_skipsRetry()
-      throws MobileHarnessException, InterruptedException {
+      throws Exception {
     TestInfo initAttempt = mockTestInfo("init_test_id", TestResult.FAIL);
     jobParams.add("flaky_test_attempts", "invalid");
 
@@ -110,7 +108,7 @@ public class FlakyTestRetryStrategyTest {
 
   @Test
   public void decideRetryOnTestEnd_noRetry_zeroFlakyTestAttemptsParam_skipsRetry()
-      throws MobileHarnessException, InterruptedException {
+      throws Exception {
     TestInfo initAttempt = mockTestInfo("init_test_id", TestResult.FAIL);
     jobParams.add("flaky_test_attempts", "0");
 
@@ -120,8 +118,7 @@ public class FlakyTestRetryStrategyTest {
   }
 
   @Test
-  public void decideRetryOnTestEnd_flakyRetry_limitReached()
-      throws MobileHarnessException, InterruptedException {
+  public void decideRetryOnTestEnd_flakyRetry_limitReached() throws Exception {
     TestInfo currentAttempt = mockTestInfo("attempt_id", TestResult.FAIL);
     currentAttempt.properties().add("flaky_attempt_index", "2");
     currentAttempt.properties().add("error_attempt_index", "0");
@@ -133,8 +130,7 @@ public class FlakyTestRetryStrategyTest {
   }
 
   @Test
-  public void decideRetryOnTestEnd_flakyRetry_retriesCorrectly()
-      throws MobileHarnessException, InterruptedException {
+  public void decideRetryOnTestEnd_flakyRetry_retriesCorrectly() throws Exception {
     TestInfo currentAttempt = mockTestInfo("attempt_id", TestResult.FAIL);
     jobParams.add("flaky_test_attempts", "3");
 
@@ -150,16 +146,15 @@ public class FlakyTestRetryStrategyTest {
   }
 
   @Test
-  public void decideRetryOnTestEnd_errorRetry_retriesCorrectly()
-      throws MobileHarnessException, InterruptedException {
+  public void decideRetryOnTestEnd_errorRetry_retriesCorrectly() throws Exception {
     TestInfo currentAttempt = mockTestInfo("attempt_id", TestResult.ERROR);
     currentAttempt.properties().add("flaky_attempt_index", "2");
     currentAttempt.properties().add("error_attempt_index", "0");
     jobParams.add("flaky_test_attempts", "3");
 
     // Mock other attempts returned by jobInfo.tests().getByName(...)
-    // To calculate errorAttempts inside getErrorAttemptsForCurrentFlakyTestIdx.
-    // It filters by TestResult.ERROR and FlakyTestIndex = 0.
+    // To calculate errorAttempts inside getErrorAttemptCountForCurrentFlakyAttemptIndex.
+    // It filters by TEST_RESULTS_OF_ERROR_ATTEMPTS and flaky_attempt_index = 2.
     // Only currentAttempt matches (since it is the only one in getByName), count = 1.
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(currentAttempt));
 
@@ -175,8 +170,7 @@ public class FlakyTestRetryStrategyTest {
   }
 
   @Test
-  public void decideRetryOnTestEnd_errorRetry_limitReached()
-      throws MobileHarnessException, InterruptedException {
+  public void decideRetryOnTestEnd_errorRetry_limitReached() throws Exception {
     TestInfo currentAttempt = mockTestInfo("attempt_id", TestResult.ERROR);
     currentAttempt.properties().add("flaky_attempt_index", "0");
     jobParams.add("flaky_test_attempts", "3");
@@ -194,8 +188,53 @@ public class FlakyTestRetryStrategyTest {
   }
 
   @Test
-  public void decideRetryOnTestEnd_flakyRetry_mergesProcessorProperties()
-      throws MobileHarnessException, InterruptedException {
+  public void decideRetryOnTestEnd_errorRetry_countsDifferentErrorResults() throws Exception {
+    TestInfo currentAttempt = mockTestInfo("attempt_id", TestResult.ERROR);
+    currentAttempt.properties().add("flaky_attempt_index", "0");
+    jobParams.add("flaky_test_attempts", "3");
+
+    TestInfo timeoutAttempt = mockTestInfo("timeout_attempt_id", TestResult.TIMEOUT);
+    timeoutAttempt.properties().add("flaky_attempt_index", "0");
+
+    // Mock two error-type attempts: TIMEOUT and ERROR. Both are in TEST_RESULTS_OF_ERROR_ATTEMPTS,
+    // so errorAttemptCount = 2, reaching MAX_ERROR_ATTEMPTS limit.
+    when(testInfos.getByName(TEST_NAME))
+        .thenReturn(ImmutableList.of(currentAttempt, timeoutAttempt));
+
+    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(currentAttempt);
+
+    assertThat(retryInfo).isEqualTo(RetryStrategy.NO_RETRY);
+  }
+
+  @Test
+  public void decideRetryOnTestEnd_errorRetry_ignoresAttemptsWithDifferentFlakyAttemptIndex()
+      throws Exception {
+    TestInfo errorAttempt = mockTestInfo("other_attempt_id", TestResult.ERROR);
+    errorAttempt.properties().add("flaky_attempt_index", "0");
+
+    TestInfo currentAttempt = mockTestInfo("attempt_id", TestResult.ERROR);
+    currentAttempt.properties().add("flaky_attempt_index", "1");
+    currentAttempt.properties().add("error_attempt_index", "0");
+    jobParams.add("flaky_test_attempts", "3");
+
+    // Mock two ERROR attempts with different flaky_attempt_index (0 and 1).
+    // getErrorAttemptCountForCurrentFlakyAttemptIndex should only count the attempt with
+    // flaky_attempt_index = 1.
+    when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(currentAttempt, errorAttempt));
+
+    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(currentAttempt);
+
+    assertThat(retryInfo)
+        .isEqualTo(
+            new RetryInfo(
+                Optional.of("TEST_ERROR"),
+                ImmutableMap.of(
+                    "error_attempt_index", "1",
+                    "flaky_attempt_index", "1")));
+  }
+
+  @Test
+  public void decideRetryOnTestEnd_flakyRetry_mergesProcessorProperties() throws Exception {
     TestInfo currentAttempt = mockTestInfo("attempt_id", TestResult.FAIL);
     jobParams.add("flaky_test_attempts", "3");
     when(testRetryProcessor.generateRetryTestTargetsProperty(currentAttempt))
@@ -214,8 +253,7 @@ public class FlakyTestRetryStrategyTest {
   }
 
   @Test
-  public void decideRetryOnTestEnd_errorRetry_mergesProcessorProperties()
-      throws MobileHarnessException, InterruptedException {
+  public void decideRetryOnTestEnd_errorRetry_mergesProcessorProperties() throws Exception {
     TestInfo currentAttempt = mockTestInfo("attempt_id", TestResult.ERROR);
     currentAttempt.properties().add("flaky_attempt_index", "2");
     currentAttempt.properties().add("error_attempt_index", "0");

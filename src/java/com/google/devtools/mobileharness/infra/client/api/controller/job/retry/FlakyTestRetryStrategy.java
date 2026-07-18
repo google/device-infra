@@ -110,7 +110,7 @@ public class FlakyTestRetryStrategy implements RetryStrategy {
       // Retry on other test results, including ERROR, TIMEOUT, UNKNOWN.
       int errorAttempts =
           getErrorAttemptCountForCurrentFlakyAttemptIndex(
-              currentTestInfo, testResult, currentFlakyAttemptIndex);
+              currentTestInfo, currentFlakyAttemptIndex);
       if (errorAttempts < MAX_ERROR_ATTEMPTS) {
         return new RetryInfo(
             Optional.of("TEST_" + testResult.name()),
@@ -132,10 +132,13 @@ public class FlakyTestRetryStrategy implements RetryStrategy {
   }
 
   private int getErrorAttemptCountForCurrentFlakyAttemptIndex(
-      TestInfo currentTestInfo, TestResult testResult, int currentFlakyAttemptsIndex) {
+      TestInfo currentTestInfo, int currentFlakyAttemptsIndex) {
     return (int)
         currentTestInfo.jobInfo().tests().getByName(currentTestInfo.locator().getName()).stream()
-            .filter(testInfo -> TEST_RESULTS_OF_ERROR_ATTEMPTS.contains(testResult))
+            .filter(
+                testInfo ->
+                    TEST_RESULTS_OF_ERROR_ATTEMPTS.contains(
+                        testInfo.resultWithCause().get().type()))
             .filter(
                 testInfo ->
                     testInfo.properties().getInt(TEST_PROP_FLAKY_ATTEMPT_INDEX).orElse(-1)
