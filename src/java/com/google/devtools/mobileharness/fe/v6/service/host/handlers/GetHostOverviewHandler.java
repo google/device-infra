@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.LabViewRequest;
+import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostLatestVersionProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostReleaseInfo;
@@ -136,6 +137,12 @@ public final class GetHostOverviewHandler {
                   labInfoResponse.getLabQueryResult().getLabView().getLabDataList().stream()
                       .map(LabData::getLabInfo)
                       .findFirst();
+
+              // A host is considered to exist iff it has a LabInfoService entry. Unknown hosts
+              // (no labInfo) surface as NOT_FOUND instead of an empty 200 response.
+              if (labInfoOpt.isEmpty()) {
+                throw FeServiceException.notFound(String.format("Host %s not found.", hostName));
+              }
 
               Optional<String> currentVersionOpt =
                   HostVersionUtil.resolveCurrentVersion(labInfoOpt, hostReleaseInfoOpt);

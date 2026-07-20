@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -39,6 +40,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
+import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostLatestVersionProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostReleaseInfo;
@@ -60,7 +62,9 @@ import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProt
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import io.grpc.Status;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -103,9 +107,11 @@ public final class GetHostOverviewHandlerTest {
     when(featureManagerFactory.create(any())).thenReturn(mockFeatureManager);
     when(mockFeatureManager.isLabServerReleaseFeatureEnabled()).thenReturn(true);
 
-    // Default empty responses
+    // A host that exists has a LabInfoService entry, so default to a present (minimal) LabInfo
+    // that models a real host. Tests that specifically exercise "host not found" override this
+    // with an empty response.
     when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
-        .thenReturn(immediateFuture(GetLabInfoResponse.getDefaultInstance()));
+        .thenReturn(immediateFuture(labInfoResponseWithHost()));
     when(hostAuxiliaryInfoProvider.getHostReleaseInfo(anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(Optional.empty()));
     when(hostAuxiliaryInfoProvider.getPassThroughFlags(anyString(), any(UniverseScope.class)))
@@ -116,7 +122,23 @@ public final class GetHostOverviewHandlerTest {
   }
 
   @Test
-  public void getHostOverview_noData_returnsUnknown() throws Exception {
+  public void getHostOverview_noLabInfo_throwsNotFound() {
+    // No LabInfoService entry for this host => the host does not exist.
+    when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
+        .thenReturn(immediateFuture(GetLabInfoResponse.getDefaultInstance()));
+
+    ExecutionException thrown =
+        assertThrows(
+            ExecutionException.class,
+            () -> getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE).get());
+
+    assertThat(thrown).hasCauseThat().isInstanceOf(FeServiceException.class);
+    assertThat(((FeServiceException) thrown.getCause()).getCode()).isEqualTo(Status.Code.NOT_FOUND);
+  }
+
+  @Test
+  public void getHostOverview_missingReleaseInfo_returnsUnknownDefaults() throws Exception {
+    // Has minimal LabInfoService entry, but no release info.
     ListenableFuture<HostOverviewPageData> result =
         getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE);
 
@@ -578,6 +600,16 @@ public final class GetHostOverviewHandlerTest {
 
     assertThat(overview.getCanUpgrade()).isFalse();
     verify(hostLatestVersionProvider, never()).getLatestVersion(any(), any());
+  }
+
+  private static GetLabInfoResponse labInfoResponseWithHost() {
+    return GetLabInfoResponse.newBuilder()
+        .setLabQueryResult(
+            LabQueryResult.newBuilder()
+                .setLabView(
+                    LabView.newBuilder()
+                        .addLabData(LabData.newBuilder().setLabInfo(LabInfo.getDefaultInstance()))))
+        .build();
   }
 
   private void mockLabInfoWithProperty(String key, String value) {
