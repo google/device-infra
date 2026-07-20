@@ -75,7 +75,6 @@ public class AndroidAdbShellDecorator extends LifecycleDecorator
 
   private AndroidAdbShellDecoratorSpec spec;
   private Duration syncCommandTimeout;
-  private boolean setUpSuccess;
 
   @Inject
   @VisibleForTesting
@@ -94,7 +93,6 @@ public class AndroidAdbShellDecorator extends LifecycleDecorator
   @Override
   protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
-    setUpSuccess = false;
     String deviceId = getDevice().getDeviceId();
     spec = testInfo.jobInfo().combinedSpec(this, deviceId);
     syncCommandTimeout = Duration.ofSeconds(spec.getAdbShellSyncCommandTimeoutSec());
@@ -115,7 +113,6 @@ public class AndroidAdbShellDecorator extends LifecycleDecorator
             testInfo,
             spec.getAdbShellIgnoreError(),
             syncCommandTimeout));
-    setUpSuccess = true;
   }
 
   @Override
@@ -123,7 +120,7 @@ public class AndroidAdbShellDecorator extends LifecycleDecorator
       throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
     try {
-      if (setUpSuccess) {
+      if (context.setupError().isEmpty()) {
         String deviceId = getDevice().getDeviceId();
         Iterable<String> commandsAfterTest =
             AndroidAdbShellSpec.parseCommands(spec.getAdbShellAfterTest());
