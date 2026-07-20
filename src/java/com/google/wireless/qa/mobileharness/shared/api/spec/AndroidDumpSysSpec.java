@@ -32,6 +32,11 @@ public final class AndroidDumpSysSpec {
               + " dumpsys log to the test log.")
   public static final String PARAM_LOG_TO_FILE = "log_to_file";
 
+  @ParamAnnotation(
+      required = false,
+      help = "Whether or not to run this decorator when a test passes. By default, it is true.")
+  public static final String PARAM_DUMPSYS_ON_PASS = "dumpsys_on_pass";
+
   public static final String PARAM_LOG_FILE_NAME_DEFAULT = "dumpsys.log";
   public static final String PARAM_DUMPSYS_TYPE_DEFAULT = "activity";
   public static final String PARAM_DUMPSYS_TYPE_NONE = "none";

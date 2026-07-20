@@ -31,7 +31,10 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.out.Result;
+import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.job.out.Warnings;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DumpSysType;
@@ -68,7 +71,9 @@ public final class AndroidDumpSysDecoratorTest {
   @Mock private Params params;
   @Mock private Warnings warnings;
   @Mock private Log log;
+  @Mock private Result result;
   @Mock private Api api;
+  @Mock private TestInfo rootTest;
 
   private static final String DEVICE_ID = "123456";
   private static final String GEN_DIR = "/var/www/tmp";
@@ -86,6 +91,12 @@ public final class AndroidDumpSysDecoratorTest {
     when(testInfo.log()).thenReturn(log);
     when(log.atInfo()).thenReturn(api);
     when(api.alsoTo(any(FluentLogger.class))).thenReturn(api);
+    when(testInfo.getRootTest()).thenReturn(rootTest);
+    when(rootTest.resultWithCause()).thenReturn(result);
+    when(testInfo.resultWithCause()).thenReturn(result);
+    when(result.get()).thenReturn(ResultTypeWithCause.create(TestResult.PASS, null));
+    when(params.getBool(AndroidDumpSysSpec.PARAM_DUMPSYS_ON_PASS, true)).thenReturn(true);
+
     decorator =
         new AndroidDumpSysDecorator(
             decoratedDriver, testInfo, systemStateManager, adbUtil, fileUtil);
@@ -299,6 +310,49 @@ public final class AndroidDumpSysDecoratorTest {
         .thenThrow(new RuntimeException("Params error"));
 
     assertThrows(RuntimeException.class, () -> decorator.run(testInfo));
+  }
+
+  @Test
+  public void run_skipOnPass_paramFalse() throws Exception {
+    mockBasicSetup(
+        false,
+        AndroidDumpSysSpec.PARAM_DUMPSYS_TYPE_DEFAULT,
+        AndroidDumpSysSpec.PARAM_DUMPSYS_SUFFIX_DEFAULT);
+    when(params.getBool(AndroidDumpSysSpec.PARAM_DUMPSYS_ON_PASS, true)).thenReturn(false);
+
+    decorator.run(testInfo);
+
+    verify(decoratedDriver).run(testInfo);
+    verify(adbUtil, never()).dumpSys(anyString(), any(DumpSysType.class), anyString());
+    verify(adbUtil, never()).dumpSys(anyString());
+  }
+
+  @Test
+  public void run_collectOnFail_paramFalse() throws Exception {
+    mockBasicSetup(
+        false,
+        AndroidDumpSysSpec.PARAM_DUMPSYS_TYPE_DEFAULT,
+        AndroidDumpSysSpec.PARAM_DUMPSYS_SUFFIX_DEFAULT);
+    when(params.getBool(AndroidDumpSysSpec.PARAM_DUMPSYS_ON_PASS, true)).thenReturn(false);
+    when(result.get())
+        .thenReturn(
+            ResultTypeWithCause.create(
+                TestResult.FAIL,
+                new MobileHarnessException(BasicErrorId.JOB_OR_TEST_RESULT_LEGACY_FAIL, "error")));
+    when(adbUtil.dumpSys(
+            eq(DEVICE_ID),
+            eq(DumpSysType.ACTIVITY),
+            eq(AndroidDumpSysSpec.PARAM_DUMPSYS_SUFFIX_DEFAULT)))
+        .thenReturn(DUMPSYS_LOG);
+
+    decorator.run(testInfo);
+
+    verify(decoratedDriver).run(testInfo);
+    verify(adbUtil)
+        .dumpSys(
+            eq(DEVICE_ID),
+            eq(DumpSysType.ACTIVITY),
+            eq(AndroidDumpSysSpec.PARAM_DUMPSYS_SUFFIX_DEFAULT));
   }
 
   private void mockBasicSetup(boolean logToFile, String dumpsysType, String dumpsysSuffix)

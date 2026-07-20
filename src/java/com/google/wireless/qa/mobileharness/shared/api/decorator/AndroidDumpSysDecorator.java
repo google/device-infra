@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DumpSysType;
@@ -125,6 +126,11 @@ public final class AndroidDumpSysDecorator extends LifecycleDecorator {
 
   @Override
   protected void tearDown(TestInfo testInfo) throws InterruptedException {
+    if (testInfo.getRootTest().resultWithCause().get().type() == TestResult.PASS
+        && !testInfo.jobInfo().params().getBool(AndroidDumpSysSpec.PARAM_DUMPSYS_ON_PASS, true)) {
+      testInfo.log().atInfo().alsoTo(logger).log("Skip dumpsys when test passed");
+      return;
+    }
     if (dumpSysCommands == null) {
       return;
     }

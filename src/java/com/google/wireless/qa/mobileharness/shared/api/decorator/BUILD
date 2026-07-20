@@ -1048,6 +1048,7 @@ java_library(
     name = "android_dump_sys_decorator",
     srcs = ["AndroidDumpSysDecorator.java"],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemstate",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
