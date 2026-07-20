@@ -25,7 +25,6 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
-import com.google.devtools.mobileharness.shared.util.auth.CredentialFileUtil;
 import com.google.devtools.mobileharness.shared.util.command.Timeout;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsUtil.GcsApiObject;
@@ -83,27 +82,6 @@ public class GcsFileManager {
 
   /** Caches of local file. */
   @VisibleForTesting final Cache<String, Path> localCache;
-
-  /**
-   * Creates a GCS file manager of {@code bucket}. The local cached in {@code homeDir} is cleaned
-   * automatically by GcsFileManager, DO NOT remove them during GcsFileManager is running.
-   *
-   * @param homeDir directory of local cache
-   * @param bucket name of bucket to manage
-   * @deprecated Please use the 3-parameter constructor {@link #GcsFileManager(Path, String,
-   *     GcsUtil.CredentialType)} instead.
-   */
-  @Deprecated
-  public GcsFileManager(Path homeDir, String bucket)
-      throws MobileHarnessException, InterruptedException {
-    this(
-        homeDir,
-        bucket,
-        CredentialFileUtil.getDefaultGcsCredentialFile().isPresent()
-            ? GcsUtil.CredentialType.ofCredentialFile(
-                CredentialFileUtil.getDefaultGcsCredentialFile().get())
-            : GcsUtil.CredentialType.ofAppDefault());
-  }
 
   /**
    * Creates an instance to manage a specified bucket with the specified credential type.
