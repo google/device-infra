@@ -12,14 +12,15 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
 import {Title} from '@angular/platform-browser';
 import {ActivatedRoute, RouterModule} from '@angular/router';
+import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
 import {combineLatest, Observable, of, ReplaySubject} from 'rxjs';
 import {catchError, map, switchMap, takeUntil, tap} from 'rxjs/operators';
-import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
 
 import {HostOverviewPageData} from '../../core/models/host_overview';
 import {HOST_SERVICE} from '../../core/services/host/host_service';
-import {SnackBarService} from '../../shared/services/snackbar_service';
 import {ClipboardService} from '../../shared/services/clipboard_service';
+import {SnackBarService} from '../../shared/services/snackbar_service';
+import {getErrorMessage} from '../../shared/utils/error_utils';
 import {HostActionBar} from './components/host_action_bar/host_action_bar';
 import {HostOverviewPage} from './components/host_overview/host_overview';
 
@@ -73,7 +74,9 @@ export class HostDetail implements OnInit, OnDestroy {
 
   readonly hostPageData$: Observable<HostPageData> = this.route.paramMap.pipe(
     map((params) => params.get('hostName')),
-    tap(() => { this.loadingService.show(); }),
+    tap(() => {
+      this.loadingService.show();
+    }),
     switchMap((hostName: string | null) => {
       if (!hostName) {
         this.loadingService.hide();
@@ -91,7 +94,7 @@ export class HostDetail implements OnInit, OnDestroy {
           console.error(`Error fetching host ${hostName}:`, err);
           return of<HostPageData>({
             hostOverviewPageData: null,
-            error: `Failed to load host data for host: ${hostName}. ${err.message || ''}`,
+            error: `Failed to load host data for host: ${hostName}. ${getErrorMessage(err)}`,
           });
         }),
         tap(() => {

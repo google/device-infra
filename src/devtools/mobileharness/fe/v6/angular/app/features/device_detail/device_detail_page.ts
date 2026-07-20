@@ -26,6 +26,7 @@ import {EnvUniverseService} from '../../core/services/env_universe_service';
 import {NavLink} from '../../shared/components/nav_link/nav_link';
 import {ClipboardService} from '../../shared/services/clipboard_service';
 import {SnackBarService} from '../../shared/services/snackbar_service';
+import {getErrorMessage} from '../../shared/utils/error_utils';
 import {DeviceActionBar} from './components/device_action_bar/device_action_bar';
 import {DeviceOverviewTab} from './components/device_overview_tab/device_overview_tab';
 import {HealthStatisticTab} from './components/health_statistic_tab/health_statistic_tab';
@@ -135,9 +136,7 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
               console.error(`Error fetching device ${id}:`, err);
               return of<DevicePageData>({
                 pageData: null,
-                error: `Failed to load device data for ID: ${id}. ${
-                  err.message || ''
-                }`,
+                error: `Failed to load device data for ID: ${id}. ${getErrorMessage(err)}`,
               });
             }),
             tap(() => {
