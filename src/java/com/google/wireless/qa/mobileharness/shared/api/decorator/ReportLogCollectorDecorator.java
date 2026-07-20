@@ -23,6 +23,8 @@ import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.util.ReportLogCollectorUtil;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -60,7 +62,8 @@ public class ReportLogCollectorDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected void setUp(TestInfo testInfo) throws InterruptedException {
+  protected void setUp(SetupContext context) throws InterruptedException {
+    TestInfo testInfo = context.testInfo();
     try {
       ReportLogCollectorDecoratorSpec spec =
           testInfo.jobInfo().combinedSpec(this, getDevice().getDeviceId());
@@ -81,7 +84,8 @@ public class ReportLogCollectorDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected void tearDown(TestInfo testInfo) throws InterruptedException {
+  protected void tearDown(TeardownContext context) throws InterruptedException {
+    TestInfo testInfo = context.testInfo();
 
     try {
       ReportLogCollectorDecoratorSpec spec =

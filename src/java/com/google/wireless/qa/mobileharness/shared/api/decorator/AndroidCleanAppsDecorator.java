@@ -39,6 +39,8 @@ import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.android.WifiUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidCleanAppsSpec;
@@ -112,7 +114,8 @@ public class AndroidCleanAppsDecorator extends LifecycleDecorator implements And
   }
 
   @Override
-  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     Log testLog = testInfo.log();
     JobInfo jobInfo = testInfo.jobInfo();
     Params params = jobInfo.params();
@@ -183,7 +186,8 @@ public class AndroidCleanAppsDecorator extends LifecycleDecorator implements And
   }
 
   @Override
-  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {}
+  protected void tearDown(TeardownContext context)
+      throws MobileHarnessException, InterruptedException {}
 
   /** Cleans data of system apps that are being tested. */
   private void cleanApps(List<String> packagesToKeep, TestInfo testInfo)

@@ -31,6 +31,8 @@ import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidDumpSysSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -118,14 +120,16 @@ public final class AndroidDumpSysDecorator extends LifecycleDecorator {
   }
 
   @Override
-  protected void setUp(TestInfo testInfo) {
+  protected void setUp(SetupContext context) {
+    TestInfo testInfo = context.testInfo();
     JobInfo jobInfo = testInfo.jobInfo();
     logToFile = jobInfo.params().isTrue(AndroidDumpSysSpec.PARAM_LOG_TO_FILE);
     dumpSysCommands = makeDumpSysCommands(jobInfo);
   }
 
   @Override
-  protected void tearDown(TestInfo testInfo) throws InterruptedException {
+  protected void tearDown(TeardownContext context) throws InterruptedException {
+    TestInfo testInfo = context.testInfo();
     if (testInfo.getRootTest().resultWithCause().get().type() == TestResult.PASS
         && !testInfo.jobInfo().params().getBool(AndroidDumpSysSpec.PARAM_DUMPSYS_ON_PASS, true)) {
       testInfo.log().atInfo().alsoTo(logger).log("Skip dumpsys when test passed");

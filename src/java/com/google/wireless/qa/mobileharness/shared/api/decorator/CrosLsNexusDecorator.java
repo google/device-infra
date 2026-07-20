@@ -25,6 +25,8 @@ import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.nio.file.Files;
@@ -82,13 +84,13 @@ public class CrosLsNexusDecorator extends CrosBaseDecorator {
    *   <li>Stores the service address in the test properties for other tools to use.
    * </ol>
    *
-   * @param testInfo the context of the current test, used to store the LSNexus service address as a
-   *     test property
+   * @param context the context containing setup metadata
    * @throws MobileHarnessException if there is an error during service creation or initialization.
    * @throws InterruptedException if the thread is interrupted during service startup.
    */
   @Override
-  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     testInfo
         .log()
         .atInfo()
@@ -119,7 +121,8 @@ public class CrosLsNexusDecorator extends CrosBaseDecorator {
    * @param testInfo the context of the current test, used for logging service shutdown messages
    */
   @Override
-  protected void cleanUp(TestInfo testInfo) {
+  protected void cleanUp(TeardownContext context) {
+    TestInfo testInfo = context.testInfo();
     for (Map.Entry<Integer, CommandProcess> entry : lsnexusServices.entrySet()) {
       final int port = entry.getKey();
       final CommandProcess process = entry.getValue();

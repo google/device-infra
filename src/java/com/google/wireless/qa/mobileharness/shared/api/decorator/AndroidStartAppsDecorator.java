@@ -26,6 +26,8 @@ import com.google.gson.reflect.TypeToken;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
@@ -82,7 +84,8 @@ public class AndroidStartAppsDecorator extends LifecycleDecorator {
   }
 
   @Override
-  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     Instant startTime = clock.instant();
 
     JobInfo jobInfo = testInfo.jobInfo();
@@ -122,7 +125,8 @@ public class AndroidStartAppsDecorator extends LifecycleDecorator {
   }
 
   @Override
-  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {}
+  protected void tearDown(TeardownContext context)
+      throws MobileHarnessException, InterruptedException {}
 
   /** Sends the progress report message. */
   private void sendProgressReportMessage(TestInfo testInfo, String progress) {

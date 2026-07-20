@@ -31,6 +31,8 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidBugreportSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -106,7 +108,8 @@ public class AndroidBugreportDecorator extends LifecycleDecorator implements And
   }
 
   @Override
-  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     String serial = getDevice().getDeviceId();
     JobInfo jobInfo = testInfo.jobInfo();
     if (jobInfo.params().getBool(PARAM_NO_AUTO_RESET, false)) {
@@ -205,7 +208,9 @@ public class AndroidBugreportDecorator extends LifecycleDecorator implements And
   }
 
   @Override
-  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void tearDown(TeardownContext context)
+      throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     JobInfo jobInfo = testInfo.jobInfo();
     String deviceId = getDevice().getDeviceId();
     try {

@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidRemoteProvisioningUtil;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -75,7 +76,7 @@ public class ReportIntegrityCollectorDecoratorTest {
                 "instance1", "csr1_bytes".getBytes(UTF_8),
                 "instance2", "csr2_bytes".getBytes(UTF_8)));
 
-    decorator.setUp(testInfo);
+    decorator.setUp(SetupContext.create(testInfo));
 
     assertThat(testInfo.properties().get("cts:build_vb_meta_digest"))
         .isEqualTo("vbmeta_digest_value");
@@ -93,7 +94,8 @@ public class ReportIntegrityCollectorDecoratorTest {
                 AndroidErrorId.ANDROID_ADB_UTIL_GET_DEVICE_PROPERTY_ERROR,
                 "Failed to get property"));
 
-    assertThrows(MobileHarnessException.class, () -> decorator.setUp(testInfo));
+    assertThrows(
+        MobileHarnessException.class, () -> decorator.setUp(SetupContext.create(testInfo)));
   }
 
   @Test
@@ -106,7 +108,7 @@ public class ReportIntegrityCollectorDecoratorTest {
                 AndroidErrorId.ANDROID_REPORT_INTEGRITY_DECORATOR_CSR_DECODE_ERROR,
                 "Failed to get CSR"));
 
-    decorator.setUp(testInfo);
+    decorator.setUp(SetupContext.create(testInfo));
 
     assertThat(testInfo.properties().get("cts:build_vb_meta_digest"))
         .isEqualTo("vbmeta_digest_value");

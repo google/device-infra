@@ -22,6 +22,8 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.StepAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.step.android.InstallApkStep;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
@@ -64,7 +66,8 @@ public class AndroidInstallAppsDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     Instant startTime = Instant.now();
     // Installs APKs.
     sendProgressReportMessage(testInfo, "Install apks");
@@ -81,7 +84,9 @@ public class AndroidInstallAppsDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void tearDown(TeardownContext context)
+      throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     if (spec != null && packagesOfInstalledApks != null) {
       postRun(spec, testInfo, packagesOfInstalledApks);
     }

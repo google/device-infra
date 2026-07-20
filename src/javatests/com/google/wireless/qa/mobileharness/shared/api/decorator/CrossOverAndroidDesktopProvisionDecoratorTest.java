@@ -22,6 +22,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.flogger.FluentLogger;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -62,7 +63,7 @@ public class CrossOverAndroidDesktopProvisionDecoratorTest {
 
   @Test
   public void prepare_success_logsMessage() throws Exception {
-    decorator.setUp(testInfo);
+    decorator.setUp(SetupContext.create(testInfo));
 
     verify(atInfo)
         .log(

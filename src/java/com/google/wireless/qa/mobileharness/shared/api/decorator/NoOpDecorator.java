@@ -21,6 +21,8 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -37,10 +39,12 @@ public class NoOpDecorator extends LifecycleDecorator implements SpecConfigable<
   }
 
   @Override
-  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {}
+  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {}
 
   @Override
-  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void tearDown(TeardownContext context)
+      throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     NoOpDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this);
     if (spec.hasExpectedResultBeforePostRun()) {
       // Checks if expected result is matched.

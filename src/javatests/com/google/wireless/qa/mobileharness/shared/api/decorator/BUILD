@@ -81,6 +81,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:python_version_check_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:report_integrity_collector_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:report_log_collector_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:lifecycle_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/util:step_skippable_lifecycle_decorator_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_device",

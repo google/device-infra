@@ -32,6 +32,8 @@ import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.util.StepSkippableLifecycleDecoratorUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -130,7 +132,7 @@ public final class AndroidAtsDynamicConfigPusherDecoratorTest {
     files.add(configFile);
     when(localFileUtil.listFiles(any(), eq(true))).thenReturn(files);
 
-    decorator.skippableSetUp(testInfo);
+    decorator.skippableSetUp(SetupContext.create(testInfo));
 
     verify(androidFileUtil).push(eq("device_id"), anyInt(), any(), any());
     verify(apkInstaller).installApkIfNotExist(eq(device), any(), any());
@@ -166,7 +168,7 @@ public final class AndroidAtsDynamicConfigPusherDecoratorTest {
         "content_provider",
         "content_provider_pkg");
 
-    decorator.skippableTearDown(testInfo);
+    decorator.skippableTearDown(TeardownContext.create(testInfo, null, null));
 
     verify(androidFileUtil).removeFiles("device_id", "device_path");
     verify(apkInstaller).uninstallApk(eq(device), eq("content_provider_pkg"), eq(true), any());
@@ -188,7 +190,9 @@ public final class AndroidAtsDynamicConfigPusherDecoratorTest {
         .thenReturn(spec);
 
     MobileHarnessException exception =
-        assertThrows(MobileHarnessException.class, () -> decorator.skippableSetUp(testInfo));
+        assertThrows(
+            MobileHarnessException.class,
+            () -> decorator.skippableSetUp(SetupContext.create(testInfo)));
     assertThat(exception).hasMessageThat().contains("Fail to find 'cts.dynamic' in tradefed jar");
   }
 
@@ -221,7 +225,7 @@ public final class AndroidAtsDynamicConfigPusherDecoratorTest {
     files.add(configFile);
     when(localFileUtil.listFiles(any(), eq(true))).thenReturn(files);
 
-    decorator.skippableSetUp(testInfo);
+    decorator.skippableSetUp(SetupContext.create(testInfo));
 
     verify(androidFileUtil).push(eq("device_id"), anyInt(), any(), any());
   }

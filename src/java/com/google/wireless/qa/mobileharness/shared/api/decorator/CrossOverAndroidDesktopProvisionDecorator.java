@@ -19,6 +19,8 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import javax.inject.Inject;
@@ -34,7 +36,8 @@ public class CrossOverAndroidDesktopProvisionDecorator extends CrosBaseDecorator
   }
 
   @Override
-  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     testInfo
         .log()
         .atInfo()
@@ -45,7 +48,8 @@ public class CrossOverAndroidDesktopProvisionDecorator extends CrosBaseDecorator
   }
 
   @Override
-  protected void cleanUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void cleanUp(TeardownContext context)
+      throws MobileHarnessException, InterruptedException {
     // Do nothing for now.
   }
 }

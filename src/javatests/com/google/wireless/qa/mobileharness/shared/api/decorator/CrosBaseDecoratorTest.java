@@ -32,6 +32,8 @@ import static org.mockito.Mockito.when;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -71,12 +73,13 @@ public class CrosBaseDecoratorTest {
     }
 
     @Override
-    protected void setUp(TestInfo testInfo) throws MobileHarnessException {
+    protected void setUp(SetupContext context) throws MobileHarnessException {
       // Do nothing.
     }
 
     @Override
-    protected void cleanUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    protected void cleanUp(TeardownContext context)
+        throws MobileHarnessException, InterruptedException {
       // Do nothing.
     }
   }
@@ -99,9 +102,9 @@ public class CrosBaseDecoratorTest {
   public void run_successfulExecution_callsPrepareRunAndTearDown() throws Exception {
     decorator.run(testInfo);
 
-    verify(decorator).setUp(testInfo);
+    verify(decorator).setUp(any(SetupContext.class));
     verify(decoratedDriver).run(testInfo);
-    verify(decorator).cleanUp(testInfo);
+    verify(decorator).cleanUp(any(TeardownContext.class));
   }
 
   @Test
@@ -112,33 +115,33 @@ public class CrosBaseDecoratorTest {
 
     assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
 
-    verify(decorator).setUp(testInfo);
+    verify(decorator).setUp(any(SetupContext.class));
     verify(decoratedDriver).run(testInfo);
-    verify(decorator).cleanUp(testInfo);
+    verify(decorator).cleanUp(any(TeardownContext.class));
   }
 
   @Test
   public void run_prepareThrowsException_callsCleanUpAndDoesNotCallRun() throws Exception {
     doThrow(new MobileHarnessException(BasicErrorId.NON_MH_EXCEPTION, "test"))
         .when(decorator)
-        .setUp(testInfo);
+        .setUp(any(SetupContext.class));
 
     assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
 
-    verify(decorator).setUp(testInfo);
-    verify(decorator).cleanUp(testInfo);
+    verify(decorator).setUp(any(SetupContext.class));
+    verify(decorator).cleanUp(any(TeardownContext.class));
     verify(decoratedDriver, never()).run(testInfo);
   }
 
   @Test
   public void run_tearDownThrowsInterruptedException_propagatesException() throws Exception {
-    doThrow(new InterruptedException("test")).when(decorator).cleanUp(testInfo);
+    doThrow(new InterruptedException("test")).when(decorator).cleanUp(any(TeardownContext.class));
 
     assertThrows(InterruptedException.class, () -> decorator.run(testInfo));
 
-    verify(decorator).setUp(testInfo);
+    verify(decorator).setUp(any(SetupContext.class));
     verify(decoratedDriver).run(testInfo);
-    verify(decorator).cleanUp(testInfo);
+    verify(decorator).cleanUp(any(TeardownContext.class));
     verify(testLogger, never()).atWarning();
   }
 
@@ -149,13 +152,13 @@ public class CrosBaseDecoratorTest {
             new MobileHarnessException(
                 BasicErrorId.NON_MH_EXCEPTION, "test", new InterruptedException("test")))
         .when(decorator)
-        .cleanUp(testInfo);
+        .cleanUp(any(TeardownContext.class));
 
     decorator.run(testInfo);
 
-    verify(decorator).setUp(testInfo);
+    verify(decorator).setUp(any(SetupContext.class));
     verify(decoratedDriver).run(testInfo);
-    verify(decorator).cleanUp(testInfo);
+    verify(decorator).cleanUp(any(TeardownContext.class));
     verify(testLogger).atWarning();
   }
 
@@ -167,9 +170,9 @@ public class CrosBaseDecoratorTest {
 
     assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
 
-    verify(decorator).setUp(testInfo);
+    verify(decorator).setUp(any(SetupContext.class));
     verify(decoratedDriver).run(testInfo);
-    verify(decorator).cleanUp(testInfo);
+    verify(decorator).cleanUp(any(TeardownContext.class));
   }
 
   @Test
@@ -178,16 +181,16 @@ public class CrosBaseDecoratorTest {
         new MobileHarnessException(BasicErrorId.NON_MH_EXCEPTION, "driver_exception");
     InterruptedException tearDownException = new InterruptedException("teardown_exception");
     doThrow(driverException).when(decoratedDriver).run(testInfo);
-    doThrow(tearDownException).when(decorator).cleanUp(testInfo);
+    doThrow(tearDownException).when(decorator).cleanUp(any(TeardownContext.class));
 
     MobileHarnessException e =
         assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
     assertThat(e).isEqualTo(driverException);
     assertThat(Arrays.asList(e.getSuppressed())).containsExactly(tearDownException);
 
-    verify(decorator).setUp(testInfo);
+    verify(decorator).setUp(any(SetupContext.class));
     verify(decoratedDriver).run(testInfo);
-    verify(decorator).cleanUp(testInfo);
+    verify(decorator).cleanUp(any(TeardownContext.class));
   }
 
   @Test
@@ -197,15 +200,15 @@ public class CrosBaseDecoratorTest {
     MobileHarnessException tearDownException =
         new MobileHarnessException(BasicErrorId.NON_MH_EXCEPTION, "teardown_exception");
     doThrow(driverException).when(decoratedDriver).run(testInfo);
-    doThrow(tearDownException).when(decorator).cleanUp(testInfo);
+    doThrow(tearDownException).when(decorator).cleanUp(any(TeardownContext.class));
 
     MobileHarnessException e =
         assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
     assertThat(e).isEqualTo(driverException);
 
-    verify(decorator).setUp(testInfo);
+    verify(decorator).setUp(any(SetupContext.class));
     verify(decoratedDriver).run(testInfo);
-    verify(decorator).cleanUp(testInfo);
+    verify(decorator).cleanUp(any(TeardownContext.class));
     verify(testLogger).atWarning();
   }
 

@@ -28,6 +28,8 @@ import com.google.devtools.mobileharness.shared.util.command.linecallback.ScanSi
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -74,7 +76,8 @@ public class AndroidShowInstructionDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected void setUp(TestInfo testInfo) throws InterruptedException, MobileHarnessException {
+  protected void setUp(SetupContext context) throws InterruptedException, MobileHarnessException {
+    TestInfo testInfo = context.testInfo();
     String serial = getDevice().getDeviceId();
     AndroidShowInstructionDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this, serial);
 
@@ -93,7 +96,8 @@ public class AndroidShowInstructionDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {}
+  protected void tearDown(TeardownContext context)
+      throws MobileHarnessException, InterruptedException {}
 
   private void showInstruction(String serial, AndroidShowInstructionDecoratorSpec spec)
       throws MobileHarnessException, InterruptedException {

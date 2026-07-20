@@ -32,6 +32,8 @@ import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidFilePusherSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -86,7 +88,8 @@ public class AndroidFilePusherDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     String deviceId = getDevice().getDeviceId();
     JobInfo jobInfo = testInfo.jobInfo();
     Map<String, String> files =
@@ -206,7 +209,8 @@ public class AndroidFilePusherDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {}
+  protected void tearDown(TeardownContext context)
+      throws MobileHarnessException, InterruptedException {}
 
   private boolean isPushFailedWithTimeout(MobileHarnessException e) {
     Throwable cause = e;

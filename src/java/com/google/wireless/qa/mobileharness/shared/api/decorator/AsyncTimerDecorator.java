@@ -20,6 +20,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.Timer;
@@ -36,8 +38,9 @@ public abstract class AsyncTimerDecorator extends LifecycleDecorator {
   }
 
   @Override
-  protected void setUp(final TestInfo testInfo)
+  protected void setUp(final SetupContext context)
       throws MobileHarnessException, InterruptedException {
+    final TestInfo testInfo = context.testInfo();
     logger.atInfo().log("Started");
     onStart(testInfo);
     timer =
@@ -72,7 +75,9 @@ public abstract class AsyncTimerDecorator extends LifecycleDecorator {
   }
 
   @Override
-  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void tearDown(TeardownContext context)
+      throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     if (timer != null) {
       timer.cancel();
       timer.purge();

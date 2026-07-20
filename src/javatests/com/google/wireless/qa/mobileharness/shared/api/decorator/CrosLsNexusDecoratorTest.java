@@ -42,6 +42,8 @@ import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -132,7 +134,7 @@ public class CrosLsNexusDecoratorTest {
   public void prepare_success_startsServiceWithCorrectCommand() throws Exception {
     doReturn(SERVICE_PORT).when(decorator).readPortFromLsNexusService(any(), any(), any(), any());
 
-    decorator.setUp(testInfo);
+    decorator.setUp(SetupContext.create(testInfo));
 
     var commandCaptor = ArgumentCaptor.forClass(Command.class);
     verify(commandExecutor).start(commandCaptor.capture());
@@ -156,7 +158,7 @@ public class CrosLsNexusDecoratorTest {
   public void prepare_success_addsServiceAddressToTestProperties() throws Exception {
     doReturn(SERVICE_PORT).when(decorator).readPortFromLsNexusService(any(), any(), any(), any());
 
-    decorator.setUp(testInfo);
+    decorator.setUp(SetupContext.create(testInfo));
 
     verify(properties).add(LSNEXUS_PARAM_SUFFIX + DUT_NAME, SERVICE_HOSTNAME + ":" + SERVICE_PORT);
   }
@@ -167,7 +169,8 @@ public class CrosLsNexusDecoratorTest {
         .when(decorator)
         .readPortFromLsNexusService(any(), any(), any(), any());
 
-    assertThrows(MobileHarnessException.class, () -> decorator.setUp(testInfo));
+    assertThrows(
+        MobileHarnessException.class, () -> decorator.setUp(SetupContext.create(testInfo)));
   }
 
   @Test
@@ -266,15 +269,15 @@ public class CrosLsNexusDecoratorTest {
   @Test
   public void tearDown_success_stopsService() throws Exception {
     doReturn(SERVICE_PORT).when(decorator).readPortFromLsNexusService(any(), any(), any(), any());
-    decorator.setUp(testInfo);
-    decorator.tearDown(testInfo);
+    decorator.setUp(SetupContext.create(testInfo));
+    decorator.tearDown(TeardownContext.create(testInfo, null, null));
 
     verify(commandProcess).stop();
   }
 
   @Test
   public void tearDown_serviceNotStarted_doesNothing() throws Exception {
-    decorator.tearDown(testInfo);
+    decorator.tearDown(TeardownContext.create(testInfo, null, null));
 
     verify(commandProcess, never()).stop();
   }
@@ -283,10 +286,10 @@ public class CrosLsNexusDecoratorTest {
   public void tearDown_afterPrepare_isIdempotent() throws Exception {
     doReturn(SERVICE_PORT).when(decorator).readPortFromLsNexusService(any(), any(), any(), any());
     // Start the service once.
-    decorator.setUp(testInfo);
+    decorator.setUp(SetupContext.create(testInfo));
     // Call tearDown twice to ensure it is idempotent.
-    decorator.tearDown(testInfo);
-    decorator.tearDown(testInfo);
+    decorator.tearDown(TeardownContext.create(testInfo, null, null));
+    decorator.tearDown(TeardownContext.create(testInfo, null, null));
 
     // Verify that the stop method was called exactly once.
     verify(commandProcess).stop();

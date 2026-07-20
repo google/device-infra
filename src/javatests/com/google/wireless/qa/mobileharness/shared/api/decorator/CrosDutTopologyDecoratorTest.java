@@ -31,6 +31,8 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyTestSpec;
@@ -105,7 +107,7 @@ public class CrosDutTopologyDecoratorTest {
     when(commandExecutor.exec(any(Command.class))).thenReturn(commandResult);
 
     // Act
-    decorator.setUp(testInfo);
+    decorator.setUp(SetupContext.create(testInfo));
 
     // Assert
     ArgumentCaptor<Command> commandCaptor = ArgumentCaptor.forClass(Command.class);
@@ -142,7 +144,7 @@ public class CrosDutTopologyDecoratorTest {
         .thenThrow(new InterruptedException("interrupted"));
 
     // Act & Assert
-    assertThrows(InterruptedException.class, () -> decorator.setUp(testInfo));
+    assertThrows(InterruptedException.class, () -> decorator.setUp(SetupContext.create(testInfo)));
   }
 
   @Test
@@ -326,6 +328,6 @@ public class CrosDutTopologyDecoratorTest {
   public void tearDown_doesNothing() throws Exception {
     // Act & Assert
     // The method is empty, so no exception is expected.
-    decorator.tearDown(testInfo);
+    decorator.tearDown(TeardownContext.create(testInfo, null, null));
   }
 }

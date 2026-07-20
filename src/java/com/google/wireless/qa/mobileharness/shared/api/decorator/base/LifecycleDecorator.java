@@ -16,12 +16,15 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator.base;
 
+import com.google.auto.value.AutoValue;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.BaseDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import java.util.Optional;
+import javax.annotation.Nullable;
 
 /**
  * A generic base decorator class that provides native, framework-level enforcement of the setup and
@@ -30,10 +33,10 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
  * <pre>{@code
  * // Conceptual execution flow:
  * try {
- *   setUp(testInfo);              // Phase 1: Setup
- *   getDecorated().run(testInfo); // Phase 2: Decorated driver
+ *   setUp();                      // Phase 1: Setup
+ *   getDecorated().run();         // Phase 2: Decorated driver
  * } finally {
- *   tearDown(testInfo);           // Phase 3: Guaranteed cleanup (suppresses teardown error if setup or driver failed)
+ *   tearDown();                   // Phase 3: Guaranteed cleanup (suppresses teardown error if setup or driver failed)
  * }
  * }</pre>
  */
@@ -57,15 +60,15 @@ public abstract class LifecycleDecorator extends BaseDecorator {
    *   <li>If {@code setUp} completes successfully, execution proceeds to the decorated driver.
    *   <li>If {@code setUp} throws an exception (e.g., {@link MobileHarnessException} or {@link
    *       InterruptedException}), execution skips the decorated driver and proceeds directly to
-   *       {@link #tearDown(TestInfo)}. The exception thrown by {@code setUp} is preserved and
-   *       rethrown after cleanup.
+   *       {@link #tearDown(TeardownContext)}. The exception thrown by {@code setUp} is preserved
+   *       and rethrown after cleanup.
    * </ul>
    *
-   * @param testInfo information and context of the running test
+   * @param context the context containing setup metadata
    * @throws MobileHarnessException if setup fails due to a MobileHarness error
    * @throws InterruptedException if setup is interrupted
    */
-  protected abstract void setUp(TestInfo testInfo)
+  protected abstract void setUp(SetupContext context)
       throws MobileHarnessException, InterruptedException;
 
   /**
@@ -75,8 +78,8 @@ public abstract class LifecycleDecorator extends BaseDecorator {
    *
    * <ul>
    *   <li><b>Guaranteed Cleanup Execution:</b> Always executed in a {@code finally} block, ensuring
-   *       cleanup runs whether {@link #setUp(TestInfo)} succeeded, {@link #setUp(TestInfo)} failed,
-   *       or the decorated driver failed.
+   *       cleanup runs whether {@link #setUp(SetupContext)} succeeded, {@link #setUp(SetupContext)}
+   *       failed, or the decorated driver failed.
    *   <li><b>Idempotent Teardown Contract:</b> Subclasses must implement this method defensibly and
    *       idempotently (e.g., checking for non-null resources before cleanup), as it may be invoked
    *       when {@code setUp} only partially completed.
@@ -87,34 +90,53 @@ public abstract class LifecycleDecorator extends BaseDecorator {
    *       the caller.
    * </ul>
    *
-   * @param testInfo information and context of the running test
+   * @param context the context containing runtime error states
    * @throws MobileHarnessException if teardown fails due to a MobileHarness error
    * @throws InterruptedException if teardown is interrupted
    */
-  protected abstract void tearDown(TestInfo testInfo)
+  protected abstract void tearDown(TeardownContext context)
       throws MobileHarnessException, InterruptedException;
 
   @Override
   public final void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
-    Throwable primaryException = null;
+    boolean setUpSuccess = false;
+    Throwable setUpException = null;
+    Throwable decoratedException = null;
     try {
-      executePhase(testInfo, "setup", this::setUp, /* primaryException= */ null);
+      SetupContext setupContext = SetupContext.create(testInfo);
+      executePhase(testInfo, "setup", this::setUp, setupContext, /* primaryException= */ null);
+      setUpSuccess = true;
       getDecorated().run(testInfo);
     } catch (Throwable e) {
-      primaryException = e;
+      if (!setUpSuccess) {
+        setUpException = e;
+      } else {
+        decoratedException = e;
+      }
       throw e;
     } finally {
-      executePhase(testInfo, "teardown", this::tearDown, primaryException);
+      TeardownContext teardownContext =
+          TeardownContext.create(testInfo, setUpException, decoratedException);
+      executePhase(
+          testInfo,
+          "teardown",
+          this::tearDown,
+          teardownContext,
+          setUpException != null ? setUpException : decoratedException);
     }
   }
 
   @FunctionalInterface
-  private interface LifecyclePhase {
-    void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException;
+  private interface LifecyclePhase<T> {
+    void run(T context) throws MobileHarnessException, InterruptedException;
   }
 
-  private void executePhase(
-      TestInfo testInfo, String phaseName, LifecyclePhase phase, Throwable primaryException)
+  private <T> void executePhase(
+      TestInfo testInfo,
+      String phaseName,
+      LifecyclePhase<T> phase,
+      T context,
+      Throwable primaryException)
       throws MobileHarnessException, InterruptedException {
     testInfo
         .log()
@@ -123,7 +145,7 @@ public abstract class LifecycleDecorator extends BaseDecorator {
         .log("Decorator [%s] %s starting.", classSimpleName, phaseName);
     Throwable phaseError = null;
     try {
-      phase.run(testInfo);
+      phase.run(context);
     } catch (Throwable e) {
       phaseError = e;
       if (primaryException != null) {
@@ -149,5 +171,38 @@ public abstract class LifecycleDecorator extends BaseDecorator {
     return error == null
         ? ""
         : String.format(" with failure [%s]", MoreThrowables.shortDebugString(error));
+  }
+
+  /** Context containing metadata for the decorator setup phase. */
+  @AutoValue
+  public abstract static class SetupContext {
+    public abstract TestInfo testInfo();
+
+    public static SetupContext create(TestInfo testInfo) {
+      return new AutoValue_LifecycleDecorator_SetupContext(testInfo);
+    }
+  }
+
+  /** Context containing execution results and metadata for the decorator teardown phase. */
+  @AutoValue
+  public abstract static class TeardownContext {
+    public abstract TestInfo testInfo();
+
+    public abstract Optional<Throwable> setupError();
+
+    public abstract Optional<Throwable> decoratedError();
+
+    /**
+     * Gets the unique error that occurred during setup or execution. Returns empty if successful.
+     */
+    public final Optional<Throwable> setupOrDecoratedError() {
+      return setupError().or(() -> decoratedError());
+    }
+
+    public static TeardownContext create(
+        TestInfo testInfo, @Nullable Throwable setupError, @Nullable Throwable decoratedError) {
+      return new AutoValue_LifecycleDecorator_TeardownContext(
+          testInfo, Optional.ofNullable(setupError), Optional.ofNullable(decoratedError));
+    }
   }
 }

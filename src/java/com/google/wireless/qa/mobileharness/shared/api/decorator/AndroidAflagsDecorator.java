@@ -31,6 +31,8 @@ import com.google.devtools.mobileharness.platform.android.lightning.systemstate.
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -87,7 +89,8 @@ public class AndroidAflagsDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     String deviceId = getDevice().getDeviceId();
     AndroidAflagsDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this, deviceId);
 
@@ -162,7 +165,9 @@ public class AndroidAflagsDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void tearDown(TeardownContext context)
+      throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     if (!flagsToRestore.isEmpty()) {
       String deviceId = getDevice().getDeviceId();
       testInfo.log().atInfo().alsoTo(logger).log("Restoring aflags on device %s", deviceId);

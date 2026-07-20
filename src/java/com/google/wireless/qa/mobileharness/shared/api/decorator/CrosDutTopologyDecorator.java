@@ -24,6 +24,8 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -50,7 +52,8 @@ public class CrosDutTopologyDecorator extends CrosBaseDecorator {
   }
 
   @Override
-  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     testInfo
         .log()
         .atInfo()
@@ -71,7 +74,7 @@ public class CrosDutTopologyDecorator extends CrosBaseDecorator {
   }
 
   @Override
-  protected void cleanUp(TestInfo testInfo) {
+  protected void cleanUp(TeardownContext context) {
     // Do nothing.
   }
 

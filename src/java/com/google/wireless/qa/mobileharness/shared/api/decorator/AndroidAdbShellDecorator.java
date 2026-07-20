@@ -30,6 +30,8 @@ import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSys
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidAdbShellSpec;
@@ -90,7 +92,8 @@ public class AndroidAdbShellDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     setUpSuccess = false;
     String deviceId = getDevice().getDeviceId();
     spec = testInfo.jobInfo().combinedSpec(this, deviceId);
@@ -116,7 +119,9 @@ public class AndroidAdbShellDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void tearDown(TeardownContext context)
+      throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     try {
       if (setUpSuccess) {
         String deviceId = getDevice().getDeviceId();

@@ -90,10 +90,11 @@ public abstract class StepSkippableLifecycleDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected final void setUp(TestInfo testInfo)
+  protected final void setUp(SetupContext context)
       throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     if (shouldRunSetup()) {
-      skippableSetUp(testInfo);
+      skippableSetUp(context);
     } else {
       testInfo
           .log()
@@ -104,10 +105,11 @@ public abstract class StepSkippableLifecycleDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected final void tearDown(TestInfo testInfo)
+  protected final void tearDown(TeardownContext context)
       throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     if (shouldRunTeardown()) {
-      skippableTearDown(testInfo);
+      skippableTearDown(context);
     } else {
       testInfo
           .log()
@@ -118,11 +120,11 @@ public abstract class StepSkippableLifecycleDecorator extends LifecycleDecorator
   }
 
   /** Subclasses implement their setup logic here, which can be skipped. */
-  protected void skippableSetUp(TestInfo testInfo)
+  protected void skippableSetUp(SetupContext context)
       throws MobileHarnessException, InterruptedException {}
 
   /** Subclasses implement their teardown logic here, which can be skipped. */
-  protected void skippableTearDown(TestInfo testInfo)
+  protected void skippableTearDown(TeardownContext context)
       throws MobileHarnessException, InterruptedException {}
 
   /**

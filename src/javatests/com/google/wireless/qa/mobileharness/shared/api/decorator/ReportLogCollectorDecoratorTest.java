@@ -23,6 +23,8 @@ import static org.mockito.Mockito.when;
 
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -71,7 +73,7 @@ public class ReportLogCollectorDecoratorTest {
         ReportLogCollectorDecoratorSpec.newBuilder().setDestDir("dest_dir").build();
     when(jobInfo.combinedSpec(decorator, "device_id")).thenReturn(spec);
 
-    decorator.setUp(testInfo);
+    decorator.setUp(SetupContext.create(testInfo));
 
     verify(localFileUtil).prepareDir(eq(new File("/gen_file_dir/dest_dir").getAbsolutePath()));
   }
@@ -87,7 +89,7 @@ public class ReportLogCollectorDecoratorTest {
             .build();
     when(jobInfo.combinedSpec(decorator, "device_id")).thenReturn(spec);
 
-    decorator.tearDown(testInfo);
+    decorator.tearDown(TeardownContext.create(testInfo, null, null));
 
     verify(androidFileUtil).pull(eq("device_id"), eq("src_dir"), any());
   }
@@ -103,7 +105,7 @@ public class ReportLogCollectorDecoratorTest {
             .build();
     when(jobInfo.combinedSpec(decorator, "device_id")).thenReturn(spec);
 
-    decorator.tearDown(testInfo);
+    decorator.tearDown(TeardownContext.create(testInfo, null, null));
 
     verify(androidFileUtil)
         .pull(
@@ -122,7 +124,7 @@ public class ReportLogCollectorDecoratorTest {
             .build();
     when(jobInfo.combinedSpec(decorator, "device_id")).thenReturn(spec);
 
-    decorator.tearDown(testInfo);
+    decorator.tearDown(TeardownContext.create(testInfo, null, null));
 
     verify(localFileUtil).prepareDir(eq(new File("/gen_file_dir", "temp_dir").getAbsolutePath()));
   }
@@ -137,7 +139,7 @@ public class ReportLogCollectorDecoratorTest {
             .build();
     when(jobInfo.combinedSpec(decorator, "device_id")).thenReturn(spec);
 
-    decorator.tearDown(testInfo);
+    decorator.tearDown(TeardownContext.create(testInfo, null, null));
 
     verify(localFileUtil).prepareDir(eq(new File("/gen_file_dir/dest_dir").getAbsolutePath()));
   }

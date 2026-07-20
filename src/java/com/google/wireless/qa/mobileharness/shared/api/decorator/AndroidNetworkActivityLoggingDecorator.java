@@ -40,6 +40,8 @@ import com.google.devtools.omnilab.deviceadmin.proto.NetworkEvent;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.ExtensionRegistry;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -127,7 +129,8 @@ public class AndroidNetworkActivityLoggingDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected void setUp(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     spec = testInfo.jobInfo().combinedSpec(this, getDevice().getDeviceId());
 
     deviceAdminAvailable = checkDeviceAdminAvailability();
@@ -139,7 +142,9 @@ public class AndroidNetworkActivityLoggingDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void tearDown(TeardownContext context)
+      throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     if (deviceAdminAvailable) {
       triggerLogDump(testInfo);
       Path hostDumpFile = Path.of(testInfo.getTmpFileDir(), "network_events.dpb");

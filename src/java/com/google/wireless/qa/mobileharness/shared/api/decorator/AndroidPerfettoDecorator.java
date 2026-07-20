@@ -27,6 +27,8 @@ import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnot
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.StepAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.step.android.PerfettoStep;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -108,8 +110,8 @@ public class AndroidPerfettoDecorator extends LifecycleDecorator {
   }
 
   @Override
-  protected void setUp(final TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException {
+  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     String deviceId = getDevice().getDeviceId();
     JobInfo jobInfo = testInfo.jobInfo();
 
@@ -122,7 +124,9 @@ public class AndroidPerfettoDecorator extends LifecycleDecorator {
   }
 
   @Override
-  protected void tearDown(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void tearDown(TeardownContext context)
+      throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     String deviceId = getDevice().getDeviceId();
     if (Objects.equals(mode, AFTER_TEST_RUNNING_MODE)) {
       tearDownInAfterTestMode(testInfo, outputFile, deviceId);

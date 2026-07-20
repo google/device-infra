@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidS
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.time.CountDownTimer;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -158,7 +159,7 @@ public final class ApkPreconditionCheckDecoratorTest {
               return "instrumentation output";
             });
 
-    decorator.skippableSetUp(testInfo);
+    decorator.skippableSetUp(SetupContext.create(testInfo));
 
     verify(apkInstaller).uninstallApk(eq(device), eq(PACKAGE_NAME), eq(false), any());
     ArgumentCaptor<ApkInstallArgs> installArgsCaptor =
@@ -190,7 +191,9 @@ public final class ApkPreconditionCheckDecoratorTest {
   public void skippableSetUp_missingApk_throwsException() {
     specBuilder.clearApk();
     MobileHarnessException exception =
-        assertThrows(MobileHarnessException.class, () -> decorator.skippableSetUp(testInfo));
+        assertThrows(
+            MobileHarnessException.class,
+            () -> decorator.skippableSetUp(SetupContext.create(testInfo)));
     assertThat(exception.getErrorId())
         .isEqualTo(AndroidErrorId.ANDROID_APK_PRECONDITION_CHECK_DECORATOR_INVALID_PARAMETER);
   }
@@ -199,7 +202,9 @@ public final class ApkPreconditionCheckDecoratorTest {
   public void skippableSetUp_missingPackage_throwsException() {
     specBuilder.clearPackageName();
     MobileHarnessException exception =
-        assertThrows(MobileHarnessException.class, () -> decorator.skippableSetUp(testInfo));
+        assertThrows(
+            MobileHarnessException.class,
+            () -> decorator.skippableSetUp(SetupContext.create(testInfo)));
     assertThat(exception.getErrorId())
         .isEqualTo(AndroidErrorId.ANDROID_APK_PRECONDITION_CHECK_DECORATOR_INVALID_PARAMETER);
   }
@@ -208,7 +213,9 @@ public final class ApkPreconditionCheckDecoratorTest {
   public void skippableSetUp_missingXtsTestDir_throwsException() {
     specBuilder.clearXtsTestDir();
     MobileHarnessException exception =
-        assertThrows(MobileHarnessException.class, () -> decorator.skippableSetUp(testInfo));
+        assertThrows(
+            MobileHarnessException.class,
+            () -> decorator.skippableSetUp(SetupContext.create(testInfo)));
     assertThat(exception.getErrorId())
         .isEqualTo(AndroidErrorId.ANDROID_APK_PRECONDITION_CHECK_DECORATOR_INVALID_PARAMETER);
   }
@@ -220,7 +227,9 @@ public final class ApkPreconditionCheckDecoratorTest {
     when(localFileUtil.listFilePaths(XTS_TEST_DIR, true)).thenReturn(ImmutableList.of());
 
     MobileHarnessException exception =
-        assertThrows(MobileHarnessException.class, () -> decorator.skippableSetUp(testInfo));
+        assertThrows(
+            MobileHarnessException.class,
+            () -> decorator.skippableSetUp(SetupContext.create(testInfo)));
     assertThat(exception.getErrorId())
         .isEqualTo(AndroidErrorId.ANDROID_APK_PRECONDITION_CHECK_DECORATOR_APK_NOT_FOUND);
   }
@@ -251,7 +260,7 @@ public final class ApkPreconditionCheckDecoratorTest {
               return "instrumentation output";
             });
 
-    decorator.skippableSetUp(testInfo);
+    decorator.skippableSetUp(SetupContext.create(testInfo));
 
     ArgumentCaptor<ApkInstallArgs> installArgsCaptor =
         ArgumentCaptor.forClass(ApkInstallArgs.class);
@@ -294,7 +303,9 @@ public final class ApkPreconditionCheckDecoratorTest {
             });
 
     MobileHarnessException exception =
-        assertThrows(MobileHarnessException.class, () -> decorator.skippableSetUp(testInfo));
+        assertThrows(
+            MobileHarnessException.class,
+            () -> decorator.skippableSetUp(SetupContext.create(testInfo)));
     assertThat(exception.getErrorId())
         .isEqualTo(AndroidErrorId.ANDROID_APK_PRECONDITION_CHECK_DECORATOR_TEST_FAILURE);
     assertThat(exception).hasMessageThat().contains("Precondition check tests failed");
@@ -331,7 +342,9 @@ public final class ApkPreconditionCheckDecoratorTest {
             });
 
     MobileHarnessException exception =
-        assertThrows(MobileHarnessException.class, () -> decorator.skippableSetUp(testInfo));
+        assertThrows(
+            MobileHarnessException.class,
+            () -> decorator.skippableSetUp(SetupContext.create(testInfo)));
     assertThat(exception.getErrorId())
         .isEqualTo(AndroidErrorId.ANDROID_APK_PRECONDITION_CHECK_DECORATOR_TEST_FAILURE);
     assertThat(exception).hasMessageThat().contains("Instrumentation failed with error");

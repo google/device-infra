@@ -35,6 +35,8 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.gson.JsonSyntaxException;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.StepSkippableLifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -103,8 +105,9 @@ public class AndroidAtsDynamicConfigPusherDecorator extends StepSkippableLifecyc
   }
 
   @Override
-  protected void skippableSetUp(TestInfo testInfo)
+  protected void skippableSetUp(SetupContext context)
       throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     String deviceId = getDevice().getDeviceId();
     AndroidAtsDynamicConfigPusherDecoratorSpec spec =
         testInfo.jobInfo().combinedSpec(this, deviceId);
@@ -153,8 +156,9 @@ public class AndroidAtsDynamicConfigPusherDecorator extends StepSkippableLifecyc
   }
 
   @Override
-  protected void skippableTearDown(TestInfo testInfo)
+  protected void skippableTearDown(TeardownContext context)
       throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     String deviceId = getDevice().getDeviceId();
     AndroidAtsDynamicConfigPusherDecoratorSpec spec =
         testInfo.jobInfo().combinedSpec(this, deviceId);

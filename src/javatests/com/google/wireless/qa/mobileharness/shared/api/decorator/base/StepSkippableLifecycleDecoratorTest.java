@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator.base;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -25,6 +26,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -63,11 +66,11 @@ public final class StepSkippableLifecycleDecoratorTest {
     }
 
     @Override
-    protected void skippableSetUp(TestInfo testInfo)
+    protected void skippableSetUp(SetupContext context)
         throws MobileHarnessException, InterruptedException {}
 
     @Override
-    protected void skippableTearDown(TestInfo testInfo)
+    protected void skippableTearDown(TeardownContext context)
         throws MobileHarnessException, InterruptedException {}
   }
 
@@ -92,9 +95,9 @@ public final class StepSkippableLifecycleDecoratorTest {
     decorator.run(testInfo);
 
     InOrder inOrder = inOrder(decorator, decorated);
-    inOrder.verify(decorator).skippableSetUp(testInfo);
+    inOrder.verify(decorator).skippableSetUp(any(SetupContext.class));
     inOrder.verify(decorated).run(testInfo);
-    inOrder.verify(decorator).skippableTearDown(testInfo);
+    inOrder.verify(decorator).skippableTearDown(any(TeardownContext.class));
   }
 
   @Test
@@ -106,9 +109,9 @@ public final class StepSkippableLifecycleDecoratorTest {
 
     decorator.run(testInfo);
 
-    verify(decorator).skippableSetUp(testInfo);
+    verify(decorator).skippableSetUp(any(SetupContext.class));
     verify(decorated).run(testInfo);
-    verify(decorator, never()).skippableTearDown(testInfo);
+    verify(decorator, never()).skippableTearDown(any(TeardownContext.class));
   }
 
   @Test
@@ -120,9 +123,9 @@ public final class StepSkippableLifecycleDecoratorTest {
 
     decorator.run(testInfo);
 
-    verify(decorator, never()).skippableSetUp(testInfo);
+    verify(decorator, never()).skippableSetUp(any(SetupContext.class));
     verify(decorated).run(testInfo);
-    verify(decorator).skippableTearDown(testInfo);
+    verify(decorator).skippableTearDown(any(TeardownContext.class));
   }
 
   @Test
@@ -135,9 +138,9 @@ public final class StepSkippableLifecycleDecoratorTest {
     decorator.run(testInfo);
 
     InOrder inOrder = inOrder(decorator, decorated);
-    inOrder.verify(decorator).skippableSetUp(testInfo);
+    inOrder.verify(decorator).skippableSetUp(any(SetupContext.class));
     inOrder.verify(decorated).run(testInfo);
-    inOrder.verify(decorator).skippableTearDown(testInfo);
+    inOrder.verify(decorator).skippableTearDown(any(TeardownContext.class));
   }
 
   @Test

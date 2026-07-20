@@ -37,6 +37,8 @@ import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidS
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.time.CountDownTimer;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.util.StepSkippableLifecycleDecoratorUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -157,7 +159,7 @@ public final class DeviceInfoCollectorDecoratorTest {
               return "instrumentation output";
             });
 
-    decorator.skippableSetUp(testInfo);
+    decorator.skippableSetUp(SetupContext.create(testInfo));
 
     // Verify properties collected
     assertThat(testProperties.get("cts:build_abi")).isEqualTo("prop_value");
@@ -200,7 +202,9 @@ public final class DeviceInfoCollectorDecoratorTest {
   public void skippableSetUp_missingApk_throwsException() {
     specBuilder.clearApk();
     MobileHarnessException exception =
-        assertThrows(MobileHarnessException.class, () -> decorator.skippableSetUp(testInfo));
+        assertThrows(
+            MobileHarnessException.class,
+            () -> decorator.skippableSetUp(SetupContext.create(testInfo)));
     assertThat(exception.getErrorId())
         .isEqualTo(AndroidErrorId.ANDROID_DEVICE_INFO_COLLECTOR_DECORATOR_INVALID_PARAMETER);
   }
@@ -211,7 +215,7 @@ public final class DeviceInfoCollectorDecoratorTest {
     StepSkippableLifecycleDecoratorUtil.setState(
         jobInfo, DEVICE_ID, DeviceInfoCollectorDecorator.class.getName(), "installed", "true");
 
-    decorator.skippableTearDown(testInfo);
+    decorator.skippableTearDown(TeardownContext.create(testInfo, null, null));
 
     verify(apkInstaller).uninstallApk(eq(device), eq(PACKAGE_NAME), eq(false), any());
 

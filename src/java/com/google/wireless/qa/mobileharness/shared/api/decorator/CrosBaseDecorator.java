@@ -19,6 +19,7 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.CrosDecoratorSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -35,15 +36,15 @@ public abstract class CrosBaseDecorator extends LifecycleDecorator implements Cr
   }
 
   @Override
-  protected final void tearDown(TestInfo testInfo) throws InterruptedException {
+  protected final void tearDown(TeardownContext context) throws InterruptedException {
     try {
-      cleanUp(testInfo);
+      cleanUp(context);
     } catch (MobileHarnessException e) {
       getTest().log().atWarning().alsoTo(logger).withCause(e).log("Failed to tear down decorator.");
     }
   }
 
-  protected abstract void cleanUp(TestInfo testInfo)
+  protected abstract void cleanUp(TeardownContext context)
       throws MobileHarnessException, InterruptedException;
 
   protected String getInventoryServiceHostname() {
