@@ -314,12 +314,17 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
             mayPrepareDeviceAfterTest(needReboot);
           }
         } catch (MobileHarnessException e) {
-          // Need to quit the loop when it's draining; Otherwise, just log the warning.
-          if (e.getErrorId() != InfraErrorId.LAB_EXTERNAL_DEVICE_MANAGER_RESERVE_FAIL_WHEN_DRAIN) {
+          if (e.getErrorId() == InfraErrorId.LAB_EXTERNAL_DEVICE_MANAGER_DEVICE_UNAVAILABLE_IN_TF
+              || e.getErrorId()
+                  == InfraErrorId.LAB_EXTERNAL_DEVICE_MANAGER_RESERVE_RPC_DEADLINE_EXCEEDED
+              || e.getErrorId()
+                  == InfraErrorId.LAB_EXTERNAL_DEVICE_MANAGER_RESERVE_FAIL_WHEN_DRAIN) {
+            // Need to quit the loop for fatal errors or when it's draining.
+            throw e;
+          } else {
+            // Otherwise, just log the warning.
             logger.atWarning().withCause(e).log(
                 "Failed to reserve device %s or run test.", device.getDeviceId());
-          } else {
-            throw e;
           }
         } finally {
           device.info().properties().remove(DEVICE_PROPERTY_RESERVATION_ID);
