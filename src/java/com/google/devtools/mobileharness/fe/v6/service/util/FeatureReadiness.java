@@ -44,11 +44,11 @@ public class FeatureReadiness {
   }
 
   public boolean isHostDebugReady() {
-    return false;
+    return true;
   }
 
   public boolean isHostDecommissionReady() {
-    return false;
+    return true;
   }
 
   public boolean isDeviceDecommissionReady() {

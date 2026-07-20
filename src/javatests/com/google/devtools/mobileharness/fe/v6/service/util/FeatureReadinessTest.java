@@ -60,12 +60,12 @@ public final class FeatureReadinessTest {
 
   @Test
   public void isHostDebugReady_returnsFalse() {
-    assertThat(featureReadiness.isHostDebugReady()).isFalse();
+    assertThat(featureReadiness.isHostDebugReady()).isTrue();
   }
 
   @Test
   public void isHostDecommissionReady_returnsFalse() {
-    assertThat(featureReadiness.isHostDecommissionReady()).isFalse();
+    assertThat(featureReadiness.isHostDecommissionReady()).isTrue();
   }
 
   @Test
