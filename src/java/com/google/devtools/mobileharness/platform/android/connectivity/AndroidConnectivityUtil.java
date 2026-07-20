@@ -961,10 +961,10 @@ public class AndroidConnectivityUtil {
           return true;
         }
         logger.atInfo().log(
-            "Device %s connected to SSIDs [%s], but expected SSID is %s",
+            "Device %s connected to SSIDs %s, but expected SSID is %s",
             serial, currentSsidList, ssid);
         if (MASKED_SSID_SUPPORTED_MODELS.contains(
-            adbUtil.getProperty(serial, AndroidProperty.MODEL))) {
+            Ascii.toLowerCase(adbUtil.getProperty(serial, AndroidProperty.MODEL)))) {
           logger.atInfo().log("Masked SSID is supported for device %s", serial);
           return isSsidMatch(currentSsidList, ssid);
         }
