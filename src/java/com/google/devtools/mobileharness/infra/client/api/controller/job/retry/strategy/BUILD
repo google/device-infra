@@ -20,7 +20,7 @@ package(
     default_visibility = [
         "//java/com/google/devtools/mobileharness/service/devicerunclh/shared/protoconverter/v1:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/plugin:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client/api/controller/job/retry:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api/controller/job/retry/strategy:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api/plugin:__pkg__",
     ],
 )

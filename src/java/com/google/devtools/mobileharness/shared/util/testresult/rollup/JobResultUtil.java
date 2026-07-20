@@ -24,7 +24,7 @@ import com.google.common.collect.Multimaps;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
-import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.FlakyTestRetryConstants;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.strategy.FlakyTestRetryConstants;
 import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestSuiteResult;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;

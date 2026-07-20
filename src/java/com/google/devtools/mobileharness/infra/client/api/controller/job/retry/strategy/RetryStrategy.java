@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.client.api.controller.job.retry;
+package com.google.devtools.mobileharness.infra.client.api.controller.job.retry.strategy;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;

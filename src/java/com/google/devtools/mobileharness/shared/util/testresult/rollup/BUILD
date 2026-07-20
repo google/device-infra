@@ -37,7 +37,7 @@ java_library(
         "//src/devtools/mobileharness/platform/android/instrumentation/result/proto:test_suite_result_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job/retry:flaky_test_retry_constants",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job/retry/strategy:flaky_test_retry_constants",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",

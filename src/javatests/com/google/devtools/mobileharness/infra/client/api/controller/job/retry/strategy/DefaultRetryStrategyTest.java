@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.client.api.controller.job.retry;
+package com.google.devtools.mobileharness.infra.client.api.controller.job.retry.strategy;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.Mockito.mock;
@@ -37,7 +37,7 @@ import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWith
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
-import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.RetryStrategy.RetryInfo;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.strategy.RetryStrategy.RetryInfo;
 import com.google.devtools.mobileharness.infra.container.proto.ModeSettingProto.ContainerModePreference;
 import com.google.devtools.mobileharness.shared.util.time.CountDownTimer;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;

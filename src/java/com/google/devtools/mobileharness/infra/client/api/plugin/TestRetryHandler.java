@@ -27,11 +27,11 @@ import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWith
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
-import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.DefaultRetryStrategy;
-import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.FlakyTestRetryConstants;
-import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.FlakyTestRetryStrategy;
-import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.RetryStrategy;
-import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.RetryStrategy.RetryInfo;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.strategy.DefaultRetryStrategy;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.strategy.FlakyTestRetryConstants;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.strategy.FlakyTestRetryStrategy;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.strategy.RetryStrategy;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.strategy.RetryStrategy.RetryInfo;
 import com.google.devtools.mobileharness.infra.client.api.util.result.ClientAllocErrorUtil;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;

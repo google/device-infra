@@ -22,7 +22,7 @@ package(
 )
 
 java_library(
-    name = "retry",
+    name = "strategy",
     srcs = glob(["*.java"]),
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
@@ -33,8 +33,8 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/model:error_id",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job/retry",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job/retry/processor:test_retry_processor",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job/retry/strategy:retry",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:count_down_timer",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
@@ -52,5 +52,5 @@ junit_test_suites(
     sizes = [
         "small",
     ],
-    deps = [":retry"],
+    deps = [":strategy"],
 )

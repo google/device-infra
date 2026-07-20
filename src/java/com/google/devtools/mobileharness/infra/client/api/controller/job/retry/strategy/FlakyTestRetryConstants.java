@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.client.api.controller.job.retry;
+package com.google.devtools.mobileharness.infra.client.api.controller.job.retry.strategy;
 
 /** Constants used in flaky test retry. */
 public final class FlakyTestRetryConstants {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.client.api.controller.job.retry;
+package com.google.devtools.mobileharness.infra.client.api.controller.job.retry.strategy;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -30,8 +30,8 @@ import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.E
 import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
-import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.RetryStrategy.RetryInfo;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.processor.TestRetryProcessor;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.strategy.RetryStrategy.RetryInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
