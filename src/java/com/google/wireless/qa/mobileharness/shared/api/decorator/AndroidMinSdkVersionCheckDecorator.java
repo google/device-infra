@@ -21,6 +21,9 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -32,7 +35,7 @@ import javax.inject.Inject;
     help =
         "Decorator to skip the test if the device's SDK version is lower than the required"
             + " minSdkVersion.")
-public class AndroidMinSdkVersionCheckDecorator extends BaseDecorator
+public class AndroidMinSdkVersionCheckDecorator extends LifecycleDecorator
     implements SpecConfigable<AndroidMinSdkVersionCheckDecoratorSpec> {
 
   private final AndroidSystemSettingUtil androidSystemSettingUtil;
@@ -46,7 +49,8 @@ public class AndroidMinSdkVersionCheckDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     String deviceId = getDevice().getDeviceId();
     AndroidMinSdkVersionCheckDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this, deviceId);
     int minSdkVersion = spec.getMinSdkVersion();
@@ -60,10 +64,11 @@ public class AndroidMinSdkVersionCheckDecorator extends BaseDecorator
                   deviceId, androidSystemSettingUtil.getDeviceSdkVersion(deviceId), minSdkVersion));
       testInfo.resultWithCause().setNonPassing(TestResult.SKIP, error);
       testInfo.getRootTest().resultWithCause().setNonPassing(TestResult.SKIP, error);
-      // Skips later decorators and driver execution because it wants to skip the test. Don't throw
-      // the exception out so to avoid the test result being overridden as FAIL/ERROR later.
-    } else {
-      getDecorated().run(testInfo);
+      throw error;
     }
   }
+
+  @Override
+  protected void tearDown(TeardownContext context)
+      throws MobileHarnessException, InterruptedException {}
 }
