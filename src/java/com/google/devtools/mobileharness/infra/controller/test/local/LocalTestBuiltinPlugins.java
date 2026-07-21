@@ -62,6 +62,13 @@ class LocalTestBuiltinPlugins {
       builtinPluginsBuilder.add(
           PluginItem.create(
               createBuiltinPlugin(
+                  "com.google.devtools.mobileharness.infra.controller.test.util.atsjitemulatorlogpuller.AtsJitEmulatorLogPullerPlugin"),
+              EventScope.CLASS_INTERNAL));
+    }
+    if (isAtsFileServerUploaderEnabled(testInfo)) {
+      builtinPluginsBuilder.add(
+          PluginItem.create(
+              createBuiltinPlugin(
                   "com.google.devtools.mobileharness.infra.controller.test.util.atsfileserveruploader.AtsFileServerUploaderPlugin"),
               EventScope.CLASS_INTERNAL));
     }

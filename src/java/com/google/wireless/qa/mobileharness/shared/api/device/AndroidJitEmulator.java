@@ -283,6 +283,37 @@ public class AndroidJitEmulator extends AndroidDevice {
     }
   }
 
+  public void pullCvdLogs(TestInfo testInfo) {
+    if (Flags.noopJitEmulator.getNonNull()) {
+      logger.atInfo().log("JIT emulator %s is no-op, skipping log fetch.", deviceId);
+      return;
+    }
+    String propertyKey = "cvd_logs_fetched_" + deviceId;
+    if (testInfo.properties().getBoolean(propertyKey).orElse(false)) {
+      logger.atInfo().log("CVD logs already fetched for %s, skipping.", deviceId);
+      return;
+    }
+    String serviceUrl = Flags.cloudOrchestratorServiceUrl.getNonNull();
+    if (serviceUrl.isEmpty()) {
+      logger.atWarning().log("cloud_orchestrator_service_url flag is NOT set, skipping log fetch.");
+      return;
+    }
+    logger.atInfo().log("Waiting for Cloud Orchestrator lock for log fetch...");
+    try {
+      cloudOrchestratorLock.lockInterruptibly();
+      try {
+        logger.atInfo().log("Acquired Cloud Orchestrator lock for log fetch.");
+        fetchLogsWithClient(serviceUrl, testInfo);
+        testInfo.properties().add(propertyKey, "true");
+      } finally {
+        cloudOrchestratorLock.unlock();
+      }
+    } catch (InterruptedException e) {
+      logger.atWarning().withCause(e).log("Interrupted during log fetch lock");
+      Thread.currentThread().interrupt();
+    }
+  }
+
   @CanIgnoreReturnValue
   @Override
   public PostTestDeviceOp postRunTest(TestInfo testInfo)
@@ -294,10 +325,12 @@ public class AndroidJitEmulator extends AndroidDevice {
 
     stopWebSocketBridgeAndDisconnectAdb();
 
+    pullCvdLogs(testInfo);
+
     String serviceUrl = Flags.cloudOrchestratorServiceUrl.getNonNull();
     if (serviceUrl.isEmpty()) {
       logger.atWarning().log(
-          "cloud_orchestrator_service_url flag is NOT set, skipping log fetch and CVD deletion.");
+          "cloud_orchestrator_service_url flag is NOT set, skipping CVD deletion.");
       return PostTestDeviceOp.NONE;
     }
 
@@ -306,7 +339,6 @@ public class AndroidJitEmulator extends AndroidDevice {
       cloudOrchestratorLock.lockInterruptibly();
       try {
         logger.atInfo().log("Acquired Cloud Orchestrator lock for cleanup.");
-        fetchLogsWithClient(serviceUrl, testInfo);
         deleteCvdWithClient(serviceUrl);
       } finally {
         cloudOrchestratorLock.unlock();
