@@ -118,7 +118,10 @@ describe('TestDetail Component', () => {
   });
 
   it('should fetch test details on init', () => {
-    expect(mockTestService.getTest).toHaveBeenCalledWith({testId: 'test_123'});
+    expect(mockTestService.getTest).toHaveBeenCalledWith({
+      testId: 'test_123',
+      jobId: '',
+    });
     const pageData = component.testPageData();
     expect(pageData).toBeTruthy();
     expect(pageData!.testOverviewData!.id).toBe('test_123');

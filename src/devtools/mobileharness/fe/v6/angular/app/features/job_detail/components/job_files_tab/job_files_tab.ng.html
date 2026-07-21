@@ -1,0 +1,257 @@
+@if (!hasFiles()) {
+  <div class="files-empty-card">
+    <mat-icon class="files-empty-icon">folder_open</mat-icon>
+    <p class="files-empty-text">No files associated with this job.</p>
+  </div>
+} @else {
+  <div class="files-layout-container">
+    <!-- CNS Path Header -->
+    @if (fileExplorer().cnsPath) {
+      <div class="cns-path-header">
+        <div class="cns-path-content">
+          <mat-icon>folder_open</mat-icon>
+          <span class="cns-path-label">CNS Root:</span>
+          <span class="cns-path-text" [title]="fileExplorer().cnsPath">{{ fileExplorer().cnsPath }}</span>
+        </div>
+        <button [disabled]="copiedCnsPath()" (click)="copyCnsPath(fileExplorer().cnsPath || '')" class="cns-copy-btn" [class.success]="copiedCnsPath()" [matTooltip]="copiedCnsPath() ? 'Copied!' : 'Copy CNS Path'">
+          <mat-icon>{{ copiedCnsPath() ? 'check' : 'content_copy' }}</mat-icon>
+        </button>
+      </div>
+    }
+
+    <!-- Split View Panel -->
+    <div class="split-view-wrapper">
+
+      <!-- Left Panel: File Explorer -->
+      <div id="file-explorer-panel"
+           class="file-explorer-panel"
+           [class.full-width]="!isSplitView()"
+           [class.split-width]="isSplitView()"
+      >
+        <!-- Search & View Toggle -->
+        <div class="explorer-header"
+             [class.layout-split]="isSplitView()"
+             [class.layout-full]="!isSplitView()"
+        >
+          <div class="files-search-wrapper"
+               [class.w-full]="isSplitView()"
+               [class.flex-grow]="!isSplitView()"
+          >
+            <input type="search"
+                   class="overview-search-input"
+                   placeholder="Search files..."
+                   [ngModel]="searchTerm()"
+                   (ngModelChange)="onSearchTermChange($event)"
+            >
+          </div>
+          <div class="explorer-actions"
+               [class.w-full]="isSplitView()"
+          >
+            <!-- Segmented Control -->
+            <div class="view-mode-selector"
+                 [class.flex-grow]="isSplitView()"
+            >
+              <button (click)="setViewMode('flat')"
+                      class="view-mode-btn"
+                      [class.active]="viewMode() === 'flat'"
+                      [class.flex-grow]="isSplitView()"
+              >
+                <mat-icon>list</mat-icon>
+                <span>Flat</span>
+              </button>
+              <button (click)="setViewMode('tree')"
+                      class="view-mode-btn"
+                      [class.active]="viewMode() === 'tree'"
+                      [class.flex-grow]="isSplitView()"
+              >
+                <mat-icon>account_tree</mat-icon>
+                <span>Tree</span>
+              </button>
+            </div>
+            <button (click)="downloadAllZip()"
+                    class="download-all-btn"
+                    [class.flex-grow]="isSplitView()"
+            >
+              <mat-icon>archive</mat-icon>
+              <span>Download (ZIP)</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="explorer-title-strip">
+          <div>Files Explorer</div>
+        </div>
+
+        <!-- Scrollable Explorer List -->
+        <div class="files-list-container custom-scrollbar">
+          <!-- Tree View -->
+          @if (viewMode() === 'tree') {
+            <div>
+              @for (node of visibleTreeNodes(); track node.path + node.name) {
+                @if (node.type === 'dir') {
+                  <div class="directory-node"
+                       (click)="toggleFolder(node, $event)"
+                  >
+                    <div class="node-content-wrapper" [style.padding-left.px]="node.depth * 12">
+                      <mat-icon class="expand-icon"
+                                [style.transform]="(expandedFolders()[node.path] !== false) ? 'rotate(0deg)' : 'rotate(-90deg)'"
+                      >expand_more</mat-icon>
+                      <mat-icon class="folder-icon">folder</mat-icon>
+                      <span>{{ node.name }}/</span>
+                    </div>
+                  </div>
+                } @else {
+                  <div class="file-node"
+                       [class.active-row]="activeFile()?.path === node.path"
+                       (click)="selectFile(node); $event.preventDefault();"
+                  >
+                    <div class="node-content-wrapper" [style.padding-left.px]="(node.depth * 12) + 16">
+                      <mat-icon class="file-icon">{{ getFileIcon(node.typeStr) }}</mat-icon>
+                      <a href="#"
+                         (click)="selectFile(node); $event.preventDefault();"
+                         class="file-link"
+                         [class.active-link]="activeFile()?.path === node.path"
+                      >
+                        <span #nodeNameEl
+                              class="file-name-text"
+                              [matTooltip]="node.name"
+                              #nodeTooltip="matTooltip"
+                              (mouseenter)="checkOverflowTooltip(nodeNameEl, nodeTooltip)"
+                        >{{ node.name }}</span>
+                      </a>
+                      @if (getFileMetaString(node.typeStr, node.size); as metaStr) {
+                        <span class="file-meta-subline">
+                          <span class="meta-sep">•</span>
+                          <span class="meta-text font-mono">{{ metaStr }}</span>
+                        </span>
+                      }
+                    </div>
+                    <button (click)="downloadFile(node, $event)"
+                            class="download-file-btn"
+                            title="Download File"
+                    >
+                      <mat-icon>download</mat-icon>
+                    </button>
+                  </div>
+                }
+              }
+            </div>
+          }
+
+          <!-- Flat View -->
+          @if (viewMode() === 'flat') {
+            <div>
+              @for (file of filteredFlatFiles(); track file.path) {
+                <div class="file-node"
+                     [class.active-row]="activeFile()?.path === file.path"
+                     (click)="selectFile(file); $event.preventDefault();"
+                >
+                  <div class="node-content-wrapper">
+                    <mat-icon class="file-icon">{{ getFileIcon(file.type) }}</mat-icon>
+                    <a href="#"
+                       (click)="selectFile(file); $event.preventDefault();"
+                       class="file-link"
+                       [class.active-link]="activeFile()?.path === file.path"
+                    >
+                      <span #fileNameEl
+                            class="file-name-text"
+                            [matTooltip]="file.path"
+                            #fileTooltip="matTooltip"
+                            (mouseenter)="checkOverflowTooltip(fileNameEl, fileTooltip)"
+                      >{{ file.path }}</span>
+                    </a>
+                    @if (getFileMetaString(file.type, file.size); as metaStr) {
+                      <span class="file-meta-subline">
+                        <span class="meta-sep">•</span>
+                        <span class="meta-text font-mono">{{ metaStr }}</span>
+                      </span>
+                    }
+                  </div>
+                  <button (click)="downloadFile(file, $event)"
+                          class="download-file-btn"
+                          title="Download File"
+                  >
+                    <mat-icon>download</mat-icon>
+                  </button>
+                </div>
+              }
+              @if (filteredFlatFiles().length === 0) {
+                <div class="no-results-panel">
+                  <mat-icon>search_off</mat-icon>
+                  <p>No files match</p>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Right Panel: File Previewer -->
+      @if (isSplitView()) {
+        <div id="file-preview-panel" class="file-preview-panel">
+          @if (loadingContent()) {
+            <!-- Loading state -->
+            <div class="preview-loading-state animate-fade-in">
+              <mat-icon>sync</mat-icon>
+              <p class="loading-title">Fetching file content...</p>
+              <span class="loading-path">{{ activeFile()?.path }}</span>
+            </div>
+          } @else {
+            <!-- Loaded state -->
+            <div class="preview-container animate-fade-in">
+              <div class="preview-header">
+                <div class="preview-title-wrapper">
+                  <mat-icon>insert_drive_file</mat-icon>
+                  <h3 [title]="activeFile()?.path">{{ activeFile()?.path }}</h3>
+                </div>
+                <div class="preview-actions">
+                  <button (click)="downloadFile(activeFile()!, $event)" class="preview-download-btn">
+                    <mat-icon>download</mat-icon>
+                    <span>Download</span>
+                  </button>
+                  <button (click)="closeFileViewer()" class="preview-close-btn" title="Close Preview">
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Main Preview Content Area -->
+              <div class="preview-content-viewport" [class.no-scroll]="isUnsupported() || sizeLoadError() || isFileTooLarge()">
+                @if (sizeLoadError() || isFileTooLarge()) {
+                  <div class="preview-unsupported-panel">
+                    <mat-icon>cloud_off</mat-icon>
+                    <p>File is too large to preview (>10MB)</p>
+                    <button (click)="downloadFile(activeFile()!, $event)" class="unsupported-download-btn">
+                      <mat-icon>download</mat-icon>
+                      <span>Download File</span>
+                    </button>
+                  </div>
+                } @else if (isUnsupported()) {
+                  <div class="preview-unsupported-panel">
+                    <mat-icon>insert_drive_file</mat-icon>
+                    <p>Preview is not supported for this file type</p>
+                    <button (click)="downloadFile(activeFile()!, $event)" class="unsupported-download-btn">
+                      <mat-icon>download</mat-icon>
+                      <span>Download File</span>
+                    </button>
+                  </div>
+                } @else if (isImageFile(activeFile()!)) {
+                  <div class="image-preview-wrapper">
+                    <div class="image-box-border">
+                      <div class="image-placeholder">
+                        <mat-icon>image</mat-icon>
+                      </div>
+                    </div>
+                    <span class="image-label">{{ activeFile()?.path }}</span>
+                  </div>
+                } @else {
+                  <pre class="preview-text-pre"><code>{{ activeFileContent() }}</code></pre>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+}

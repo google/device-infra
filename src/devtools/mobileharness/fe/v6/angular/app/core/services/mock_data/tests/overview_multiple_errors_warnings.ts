@@ -8,19 +8,19 @@ import {MockTestScenario} from '../models';
 
 /** A mock test scenario representing a test with multiple errors and warnings. */
 export const SCENARIO_TEST_MULTIPLE_ERRORS_WARNINGS: MockTestScenario = {
-  id: 'test-multiple-errors-warnings-1',
+  id: 'c0a4b01d-b7f9-4008-adf9-26d1a70e5f61',
   scenarioName: 'Test with Multiple Errors and Warnings',
   overview: {
-    id: 'test-multiple-errors-warnings-1',
+    id: 'c0a4b01d-b7f9-4008-adf9-26d1a70e5f61',
     name: 'com.google.devtools.mobileharness.infra.ComplexFailureTest#testExecute',
     status: TestStatus.TEST_STATUS_DONE,
     result: TestResult.TEST_RESULT_ERROR,
     job: {
-      id: 'fa789cda-123d-456e-b065-c77724b9d888',
+      id: 'b65cadd7-6ad6-440e-a3b7-bfe1948557e6',
       name: 'com.google.android.gm.GmailInstrumentationTest',
       status: JobStatus.JOB_STATUS_DONE,
       result: JobResult.JOB_RESULT_ERROR,
-      spongeLink: 'http://sponge/mock-job-link',
+      spongeLink: 'http://sponge2/fa789cda-123d-456e-b065-c77724b9d888',
     },
     devices: {
       device: [
@@ -38,7 +38,7 @@ export const SCENARIO_TEST_MULTIPLE_ERRORS_WARNINGS: MockTestScenario = {
       createTime: '2025-07-09T10:15:00Z',
       startTime: '2025-07-09T10:15:05Z',
       endTime: '2025-07-09T10:15:20Z',
-      lastUpdateTime: '2025-07-09T10:15:20Z',
+      updateTime: '2025-07-09T10:15:20Z',
       user: 'dafeni',
       actualUser: 'dafeni@google.com',
     },
@@ -508,5 +508,6 @@ get 1 files; total size: 3.95KB; total time: PT3.912818S; speed: 822.95 B/s
 2026-06-09 20:32:58:976 PDT I No external_storage_path specified, skip copying test generated files to CNS.
 2026-06-09 20:32:58:977 PDT I Start uploading test data to GoogleAnalytics
 2026-06-09 20:32:58:983 PDT I Finished uploading test data to GoogleAnalytics`,
-  cloudLogLink: '#',
+  cloudLogLink:
+    'https://console.cloud.google.com/logs/query;query=resource.type%3D%22mobileharness_test%22%20AND%20labels.test_id%3D%2271f02572-1262-4dce-9cab-20e7d3011c24%22',
 };

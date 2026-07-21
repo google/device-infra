@@ -12,7 +12,8 @@ import {UrlService} from '@deviceinfra/app/core/services/url_service';
 export type NavLinkConfig =
   | {type: 'host'; hostName: string; hostIp: string}
   | {type: 'device'; hostName: string; hostIp: string; deviceId: string}
-  | {type: 'job'; jobId: string};
+  | {type: 'job'; jobId: string}
+  | {type: 'test'; jobId: string; testId: string};
 
 /**
  * A customized link component to centralize navigation behavior.
@@ -86,8 +87,10 @@ export class NavLink implements OnInit, OnDestroy {
       return `/hosts/${this.config.hostName}`;
     } else if (this.config.type === 'device') {
       return `/devices/${this.config.deviceId}`;
-    } else {
+    } else if (this.config.type === 'job') {
       return `/jobs/${this.config.jobId}`;
+    } else {
+      return `/jobs/${this.config.jobId}/tests/${this.config.testId}`;
     }
   }
 
@@ -170,7 +173,7 @@ export class NavLink implements OnInit, OnDestroy {
   }
 
   private getNavParams(): {
-    page: 'host_details' | 'device_details' | 'job_details';
+    page: 'host_details' | 'device_details' | 'job_details' | 'test_details';
     params: Record<string, string>;
   } {
     if (this.config.type === 'job') {
@@ -178,6 +181,15 @@ export class NavLink implements OnInit, OnDestroy {
         page: 'job_details',
         params: {
           'job_id': this.config.jobId,
+          ...this.customQueryParams,
+        },
+      };
+    } else if (this.config.type === 'test') {
+      return {
+        page: 'test_details',
+        params: {
+          'job_id': this.config.jobId,
+          'test_id': this.config.testId,
           ...this.customQueryParams,
         },
       };

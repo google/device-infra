@@ -20,7 +20,7 @@ export const SCENARIO_TEST_LONG_NAME: MockTestScenario = {
       name: 'com.google.android.apps.someteam.super.long.package.name.indicating.deep.hierarchy.for.this.particular.test.suite.manifest.class',
       status: JobStatus.JOB_STATUS_DONE,
       result: JobResult.JOB_RESULT_PASS,
-      spongeLink: 'http://sponge/mock-job-link',
+      spongeLink: 'http://sponge2/d789e532-0bc4-4d89-8260-8012626e2e4f',
     },
     devices: {
       device: [
@@ -38,7 +38,7 @@ export const SCENARIO_TEST_LONG_NAME: MockTestScenario = {
       createTime: '2025-07-09T10:11:15Z',
       startTime: '2025-07-09T10:11:15Z',
       endTime: '2025-07-09T10:11:25Z',
-      lastUpdateTime: '2025-07-09T10:11:25Z',
+      updateTime: '2025-07-09T10:11:25Z',
       user: 'dafeni',
       actualUser: 'dafeni@google.com',
     },
@@ -51,5 +51,6 @@ export const SCENARIO_TEST_LONG_NAME: MockTestScenario = {
     },
   },
   log: 'Passed.',
-  cloudLogLink: '#',
+  cloudLogLink:
+    'https://console.cloud.google.com/logs/query;query=resource.type%3D%22mobileharness_test%22%20AND%20labels.test_id%3D%22test-long-name%22',
 };

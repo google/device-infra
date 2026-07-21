@@ -503,7 +503,7 @@
 
   .hover-grid {
     display: grid;
-    grid-template-columns: 70px auto;
+    grid-template-columns: 70px minmax(0, 1fr);
     gap: 6px 12px;
     align-items: start;
     font-size: 12px;
@@ -513,6 +513,7 @@
       font-weight: 500;
     }
     .val {
+      min-width: 0;
       color: #3c4043;
       font-family: typography.$labconsole-font;
       word-break: break-all;
@@ -522,10 +523,19 @@
         display: flex;
         flex-direction: column;
         gap: 2px;
+        min-width: 0;
       }
 
       &.text-success {
         color: #137333;
+      }
+
+      .text-truncate {
+        display: block;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
     }
 

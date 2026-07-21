@@ -26,8 +26,15 @@ export class HttpTestService extends TestService {
 
   override getTest(request: GetTestRequest): Observable<TestOverviewData> {
     let url = `${this.apiUrl}/${request.testId}`;
+    const queryParams: string[] = [];
+    if (request.jobId) {
+      queryParams.push(`job_id=${encodeURIComponent(request.jobId)}`);
+    }
     if (request.subTestId) {
-      url += `?sub_test_id=${request.subTestId}`;
+      queryParams.push(`sub_test_id=${encodeURIComponent(request.subTestId)}`);
+    }
+    if (queryParams.length > 0) {
+      url += `?${queryParams.join('&')}`;
     }
     return this.http
       .get<GetTestResponse>(url)
@@ -40,6 +47,7 @@ export class HttpTestService extends TestService {
     return this.http.post<GetTestLogResponse>(
       `${this.apiUrl}/${request.testId}:getTestLog`,
       {
+        'job_id': request.jobId,
         'offset': request.offset,
         'length': request.length,
       },

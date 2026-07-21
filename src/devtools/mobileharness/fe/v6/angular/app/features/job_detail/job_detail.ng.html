@@ -1,0 +1,343 @@
+<div class="job-detail-container">
+  @if (errorMessage(); as error) {
+    <div class="error-message">
+      <mat-icon class="error-icon">error_outline</mat-icon>
+      <p>{{ error }}</p>
+      <a routerLink="/dev/device-harness" class="m3-button">Back to Harness</a>
+    </div>
+  } @else if (job(); as job) {
+    <div class="main-card">
+      <!-- Breadcrumb Navigation & Top Action Bar -->
+      <header class="card-header">
+        <div class="header-breadcrumbs">
+          <div class="breadcrumbs-list">
+            @if (job.session?.id) {
+              <!-- Session Link would navigate to session detail page in the future -->
+              <span class="breadcrumb-item-link" title="Session: {{ job.session?.name || job.session?.id }}">
+                {{ job.session?.name || 'Session' }}
+              </span>
+              <mat-icon class="chevron-icon">chevron_right</mat-icon>
+            }
+            <span class="breadcrumb-item-text monospaced-text" title="Job ID: {{ job.id }}">{{ job.id }}</span>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <!-- Kill Job Button: explicitly guarded by independent operational capability check -->
+          @if (killActionState(); as killAction) {
+            <app-action-button
+              [action]="killAction"
+              [label]="jobActionUiConfig.kill.label"
+              [icon]="jobActionUiConfig.kill.icon"
+              [customClass]="jobActionUiConfig.kill.customClass || ''"
+              [testId]="jobActionUiConfig.kill.testIdPrefix"
+              (actionClick)="onKillJobClicked(job)"
+            ></app-action-button>
+          }
+
+            <!-- Sponge Button -->
+            @if (job.spongeLink) {
+              <a [href]="job.spongeLink" target="_blank" class="sponge-link-btn" title="Open Sponge Results">
+                <span>View in Sponge</span>
+                <mat-icon>open_in_new</mat-icon>
+              </a>
+            }
+          </div>
+        </header>
+
+        <div class="card-body">
+          <!-- Job Title Bar / Identity Area -->
+          <div class="job-title-bar">
+            <div class="title-bar-content-wrapper">
+              <div class="title-left-section">
+                <div class="title-text-wrapper">
+                  <div class="title-label">Job Name</div>
+                  <h1 class="job-title" [matTooltip]="job.name">{{ job.name }}</h1>
+
+                  <div class="metadata-grid">
+                    <!-- Row 1: Job ID -->
+                    <span class="metadata-label">Job ID:</span>
+                    <div class="metadata-value font-mono bg-gray-box">
+                      <span class="value-text" [matTooltip]="job.id">{{ job.id }}</span>
+                      <button [disabled]="copiedJobId()" (click)="copyJobId(job.id)" class="inline-copy-button" [class.success]="copiedJobId()" [matTooltip]="copiedJobId() ? 'Copied!' : 'Copy Job ID'">
+                        <mat-icon>{{ copiedJobId() ? 'check' : 'content_copy' }}</mat-icon>
+                      </button>
+                    </div>
+
+                    <!-- Row 2: Part of Session (if any) -->
+                    @if (job.session?.id) {
+                      <span class="metadata-label">Part of Session:</span>
+                      <div class="metadata-value font-mono bg-gray-box">
+                        <div class="session-hover-container">
+                          <span class="session-link-value">
+                            {{ job.session?.id }}
+                          </span>
+                          <div class="session-details-panel">
+                            <div class="panel-section-title">Session Name</div>
+                            <div class="panel-section-value font-sans">{{ job.session?.name || 'N/A' }}</div>
+
+                            @if (job.session?.status) {
+                              <div class="panel-row-grid margin-top-small">
+                                <div class="panel-grid-item">
+                                  <div class="panel-section-title">Status</div>
+                                  <div class="panel-section-value text-sans"
+                                    [class.text-success]="job.session?.status === 'SESSION_STATUS_DONE'"
+                                    [class.text-primary]="job.session?.status === 'SESSION_STATUS_RUNNING'"
+                                  >{{ job.session?.status?.replace('SESSION_STATUS_', '') }}</div>
+                                </div>
+                                @if (job.session?.result) {
+                                  <div class="panel-grid-item">
+                                    <div class="panel-section-title">Result</div>
+                                    <div class="panel-section-value text-sans"
+                                      [class.text-success]="job.session?.result === 'SESSION_RESULT_PASS'"
+                                      [class.text-danger]="job.session?.result === 'SESSION_RESULT_FAIL' || job.session?.result === 'SESSION_RESULT_ERROR'"
+                                    >{{ job.session?.result?.replace('SESSION_RESULT_', '') }}</div>
+                                  </div>
+                                }
+                              </div>
+                            }
+                            <div class="panel-arrow"></div>
+                          </div>
+                        </div>
+                        <button [disabled]="copiedSessionId()" (click)="copySessionId(job.session?.id || '')" class="inline-copy-button" [class.success]="copiedSessionId()" [matTooltip]="copiedSessionId() ? 'Copied!' : 'Copy Session ID'">
+                          <mat-icon>{{ copiedSessionId() ? 'check' : 'content_copy' }}</mat-icon>
+                        </button>
+                      </div>
+                    }
+
+                    <div class="vertical-separator"></div>
+
+                    <div class="status-indicator">
+                      <!-- Status Badge / Icon -->
+                      @let status = statusPillLabel();
+                      @let result = resultPillLabel();
+                      <mat-icon
+                        [class.status-green-icon]="result === 'PASS'"
+                        [class.status-red-icon]="result === 'FAIL' || result === 'ERROR' || result === 'TIMEOUT'"
+                        [class.status-blue-icon]="status === 'RUNNING'"
+                        [class.status-assigned-icon]="status === 'ASSIGNED'"
+                        [class.status-gray-icon]="result === 'ABORT' || result === 'SKIP' || status === 'NEW'"
+                        [class.status-yellow-icon]="status === 'SUSPENDED'"
+                        [class.spin-animation]="status === 'RUNNING'"
+                      >
+                        {{
+                          result === 'PASS' ? 'check_circle' :
+                          result === 'FAIL' || result === 'ERROR' ? 'error' :
+                          result === 'TIMEOUT' ? 'access_time' :
+                          result === 'SKIP' ? 'block' :
+                          result === 'ABORT' ? 'do_not_disturb_on' :
+                          status === 'RUNNING' ? 'sync' :
+                          status === 'ASSIGNED' ? 'assignment_turned_in' :
+                          status === 'NEW' ? 'schedule' :
+                          status === 'SUSPENDED' ? 'pause_circle_filled' :
+                          'watch_later'
+                        }}
+                      </mat-icon>
+
+                      <span class="status-pill"
+                        [class.status-blue-pill]="status === 'RUNNING'"
+                        [class.status-assigned-pill]="status === 'ASSIGNED'"
+                        [class.status-yellow-pill]="status === 'SUSPENDED'"
+                        [class.status-gray-pill]="status === 'DONE'"
+                        [class.status-new-pill]="status === 'NEW'"
+                      >Status: {{ status }}</span>
+
+                      @if (result; as res) {
+                        @if (res !== 'UNKNOWN') {
+                          <span class="status-pill"
+                            [class.result-green-pill]="res === 'PASS'"
+                            [class.result-red-pill]="res === 'FAIL' || res === 'ERROR' || res === 'TIMEOUT'"
+                            [class.result-gray-pill]="res === 'ABORT' || res === 'SKIP'"
+                          >Result: {{ res }}</span>
+                        }
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Device Requirements Summary Card (Right Column) -->
+              <div class="device-req-summary-card">
+                <div class="summary-card-header">
+                  <div class="card-title">Device Requirements</div>
+                  <a href="#" (click)="scrollToJobConfig($event)" class="anchor-link-config">
+                    <span>Job Config Details</span>
+                    <mat-icon>arrow_downward</mat-icon>
+                  </a>
+                </div>
+                <div class="summary-grid">
+                  <!-- Driver -->
+                  @let firstDev = job.config.devices?.device?.[0];
+                  <span class="grid-label">Driver</span>
+                  <span class="grid-value text-monospace text-truncate" [title]="firstDev?.driver || 'N/A'">
+                    {{ firstDev?.driver || 'N/A' }}
+                  </span>
+
+                  <!-- Device / Devices summary -->
+                  @if (isMultiDevice()) {
+                    <span class="grid-label">Devices</span>
+                    <div class="grid-value-stack">
+                      @for (dev of job.config.devices?.device; track $index) {
+                        <div class="device-requirement-hover-item">
+                          <span class="dev-type-link hover-link">
+                            {{ dev.deviceType }}
+                          </span>
+
+                          <!-- Device requirement hover details panel -->
+                          <div class="device-requirement-hover-panel">
+                            <div class="panel-title-upper">Device {{ $index + 1 }} Requirements</div>
+                            <div class="hover-grid">
+                              <span class="lbl">Device Type</span>
+                              <span class="val text-truncate">{{ dev.deviceType }}</span>
+
+                              <span class="lbl">Driver</span>
+                              <span class="val text-truncate">{{ dev.driver || 'N/A' }}</span>
+
+                              <span class="lbl">Dimensions</span>
+                              <div class="val value-stack-container">
+                                @if (dev.dimensions && (dev.dimensions | keyvalue).length > 0) {
+                                  @for (dim of dev.dimensions | keyvalue; track dim.key) {
+                                    <div class="text-truncate"><span class="dimension-key text-monospace">{{ dim.key }}</span>: <span class="text-monospace">{{ dim.value }}</span></div>
+                                  }
+                                } @else {
+                                  <div class="empty-fallback-text">None</div>
+                                }
+                              </div>
+
+                              <span class="lbl">Decorators</span>
+                              <div class="val value-stack-container">
+                                @if (dev.decorators && dev.decorators.length > 0) {
+                                  <div class="text-success value-stack-container">
+                                    @for (dec of dev.decorators; track dec) {
+                                      <div class="text-truncate">{{ dec.trim() }}</div>
+                                    }
+                                  </div>
+                                } @else {
+                                  <div class="empty-fallback-text">None</div>
+                                }
+                              </div>
+                            </div>
+                            <div class="panel-arrow"></div>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <!-- Device Type -->
+                    <span class="grid-label">Device Type</span>
+                    <span class="grid-value text-monospace text-truncate" [title]="firstDev?.deviceType || 'N/A'">
+                      {{ firstDev?.deviceType || 'N/A' }}
+                    </span>
+
+                    <!-- Dimensions -->
+                    <span class="grid-label">Dimensions</span>
+                    <div class="grid-value relative-hover-item">
+                      @let dims = firstDev?.dimensions || {};
+                      @let dimCount = (dims | keyvalue).length;
+                      <span class="dev-type-link hover-link">
+                        {{ dimCount === 1 ? '1 Dimension' : dimCount + ' Dimensions' }}
+                      </span>
+                      <!-- Dimensions hover panel -->
+                      <div class="device-requirement-hover-panel">
+                        <div class="panel-title-upper">Configured Dimensions</div>
+                        <div class="hover-dimensions-stack">
+                          @if (dimCount > 0) {
+                            @for (dim of dims | keyvalue; track dim.key) {
+                              <div class="text-truncate"><span class="dimension-key text-monospace">{{ dim.key }}</span>: <span class="text-monospace">{{ dim.value }}</span></div>
+                            }
+                          } @else {
+                            <div class="empty-fallback-text">None</div>
+                          }
+                        </div>
+                        <div class="panel-arrow"></div>
+                      </div>
+                    </div>
+
+                    <!-- Decorators -->
+                    <span class="grid-label">Decorators</span>
+                    <div class="grid-value relative-hover-item">
+                      @let decsList = firstDev?.decorators || [];
+                      <span class="dev-type-link hover-link">
+                        {{ decsList.length === 1 ? '1 Decorator' : decsList.length + ' Decorators' }}
+                      </span>
+                      <!-- Decorators hover panel -->
+                      <div class="device-requirement-hover-panel">
+                        <div class="panel-title-upper">Active Decorators</div>
+                        <div class="hover-dimensions-stack">
+                          @if (decsList.length > 0) {
+                            <div class="text-success value-stack-container">
+                              @for (dec of decsList; track dec) {
+                                <div class="text-truncate">{{ dec.trim() }}</div>
+                              }
+                            </div>
+                          } @else {
+                            <div class="empty-fallback-text">None</div>
+                          }
+                        </div>
+                        <div class="panel-arrow"></div>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab Navigation Headers -->
+          <div class="tabs-container">
+            <nav class="tabs-nav">
+              <button (click)="setActiveTab('overview')" [class.active]="activeTab() === 'overview'" class="tab-link">Overview</button>
+              <button (click)="setActiveTab('timeline')" [class.active]="activeTab() === 'timeline'" class="tab-link">Timeline</button>
+              <button (click)="setActiveTab('log')" [class.active]="activeTab() === 'log'" class="tab-link">
+                <span class="tab-link-content">
+                  <span>Job Log</span>
+                  @if (job.status === 'JOB_STATUS_RUNNING') {
+                    <span class="live-badge">
+                      <span class="live-dot"></span>
+                      <span>LIVE</span>
+                    </span>
+                  }
+                </span>
+              </button>
+              <button (click)="setActiveTab('files')" [class.active]="activeTab() === 'files'" class="tab-link">Files</button>
+            </nav>
+          </div>
+
+          <!-- Tab Content Panes -->
+          <div class="tab-content-container">
+            <!-- Overview Tab -->
+            @if (activeTab() === 'overview') {
+              <div class="tab-content">
+                <app-job-overview-tab [job]="job"></app-job-overview-tab>
+              </div>
+            }
+
+            <!-- Timeline Tab -->
+            @if (activeTab() === 'timeline') {
+              <div class="tab-content">
+                <app-job-timeline-tab [timingBreakdown]="job.timingBreakdown"></app-job-timeline-tab>
+              </div>
+            }
+
+            <!-- Job Log Tab -->
+            @if (activeTab() === 'log') {
+              <div class="tab-content">
+                <app-job-log-tab [jobId]="job.id"></app-job-log-tab>
+              </div>
+            }
+
+            <!-- Files Tab -->
+            @if (activeTab() === 'files') {
+              <div class="tab-content">
+                <app-job-files-tab [jobId]="job.id" [fileExplorer]="job.fileExplorer || {}"></app-job-files-tab>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="loading-message">
+        <!-- Skeleton or initial state -->
+      </div>
+    }
+</div>

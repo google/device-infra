@@ -70,6 +70,24 @@ message JobConfig {
   map<string, string> params = 3;
 }
 
+// Information about a file associated with the job.
+message JobFile {
+  string path = 1;
+  int64 size = 2;
+  string type = 3;
+}
+
+// File explorer resources.
+message FileExplorer {
+  string cns_path = 1;
+  repeated JobFile files = 2;
+}
+
+// Representation of Job operations / actions.
+message JobActions {
+  .devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState kill = 1;
+}
+
 // ---------- Top-level Layout Message ----------
 
 message JobDetail {
@@ -104,4 +122,7 @@ message JobDetail {
   // Detailed timing breakdown.
   .devtools.mobileharness.fe.v6.service.proto.common.TimeBreakdown
       timing_breakdown = 12;
+
+  // Files explorer resources.
+  FileExplorer file_explorer = 13;
 }

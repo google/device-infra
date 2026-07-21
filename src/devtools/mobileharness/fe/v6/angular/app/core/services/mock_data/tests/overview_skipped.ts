@@ -20,7 +20,7 @@ export const SCENARIO_TEST_SKIPPED: MockTestScenario = {
       name: 'hello_mobile_harness_test_on_mh',
       status: JobStatus.JOB_STATUS_DONE,
       result: JobResult.JOB_RESULT_PASS,
-      spongeLink: 'http://sponge/mock-job-link',
+      spongeLink: 'http://sponge2/b65cadd7-6ad6-440e-a3b7-bfe1948557e6',
     },
     devices: {
       device: [
@@ -37,7 +37,7 @@ export const SCENARIO_TEST_SKIPPED: MockTestScenario = {
     executionDetails: {
       createTime: '2025-07-09T10:11:15Z',
       endTime: '2025-07-09T10:11:16Z',
-      lastUpdateTime: '2025-07-09T10:11:16Z',
+      updateTime: '2025-07-09T10:11:16Z',
       user: 'dafeni',
       actualUser: 'dafeni@google.com',
     },
@@ -49,5 +49,6 @@ export const SCENARIO_TEST_SKIPPED: MockTestScenario = {
     },
   },
   log: 'Test skipped due to @Ignore annotation.',
-  cloudLogLink: '#',
+  cloudLogLink:
+    'https://console.cloud.google.com/logs/query;query=resource.type%3D%22mobileharness_test%22%20AND%20labels.test_id%3D%22test-skipped-1%22',
 };

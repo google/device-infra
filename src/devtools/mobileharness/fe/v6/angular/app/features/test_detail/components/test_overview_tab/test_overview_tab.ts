@@ -72,7 +72,7 @@ export class TestOverviewTab {
     {key: 'createTime', label: 'Create Time'},
     {key: 'startTime', label: 'Start Time'},
     {key: 'endTime', label: 'End Time'},
-    {key: 'lastUpdateTime', label: 'Last Update Time'},
+    {key: 'updateTime', label: 'Last Update Time'},
   ] as const;
 
   /**
@@ -119,7 +119,7 @@ export class TestOverviewTab {
    * @return An object containing raw, display, duration, local, UTC, and elapsed HTML strings.
    */
   getTimestampInfo(
-    key: 'createTime' | 'startTime' | 'endTime' | 'lastUpdateTime',
+    key: 'createTime' | 'startTime' | 'endTime' | 'updateTime',
     test: TestOverviewData,
     baseCreateDate: Date | null = null,
   ) {
@@ -132,8 +132,8 @@ export class TestOverviewTab {
         rawValue = details.startTime;
       } else if (key === 'endTime') {
         rawValue = details.endTime;
-      } else if (key === 'lastUpdateTime') {
-        rawValue = details.lastUpdateTime;
+      } else if (key === 'updateTime') {
+        rawValue = details.updateTime;
       }
     }
     const date = rawValue ? dateUtils.parsePdtTimestamp(rawValue) : null;

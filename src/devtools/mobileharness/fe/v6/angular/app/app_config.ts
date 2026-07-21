@@ -22,6 +22,9 @@ import {InterceptedFakeDeviceService} from './core/services/device/intercepted_f
 import {HOST_SERVICE} from './core/services/host/host_service';
 import {HttpHostService} from './core/services/host/http_host_service';
 import {InterceptedFakeHostService} from './core/services/host/intercepted_fake_host_service';
+import {FakeJobService} from './core/services/job/fake_job_service';
+import {HttpJobService} from './core/services/job/http_job_service';
+import {JOB_SERVICE} from './core/services/job/job_service';
 import {FakeTestService} from './core/services/test/fake_test_service';
 import {HttpTestService} from './core/services/test/http_test_service';
 import {TEST_SERVICE} from './core/services/test/test_service';
@@ -74,6 +77,14 @@ export const appConfig: ApplicationConfig = {
       useFactory: (route: ActivatedRoute) => {
         const useFakeData = route.snapshot.queryParams['fake_data'] === 'true';
         return useFakeData ? new FakeTestService() : new HttpTestService();
+      },
+      deps: [ActivatedRoute],
+    },
+    {
+      provide: JOB_SERVICE,
+      useFactory: (route: ActivatedRoute) => {
+        const useFakeData = route.snapshot.queryParams['fake_data'] === 'true';
+        return useFakeData ? new FakeJobService() : new HttpJobService();
       },
       deps: [ActivatedRoute],
     },
