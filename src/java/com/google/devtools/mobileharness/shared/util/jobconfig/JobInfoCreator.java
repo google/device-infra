@@ -610,7 +610,7 @@ public final class JobInfoCreator {
    * Updates the DeviceList according to the {@code TAG_DEVICE_SPEC} file in the files and returns
    * the updated JobConfig.
    */
-  private static JobConfig updateDeviceList(JobConfig mhJobConfig, String genDirPath)
+  public static JobConfig updateDeviceList(JobConfig mhJobConfig, String genDirPath)
       throws MobileHarnessException, InterruptedException {
     for (FileConfig fileConfig : mhJobConfig.getFiles().getContentList()) {
       if (TAG_DEVICE_SPEC.equals(fileConfig.getTag())) {
