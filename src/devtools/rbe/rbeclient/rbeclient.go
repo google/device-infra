@@ -35,12 +35,13 @@ func New(ctx context.Context, clientOpts Opts) (*client.Client, error) {
 	}
 
 	start := time.Now()
+
 	newClient, err := client.NewClient(ctx, clientOpts.Instance, client.DialParams{
 		Service:               clientOpts.ServiceAddress,
 		CredFile:              clientOpts.ServiceAccountJSON,
 		UseApplicationDefault: clientOpts.UseApplicationDefault,
 		MaxConcurrentRequests: client.DefaultMaxConcurrentRequests,
 	}, opts...)
-	log.Infof("created RBE client, took %s", time.Since(start))
+	log.InfoContextf(ctx, "created RBE client, took %s", time.Since(start))
 	return newClient, err
 }

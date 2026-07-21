@@ -146,12 +146,20 @@ func checkFlags() error {
 	if *casInstance == "" {
 		return errors.New("-cas-instance must be specified")
 	}
-	if *serviceAccount == "" && *useADC == false {
-		return errors.New("Either -use-adc must be true or -service-account-json must be specified")
+
+	authMethodsCount := 0
+	if *useADC {
+		authMethodsCount++
 	}
-	if *serviceAccount != "" && *useADC == true {
-		return errors.New("-use-adc and -service-account-json must not be set together")
+	if *serviceAccount != "" {
+		authMethodsCount++
 	}
+
+	if authMethodsCount != 1 {
+		authErrStr := "exactly one of -use-adc or -service-account-json must be specified"
+		return errors.New(authErrStr)
+	}
+
 	if isSameFilesystem, err := isSameFilesystem(*cacheDir, *dir); err == nil {
 		if *useHardlink && !isSameFilesystem {
 			log.Warningf("Hardlink will not be used as cache dir %s and download dir %s are not in the same filesystem.", *cacheDir, *dir)
@@ -258,7 +266,16 @@ func run(ctx context.Context) error {
 	if *casConcurrency != RBECASConcurrency {
 		log.InfoContextf(ctx, "casConcurrency: %v\n", *casConcurrency)
 	}
-	client, err := rbeclient.New(ctx, rbeclient.Opts{Instance: *casInstance, ServiceAddress: *casAddr, ServiceAccountJSON: *serviceAccount, UseApplicationDefault: *useADC, CASConcurrency: *casConcurrency, RPCTimeouts: rpcTimeouts})
+
+	clientOpts := rbeclient.Opts{
+		Instance:              *casInstance,
+		ServiceAddress:        *casAddr,
+		ServiceAccountJSON:    *serviceAccount,
+		UseApplicationDefault: *useADC,
+		CASConcurrency:        *casConcurrency,
+		RPCTimeouts:           rpcTimeouts,
+	}
+	client, err := rbeclient.New(ctx, clientOpts)
 	if err != nil {
 		if strings.Contains(err.Error(), "rpc error: code = PermissionDenied") && *useADC == true {
 			logAdcCredentials()

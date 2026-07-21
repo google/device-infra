@@ -22,7 +22,9 @@ package(
 
 go_library(
     name = "rbeclient",
-    srcs = ["rbeclient.go"],
+    srcs = [
+        "rbeclient.go",
+    ],
     importpath = "github.com/google/device-infra/src/devtools/rbe/rbeclient",
     deps = [
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/client",
