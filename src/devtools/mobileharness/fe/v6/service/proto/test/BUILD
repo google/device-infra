@@ -44,6 +44,7 @@ proto_library(
     srcs = ["test_service.proto"],
     deps = [
         ":test_resources_proto",
+        "@googleapis//google/api:annotations_proto",
     ],
 )
 

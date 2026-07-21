@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package devtools.mobileharness.fe.v6.service.proto.test;
 
+import "google/api/annotations.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/test/test_resources.proto";
 
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.test";
@@ -26,10 +27,20 @@ option java_outer_classname = "TestServiceProto";
 
 service TestService {
   // Gets the detailed information of a test by its ID.
-  rpc GetTest(GetTestRequest) returns (GetTestResponse) {}
+  rpc GetTest(GetTestRequest) returns (GetTestResponse) {
+    option (google.api.http) = {
+      post: "/v6/tests/{test_id}:getTest"
+      body: "*"
+    };
+  }
 
   // Gets the log chunk of a test by its ID, supporting pagination/offset.
-  rpc GetTestLog(GetTestLogRequest) returns (GetTestLogResponse) {}
+  rpc GetTestLog(GetTestLogRequest) returns (GetTestLogResponse) {
+    option (google.api.http) = {
+      post: "/v6/tests/{test_id}:getTestLog"
+      body: "*"
+    };
+  }
 }
 
 message GetTestRequest {

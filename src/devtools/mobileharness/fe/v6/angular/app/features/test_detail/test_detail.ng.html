@@ -6,7 +6,8 @@
       <p>{{ data.error }}</p>
       <a routerLink="/dev/device-harness" queryParamsHandling="merge" class="m3-button">Back to Harness</a>
     </div>
-  } @else if (data && data.testOverviewData; as test) {
+  } @else if (data && data.testOverviewData) {
+    @let test = data.testOverviewData;
     <div class="main-card">
         <!-- Breadcrumb Navigation -->
         <header class="card-header">
@@ -120,14 +121,16 @@
               </div>
 
                <div class="executed-on-card">
+                @let host = test.host;
+                @let devices = test.devices?.device;
                 <div class="executed-on-title">Executed on</div>
                 <div class="executed-on-grid">
                   <span class="grid-label">Device</span>
-                  @if (test.host && test.host.name && test.host.ip) {
+                  @if (host && host.name && host.ip) {
                     <div class="grid-value value-stack-container">
-                      @for (dev of test.devices?.device; track dev.id) {
+                      @for (dev of devices; track dev.id) {
                         <a app-nav-link
-                          [config]="{type: 'device', hostName: test.host.name, hostIp: test.host.ip, deviceId: dev.id}"
+                          [config]="{type: 'device', hostName: host.name, hostIp: host.ip, deviceId: dev.id}"
                           queryParamsHandling="merge"
                           class="grid-link-value font-mono"
                           [matTooltip]="'View Device Details: ' + dev.id"
@@ -137,25 +140,25 @@
                     </div>
                   } @else {
                     <div class="grid-value value-stack-container font-mono">
-                      @for (dev of test.devices?.device; track dev.id) {
+                      @for (dev of devices; track dev.id) {
                         <span>{{ dev.id }}</span>
                       }
                     </div>
                   }
 
-                  @if (test.host && test.host.name && test.host.ip) {
+                  @if (host && host.name && host.ip) {
                     <div class="grid-divider"></div>
 
                     <span class="grid-label">Host</span>
                     <div class="grid-value font-mono">
                       <a app-nav-link
-                        [config]="{type: 'host', hostName: test.host.name, hostIp: test.host.ip}"
+                        [config]="{type: 'host', hostName: host.name, hostIp: host.ip}"
                         queryParamsHandling="merge"
                         class="grid-link-value"
-                        [matTooltip]="test.host.name"
-                        >{{ test.host.name }}</a
+                        [matTooltip]="host.name"
+                        >{{ host.name }}</a
                       >
-                      <div class="host-ip-text">{{ test.host.ip }}</div>
+                      <div class="host-ip-text">{{ host.ip }}</div>
                     </div>
                   }
                 </div>
@@ -205,7 +208,12 @@
             @if (activeTab() === 'log') {
               <div class="tab-content">
                 @defer {
-                  <app-test-log-tab [testId]="test.id"></app-test-log-tab>
+                  <app-test-log-tab
+                    [testId]="test.id"
+                    [jobId]="test.job?.id || data?.jobId || ''"
+                    [cloudLogLink]="test.executionDetails?.cloudLogLink || ''"
+                    [initialStatus]="test.status"
+                  ></app-test-log-tab>
                 } @placeholder {
                   <div class="tab-loading-placeholder">Loading logs...</div>
                 }

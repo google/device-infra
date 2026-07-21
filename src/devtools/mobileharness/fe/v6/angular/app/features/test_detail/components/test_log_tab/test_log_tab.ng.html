@@ -10,7 +10,9 @@
   <div class="log-viewer-container">
     <div class="log-viewer-viewport" [style.height.px]="viewportHeight()" #logViewport>
       @for (line of logLines(); track $index) {
-        <div class="log-line">{{ line }}</div>
+        <div class="log-line">
+          {{ line }}
+        </div>
       }
     </div>
   </div>

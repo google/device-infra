@@ -36,7 +36,7 @@ export const SCENARIO_TEST_SUSPENDED: MockTestScenario = {
     },
     executionDetails: {
       createTime: '2025-07-09T11:40:00Z',
-      lastUpdateTime: '2025-07-09T11:45:00Z',
+      updateTime: '2025-07-09T11:45:00Z',
       user: 'blaze-user',
       actualUser: 'mobileharness-ci-runner',
     },

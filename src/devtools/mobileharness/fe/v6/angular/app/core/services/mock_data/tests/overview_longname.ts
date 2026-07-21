@@ -38,7 +38,7 @@ export const SCENARIO_TEST_LONG_NAME: MockTestScenario = {
       createTime: '2025-07-09T10:11:15Z',
       startTime: '2025-07-09T10:11:15Z',
       endTime: '2025-07-09T10:11:25Z',
-      lastUpdateTime: '2025-07-09T10:11:25Z',
+      updateTime: '2025-07-09T10:11:25Z',
       user: 'dafeni',
       actualUser: 'dafeni@google.com',
     },
