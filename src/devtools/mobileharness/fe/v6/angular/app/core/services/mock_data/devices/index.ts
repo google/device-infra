@@ -25,9 +25,11 @@ import {SCENARIO_WIFI_DIMENSIONS_ONLY} from './23_wifi_dimensions_only';
 import {SCENARIO_TESTBED_SINGLE_ELIGIBLE} from './24_testbed_single_eligible';
 import {SCENARIO_TESTBED_MIXED_ELIGIBILITY} from './25_testbed_mixed_eligibility';
 import {SCENARIO_COMING_SOON} from './26_coming_soon';
+import {SCENARIO_DEVICE_REFRESH} from './27_refresh_scenario';
 
 /** Central registry of all mock device scenarios. */
 export const MOCK_DEVICE_SCENARIOS: MockDeviceScenario[] = [
+  SCENARIO_DEVICE_REFRESH,
   SCENARIO_IN_SERVICE_IDLE,
   SCENARIO_IN_SERVICE_BUSY,
   SCENARIO_OUT_OF_SERVICE_INIT,

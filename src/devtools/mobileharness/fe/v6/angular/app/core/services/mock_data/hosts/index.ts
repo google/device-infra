@@ -33,10 +33,12 @@ import {OVERVIEW_11} from './overview_11';
 import {OVERVIEW_12} from './overview_12';
 import {OVERVIEW_13} from './overview_13';
 import {OVERVIEW_14} from './overview_14';
+import {OVERVIEW_REFRESH} from './overview_refresh';
 import {SCENARIO_RC_PERMISSIONS_ALL} from './remote_control_permissions';
 
 /** Central registry of all mock host scenarios. */
 export const MOCK_HOST_SCENARIOS: MockHostScenario[] = [
+  OVERVIEW_REFRESH,
   SCENARIO_HOST_NO_CONFIG,
   SCENARIO_HOST_BASIC_EDITABLE,
   SCENARIO_HOST_SHARED_MODE,

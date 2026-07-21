@@ -29,6 +29,7 @@ import {
   HostOverviewPageData,
   RemoteControlDevicesRequest,
   RemoteControlDevicesResponse,
+  UiLabType,
 } from '../../models/host_overview';
 import {MOCK_HOST_SCENARIOS} from '../mock_data';
 import {
@@ -70,24 +71,142 @@ export class FakeHostService extends HostService {
   override getHostOverview(hostName: string): Observable<HostOverviewPageData> {
     const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
     if (scenario && scenario.overview) {
+      if (hostName === 'refresh-host-name') {
+        this.getHostOverviewCallCount++;
+
+        // Simulate failure on the 5th call
+        if (this.getHostOverviewCallCount % 5 === 0) {
+          return throwError(
+            () =>
+              new Error(
+                `Simulated failure on 5th refresh call for host: ${hostName}.`,
+              ),
+          ).pipe(delay(1000));
+        }
+
+        const isEven = this.getHostOverviewCallCount % 2 === 0;
+
+        // Deep clone to avoid mutating shared mock data across different invocations or components.
+        // If we don't clone, mutating `overview` below would persist in the `MOCK_HOST_SCENARIOS` array
+        // and bleed into other calls or tests, breaking isolation and making UI reactivity harder to verify reliably.
+        // Define consistent states based on isEven to simulate dynamic changes correctly.
+        const derivedUiLabTypes: UiLabType[] = isEven
+          ? ['SATELLITE']
+          : ['SATELLITE', 'FUSION'];
+        const isCoreLab = derivedUiLabTypes.includes('CORE');
+        const isFusionLab = derivedUiLabTypes.includes('FUSION');
+        const derivedHostStatus = isEven ? 'MISSING' : 'RUNNING';
+
+        // 🛠 Compute Actions using derived state to maintain internal consistency.
+        const actions = createHostActions(
+          derivedHostStatus,
+          isCoreLab,
+          isFusionLab,
+        );
+
+        // Compute simulated states
+        const connectivityState = isEven
+          ? 'MISSING'
+          : scenario.overview.labServer?.connectivity?.state || 'RUNNING';
+        const activityState = isEven
+          ? 'STOPPED'
+          : scenario.overview.labServer?.activity?.state || 'STARTED';
+        const daemonState = isEven
+          ? 'MISSING'
+          : scenario.overview.daemonServer?.status?.state || 'RUNNING';
+
+        const labServerActions = createLabServerActions(
+          connectivityState,
+          activityState,
+          daemonState,
+          derivedUiLabTypes,
+        );
+
+        const overview = {
+          ...scenario.overview,
+          os: isEven ? 'Linux (Alternate)' : scenario.overview.os,
+          uiLabTypes: derivedUiLabTypes,
+          labServer: {
+            ...scenario.overview.labServer,
+            version: isEven
+              ? 'v4.99.9 (Updated)'
+              : scenario.overview.labServer.version,
+            connectivity: {
+              ...scenario.overview.labServer.connectivity,
+              state: isEven
+                ? 'MISSING'
+                : scenario.overview.labServer.connectivity.state,
+              title: isEven
+                ? 'Missing'
+                : scenario.overview.labServer.connectivity.title,
+            },
+            activity: scenario.overview.labServer.activity
+              ? {
+                  ...scenario.overview.labServer.activity,
+                  state: isEven
+                    ? 'STOPPED'
+                    : scenario.overview.labServer.activity?.state || 'STARTED',
+                  title: isEven
+                    ? 'Stopped'
+                    : scenario.overview.labServer.activity?.title || 'Started',
+                }
+              : undefined,
+            passThroughFlags: isEven
+              ? '--alt_flag=true'
+              : scenario.overview.labServer.passThroughFlags,
+            actions: labServerActions,
+          },
+          daemonServer: {
+            ...scenario.overview.daemonServer,
+            version: isEven ? 'v5.0.0' : scenario.overview.daemonServer.version,
+            status: {
+              ...scenario.overview.daemonServer.status,
+              state: isEven
+                ? 'MISSING'
+                : scenario.overview.daemonServer.status.state,
+              title: isEven
+                ? 'Missing'
+                : scenario.overview.daemonServer.status.title,
+            },
+          },
+          properties: {
+            ...scenario.overview.properties,
+            'Refresh Count': String(this.getHostOverviewCallCount),
+            'Last Refreshed At': new Date().toLocaleTimeString(),
+            'Simulated State': isEven ? 'Even Refresh' : 'Odd Refresh',
+          },
+        };
+
+        return of({
+          headerInfo: {
+            hostName,
+            actions,
+          },
+          overviewContent: overview,
+        }).pipe(delay(1000));
+      }
+
+      // Original logic for other hosts
       const actions = scenario.actions || createHostActions('RUNNING', false);
-      const overview = {...scenario.overview};
 
-      if (!overview.labServer.actions) {
-        const connectivityState =
-          overview.labServer.connectivity?.state || 'RUNNING';
-        const activityState = overview.labServer.activity?.state || 'STARTED';
-        const daemonState = overview.daemonServer?.status?.state || 'RUNNING';
-        const uiLabTypes = overview.uiLabTypes || [];
+      // Clone to avoid mutating static mock data, ensuring isolation between calls.
+      // Cast to any to bypass readonly restrictions on actions for mock data manipulation.
+      let overview = scenario.overview
+        ? structuredClone(scenario.overview)
+        : undefined;
 
-        overview.labServer = {
-          ...overview.labServer,
-          actions: createLabServerActions(
-            connectivityState,
-            activityState,
-            daemonState,
-            uiLabTypes,
-          ),
+      if (overview && overview.labServer && !overview.labServer.actions) {
+        overview = {
+          ...overview,
+          labServer: {
+            ...overview.labServer,
+            actions: createLabServerActions(
+              overview.labServer.connectivity?.state,
+              overview.labServer.activity?.state,
+              overview.daemonServer?.status?.state,
+              overview.uiLabTypes,
+            ),
+          },
         };
       }
 
@@ -96,7 +215,7 @@ export class FakeHostService extends HostService {
           hostName,
           actions,
         },
-        overviewContent: overview,
+        overviewContent: overview!,
       }).pipe(delay(1000));
     } else {
       return timer(1000).pipe(
@@ -348,6 +467,7 @@ TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0`,
   private preflightStopCallCount = 0;
   private preflightStartCallCount = 0;
   private preflightRestartCallCount = 0;
+  private getHostOverviewCallCount = 0;
 
   override preflightLabServerLifecycle(
     hostName: string,

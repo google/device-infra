@@ -7,15 +7,16 @@ import {
 import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
-  ChangeDetectorRef,
   Component,
   computed,
   DestroyRef,
+  effect,
   inject,
-  Input,
-  OnChanges,
+  input,
+  linkedSignal,
+  output,
   signal,
-  SimpleChanges,
+  untracked,
 } from '@angular/core';
 import {takeUntilDestroyed, toSignal} from '@angular/core/rxjs-interop';
 import {FormsModule} from '@angular/forms';
@@ -179,13 +180,12 @@ const STATUS_SEMANTIC_MAP: Record<string, {icon: string; colorClass: string}> =
   ],
   providers: [LabServerActionService],
 })
-export class HostOverviewPage implements OnChanges {
+export class HostOverviewPage {
   private readonly dialog = inject(MatDialog);
   private readonly hostService = inject(HOST_SERVICE);
   protected readonly deviceActions = useDeviceActions();
   private readonly destroyRef = inject(DestroyRef);
   private readonly snackBar = inject(SnackBarService);
-  private readonly cdr = inject(ChangeDetectorRef);
   private readonly envUniverseService = inject(EnvUniverseService);
   private readonly comingSoonService = inject(ComingSoonService);
   private readonly appData = inject(APP_DATA);
@@ -228,21 +228,37 @@ export class HostOverviewPage implements OnChanges {
     keyof typeof this.labServerActionUiConfig
   > = ['release', 'restart', 'start', 'stop'];
 
-  @Input({required: true}) host!: HostOverview;
-  @Input() actions?: HostActions;
+  readonly host = input.required<HostOverview>();
+  readonly actions = input<HostActions>();
+  readonly refresh = output<void>();
+
+  protected readonly localHost = linkedSignal(() => this.host());
+
+  constructor() {
+    effect(() => {
+      const host = this.localHost();
+      untracked(() => {
+        this.selection.clear();
+        this.passThroughFlags.set(host.labServer.passThroughFlags);
+        this.loadDevices();
+      });
+    });
+  }
 
   readonly isAteHost = computed(() => {
-    return this.host.uiLabTypes?.includes('ATE') ?? false;
+    return this.localHost().uiLabTypes?.includes('ATE') ?? false;
   });
 
   readonly displayLabTypes = computed(() => {
     return (
-      this.host.uiLabTypes?.map((type) => this.mapUiLabTypeToString(type)) ?? []
+      this.localHost().uiLabTypes?.map((type) =>
+        this.mapUiLabTypeToString(type),
+      ) ?? []
     );
   });
 
   readonly isSatelliteLab = computed(() => {
-    return this.host.uiLabTypes?.includes('SATELLITE') ?? false;
+    return this.localHost().uiLabTypes?.includes('SATELLITE') ?? false;
   });
 
   private mapUiLabTypeToString(type: UiLabType): string {
@@ -421,34 +437,15 @@ export class HostOverviewPage implements OnChanges {
     return baseItems;
   });
 
-  private handleHostDataChange() {
-    this.selection.clear();
-    this.passThroughFlags.set(this.host.labServer.passThroughFlags);
-    this.loadDevices();
-  }
-
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['host']) {
-      this.handleHostDataChange();
-
-      console.log('*** Current host data received by component:', this.host);
-      console.log(
-        '*** canUpgrade value:',
-        this.host.canUpgrade,
-        'Type:',
-        typeof this.host.canUpgrade,
-      );
-    }
-  }
-
   // --- Lab Server Card ---
 
   getDiagnosticLinks(
     category: 'OVERVIEW' | 'LAB_SERVER' | 'DAEMON_SERVER',
   ): DiagnosticLink[] {
     return (
-      this.host.diagnosticLinks?.filter((link) => link.category === category) ??
-      []
+      this.localHost().diagnosticLinks?.filter(
+        (link) => link.category === category,
+      ) ?? []
     );
   }
 
@@ -469,7 +466,7 @@ export class HostOverviewPage implements OnChanges {
   }
 
   onUpgrade() {
-    if (this.host.labServer.actions?.release?.isReady) {
+    if (this.localHost().labServer.actions?.release?.isReady) {
       this.preflightAndOpenRelease({preSelectLatest: true}).subscribe({
         error: () => {},
       });
@@ -524,7 +521,7 @@ export class HostOverviewPage implements OnChanges {
   openFlagsDialog() {
     const dialogRef = this.dialog.open(FlagsDialog, {
       data: {
-        hostName: this.host.hostName,
+        hostName: this.localHost().hostName,
         currentFlags: this.passThroughFlags(),
       },
       width: '72rem',
@@ -542,7 +539,13 @@ export class HostOverviewPage implements OnChanges {
           result !== 'cancel'
         ) {
           this.passThroughFlags.set(result);
-          this.host.labServer.passThroughFlags = result;
+          this.localHost.update((host) => ({
+            ...host,
+            labServer: {
+              ...host.labServer,
+              passThroughFlags: result,
+            },
+          }));
           this.showReleaseConfirmDialog();
         }
       });
@@ -568,50 +571,41 @@ export class HostOverviewPage implements OnChanges {
   preflightAndOpenRelease(
     options: {preSelectLatest?: boolean; preSelectCurrent?: boolean} = {},
   ) {
-    return this.actionService.preflightAndOpenRelease(this.host, options);
+    return this.actionService.preflightAndOpenRelease(
+      this.localHost(),
+      options,
+    );
   }
 
   onStart() {
-    this.actionService.start(this.host, {
-      onActionUnavailable: this.triggerBackgroundRefresh.bind(this),
+    this.actionService.start(this.localHost(), {
+      onActionUnavailable: () => {
+        this.refresh.emit();
+      },
     });
   }
 
   onStop() {
-    this.actionService.stop(this.host, {
-      onActionUnavailable: this.triggerBackgroundRefresh.bind(this),
+    this.actionService.stop(this.localHost(), {
+      onActionUnavailable: () => {
+        this.refresh.emit();
+      },
     });
   }
 
   onRestart() {
-    this.actionService.restart(this.host, {
-      onActionUnavailable: this.triggerBackgroundRefresh.bind(this),
+    this.actionService.restart(this.localHost(), {
+      onActionUnavailable: () => {
+        this.refresh.emit();
+      },
     });
-  }
-
-  private triggerBackgroundRefresh() {
-    this.snackBar.showInfo('Refreshing page data...');
-    this.hostService
-      .getHostOverview(this.host.hostName)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (data) => {
-          this.host = data.overviewContent;
-          this.handleHostDataChange();
-          this.snackBar.showSuccess('Page data refreshed.');
-          this.cdr.markForCheck();
-        },
-        error: (err) => {
-          this.snackBar.showError(`Failed to refresh: ${err.message}`);
-        },
-      });
   }
 
   // --- Devices Card ---
   loadDevices() {
     this.isDeviceLoading.set(true);
     this.hostService
-      .getHostDeviceSummaries(this.host.hostName)
+      .getHostDeviceSummaries(this.localHost().hostName)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (response) => {
@@ -706,7 +700,7 @@ export class HostOverviewPage implements OnChanges {
   private executeDecommission(devices: DeviceSummary[]) {
     return this.hostService
       .decommissionMissingDevices(
-        this.host.hostName,
+        this.localHost().hostName,
         devices.map((d) => d.id),
       )
       .pipe(
@@ -764,8 +758,8 @@ export class HostOverviewPage implements OnChanges {
       this.comingSoonService.showForHost(
         feature,
         this.legacyFeUrl,
-        this.host.hostName,
-        this.host.ip,
+        this.localHost().hostName,
+        this.localHost().ip,
         element ? 'hostDevicesItem' : 'hostDevices',
       );
     } else {
@@ -793,17 +787,21 @@ export class HostOverviewPage implements OnChanges {
 
   // device table actions -  Multi-device remote control
   startRemoteControl(devices: DeviceSummary[]) {
-    this.deviceActions.startRemoteControl(this.host.hostName, devices);
+    this.deviceActions.startRemoteControl(this.localHost().hostName, devices);
   }
 
   startSubDeviceRemoteControl(
     subDevice: SubDeviceInfo,
     parentDevice: DeviceSummary,
   ) {
-    this.deviceActions.startRemoteControl(this.host.hostName, parentDevice, {
-      isSubDevice: true,
-      subDeviceOnly: subDevice,
-    });
+    this.deviceActions.startRemoteControl(
+      this.localHost().hostName,
+      parentDevice,
+      {
+        isSubDevice: true,
+        subDeviceOnly: subDevice,
+      },
+    );
   }
 
   toggleRow(element: DeviceSummary) {
@@ -1003,7 +1001,7 @@ export class HostOverviewPage implements OnChanges {
   flashDevice(element: DeviceSummary): void {
     this.deviceActions.flashDevice(
       element.id,
-      this.host.hostName,
+      this.localHost().hostName,
       element.actions?.flash?.params,
     );
   }
@@ -1019,8 +1017,8 @@ export class HostOverviewPage implements OnChanges {
   configureDevice(element: DeviceSummary): void {
     this.deviceActions.configureDevice(
       element.id,
-      this.host.hostName,
-      this.host.ip,
+      this.localHost().hostName,
+      this.localHost().ip,
     );
   }
 }

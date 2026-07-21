@@ -29,15 +29,17 @@
               <span class="host-text-bold">Host: </span>
               <span class="host-text">{{ host.hostName }}</span>
             </h1>
-            <button class="copy-button" title="Copy host name to clipboard" (click)="copyToClipboard(host.hostName)">
-              <mat-icon class="copy-icon">content_copy</mat-icon>
-            </button>
-            <div class="title-actions">
-              <a></a>
+            <div class="title-action-container">
+              <button class="title-action-btn" title="Copy host name to clipboard" (click)="copyToClipboard(host.hostName)">
+                <mat-icon class="title-action-icon">content_copy</mat-icon>
+              </button>
+              <button class="title-action-btn" title="Refresh data" (click)="triggerRefresh()" [disabled]="loadingService.isLoading()">
+                <mat-icon class="title-action-icon" [class.spin-animation]="loadingService.isLoading()">refresh</mat-icon>
+              </button>
             </div>
           </div>
           <div class="host-overview-content">
-            <app-host-overview-page [host]="host" [actions]="pageData.headerInfo.actions"></app-host-overview-page>
+            <app-host-overview-page [host]="host" [actions]="pageData.headerInfo.actions" (refresh)="triggerRefresh()"></app-host-overview-page>
           </div>
         </div>
       </div>

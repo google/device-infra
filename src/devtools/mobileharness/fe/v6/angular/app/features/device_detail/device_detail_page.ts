@@ -11,12 +11,29 @@ import {
 } from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
+import {MatSnackBarRef} from '@angular/material/snack-bar';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {Title} from '@angular/platform-browser';
 import {ActivatedRoute, RouterModule} from '@angular/router';
 import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
-import {combineLatest, Observable, of, ReplaySubject} from 'rxjs';
-import {catchError, map, switchMap, takeUntil, tap} from 'rxjs/operators';
+import {
+  combineLatest,
+  merge,
+  Observable,
+  of,
+  ReplaySubject,
+  Subject,
+} from 'rxjs';
+import {
+  catchError,
+  map,
+  scan,
+  shareReplay,
+  switchMap,
+  takeUntil,
+  tap,
+  throttleTime,
+} from 'rxjs/operators';
 
 import {dateUtils} from '@deviceinfra/app/shared/utils/date_utils';
 import {APP_DATA, getLegacyFeUrl} from '../../core/models/app_data';
@@ -33,7 +50,8 @@ import {HealthStatisticTab} from './components/health_statistic_tab/health_stati
 
 declare interface DevicePageData {
   pageData: DeviceOverviewPageData | null;
-  error: string | null;
+  error?: string | null;
+  id?: string | null;
 }
 
 /**
@@ -74,10 +92,23 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
   private readonly destroyed = new ReplaySubject<void>(1);
   private readonly appData = inject(APP_DATA);
   private readonly clipboardService = inject(ClipboardService);
-  private readonly loadingService = inject(LoadingService);
+  protected readonly loadingService = inject(LoadingService);
   private readonly envUniverseService = inject(EnvUniverseService);
 
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
+
+  /**
+   * Subject to trigger a data refresh.
+   */
+  private readonly refreshSubject$ = new Subject<void>();
+  private refreshSnackBarRef?: MatSnackBarRef<unknown>;
+
+  /**
+   * Triggers a refresh of the device data.
+   */
+  triggerRefresh(): void {
+    this.refreshSubject$.next();
+  }
 
   activeTab = signal<'overview' | 'test-history' | 'health' | 'record'>(
     'overview',
@@ -92,7 +123,7 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
       ),
     ])
       .pipe(takeUntil(this.destroyed))
-      .subscribe(([id, isEmbedded]) => {
+      .subscribe(([id, isEmbedded]: [string | null, boolean]) => {
         const isStandalone = !isEmbedded;
         this.hasBackground = isStandalone;
         this.cdr.markForCheck();
@@ -106,44 +137,97 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.refreshSnackBarRef?.dismiss();
+    this.refreshSnackBarRef = undefined;
     this.destroyed.next();
     this.destroyed.complete();
     this.titleService.setTitle(`OmniLab Console`);
   }
 
-  readonly devicePageData$: Observable<DevicePageData> =
-    this.route.paramMap.pipe(
+  readonly devicePageData$: Observable<DevicePageData> = this.route.paramMap
+    .pipe(
       map((params) => params.get('id')),
+      switchMap((id) =>
+        merge(
+          of({id, isRefresh: false}),
+          this.refreshSubject$.pipe(map(() => ({id, isRefresh: true}))),
+        ),
+      ),
+    )
+    .pipe(
+      throttleTime(1000, undefined, {leading: true, trailing: true}),
+      tap(({isRefresh}) => {
+        if (isRefresh) {
+          this.refreshSnackBarRef?.dismiss();
+          this.refreshSnackBarRef = this.snackBar.showInProgress(
+            'Refreshing device data...',
+          );
+        }
+      }),
       tap(() => {
         this.loadingService.show();
       }),
-      switchMap((id) => {
+      switchMap(({id, isRefresh}) => {
         if (!id) {
           this.loadingService.hide();
           return of<DevicePageData>({
             pageData: null,
             error: 'No device ID provided in the route.',
+            id: null,
           });
         }
+
         return this.deviceService
           .getDeviceOverview({id, forceRefresh: true})
           .pipe(
-            map((pageData) => ({
-              pageData,
-              error: null,
-            })),
+            map((pageData) => {
+              this.loadingService.hide();
+              if (isRefresh && this.refreshSnackBarRef) {
+                this.refreshSnackBarRef.dismiss();
+                this.refreshSnackBarRef = undefined;
+                this.snackBar.showSuccess('Device data refreshed.');
+              }
+              return {
+                pageData,
+                error: undefined,
+                id,
+              };
+            }),
             catchError((err) => {
               console.error(`Error fetching device ${id}:`, err);
+              this.loadingService.hide();
+              if (this.refreshSnackBarRef) {
+                this.refreshSnackBarRef.dismiss();
+                this.refreshSnackBarRef = undefined;
+                this.snackBar.showError(
+                  `Failed to refresh device data for device: ${id}.`,
+                );
+              }
               return of<DevicePageData>({
                 pageData: null,
-                error: `Failed to load device data for ID: ${id}. ${getErrorMessage(err)}`,
+                error: `Failed to load device data for device: ${id}. ${getErrorMessage(err)}`,
+                id,
               });
-            }),
-            tap(() => {
-              this.loadingService.hide();
             }),
           );
       }),
+      scan<DevicePageData, DevicePageData>(
+        (acc, curr) => {
+          if (curr.pageData) {
+            return curr;
+          }
+          // If failure, check if ID matches previous success
+          if (acc.pageData && acc.id === curr.id) {
+            return {
+              ...acc,
+              error: undefined, // Clear error for silent failure
+            };
+          }
+          return curr;
+        },
+        {pageData: null, id: null},
+      ),
+      shareReplay(1),
     );
 
   setActiveTab(tab: 'overview' | 'test-history' | 'health' | 'record'): void {

@@ -12,6 +12,7 @@ import {
   TakeScreenshotResponse,
 } from '../../models/device_action';
 import {
+  DeviceOverview,
   DeviceOverviewPageData,
   GetDeviceOverviewRequest,
   TestbedConfig,
@@ -38,6 +39,8 @@ import {
   providedIn: 'root',
 })
 export class FakeDeviceService extends DeviceService {
+  private getDeviceOverviewCallCount = 0;
+
   constructor() {
     super();
   }
@@ -54,6 +57,128 @@ export class FakeDeviceService extends DeviceService {
   ): Observable<DeviceOverviewPageData> {
     const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === request.id);
     if (scenario) {
+      if (request.id === 'refresh-device-id') {
+        this.getDeviceOverviewCallCount++;
+
+        // Simulate failure on the 5th call
+        if (this.getDeviceOverviewCallCount % 5 === 0) {
+          return throwError(
+            () =>
+              new Error(
+                `Simulated failure on 5th refresh call for device: ${request.id}.`,
+              ),
+          ).pipe(delay(1000));
+        }
+
+        const isEven = this.getDeviceOverviewCallCount % 2 === 0;
+
+        // Deep clone overview to avoid mutating global mock data
+        const overview = structuredClone(scenario.overview) as DeviceOverview;
+
+        // 🎭 Simulate dynamic changes on refresh across all sections to verify UI reactivity.
+
+        // 1. Health & Activity Section
+        overview.healthAndActivity.state = isEven
+          ? 'IN_SERVICE_IDLE'
+          : 'OUT_OF_SERVICE_NEEDS_FIXING';
+        overview.healthAndActivity.title = isEven
+          ? 'In Service (Idle)'
+          : 'Out of Service (Needs Fixing)';
+        overview.healthAndActivity.subtitle = isEven
+          ? 'The device is healthy and ready for new tasks.'
+          : 'The device is experiencing issues and needs attention.';
+
+        if (overview.healthAndActivity.deviceStatus) {
+          overview.healthAndActivity.deviceStatus.status = isEven
+            ? 'IDLE'
+            : 'MISSING';
+          overview.healthAndActivity.deviceStatus.isCritical = !isEven;
+        }
+
+        // 2. Basic Information Section
+        overview.basicInfo.batteryLevel = isEven ? 95 : 42;
+        overview.basicInfo.version = isEven ? '14 (Stable)' : '14 (Beta)';
+
+        if (overview.basicInfo.network) {
+          overview.basicInfo.network.wifiRssi = isEven ? -50 : -85;
+          overview.basicInfo.network.hasInternet = isEven;
+        }
+
+        // 3. Properties Section
+        overview.properties = {
+          ...scenario.overview.properties,
+          'Refresh Count': String(this.getDeviceOverviewCallCount),
+          'Last Refreshed At': new Date().toLocaleTimeString(),
+          'Simulated State': isEven ? 'Even Refresh' : 'Odd Refresh',
+        };
+
+        // 4. Capabilities Section
+        if (overview.capabilities) {
+          overview.capabilities.supportedDrivers = isEven
+            ? [
+                ...(scenario.overview.capabilities.supportedDrivers || []),
+                'DynamicFakeDriver',
+              ]
+            : scenario.overview.capabilities.supportedDrivers;
+        }
+
+        // 5. Dimensions Section
+        if (overview.dimensions && overview.dimensions.supported) {
+          // Inject dynamic dimension into the first available source group
+          const sources = Object.keys(overview.dimensions.supported);
+          if (sources.length > 0) {
+            const source = sources[0];
+            overview.dimensions.supported[source] = {
+              ...overview.dimensions.supported[source],
+              dimensions: [
+                ...(scenario.overview.dimensions?.supported?.[source]
+                  ?.dimensions || []),
+                {
+                  name: 'Dynamic Simulation Source',
+                  value: isEven ? 'Toggle A' : 'Toggle B',
+                },
+              ],
+            };
+          }
+        }
+
+        // 6. Sub-Devices Section (if applicable)
+        if (overview.subDevices && overview.subDevices.length > 0) {
+          overview.subDevices[0].batteryLevel = isEven ? 80 : 20;
+          if (overview.subDevices[0].network) {
+            overview.subDevices[0].network.wifiRssi = isEven ? -55 : -90;
+          }
+        }
+
+        // 7. Permissions Section
+        if (overview.permissions) {
+          overview.permissions.owners = isEven
+            ? [
+                ...(scenario.overview.permissions?.owners || []),
+                'DynamicFakeOwner',
+              ]
+            : scenario.overview.permissions?.owners;
+          overview.permissions.executors = isEven
+            ? [
+                ...(scenario.overview.permissions?.executors || []),
+                'DynamicFakeExecutor',
+              ]
+            : scenario.overview.permissions?.executors;
+        }
+
+        // Create a cloned scenario with the modified overview to pass to header info function
+        const simulatedScenario = {
+          ...scenario,
+          overview,
+        };
+
+        return of({
+          overview,
+          headerInfo: this.getMockDeviceHeaderInfo(simulatedScenario),
+        }).pipe(delay(1000));
+      }
+
+      // Original logic for other devices
       return of({
         overview: scenario.overview,
         headerInfo: this.getMockDeviceHeaderInfo(scenario),
