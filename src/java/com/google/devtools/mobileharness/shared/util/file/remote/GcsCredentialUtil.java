@@ -16,10 +16,12 @@
 
 package com.google.devtools.mobileharness.shared.util.file.remote;
 
+import com.google.auth.oauth2.GoogleCredentials;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.shared.util.auth.CredentialFileUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import java.io.IOException;
 import javax.annotation.Nullable;
 
 /** Utility for getting GCS credential type. */
@@ -82,7 +84,21 @@ public final class GcsCredentialUtil {
       return GcsUtil.CredentialType.ofCredentialFile(credentialFile);
     }
 
-    // Otherwise, use app default credential.
-    return GcsUtil.CredentialType.ofAppDefault();
+    if (hasApplicationDefaultCredentials()) {
+      return GcsUtil.CredentialType.ofAppDefault();
+    }
+
+    return GcsUtil.CredentialType.ofNone();
+  }
+
+  private static boolean hasApplicationDefaultCredentials() {
+    try {
+      @SuppressWarnings("unused")
+      var unused = GoogleCredentials.getApplicationDefault();
+      return true;
+    } catch (IOException e) {
+      logger.atFine().withCause(e).log("Failed to get Application Default Credentials");
+      return false;
+    }
   }
 }
