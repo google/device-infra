@@ -139,6 +139,9 @@ message AllocationWorkflowContext {
     // The job ID returned by Otter when the test execution environment is
     // allocated.
     string otter_job_id = 1;
+
+    // The device class name requested for the test execution environment.
+    string device_class_name = 2;
   }
 
   OmnilabContext omnilab_context = 1;
