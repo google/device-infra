@@ -38,16 +38,16 @@ func New(conn net.Conn) (*Conn, error) {
 // multiple subscribers from corrupting the stream (net.Conn is stateful and
 // cannot be shared by multiple Read Pumps).
 func (c *Conn) ToFlux(ctx context.Context) flux.Flux {
-	slog.Debug("rxconn.ToFlux called", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
+	slog.DebugContext(ctx, "rxconn.ToFlux called", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
 	if c.subscribed.Swap(true) {
-		slog.Warn("rxconn.ToFlux subscription rejected: already subscribed")
+		slog.WarnContext(ctx, "rxconn.ToFlux subscription rejected: already subscribed")
 		return flux.Error(errors.New("ToFlux allows only one subscriber"))
 	}
 
 	c.wg.Add(1)
 	var fluxSubscribed atomic.Bool
 	return flux.Create(func(subscriberCtx context.Context, sink flux.Sink) {
-		slog.Debug("rxconn.ToFlux subscribed", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
+		slog.DebugContext(subscriberCtx, "rxconn.ToFlux subscribed", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
 		if fluxSubscribed.Swap(true) {
 			sink.Error(errors.New("ToFlux allows only one subscriber"))
 			return
@@ -60,9 +60,9 @@ func (c *Conn) ToFlux(ctx context.Context) flux.Flux {
 
 		// 1. The TCP Read Pump
 		go func() {
-			slog.Debug("rxconn.ToFlux TCP Read Pump started", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
+			slog.DebugContext(subscriberCtx, "rxconn.ToFlux TCP Read Pump started", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
 			defer func() {
-				slog.Debug("rxconn.ToFlux TCP Read Pump exiting", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
+				slog.DebugContext(subscriberCtx, "rxconn.ToFlux TCP Read Pump exiting", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
 				close(upstreamChan)
 			}()
 			for {
@@ -75,21 +75,21 @@ func (c *Conn) ToFlux(ctx context.Context) flux.Flux {
 					case upstreamChan <- buf[:n]:
 					// ctx: The outer context passed to ToFlux. Tells us if the application cancelled the operation.
 					case <-ctx.Done():
-						slog.Debug("rxconn.ToFlux TCP Read Pump ctx cancelled", "error", ctx.Err())
+						slog.DebugContext(ctx, "rxconn.ToFlux TCP Read Pump ctx cancelled", "error", ctx.Err())
 						errChan <- ctx.Err()
 						return
 					// subscriberCtx: The internal context managed by RSocket for this subscriber. Tells us if the subscriber unsubscribed.
 					case <-subscriberCtx.Done():
-						slog.Debug("rxconn.ToFlux TCP Read Pump subscriberCtx cancelled", "error", subscriberCtx.Err())
+						slog.DebugContext(subscriberCtx, "rxconn.ToFlux TCP Read Pump subscriberCtx cancelled", "error", subscriberCtx.Err())
 						errChan <- subscriberCtx.Err()
 						return
 					}
 				}
 				if err != nil {
 					if errors.Is(err, io.EOF) {
-						slog.Info("rxconn.ToFlux TCP Read Pump connection closed gracefully", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
+						slog.InfoContext(subscriberCtx, "rxconn.ToFlux TCP Read Pump connection closed gracefully", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
 					} else {
-						slog.Error("rxconn.ToFlux TCP Read Pump read error", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr(), "error", err)
+						slog.ErrorContext(subscriberCtx, "rxconn.ToFlux TCP Read Pump read error", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr(), "error", err)
 					}
 					errChan <- err
 					return
@@ -99,19 +99,19 @@ func (c *Conn) ToFlux(ctx context.Context) flux.Flux {
 
 		// 2. RSocket Flux Generator
 		go func() {
-			slog.Debug("rxconn.ToFlux Flux Generator started", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
+			slog.DebugContext(subscriberCtx, "rxconn.ToFlux Flux Generator started", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
 			defer func() {
-				slog.Debug("rxconn.ToFlux Flux Generator exiting", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
+				slog.DebugContext(subscriberCtx, "rxconn.ToFlux Flux Generator exiting", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
 				c.wg.Done()
 			}()
 			for {
 				select {
 				case <-ctx.Done():
-					slog.Debug("rxconn.ToFlux Flux Generator: outer ctx done", "error", ctx.Err())
+					slog.DebugContext(ctx, "rxconn.ToFlux Flux Generator: outer ctx done", "error", ctx.Err())
 					sink.Complete()
 					return
 				case <-subscriberCtx.Done():
-					slog.Debug("rxconn.ToFlux Flux Generator: subscriberCtx done", "error", subscriberCtx.Err())
+					slog.DebugContext(subscriberCtx, "rxconn.ToFlux Flux Generator: subscriberCtx done", "error", subscriberCtx.Err())
 					sink.Complete()
 					return
 				case data, ok := <-upstreamChan:
@@ -119,12 +119,12 @@ func (c *Conn) ToFlux(ctx context.Context) flux.Flux {
 						// upstreamChan closed string, check errors
 						select {
 						case err := <-errChan:
-							slog.Debug("rxconn.ToFlux Flux Generator: upstreamChan closed, got error from read pump", "error", err)
+							slog.DebugContext(subscriberCtx, "rxconn.ToFlux Flux Generator: upstreamChan closed, got error from read pump", "error", err)
 							// Treat ALL read errors as clean completion to avoid sending ERROR frames
 							// that cause panics in rsocket-go Responder side.
 							sink.Complete()
 						default:
-							slog.Debug("rxconn.ToFlux Flux Generator: upstreamChan closed, no error")
+							slog.DebugContext(subscriberCtx, "rxconn.ToFlux Flux Generator: upstreamChan closed, no error")
 							sink.Complete()
 						}
 						return
@@ -138,7 +138,7 @@ func (c *Conn) ToFlux(ctx context.Context) flux.Flux {
 
 // FromFlux subscribes to the Flux and writes to the active socket.
 func (c *Conn) FromFlux(ctx context.Context, incoming flux.Flux) {
-	slog.Debug("rxconn.FromFlux subscribing", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
+	slog.DebugContext(ctx, "rxconn.FromFlux subscribing", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
 	c.wg.Add(1)
 	incoming.Subscribe(ctx,
 		rx.OnNext(func(p payload.Payload) error {
@@ -147,7 +147,7 @@ func (c *Conn) FromFlux(ctx context.Context, incoming flux.Flux) {
 			for len(data) > 0 {
 				n, err := c.conn.Write(data)
 				if err != nil {
-					slog.Error("rxconn.FromFlux write error", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr(), "error", err)
+					slog.ErrorContext(ctx, "rxconn.FromFlux write error", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr(), "error", err)
 					return err // Connection dropped locally, triggers OnError implicitly
 				}
 				data = data[n:]
@@ -156,25 +156,25 @@ func (c *Conn) FromFlux(ctx context.Context, incoming flux.Flux) {
 			return nil
 		}),
 		rx.OnComplete(func() {
-			slog.Debug("rxconn.FromFlux OnComplete received", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
+			slog.DebugContext(ctx, "rxconn.FromFlux OnComplete received", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
 			defer func() {
-				slog.Debug("rxconn.FromFlux OnComplete exiting", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
+				slog.DebugContext(ctx, "rxconn.FromFlux OnComplete exiting", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
 				c.wg.Done()
 			}()
 			// Remote sent EOF via RSocket. We mirror the FIN locally.
 			if cw, ok := c.conn.(interface{ CloseWrite() error }); ok {
-				slog.Debug("rxconn.FromFlux calling CloseWrite", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
+				slog.DebugContext(ctx, "rxconn.FromFlux calling CloseWrite", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
 				_ = cw.CloseWrite()
 			}
 		}),
 		rx.OnError(func(err error) {
-			slog.Error("rxconn.FromFlux OnError received", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr(), "error", err)
+			slog.ErrorContext(ctx, "rxconn.FromFlux OnError received", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr(), "error", err)
 			defer func() {
-				slog.Debug("rxconn.FromFlux OnError exiting", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
+				slog.DebugContext(ctx, "rxconn.FromFlux OnError exiting", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
 				c.wg.Done()
 			}()
 			// Remote dropped abruptly. Kill the local socket.
-			slog.Info("rxconn.FromFlux closing connection due to remote error", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
+			slog.InfoContext(ctx, "rxconn.FromFlux closing connection due to remote error", "local", c.conn.LocalAddr(), "remote", c.conn.RemoteAddr())
 			_ = c.conn.Close()
 		}),
 	)

@@ -35,7 +35,10 @@ go_library(
         "@com_github_rsocket_rsocket_go//payload",
         "@com_github_rsocket_rsocket_go//rx",
         "@com_github_rsocket_rsocket_go//rx/flux",
+        "@io_opentelemetry_go_otel_metric//:metric",
         "@io_opentelemetry_go_otel_trace//:trace",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel//attribute",
         "@io_opentelemetry_go_otel//codes",
     ],
 )
@@ -54,5 +57,6 @@ go_test(
         "@com_github_rsocket_rsocket_go//payload",
         "@com_github_rsocket_rsocket_go//rx/flux",
         "@com_github_rsocket_rsocket_go//rx/mono",
+        "@io_opentelemetry_go_otel_trace//:trace",
     ],
 )

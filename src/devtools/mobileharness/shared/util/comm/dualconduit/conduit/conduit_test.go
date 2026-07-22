@@ -9,6 +9,7 @@ import (
 	"github.com/rsocket/rsocket-go"
 	"github.com/rsocket/rsocket-go/rx/flux"
 	"github.com/rsocket/rsocket-go/rx/mono"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestConduitCloseViaPumpCtx(t *testing.T) {
@@ -20,7 +21,7 @@ func TestConduitCloseViaPumpCtx(t *testing.T) {
 
 	c := New(ctx, "test-id", nil, mrs, func() {
 		close(removed)
-	}, nil, nil)
+	}, nil, trace.SpanContext{}, nil)
 
 	if c.ID != "test-id" {
 		t.Errorf("New() ID = %v, want %v", c.ID, "test-id")
@@ -61,7 +62,7 @@ func TestConduitCloseViaRSocket(t *testing.T) {
 
 	c := New(ctx, "test-id2", nil, mrs, func() {
 		close(removed)
-	}, nil, nil)
+	}, nil, trace.SpanContext{}, nil)
 
 	// Simulate RSocket connection drop.
 	mrs.Close()
@@ -91,7 +92,7 @@ func TestConduitExplicitClose(t *testing.T) {
 
 	c := New(ctx, "test-id3", nil, mrs, func() {
 		removed = true
-	}, nil, nil)
+	}, nil, trace.SpanContext{}, nil)
 
 	// Explicitly close the Conduit.
 	if err := c.Close(); err != nil {
@@ -129,7 +130,7 @@ func TestConduitCloseIdempotent(t *testing.T) {
 
 	c := New(ctx, "test-id4", nil, mrs, func() {
 		removedCount++
-	}, nil, nil)
+	}, nil, trace.SpanContext{}, nil)
 
 	// Explicitly close the Conduit multiple times.
 	if err := c.Close(); err != nil {

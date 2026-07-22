@@ -16,6 +16,6 @@ type Server struct {
 
 // SayHello implements helloworld.GreeterServer
 func (s *Server) SayHello(ctx context.Context, in *helloworldpb.HelloRequest) (*helloworldpb.HelloReply, error) {
-	slog.Info("Received SayHello", "name", in.GetName())
+	slog.InfoContext(ctx, "Received SayHello", "name", in.GetName())
 	return &helloworldpb.HelloReply{Message: "Hello " + in.GetName()}, nil
 }

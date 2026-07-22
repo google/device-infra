@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -20,20 +21,23 @@ var (
 	port = flag.Int("port", 50052, "The server port")
 )
 
+const serviceName = "dualconduit-helloworld"
+
 func main() {
-	logutil.Setup("/logs/helloworld.log")
+	logutil.Setup("/logs/helloworld.log", serviceName)
 	flag.Parse()
+	ctx := context.Background()
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
-		slog.Error("Failed to listen", "error", err)
+		slog.ErrorContext(ctx, "Failed to listen", "error", err)
 		os.Exit(1)
 	}
 	s := grpc.NewServer()
 	helloworldsvcpb.RegisterGreeterServer(s, &helloworld.Server{})
 	reflection.Register(s)
-	slog.Info("Helloworld server listening", "addr", lis.Addr())
+	slog.InfoContext(ctx, "Helloworld server listening", "addr", lis.Addr())
 	if err := s.Serve(lis); err != nil {
-		slog.Error("Failed to serve", "error", err)
+		slog.ErrorContext(ctx, "Failed to serve", "error", err)
 		os.Exit(1)
 	}
 }

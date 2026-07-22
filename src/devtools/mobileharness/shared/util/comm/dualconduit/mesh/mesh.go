@@ -79,7 +79,7 @@ func New(ctx context.Context, httpPort, tcpPort int, discoveryTypeStr string) *S
 
 	discType, ok := discoveryTypes[discoveryTypeStr]
 	if !ok {
-		slog.Warn("Unknown discovery type, defaulting to STRICT_DNS", "type", discoveryTypeStr)
+		slog.WarnContext(ctx, "Unknown discovery type, defaulting to STRICT_DNS", "type", discoveryTypeStr)
 		discType = clusterpb.Cluster_STRICT_DNS
 	}
 
@@ -152,14 +152,14 @@ func (s *Server) updateSnapshot(ctx context.Context) error {
 	version := fmt.Sprintf("v%d", s.version)
 	snap, err := s.generateSnapshot(version)
 	if err != nil {
-		slog.Error("Failed to generate snapshot", "error", err)
+		slog.ErrorContext(ctx, "Failed to generate snapshot", "error", err)
 		return err
 	}
 
 	// We assume node ID is "node" for simplicity. In real case it should match Envoy node ID.
 	err = s.cache.SetSnapshot(ctx, "node", snap)
 	if err != nil {
-		slog.Error("Failed to set snapshot", "error", err)
+		slog.ErrorContext(ctx, "Failed to set snapshot", "error", err)
 		return err
 	}
 	return nil
@@ -415,7 +415,7 @@ func makeEndpoints(clusterName string, addresses []string) *endpointpb.ClusterLo
 	for _, address := range addresses {
 		host, portStr, err := net.SplitHostPort(address)
 		if err != nil {
-			slog.Warn("Failed to split host port", "address", address, "error", err)
+			slog.WarnContext(context.Background(), "Failed to split host port", "address", address, "error", err)
 			host = address // Fallback to address as host if split fails
 		}
 		var port uint32

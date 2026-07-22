@@ -19,6 +19,7 @@ import (
 	dconpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/attribute"
+	otelcodes "go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 )
@@ -67,7 +68,7 @@ func (s *Service) DeregisterEndpoint(ctx context.Context, req *dconpb.EstablishC
 
 // Run starts the Acceptor service, listening for incoming RSocket connections.
 func (s *Service) Run(ctx context.Context) error {
-	slog.Info("Acceptor starting up")
+	slog.InfoContext(ctx, "Acceptor starting up")
 
 	defer s.Manager.Shutdown()
 
@@ -83,14 +84,14 @@ func (s *Service) Run(ctx context.Context) error {
 			return nil, err
 		}
 
-		slog.Info("RSocket Connection incoming", "id", conduitID, "metadata", req)
-
 		// Extract parent context from W3C headers in traceContext
 		extractedCtx := otel.GetTextMapPropagator().Extract(ctx, propagation.MapCarrier(traceContext))
 
+		slog.InfoContext(extractedCtx, "RSocket Connection incoming", "id", conduitID, "metadata", req)
+
 		// Start OpenTelemetry span for acceptor side conduit lifecycle
 		tracer := otel.Tracer("dualconduit/conduit")
-		_, acceptorSpan := tracer.Start(extractedCtx, "conduit.lifecycle",
+		_, acceptorSpan := tracer.Start(extractedCtx, "conduit.open",
 			trace.WithAttributes(
 				attribute.String("conduit.id", conduitID),
 				attribute.String("conduit.destination", req.DestinationEndpoint),
@@ -99,12 +100,15 @@ func (s *Service) Run(ctx context.Context) error {
 			),
 		)
 
-		con, err := s.Manager.Add(ctx, conduitID, req, rs, nil, acceptorSpan)
+		con, err := s.Manager.Add(ctx, conduitID, req, rs, nil, acceptorSpan.SpanContext())
 		if err != nil {
-			slog.Error("Failed to add conduit", "id", conduitID, "error", err)
+			slog.ErrorContext(extractedCtx, "Failed to add conduit", "id", conduitID, "error", err)
+			acceptorSpan.RecordError(err)
+			acceptorSpan.SetStatus(otelcodes.Error, err.Error())
 			acceptorSpan.End()
 			return nil, err
 		}
+		acceptorSpan.End()
 
 		if req.Type == dconpb.EstablishConduitRequest_CONDUIT_TYPE_REVERSE {
 			return s.handleReverseConduit(ctx, conduitID, req, rs, con)
@@ -120,11 +124,11 @@ func (s *Service) Run(ctx context.Context) error {
 }
 
 func (s *Service) handleProbe() rsocket.RSocket {
-	slog.Info("Received check connection, acknowledging")
+	slog.InfoContext(context.Background(), "Received check connection, acknowledging")
 	return rsocket.NewAbstractSocket(
 		rsocket.RequestResponse(func(msg payload.Payload) mono.Mono {
 			clientHostname := msg.DataUTF8()
-			slog.Info("Probe from client", "hostname", clientHostname)
+			slog.InfoContext(context.Background(), "Probe from client", "hostname", clientHostname)
 			return mono.Just(payload.New([]byte("ACK "+clientHostname), nil))
 		}),
 	)
@@ -133,7 +137,7 @@ func (s *Service) handleProbe() rsocket.RSocket {
 func (s *Service) parseSetupMetadata(setup payload.SetupPayload) (*dconpb.EstablishConduitRequest, map[string]string, error) {
 	metadata, ok := setup.Metadata()
 	if !ok {
-		slog.Error("Setup payload is missing metadata")
+		slog.ErrorContext(context.Background(), "Setup payload is missing metadata")
 		return nil, nil, fmt.Errorf("setup payload is missing metadata")
 	}
 	setupMeta := &dconpb.ConduitSetupMetadata{}
@@ -144,7 +148,7 @@ func (s *Service) parseSetupMetadata(setup payload.SetupPayload) (*dconpb.Establ
 	// Fallback to unmarshaling directly as EstablishConduitRequest
 	req := &dconpb.EstablishConduitRequest{}
 	if err := proto.Unmarshal(metadata, req); err != nil {
-		slog.Error("Invalid setup metadata", "error", err)
+		slog.ErrorContext(context.Background(), "Invalid setup metadata", "error", err)
 		return nil, nil, err
 	}
 	return req, nil, nil
@@ -157,7 +161,7 @@ func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, re
 	}
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
-		slog.Error("Failed to allocate port for reverse conduit", "id", conduitID, "error", err)
+		slog.ErrorContext(ctx, "Failed to allocate port for reverse conduit", "id", conduitID, "error", err)
 		return nil, err
 	}
 	tcpAddr, ok := lis.Addr().(*net.TCPAddr)
@@ -171,7 +175,7 @@ func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, re
 	go func() {
 		logicalName, err := s.RegisterEndpoint(ctx, req, dynamicPort)
 		if err != nil {
-			slog.Error("Service register failed", "id", conduitID, "error", err)
+			slog.ErrorContext(ctx, "Service register failed", "id", conduitID, "error", err)
 			lis.Close()
 			con.Close()
 			return
@@ -180,7 +184,7 @@ func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, re
 		go func() {
 			<-con.Context().Done()
 			if err := s.DeregisterEndpoint(ctx, req, dynamicPort); err != nil {
-				slog.Error("Service deregister failed", "id", conduitID, "error", err)
+				slog.ErrorContext(ctx, "Service deregister failed", "id", conduitID, "error", err)
 			}
 		}()
 
@@ -205,7 +209,7 @@ func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, re
 				},
 			}
 		default:
-			slog.Error("Unsupported protocol for reverse conduit", "id", conduitID, "protocol", req.Protocol)
+			slog.ErrorContext(ctx, "Unsupported protocol for reverse conduit", "id", conduitID, "protocol", req.Protocol)
 			lis.Close()
 			con.Close()
 			return
@@ -217,7 +221,7 @@ func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, re
 		}
 		metadata, err := proto.Marshal(resp)
 		if err != nil {
-			slog.Error("Failed to marshal registration metadata", "id", conduitID, "error", err)
+			slog.ErrorContext(ctx, "Failed to marshal registration metadata", "id", conduitID, "error", err)
 			lis.Close()
 			con.Close()
 			return
@@ -229,7 +233,7 @@ func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, re
 		if err := conduit.StartListeningLoop(con, func() (net.Listener, error) {
 			return lis, nil
 		}); err != nil {
-			slog.Error("StartListeningLoop error", "id", conduitID, "error", err)
+			slog.ErrorContext(ctx, "StartListeningLoop error", "id", conduitID, "error", err)
 		}
 	}()
 
@@ -238,7 +242,7 @@ func (s *Service) handleReverseConduit(ctx context.Context, conduitID string, re
 		rsocket.MetadataPush(func(msg payload.Payload) {
 			metadata, ok := msg.Metadata()
 			if ok && string(metadata) == "CLOSE" {
-				slog.Info("Received CLOSE signal from Dialer", "id", conduitID)
+				slog.InfoContext(ctx, "Received CLOSE signal from Dialer", "id", conduitID)
 				con.Close()
 			}
 		}),

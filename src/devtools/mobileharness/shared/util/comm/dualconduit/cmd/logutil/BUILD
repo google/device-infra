@@ -25,6 +25,7 @@ go_library(
     srcs = ["logutil.go"],
     importpath = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/logutil",
     deps = [
+        "@io_opentelemetry_go_contrib_bridges_otelslog//:otelslog",
         "@in_gopkg_natefinch_lumberjack_v2//:lumberjack_v2",
     ],
 )
@@ -33,4 +34,5 @@ go_test(
     name = "logutil_test",
     srcs = ["logutil_test.go"],
     embed = [":logutil"],
+    deps = ["@io_opentelemetry_go_contrib_bridges_otelslog//:otelslog"],
 )

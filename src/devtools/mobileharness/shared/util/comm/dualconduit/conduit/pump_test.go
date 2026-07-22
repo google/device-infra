@@ -14,6 +14,7 @@ import (
 	"github.com/rsocket/rsocket-go/payload"
 	"github.com/rsocket/rsocket-go"
 	"github.com/rsocket/rsocket-go/rx/flux"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type mockCloseable struct {
@@ -71,7 +72,7 @@ func TestStartListeningLoop_MultipleStreams(t *testing.T) {
 		}),
 	)
 
-	c := New(ctx, "test-id", nil, mockCloseable{fakeRSocket}, func() {}, nil, nil)
+	c := New(ctx, "test-id", nil, mockCloseable{fakeRSocket}, func() {}, nil, trace.SpanContext{}, nil)
 	port := freePort()
 
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
@@ -151,7 +152,7 @@ func TestStartListeningLoop_AcceptError(t *testing.T) {
 	defer cancel()
 
 	fakeRSocket := rsocket.NewAbstractSocket()
-	c := New(ctx, "test-id", nil, mockCloseable{fakeRSocket}, func() {}, nil, nil)
+	c := New(ctx, "test-id", nil, mockCloseable{fakeRSocket}, func() {}, nil, trace.SpanContext{}, nil)
 	port := freePort()
 
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
@@ -190,7 +191,7 @@ func TestHandleIngressConnection_RxConnNilError(t *testing.T) {
 	defer cancel()
 
 	fakeRSocket := rsocket.NewAbstractSocket()
-	c := New(ctx, "test-id", nil, mockCloseable{fakeRSocket}, func() {}, nil, nil)
+	c := New(ctx, "test-id", nil, mockCloseable{fakeRSocket}, func() {}, nil, trace.SpanContext{}, nil)
 
 	// call handleIngressConnection with nil conn, it should log error and return without panic.
 	handleIngressConnection(c, nil)
@@ -223,7 +224,7 @@ func TestAcceptStream_MultipleStreams(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	c := New(ctx, "test", nil, mockCloseable{rsocket.NewAbstractSocket()}, func() {}, nil, nil)
+	c := New(ctx, "test", nil, mockCloseable{rsocket.NewAbstractSocket()}, func() {}, nil, trace.SpanContext{}, nil)
 
 	// Prepare dummy incoming fluxes
 	incoming := make([]chan payload.Payload, 3)
@@ -285,7 +286,7 @@ func TestCombinedLoopAndAccept(t *testing.T) {
 			return msgs
 		}),
 	)
-	c := New(ctx, "test", nil, mockCloseable{fakeRSocket}, func() {}, nil, nil)
+	c := New(ctx, "test", nil, mockCloseable{fakeRSocket}, func() {}, nil, trace.SpanContext{}, nil)
 
 	// 1. Start Listener
 	port := freePort()
@@ -348,7 +349,7 @@ func TestHalfClose_Ingress_ClientCloseWrite(t *testing.T) {
 		}),
 	)
 
-	c := New(ctx, "test", nil, mockCloseable{fakeRSocket}, func() {}, nil, nil)
+	c := New(ctx, "test", nil, mockCloseable{fakeRSocket}, func() {}, nil, trace.SpanContext{}, nil)
 	port := freePort()
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
 	if err != nil {
@@ -434,7 +435,7 @@ func TestHalfClose_Egress_ServerCloseWrite(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	c := New(ctx, "test", nil, mockCloseable{rsocket.NewAbstractSocket()}, func() {}, nil, nil)
+	c := New(ctx, "test", nil, mockCloseable{rsocket.NewAbstractSocket()}, func() {}, nil, trace.SpanContext{}, nil)
 
 	// Incoming channel provides exactly 1 message then completes.
 	f := flux.Just(payload.New([]byte("req"), nil))

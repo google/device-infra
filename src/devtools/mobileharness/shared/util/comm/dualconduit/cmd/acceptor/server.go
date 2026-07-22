@@ -20,8 +20,10 @@ import (
 	"google.golang.org/grpc"
 )
 
+const serviceName = "dualconduit-acceptor"
+
 func main() {
-	logutil.Setup("/logs/acceptor.log")
+	logutil.Setup("/logs/acceptor.log", serviceName)
 	port := flag.Int("port", 7878, "The RSocket server port")
 	transportType := flag.String("transport", "tcp", "The transport protocol to use (tcp, websocket)")
 	xdsPort := flag.Int("xds_port", 18000, "The xDS gRPC server port")
@@ -34,12 +36,12 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Initialize OpenTelemetry tracer provider
-	shutdownTracer, err := otelutil.InitTracerProvider(ctx, "dualconduit-acceptor")
+	// Initialize OpenTelemetry telemetry (traces and metrics)
+	shutdownTelemetry, err := otelutil.InitTelemetry(ctx, serviceName)
 	if err != nil {
-		slog.Error("Failed to initialize OpenTelemetry tracer", "error", err)
+		slog.ErrorContext(ctx, "Failed to initialize OpenTelemetry", "error", err)
 	} else {
-		defer shutdownTracer(ctx)
+		defer shutdownTelemetry(ctx)
 	}
 
 	// Initialize mesh server (xDS server)
@@ -60,12 +62,12 @@ func main() {
 
 		lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *xdsPort))
 		if err != nil {
-			slog.Error("Failed to listen on xDS port", "port", *xdsPort, "error", err)
+			slog.ErrorContext(ctx, "Failed to listen on xDS port", "port", *xdsPort, "error", err)
 			os.Exit(1)
 		}
-		slog.Info("xDS server listening", "port", *xdsPort)
+		slog.InfoContext(ctx, "xDS server listening", "port", *xdsPort)
 		if err := grpcServer.Serve(lis); err != nil {
-			slog.Error("xDS server error", "error", err)
+			slog.ErrorContext(ctx, "xDS server error", "error", err)
 			os.Exit(1)
 		}
 	}()
@@ -74,11 +76,11 @@ func main() {
 	go func() {
 		srv, err := acceptor.New(newTransporter, meshServer, *reverseForwardAddress)
 		if err != nil {
-			slog.Error("Failed to create acceptor", "error", err)
+			slog.ErrorContext(ctx, "Failed to create acceptor", "error", err)
 			os.Exit(1)
 		}
 		if err := srv.Run(ctx); err != nil {
-			slog.Error("Acceptor error", "error", err)
+			slog.ErrorContext(ctx, "Acceptor error", "error", err)
 			os.Exit(1)
 		}
 	}()
@@ -89,5 +91,5 @@ func main() {
 	<-sigs
 
 	cancel()
-	slog.Info("Acceptor shutting down")
+	slog.InfoContext(ctx, "Acceptor shutting down")
 }

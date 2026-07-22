@@ -35,7 +35,7 @@ func StartListeningLoop(c *Conduit, listen func() (net.Listener, error)) error {
 				return nil
 			default:
 			}
-			slog.Error("StartListeningLoop Accept error", "error", err)
+			slog.ErrorContext(c.Context(), "StartListeningLoop Accept error", "error", err)
 			continue
 		}
 
@@ -56,7 +56,7 @@ func handleIngressConnection(c *Conduit, conn net.Conn) {
 	}
 	rc, err := rxconn.New(conn)
 	if err != nil {
-		slog.Error("rxconn.New error", "id", c.ID, "error", err)
+		slog.ErrorContext(c.Context(), "rxconn.New error", "id", c.ID, "error", err)
 		return
 	}
 
@@ -80,7 +80,7 @@ func handleIngressConnection(c *Conduit, conn net.Conn) {
 
 	// Wait until both pumps finish.
 	rc.Wait()
-	slog.Info("Conduit ingress connection finished", "id", c.ID, "remote_addr", remoteAddr)
+	slog.InfoContext(streamCtx, "Conduit ingress connection finished", "id", c.ID, "remote_addr", remoteAddr)
 }
 
 // AcceptStream handles an incoming RSocket channel, dials the target service, and bridges the streams.
@@ -88,7 +88,7 @@ func handleIngressConnection(c *Conduit, conn net.Conn) {
 func AcceptStream(c *Conduit, destEndpoint string, downstream flux.Flux) flux.Flux {
 	conn, err := net.Dial("tcp", destEndpoint)
 	if err != nil {
-		slog.Error("Conduit AcceptStream: Dial backend failed", "id", c.ID, "backend", destEndpoint, "error", err)
+		slog.ErrorContext(c.Context(), "Conduit AcceptStream: Dial backend failed", "id", c.ID, "backend", destEndpoint, "error", err)
 		return flux.Create(func(ctx context.Context, s flux.Sink) {
 			// Subscribe and drain downstream Flux to activate RSocket's internal DoFinally
 			// and unblock the unicast processor's Complete() call on Dialer's completion.
@@ -102,11 +102,11 @@ func AcceptStream(c *Conduit, destEndpoint string, downstream flux.Flux) flux.Fl
 			s.Error(err) // Propagate the dial error immediately
 		})
 	}
-	slog.Info("Conduit AcceptStream: Connected to backend", "id", c.ID, "backend", destEndpoint)
+	slog.InfoContext(c.Context(), "Conduit AcceptStream: Connected to backend", "id", c.ID, "backend", destEndpoint)
 
 	rc, err := rxconn.New(conn)
 	if err != nil {
-		slog.Error("Conduit AcceptStream: rxconn.New failed", "id", c.ID, "error", err)
+		slog.ErrorContext(c.Context(), "Conduit AcceptStream: rxconn.New failed", "id", c.ID, "error", err)
 		conn.Close()
 		return flux.Error(err)
 	}
@@ -122,10 +122,10 @@ func AcceptStream(c *Conduit, destEndpoint string, downstream flux.Flux) flux.Fl
 	// Clean up TCP connection when streaming finishes.
 	c.activeConnections.Add(1)
 	go func() {
-		slog.Debug("Conduit AcceptStream pump started", "id", c.ID, "backend", destEndpoint)
+		slog.DebugContext(streamCtx, "Conduit AcceptStream pump started", "id", c.ID, "backend", destEndpoint)
 		defer c.activeConnections.Done()
 		rc.Wait()
-		slog.Debug("Conduit AcceptStream pump finished, closing connection", "id", c.ID, "backend", destEndpoint)
+		slog.DebugContext(streamCtx, "Conduit AcceptStream pump finished, closing connection", "id", c.ID, "backend", destEndpoint)
 		cancel()
 		conn.Close()
 	}()

@@ -34,8 +34,10 @@ type config struct {
 	ForwardAddress string
 }
 
+const serviceName = "dualconduit-dialer"
+
 func main() {
-	logutil.Setup("/logs/dialer.log")
+	logutil.Setup("/logs/dialer.log", serviceName)
 	var cfg config
 	var port int
 	var retryStrategy string
@@ -65,7 +67,7 @@ func main() {
 	flag.Parse()
 
 	if cfg.UseSAToken && cfg.SAKeyFile == "" {
-		slog.Error("sa_key_file must be set when use_sa_token is true")
+		slog.ErrorContext(context.Background(), "sa_key_file must be set when use_sa_token is true")
 		os.Exit(1)
 	}
 
@@ -103,7 +105,7 @@ func main() {
 		policy.MaxAttempts = 1
 		policy.Strategy = &dialer.ConstantBackoff{}
 	default:
-		slog.Error("Invalid retry_strategy", "strategy", retryStrategy)
+		slog.ErrorContext(context.Background(), "Invalid retry_strategy", "strategy", retryStrategy)
 		os.Exit(1)
 	}
 
@@ -111,30 +113,30 @@ func main() {
 	dialerCtx, dialerCancel := context.WithCancel(context.Background())
 	defer dialerCancel()
 
-	// Initialize OpenTelemetry tracer provider
-	shutdownTracer, err := otelutil.InitTracerProvider(dialerCtx, "dualconduit-dialer")
+	// Initialize OpenTelemetry telemetry (traces and metrics)
+	shutdownTelemetry, err := otelutil.InitTelemetry(dialerCtx, serviceName)
 	if err != nil {
-		slog.Error("Failed to initialize OpenTelemetry tracer", "error", err)
+		slog.ErrorContext(dialerCtx, "Failed to initialize OpenTelemetry", "error", err)
 	} else {
-		defer shutdownTracer(dialerCtx)
+		defer shutdownTelemetry(dialerCtx)
 	}
 	dialerSvc := dialer.New(dialerCtx, cfg.Hostname, cfg.ForwardAddress, newTransporter, policy, keepAliveTickPeriod)
 	if err := dialerSvc.CheckConnection(context.Background()); err != nil {
-		slog.Error("Pre-flight check failed", "error", err)
+		slog.ErrorContext(dialerCtx, "Pre-flight check failed", "error", err)
 		os.Exit(1)
 	}
 
 	for _, fc := range forwardConduits {
 		req, err := flagutil.ParseForwardConduitFlag(fc)
 		if err != nil {
-			slog.Error("Failed to parse -L flag", "flag", fc, "error", err)
+			slog.ErrorContext(dialerCtx, "Failed to parse -L flag", "flag", fc, "error", err)
 			os.Exit(1)
 		}
 		req.InstanceId = cfg.Hostname
 		if req.InstanceId == "" {
 			hostname, err := os.Hostname()
 			if err != nil {
-				slog.Warn("Failed to get hostname", "error", err)
+				slog.WarnContext(dialerCtx, "Failed to get hostname", "error", err)
 				// Proceed with an empty InstanceId if os.Hostname fails.
 			} else {
 				req.InstanceId = hostname
@@ -147,21 +149,21 @@ func main() {
 		}
 		resp, err := dialerSvc.EstablishSession(context.Background(), sessionReq)
 		if err != nil {
-			slog.Error("Failed to establish forward session", "flag", fc, "error", err)
+			slog.ErrorContext(dialerCtx, "Failed to establish forward session", "flag", fc, "error", err)
 			os.Exit(1)
 		}
 		if len(resp.EstablishConduitResponses) > 0 {
 			cResp := resp.EstablishConduitResponses[0]
-			slog.Info("Established forward session", "session_id", resp.SessionId, "conduit_id", cResp.ConduitId, "locator", cResp.ServiceLocator)
+			slog.InfoContext(dialerCtx, "Established forward session", "session_id", resp.SessionId, "conduit_id", cResp.ConduitId, "locator", cResp.ServiceLocator)
 		} else {
-			slog.Info("Established forward session", "session_id", resp.SessionId)
+			slog.InfoContext(dialerCtx, "Established forward session", "session_id", resp.SessionId)
 		}
 	}
 
 	// 2. Start Dialer gRPC server
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
-		slog.Error("Failed to listen on port", "port", port, "error", err)
+		slog.ErrorContext(dialerCtx, "Failed to listen on port", "port", port, "error", err)
 		os.Exit(1)
 	}
 
@@ -177,17 +179,17 @@ func main() {
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		sig := <-sigChan
-		slog.Info("Received signal, shutting down", "signal", sig)
+		slog.InfoContext(dialerCtx, "Received signal, shutting down", "signal", sig)
 		dialerCancel()
 		dialerSvc.Manager.Shutdown()
 		s.GracefulStop()
-		slog.Info("Graceful shutdown complete")
+		slog.InfoContext(dialerCtx, "Graceful shutdown complete")
 		os.Exit(0)
 	}()
 
-	slog.Info("Dialer gRPC server listening", "port", port)
+	slog.InfoContext(dialerCtx, "Dialer gRPC server listening", "port", port)
 	if err := s.Serve(lis); err != nil {
-		slog.Error("Failed to serve", "error", err)
+		slog.ErrorContext(dialerCtx, "Failed to serve", "error", err)
 		os.Exit(1)
 	}
 }

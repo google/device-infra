@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"log/slog"
 	"testing"
 	"time"
@@ -70,5 +71,70 @@ func TestReplaceAttr(t *testing.T) {
 	wantVal := "2026-07-08T12:34:56.789-0700"
 	if replaced.Value.String() != wantVal {
 		t.Errorf("replaceAttr value = %q, want %q", replaced.Value.String(), wantVal)
+	}
+}
+
+type panickingHandler struct{}
+
+func (p *panickingHandler) Enabled(context.Context, slog.Level) bool { return true }
+func (p *panickingHandler) Handle(context.Context, slog.Record) error {
+	panic("simulated otel exporter crash")
+}
+func (p *panickingHandler) WithAttrs([]slog.Attr) slog.Handler { return p }
+func (p *panickingHandler) WithGroup(string) slog.Handler      { return p }
+
+func TestMultiHandlerWithBrokenOTelExporter(t *testing.T) {
+	var buf bytes.Buffer
+	jsonHandler := slog.NewJSONHandler(&buf, &slog.HandlerOptions{ReplaceAttr: replaceAttr})
+	fileHandler := &flatteningHandler{Handler: jsonHandler}
+
+	mh := &multiHandler{
+		fileHandler: fileHandler,
+		otelHandler: &panickingHandler{},
+	}
+
+	logger := slog.New(mh)
+
+	// Logging should not panic, and file log should succeed
+	logger.InfoContext(context.Background(), "test message", "key", "value")
+
+	var data map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &data); err != nil {
+		t.Fatalf("Failed to unmarshal JSON from file handler: %v", err)
+	}
+
+	msg, ok := data["message"].(string)
+	if !ok || msg != "test message key=value" {
+		t.Errorf("fileHandler message = %q, want %q", msg, "test message key=value")
+	}
+}
+
+func TestMultiHandlerWithUnreachableSidecar(t *testing.T) {
+	var buf bytes.Buffer
+	jsonHandler := slog.NewJSONHandler(&buf, &slog.HandlerOptions{ReplaceAttr: replaceAttr})
+	fileHandler := &flatteningHandler{Handler: jsonHandler}
+
+	otelHandler := otelslog.NewHandler("test-service")
+
+	mh := &multiHandler{
+		fileHandler: fileHandler,
+		otelHandler: otelHandler,
+	}
+
+	logger := slog.New(mh)
+
+	// Emit multiple log records; should be fast and non-blocking
+	start := time.Now()
+	for i := 0; i < 100; i++ {
+		logger.InfoContext(context.Background(), "log line", "index", i)
+	}
+	elapsed := time.Since(start)
+
+	if elapsed > 1*time.Second {
+		t.Errorf("Logging to unreachable sidecar took too long: %v", elapsed)
+	}
+
+	if buf.Len() == 0 {
+		t.Errorf("File log buffer is empty, expected local logs")
 	}
 }

@@ -39,6 +39,7 @@ go_library(
         "@io_opentelemetry_go_otel_trace//:trace",
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel//attribute",
+        "@io_opentelemetry_go_otel//codes",
         "@io_opentelemetry_go_otel//propagation",
         "@org_golang_google_protobuf//proto",
     ],

@@ -3,12 +3,16 @@ package conduit
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/rsocket/rsocket-go"
 
 	dconpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel"
 )
 
 var (
@@ -25,15 +29,83 @@ type RemoveHandler func(id string, meta *dconpb.EstablishConduitRequest)
 
 // Manager is responsible for storing active conduits and handling their lifecycle across the system.
 type Manager struct {
-	mu             sync.RWMutex
-	conduits       map[string]*Conduit
-	removeHandlers []RemoveHandler // List of removal subscribers.
+	mu                sync.RWMutex
+	conduits          map[string]*Conduit
+	removeHandlers    []RemoveHandler // List of removal subscribers.
+	durationHistogram metric.Float64Histogram
 }
 
 // NewManager creates an empty manager for Conduits.
 func NewManager() *Manager {
-	return &Manager{
+	m := &Manager{
 		conduits: make(map[string]*Conduit),
+	}
+	m.registerMetrics()
+	return m
+}
+
+func (m *Manager) registerMetrics() {
+	meter := otel.Meter("dualconduit/conduit")
+
+	boundaries := []float64{1, 10, 60, 600, 3600, 86400, 604800}
+	durationHistogram, err := meter.Float64Histogram(
+		"conduit.duration",
+		metric.WithDescription("Duration of the conduit connection"),
+		metric.WithUnit("s"),
+		metric.WithExplicitBucketBoundaries(boundaries...),
+	)
+	if err != nil {
+		slog.ErrorContext(context.Background(), "Failed to create conduit.duration histogram", "error", err)
+	} else {
+		m.durationHistogram = durationHistogram
+	}
+
+	ageGauge, err := meter.Float64ObservableGauge(
+		"conduit.age",
+		metric.WithDescription("Current age of active conduits"),
+		metric.WithUnit("s"),
+	)
+	if err != nil {
+		slog.ErrorContext(context.Background(), "Failed to create conduit.age gauge", "error", err)
+	}
+
+	activeCounter, err := meter.Int64ObservableUpDownCounter(
+		"conduit.active_count",
+		metric.WithDescription("Number of active conduits"),
+		metric.WithUnit("1"),
+	)
+	if err != nil {
+		slog.ErrorContext(context.Background(), "Failed to create conduit.active_count counter", "error", err)
+	}
+
+	if ageGauge == nil || activeCounter == nil {
+		return
+	}
+
+	_, err = meter.RegisterCallback(func(ctx context.Context, obs metric.Observer) error {
+		type conduitInfo struct {
+			id  string
+			age float64
+		}
+		var active []conduitInfo
+
+		m.mu.RLock()
+		obs.ObserveInt64(activeCounter, int64(len(m.conduits)))
+		for _, c := range m.conduits {
+			active = append(active, conduitInfo{
+				id:  c.ID,
+				age: time.Since(c.startTime).Seconds(),
+			})
+		}
+		m.mu.RUnlock()
+
+		for _, info := range active {
+			obs.ObserveFloat64(ageGauge, info.age)
+		}
+		return nil
+	}, ageGauge, activeCounter)
+	if err != nil {
+		slog.ErrorContext(context.Background(), "Failed to register metric callback", "error", err)
 	}
 }
 
@@ -42,7 +114,7 @@ func NewManager() *Manager {
 // the conduit will automatically shut down and remove itself from the manager.
 //
 // Returns ErrAlreadyExists if a Conduit with the same ID already exists.
-func (m *Manager) Add(ctx context.Context, id string, meta *dconpb.EstablishConduitRequest, rs rsocket.CloseableRSocket, beforeClose func(), span trace.Span) (*Conduit, error) {
+func (m *Manager) Add(ctx context.Context, id string, meta *dconpb.EstablishConduitRequest, rs rsocket.CloseableRSocket, beforeClose func(), openSpanContext trace.SpanContext) (*Conduit, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -63,7 +135,7 @@ func (m *Manager) Add(ctx context.Context, id string, meta *dconpb.EstablishCond
 		}
 	}
 
-	c := New(ctx, id, meta, rs, onRemove, beforeClose, span)
+	c := New(ctx, id, meta, rs, onRemove, beforeClose, openSpanContext, m.durationHistogram)
 	m.conduits[id] = c
 	return c, nil
 }

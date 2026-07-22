@@ -95,7 +95,7 @@ func (s *Service) EstablishConduit(ctx context.Context, req *dconpb.EstablishCon
 }
 
 func (s *Service) establishConduit(ctx context.Context, req *dconpb.EstablishConduitRequest) (*dconpb.EstablishConduitResponse, error) {
-	slog.Info("Received EstablishConduit request", "request", req)
+	slog.InfoContext(ctx, "Received EstablishConduit request", "request", req)
 
 	if req.Type == dconpb.EstablishConduitRequest_CONDUIT_TYPE_FORWARD && req.EntryPort == 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "entry port must be set for forward conduit")
@@ -106,7 +106,7 @@ func (s *Service) establishConduit(ctx context.Context, req *dconpb.EstablishCon
 
 	// Start OpenTelemetry span for the conduit lifecycle on Dialer
 	tracer := otel.Tracer("dualconduit/conduit")
-	ctx, dialerSpan := tracer.Start(ctx, "conduit.lifecycle",
+	ctx, dialerSpan := tracer.Start(ctx, "conduit.open",
 		trace.WithAttributes(
 			attribute.String("conduit.id", id),
 			attribute.String("conduit.destination", req.DestinationEndpoint),
@@ -149,24 +149,26 @@ func (s *Service) establishConduit(ctx context.Context, req *dconpb.EstablishCon
 	var beforeClose func()
 	if req.Type == dconpb.EstablishConduitRequest_CONDUIT_TYPE_REVERSE {
 		beforeClose = func() {
-			slog.Info("Sending CLOSE signal to Acceptor", "id", id)
+			slog.InfoContext(ctx, "Sending CLOSE signal to Acceptor", "id", id)
 			rsClient.MetadataPush(payload.New(nil, []byte(closeSignal)))
 			time.Sleep(reverseConduitCloseSignalDelay)
 		}
 	}
 
-	// 4. Create Conduit in the Manager (passes ownership of dialerSpan)
-	con, err := s.Manager.Add(s.ServiceCtx, id, req, rsClient, beforeClose, dialerSpan)
+	// 4. Create Conduit in the Manager.
+	// End the setup span after adding to the manager, so failures in Add are captured.
+	dialerSpan.End()
+	openSpanContext := dialerSpan.SpanContext()
+	con, err := s.Manager.Add(s.ServiceCtx, id, req, rsClient, beforeClose, openSpanContext)
 	if err != nil {
 		rsClient.Close()
-		dialerSpan.End()
 		return nil, status.Errorf(codes.Internal, "failed to add conduit to manager: %v", err)
 	}
 	close(condReady)
 
 	var serviceLocator *dconpb.ServiceLocator
 	if req.Type == dconpb.EstablishConduitRequest_CONDUIT_TYPE_FORWARD {
-		serviceLocator, err = s.startForwardConduit(con, uint32(req.EntryPort))
+		serviceLocator, err = s.startForwardConduit(ctx, con, uint32(req.EntryPort))
 		if err != nil {
 			con.Close()
 			return nil, err
@@ -232,7 +234,7 @@ func (s *Service) startRSocketClient(id string, req *dconpb.EstablishConduitRequ
 	return rsClient, nil
 }
 
-func (s *Service) startForwardConduit(con *conduit.Conduit, entryPort uint32) (*dconpb.ServiceLocator, error) {
+func (s *Service) startForwardConduit(ctx context.Context, con *conduit.Conduit, entryPort uint32) (*dconpb.ServiceLocator, error) {
 	// 5. If it is a forward conduit, start the local listening loop.
 	port := int(entryPort)
 	addr := s.ForwardAddress
@@ -267,7 +269,7 @@ func (s *Service) startForwardConduit(con *conduit.Conduit, entryPort uint32) (*
 		if err := conduit.StartListeningLoop(con, func() (net.Listener, error) {
 			return lis, nil
 		}); err != nil {
-			slog.Error("StartListeningLoop error", "error", err)
+			slog.ErrorContext(ctx, "StartListeningLoop error", "error", err)
 		}
 	}()
 	return serviceLocator, nil
@@ -298,7 +300,7 @@ func (s *Service) waitForReverseConduitLocator(ctx context.Context, metadataPush
 
 // TeardownConduit handles the gRPC request to tear down a conduit.
 func (s *Service) TeardownConduit(ctx context.Context, req *dconpb.TeardownConduitRequest) (*dconpb.TeardownConduitResponse, error) {
-	slog.Info("Received TeardownConduit request", "request", req)
+	slog.InfoContext(ctx, "Received TeardownConduit request", "request", req)
 	s.Manager.Remove(req.ConduitId)
 	return &dconpb.TeardownConduitResponse{}, nil
 }
@@ -336,7 +338,7 @@ func (s *Service) CheckConnection(ctx context.Context) error {
 			return err
 		}
 
-		slog.Info("Performing pre-flight check to acceptor")
+		slog.InfoContext(ctx, "Performing pre-flight check to acceptor")
 		client, err := rsocket.Connect().
 			SetupPayload(payload.New([]byte(probeSignal), nil)).
 			Transport(trans).
@@ -360,7 +362,7 @@ func (s *Service) CheckConnection(ctx context.Context) error {
 			return fmt.Errorf("unexpected pre-flight check response: %q, want: %q", string(resp.Data()), expectedAck)
 		}
 
-		slog.Info("Pre-flight check successful")
+		slog.InfoContext(ctx, "Pre-flight check successful")
 		return nil
 	})
 }
@@ -381,7 +383,7 @@ func (s *Service) establishConduitWithRetry(ctx context.Context, req *dconpb.Est
 
 // EstablishSession handles the gRPC request to establish a persistent session of conduits.
 func (s *Service) EstablishSession(ctx context.Context, req *dconpb.EstablishSessionRequest) (*dconpb.EstablishSessionResponse, error) {
-	slog.Info("Received EstablishSession request", "request", req)
+	slog.InfoContext(ctx, "Received EstablishSession request", "request", req)
 
 	if req.GetEstablishConduitRequest() == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "establish_conduit_request must be set")
@@ -455,7 +457,7 @@ func (s *Service) EstablishSession(ctx context.Context, req *dconpb.EstablishSes
 
 // TeardownSession handles the gRPC request to tear down a session.
 func (s *Service) TeardownSession(ctx context.Context, req *dconpb.TeardownSessionRequest) (*dconpb.TeardownSessionResponse, error) {
-	slog.Info("Received TeardownSession request", "request", req)
+	slog.InfoContext(ctx, "Received TeardownSession request", "request", req)
 
 	// 1. Retrieve the session to get its conduits before removing it.
 	sess, err := s.Sessions.Session(req.SessionId)
@@ -478,7 +480,7 @@ func (s *Service) TeardownSession(ctx context.Context, req *dconpb.TeardownSessi
 	// 4. Tear down all associated conduits.
 	// We do this by removing them from the low-level conduit manager.
 	for _, cid := range sess.Conduits() {
-		slog.Info("Tearing down conduit as part of session teardown", "conduitID", cid, "sessionID", req.SessionId)
+		slog.InfoContext(ctx, "Tearing down conduit as part of session teardown", "conduitID", cid, "sessionID", req.SessionId)
 		s.Manager.Remove(cid)
 	}
 
@@ -486,10 +488,10 @@ func (s *Service) TeardownSession(ctx context.Context, req *dconpb.TeardownSessi
 }
 
 func (s *Service) handleConduitRemoved(id string, meta *dconpb.EstablishConduitRequest) {
-	slog.Info("handleConduitRemoved", "conduitID", id, "meta", meta)
+	slog.InfoContext(s.ServiceCtx, "handleConduitRemoved", "conduitID", id, "meta", meta)
 	select {
 	case <-s.ServiceCtx.Done():
-		slog.Info("Service is shutting down, ignoring conduit removal", "conduitID", id)
+		slog.InfoContext(s.ServiceCtx, "Service is shutting down, ignoring conduit removal", "conduitID", id)
 		return
 	default:
 	}
@@ -498,14 +500,14 @@ func (s *Service) handleConduitRemoved(id string, meta *dconpb.EstablishConduitR
 	// the SessionManager, so ok will be false and we skip reconnection.
 	sess, ok := s.Sessions.FindByConduitID(id)
 	if !ok {
-		slog.Warn("Conduit not found in session manager", "conduitID", id)
+		slog.WarnContext(s.ServiceCtx, "Conduit not found in session manager", "conduitID", id)
 		return // Not a persistent session conduit
 	}
 	if !sess.Meta.AutoReconnect {
-		slog.Info("Conduit removed from persistent session, auto-reconnect is disabled", "conduitID", id, "sessionID", sess.ID)
+		slog.InfoContext(sess.Context(), "Conduit removed from persistent session, auto-reconnect is disabled", "conduitID", id, "sessionID", sess.ID)
 		return
 	}
-	slog.Info("Conduit removed from persistent session, triggering reconnect", "conduitID", id, "sessionID", sess.ID)
+	slog.InfoContext(sess.Context(), "Conduit removed from persistent session, triggering reconnect", "conduitID", id, "sessionID", sess.ID)
 	go s.reconnect(sess, id, meta)
 }
 
@@ -515,16 +517,16 @@ func (s *Service) reconnect(sess *session.Session, brokenConduitID string, meta 
 	reconCtx, cancel := context.WithCancel(sess.Context())
 	defer cancel()
 
-	slog.Info("Reconnecting conduit", "brokenConduitID", brokenConduitID, "sessionID", sess.ID)
+	slog.InfoContext(reconCtx, "Reconnecting conduit", "brokenConduitID", brokenConduitID, "sessionID", sess.ID)
 	resp, err := s.establishConduitWithRetry(reconCtx, meta, s.DefaultRetryPolicy)
 	if err != nil {
-		slog.Error("Failed to reconnect conduit after retry policy exhausted", "brokenConduitID", brokenConduitID, "sessionID", sess.ID, "error", err)
+		slog.ErrorContext(reconCtx, "Failed to reconnect conduit after retry policy exhausted", "brokenConduitID", brokenConduitID, "sessionID", sess.ID, "error", err)
 		// What to do if reconnect fails?
 		// If MaxAttempts was reached, we might want to mark the session as degraded or close it.
 		// For now, with infinite retries, we shouldn't get here unless context is canceled.
 		return
 	}
 
-	slog.Info("Reconnected conduit successfully", "oldID", brokenConduitID, "newID", resp.ConduitId, "sessionID", sess.ID)
+	slog.InfoContext(reconCtx, "Reconnected conduit successfully", "oldID", brokenConduitID, "newID", resp.ConduitId, "sessionID", sess.ID)
 	sess.ReplaceConduit(brokenConduitID, resp.ConduitId)
 }

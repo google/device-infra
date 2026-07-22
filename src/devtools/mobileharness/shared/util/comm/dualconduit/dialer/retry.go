@@ -69,7 +69,7 @@ func Retry(ctx context.Context, policy RetryPolicy, op func(ctx context.Context)
 		}
 
 		backoff := policy.Strategy.Backoff(attempts - 1)
-		slog.Info("Operation failed, retrying", "attempt", attempts, "backoff", backoff, "error", err)
+		slog.InfoContext(ctx, "Operation failed, retrying", "attempt", attempts, "backoff", backoff, "error", err)
 
 		// 2. Cutoff by Total Timeout (via ctx.Done())
 		select {

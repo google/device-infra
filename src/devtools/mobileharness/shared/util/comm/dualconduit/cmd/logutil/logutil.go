@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 
+	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
@@ -73,9 +74,59 @@ func replaceAttr(groups []string, a slog.Attr) slog.Attr {
 	}
 }
 
-// Setup configures the default slog logger to write to both os.Stderr
-// and a rotating file at the specified path.
-func Setup(logPath string) {
+// multiHandler dispatches log records to both local fileHandler and otelHandler.
+// It guarantees that errors or panics in otelHandler cannot affect fileHandler or app execution.
+type multiHandler struct {
+	fileHandler slog.Handler
+	otelHandler slog.Handler
+}
+
+func (h *multiHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return h.fileHandler.Enabled(ctx, level) || (h.otelHandler != nil && h.otelHandler.Enabled(ctx, level))
+}
+
+func (h *multiHandler) Handle(ctx context.Context, r slog.Record) error {
+	err := h.fileHandler.Handle(ctx, r)
+	if h.otelHandler != nil {
+		func() {
+			// Protect the main app and file logging by swallowing any panics
+			// or crashes originating from otelHandler (e.g., exporter failures).
+			defer func() {
+				_ = recover()
+			}()
+			if h.otelHandler.Enabled(ctx, r.Level) {
+				_ = h.otelHandler.Handle(ctx, r)
+			}
+		}()
+	}
+	return err
+}
+
+func (h *multiHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	var otel slog.Handler
+	if h.otelHandler != nil {
+		otel = h.otelHandler.WithAttrs(attrs)
+	}
+	return &multiHandler{
+		fileHandler: h.fileHandler.WithAttrs(attrs),
+		otelHandler: otel,
+	}
+}
+
+func (h *multiHandler) WithGroup(name string) slog.Handler {
+	var otel slog.Handler
+	if h.otelHandler != nil {
+		otel = h.otelHandler.WithGroup(name)
+	}
+	return &multiHandler{
+		fileHandler: h.fileHandler.WithGroup(name),
+		otelHandler: otel,
+	}
+}
+
+// Setup configures the default slog logger to write to os.Stderr,
+// a rotating file at the specified path, and optionally OpenTelemetry if serviceName is non-empty.
+func Setup(logPath string, serviceName string) {
 	rotator := &lumberjack.Logger{
 		Filename:   logPath,
 		MaxSize:    10, // megabytes
@@ -91,7 +142,18 @@ func Setup(logPath string) {
 	}
 
 	jsonHandler := slog.NewJSONHandler(mw, opts)
-	handler := &flatteningHandler{Handler: jsonHandler}
-	logger := slog.New(handler)
+	fileHandler := &flatteningHandler{Handler: jsonHandler}
+
+	var otelHandler slog.Handler
+	if serviceName != "" {
+		otelHandler = otelslog.NewHandler(serviceName)
+	}
+
+	mh := &multiHandler{
+		fileHandler: fileHandler,
+		otelHandler: otelHandler,
+	}
+
+	logger := slog.New(mh)
 	slog.SetDefault(logger)
 }
