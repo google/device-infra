@@ -24,23 +24,19 @@ import com.google.common.collect.Multimaps;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
-import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.strategy.FlakyTestRetryConstants;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.processor.RetryTestsGrouper;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.processor.RetryTestsGrouper.GroupedTests;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.processor.RetryTestsGrouper.ShardTestRuns;
 import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestSuiteResult;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.testresult.rollup.Outcome.OutcomeSummary;
 import com.google.protobuf.ExtensionRegistryLite;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.TreeMap;
-import java.util.stream.Collectors;
 
 /** Utility for computing job-level rolled up test results. */
 public final class JobResultUtil {
@@ -54,9 +50,8 @@ public final class JobResultUtil {
    * to get a rollup {@link TestResult} for each shard, and then rolling up shards horizontally.
    */
   public static TestResult computeJobRunResult(JobInfo jobInfo) {
-    ImmutableListMultimap<String, TestInfo> groupedTestRunsByShard =
-        groupTestRunsByShard(ImmutableList.copyOf(jobInfo.tests().getAll().values()));
-    if (groupedTestRunsByShard.isEmpty()) {
+    GroupedTests groupedTests = RetryTestsGrouper.groupTestsByShardAndFlakyAttemptIndex(jobInfo);
+    if (groupedTests.testsByShardIndex().isEmpty()) {
       logger.atInfo().log("No valid test runs found for job %s.", jobInfo.locator().getId());
       return TestResult.create(
           /* testCases= */ ImmutableList.of(),
@@ -66,10 +61,9 @@ public final class JobResultUtil {
     }
 
     ImmutableList.Builder<TestResult> shardResultsOfJobRunBuilder = ImmutableList.builder();
-    for (String shardIndex : groupedTestRunsByShard.keySet()) {
-      ImmutableList<TestInfo> attemptsForOneShard = groupedTestRunsByShard.get(shardIndex);
+    for (ShardTestRuns attemptsForOneShard : groupedTests.testsByShardIndex().values()) {
       List<TestResult> rerunShardTestResults = new ArrayList<>();
-      for (TestInfo attempt : attemptsForOneShard) {
+      for (TestInfo attempt : attemptsForOneShard.testsByFlakyAttemptIndex().values()) {
         rerunShardTestResults.add(loadTestResult(attempt));
       }
       TestResult rollupShardResult = rollupToShardTestResult(rerunShardTestResults);
@@ -80,75 +74,6 @@ public final class JobResultUtil {
     return rollupShardResultsToJobResult(shardResults);
   }
 
-  /**
-   * Groups test runs by shard.
-   *
-   * <p>Each entry in the returned map represents all test runs(including original run and reruns,
-   * only consider pass or fail runs) for a particular shard. If none of the runs for a shard is
-   * pass or fail, return the last run for that shard.
-   */
-  private static ImmutableListMultimap<String, TestInfo> groupTestRunsByShard(
-      List<TestInfo> testInfoList) {
-    ImmutableListMultimap<String, TestInfo> shardIndexToTestInfoList =
-        Multimaps.index(
-            testInfoList, t -> t.properties().getOptional(Test.SHARD_INDEX).orElse("0"));
-
-    ImmutableListMultimap.Builder<String, TestInfo> testRunsByShard =
-        ImmutableListMultimap.builder();
-
-    for (String shardIndex : shardIndexToTestInfoList.keySet()) {
-      ImmutableList<TestInfo> testRunsForShard = shardIndexToTestInfoList.get(shardIndex);
-      logger.atInfo().log("Found %s test runs for shard %s", testRunsForShard.size(), shardIndex);
-      boolean hasPassOrFail = testRunsForShard.stream().anyMatch(JobResultUtil::isPassOrFail);
-
-      if (hasPassOrFail) {
-        Map<Integer, ImmutableList<TestInfo>> flakyAttemptIndexToTestInfoList =
-            testRunsForShard.stream()
-                .collect(
-                    Collectors.groupingBy(
-                        t ->
-                            getAttemptIndexProperty(
-                                t, FlakyTestRetryConstants.TEST_PROP_FLAKY_ATTEMPT_INDEX),
-                        TreeMap::new,
-                        toImmutableList()));
-
-        for (ImmutableList<TestInfo> testsFromSameFlakyAttempt :
-            flakyAttemptIndexToTestInfoList.values()) {
-          findLastPassOrFailRun(testsFromSameFlakyAttempt)
-              .ifPresent(passOrFailTest -> testRunsByShard.put(shardIndex, passOrFailTest));
-        }
-      } else {
-        findLastRun(testRunsForShard)
-            .ifPresent(lastRun -> testRunsByShard.put(shardIndex, lastRun));
-      }
-    }
-
-    return testRunsByShard.build();
-  }
-
-  private static Optional<TestInfo> findLastPassOrFailRun(List<TestInfo> attempts) {
-    return attempts.stream()
-        .filter(JobResultUtil::isPassOrFail)
-        .max(
-            Comparator.comparingInt(
-                t ->
-                    getAttemptIndexProperty(
-                        t, FlakyTestRetryConstants.TEST_PROP_ERROR_ATTEMPT_INDEX)));
-  }
-
-  private static Optional<TestInfo> findLastRun(List<TestInfo> attempts) {
-    return attempts.stream()
-        .max(
-            Comparator.comparingInt(
-                    (TestInfo t) ->
-                        getAttemptIndexProperty(
-                            t, FlakyTestRetryConstants.TEST_PROP_FLAKY_ATTEMPT_INDEX))
-                .thenComparingInt(
-                    t ->
-                        getAttemptIndexProperty(
-                            t, FlakyTestRetryConstants.TEST_PROP_ERROR_ATTEMPT_INDEX)));
-  }
-
   private static boolean isPassOrFail(TestInfo testInfo) {
     if (testInfo.resultWithCause() == null || testInfo.resultWithCause().get() == null) {
       return false;
@@ -157,18 +82,6 @@ public final class JobResultUtil {
         testInfo.resultWithCause().get().type();
     return type == com.google.devtools.mobileharness.api.model.proto.Test.TestResult.PASS
         || type == com.google.devtools.mobileharness.api.model.proto.Test.TestResult.FAIL;
-  }
-
-  private static int getAttemptIndexProperty(TestInfo testInfo, String propertyName) {
-    String value = testInfo.properties().get(propertyName);
-    if (value == null) {
-      return 0;
-    }
-    try {
-      return Integer.parseInt(value);
-    } catch (NumberFormatException e) {
-      return 0;
-    }
   }
 
   private static TestResult loadTestResult(TestInfo testInfo) {
