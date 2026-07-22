@@ -750,13 +750,6 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
             newDeviceInfos,
             deviceFeatures,
             testException));
-    // Marks the test as finished.
-    testInfo.status().set(TestStatus.DONE);
-    logger.atInfo().log(
-        "Finish [%s:%s] : %s",
-        testInfo.jobInfo().locator(),
-        testInfo.locator().getName(),
-        testInfo.resultWithCause().get().type());
     try {
       postTestDeviceOp = postRunTest(testInfo, allocation);
     } catch (InterruptedException e) {
@@ -780,6 +773,15 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
               createExceptionWithoutStackTrace(
                   InfraErrorId.TR_POST_RUN_GENERIC_ERROR, "Post-test operations failed", e));
     } finally {
+      // Marks the test as finished ONLY after postRunTest completes so remote clients do not close
+      // device connections prematurely.
+      testInfo.status().set(TestStatus.DONE);
+      logger.atInfo().log(
+          "Finish [%s:%s] : %s",
+          testInfo.jobInfo().locator(),
+          testInfo.locator().getName(),
+          testInfo.resultWithCause().get().type());
+
       testInfo.log().atInfo().alsoTo(logger).log("Post TestEndedEvent to test %s", testLocator);
       // Event handlers in JAR_PLUGIN:
       // 1) Inherit the event handlers of the JAR_PLUGIN bus from JobRunner on Client side.
