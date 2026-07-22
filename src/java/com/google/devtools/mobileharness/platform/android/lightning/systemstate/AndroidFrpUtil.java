@@ -80,10 +80,21 @@ public class AndroidFrpUtil {
     }
   }
 
+  /** Clears screen lock PIN and disables lock screen on the device. */
+  public void clearScreenLock(DeviceInfo deviceInfo, @Nullable LogCollector<?> log)
+      throws MobileHarnessException, InterruptedException {
+    String deviceId = deviceInfo.deviceId().controlId();
+    SharedLogUtil.logMsg(logger, log, "Clearing screen lock PIN on device %s", deviceId);
+    adb.runShell(
+        deviceId, "locksettings clear --old 1234", /* timeout= */ null, /* lineCallback= */ null);
+    adb.runShell(
+        deviceId, "locksettings set-disabled true", /* timeout= */ null, /* lineCallback= */ null);
+  }
+
   /**
    * Factory reset Android Q+ devices via Test Harness Mode, which will also retain adb key before
-   * factory reset and apply some pre-defined settings to device. Will clear frp and retry factory
-   * reset if the 1st attempt fails due to frp is active.
+   * factory reset and apply some pre-defined settings to device. Will clear frp/screen lock and
+   * retry factory reset if the 1st attempt fails due to frp active or screen locked.
    *
    * <p>Settings in Test Harness Mode include skipping setup wizard, staying device awake when
    * charging, etc. This mode works on user/userdebug builds on Q+.
@@ -102,6 +113,13 @@ public class AndroidFrpUtil {
       if (e.getErrorId()
           == AndroidErrorId.ANDROID_SYSTEM_STATE_FACTORY_RESET_VIA_TEST_HARNESS_FRP_ERROR) {
         clearFactoryResetProtection(deviceInfo, log);
+        SharedLogUtil.logMsg(
+            logger, log, "Retry factory reset via test harness for device %s", deviceId);
+        androidSystemStateUtil.factoryResetViaTestHarness(deviceId, waitTime);
+      } else if (e.getErrorId()
+          == AndroidErrorId
+              .ANDROID_SYSTEM_STATE_FACTORY_RESET_VIA_TEST_HARNESS_SCREEN_LOCKED_ERROR) {
+        clearScreenLock(deviceInfo, log);
         SharedLogUtil.logMsg(
             logger, log, "Retry factory reset via test harness for device %s", deviceId);
         androidSystemStateUtil.factoryResetViaTestHarness(deviceId, waitTime);
