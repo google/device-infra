@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package devtools.mobileharness.fe.v6.service.proto.test;
 
+import "google/api/annotations.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/test/test_resources.proto";
 
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.test";
@@ -26,10 +27,28 @@ option java_outer_classname = "TestServiceProto";
 
 service TestService {
   // Gets the detailed information of a test by its ID.
-  rpc GetTest(GetTestRequest) returns (GetTestResponse) {}
+  //
+  // Uses POST (not GET) because the request carries fields in the body
+  // (`body: "*"`, e.g. job_id); an HTTP GET cannot carry a request body.
+  rpc GetTest(GetTestRequest) returns (GetTestResponse) {
+    option (google.api.http) = {
+      post: "/v6/tests/{test_id}:getTest"
+      body: "*"
+    };
+  }
 
-  // Gets the log chunk of a test by its ID, supporting pagination/offset.
-  rpc GetTestLog(GetTestLogRequest) returns (GetTestLogResponse) {}
+  // Gets the log of a test by its ID, returning the log from `offset` to the
+  // end.
+  //
+  // Uses POST (not GET) for the same reason as GetTest: the request carries
+  // fields in the body (`body: "*"`, e.g. job_id/offset); an HTTP GET cannot
+  // carry a request body.
+  rpc GetTestLog(GetTestLogRequest) returns (GetTestLogResponse) {
+    option (google.api.http) = {
+      post: "/v6/tests/{test_id}:getTestLog"
+      body: "*"
+    };
+  }
 }
 
 message GetTestRequest {
@@ -58,7 +77,10 @@ message GetTestLogRequest {
   // The starting byte offset to read from.
   int64 offset = 2;
 
-  // The maximum number of bytes to read.
+  // Currently IGNORED by the server: GetTestLog returns the log from `offset`
+  // to the end in a single response (MOSS provides no server-side log slicing).
+  // Kept for wire compatibility and possible future use; clients may still set
+  // it, but it has no effect today.
   int32 length = 3;
 
   // The ID of the parent job.
@@ -66,12 +88,16 @@ message GetTestLogRequest {
 }
 
 message GetTestLogResponse {
-  // The retrieved log content chunk.
+  // The retrieved log content, from the request `offset` to the end of the log.
   string log_content = 1;
 
-  // The offset to be used for the next read request.
+  // The end offset of `log_content` (i.e. the current log length). A client
+  // tailing a live/RUNNING test passes this back as `offset` on its next poll
+  // to fetch only newly-appended content.
   int64 next_offset = 2;
 
-  // Whether there are more log contents to be read.
+  // Currently always false: GetTestLog returns the log through the current end
+  // in a single response, so there is never a further chunk to fetch for the
+  // same snapshot. Kept for wire compatibility and possible future use.
   bool has_more = 3;
 }
