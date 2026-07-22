@@ -40,8 +40,11 @@ import java.time.Duration;
 @DecoratorAnnotation(help = "For setting the device wifi ssid before the test is run.")
 public class AndroidSetWifiDecorator extends LifecycleDecorator
     implements SpecConfigable<AndroidSetWifiDecoratorSpec> {
-  /** The waiting time of timeout to connect to the ssid. */
-  protected static final Duration TIMEOUT_SSID_CONNECTION_TIME = Duration.ofMinutes(2);
+  /**
+   * The waiting time of timeout to connect to the ssid. 5 mins are useful when using 6G WiFi AP
+   * because it has multiple frequency bands.
+   */
+  protected static final Duration TIMEOUT_SSID_CONNECTION_TIME = Duration.ofMinutes(5);
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -67,7 +70,7 @@ public class AndroidSetWifiDecorator extends LifecycleDecorator
     String wifiSsid;
     String wifiPsk;
     boolean wifiScanSsid = false;
-    int retryNum = spec.hasWifiRetryNum() ? spec.getWifiRetryNum() : 0;
+    int retryNum = spec.getWifiRetryNum();
     boolean wifiSsidOptional = spec.getWifiSsidOptional();
     if (spec.getUseDefaultSsid()) {
       // Get the wifi config from the device property.

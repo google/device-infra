@@ -48,11 +48,10 @@ message AndroidSetWifiDecoratorSpec {
       [(field_detail) = { help: "Whether to scan for hidden SSID" }];
 
   optional int32 wifi_retry_num = 5 [
-    default = 0,
+    default = 3,
     (field_detail) = {
-      help: "Nums of retrying to connect to the wifi. Default value is 0. 5 is "
-            "max allowed. For normal usage, we do suggest not to set it larger "
-            "than 2 to save waiting time."
+      help: "Nums of retrying to connect to the wifi. Default value is 3. 5 is "
+            "max allowed."
     }
   ];
 

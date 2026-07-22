@@ -99,8 +99,8 @@ public class AndroidSetWifiDecoratorTest {
                 .setWifiSsid(WIFI_SSID)
                 .setWifiPsk(WIFI_PSK)
                 .setScanSsid(false)
-                .setWaitTimeout(Duration.ofMinutes(2))
-                .setRetryNum(0)
+                .setWaitTimeout(Duration.ofMinutes(5))
+                .setRetryNum(3)
                 .build(),
             log);
     verify(decoratedDriver).run(testInfo);
@@ -126,8 +126,8 @@ public class AndroidSetWifiDecoratorTest {
                 .setWifiSsid(WIFI_SSID)
                 .setWifiPsk(WIFI_PSK)
                 .setScanSsid(true)
-                .setWaitTimeout(Duration.ofMinutes(2))
-                .setRetryNum(0)
+                .setWaitTimeout(Duration.ofMinutes(5))
+                .setRetryNum(3)
                 .build(),
             log);
     verify(decoratedDriver).run(testInfo);
@@ -170,8 +170,8 @@ public class AndroidSetWifiDecoratorTest {
                 .setWifiSsid("ssid1")
                 .setWifiPsk("psk1")
                 .setScanSsid(false)
-                .setWaitTimeout(Duration.ofMinutes(2))
-                .setRetryNum(0)
+                .setWaitTimeout(Duration.ofMinutes(5))
+                .setRetryNum(3)
                 .build(),
             log);
     verify(decoratedDriver).run(testInfo);
@@ -210,7 +210,7 @@ public class AndroidSetWifiDecoratorTest {
                 .setWifiSsid(WIFI_SSID)
                 .setWifiPsk(WIFI_PSK)
                 .setScanSsid(false)
-                .setWaitTimeout(Duration.ofMinutes(2))
+                .setWaitTimeout(Duration.ofMinutes(5))
                 .setRetryNum(WIFI_RETRY_NUM)
                 .build(),
             log);
