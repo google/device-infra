@@ -32,7 +32,18 @@ static size_t g_screenLogCount = 0;
 static char g_logText[LOG_TEXT_CAP];
 static size_t g_logTextLen = 0;
 static uint32_t g_lastLvglTickMs = 0;
+static uint32_t g_lastLvglHandlerMs = 0;
+static uint32_t g_logDirtySinceMs = 0;
+static bool g_logDirty = false;
+static bool g_forceFollowPending = false;
 static bool g_logoShown = false;
+
+// Keep display work out of the servo command path. Log messages are appended
+// to the in-memory ring immediately, then coalesced into one LVGL update after
+// a short quiet window. LVGL itself only needs a modest service rate because
+// this UI has no latency-sensitive animations.
+static const uint32_t LOG_FLUSH_DEBOUNCE_MS = 50;
+static const uint32_t LVGL_HANDLER_INTERVAL_MS = 20;
 
 void lvglDisplayFlush(lv_disp_drv_t* disp, const lv_area_t* area,
                       lv_color_t* colorP) {
@@ -109,15 +120,28 @@ void scrollLogToBottom() {
   lv_obj_scroll_to_y(g_logPanel, LV_COORD_MAX, LV_ANIM_OFF);
 }
 
-void appendLogToUi(const char* line, bool forceFollow) {
-  if (!g_logLabel) return;
-  if (!recoverbot::shouldShowLineOnScreen(line)) return;
+void flushPendingLogUi() {
+  if (!g_logDirty || !g_logLabel) return;
 
   bool wasAtBottom = true;
   if (g_logPanel) {
     lv_obj_update_layout(g_logPanel);
     wasAtBottom = lv_obj_get_scroll_bottom(g_logPanel) <= 6;
   }
+
+  rebuildLogText();
+  lv_label_set_text_static(g_logLabel, g_logText);
+  updateStatusLabel();
+
+  if (g_forceFollowPending || wasAtBottom) scrollLogToBottom();
+
+  g_logDirty = false;
+  g_forceFollowPending = false;
+}
+
+void appendLogToUi(const char* line, bool forceFollow) {
+  if (!g_logLabel) return;
+  if (!recoverbot::shouldShowLineOnScreen(line)) return;
 
   size_t idx;
   if (g_screenLogCount < SCREEN_LOG_LINES) {
@@ -129,12 +153,9 @@ void appendLogToUi(const char* line, bool forceFollow) {
   }
 
   snprintf(g_screenLog[idx], SCREEN_LOG_LINE_CHARS, "%s", line);
-  rebuildLogText();
-
-  lv_label_set_text_static(g_logLabel, g_logText);
-  updateStatusLabel();
-
-  if (forceFollow || wasAtBottom) scrollLogToBottom();
+  if (!g_logDirty) g_logDirtySinceMs = millis();
+  g_logDirty = true;
+  g_forceFollowPending = g_forceFollowPending || forceFollow;
 }
 
 bool isLogoShown() { return g_logoShown; }
@@ -149,8 +170,9 @@ bool prepareLogUiForMessage() {
 
 void finishLogUiMessage(bool wasLogoShown) {
   if (!wasLogoShown) return;
-  lv_obj_invalidate(lv_scr_act());
-  lv_timer_handler();
+  // The pending log flush will restore the LVGL screen. Avoid a synchronous
+  // render here because logMsg() is also called by press/release operations.
+  g_forceFollowPending = true;
 }
 
 void initLogUi() {
@@ -216,6 +238,7 @@ void initLogUi() {
   lv_label_set_text_static(g_logLabel, g_logText);
 
   g_lastLvglTickMs = millis();
+  g_lastLvglHandlerMs = g_lastLvglTickMs;
   lv_timer_handler();
 }
 
@@ -224,7 +247,18 @@ void serviceLogUi() {
   lv_tick_inc(now - g_lastLvglTickMs);
   g_lastLvglTickMs = now;
 
-  if (!g_logoShown) lv_timer_handler();
+  if (g_logoShown) return;
+
+  bool flushed = false;
+  if (g_logDirty && (now - g_logDirtySinceMs) >= LOG_FLUSH_DEBOUNCE_MS) {
+    flushPendingLogUi();
+    flushed = true;
+  }
+
+  if (flushed || (now - g_lastLvglHandlerMs) >= LVGL_HANDLER_INTERVAL_MS) {
+    lv_timer_handler();
+    g_lastLvglHandlerMs = now;
+  }
 }
 
 void showLogoScreen() {
