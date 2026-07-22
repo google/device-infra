@@ -47,6 +47,7 @@ import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilA
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -71,7 +72,7 @@ import javax.annotation.Nullable;
     help =
         "For removing all other Google accounts, "
             + "and set the given accounts(if specified) as the Google accounts on device.")
-public class AndroidAccountDecorator extends BaseDecorator
+public class AndroidAccountDecorator extends LifecycleDecorator
     implements GoogleAccountDecoratorSpec, SpecConfigable<AndroidAccountDecoratorSpec> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -95,6 +96,8 @@ public class AndroidAccountDecorator extends BaseDecorator
   private final AndroidAccountManager androidAccountManager;
 
   private AndroidAccountDecoratorSpec spec;
+  private boolean removeAfterTest;
+  private boolean forceRemove;
 
   /**
    * Constructor. Do NOT modify the parameter list. This constructor is required by the lab server
@@ -129,7 +132,8 @@ public class AndroidAccountDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     Device device = getDevice();
     String deviceId = device.getDeviceId();
     spec = testInfo.jobInfo().combinedSpec(this, deviceId);
@@ -167,12 +171,12 @@ public class AndroidAccountDecorator extends BaseDecorator
 
     ImmutableList<AccountCredentialType> credentialTypes = getAccountCredentialTypes();
 
-    boolean removeAfterTest =
+    removeAfterTest =
         DeviceUtil.inSharedLab()
             || !spec.hasRemoveAccountAfterTest()
             || (spec.hasRemoveAccountAfterTest() && spec.getRemoveAccountAfterTest());
 
-    boolean forceRemove = spec.getForceRemoveAccount();
+    forceRemove = spec.getForceRemoveAccount();
     boolean forceInstallSignedVersion = spec.getForceInstallSignedApks();
     if (forceInstallSignedVersion) {
       androidAccountManager.allowForceInstallSignedAccountHelperApks(testInfo.log());
@@ -180,44 +184,47 @@ public class AndroidAccountDecorator extends BaseDecorator
 
     if (!isCredentialTypesSupported(testInfo, credentialTypes)) {
       // CredentialType from user input cannot be supported by device.
-      testInfo
-          .resultWithCause()
-          .setNonPassing(
-              FAIL,
-              new MobileHarnessException(
-                  AndroidErrorId.ANDROID_ACCOUNT_DECORATOR_USE_LST_ON_RELEASE_KEYS_DEVICE_ERROR,
-                  "LOGIN_SCOPED_TOKEN can not be supported by release-key device"));
-      return;
+      MobileHarnessException exception =
+          new MobileHarnessException(
+              AndroidErrorId.ANDROID_ACCOUNT_DECORATOR_USE_LST_ON_RELEASE_KEYS_DEVICE_ERROR,
+              "LOGIN_SCOPED_TOKEN can not be supported by release-key device");
+      testInfo.resultWithCause().setNonPassing(FAIL, exception);
+      throw exception;
     }
     removeExistingAndGetAccountsToUpdate(device, forceRemove, accountsToAdd, testInfo.log());
 
+    tryStartAuthAccountService(deviceId, testInfo);
+    loginAccounts(testInfo, accountsToAdd, credentialTypes);
+    // An empty line to separate the log.
+    testInfo.log().atInfo().alsoTo(logger).log("\n");
+  }
+
+  @Override
+  protected void tearDown(TeardownContext context)
+      throws MobileHarnessException, InterruptedException {
+    if (context.setupError().isPresent() || spec == null) {
+      return;
+    }
+    TestInfo testInfo = context.testInfo();
+    Device device = getDevice();
+    String deviceId = device.getDeviceId();
     try {
-      tryStartAuthAccountService(deviceId, testInfo);
-      loginAccounts(testInfo, accountsToAdd, credentialTypes);
-      // And empty line to separate the log.
-      testInfo.log().atInfo().alsoTo(logger).log("\n");
-      getDecorated().run(testInfo);
-    } finally {
-      try {
-        if (removeAfterTest) {
-          if (systemStateManager.isOnline(deviceId)) {
-            removeExistingAndGetAccountsToUpdate(
-                device, forceRemove, /* newAccounts= */ ImmutableList.of(), testInfo.log());
-          } else {
-            testInfo
-                .warnings()
-                .addAndLog(
-                    new MobileHarnessException(
-                        AndroidErrorId.ANDROID_ACCOUNT_DECORATOR_DEVICE_NOT_FOUND,
-                        "Skip to remove account(s) because device "
-                            + deviceId
-                            + " is disconnected."),
-                    logger);
-          }
+      if (removeAfterTest) {
+        if (systemStateManager.isOnline(deviceId)) {
+          removeExistingAndGetAccountsToUpdate(
+              device, forceRemove, /* newAccounts= */ ImmutableList.of(), testInfo.log());
+        } else {
+          testInfo
+              .warnings()
+              .addAndLog(
+                  new MobileHarnessException(
+                      AndroidErrorId.ANDROID_ACCOUNT_DECORATOR_DEVICE_NOT_FOUND,
+                      "Skip to remove account(s) because device " + deviceId + " is disconnected."),
+                  logger);
         }
-      } catch (MobileHarnessException e) {
-        testInfo.warnings().addAndLog(e, logger);
       }
+    } catch (MobileHarnessException e) {
+      testInfo.warnings().addAndLog(e, logger);
     }
   }
 
