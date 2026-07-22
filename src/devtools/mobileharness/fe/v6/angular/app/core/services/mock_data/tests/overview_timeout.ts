@@ -38,7 +38,7 @@ export const SCENARIO_TEST_TIMEOUT: MockTestScenario = {
       createTime: '2025-07-09T10:20:00Z',
       startTime: '2025-07-09T10:20:05Z',
       endTime: '2025-07-09T10:25:05Z',
-      lastUpdateTime: '2025-07-09T10:25:05Z',
+      updateTime: '2025-07-09T10:25:05Z',
       user: 'dafeni',
       actualUser: 'dafeni@google.com',
     },

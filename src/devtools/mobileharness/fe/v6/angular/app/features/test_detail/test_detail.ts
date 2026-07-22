@@ -86,23 +86,28 @@ export class TestDetail {
           queryParams.get('sub_test_id') ||
           queryParams.get('sub_test') ||
           undefined,
+        jobId: params.get('jobId') || '',
       })),
       distinctUntilChanged(
-        (a, b) => a.testId === b.testId && a.subTestId === b.subTestId,
+        (a, b) =>
+          a.testId === b.testId &&
+          a.subTestId === b.subTestId &&
+          a.jobId === b.jobId,
       ),
       tap(() => {
         this.loadingService.show();
       }),
-      switchMap(({testId, subTestId}) => {
+      switchMap(({testId, subTestId, jobId}) => {
         if (!testId) {
           this.loadingService.hide();
           return of<TestPageData>({
             testOverviewData: null,
             error: 'No test ID provided in the route.',
+            jobId,
           });
         }
 
-        const request: GetTestRequest = {testId};
+        const request: GetTestRequest = {testId, jobId};
         if (subTestId) {
           request.subTestId = subTestId;
         }
@@ -110,7 +115,9 @@ export class TestDetail {
         const idForErrorLogging = subTestId || testId;
 
         return this.testService.getTest(request).pipe(
-          map((testOverviewData) => ({testOverviewData}) as TestPageData),
+          map(
+            (testOverviewData) => ({testOverviewData, jobId}) as TestPageData,
+          ),
           tap((data) => {
             if (data?.testOverviewData) {
               const test = data.testOverviewData;
@@ -126,6 +133,7 @@ export class TestDetail {
             return of<TestPageData>({
               testOverviewData: null,
               error: `Failed to load test data for ID: ${idForErrorLogging}. ${err.message || ''}`,
+              jobId,
             });
           }),
           finalize(() => {

@@ -39,7 +39,7 @@ export const SCENARIO_TEST_FAILED: MockTestScenario = {
       createTime: '2025-07-09T10:12:10Z',
       startTime: '2025-07-09T10:12:10Z',
       endTime: '2025-07-09T10:12:40Z',
-      lastUpdateTime: '2025-07-09T10:12:40Z',
+      updateTime: '2025-07-09T10:12:40Z',
       user: 'dafeni',
       actualUser: 'dafeni@google.com',
     },

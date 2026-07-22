@@ -38,7 +38,7 @@ export const SCENARIO_TEST_ERROR: MockTestScenario = {
       createTime: '2025-07-09T10:15:00Z',
       startTime: '2025-07-09T10:15:05Z',
       endTime: '2025-07-09T10:15:10Z',
-      lastUpdateTime: '2025-07-09T10:15:10Z',
+      updateTime: '2025-07-09T10:15:10Z',
       user: 'dafeni',
       actualUser: 'dafeni@google.com',
     },

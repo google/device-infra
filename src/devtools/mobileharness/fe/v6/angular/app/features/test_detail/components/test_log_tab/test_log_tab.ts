@@ -37,14 +37,20 @@ const CHUNK_SIZE = 100000;
 export class TestLogTab implements OnInit {
   /** The unique test ID passed from the parent component. */
   readonly testId = input.required<string>();
+  readonly jobId = input.required<string>();
 
   private readonly testService = inject(TEST_SERVICE);
   private readonly destroyRef = inject(DestroyRef);
 
   /** Signal holding the array of log lines currently rendered in the log viewport. */
   readonly logLines = signal<string[]>(['Loading logs...']);
-  /** Signal holding the external cloud log explorer URL for this test. */
-  readonly cloudLogLink = signal<string>('');
+  /** The external cloud log explorer URL for this test. */
+  readonly cloudLogLink = input<string>('');
+
+  /** The initial test status of the test. */
+  readonly initialStatus = input<TestStatus>(
+    TestStatus.TEST_STATUS_UNSPECIFIED,
+  );
 
   /** Buffer preserving incomplete line string fragments across network fetch boundaries. */
   private trailingBuffer = '';
@@ -67,7 +73,7 @@ export class TestLogTab implements OnInit {
   });
 
   /** Reference to the log viewer scroll container. */
-  readonly logViewport = viewChild<ElementRef<HTMLElement>>('logViewport');
+  readonly logViewport = viewChild<ElementRef<HTMLDivElement>>('logViewport');
 
   constructor() {
     effect(() => {
@@ -87,17 +93,11 @@ export class TestLogTab implements OnInit {
   private startLiveLogStreaming() {
     const id = this.testId();
 
-    const initialFetch$: Observable<FetchState> = this.testService
-      .getTest({testId: id})
-      .pipe(
-        concatMap((testDetail) => {
-          const link = testDetail.executionDetails?.cloudLogLink;
-          if (link) {
-            this.cloudLogLink.set(link);
-          }
-          return this.fetchLogChunk(id, 0, testDetail.status);
-        }),
-      );
+    const initialFetch$: Observable<FetchState> = this.fetchLogChunk(
+      id,
+      0,
+      this.initialStatus(),
+    );
 
     initialFetch$
       .pipe(
@@ -110,12 +110,10 @@ export class TestLogTab implements OnInit {
             return this.fetchLogChunk(id, state.offset, state.status);
           } else {
             return timer(POLLING_INTERVAL_MS).pipe(
-              concatMap(() => this.testService.getTest({testId: id})),
+              concatMap(() =>
+                this.testService.getTest({testId: id, jobId: this.jobId()}),
+              ),
               concatMap((testDetail) => {
-                const link = testDetail.executionDetails?.cloudLogLink;
-                if (link) {
-                  this.cloudLogLink.set(link);
-                }
                 return this.fetchLogChunk(id, state.offset, testDetail.status);
               }),
             );
@@ -166,7 +164,12 @@ export class TestLogTab implements OnInit {
     status: TestStatus,
   ): Observable<FetchState> {
     return this.testService
-      .getTestLog({testId: id, offset, length: CHUNK_SIZE})
+      .getTestLog({
+        testId: id,
+        jobId: this.jobId(),
+        offset,
+        length: CHUNK_SIZE,
+      })
       .pipe(
         map((logResp) => {
           return {
@@ -186,6 +189,9 @@ export class TestLogTab implements OnInit {
    * @param newLogs The byte-slice log string to append.
    */
   private appendLogs(newLogs: string) {
+    if (!newLogs) {
+      return;
+    }
     this.logLines.update((current) => {
       const lines =
         current.length === 1 &&
@@ -220,33 +226,17 @@ export class TestLogTab implements OnInit {
     });
   }
 
-  /**
-   * Automatically scrolls the viewport container to the absolute bottom
-   * if the user is currently positioned near the bottom of the log stream.
-   */
   private scrollToBottom() {
-    const el = this.logViewport()?.nativeElement;
-    if (el) {
+    const viewport = this.logViewport();
+    if (viewport) {
       setTimeout(() => {
-        const offsetFromBottom =
-          el.scrollHeight - el.scrollTop - el.clientHeight;
-        if (
-          offsetFromBottom < 250 ||
-          el.scrollHeight <= el.clientHeight + 200
-        ) {
+        try {
+          const el = viewport.nativeElement;
           el.scrollTop = el.scrollHeight;
+        } catch {
+          // Fallback if viewport measurement fails.
         }
-      }, 50);
+      }, 100);
     }
-  }
-
-  /**
-   * Tracking function for loop performance optimization.
-   *
-   * @param index The current array index.
-   * @return The numeric index tracking reference.
-   */
-  trackByFn(index: number) {
-    return index;
   }
 }

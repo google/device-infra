@@ -25,12 +25,12 @@ export class HttpTestService extends TestService {
   }
 
   override getTest(request: GetTestRequest): Observable<TestOverviewData> {
-    let url = `${this.apiUrl}/${request.testId}`;
-    if (request.subTestId) {
-      url += `?sub_test_id=${request.subTestId}`;
-    }
     return this.http
-      .get<GetTestResponse>(url)
+      .post<GetTestResponse>(`${this.apiUrl}/${request.testId}:getTest`, {
+        'test_id': request.testId,
+        'sub_test_id': request.subTestId,
+        'job_id': request.jobId,
+      })
       .pipe(map((response) => response.test));
   }
 
@@ -40,8 +40,10 @@ export class HttpTestService extends TestService {
     return this.http.post<GetTestLogResponse>(
       `${this.apiUrl}/${request.testId}:getTestLog`,
       {
+        'test_id': request.testId,
         'offset': request.offset,
         'length': request.length,
+        'job_id': request.jobId,
       },
     );
   }

@@ -37,7 +37,7 @@ export const SCENARIO_TEST_SKIPPED: MockTestScenario = {
     executionDetails: {
       createTime: '2025-07-09T10:11:15Z',
       endTime: '2025-07-09T10:11:16Z',
-      lastUpdateTime: '2025-07-09T10:11:16Z',
+      updateTime: '2025-07-09T10:11:16Z',
       user: 'dafeni',
       actualUser: 'dafeni@google.com',
     },

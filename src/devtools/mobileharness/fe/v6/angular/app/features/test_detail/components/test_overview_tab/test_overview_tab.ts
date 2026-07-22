@@ -72,7 +72,7 @@ export class TestOverviewTab {
     {key: 'createTime', label: 'Create Time'},
     {key: 'startTime', label: 'Start Time'},
     {key: 'endTime', label: 'End Time'},
-    {key: 'lastUpdateTime', label: 'Last Update Time'},
+    {key: 'updateTime', label: 'Last Update Time'},
   ] as const;
 
   /**
@@ -119,23 +119,21 @@ export class TestOverviewTab {
    * @return An object containing raw, display, duration, local, UTC, and elapsed HTML strings.
    */
   getTimestampInfo(
-    key: 'createTime' | 'startTime' | 'endTime' | 'lastUpdateTime',
+    key: 'createTime' | 'startTime' | 'endTime' | 'updateTime',
     test: TestOverviewData,
     baseCreateDate: Date | null = null,
   ) {
-    const details = test.executionDetails;
-    let rawValue: string | undefined = undefined;
-    if (details) {
-      if (key === 'createTime') {
-        rawValue = details.createTime;
-      } else if (key === 'startTime') {
-        rawValue = details.startTime;
-      } else if (key === 'endTime') {
-        rawValue = details.endTime;
-      } else if (key === 'lastUpdateTime') {
-        rawValue = details.lastUpdateTime;
-      }
+    let rawValue: string | undefined;
+    if (key === 'createTime') {
+      rawValue = test.executionDetails?.createTime;
+    } else if (key === 'startTime') {
+      rawValue = test.executionDetails?.startTime;
+    } else if (key === 'endTime') {
+      rawValue = test.executionDetails?.endTime;
+    } else if (key === 'updateTime') {
+      rawValue = test.executionDetails?.updateTime;
     }
+
     const date = rawValue ? dateUtils.parsePdtTimestamp(rawValue) : null;
     const isValid = date && !isNaN(date.getTime());
 

@@ -45,7 +45,7 @@ export const SCENARIO_TEST_IN_PROGRESS: MockTestScenario = {
       createTime: '2025-07-09T11:30:10Z',
       startTime: '2025-07-09T11:30:15Z',
       endTime: '2025-07-09T11:30:18Z',
-      lastUpdateTime: '2025-07-09T11:30:18Z',
+      updateTime: '2025-07-09T11:30:18Z',
       user: 'dafeni',
       actualUser: 'dafeni@google.com',
     },

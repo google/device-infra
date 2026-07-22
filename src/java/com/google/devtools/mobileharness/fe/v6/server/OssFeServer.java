@@ -28,6 +28,8 @@ import com.google.devtools.mobileharness.fe.v6.service.device.DeviceServiceModul
 import com.google.devtools.mobileharness.fe.v6.service.host.HostServiceGrpcImpl;
 import com.google.devtools.mobileharness.fe.v6.service.host.HostServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.shared.OssStubsModule;
+import com.google.devtools.mobileharness.fe.v6.service.test.OssTestServiceModule;
+import com.google.devtools.mobileharness.fe.v6.service.test.TestServiceGrpcImpl;
 import com.google.devtools.mobileharness.fe.v6.shared.util.concurrent.OssExecutorModule;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.flags.core.FlagsManager;
@@ -50,6 +52,7 @@ public final class OssFeServer {
   private final HostServiceGrpcImpl hostService;
   private final ConfigServiceGrpcImpl configService;
   private final AdminServiceGrpcImpl adminService;
+  private final TestServiceGrpcImpl testService;
   private volatile Server grpcServer;
 
   @Inject
@@ -58,11 +61,13 @@ public final class OssFeServer {
       HostServiceGrpcImpl hostService,
       ConfigServiceGrpcImpl configService,
       AdminServiceGrpcImpl adminService,
+      TestServiceGrpcImpl testService,
       @ServerPort int port) {
     this.deviceService = deviceService;
     this.hostService = hostService;
     this.configService = configService;
     this.adminService = adminService;
+    this.testService = testService;
     this.port = port;
   }
 
@@ -74,6 +79,7 @@ public final class OssFeServer {
             .addService(hostService)
             .addService(configService)
             .addService(adminService)
+            .addService(testService)
             .addService(ProtoReflectionService.newInstance())
             .build();
     grpcServer.start();
@@ -107,6 +113,7 @@ public final class OssFeServer {
             new HostServiceModule(),
             new ConfigServiceModule(),
             new AdminServiceModule(),
+            new OssTestServiceModule(),
             new OssStubsModule(),
             new AbstractModule() {
               @Override
