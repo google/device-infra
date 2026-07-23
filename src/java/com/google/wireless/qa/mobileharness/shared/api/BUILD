@@ -89,8 +89,8 @@ java_library(
 java_library(
     name = "xts_test_lab_plugin",
     runtime_deps = [
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/atsfileserveruploader:ats_file_server_uploader_plugin",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/atsjitemulatorlogpuller:ats_jit_emulator_log_puller_plugin",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/ats:ats_file_server_uploader_plugin",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/ats:ats_jit_emulator_log_puller_plugin",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/xtsdownloader:mcts_dynamic_download_plugin",
         "//src/java/com/google/devtools/mobileharness/platform/android/slate/plugin:slate2aoa_script_generator_plugin",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:ats_device_recovery_plugin",
@@ -293,7 +293,6 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local/annotation",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/reflection:class_constants",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator",

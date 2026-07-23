@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.controller.test.util.atsjitemulatorlogpuller;
+package com.google.devtools.mobileharness.infra.controller.test.util.ats;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;

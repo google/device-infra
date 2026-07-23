@@ -24,7 +24,7 @@ java_library(
     srcs = ["AtsFileServerUploaderPlugin.java"],
     visibility = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/controller/test/util/atsfileserveruploader:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/test/util/ats:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -34,6 +34,25 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/plugin",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "ats_jit_emulator_log_puller_plugin",
+    srcs = ["AtsJitEmulatorLogPullerPlugin.java"],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/test/util/ats:__subpackages__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_jit_emulator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/plugin",
         "@maven//:com_google_guava_guava",
