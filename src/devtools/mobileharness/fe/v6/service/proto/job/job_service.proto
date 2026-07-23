@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package devtools.mobileharness.fe.v6.service.proto.job;
 
+import "google/api/annotations.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/common/common_resources.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/job/job_resources.proto";
 
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.job";
@@ -26,10 +28,22 @@ option java_outer_classname = "JobServiceProto";
 
 service JobService {
   // Retrieves the detailed Job overview by its ID.
-  rpc GetJob(GetJobRequest) returns (GetJobResponse) {}
+  rpc GetJob(GetJobRequest) returns (GetJobResponse) {
+    option (google.api.http) = {
+      get: "/v6/jobs/{job_id}"
+    };
+  }
 
-  // Streams or paginates log chunks of a running/completed Job.
-  rpc GetJobLog(GetJobLogRequest) returns (GetJobLogResponse) {}
+  // Gets the log of a job by its ID, returning the log from `offset` to the
+  // end.
+  //
+  // Non-path fields (offset, content_hash) are automatically mapped to query
+  // parameters by the gRPC-JSON transcoder.
+  rpc GetJobLog(GetJobLogRequest) returns (GetJobLogResponse) {
+    option (google.api.http) = {
+      get: "/v6/jobs/{job_id}/log"
+    };
+  }
 }
 
 message GetJobRequest {
@@ -41,22 +55,60 @@ message GetJobResponse {
 }
 
 message GetJobLogRequest {
+  // The ID of the job whose log to retrieve.
   string job_id = 1;
 
-  // The starting byte offset to read from.
+  // The starting byte offset to read from. Pass 0 for the first call; pass
+  // back `next_offset` from the previous response for subsequent polls to get
+  // only newly-appended content.
   int64 offset = 2;
 
-  // The maximum number of bytes to read.
-  int32 length = 3;
+  // Optional log integrity token, echoed verbatim from the previous response's
+  // `content_hash`. The server uses it to verify that the log content the
+  // client has cached (bytes [0, offset)) has not changed since the last
+  // response:
+  //   - Match (or empty) → normal response from `offset` onward.
+  //   - Mismatch → `log_reset = true`, full log returned from byte 0.
+  //
+  // The client treats this as an opaque string — it never computes or inspects
+  // it. On the first request (offset=0), omit this field.
+  string content_hash = 3;
 }
 
 message GetJobLogResponse {
-  // The retrieved log content chunk.
+  // Log content starting from:
+  //   - the request `offset` (normal case), OR
+  //   - byte 0 (if `log_reset` is true, indicating a content_hash mismatch).
   string log_content = 1;
 
-  // The offset to be used for the next read request.
+  // The byte offset immediately after `log_content` (i.e. the current total log
+  // length). Pass this as `offset` on the next poll to get only new content.
   int64 next_offset = 2;
 
-  // Whether there are more log contents to be read.
-  bool has_more = 3;
+  // The job's current lifecycle status, read from MOSS at query time. The
+  // frontend uses this to decide whether to keep polling:
+  //   - RUNNING / NEW / ASSIGNED → schedule another poll after a delay
+  //   - DONE / SUSPENDED → stop polling (log is final)
+  //
+  // This is authoritative (fresh from MOSS), so the frontend does NOT need a
+  // separate GetJob call just for status during log tailing.
+  devtools.mobileharness.fe.v6.service.proto.common.JobStatus job_status = 3;
+
+  // True if the server detected that the log content before the requested
+  // `offset` has changed (content_hash mismatch). When set:
+  //   - `log_content` contains the FULL log from byte 0 (not from `offset`).
+  //   - `next_offset` reflects the full log length.
+  //   - The client should discard its cached log and replace it entirely.
+  //
+  // Always false when the request omits `content_hash`.
+  bool log_reset = 4;
+
+  // Server-computed integrity token covering the log content from byte 0 to
+  // `next_offset`. The client stores this opaquely and passes it back as
+  // `content_hash` in the next request so the server can detect if content
+  // before the client's `offset` has changed.
+  //
+  // Always present. On `log_reset`, this covers the full log (since the
+  // response returned the full log from byte 0).
+  string content_hash = 5;
 }
