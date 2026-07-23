@@ -54,6 +54,7 @@ import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberEx
 import com.google.devtools.mobileharness.shared.constant.closeable.MobileHarnessAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.message.TestMessageInfo;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.event.EventBus.SubscriberExceptionContext;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
 import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUtil;
@@ -409,6 +410,22 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
           .log("Test interrupted, error:%n%s", Throwables.getStackTraceAsString(e));
       throw e;
     } catch (MobileHarnessException e) {
+      TestResult initialResult = testInfo.resultWithCause().get().type();
+      if (initialResult != TestResult.UNKNOWN) {
+        testInfo
+            .log()
+            .atInfo()
+            .alsoTo(logger)
+            .log(
+                "Test result was already set to %s, exception during execution: %s",
+                initialResult, MoreThrowables.shortDebugString(e));
+      } else {
+        testInfo
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .log("ERROR: %s", Throwables.getStackTraceAsString(e));
+      }
       // Marks this to {@link TestResult#ERROR} in case the driver has already changed the
       // {@link TestResult}.
       ResultInternalUtil.setNonPassing(
@@ -416,11 +433,6 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
           ResultUtil.getResultByException(e),
           e,
           /* logStackTrace= */ false);
-      testInfo
-          .log()
-          .atWarning()
-          .alsoTo(logger)
-          .log("ERROR: %s", Throwables.getStackTraceAsString(e));
       testException = e;
     } catch (Throwable e) {
       // Marks this to {@link TestResult#ERROR} in case the driver has already changed the
