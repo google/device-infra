@@ -19,6 +19,7 @@ syntax = "proto3";
 package devtools.mobileharness.fe.v6.service.proto.test;
 
 import "google/api/annotations.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/common/common_resources.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/test/test_resources.proto";
 
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.test";
@@ -39,7 +40,7 @@ service TestService {
   // Gets the log of a test by its ID, returning the log from `offset` to the
   // end.
   //
-  // Non-path fields (job_id, offset, length) are automatically mapped to query
+  // Non-path fields (job_id, offset) are automatically mapped to query
   // parameters by the gRPC-JSON transcoder.
   rpc GetTestLog(GetTestLogRequest) returns (GetTestLogResponse) {
     option (google.api.http) = {
@@ -69,32 +70,63 @@ message GetTestResponse {
 }
 
 message GetTestLogRequest {
+  // The ID of the test whose log to retrieve.
   string test_id = 1;
 
-  // The starting byte offset to read from.
+  // The starting byte offset to read from. Pass 0 for the first call; pass
+  // back `next_offset` from the previous response for subsequent polls to get
+  // only newly-appended content.
   int64 offset = 2;
 
-  // Currently IGNORED by the server: GetTestLog returns the log from `offset`
-  // to the end in a single response (MOSS provides no server-side log slicing).
-  // Kept for wire compatibility and possible future use; clients may still set
-  // it, but it has no effect today.
-  int32 length = 3;
+  // The ID of the parent job (required by MOSS to locate the test).
+  string job_id = 3;
 
-  // The ID of the parent job.
-  string job_id = 4;
+  // Optional log integrity token, echoed verbatim from the previous response's
+  // `content_hash`. The server uses it to verify that the log content the
+  // client has cached (bytes [0, offset)) has not changed since the last
+  // response:
+  //   - Match (or empty) → normal response from `offset` onward.
+  //   - Mismatch → `log_reset = true`, full log returned from byte 0.
+  //
+  // The client treats this as an opaque string — it never computes or inspects
+  // it. On the first request (offset=0), omit this field.
+  string content_hash = 4;
 }
 
 message GetTestLogResponse {
-  // The retrieved log content, from the request `offset` to the end of the log.
+  // Log content starting from:
+  //   - the request `offset` (normal case), OR
+  //   - byte 0 (if `log_reset` is true, indicating a content_hash mismatch).
   string log_content = 1;
 
-  // The end offset of `log_content` (i.e. the current log length). A client
-  // tailing a live/RUNNING test passes this back as `offset` on its next poll
-  // to fetch only newly-appended content.
+  // The byte offset immediately after `log_content` (i.e. the current total log
+  // length). Pass this as `offset` on the next poll to get only new content.
   int64 next_offset = 2;
 
-  // Currently always false: GetTestLog returns the log through the current end
-  // in a single response, so there is never a further chunk to fetch for the
-  // same snapshot. Kept for wire compatibility and possible future use.
-  bool has_more = 3;
+  // The test's current lifecycle status, read from MOSS at query time. The
+  // frontend uses this to decide whether to keep polling:
+  //   - RUNNING / NEW / ASSIGNED → schedule another poll after a delay
+  //   - DONE / SUSPENDED → stop polling (log is final)
+  //
+  // This is authoritative (fresh from MOSS), so the frontend does NOT need a
+  // separate GetTest call just for status during log tailing.
+  devtools.mobileharness.fe.v6.service.proto.common.TestStatus test_status = 3;
+
+  // True if the server detected that the log content before the requested
+  // `offset` has changed (content_hash mismatch). When set:
+  //   - `log_content` contains the FULL log from byte 0 (not from `offset`).
+  //   - `next_offset` reflects the full log length.
+  //   - The client should discard its cached log and replace it entirely.
+  //
+  // Always false when the request omits `content_hash`.
+  bool log_reset = 4;
+
+  // Server-computed integrity token covering the log content from byte 0 to
+  // `next_offset`. The client stores this opaquely and passes it back as
+  // `content_hash` in the next request so the server can detect if content
+  // before the client's `offset` has changed.
+  //
+  // Always present. On `log_reset`, this covers the full log (since the
+  // response returned the full log from byte 0).
+  string content_hash = 5;
 }

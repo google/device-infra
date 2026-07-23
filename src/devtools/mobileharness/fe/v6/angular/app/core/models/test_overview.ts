@@ -190,5 +190,4 @@ export interface GetTestResponse {
 export interface GetTestLogResponse {
   logContent: string;
   nextOffset: number;
-  hasMore: boolean;
 }

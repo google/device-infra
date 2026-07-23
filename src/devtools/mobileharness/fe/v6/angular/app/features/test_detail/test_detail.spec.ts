@@ -74,7 +74,6 @@ describe('TestDetail Component', () => {
       of({
         logContent: '',
         nextOffset: 0,
-        hasMore: false,
       }),
     );
 

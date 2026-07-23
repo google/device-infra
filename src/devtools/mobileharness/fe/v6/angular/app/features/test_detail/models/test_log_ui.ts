@@ -6,8 +6,6 @@ import {TestStatus} from '@deviceinfra/app/core/models/test_overview';
 export interface FetchState {
   /** The byte offset representing the end of the downloaded log chunk. */
   readonly offset: number;
-  /** Boolean indicating whether additional log chunks are immediately available on the server. */
-  readonly hasMore: boolean;
   /** The current execution status of the test being monitored. */
   readonly status: TestStatus;
   /** The raw textual log content downloaded in this specific chunk. */

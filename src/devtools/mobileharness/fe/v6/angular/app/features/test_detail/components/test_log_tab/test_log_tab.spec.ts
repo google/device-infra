@@ -53,7 +53,6 @@ describe('TestLogTab Component', () => {
         of({
           logContent: 'Log Content 1\nLog Content 2',
           nextOffset: 27,
-          hasMore: false,
         }),
       );
 
@@ -115,13 +114,11 @@ describe('TestLogTab Component', () => {
           return of({
             logContent: 'Line 1\nLine 2\n',
             nextOffset: 13,
-            hasMore: false,
           });
         }
         return of({
           logContent: 'Line 3\nLine 4\n',
           nextOffset: 27,
-          hasMore: false,
         });
       });
 

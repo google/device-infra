@@ -102,24 +102,22 @@ export class TestLogTab implements OnInit {
     initialFetch$
       .pipe(
         expand((state: FetchState): Observable<FetchState> => {
-          if (state.status === TestStatus.TEST_STATUS_DONE && !state.hasMore) {
+          if (state.status === TestStatus.TEST_STATUS_DONE) {
             return EMPTY;
           }
 
-          if (state.hasMore) {
-            return this.fetchLogChunk(id, state.offset, state.status);
-          } else {
-            return timer(POLLING_INTERVAL_MS).pipe(
-              concatMap(() => this.testService.getTest({testId: id})),
-              concatMap((testDetail) => {
-                const link = testDetail.executionDetails?.cloudLogLink;
-                if (link) {
-                  this.cloudLogLink.set(link);
-                }
-                return this.fetchLogChunk(id, state.offset, testDetail.status);
-              }),
-            );
-          }
+          // Test is still running: wait, re-check status, then fetch the log
+          // newly appended since the last offset.
+          return timer(POLLING_INTERVAL_MS).pipe(
+            concatMap(() => this.testService.getTest({testId: id})),
+            concatMap((testDetail) => {
+              const link = testDetail.executionDetails?.cloudLogLink;
+              if (link) {
+                this.cloudLogLink.set(link);
+              }
+              return this.fetchLogChunk(id, state.offset, testDetail.status);
+            }),
+          );
         }),
         catchError((err) => {
           console.error('Error fetching dynamic test logs:', err);
@@ -140,8 +138,7 @@ export class TestLogTab implements OnInit {
           if (state.logContent) {
             this.appendLogs(state.logContent);
           }
-          const isStreamingDone =
-            state.status === TestStatus.TEST_STATUS_DONE && !state.hasMore;
+          const isStreamingDone = state.status === TestStatus.TEST_STATUS_DONE;
           const currentLines = this.logLines();
           const remainsLoading =
             currentLines.length === 1 && currentLines[0] === 'Loading logs...';
@@ -171,7 +168,6 @@ export class TestLogTab implements OnInit {
         map((logResp) => {
           return {
             offset: logResp.nextOffset,
-            hasMore: logResp.hasMore,
             status,
             logContent: logResp.logContent || '',
           };

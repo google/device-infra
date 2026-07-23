@@ -91,12 +91,10 @@ export class FakeTestService extends TestService {
         Number(offset) + length,
       );
       const nextOffset = Number(offset) + chunk.length;
-      const hasMore = nextOffset < visibleLog.length;
 
       return of({
         logContent: chunk,
         nextOffset,
-        hasMore,
       }).pipe(delay(500));
     } else {
       return throwError(
