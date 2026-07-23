@@ -29,22 +29,22 @@ option java_outer_classname = "TestServiceProto";
 service TestService {
   // Gets the detailed information of a test by its ID.
   //
-  // Non-path fields (job_id, sub_test_id) are automatically mapped to query
-  // parameters by the gRPC-JSON transcoder (e.g. ?job_id=xxx&sub_test_id=yyy).
+  // Test is a sub-resource of Job (AIP-122). Non-path fields (sub_test_id) are
+  // automatically mapped to query parameters by the gRPC-JSON transcoder.
   rpc GetTest(GetTestRequest) returns (GetTestResponse) {
     option (google.api.http) = {
-      get: "/v6/tests/{test_id}"
+      get: "/v6/jobs/{job_id}/tests/{test_id}"
     };
   }
 
   // Gets the log of a test by its ID, returning the log from `offset` to the
   // end.
   //
-  // Non-path fields (job_id, offset) are automatically mapped to query
+  // Non-path fields (offset, content_hash) are automatically mapped to query
   // parameters by the gRPC-JSON transcoder.
   rpc GetTestLog(GetTestLogRequest) returns (GetTestLogResponse) {
     option (google.api.http) = {
-      get: "/v6/tests/{test_id}/log"
+      get: "/v6/jobs/{job_id}/tests/{test_id}/log"
     };
   }
 }
