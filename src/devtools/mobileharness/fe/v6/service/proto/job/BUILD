@@ -44,6 +44,8 @@ proto_library(
     srcs = ["job_service.proto"],
     deps = [
         ":job_resources_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_proto",
+        "@googleapis//google/api:annotations_proto",
     ],
 )
 
