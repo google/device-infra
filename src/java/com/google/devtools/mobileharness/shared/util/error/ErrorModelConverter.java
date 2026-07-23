@@ -71,8 +71,7 @@ public class ErrorModelConverter {
    * given ErrorId if not null, or use {@link BasicErrorId#NON_MH_EXCEPTION} if null.
    */
   static ErrorId finalizeErrorId(Throwable throwable, @Nullable ErrorId errorId) {
-    if (throwable instanceof MobileHarnessException) {
-      MobileHarnessException mhException = (MobileHarnessException) throwable;
+    if (throwable instanceof MobileHarnessException mhException) {
       errorId = mhException.getErrorId();
     } else if (errorId == null) {
       errorId = BasicErrorId.NON_MH_EXCEPTION;
@@ -104,11 +103,18 @@ public class ErrorModelConverter {
   }
 
   public static ErrorInfo toLegacyErrorInfo(ExceptionProto.ExceptionDetail detail) {
-    return toLegacyErrorInfo(detail.getSummary());
+    return toLegacyErrorInfo(detail.getSummary()).toBuilder()
+        .setStackTrace(getCompleteStackTrace(detail))
+        .build();
   }
 
   public static ErrorInfo toLegacyErrorInfo(FlattenedExceptionDetail flattenedExceptionDetail) {
-    return toLegacyErrorInfo(flattenedExceptionDetail.getSummary());
+    ErrorInfo.Builder errorInfo =
+        toLegacyErrorInfo(flattenedExceptionDetail.getSummary()).toBuilder();
+    if (flattenedExceptionDetail.hasCompleteStackTrace()) {
+      errorInfo.setStackTrace(flattenedExceptionDetail.getCompleteStackTrace());
+    }
+    return errorInfo.build();
   }
 
   private static StackTraceElement[] getStackTrace(ExceptionProto.ExceptionSummary summary) {

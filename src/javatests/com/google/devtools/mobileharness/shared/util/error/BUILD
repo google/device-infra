@@ -25,7 +25,10 @@ java_library(
     name = "error",
     srcs = glob(["*.java"]),
     deps = [
+        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:error_model_converter",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
