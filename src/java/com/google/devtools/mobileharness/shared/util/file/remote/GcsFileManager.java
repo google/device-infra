@@ -523,16 +523,24 @@ public class GcsFileManager {
           dir, tmpZipFile, decodedChecksum, crc32cChecksum, zipStoreOnly, zipTimeout);
 
       Path zipFile = homeDir.resolve(decodedChecksum + ".zip");
-      return ZipInfo.create(
-          decodedChecksum,
-          localCache.get(
-              crc32cChecksum,
-              () -> {
-                localFileUtil.moveFileOrDir(tmpZipFile, zipFile);
-                localFileUtil.setFilePermission(zipFile, "r-xr-xr-x");
-                logger.atInfo().log("Update local cache: %s: %s", crc32cChecksum, zipFile);
-                return zipFile;
-              }));
+      Callable<Path> cacheLoader =
+          () -> {
+            localFileUtil.moveFileOrDir(tmpZipFile, zipFile);
+            localFileUtil.setFilePermission(zipFile, "r-xr-xr-x");
+            logger.atInfo().log("Update local cache: %s: %s", crc32cChecksum, zipFile);
+            return zipFile;
+          };
+      Path cachedPath = localCache.get(crc32cChecksum, cacheLoader);
+      if (!localFileUtil.isFileOrDirExist(cachedPath)) {
+        // The cached file was deleted from disk (e.g., by upload() cleanup or external tools
+        // like tmpreaper) while the in-memory cache entry remained. Invalidate and retry.
+        logger.atWarning().log(
+            "Cached compressed file %s was deleted outside. Invalidating cache and retrying.",
+            cachedPath);
+        localCache.invalidate(crc32cChecksum);
+        cachedPath = localCache.get(crc32cChecksum, cacheLoader);
+      }
+      return ZipInfo.create(decodedChecksum, cachedPath);
     } catch (ExecutionException e) {
       throw new MobileHarnessException(
           BasicErrorId.GCS_COMPRESS_DIRECTORY, "Failed to cache compressed file " + tmpZipFile, e);
