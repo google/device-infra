@@ -41,6 +41,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
+import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import org.junit.Before;
@@ -78,6 +79,7 @@ public class FlakyTestRetryStrategyTest {
     when(jobInfo.locator()).thenReturn(JOB_LOCATOR);
     when(jobInfo.tests()).thenReturn(testInfos);
     when(jobInfo.params()).thenReturn(jobParams);
+    when(jobInfo.log()).thenReturn(new Log(new Timing()));
     when(testResult.get()).thenReturn(testResultWithCause);
     when(testResultWithCause.causeProtoNonEmpty()).thenReturn(ExceptionDetail.getDefaultInstance());
     when(testRetryProcessor.generateRetryTestTargetsProperty(any())).thenReturn(ImmutableMap.of());
@@ -90,9 +92,9 @@ public class FlakyTestRetryStrategyTest {
     TestInfo initAttempt = mockTestInfo("init_test_id", TestResult.FAIL);
     // No flaky_test_attempts param set, empty by default.
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(initAttempt);
 
-    assertThat(retryInfo).isEqualTo(RetryStrategy.NO_RETRY);
+    assertThat(retryInfos).isEmpty();
   }
 
   @Test
@@ -101,9 +103,9 @@ public class FlakyTestRetryStrategyTest {
     TestInfo initAttempt = mockTestInfo("init_test_id", TestResult.FAIL);
     jobParams.add("flaky_test_attempts", "invalid");
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(initAttempt);
 
-    assertThat(retryInfo).isEqualTo(RetryStrategy.NO_RETRY);
+    assertThat(retryInfos).isEmpty();
   }
 
   @Test
@@ -112,9 +114,9 @@ public class FlakyTestRetryStrategyTest {
     TestInfo initAttempt = mockTestInfo("init_test_id", TestResult.FAIL);
     jobParams.add("flaky_test_attempts", "0");
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(initAttempt);
 
-    assertThat(retryInfo).isEqualTo(RetryStrategy.NO_RETRY);
+    assertThat(retryInfos).isEmpty();
   }
 
   @Test
@@ -124,9 +126,9 @@ public class FlakyTestRetryStrategyTest {
     currentAttempt.properties().add("error_attempt_index", "0");
     jobParams.add("flaky_test_attempts", "3");
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(currentAttempt);
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(currentAttempt);
 
-    assertThat(retryInfo).isEqualTo(RetryStrategy.NO_RETRY);
+    assertThat(retryInfos).isEmpty();
   }
 
   @Test
@@ -134,15 +136,16 @@ public class FlakyTestRetryStrategyTest {
     TestInfo currentAttempt = mockTestInfo("attempt_id", TestResult.FAIL);
     jobParams.add("flaky_test_attempts", "3");
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(currentAttempt);
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(currentAttempt);
 
-    assertThat(retryInfo)
-        .isEqualTo(
+    assertThat(retryInfos)
+        .containsExactly(
             new RetryInfo(
-                Optional.of("TEST_FAIL"),
+                "TEST_FAIL",
                 ImmutableMap.of(
                     "error_attempt_index", "0",
-                    "flaky_attempt_index", "1")));
+                    "flaky_attempt_index", "1",
+                    "flaky_test_parallel_retry", "false")));
   }
 
   @Test
@@ -158,12 +161,12 @@ public class FlakyTestRetryStrategyTest {
     // Only currentAttempt matches (since it is the only one in getByName), count = 1.
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(currentAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(currentAttempt);
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(currentAttempt);
 
-    assertThat(retryInfo)
-        .isEqualTo(
+    assertThat(retryInfos)
+        .containsExactly(
             new RetryInfo(
-                Optional.of("TEST_ERROR"),
+                "TEST_ERROR",
                 ImmutableMap.of(
                     "error_attempt_index", "1",
                     "flaky_attempt_index", "2")));
@@ -182,9 +185,9 @@ public class FlakyTestRetryStrategyTest {
     // to retry.
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(currentAttempt, otherAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(currentAttempt);
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(currentAttempt);
 
-    assertThat(retryInfo).isEqualTo(RetryStrategy.NO_RETRY);
+    assertThat(retryInfos).isEmpty();
   }
 
   @Test
@@ -201,9 +204,9 @@ public class FlakyTestRetryStrategyTest {
     when(testInfos.getByName(TEST_NAME))
         .thenReturn(ImmutableList.of(currentAttempt, timeoutAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(currentAttempt);
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(currentAttempt);
 
-    assertThat(retryInfo).isEqualTo(RetryStrategy.NO_RETRY);
+    assertThat(retryInfos).isEmpty();
   }
 
   @Test
@@ -222,12 +225,12 @@ public class FlakyTestRetryStrategyTest {
     // flaky_attempt_index = 1.
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(currentAttempt, errorAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(currentAttempt);
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(currentAttempt);
 
-    assertThat(retryInfo)
-        .isEqualTo(
+    assertThat(retryInfos)
+        .containsExactly(
             new RetryInfo(
-                Optional.of("TEST_ERROR"),
+                "TEST_ERROR",
                 ImmutableMap.of(
                     "error_attempt_index", "1",
                     "flaky_attempt_index", "1")));
@@ -240,15 +243,16 @@ public class FlakyTestRetryStrategyTest {
     when(testRetryProcessor.generateRetryTestTargetsProperty(currentAttempt))
         .thenReturn(ImmutableMap.of("retry_prop_key", "retry_prop_value"));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(currentAttempt);
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(currentAttempt);
 
-    assertThat(retryInfo)
-        .isEqualTo(
+    assertThat(retryInfos)
+        .containsExactly(
             new RetryInfo(
-                Optional.of("TEST_FAIL"),
+                "TEST_FAIL",
                 ImmutableMap.of(
                     "error_attempt_index", "0",
                     "flaky_attempt_index", "1",
+                    "flaky_test_parallel_retry", "false",
                     "retry_prop_key", "retry_prop_value")));
   }
 
@@ -263,16 +267,52 @@ public class FlakyTestRetryStrategyTest {
     when(testRetryProcessor.generateRetryTestTargetsProperty(currentAttempt))
         .thenReturn(ImmutableMap.of("retry_prop_key", "retry_prop_value"));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(currentAttempt);
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(currentAttempt);
 
-    assertThat(retryInfo)
-        .isEqualTo(
+    assertThat(retryInfos)
+        .containsExactly(
             new RetryInfo(
-                Optional.of("TEST_ERROR"),
+                "TEST_ERROR",
                 ImmutableMap.of(
                     "error_attempt_index", "1",
                     "flaky_attempt_index", "2",
                     "retry_prop_key", "retry_prop_value")));
+  }
+
+  @Test
+  public void decideRetryOnTestEnd_parallelFlakyRetry_createsTwoRetries() throws Exception {
+    TestInfo currentAttempt = mockTestInfo("attempt_id", TestResult.FAIL);
+    jobParams.add("flaky_test_attempts", "3");
+    jobParams.add("flaky_test_parallel_retry", "true");
+
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(currentAttempt);
+
+    assertThat(retryInfos)
+        .containsExactly(
+            new RetryInfo(
+                "PARALLEL_FLAKY_TEST_RETRY_FOR_TEST_FAIL",
+                ImmutableMap.of(
+                    "error_attempt_index", "0",
+                    "flaky_attempt_index", "1",
+                    "flaky_test_parallel_retry", "true")),
+            new RetryInfo(
+                "PARALLEL_FLAKY_TEST_RETRY_FOR_TEST_FAIL",
+                ImmutableMap.of(
+                    "error_attempt_index", "0",
+                    "flaky_attempt_index", "2",
+                    "flaky_test_parallel_retry", "true")));
+  }
+
+  @Test
+  public void decideRetryOnTestEnd_parallelFlakyRetry_limitReached() throws Exception {
+    TestInfo currentAttempt = mockTestInfo("attempt_id", TestResult.FAIL);
+    currentAttempt.properties().add("flaky_attempt_index", "1");
+    jobParams.add("flaky_test_attempts", "3");
+    jobParams.add("flaky_test_parallel_retry", "true");
+
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(currentAttempt);
+
+    assertThat(retryInfos).isEmpty();
   }
 
   private TestInfo mockTestInfo(String testId, TestResult result) {

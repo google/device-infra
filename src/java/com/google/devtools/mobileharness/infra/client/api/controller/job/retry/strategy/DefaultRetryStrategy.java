@@ -38,6 +38,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 
 /** Default strategy deciding whether a finished test should be retried. */
@@ -80,7 +81,7 @@ public class DefaultRetryStrategy implements RetryStrategy {
 
   /** Decide whether the test should be retried. */
   @Override
-  public RetryInfo decideRetryOnTestEnd(TestInfo currentTestInfo)
+  public List<RetryInfo> decideRetryOnTestEnd(TestInfo currentTestInfo)
       throws MobileHarnessException, InterruptedException {
     JobInfo jobInfo = currentTestInfo.jobInfo();
     Retry retrySetting = jobInfo.setting().getRetry();
@@ -93,7 +94,7 @@ public class DefaultRetryStrategy implements RetryStrategy {
                 .filter(DefaultRetryStrategy::isValidAttempt)
                 .count();
     if (validAttemptNum > retrySetting.getTestAttempts()) {
-      return NO_RETRY;
+      return ImmutableList.of();
     }
 
     TestResult testResult = currentTestInfo.resultWithCause().get().type();
@@ -228,7 +229,10 @@ public class DefaultRetryStrategy implements RetryStrategy {
         newTestProperties.put(Ascii.toLowerCase(Test.CONTAINER_MODE.name()), "false");
       }
     }
-    return new RetryInfo(Optional.ofNullable(retryReason), newTestProperties.buildOrThrow());
+    if (retryReason != null) {
+      return ImmutableList.of(new RetryInfo(retryReason, newTestProperties.buildOrThrow()));
+    }
+    return ImmutableList.of();
   }
 
   private ImmutableList<TestInfo> getAllAttempts(JobInfo jobInfo, TestInfo currentTestInfo) {
