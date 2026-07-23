@@ -185,4 +185,53 @@ public class AdbWebSocketBridgeTest {
       assertThat(receivedMessages.poll(5, SECONDS).utf8()).isEqualTo("CMD2");
     }
   }
+
+  @Test
+  public void start_retryWebSocketConnectionOnHandshakeFailure() throws Exception {
+    server.enqueue(new MockResponse().setResponseCode(500));
+    server.enqueue(new MockResponse().withWebSocketUpgrade(serverListener));
+
+    bridge.start();
+    Thread.sleep(2000);
+
+    try (Socket clientSocket = new Socket(InetAddress.getByName("127.0.0.1"), bridgePort)) {
+      clientSocket.setSoTimeout(5000);
+
+      WebSocket ws = webSockets.poll(10, SECONDS);
+      assertThat(ws).isNotNull();
+
+      String testMessage = "Hello after retry";
+      OutputStream out = clientSocket.getOutputStream();
+      out.write(testMessage.getBytes(StandardCharsets.UTF_8));
+      out.flush();
+
+      ByteString received = receivedMessages.poll(10, SECONDS);
+      assertThat(received).isNotNull();
+      assertThat(received.utf8()).isEqualTo(testMessage);
+    }
+  }
+
+  @Test
+  public void stop_closesActiveSockets() throws Exception {
+    server.enqueue(new MockResponse().withWebSocketUpgrade(serverListener));
+
+    bridge.start();
+    Thread.sleep(2000);
+
+    Socket clientSocket = new Socket(InetAddress.getByName("127.0.0.1"), bridgePort);
+    clientSocket.setSoTimeout(5000);
+
+    WebSocket ws = webSockets.poll(10, SECONDS);
+    assertThat(ws).isNotNull();
+
+    // Session is active. Now stop the bridge.
+    bridge.stop();
+
+    // Verify client socket is closed by checking if read returns -1 (EOF)
+    InputStream in = clientSocket.getInputStream();
+    int read = in.read();
+    assertThat(read).isEqualTo(-1);
+
+    clientSocket.close();
+  }
 }

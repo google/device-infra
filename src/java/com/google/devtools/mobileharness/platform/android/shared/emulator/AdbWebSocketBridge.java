@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.ConnectException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -70,13 +71,18 @@ public class AdbWebSocketBridge {
 
   private static final Supplier<OkHttpClient> SHARED_CLIENT =
       Suppliers.memoize(
-          () ->
-              new OkHttpClient.Builder()
-                  .pingInterval(Duration.ofSeconds(10))
-                  .connectTimeout(Duration.ofSeconds(10))
-                  .readTimeout(Duration.ZERO)
-                  .writeTimeout(Duration.ofSeconds(10))
-                  .build());
+          () -> {
+            okhttp3.Dispatcher dispatcher = new okhttp3.Dispatcher();
+            dispatcher.setMaxRequests(500);
+            dispatcher.setMaxRequestsPerHost(500);
+            return new OkHttpClient.Builder()
+                .dispatcher(dispatcher)
+                .pingInterval(Duration.ofSeconds(10))
+                .connectTimeout(Duration.ofSeconds(10))
+                .readTimeout(Duration.ZERO)
+                .writeTimeout(Duration.ofSeconds(10))
+                .build();
+          });
 
   private final String webSocketUrl;
   private final String token;
@@ -111,27 +117,68 @@ public class AdbWebSocketBridge {
         "Bridge background loop failed");
   }
 
-  @SuppressWarnings("AddressSelection")
   private void run() throws IOException {
     isRunning.set(true);
-    try (ServerSocket ss = new ServerSocket(adbPort, 1, InetAddress.getByName("127.0.0.1"))) {
+    try (ServerSocket ss = new ServerSocket()) {
+      ss.setReuseAddress(true);
+      ss.bind(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), adbPort), 50);
       this.serverSocket = ss;
       serverSocket.setSoTimeout(ADB_LISTEN_TIMEOUT_MS);
 
       while (isRunning.get() && !Thread.currentThread().isInterrupted()) {
-        try (Socket tcpSocket = serverSocket.accept()) {
+        try {
+          Socket tcpSocket = serverSocket.accept();
           tcpSocket.setKeepAlive(true);
           tcpSocket.setSoTimeout(0);
 
-          handleSession(tcpSocket);
+          logger.atInfo().log("Accepted TCP connection: %s, submitting to executor", tcpSocket);
+          try {
+            logFailure(
+                executor.submit(
+                    () -> {
+                      try {
+                        handleSession(tcpSocket);
+                      } catch (InterruptedException e) {
+                        logger.atWarning().log(
+                            "Session handler interrupted for TCP: %s", tcpSocket);
+                        Thread.currentThread().interrupt();
+                      } catch (RuntimeException | Error e) {
+                        logger.atWarning().withCause(e).log(
+                            "Error in session handler for TCP: %s", tcpSocket);
+                        throwIfInstanceOf(e, Error.class);
+                      } finally {
+                        try {
+                          logger.atInfo().log(
+                              "Closing TCP socket in executor finally: %s", tcpSocket);
+                          tcpSocket.close();
+                        } catch (IOException e) {
+                          // ignore
+                        }
+                      }
+                    }),
+                Level.SEVERE,
+                "Session handler fatal error");
+          } catch (Exception e) {
+            try {
+              logger.atWarning().log(
+                  "Failed to submit session handler to executor, closing TCP: %s", tcpSocket);
+              tcpSocket.close();
+            } catch (IOException ignored) {
+              // ignore
+            }
+            throw e;
+          }
         } catch (SocketTimeoutException e) {
           // Just a heartbeat for the listener loop
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          break;
         } catch (IOException | RuntimeException | Error e) {
           if (isRunning.get()) {
-            logger.atWarning().withCause(e).log("Error in bridge session handler");
+            logger.atWarning().withCause(e).log("Error in bridge accept loop");
+            try {
+              sleeper.sleep(Duration.ofMillis(100));
+            } catch (InterruptedException ie) {
+              logger.atWarning().log("Sleeper interrupted in accept loop");
+              Thread.currentThread().interrupt();
+            }
           }
           throwIfInstanceOf(e, Error.class);
         }
@@ -165,8 +212,10 @@ public class AdbWebSocketBridge {
    * </ul>
    */
   private void handleSession(Socket tcpSocket) throws InterruptedException {
+    logger.atInfo().log("Handling bridge session for TCP socket: %s", tcpSocket);
     Callable<ConnectListener> connectCallable =
         () -> {
+          logger.atInfo().log("Attempting to connect WebSocket for TCP socket: %s", tcpSocket);
           CountDownLatch sessionLatch = new CountDownLatch(1);
           AtomicBoolean closed = new AtomicBoolean(false);
           ConnectListener listener = new ConnectListener(tcpSocket, sessionLatch, closed);
@@ -174,8 +223,13 @@ public class AdbWebSocketBridge {
           listener.ws = ws;
 
           if (listener.connectedLatch.await(15, SECONDS) && listener.connected.get()) {
+            logger.atInfo().log(
+                "WebSocket connection established successfully for TCP: %s", tcpSocket);
             return listener;
           } else {
+            // TODO: rate limit this logging.
+            logger.atFine().log(
+                "WebSocket connection attempt timed out or failed for TCP: %s", tcpSocket);
             if (ws != null) {
               // Code 1000 indicates a "Normal Closure" per WebSocket protocol (RFC 6455)
               ws.close(1000, "Connection attempt failed");
@@ -198,6 +252,8 @@ public class AdbWebSocketBridge {
               .build()
               .call();
     } catch (RetryException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to establish WebSocket connection after retries for TCP: %s", tcpSocket);
       if (e.getCause() instanceof InterruptedException) {
         Thread.currentThread().interrupt();
         throw (InterruptedException) e.getCause();
@@ -218,7 +274,9 @@ public class AdbWebSocketBridge {
         successfulListener.sessionLatch);
 
     // Wait for session to finish
+    logger.atInfo().log("Waiting for session to finish for TCP: %s", tcpSocket);
     successfulListener.sessionLatch.await();
+    logger.atInfo().log("Session finished for TCP: %s", tcpSocket);
   }
 
   private class ConnectListener extends WebSocketListener {
@@ -238,15 +296,25 @@ public class AdbWebSocketBridge {
 
     @Override
     public void onOpen(WebSocket webSocket, Response response) {
+      logger.atInfo().log("WebSocket connection opened. WS: %s", webSocket);
       connected.set(true);
       connectedLatch.countDown();
     }
 
     @Override
     public void onFailure(WebSocket webSocket, Throwable t, Response response) {
+      if (connected.get()) {
+        logger.atWarning().withCause(t).log(
+            "WebSocket session failed. WS: %s, Response: %s", webSocket, response);
+      } else {
+        // TODO: rate limit this logging.
+        logger.atFine().withCause(t).log(
+            "WebSocket connection failure during setup. WS: %s, Response: %s", webSocket, response);
+      }
       connectedLatch.countDown();
-      if (sessionLatch != null) {
-        terminateSession(webSocket, tcpSocket, closed, "Failure: " + t.getMessage(), sessionLatch);
+      if (connected.get() && sessionLatch != null) {
+        terminateSession(
+            webSocket, tcpSocket, closed, "WS Failure: " + t.getMessage(), sessionLatch);
       }
     }
 
@@ -257,28 +325,34 @@ public class AdbWebSocketBridge {
           tcpSocket.getOutputStream().write(bytes.toByteArray());
           tcpSocket.getOutputStream().flush();
         } catch (IOException e) {
-          terminateSession(webSocket, tcpSocket, closed, "TCP write failure", sessionLatch);
+          terminateSession(
+              webSocket, tcpSocket, closed, "TCP write failure: " + e.getMessage(), sessionLatch);
         }
       }
     }
 
     @Override
     public void onClosing(WebSocket webSocket, int code, String reason) {
+      logger.atInfo().log(
+          "WebSocket connection closing. WS: %s, Code: %d, Reason: %s", webSocket, code, reason);
       if (sessionLatch != null) {
-        terminateSession(webSocket, tcpSocket, closed, "Remote closed", sessionLatch);
+        terminateSession(webSocket, tcpSocket, closed, "Remote closing: " + reason, sessionLatch);
       }
     }
 
     @Override
     public void onClosed(WebSocket webSocket, int code, String reason) {
+      logger.atInfo().log(
+          "WebSocket connection closed. WS: %s, Code: %d, Reason: %s", webSocket, code, reason);
       if (sessionLatch != null) {
-        terminateSession(webSocket, tcpSocket, closed, "Closed", sessionLatch);
+        terminateSession(webSocket, tcpSocket, closed, "Remote closed: " + reason, sessionLatch);
       }
     }
   }
 
   private void startTcpToWsPump(
       Socket tcpSocket, WebSocket ws, AtomicBoolean closed, CountDownLatch latch) {
+    logger.atInfo().log("Starting TCP to WebSocket pump for TCP socket: %s", tcpSocket);
     logFailure(
         executor.submit(
             () -> {
@@ -303,6 +377,8 @@ public class AdbWebSocketBridge {
   private void terminateSession(
       WebSocket ws, Socket tcpSocket, AtomicBoolean closed, String reason, CountDownLatch latch) {
     if (closed.compareAndSet(false, true)) {
+      logger.atInfo().log(
+          "Terminating bridge session. Reason: %s, WS: %s, TCP: %s", reason, ws, tcpSocket);
       if (ws != null) {
         // Code 1000 indicates a "Normal Closure" per WebSocket protocol (RFC 6455)
         ws.close(1000, reason);
