@@ -37,7 +37,6 @@ java_library(
         "//src/devtools/mobileharness/fe/v6/service/proto/host:host_service_java_proto",
         "//src/devtools/mobileharness/infra/master/rpc/proto:lab_sync_service_java_proto",
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/handlers",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/errors",

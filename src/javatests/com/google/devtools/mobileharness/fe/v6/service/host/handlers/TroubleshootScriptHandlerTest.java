@@ -17,16 +17,17 @@
 package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
 import com.google.devtools.mobileharness.fe.v6.service.device.provider.DeviceOpsStubProvider;
+import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ListTroubleshootScriptsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ListTroubleshootScriptsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.RunTroubleshootScriptRequest;
@@ -37,6 +38,7 @@ import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.DeviceOpsStub;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ;
+import io.grpc.Status;
 import java.util.concurrent.ExecutionException;
 import org.junit.Before;
 import org.junit.Rule;
@@ -94,7 +96,7 @@ public final class TroubleshootScriptHandlerTest {
   }
 
   @Test
-  public void runTroubleshootScript_unsupportedScript_fails() throws Exception {
+  public void runTroubleshootScript_unsupportedScript_throwsInvalidArgument() throws Exception {
     RunTroubleshootScriptRequest request =
         RunTroubleshootScriptRequest.newBuilder()
             .setHostName("host")
@@ -104,8 +106,87 @@ public final class TroubleshootScriptHandlerTest {
     ExecutionException e =
         assertThrows(
             ExecutionException.class, () -> handler.runTroubleshootScript(request, UNIVERSE).get());
-    assertThat(e).hasCauseThat().isInstanceOf(MobileHarnessException.class);
-    assertThat(e).hasCauseThat().hasMessageThat().contains("Unsupported troubleshoot script");
+    assertThat(e).hasCauseThat().isInstanceOf(FeServiceException.class);
+    FeServiceException feEx = (FeServiceException) e.getCause();
+    assertThat(feEx.getCode()).isEqualTo(Status.Code.INVALID_ARGUMENT);
+    assertThat(feEx).hasMessageThat().contains("Unsupported troubleshoot script");
+  }
+
+  @Test
+  public void runTroubleshootScript_downstreamRpcFails_wrapsAsFeServiceException()
+      throws Exception {
+    RunTroubleshootScriptRequest request =
+        RunTroubleshootScriptRequest.newBuilder()
+            .setHostName("host")
+            .setScript(TroubleshootScript.RESET_USB_HUB)
+            .build();
+
+    when(deviceOpsStubProvider.createStub(anyString(), any())).thenReturn(deviceOpsStub);
+    when(deviceOpsStub.runTroubleshootScriptAsync(any()))
+        .thenReturn(
+            immediateFailedFuture(
+                Status.UNAVAILABLE.withDescription("Lab server unreachable").asRuntimeException()));
+
+    ExecutionException e =
+        assertThrows(
+            ExecutionException.class, () -> handler.runTroubleshootScript(request, UNIVERSE).get());
+    assertThat(e).hasCauseThat().isInstanceOf(FeServiceException.class);
+    FeServiceException feEx = (FeServiceException) e.getCause();
+    assertThat(feEx.getCode()).isEqualTo(Status.Code.UNAVAILABLE);
+    assertThat(feEx).hasMessageThat().contains("host");
+    assertThat(feEx).hasMessageThat().contains("Lab server unreachable");
+  }
+
+  @Test
+  public void runTroubleshootScript_unexpectedException_wrapsAsInternal() throws Exception {
+    RunTroubleshootScriptRequest request =
+        RunTroubleshootScriptRequest.newBuilder()
+            .setHostName("myhost")
+            .setScript(TroubleshootScript.RESET_USB_HUB)
+            .build();
+
+    when(deviceOpsStubProvider.createStub(anyString(), any())).thenReturn(deviceOpsStub);
+    when(deviceOpsStub.runTroubleshootScriptAsync(any()))
+        .thenReturn(immediateFailedFuture(new RuntimeException("something broke")));
+
+    ExecutionException e =
+        assertThrows(
+            ExecutionException.class, () -> handler.runTroubleshootScript(request, UNIVERSE).get());
+    assertThat(e).hasCauseThat().isInstanceOf(FeServiceException.class);
+    FeServiceException feEx = (FeServiceException) e.getCause();
+    assertThat(feEx.getCode()).isEqualTo(Status.Code.INTERNAL);
+    assertThat(feEx).hasMessageThat().contains("myhost");
+    assertThat(feEx).hasMessageThat().contains("something broke");
+  }
+
+  @Test
+  public void runTroubleshootScript_nestedCause_exposesFullCauseChain() throws Exception {
+    RunTroubleshootScriptRequest request =
+        RunTroubleshootScriptRequest.newBuilder()
+            .setHostName("labhost1")
+            .setScript(TroubleshootScript.RESET_USB_HUB)
+            .build();
+
+    // Simulate a nested exception: outer wraps an inner with command details.
+    RuntimeException rootCause =
+        new RuntimeException("cmd exited with code 1, stderr: usb device not found");
+    RuntimeException wrapper = new RuntimeException("Script execution failed", rootCause);
+
+    when(deviceOpsStubProvider.createStub(anyString(), any())).thenReturn(deviceOpsStub);
+    when(deviceOpsStub.runTroubleshootScriptAsync(any()))
+        .thenReturn(immediateFailedFuture(wrapper));
+
+    ExecutionException e =
+        assertThrows(
+            ExecutionException.class, () -> handler.runTroubleshootScript(request, UNIVERSE).get());
+    assertThat(e).hasCauseThat().isInstanceOf(FeServiceException.class);
+    FeServiceException feEx = (FeServiceException) e.getCause();
+    assertThat(feEx.getCode()).isEqualTo(Status.Code.INTERNAL);
+    assertThat(feEx).hasMessageThat().contains("labhost1");
+    // Both the wrapper message and root cause message must appear.
+    assertThat(feEx).hasMessageThat().contains("Script execution failed");
+    assertThat(feEx).hasMessageThat().contains("cmd exited with code 1");
+    assertThat(feEx).hasMessageThat().contains("usb device not found");
   }
 
   @Test
@@ -137,7 +218,7 @@ public final class TroubleshootScriptHandlerTest {
   }
 
   @Test
-  public void runTroubleshootScript_routedUniverse_fails() throws Exception {
+  public void runTroubleshootScript_routedUniverse_throwsUnimplemented() throws Exception {
     RunTroubleshootScriptRequest request =
         RunTroubleshootScriptRequest.newBuilder()
             .setHostName("host")
@@ -151,12 +232,14 @@ public final class TroubleshootScriptHandlerTest {
                 handler
                     .runTroubleshootScript(request, new UniverseScope.RoutedUniverse("partner"))
                     .get());
-    assertThat(e).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
-    assertThat(e).hasCauseThat().hasMessageThat().contains("self universe");
+    assertThat(e).hasCauseThat().isInstanceOf(FeServiceException.class);
+    FeServiceException feEx = (FeServiceException) e.getCause();
+    assertThat(feEx.getCode()).isEqualTo(Status.Code.UNIMPLEMENTED);
+    assertThat(feEx).hasMessageThat().contains("self universe");
   }
 
   @Test
-  public void listTroubleshootScripts_routedUniverse_fails() throws Exception {
+  public void listTroubleshootScripts_routedUniverse_throwsUnimplemented() throws Exception {
     ListTroubleshootScriptsRequest request =
         ListTroubleshootScriptsRequest.newBuilder().setHostName("host").build();
 
@@ -167,8 +250,10 @@ public final class TroubleshootScriptHandlerTest {
                 handler
                     .listTroubleshootScripts(request, new UniverseScope.RoutedUniverse("partner"))
                     .get());
-    assertThat(e).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
-    assertThat(e).hasCauseThat().hasMessageThat().contains("self universe");
+    assertThat(e).hasCauseThat().isInstanceOf(FeServiceException.class);
+    FeServiceException feEx = (FeServiceException) e.getCause();
+    assertThat(feEx.getCode()).isEqualTo(Status.Code.UNIMPLEMENTED);
+    assertThat(feEx).hasMessageThat().contains("self universe");
   }
 
   private static GetLabInfoResponse buildLabInfoWithBusyDevice() {

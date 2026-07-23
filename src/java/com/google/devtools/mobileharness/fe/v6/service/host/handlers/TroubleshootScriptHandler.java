@@ -16,17 +16,19 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
+import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.FluentFuture;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.fe.v6.service.device.provider.DeviceOpsStubProvider;
+import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.TroubleshootScriptRegistry.ScriptMetadata;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ListTroubleshootScriptsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.ListTroubleshootScriptsResponse;
@@ -40,12 +42,16 @@ import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProt
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ;
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.RunTroubleshootScriptRequest.TroubleshootScript;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
 /** Handler for troubleshoot script operations (run and list). */
 @Singleton
 public class TroubleshootScriptHandler {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final LabInfoProvider labInfoProvider;
   private final DeviceOpsStubProvider deviceOpsStubProvider;
@@ -62,39 +68,47 @@ public class TroubleshootScriptHandler {
       RunTroubleshootScriptRequest request, UniverseScope universe) {
     if (!(universe instanceof UniverseScope.SelfUniverse)) {
       return immediateFailedFuture(
-          new IllegalArgumentException(
+          FeServiceException.unimplemented(
               "Troubleshoot scripts are only supported in the self universe."));
     }
     String hostName = request.getHostName();
 
-    return Futures.transformAsync(
-        labInfoProvider.getLabInfoAsync(createGetLabInfoRequest(hostName), universe),
-        labInfoResponse -> {
-          DeviceOpsServ.RunTroubleshootScriptRequest.TroubleshootScript labScript =
-              switch (request.getScript()) {
-                case RESET_USB_HUB ->
-                    DeviceOpsServ.RunTroubleshootScriptRequest.TroubleshootScript.RESET_USB_HUB;
-                default ->
-                    throw new MobileHarnessException(
-                        BasicErrorId.COMMAND_EXEC_FAIL,
-                        "Unsupported troubleshoot script: " + request.getScript());
-              };
+    return FluentFuture.from(
+            labInfoProvider.getLabInfoAsync(createGetLabInfoRequest(hostName), universe))
+        .transformAsync(
+            labInfoResponse -> {
+              DeviceOpsServ.RunTroubleshootScriptRequest.TroubleshootScript labScript =
+                  switch (request.getScript()) {
+                    case RESET_USB_HUB ->
+                        DeviceOpsServ.RunTroubleshootScriptRequest.TroubleshootScript.RESET_USB_HUB;
+                    default ->
+                        throw FeServiceException.invalidArgument(
+                            "Unsupported troubleshoot script: " + request.getScript());
+                  };
 
-          DeviceOpsServ.RunTroubleshootScriptRequest labRequest =
-              DeviceOpsServ.RunTroubleshootScriptRequest.newBuilder().setScript(labScript).build();
+              DeviceOpsServ.RunTroubleshootScriptRequest labRequest =
+                  DeviceOpsServ.RunTroubleshootScriptRequest.newBuilder()
+                      .setScript(labScript)
+                      .build();
 
-          DeviceOpsStub stub = deviceOpsStubProvider.createStub(hostName, universe);
-          return Futures.transform(
-              stub.runTroubleshootScriptAsync(labRequest),
-              labResponse ->
-                  RunTroubleshootScriptResponse.newBuilder()
-                      .setExitCode(labResponse.getExitCode())
-                      .setStdout(labResponse.getStdout())
-                      .setStderr(labResponse.getStderr())
-                      .build(),
-              directExecutor());
-        },
-        directExecutor());
+              DeviceOpsStub stub = deviceOpsStubProvider.createStub(hostName, universe);
+              return Futures.transform(
+                  stub.runTroubleshootScriptAsync(labRequest),
+                  labResponse ->
+                      RunTroubleshootScriptResponse.newBuilder()
+                          .setExitCode(labResponse.getExitCode())
+                          .setStdout(labResponse.getStdout())
+                          .setStderr(labResponse.getStderr())
+                          .build(),
+                  directExecutor());
+            },
+            directExecutor())
+        .catching(
+            Exception.class,
+            e -> {
+              throw toFeServiceException(hostName, e);
+            },
+            directExecutor());
   }
 
   /** Lists available troubleshoot scripts, disabling them if any device is BUSY. */
@@ -102,7 +116,7 @@ public class TroubleshootScriptHandler {
       ListTroubleshootScriptsRequest request, UniverseScope universe) {
     if (!(universe instanceof UniverseScope.SelfUniverse)) {
       return immediateFailedFuture(
-          new IllegalArgumentException(
+          FeServiceException.unimplemented(
               "Troubleshoot scripts are only supported in the self universe."));
     }
     String hostName = request.getHostName();
@@ -149,6 +163,61 @@ public class TroubleshootScriptHandler {
           return response.build();
         },
         directExecutor());
+  }
+
+  /**
+   * Converts downstream exceptions into {@link FeServiceException} so that the gRPC/AF boundary
+   * (FeGrpcInvoker / SafeExceptionHandler) maps them to the correct HTTP status code.
+   *
+   * <p>If the exception is already a {@code FeServiceException} (e.g. from validation above), it is
+   * re-thrown as-is. gRPC {@link StatusRuntimeException}s from the lab server RPC preserve their
+   * original code. All other exceptions become {@code INTERNAL}.
+   *
+   * <p>The error message includes the full cause chain so the client can display detailed command
+   * logs (exit code, stdout, stderr) for debugging troubleshoot script failures.
+   */
+  private static FeServiceException toFeServiceException(String hostName, Exception e) {
+    if (e instanceof FeServiceException feEx) {
+      return feEx;
+    }
+    String detail = collectCauseChainMessages(e);
+    if (e instanceof StatusRuntimeException sre) {
+      Status.Code code = sre.getStatus().getCode();
+      String message =
+          String.format("Troubleshoot script failed on host %s: %s — %s", hostName, code, detail);
+      return new FeServiceException(code, message, sre);
+    }
+    logger.atWarning().withCause(e).log(
+        "Unexpected error running troubleshoot script on host %s", hostName);
+    return new FeServiceException(
+        Status.Code.INTERNAL,
+        String.format("Troubleshoot script failed on host %s: %s", hostName, detail),
+        e);
+  }
+
+  /**
+   * Walks the exception cause chain and collects all distinct messages, joined by {@code "; Caused
+   * by: "}. This surfaces root-cause details (e.g. command exit codes, stderr output) that would
+   * otherwise be hidden in nested exceptions.
+   */
+  private static String collectCauseChainMessages(Throwable t) {
+    StringBuilder sb = new StringBuilder();
+    String lastMessage = null;
+    for (Throwable current = t; current != null; current = current.getCause()) {
+      String msg = current.getMessage();
+      if (isNullOrEmpty(msg)) {
+        msg = current.getClass().getSimpleName();
+      }
+      // Skip duplicate messages (common when wrapping exceptions re-use the same message).
+      if (!msg.equals(lastMessage)) {
+        if (sb.length() > 0) {
+          sb.append("; Caused by: ");
+        }
+        sb.append(msg);
+        lastMessage = msg;
+      }
+    }
+    return sb.length() > 0 ? sb.toString() : t.getClass().getSimpleName();
   }
 
   /** Returns true if no devices are BUSY on the host, meaning it is safe to run RESET_USB_HUB. */
