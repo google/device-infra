@@ -55,13 +55,23 @@
               <div class="title-text-wrapper">
                 <div class="title-main">
                   <h1 class="device-title" title="{{ device.id }}">{{ device.id }}</h1>
-                  <button
-                    (click)="copyToClipboard(device.id)"
-                    class="copy-button"
-                    title="Copy device ID"
-                  >
-                    <mat-icon class="copy-icon">content_copy</mat-icon>
-                  </button>
+                  <div class="title-action-container">
+                    <button
+                      (click)="copyToClipboard(device.id)"
+                      class="title-action-btn"
+                      title="Copy device ID"
+                    >
+                      <mat-icon class="title-action-icon">content_copy</mat-icon>
+                    </button>
+                    <button
+                      class="title-action-btn"
+                      title="Refresh data"
+                      (click)="triggerRefresh()"
+                      [disabled]="loadingService.isLoading()"
+                    >
+                      <mat-icon class="title-action-icon" [class.spin-animation]="loadingService.isLoading()">refresh</mat-icon>
+                    </button>
+                  </div>
                 </div>
                 <div class="title-subtitle">
                   <span>Connected to Host:</span>

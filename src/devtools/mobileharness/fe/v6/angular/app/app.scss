@@ -280,9 +280,19 @@ mat-spinner.loading-spinner {
   display: flex;
   height: 100%;
   justify-content: center;
-  position: absolute;
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
-  z-index: 101;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.5); // Dims the content behind
+  z-index: 9999; // Ensure it's on top of everything
+}
+
+// If the initial pre-bootstrap loader is present, hide the global overlay
+// to prevent double spinners and overlapping masks.
+#initial-loading-overlay ~ app-root .loading-spinner-overlay {
+  display: none !important;
 }
 
 .page {

@@ -208,3 +208,54 @@
   margin-right: 12px;
   vertical-align: middle;
 }
+
+.title-action-container {
+  display: flex;
+  align-items: center;
+}
+
+.title-action-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280; // text-gray-500
+  flex-shrink: 0;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+
+  &:hover:not(:disabled) {
+    background-color: rgba(107, 114, 128, 0.1);
+    color: #1f2937; // hover:text-gray-800
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .title-action-icon {
+    font-size: 24px;
+    height: 24px;
+    width: 24px;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin-animation {
+  animation: spin 1s linear infinite;
+}
