@@ -57,11 +57,18 @@ public abstract class LifecycleDecorator extends BaseDecorator {
    * <ul>
    *   <li>Executed as the first lifecycle phase when this decorator's {@link #run(TestInfo)} is
    *       invoked.
-   *   <li>If {@code setUp} completes successfully, execution proceeds to the decorated driver.
+   *   <li>If {@code setUp} completes successfully (does not throw an exception), execution proceeds
+   *       to the decorated driver.
    *   <li>If {@code setUp} throws an exception (e.g., {@link MobileHarnessException} or {@link
    *       InterruptedException}), execution skips the decorated driver and proceeds directly to
    *       {@link #tearDown(TeardownContext)}. The exception thrown by {@code setUp} is preserved
    *       and rethrown after cleanup.
+   *   <li>Regardless of whether {@code setUp} throws an exception or not, {@link
+   *       #tearDown(TeardownContext)} will always run.
+   *   <li>Therefore, if {@code setUp} needs to skip the decorated driver's execution, the
+   *       recommended approach is to set the test result (e.g., calling {@code
+   *       testInfo.resultWithCause().setNonPassing(...)}) and throw a {@link
+   *       MobileHarnessException}.
    * </ul>
    *
    * @param context the context containing setup metadata
@@ -80,9 +87,14 @@ public abstract class LifecycleDecorator extends BaseDecorator {
    *   <li><b>Guaranteed Cleanup Execution:</b> Always executed in a {@code finally} block, ensuring
    *       cleanup runs whether {@link #setUp(SetupContext)} succeeded, {@link #setUp(SetupContext)}
    *       failed, or the decorated driver failed.
-   *   <li><b>Idempotent Teardown Contract:</b> Subclasses must implement this method defensibly and
-   *       idempotently (e.g., checking for non-null resources before cleanup), as it may be invoked
-   *       when {@code setUp} only partially completed.
+   *   <li><b>Defensive Resource Cleanup:</b> Because {@code tearDown} is always called regardless
+   *       of where {@link #setUp(SetupContext)} throws an exception, {@code tearDown} needs to
+   *       check every single resource individually to determine whether it needs to be released and
+   *       release each of them.
+   *   <li><b>Error Context Inspection:</b> {@code tearDown} can inspect {@link
+   *       TeardownContext#setupError()}, {@link TeardownContext#decoratedError()}, and {@link
+   *       TeardownContext#setupOrDecoratedError()} to determine whether {@code setUp} or the
+   *       decorated driver threw an exception.
    *   <li><b>Exception Suppression:</b> If an exception occurred during {@code setUp} or decorated
    *       driver execution, and {@code tearDown} also throws an exception, the teardown exception
    *       is automatically attached as a suppressed exception to the primary error. If both setup
