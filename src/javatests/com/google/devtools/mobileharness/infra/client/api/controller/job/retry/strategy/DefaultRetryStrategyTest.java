@@ -53,6 +53,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import org.junit.Before;
@@ -117,11 +118,11 @@ public class DefaultRetryStrategyTest {
 
     TestInfo initAttempt = mockTestInfo("init_test_id", TestResult.ERROR);
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(initAttempt));
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(initAttempt);
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
-
-    assertThat(retryInfo.retryReason().orElse(null)).isEqualTo("TEST_ERROR");
-    assertThat(retryInfo.newTestProperties())
+    assertThat(retryInfos).hasSize(1);
+    assertThat(retryInfos.get(0).retryReason()).isEqualTo("TEST_ERROR");
+    assertThat(retryInfos.get(0).newTestProperties())
         .containsExactly(
             Ascii.toLowerCase(PropertyName.Test.CONTAINER_MODE.name()),
             "false",
@@ -137,10 +138,7 @@ public class DefaultRetryStrategyTest {
     TestInfo initAttempt = mockTestInfo("init_test_id", TestResult.FAIL);
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(initAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
-
-    assertThat(retryInfo.retryReason()).isEmpty();
-    assertThat(retryInfo.newTestProperties()).isEmpty();
+    assertThat(retryStrategy.decideRetryOnTestEnd(initAttempt)).isEmpty();
   }
 
   @Test
@@ -151,10 +149,7 @@ public class DefaultRetryStrategyTest {
     TestInfo initAttempt = mockTestInfo("init_test_id", TestResult.PASS);
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(initAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
-
-    assertThat(retryInfo.retryReason()).isEmpty();
-    assertThat(retryInfo.newTestProperties()).isEmpty();
+    assertThat(retryStrategy.decideRetryOnTestEnd(initAttempt)).isEmpty();
   }
 
   @Test
@@ -165,10 +160,7 @@ public class DefaultRetryStrategyTest {
     TestInfo initAttempt = mockTestInfo("init_test_id", TestResult.SKIP);
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(initAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
-
-    assertThat(retryInfo.retryReason()).isEmpty();
-    assertThat(retryInfo.newTestProperties()).isEmpty();
+    assertThat(retryStrategy.decideRetryOnTestEnd(initAttempt)).isEmpty();
   }
 
   @Test
@@ -180,9 +172,11 @@ public class DefaultRetryStrategyTest {
     TestInfo initAttempt = mockTestInfo("init_test_id", TestResult.TIMEOUT);
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(initAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(initAttempt);
+    assertThat(retryInfos).hasSize(1);
+    RetryInfo retryInfo = retryInfos.get(0);
 
-    assertThat(retryInfo.retryReason().orElse(null)).isEqualTo("TEST_TIMEOUT");
+    assertThat(retryInfo.retryReason()).isEqualTo("TEST_TIMEOUT");
     assertThat(retryInfo.newTestProperties())
         .containsExactly(
             Ascii.toLowerCase(PropertyName.Test.CONTAINER_MODE.name()),
@@ -200,10 +194,7 @@ public class DefaultRetryStrategyTest {
     TestInfo initAttempt = mockTestInfo("init_test_id", TestResult.TIMEOUT);
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(initAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
-
-    assertThat(retryInfo.retryReason()).isEmpty();
-    assertThat(retryInfo.newTestProperties()).isEmpty();
+    assertThat(retryStrategy.decideRetryOnTestEnd(initAttempt)).isEmpty();
   }
 
   @Test
@@ -219,9 +210,11 @@ public class DefaultRetryStrategyTest {
             BasicErrorId.CUSTOMER_TEST_EXECUTION_TIMEOUT_EXCEPTION_WRAPPER);
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(initAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(initAttempt);
+    assertThat(retryInfos).hasSize(1);
+    RetryInfo retryInfo = retryInfos.get(0);
 
-    assertThat(retryInfo.retryReason().orElse(null)).isEqualTo("TEST_ERROR");
+    assertThat(retryInfo.retryReason()).isEqualTo("TEST_ERROR");
     assertThat(retryInfo.newTestProperties())
         .containsExactly(
             Ascii.toLowerCase(PropertyName.Test.CONTAINER_MODE.name()),
@@ -243,10 +236,7 @@ public class DefaultRetryStrategyTest {
             BasicErrorId.CUSTOMER_TEST_EXECUTION_TIMEOUT_EXCEPTION_WRAPPER);
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(initAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
-
-    assertThat(retryInfo.retryReason()).isEmpty();
-    assertThat(retryInfo.newTestProperties()).isEmpty();
+    assertThat(retryStrategy.decideRetryOnTestEnd(initAttempt)).isEmpty();
   }
 
   @Test
@@ -261,9 +251,11 @@ public class DefaultRetryStrategyTest {
     TestInfo initAttempt = mockTestInfo("init_test_id", TestResult.FAIL);
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(initAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(initAttempt);
+    assertThat(retryInfos).hasSize(1);
+    RetryInfo retryInfo = retryInfos.get(0);
 
-    assertThat(retryInfo.retryReason().orElse(null)).isEqualTo("TEST_FAIL");
+    assertThat(retryInfo.retryReason()).isEqualTo("TEST_FAIL");
     assertThat(retryInfo.newTestProperties())
         .containsExactly(
             Ascii.toLowerCase(PropertyName.Test.CONTAINER_MODE.name()),
@@ -288,9 +280,11 @@ public class DefaultRetryStrategyTest {
             AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_NO_VALID_UID_ASSIGNED);
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(initAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(initAttempt);
+    assertThat(retryInfos).hasSize(1);
+    RetryInfo retryInfo = retryInfos.get(0);
 
-    assertThat(retryInfo.retryReason().orElse(null)).isEqualTo("TEST_FAIL");
+    assertThat(retryInfo.retryReason()).isEqualTo("TEST_FAIL");
     assertThat(retryInfo.newTestProperties())
         .containsExactly(
             Ascii.toLowerCase(PropertyName.Test.RETRY_AFTER_NO_VALID_UID_ASSIGNED.name()),
@@ -314,9 +308,11 @@ public class DefaultRetryStrategyTest {
     initAttempt.properties().add(PropertyName.Test.CONTAINER_MODE, "true");
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(initAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(initAttempt);
+    assertThat(retryInfos).hasSize(1);
+    RetryInfo retryInfo = retryInfos.get(0);
 
-    assertThat(retryInfo.retryReason().orElse(null)).isEqualTo("POTENTIAL_CONTAINER_ISSUE");
+    assertThat(retryInfo.retryReason()).isEqualTo("POTENTIAL_CONTAINER_ISSUE");
 
     assertThat(retryInfo.newTestProperties())
         .containsExactly(
@@ -340,10 +336,7 @@ public class DefaultRetryStrategyTest {
     initAttempt.properties().add(PropertyName.Test.CONTAINER_MODE, "true");
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(initAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
-
-    assertThat(retryInfo.retryReason()).isEmpty();
-    assertThat(retryInfo.newTestProperties()).isEmpty();
+    assertThat(retryStrategy.decideRetryOnTestEnd(initAttempt)).isEmpty();
   }
 
   @Test
@@ -365,10 +358,11 @@ public class DefaultRetryStrategyTest {
             "last_test_id", TestResult.ERROR, BasicErrorId.JOB_OR_TEST_RESULT_LEGACY_INFRA_ERROR);
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(initAttempt, lastAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(lastAttempt);
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(lastAttempt);
+    assertThat(retryInfos).hasSize(1);
+    RetryInfo retryInfo = retryInfos.get(0);
 
-    assertThat(retryInfo.retryReason().orElse(null))
-        .isEqualTo("EXTRA_RETRY_FOR_INFRA_ISSUE_AS_CRITICAL_ERROR");
+    assertThat(retryInfo.retryReason()).isEqualTo("EXTRA_RETRY_FOR_INFRA_ISSUE_AS_CRITICAL_ERROR");
     assertThat(retryInfo.newTestProperties())
         .containsExactly(
             Ascii.toLowerCase(PropertyName.Test.CONTAINER_MODE.name()),
@@ -397,10 +391,7 @@ public class DefaultRetryStrategyTest {
             "last_test_id", TestResult.ERROR, BasicErrorId.JOB_OR_TEST_RESULT_LEGACY_INFRA_ERROR);
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(initAttempt, lastAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(lastAttempt);
-
-    assertThat(retryInfo.retryReason()).isEmpty();
-    assertThat(retryInfo.newTestProperties()).isEmpty();
+    assertThat(retryStrategy.decideRetryOnTestEnd(initAttempt)).isEmpty();
   }
 
   @Test
@@ -441,11 +432,7 @@ public class DefaultRetryStrategyTest {
 
     TestInfo lastAttempt = mockTestInfo("last_test_id", TestResult.ERROR, nonMhInfraErrorId);
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(initAttempt, lastAttempt));
-
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(lastAttempt);
-
-    assertThat(retryInfo.retryReason()).isEmpty();
-    assertThat(retryInfo.newTestProperties()).isEmpty();
+    assertThat(retryStrategy.decideRetryOnTestEnd(lastAttempt)).isEmpty();
   }
 
   @Test
@@ -466,10 +453,7 @@ public class DefaultRetryStrategyTest {
             "last_test_id", TestResult.ERROR, BasicErrorId.JOB_OR_TEST_RESULT_LEGACY_INFRA_ERROR);
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(initAttempt, lastAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(lastAttempt);
-
-    assertThat(retryInfo.retryReason()).isEmpty();
-    assertThat(retryInfo.newTestProperties()).isEmpty();
+    assertThat(retryStrategy.decideRetryOnTestEnd(lastAttempt)).isEmpty();
   }
 
   @Test
@@ -490,10 +474,7 @@ public class DefaultRetryStrategyTest {
             "last_test_id", TestResult.FAIL, BasicErrorId.JOB_OR_TEST_RESULT_LEGACY_INFRA_ERROR);
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(initAttempt, lastAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(lastAttempt);
-
-    assertThat(retryInfo.retryReason()).isEmpty();
-    assertThat(retryInfo.newTestProperties()).isEmpty();
+    assertThat(retryStrategy.decideRetryOnTestEnd(lastAttempt)).isEmpty();
   }
 
   @Test
@@ -516,10 +497,7 @@ public class DefaultRetryStrategyTest {
             "last_test_id", TestResult.FAIL, BasicErrorId.JOB_OR_TEST_RESULT_LEGACY_INFRA_ERROR);
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(initAttempt, lastAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(lastAttempt);
-
-    assertThat(retryInfo.retryReason()).isEmpty();
-    assertThat(retryInfo.newTestProperties()).isEmpty();
+    assertThat(retryStrategy.decideRetryOnTestEnd(lastAttempt)).isEmpty();
   }
 
   @Test
@@ -538,10 +516,7 @@ public class DefaultRetryStrategyTest {
     TestInfo lastAttempt = mockTestInfo("last_test_id", TestResult.FAIL);
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(initAttempt, lastAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(lastAttempt);
-
-    assertThat(retryInfo.retryReason()).isEmpty();
-    assertThat(retryInfo.newTestProperties()).isEmpty();
+    assertThat(retryStrategy.decideRetryOnTestEnd(lastAttempt)).isEmpty();
   }
 
   @Test
@@ -559,9 +534,11 @@ public class DefaultRetryStrategyTest {
     TestInfo lastAttempt = mockTestInfo("last_test_id", TestResult.FAIL);
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(attempt1, lastAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(lastAttempt);
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(lastAttempt);
+    assertThat(retryInfos).hasSize(1);
+    RetryInfo retryInfo = retryInfos.get(0);
 
-    assertThat(retryInfo.retryReason().orElse(null)).isEqualTo("TEST_FAIL");
+    assertThat(retryInfo.retryReason()).isEqualTo("TEST_FAIL");
     assertThat(retryInfo.newTestProperties())
         .containsExactly(
             Ascii.toLowerCase(PropertyName.Test.CONTAINER_MODE.name()),
@@ -587,9 +564,11 @@ public class DefaultRetryStrategyTest {
     initAttempt.properties().add(PropertyName.Test._DRAIN_TIMEOUT_RETRY_ATTEMPTS, "2");
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(initAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(initAttempt);
+    assertThat(retryInfos).hasSize(1);
+    RetryInfo retryInfo = retryInfos.get(0);
 
-    assertThat(retryInfo.retryReason().orElse(null)).isEqualTo("DRAIN_TIMEOUT_ERROR");
+    assertThat(retryInfo.retryReason()).isEqualTo("DRAIN_TIMEOUT_ERROR");
     assertThat(retryInfo.newTestProperties())
         .containsExactly(
             Ascii.toLowerCase(PropertyName.Test.CONTAINER_MODE.name()),
@@ -617,10 +596,7 @@ public class DefaultRetryStrategyTest {
     initAttempt.properties().add(PropertyName.Test._DRAIN_TIMEOUT_RETRY_ATTEMPTS, "5");
     when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(initAttempt));
 
-    RetryInfo retryInfo = retryStrategy.decideRetryOnTestEnd(initAttempt);
-
-    assertThat(retryInfo.retryReason()).isEmpty();
-    assertThat(retryInfo.newTestProperties()).isEmpty();
+    assertThat(retryStrategy.decideRetryOnTestEnd(initAttempt)).isEmpty();
   }
 
   private TestInfo mockTestInfo(String testId, TestResult result) {
