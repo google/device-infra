@@ -27,7 +27,6 @@ export const SCENARIO_TEST_FAILED: MockTestScenario = {
       device: [
         {
           id: '43021FDAQ000UM',
-          type: 'AndroidRealDevice',
         },
       ],
     },

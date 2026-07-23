@@ -26,7 +26,6 @@ export const SCENARIO_TEST_SUSPENDED: MockTestScenario = {
       device: [
         {
           id: '4D5A1FDAB001BB',
-          type: 'AndroidRealDevice',
         },
       ],
     },

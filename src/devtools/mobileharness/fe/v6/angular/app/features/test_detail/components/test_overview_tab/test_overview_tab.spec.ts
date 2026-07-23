@@ -41,7 +41,6 @@ describe('TestOverviewTab Component', () => {
       device: [
         {
           id: 'device_01',
-          type: 'AndroidRealDevice',
         },
       ],
     },

@@ -32,7 +32,7 @@ option java_outer_classname = "TestResourcesProto";
 // One device the test was executed on.
 message TestDevice {
   string id = 1;
-  string type = 2;
+  reserved 2;
 }
 
 // A lightweight summary of a test. Used as a list row in two contexts:

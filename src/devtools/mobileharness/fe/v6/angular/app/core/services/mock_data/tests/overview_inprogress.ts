@@ -33,7 +33,6 @@ export const SCENARIO_TEST_IN_PROGRESS: MockTestScenario = {
       device: [
         {
           id: '43021FDAQ000UM',
-          type: 'AndroidRealDevice',
         },
       ],
     },

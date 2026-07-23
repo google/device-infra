@@ -26,7 +26,6 @@ export const SCENARIO_TEST_WARNING: MockTestScenario = {
       device: [
         {
           id: '99061FFAZ004AA',
-          type: 'AndroidRealDevice',
         },
       ],
     },

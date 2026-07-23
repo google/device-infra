@@ -78,7 +78,6 @@ export interface ParentJobInfo {
 /** One device the test was executed on. */
 export interface TestDevice {
   id: string;
-  type: string;
 }
 
 /** Wrapper for a list of devices. */
