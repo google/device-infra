@@ -22,10 +22,13 @@ package(
 )
 
 java_library(
-    name = "ats_jit_emulator_log_puller_plugin_test",
+    name = "ats",
     srcs = glob(["*.java"]),
     deps = [
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/atsjitemulatorlogpuller:ats_jit_emulator_log_puller_plugin",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/ats:ats_file_server_uploader_plugin",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/ats:ats_jit_emulator_log_puller_plugin",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_jit_emulator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:test",
@@ -41,5 +44,5 @@ junit_test_suites(
     sizes = [
         "small",
     ],
-    deps = [":ats_jit_emulator_log_puller_plugin_test"],
+    deps = [":ats"],
 )
