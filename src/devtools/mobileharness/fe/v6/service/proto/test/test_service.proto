@@ -28,25 +28,22 @@ option java_outer_classname = "TestServiceProto";
 service TestService {
   // Gets the detailed information of a test by its ID.
   //
-  // Uses POST (not GET) because the request carries fields in the body
-  // (`body: "*"`, e.g. job_id); an HTTP GET cannot carry a request body.
+  // Non-path fields (job_id, sub_test_id) are automatically mapped to query
+  // parameters by the gRPC-JSON transcoder (e.g. ?job_id=xxx&sub_test_id=yyy).
   rpc GetTest(GetTestRequest) returns (GetTestResponse) {
     option (google.api.http) = {
-      post: "/v6/tests/{test_id}:getTest"
-      body: "*"
+      get: "/v6/tests/{test_id}"
     };
   }
 
   // Gets the log of a test by its ID, returning the log from `offset` to the
   // end.
   //
-  // Uses POST (not GET) for the same reason as GetTest: the request carries
-  // fields in the body (`body: "*"`, e.g. job_id/offset); an HTTP GET cannot
-  // carry a request body.
+  // Non-path fields (job_id, offset, length) are automatically mapped to query
+  // parameters by the gRPC-JSON transcoder.
   rpc GetTestLog(GetTestLogRequest) returns (GetTestLogResponse) {
     option (google.api.http) = {
-      post: "/v6/tests/{test_id}:getTestLog"
-      body: "*"
+      get: "/v6/tests/{test_id}/log"
     };
   }
 }
