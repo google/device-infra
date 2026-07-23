@@ -513,6 +513,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidMinSdkVersionCheckDecorator");
     device.addSupportedDecorator("AndroidNetworkActivityLoggingDecorator");
     device.addSupportedDecorator("AndroidOrientationDecorator");
+    device.addSupportedDecorator("AndroidPerfettoDecorator");
     device.addSupportedDecorator("AndroidRuntimeStatsDecorator");
     device.addSupportedDecorator("AndroidScreenshotDecorator");
     device.addSupportedDecorator("AndroidSetWifiDecorator");

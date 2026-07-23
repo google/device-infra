@@ -134,6 +134,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_logcat_monitoring_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_network_activity_logging_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_orientation_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_perfetto_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_runtime_stats_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_screenshot_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_start_apps_decorator",
@@ -153,6 +154,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_native_bin_env_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_network_activity_logging_env_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_orientation_decorator_env_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_perfetto_decorator_env_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:android_screenshot_decorator_env_validator",
     ],
 )
@@ -171,6 +173,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_native_bin_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_network_activity_logging_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_orientation_decorator_job_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_perfetto_decorator_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_robo_test_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_runtime_stats_decorator_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_start_apps_decorator_job_validator",
