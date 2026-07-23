@@ -117,8 +117,9 @@ public class Result {
       if (this.result.equals(TestResult.TIMEOUT)
           && !params.isTrue(PARAM_ALLOW_OVERRIDE_TIMEOUT_TO_PASS)) {
         // Timeout test may require rebooting the device: b/33743212.
-        logger.atWarning().withStackTrace(StackSize.MEDIUM).log(
-            "Prevent overriding %s result to PASS", this);
+        logger.atWarning().log(
+            "Prevent overriding %s result to PASS, current_stack_trace=%s",
+            this, shortDebugCurrentStackTrace(/* maxLength= */ 4L, /* skip= */ 1L));
         return this;
       }
 
@@ -152,7 +153,7 @@ public class Result {
   /**
    * Do NOT make this method public.
    *
-   * @param logStackTrace whether to log the current stack trace when successfully setting
+   * @param logStackTrace whether to log the current stack trace
    */
   @CanIgnoreReturnValue
   Result setNonPassing(TestResult result, MobileHarnessException cause, boolean logStackTrace) {
@@ -176,7 +177,7 @@ public class Result {
   /**
    * Do NOT make this method public.
    *
-   * @param logStackTrace whether to log the current stack trace when successfully setting
+   * @param logStackTrace whether to log the current stack trace
    */
   @CanIgnoreReturnValue
   Result setNonPassing(
@@ -190,8 +191,9 @@ public class Result {
       }
       if (this.result.equals(TestResult.TIMEOUT)) {
         // Timeout test may require rebooting the device: b/33743212.
-        logger.atWarning().withStackTrace(StackSize.FULL).log(
-            "Prevent overriding %s result to %s", this, formatResultWithCause(result, cause));
+        logger.atWarning().withStackTrace(stackSize(logStackTrace)).log(
+            "Prevent overriding %s result to %s%s",
+            this, formatResultWithCause(result, cause), formatCurrentStackTrace(logStackTrace));
         this.cause =
             this.cause == null ? null : this.cause.toBuilder().addSuppressed(cause).build();
         return this;
@@ -208,8 +210,9 @@ public class Result {
               && result.equals(TestResult.TIMEOUT);
 
       if (preventOverrideOfExistingPassToError || preventOverrideOfExistingPassToTimeout) {
-        logger.atWarning().withStackTrace(StackSize.FULL).log(
-            "Prevent overriding %s result to %s", this, formatResultWithCause(result, cause));
+        logger.atWarning().withStackTrace(stackSize(logStackTrace)).log(
+            "Prevent overriding %s result to %s%s",
+            this, formatResultWithCause(result, cause), formatCurrentStackTrace(logStackTrace));
         return this;
       }
 
@@ -221,21 +224,19 @@ public class Result {
       if (!allowOverrideOfExistingFailToError
           && (this.result.equals(TestResult.FAIL) || this.result.equals(TestResult.SKIP))
           && (result.equals(TestResult.ERROR) || result.equals(TestResult.TIMEOUT))) {
-        logger.atWarning().withStackTrace(StackSize.FULL).log(
-            "Prevent overriding %s result to %s", this, formatResultWithCause(result, cause));
+        logger.atWarning().withStackTrace(stackSize(logStackTrace)).log(
+            "Prevent overriding %s result to %s%s",
+            this, formatResultWithCause(result, cause), formatCurrentStackTrace(logStackTrace));
         this.cause =
             this.cause == null ? null : this.cause.toBuilder().addSuppressed(cause).build();
         return this;
       }
 
-      logger.atInfo().withStackTrace(logStackTrace ? StackSize.FULL : StackSize.NONE).log(
+      logger.atInfo().withStackTrace(stackSize(logStackTrace)).log(
           "Set result: %s -> %s%s",
           this,
           formatResultWithDetailedCause(result, cause),
-          logStackTrace
-              ? ""
-              : ", current_stack_trace="
-                  + shortDebugCurrentStackTrace(/* maxLength= */ 4L, /* skip= */ 2L));
+          formatCurrentStackTrace(logStackTrace));
       this.result = result;
       if (this.cause == null) {
         this.cause = cause;
@@ -420,5 +421,21 @@ public class Result {
                   .toDeserializedException(cause))
           + "]";
     }
+  }
+
+  /**
+   * Returns an empty string if {@code logStackTrace} is true; otherwise, returns a string like
+   * {@code ", current_stack_trace=[com.example.Goo.goo(Goo.java:10) <--
+   * com.example.Foo.foo(Foo.java:20)]"}.
+   */
+  private static String formatCurrentStackTrace(boolean logStackTrace) {
+    return logStackTrace
+        ? ""
+        : ", current_stack_trace="
+            + shortDebugCurrentStackTrace(/* maxLength= */ 4L, /* skip= */ 3L);
+  }
+
+  private static StackSize stackSize(boolean logStackTrace) {
+    return logStackTrace ? StackSize.FULL : StackSize.NONE;
   }
 }
