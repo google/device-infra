@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
@@ -39,6 +40,7 @@ import com.google.devtools.mobileharness.platform.android.xts.businesslogic.Busi
 import com.google.devtools.mobileharness.platform.android.xts.businesslogic.BusinessLogicExecutor;
 import com.google.devtools.mobileharness.platform.android.xts.businesslogic.BusinessLogicFetcher;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -47,6 +49,7 @@ import java.time.Duration;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 /**
@@ -54,7 +57,7 @@ import javax.inject.Inject;
  * types.
  */
 @DecoratorAnnotation(help = "Skips module execution if specified by business logic.")
-public class AndroidBusinessLogicSkipModuleDecorator extends BaseDecorator
+public class AndroidBusinessLogicSkipModuleDecorator extends LifecycleDecorator
     implements SpecConfigable<AndroidBusinessLogicSkipModuleDecoratorSpec> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -116,10 +119,15 @@ public class AndroidBusinessLogicSkipModuleDecorator extends BaseDecorator
     this.businessLogicFetcher = businessLogicFetcher;
   }
 
-  private boolean shouldSkipRun = true;
+  /**
+   * The exception to throw if the module execution should be skipped or fail based on business
+   * logic. If {@code null}, the module execution should continue.
+   */
+  @Nullable private MobileHarnessException evaluationResultException;
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     String deviceId = getDevice().getDeviceId();
     AndroidBusinessLogicSkipModuleDecoratorSpec spec =
         testInfo.jobInfo().combinedSpec(this, deviceId);
@@ -157,9 +165,10 @@ public class AndroidBusinessLogicSkipModuleDecorator extends BaseDecorator
                   .orElse("");
         }
         String key = getClass().getName() + "#" + configFileName;
-        logic.applyLogicFor(key, executor);
-        if (this.shouldSkipRun) {
-          return;
+        boolean matched = logic.applyLogicFor(key, executor);
+        if (!matched) {
+          skipTest(
+              String.format("Module %s skipped because no business logic rules matched.", key));
         }
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
@@ -173,6 +182,7 @@ public class AndroidBusinessLogicSkipModuleDecorator extends BaseDecorator
                   + " (though tests depending on the remote configuration will fail).",
               e);
         }
+        this.evaluationResultException = null;
         testInfo
             .log()
             .atWarning()
@@ -180,35 +190,45 @@ public class AndroidBusinessLogicSkipModuleDecorator extends BaseDecorator
             .withCause(e)
             .log("Failed to evaluate business logic. Continuing with module execution.");
       }
+
+      // If the exception is non-null, throw it to skip the decorated execution (the test result has
+      // already
+      // been set). Otherwise, the execution continues normally.
+      if (this.evaluationResultException != null) {
+        throw this.evaluationResultException;
+      }
     }
-    getDecorated().run(testInfo);
   }
+
+  @Override
+  protected void tearDown(TeardownContext context)
+      throws MobileHarnessException, InterruptedException {}
 
   /** Called via reflection by {@link BusinessLogicExecutor}. */
   public void continueTest() {
-    this.shouldSkipRun = false;
+    this.evaluationResultException = null;
   }
 
   /** Called via reflection by {@link BusinessLogicExecutor}. */
   public void skipTest(String errorMessage) {
-    this.shouldSkipRun = true;
     MobileHarnessException exception =
-        new MobileHarnessException(
+        MobileHarnessExceptionFactory.createExceptionWithoutStackTrace(
             AndroidErrorId.ANDROID_BUSINESS_LOGIC_SKIP_MODULE_DECORATOR_SKIPPED, errorMessage);
 
     getTest().resultWithCause().setNonPassing(TestResult.SKIP, exception);
     getTest().getRootTest().resultWithCause().setNonPassing(TestResult.SKIP, exception);
+    this.evaluationResultException = exception;
   }
 
   /** Called via reflection by {@link BusinessLogicExecutor}. */
   public void failTest(String errorMessage) {
-    this.shouldSkipRun = true;
     MobileHarnessException exception =
-        new MobileHarnessException(
+        MobileHarnessExceptionFactory.createExceptionWithoutStackTrace(
             AndroidErrorId.ANDROID_BUSINESS_LOGIC_SKIP_MODULE_DECORATOR_FAIL, errorMessage);
 
     getTest().resultWithCause().setNonPassing(TestResult.ERROR, exception);
     getTest().getRootTest().resultWithCause().setNonPassing(TestResult.ERROR, exception);
+    this.evaluationResultException = exception;
   }
 
   private ImmutableSetMultimap<String, String> buildRequestParams(

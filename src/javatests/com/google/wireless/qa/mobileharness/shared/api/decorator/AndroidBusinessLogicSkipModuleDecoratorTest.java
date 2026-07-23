@@ -16,6 +16,7 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -188,7 +189,7 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
             anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
         .thenReturn(jsonLogic);
 
-    decorator.run(testInfo);
+    assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
 
     verify(testResultWithCause, Mockito.times(2))
         .setNonPassing(eq(TestResult.SKIP), any(MobileHarnessException.class));
@@ -207,7 +208,7 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
             anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
         .thenReturn("{}");
 
-    decorator.run(testInfo);
+    assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
 
     verify(mockFetcher)
         .fetchBusinessLogic(
@@ -237,7 +238,7 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
             anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
         .thenReturn("{}");
 
-    decorator.run(testInfo);
+    assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
 
     verify(mockFetcher)
         .fetchBusinessLogic(
@@ -266,7 +267,7 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
             anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
         .thenReturn("{}");
 
-    decorator.run(testInfo);
+    assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
 
     verify(mockFetcher)
         .fetchBusinessLogic(
@@ -313,7 +314,7 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
             anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
         .thenReturn(jsonLogic);
 
-    decorator.run(testInfo);
+    assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
 
     verify(testResultWithCause, Mockito.times(2))
         .setNonPassing(eq(TestResult.SKIP), any(MobileHarnessException.class));
@@ -356,7 +357,7 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
             anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
         .thenReturn(jsonLogic);
 
-    decorator.run(testInfo);
+    assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
 
     verify(testResultWithCause, Mockito.times(2))
         .setNonPassing(eq(TestResult.SKIP), any(MobileHarnessException.class));
@@ -397,7 +398,7 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
             anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
         .thenReturn(jsonLogic);
 
-    decorator.run(testInfo);
+    assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
 
     verify(testResultWithCause, Mockito.times(2))
         .setNonPassing(eq(TestResult.SKIP), any(MobileHarnessException.class));
@@ -416,7 +417,7 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
             anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
         .thenReturn("{}");
 
-    decorator.run(testInfo);
+    assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
 
     verify(decoratedDriver, never()).run(any());
   }
@@ -433,7 +434,7 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
             anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
         .thenReturn("{}");
 
-    decorator.run(testInfo);
+    assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
 
     verify(mockFetcher)
         .fetchBusinessLogic(

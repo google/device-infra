@@ -61,6 +61,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:__pkg__",
     ],

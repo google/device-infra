@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -50,12 +51,20 @@ public final class BusinessLogic {
    *
    * @param name The name to check rules for.
    * @param executor Execution handler for conditions and actions.
+   * @return {@code true} if matching rules were found for the given name and invoked; {@code false}
+   *     otherwise.
    */
-  public void applyLogicFor(String name, BusinessLogicExecutor executor)
+  @CanIgnoreReturnValue
+  public boolean applyLogicFor(String name, BusinessLogicExecutor executor)
       throws ReflectiveOperationException {
-    for (BusinessLogicRulesList rulesList : rules.get(name)) {
-      rulesList.invokeRules(executor);
+    ImmutableList<BusinessLogicRulesList> rulesList = rules.get(name);
+    if (rulesList.isEmpty()) {
+      return false;
     }
+    for (BusinessLogicRulesList rulesListEntry : rulesList) {
+      rulesListEntry.invokeRules(executor);
+    }
+    return true;
   }
 
   /** Parses a BusinessLogic instance from a JSON string. */
