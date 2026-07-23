@@ -90,6 +90,7 @@ java_library(
     name = "xts_test_lab_plugin",
     runtime_deps = [
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/atsfileserveruploader:ats_file_server_uploader_plugin",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/atsjitemulatorlogpuller:ats_jit_emulator_log_puller_plugin",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/xtsdownloader:mcts_dynamic_download_plugin",
         "//src/java/com/google/devtools/mobileharness/platform/android/slate/plugin:slate2aoa_script_generator_plugin",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:ats_device_recovery_plugin",
