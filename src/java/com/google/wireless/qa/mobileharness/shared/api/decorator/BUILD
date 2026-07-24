@@ -215,6 +215,7 @@ java_library(
     name = "android_business_logic_skip_module_decorator",
     srcs = ["AndroidBusinessLogicSkipModuleDecorator.java"],
     deps = [
+        "//java/com/google/common/labs/base:base8",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",
