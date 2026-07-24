@@ -54,6 +54,7 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/platform/android/shared/emulator:__subpackages__",
     ],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent/retry",

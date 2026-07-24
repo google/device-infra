@@ -26,6 +26,8 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import okhttp3.Response;
@@ -184,5 +186,91 @@ public class AdbWebSocketBridgeTest {
       socket2.getOutputStream().write("CMD2".getBytes(StandardCharsets.UTF_8));
       assertThat(receivedMessages.poll(5, SECONDS).utf8()).isEqualTo("CMD2");
     }
+  }
+
+  @Test
+  public void start_handlesConcurrentTcpConnections() throws Exception {
+    server.enqueue(new MockResponse().withWebSocketUpgrade(serverListener));
+    server.enqueue(new MockResponse().withWebSocketUpgrade(serverListener));
+
+    bridge.start();
+    Thread.sleep(2000);
+
+    // Open first connection and keep it open
+    try (Socket socket1 = new Socket(InetAddress.getByName("127.0.0.1"), bridgePort);
+        // Open second connection concurrently
+        Socket socket2 = new Socket(InetAddress.getByName("127.0.0.1"), bridgePort)) {
+
+      WebSocket ws1 = webSockets.poll(5, SECONDS);
+      WebSocket ws2 = webSockets.poll(5, SECONDS);
+
+      assertThat(ws1).isNotNull();
+      assertThat(ws2).isNotNull();
+
+      // Verify they can both send messages
+      socket1.getOutputStream().write("CMD1".getBytes(StandardCharsets.UTF_8));
+      socket1.getOutputStream().flush();
+      socket2.getOutputStream().write("CMD2".getBytes(StandardCharsets.UTF_8));
+      socket2.getOutputStream().flush();
+
+      // We might receive them in any order, so we check the queue
+      Set<String> received = new HashSet<>();
+      received.add(receivedMessages.poll(5, SECONDS).utf8());
+      received.add(receivedMessages.poll(5, SECONDS).utf8());
+
+      assertThat(received).containsExactly("CMD1", "CMD2");
+
+      ws1.close(1000, "Bye 1");
+      ws2.close(1000, "Bye 2");
+    }
+  }
+
+  @Test
+  public void start_retryWebSocketConnectionOnHandshakeFailure() throws Exception {
+    server.enqueue(new MockResponse().setResponseCode(500));
+    server.enqueue(new MockResponse().withWebSocketUpgrade(serverListener));
+
+    bridge.start();
+    Thread.sleep(2000);
+
+    try (Socket clientSocket = new Socket(InetAddress.getByName("127.0.0.1"), bridgePort)) {
+      clientSocket.setSoTimeout(5000);
+
+      WebSocket ws = webSockets.poll(10, SECONDS);
+      assertThat(ws).isNotNull();
+
+      String testMessage = "Hello after retry";
+      OutputStream out = clientSocket.getOutputStream();
+      out.write(testMessage.getBytes(StandardCharsets.UTF_8));
+      out.flush();
+
+      ByteString received = receivedMessages.poll(10, SECONDS);
+      assertThat(received).isNotNull();
+      assertThat(received.utf8()).isEqualTo(testMessage);
+    }
+  }
+
+  @Test
+  public void stop_closesActiveSockets() throws Exception {
+    server.enqueue(new MockResponse().withWebSocketUpgrade(serverListener));
+
+    bridge.start();
+    Thread.sleep(2000);
+
+    Socket clientSocket = new Socket(InetAddress.getByName("127.0.0.1"), bridgePort);
+    clientSocket.setSoTimeout(5000);
+
+    WebSocket ws = webSockets.poll(10, SECONDS);
+    assertThat(ws).isNotNull();
+
+    // Session is active. Now stop the bridge.
+    bridge.stop();
+
+    // Verify client socket is closed by checking if read returns -1 (EOF)
+    InputStream in = clientSocket.getInputStream();
+    int read = in.read();
+    assertThat(read).isEqualTo(-1);
+
+    clientSocket.close();
   }
 }
