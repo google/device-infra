@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidS
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.AsyncTimerDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidHdVideoSpec;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
@@ -179,7 +180,7 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator implements Andr
   }
 
   @Override
-  void onStart(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void onStart(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     stopwatch.start();
     String deviceId = getDevice().getDeviceId();
     JobInfo jobInfo = testInfo.jobInfo();
@@ -250,7 +251,8 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator implements Andr
   }
 
   @Override
-  void runTimerTask(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void runTimerTask(TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException {
     String deviceId = getDevice().getDeviceId();
 
     // Holds the lock while running commands to prevent starting to record after the test finishes.
@@ -344,7 +346,7 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator implements Andr
   }
 
   @Override
-  void onEnd(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void onEnd(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     String deviceId = getDevice().getDeviceId();
     try {
       // Stops screen recording.
