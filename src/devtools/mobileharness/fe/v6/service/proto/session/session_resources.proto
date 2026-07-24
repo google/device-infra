@@ -1,0 +1,82 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package devtools.mobileharness.fe.v6.service.proto.session;
+
+import "google/protobuf/timestamp.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/common/common_resources.proto";
+
+option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.session";
+option java_multiple_files = true;
+option java_outer_classname = "SessionResourcesProto";
+
+// Represents a lightweight child job within the session.
+message SessionJob {
+  string id = 1;
+  string name = 2;
+  .devtools.mobileharness.fe.v6.service.proto.common.JobStatus status = 3;
+  .devtools.mobileharness.fe.v6.service.proto.common.JobResult result = 4;
+  google.protobuf.Timestamp start_time = 5;
+  google.protobuf.Timestamp end_time = 6;
+}
+
+// Information about a file associated with the session.
+message SessionFile {
+  string path = 1;
+  int64 size = 2;
+  string type = 3;
+  string content = 4;
+}
+
+// File explorer resources.
+message FileExplorer {
+  string cns_path = 1;
+  repeated SessionFile files = 2;
+}
+
+// Top-level message representing detailed information of a session.
+message SessionDetail {
+  string id = 1;
+  string name = 2;
+  .devtools.mobileharness.fe.v6.service.proto.common.SessionStatus status = 3;
+  .devtools.mobileharness.fe.v6.service.proto.common.SessionResult result = 4;
+  string sponge_link = 5;
+
+  // Session metadata / environment details.
+  string client = 6;
+  string version = 7;
+  string executor = 8;
+  repeated string labels = 9;
+
+  // Troubleshooting card (warnings & errors) (shared).
+  .devtools.mobileharness.fe.v6.service.proto.common.Troubleshooting
+      troubleshooting = 10;
+
+  // Child job summaries.
+  repeated SessionJob jobs = 11;
+
+  // Timestamps / execution details.
+  .devtools.mobileharness.fe.v6.service.proto.common.ExecutionDetails
+      execution_details = 12;
+
+  // Custom key-value properties.
+  map<string, string> properties = 13;
+
+  // Files explorer resources.
+  FileExplorer file_explorer = 14;
+}
