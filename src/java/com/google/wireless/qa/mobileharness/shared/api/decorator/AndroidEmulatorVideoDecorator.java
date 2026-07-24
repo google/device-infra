@@ -26,6 +26,7 @@ import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.a
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.AsyncTimerDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -74,14 +75,15 @@ public class AndroidEmulatorVideoDecorator extends AsyncTimerDecorator
   }
 
   @Override
-  long getIntervalMs(TestInfo testInfo) {
+  protected long getIntervalMs(TestInfo testInfo) {
     return emulatorVideoDecoratorSpec.hasTimeLimitSecs()
         ? Duration.ofSeconds(emulatorVideoDecoratorSpec.getTimeLimitSecs()).toMillis()
         : MAX_EMULATOR_SUPPORTED_VIDEO_DURATION.toMillis();
   }
 
   @Override
-  void runTimerTask(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void runTimerTask(TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException {
     // If a recording is already running, stop it before starting a new one. The video file is only
     // written to when the recording is explicitly stopped. Allow a small delay before starting the
     // next recording to let the emulator complete writing the previous video file. If consecutive
@@ -146,7 +148,7 @@ public class AndroidEmulatorVideoDecorator extends AsyncTimerDecorator
   }
 
   @Override
-  void onEnd(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void onEnd(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     stopVideoRecording(testInfo);
     testInfo
         .properties()

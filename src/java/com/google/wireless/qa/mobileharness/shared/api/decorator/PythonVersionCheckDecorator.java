@@ -24,6 +24,7 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -36,7 +37,7 @@ import javax.inject.Inject;
 /** Decorator to check if the host's Python version meets the requirement. */
 @DecoratorAnnotation(
     help = "Decorator to fail the test if the host's Python version does not meet the requirement.")
-public class PythonVersionCheckDecorator extends BaseDecorator
+public class PythonVersionCheckDecorator extends LifecycleDecorator
     implements SpecConfigable<PythonVersionCheckDecoratorSpec> {
 
   private static final Pattern PYTHON_VERSION_PATTERN =
@@ -52,7 +53,8 @@ public class PythonVersionCheckDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     PythonVersionCheckDecoratorSpec spec =
         testInfo.jobInfo().combinedSpec(this, getDevice().getDeviceId());
 
@@ -66,9 +68,11 @@ public class PythonVersionCheckDecorator extends BaseDecorator
         return;
       }
     }
-
-    getDecorated().run(testInfo);
   }
+
+  @Override
+  protected void tearDown(TeardownContext context)
+      throws MobileHarnessException, InterruptedException {}
 
   private void checkVersion(PythonVersionCheckDecoratorSpec spec)
       throws MobileHarnessException, InterruptedException {

@@ -23,14 +23,34 @@ package(
 )
 
 java_library(
+    name = "base_decorator",
+    srcs = ["BaseDecorator.java"],
+    visibility = [
+        "//java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+        "//javatests/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
+        "//javatests/com/google/wireless/qa/mobileharness/shared/api/decorator/base:__pkg__",
+        "//javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:__pkg__",
+    ],
+    deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:base_driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+    ],
+)
+
+java_library(
     name = "lifecycle_decorator",
     srcs = ["LifecycleDecorator.java"],
     deps = [
+        ":base_decorator",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:base_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_code_findbugs_jsr305",
@@ -45,6 +65,18 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/util:step_skippable_lifecycle_decorator_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+    ],
+)
+
+java_library(
+    name = "async_timer_decorator",
+    srcs = ["AsyncTimerDecorator.java"],
+    deps = [
+        ":lifecycle_decorator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
     ],

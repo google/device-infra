@@ -14,12 +14,10 @@
  * limitations under the License.
  */
 
-package com.google.wireless.qa.mobileharness.shared.api.decorator;
+package com.google.wireless.qa.mobileharness.shared.api.decorator.base;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -87,32 +85,28 @@ public abstract class AsyncTimerDecorator extends LifecycleDecorator {
   }
 
   /** The interval time in milliseconds between two successive timer task executions. */
-  @VisibleForTesting
-  abstract long getIntervalMs(TestInfo testInfo)
+  protected abstract long getIntervalMs(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException;
 
   /** Task periodically & asynchronously run during the test running. */
-  @VisibleForTesting
-  abstract void runTimerTask(TestInfo testInfo) throws MobileHarnessException, InterruptedException;
+  protected abstract void runTimerTask(TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException;
 
   /** Get the flag to indicate if schedule rate should be fixed */
-  @VisibleForTesting
-  Boolean getFixedScheduleRate(TestInfo testInfo)
+  protected Boolean getFixedScheduleRate(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
     return false;
   }
 
   /** Executed when entering this decorator. */
-  @VisibleForTesting
   @SuppressWarnings("unused")
-  void onStart(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void onStart(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     // Does nothing.
   }
 
   /** Executed when finishing this decorator. */
-  @VisibleForTesting
   @SuppressWarnings("unused")
-  void onEnd(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected void onEnd(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     // Does nothing.
   }
 }

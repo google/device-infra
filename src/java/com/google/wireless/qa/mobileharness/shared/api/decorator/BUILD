@@ -34,30 +34,6 @@ java_library(
     ],
 )
 
-java_library(
-    name = "async_timer_decorator",
-    srcs = ["AsyncTimerDecorator.java"],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:lifecycle_decorator",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "base_decorator",
-    srcs = ["BaseDecorator.java"],
-    deps = [
-        ":decorator",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:base_driver",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-    ],
-)
-
 ################################################################################
 # Decorator libraries in alphabetical order
 ################################################################################
@@ -328,11 +304,11 @@ java_library(
     name = "android_emulator_video_decorator",
     srcs = ["AndroidEmulatorVideoDecorator.java"],
     deps = [
-        ":async_timer_decorator",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:async_timer_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
@@ -391,7 +367,6 @@ java_library(
     name = "android_hd_video_decorator",
     srcs = ["AndroidHdVideoDecorator.java"],
     deps = [
-        ":async_timer_decorator",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",
@@ -402,6 +377,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:async_timer_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_hd_video_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
@@ -670,11 +646,11 @@ java_library(
     name = "android_shipping_api_level_check_decorator",
     srcs = ["AndroidShippingApiLevelCheckDecorator.java"],
     deps = [
-        ":base_decorator",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:lifecycle_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
@@ -849,12 +825,12 @@ java_library(
         "CompositeDeviceDecoratorAdapter.java",
     ],
     deps = [
-        ":base_decorator",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:exception_handler",
         "//src/java/com/google/devtools/mobileharness/platform/testbed:runner_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:base_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:composite_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
@@ -1018,12 +994,12 @@ java_library(
     name = "python_version_check_decorator",
     srcs = ["PythonVersionCheckDecorator.java"],
     deps = [
-        ":base_decorator",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:lifecycle_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",

@@ -20,9 +20,11 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
@@ -33,6 +35,7 @@ import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.PythonVersionCheckDecoratorSpec;
 import org.junit.Before;
 import org.junit.Rule;
@@ -59,6 +62,7 @@ public class PythonVersionCheckDecoratorTest {
   @Mock private CommandExecutor commandExecutor;
   @Mock private TestInfo rootTestInfo;
   @Mock private Result rootResult;
+  @Mock private Log log;
 
   @Captor private ArgumentCaptor<MobileHarnessException> exceptionCaptor;
 
@@ -70,6 +74,10 @@ public class PythonVersionCheckDecoratorTest {
     when(device.getDeviceId()).thenReturn("fake_device_id");
     decorator = new PythonVersionCheckDecorator(decoratedDriver, testInfo, commandExecutor);
     when(testInfo.jobInfo()).thenReturn(jobInfo);
+    when(testInfo.log()).thenReturn(log);
+    Log.Api logApi = mock(Log.Api.class);
+    when(logApi.alsoTo(any(FluentLogger.class))).thenReturn(logApi);
+    when(log.atInfo()).thenReturn(logApi);
     when(testInfo.resultWithCause()).thenReturn(result);
     when(testInfo.getRootTest()).thenReturn(rootTestInfo);
     when(rootTestInfo.resultWithCause()).thenReturn(rootResult);
