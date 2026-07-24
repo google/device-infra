@@ -132,7 +132,10 @@ describe('HostOverview Component', () => {
 
     fixture = TestBed.createComponent(HostOverviewPage);
     component = fixture.componentInstance;
-    component.host = mockHost;
+    // For Angular Signal inputs, we must use `fixture.componentRef.setInput`
+    // to trigger reactivity and update the signal value in tests.
+    // Calling `component.host = ...` directly is not allowed as Signal inputs are read-only getters.
+    fixture.componentRef.setInput('host', mockHost);
     hostService = TestBed.inject(HOST_SERVICE) as FakeHostService;
   });
 
@@ -142,10 +145,10 @@ describe('HostOverview Component', () => {
   });
 
   it('should display all lab types from uiLabTypes', () => {
-    component.host = {
+    fixture.componentRef.setInput('host', {
       ...mockHost,
       uiLabTypes: ['SATELLITE', 'SLAAS'],
-    };
+    });
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
@@ -160,19 +163,19 @@ describe('HostOverview Component', () => {
   });
 
   it('should correctly identify ATE host', () => {
-    component.host = {
+    fixture.componentRef.setInput('host', {
       ...mockHost,
       uiLabTypes: ['ATE'],
-    };
+    });
     expect(component.isAteHost()).toBeTrue();
     expect(component.isSatelliteLab()).toBeFalse();
   });
 
   it('should correctly identify Satellite host', () => {
-    component.host = {
+    fixture.componentRef.setInput('host', {
       ...mockHost,
       uiLabTypes: ['SATELLITE'],
-    };
+    });
     expect(component.isAteHost()).toBeFalse();
     expect(component.isSatelliteLab()).toBeTrue();
   });
@@ -230,7 +233,7 @@ describe('HostOverview Component', () => {
     expect(component.isOpeningRelease()).toBeFalse();
     expect(dialogSpy.open).toHaveBeenCalledWith(ReleaseDialog, {
       data: {
-        hostName: component.host.hostName,
+        hostName: component.host().hostName,
         releaseConfigs: mockVersions,
         passThroughFlags: component.passThroughFlags,
         preSelectLatest: true,
@@ -241,7 +244,7 @@ describe('HostOverview Component', () => {
   });
 
   it('should show coming soon popup on onUpgrade click when release action is not ready', () => {
-    component.host = {
+    fixture.componentRef.setInput('host', {
       ...mockHost,
       labServer: {
         ...mockHost.labServer,
@@ -257,7 +260,7 @@ describe('HostOverview Component', () => {
           stop: mockHost.labServer.actions!.stop,
         },
       },
-    };
+    });
     fixture.detectChanges();
 
     component.onUpgrade();
@@ -265,8 +268,8 @@ describe('HostOverview Component', () => {
     expect(comingSoonServiceSpy.showForHost).toHaveBeenCalledWith(
       ActionBarAction.HOST_RELEASE,
       component.legacyFeUrl,
-      component.host.hostName,
-      component.host.ip,
+      component.host().hostName,
+      component.host().ip,
       'hostDevices',
     );
   });
@@ -300,7 +303,7 @@ describe('HostOverview Component', () => {
     expect(component.isOpeningUpgrade()).toBeFalse();
     expect(dialogSpy.open).toHaveBeenCalledWith(ReleaseDialog, {
       data: {
-        hostName: component.host.hostName,
+        hostName: component.host().hostName,
         releaseConfigs: mockVersions,
         passThroughFlags: component.passThroughFlags,
         preSelectLatest: false,
@@ -394,7 +397,7 @@ describe('HostOverview Component', () => {
 
     // Verify preflight check was triggered
     expect(hostService.preflightLabServerRelease).toHaveBeenCalledWith(
-      component.host.hostName,
+      component.host().hostName,
     );
     expect(component.isOpeningRelease()).toBeTrue();
   });
@@ -440,7 +443,10 @@ describe('HostOverview Component', () => {
 
     expect(dialogSpy.open).toHaveBeenCalledTimes(2);
     expect(component.passThroughFlags()).toBe('--new-flags');
-    expect(component.host.labServer.passThroughFlags).toBe('--new-flags');
+    expect(
+      (component as unknown as {localHost(): HostOverview}).localHost()
+        .labServer.passThroughFlags,
+    ).toBe('--new-flags');
 
     const secondOpenCall = dialogSpy.open.calls.mostRecent();
     expect(secondOpenCall).toBeTruthy();
@@ -498,7 +504,7 @@ describe('HostOverview Component', () => {
     component.startSubDeviceRemoteControl(mockSub, mockParent);
 
     expect(remoteControlService.startRemoteControl).toHaveBeenCalledWith(
-      component.host.hostName,
+      component.host().hostName,
       jasmine.any(Array),
       true,
     );
@@ -544,7 +550,7 @@ describe('HostOverview Component', () => {
 
     expect(deviceActionService.flashDevice).toHaveBeenCalledWith(
       'device-1',
-      component.host.hostName,
+      component.host().hostName,
       jasmine.objectContaining({deviceType: 'Pixel'}),
     );
   });
@@ -667,7 +673,7 @@ describe('HostOverview Component', () => {
 
     expect(dialogSpy.open).toHaveBeenCalledWith(ReleaseDialog, {
       data: {
-        hostName: component.host.hostName,
+        hostName: component.host().hostName,
         releaseConfigs: mockVersions,
         passThroughFlags: jasmine.anything(),
       },

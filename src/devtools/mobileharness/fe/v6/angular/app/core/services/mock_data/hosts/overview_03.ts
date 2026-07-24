@@ -81,7 +81,7 @@ const deviceSummaries: DeviceSummary[] = [
 ];
 
 /** Mock host overview data. */
-export const OVERVIEW_03: MockHostScenario = {
+const OVERVIEW_03_DATA: MockHostScenario = {
   hostName: 'core-host-c-3.example.com',
   scenarioName: 'Overview 3: Unconfigured Host (Core Lab)',
   overview,
@@ -93,3 +93,10 @@ export const OVERVIEW_03: MockHostScenario = {
   defaultDeviceConfig: null,
   actions: createHostActions('RUNNING', true),
 };
+
+/**
+ * Returns the mock scenario for 03.
+ */
+export function OVERVIEW_03(callCount?: number): MockHostScenario {
+  return OVERVIEW_03_DATA;
+}

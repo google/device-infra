@@ -59,7 +59,7 @@ const CONFIG: DeviceConfig = {
  * initializing. This scenario is used for testing and development purposes to
  * simulate a device in a specific state.
  */
-export const SCENARIO_OUT_OF_SERVICE_INIT: MockDeviceScenario = {
+const SCENARIO_OUT_OF_SERVICE_INIT_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: 'Out of Service - Initializing',
   overview: OVERVIEW,
@@ -73,3 +73,12 @@ export const SCENARIO_OUT_OF_SERVICE_INIT: MockDeviceScenario = {
     quarantine: true,
   },
 };
+
+/**
+ * Returns the mock scenario for out of service init.
+ */
+export function SCENARIO_OUT_OF_SERVICE_INIT(
+  callCount?: number,
+): MockDeviceScenario {
+  return SCENARIO_OUT_OF_SERVICE_INIT_DATA;
+}

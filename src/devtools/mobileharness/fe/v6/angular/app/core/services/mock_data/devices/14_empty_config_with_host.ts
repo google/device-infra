@@ -41,7 +41,7 @@ const OVERVIEW: DeviceOverview = {
  * is used for testing and development purposes to simulate a device in a
  * specific state.
  */
-export const SCENARIO_EMPTY_CONFIG_WITH_HOST: MockDeviceScenario = {
+const SCENARIO_EMPTY_CONFIG_WITH_HOST_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: 'Empty Config with Host',
   overview: OVERVIEW,
@@ -55,3 +55,12 @@ export const SCENARIO_EMPTY_CONFIG_WITH_HOST: MockDeviceScenario = {
     quarantine: true,
   },
 };
+
+/**
+ * Returns the mock scenario for empty config with host.
+ */
+export function SCENARIO_EMPTY_CONFIG_WITH_HOST(
+  callCount?: number,
+): MockDeviceScenario {
+  return SCENARIO_EMPTY_CONFIG_WITH_HOST_DATA;
+}

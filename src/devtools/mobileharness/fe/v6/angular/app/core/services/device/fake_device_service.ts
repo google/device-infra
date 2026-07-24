@@ -38,6 +38,8 @@ import {
   providedIn: 'root',
 })
 export class FakeDeviceService extends DeviceService {
+  private getDeviceOverviewCallCount = 0;
+
   constructor() {
     super();
   }
@@ -52,22 +54,29 @@ export class FakeDeviceService extends DeviceService {
   override getDeviceOverview(
     request: GetDeviceOverviewRequest,
   ): Observable<DeviceOverviewPageData> {
-    const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === request.id);
-    if (scenario) {
-      return of({
-        overview: scenario.overview,
-        headerInfo: this.getMockDeviceHeaderInfo(scenario),
-      }).pipe(delay(1000));
-    } else {
+    const wrapper = MOCK_DEVICE_SCENARIOS.find((s) => s.id === request.id);
+    if (!wrapper) {
       return throwError(
         () =>
           new Error(`Device with ID '${request.id}' not found in mock data.`),
       ).pipe(delay(1000));
     }
+
+    try {
+      this.getDeviceOverviewCallCount++;
+      const scenario = wrapper.factory(this.getDeviceOverviewCallCount);
+      return of({
+        overview: scenario.overview,
+        headerInfo: this.getMockDeviceHeaderInfo(scenario),
+      }).pipe(delay(1000));
+    } catch (e: unknown) {
+      return throwError(() => e).pipe(delay(1000));
+    }
   }
 
   override getDeviceHeaderInfo(id: string): Observable<DeviceHeaderInfo> {
-    const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+    const wrapper = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+    const scenario = wrapper?.factory(this.getDeviceOverviewCallCount);
     if (scenario) {
       return of(this.getMockDeviceHeaderInfo(scenario)).pipe(delay(1000));
     } else {
@@ -88,7 +97,8 @@ export class FakeDeviceService extends DeviceService {
     startDate: GoogleDate,
     endDate: GoogleDate,
   ): Observable<HealthinessStats> {
-    const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+    const wrapper = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+    const scenario = wrapper?.factory(this.getDeviceOverviewCallCount);
     if (scenario) {
       const stats =
         scenario.healthinessStats ||
@@ -112,7 +122,8 @@ export class FakeDeviceService extends DeviceService {
     startDate: GoogleDate,
     endDate: GoogleDate,
   ): Observable<TestResultStats> {
-    const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+    const wrapper = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+    const scenario = wrapper?.factory(this.getDeviceOverviewCallCount);
     if (scenario) {
       const stats =
         scenario.testResultStats || generateTestResultStats(startDate, endDate);
@@ -135,7 +146,8 @@ export class FakeDeviceService extends DeviceService {
     startDate: GoogleDate,
     endDate: GoogleDate,
   ): Observable<RecoveryTaskStats> {
-    const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+    const wrapper = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+    const scenario = wrapper?.factory(this.getDeviceOverviewCallCount);
     if (scenario) {
       const stats =
         scenario.recoveryTaskStats ||
@@ -198,7 +210,8 @@ export class FakeDeviceService extends DeviceService {
 
   override getTestbedConfig(id: string): Observable<TestbedConfig> {
     console.log(`FakeService: Getting testbed config for ${id}`);
-    const scenario = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+    const wrapper = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+    const scenario = wrapper?.factory(this.getDeviceOverviewCallCount);
     if (scenario) {
       return of({
         yamlContent: scenario.testbedConfig?.yamlContent || '',

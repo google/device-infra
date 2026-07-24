@@ -87,7 +87,7 @@ const TESTBED_CONFIG: TestbedConfig = {
 };
 
 /** Mock data for a testbed device with a single eligible sub-device. */
-export const SCENARIO_TESTBED_SINGLE_ELIGIBLE: MockDeviceScenario = {
+const SCENARIO_TESTBED_SINGLE_ELIGIBLE_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: '24. Testbed Device (Single Eligible Sub-Device)',
   overview: OVERVIEW,
@@ -95,3 +95,12 @@ export const SCENARIO_TESTBED_SINGLE_ELIGIBLE: MockDeviceScenario = {
   isQuarantined: false,
   testbedConfig: TESTBED_CONFIG,
 };
+
+/**
+ * Returns the mock scenario for testbed single eligible.
+ */
+export function SCENARIO_TESTBED_SINGLE_ELIGIBLE(
+  callCount?: number,
+): MockDeviceScenario {
+  return SCENARIO_TESTBED_SINGLE_ELIGIBLE_DATA;
+}

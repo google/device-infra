@@ -1,3 +1,4 @@
+@let host = localHost();
 <app-master-detail-layout [navList]="navList()">
   <app-info-card #overviewSection id="overview" cardTitle="Overview" [collapsible]="false">
     @for (link of getDiagnosticLinks('OVERVIEW'); track link.label) {

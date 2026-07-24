@@ -80,7 +80,7 @@ const CONFIG: DeviceConfig = {
 /**
  * Represents a mock device scenario where the device is idle but quarantined.
  */
-export const SCENARIO_IDLE_BUT_QUARANTINED: MockDeviceScenario = {
+const SCENARIO_IDLE_BUT_QUARANTINED_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: '15. Idle But Quarantined',
   overview: OVERVIEW,
@@ -95,3 +95,12 @@ export const SCENARIO_IDLE_BUT_QUARANTINED: MockDeviceScenario = {
     quarantine: true,
   },
 };
+
+/**
+ * Returns the mock scenario for idle but quarantined.
+ */
+export function SCENARIO_IDLE_BUT_QUARANTINED(
+  callCount?: number,
+): MockDeviceScenario {
+  return SCENARIO_IDLE_BUT_QUARANTINED_DATA;
+}

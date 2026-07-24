@@ -168,7 +168,7 @@ export const MOCK_TESTBED_CONFIG_TESTBED_DEVICE: TestbedConfig = {
 };
 
 /** Mock device scenario for TESTBED-EVEN-002. */
-export const SCENARIO_TESTBED_EVEN_SUBDEVICES: MockDeviceScenario = {
+const SCENARIO_TESTBED_EVEN_SUBDEVICES_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: '21. Testbed Device with Even Sub-Devices',
   overview: OVERVIEW,
@@ -176,3 +176,12 @@ export const SCENARIO_TESTBED_EVEN_SUBDEVICES: MockDeviceScenario = {
   isQuarantined: false,
   testbedConfig: MOCK_TESTBED_CONFIG_TESTBED_DEVICE,
 };
+
+/**
+ * Returns the mock scenario for testbed even subdevices.
+ */
+export function SCENARIO_TESTBED_EVEN_SUBDEVICES(
+  callCount?: number,
+): MockDeviceScenario {
+  return SCENARIO_TESTBED_EVEN_SUBDEVICES_DATA;
+}

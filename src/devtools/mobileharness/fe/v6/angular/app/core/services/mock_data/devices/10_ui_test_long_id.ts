@@ -62,7 +62,7 @@ const CONFIG: DeviceConfig = {
  * scenario is used for testing and development purposes to simulate a device
  * with a specific state.
  */
-export const SCENARIO_UI_TEST_LONG_ID: MockDeviceScenario = {
+const SCENARIO_UI_TEST_LONG_ID_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: '10. UI Test, Long ID (Critical)',
   overview: OVERVIEW,
@@ -76,3 +76,12 @@ export const SCENARIO_UI_TEST_LONG_ID: MockDeviceScenario = {
     quarantine: true,
   },
 };
+
+/**
+ * Returns the mock scenario for ui test long id.
+ */
+export function SCENARIO_UI_TEST_LONG_ID(
+  callCount?: number,
+): MockDeviceScenario {
+  return SCENARIO_UI_TEST_LONG_ID_DATA;
+}

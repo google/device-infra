@@ -473,7 +473,7 @@ const CONFIG: DeviceConfig = {
 /**
  * Represents a mock device scenario with test result stats.
  */
-export const SCENARIO_TEST_RESULTS: MockDeviceScenario = {
+const SCENARIO_TEST_RESULTS_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: '22. Device with Test Results',
   overview: OVERVIEW,
@@ -490,3 +490,10 @@ export const SCENARIO_TEST_RESULTS: MockDeviceScenario = {
     quarantine: true,
   },
 };
+
+/**
+ * Returns the mock scenario for test results.
+ */
+export function SCENARIO_TEST_RESULTS(callCount?: number): MockDeviceScenario {
+  return SCENARIO_TEST_RESULTS_DATA;
+}

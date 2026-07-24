@@ -107,7 +107,7 @@ const deviceSummaries: DeviceSummary[] = [
 ];
 
 /** Mock host overview data. */
-export const OVERVIEW_13: MockHostScenario = {
+const OVERVIEW_13_DATA: MockHostScenario = {
   hostName: 'decommission-test-host.prod.example.com',
   scenarioName: 'Overview 13: Decommission Devices',
   overview,
@@ -119,3 +119,10 @@ export const OVERVIEW_13: MockHostScenario = {
   defaultDeviceConfig: null,
   actions: createHostActions('RUNNING', false),
 };
+
+/**
+ * Returns the mock scenario for 13.
+ */
+export function OVERVIEW_13(callCount?: number): MockHostScenario {
+  return OVERVIEW_13_DATA;
+}

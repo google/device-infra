@@ -251,7 +251,7 @@ const deviceSummaries: DeviceSummary[] = [
 ];
 
 /** Mock host overview data. */
-export const OVERVIEW_01: MockHostScenario = {
+const OVERVIEW_01_DATA: MockHostScenario = {
   hostName: 'host-a-1.example.com',
   scenarioName: 'Overview 1: Online, SLaaS, Running',
   overview,
@@ -263,3 +263,10 @@ export const OVERVIEW_01: MockHostScenario = {
   defaultDeviceConfig: DEFAULT_DEVICE_CONFIG,
   actions: createHostActions('RUNNING', false, true),
 };
+
+/**
+ * Returns the mock scenario for 01.
+ */
+export function OVERVIEW_01(callCount?: number): MockHostScenario {
+  return OVERVIEW_01_DATA;
+}

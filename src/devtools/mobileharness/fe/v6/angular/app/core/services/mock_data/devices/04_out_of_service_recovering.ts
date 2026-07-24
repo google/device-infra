@@ -65,7 +65,7 @@ const CONFIG: DeviceConfig = {
  * recovering. This scenario is used for testing and development purposes to
  * simulate a device in a specific state.
  */
-export const SCENARIO_OUT_OF_SERVICE_RECOVERING: MockDeviceScenario = {
+const SCENARIO_OUT_OF_SERVICE_RECOVERING_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: 'Out of Service - Recovering',
   overview: OVERVIEW,
@@ -79,3 +79,12 @@ export const SCENARIO_OUT_OF_SERVICE_RECOVERING: MockDeviceScenario = {
     quarantine: true,
   },
 };
+
+/**
+ * Returns the mock scenario for out of service recovering.
+ */
+export function SCENARIO_OUT_OF_SERVICE_RECOVERING(
+  callCount?: number,
+): MockDeviceScenario {
+  return SCENARIO_OUT_OF_SERVICE_RECOVERING_DATA;
+}

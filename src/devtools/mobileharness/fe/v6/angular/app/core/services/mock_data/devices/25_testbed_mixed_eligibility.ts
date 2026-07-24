@@ -98,7 +98,7 @@ const TESTBED_CONFIG: TestbedConfig = {
 };
 
 /** Mock data for a testbed device with mixed eligibility sub-devices. */
-export const SCENARIO_TESTBED_MIXED_ELIGIBILITY: MockDeviceScenario = {
+const SCENARIO_TESTBED_MIXED_ELIGIBILITY_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: '25. Testbed Device (Mixed Eligibility)',
   overview: OVERVIEW,
@@ -106,3 +106,12 @@ export const SCENARIO_TESTBED_MIXED_ELIGIBILITY: MockDeviceScenario = {
   isQuarantined: false,
   testbedConfig: TESTBED_CONFIG,
 };
+
+/**
+ * Returns the mock scenario for testbed mixed eligibility.
+ */
+export function SCENARIO_TESTBED_MIXED_ELIGIBILITY(
+  callCount?: number,
+): MockDeviceScenario {
+  return SCENARIO_TESTBED_MIXED_ELIGIBILITY_DATA;
+}

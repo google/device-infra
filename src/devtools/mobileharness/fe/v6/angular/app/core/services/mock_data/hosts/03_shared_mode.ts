@@ -53,7 +53,7 @@ const PREFLIGHT_RESPONSE: PreflightLabServerReleaseResponse = {
   },
 };
 
-export const SCENARIO_HOST_SHARED_MODE: MockHostScenario = {
+const SCENARIO_HOST_SHARED_MODE_DATA: MockHostScenario = {
   hostName: 'host-shared-mode.example.com',
   scenarioName: '3. Shared Mode',
   overview: {
@@ -82,3 +82,12 @@ export const SCENARIO_HOST_SHARED_MODE: MockHostScenario = {
     ],
   },
 };
+
+/**
+ * Returns the mock scenario for host shared mode.
+ */
+export function SCENARIO_HOST_SHARED_MODE(
+  callCount?: number,
+): MockHostScenario {
+  return SCENARIO_HOST_SHARED_MODE_DATA;
+}

@@ -61,7 +61,7 @@ const CONFIG: DeviceConfig = {
 };
 
 /** Mock data for a Linux device scenario. */
-export const SCENARIO_LINUX_DEVICE: MockDeviceScenario = {
+const SCENARIO_LINUX_DEVICE_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: '16. Linux Device (Actions Hidden)',
   overview: OVERVIEW,
@@ -75,3 +75,10 @@ export const SCENARIO_LINUX_DEVICE: MockDeviceScenario = {
     quarantine: true, // Quarantine is a generic action
   },
 };
+
+/**
+ * Returns the mock scenario for linux device.
+ */
+export function SCENARIO_LINUX_DEVICE(callCount?: number): MockDeviceScenario {
+  return SCENARIO_LINUX_DEVICE_DATA;
+}

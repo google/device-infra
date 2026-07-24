@@ -69,7 +69,7 @@ const CONFIG: DeviceConfig = {
  * and is not accessible to the lab server. This scenario is used for testing
  * and development purposes to simulate a device in a specific state.
  */
-export const SCENARIO_HOST_MANAGED_DEVICE: MockDeviceScenario = {
+const SCENARIO_HOST_MANAGED_DEVICE_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: 'Host Managed Device',
   overview: OVERVIEW,
@@ -83,3 +83,12 @@ export const SCENARIO_HOST_MANAGED_DEVICE: MockDeviceScenario = {
     quarantine: true,
   },
 };
+
+/**
+ * Returns the mock scenario for host managed device.
+ */
+export function SCENARIO_HOST_MANAGED_DEVICE(
+  callCount?: number,
+): MockDeviceScenario {
+  return SCENARIO_HOST_MANAGED_DEVICE_DATA;
+}

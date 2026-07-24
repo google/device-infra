@@ -73,7 +73,7 @@ const CONFIG: DeviceConfig = {
 /**
  * A mock device scenario where only Wifi and Dimensions configuration sections are visible.
  */
-export const SCENARIO_WIFI_DIMENSIONS_ONLY: MockDeviceScenario = {
+const SCENARIO_WIFI_DIMENSIONS_ONLY_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: 'WiFi & Dimensions Only',
   overview: OVERVIEW,
@@ -87,3 +87,12 @@ export const SCENARIO_WIFI_DIMENSIONS_ONLY: MockDeviceScenario = {
     quarantine: true,
   },
 };
+
+/**
+ * Returns the mock scenario for wifi dimensions only.
+ */
+export function SCENARIO_WIFI_DIMENSIONS_ONLY(
+  callCount?: number,
+): MockDeviceScenario {
+  return SCENARIO_WIFI_DIMENSIONS_ONLY_DATA;
+}

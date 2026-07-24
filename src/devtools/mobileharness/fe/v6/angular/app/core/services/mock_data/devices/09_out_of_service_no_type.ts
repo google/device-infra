@@ -57,7 +57,7 @@ const CONFIG: DeviceConfig = {
  * no type. This scenario is used for testing and development purposes to
  * simulate a device in a specific state.
  */
-export const SCENARIO_OUT_OF_SERVICE_NO_TYPE: MockDeviceScenario = {
+const SCENARIO_OUT_OF_SERVICE_NO_TYPE_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: 'Out of Service - No Type',
   overview: OVERVIEW,
@@ -71,3 +71,12 @@ export const SCENARIO_OUT_OF_SERVICE_NO_TYPE: MockDeviceScenario = {
     quarantine: true,
   },
 };
+
+/**
+ * Returns the mock scenario for out of service no type.
+ */
+export function SCENARIO_OUT_OF_SERVICE_NO_TYPE(
+  callCount?: number,
+): MockDeviceScenario {
+  return SCENARIO_OUT_OF_SERVICE_NO_TYPE_DATA;
+}

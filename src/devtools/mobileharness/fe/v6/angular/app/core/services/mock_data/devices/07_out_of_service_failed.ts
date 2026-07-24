@@ -59,7 +59,7 @@ const CONFIG: DeviceConfig = {
  * failed. This scenario is used for testing and development purposes to
  * simulate a device in a specific state.
  */
-export const SCENARIO_OUT_OF_SERVICE_FAILED: MockDeviceScenario = {
+const SCENARIO_OUT_OF_SERVICE_FAILED_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: 'Out of Service - Failed',
   overview: OVERVIEW,
@@ -73,3 +73,12 @@ export const SCENARIO_OUT_OF_SERVICE_FAILED: MockDeviceScenario = {
     quarantine: true,
   },
 };
+
+/**
+ * Returns the mock scenario for out of service failed.
+ */
+export function SCENARIO_OUT_OF_SERVICE_FAILED(
+  callCount?: number,
+): MockDeviceScenario {
+  return SCENARIO_OUT_OF_SERVICE_FAILED_DATA;
+}

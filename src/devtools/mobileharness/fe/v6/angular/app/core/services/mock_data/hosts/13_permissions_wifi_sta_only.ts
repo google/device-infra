@@ -58,7 +58,7 @@ const UI_STATUS: HostConfigUiStatus = {
 };
 
 /** Mock scenario for host with only permissions, wifi, and stability visible in device config. */
-export const SCENARIO_HOST_PERMISSIONS_WIFI_STA: MockHostScenario = {
+const SCENARIO_HOST_PERMISSIONS_WIFI_STA_DATA: MockHostScenario = {
   hostName: 'host-permissions-wifi-sta.example.com',
   scenarioName: '13. Permissions, Wifi, Sta Only',
   overview: createDefaultHostOverview('host-permissions-wifi-sta.example.com'),
@@ -70,3 +70,12 @@ export const SCENARIO_HOST_PERMISSIONS_WIFI_STA: MockHostScenario = {
   defaultDeviceConfig: DEFAULT_DEVICE_CONFIG,
   actions: createHostActions(),
 };
+
+/**
+ * Returns the mock scenario for host permissions wifi sta.
+ */
+export function SCENARIO_HOST_PERMISSIONS_WIFI_STA(
+  callCount?: number,
+): MockHostScenario {
+  return SCENARIO_HOST_PERMISSIONS_WIFI_STA_DATA;
+}

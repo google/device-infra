@@ -83,7 +83,7 @@ describe('Device Settings Component', () => {
       MatTestDialogOpener.withComponent(DeviceSettings, {
         data: {
           deviceId: 'test-device',
-          config: SCENARIO_IN_SERVICE_IDLE.config as DeviceConfig,
+          config: SCENARIO_IN_SERVICE_IDLE().config as DeviceConfig,
         },
       }),
     );

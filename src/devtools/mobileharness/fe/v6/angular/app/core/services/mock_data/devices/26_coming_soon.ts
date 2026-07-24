@@ -11,11 +11,11 @@ import {SCENARIO_IN_SERVICE_IDLE} from './01_in_service_idle';
  * This scenario is used for testing and development purposes to simulate a
  * device in a specific state.
  */
-export const SCENARIO_COMING_SOON: MockDeviceScenario = {
-  ...SCENARIO_IN_SERVICE_IDLE,
+const SCENARIO_COMING_SOON_DATA: MockDeviceScenario = {
+  ...SCENARIO_IN_SERVICE_IDLE(),
   id: 'buttons-not-implemented.example.com',
   overview: {
-    ...SCENARIO_IN_SERVICE_IDLE.overview,
+    ...SCENARIO_IN_SERVICE_IDLE().overview,
     id: 'buttons-not-implemented.example.com',
     host: {
       name: 'buttons-not-implemented.host.example.com',
@@ -25,3 +25,10 @@ export const SCENARIO_COMING_SOON: MockDeviceScenario = {
   scenarioName: 'Coming Soon - All Actions Not Ready',
   allActionsNotReady: true,
 };
+
+/**
+ * Returns the mock scenario for coming soon.
+ */
+export function SCENARIO_COMING_SOON(callCount?: number): MockDeviceScenario {
+  return SCENARIO_COMING_SOON_DATA;
+}

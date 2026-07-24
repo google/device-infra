@@ -64,7 +64,7 @@ const deviceSummaries: DeviceSummary[] = [
 ];
 
 /** Mock host overview data. */
-export const OVERVIEW_12: MockHostScenario = {
+const OVERVIEW_12_DATA: MockHostScenario = {
   hostName: 'long-text-host.example.com',
   scenarioName: 'Overview 12: Devices with Long Text Columns',
   overview,
@@ -76,3 +76,10 @@ export const OVERVIEW_12: MockHostScenario = {
   defaultDeviceConfig: null,
   actions: createHostActions('RUNNING', false),
 };
+
+/**
+ * Returns the mock scenario for 12.
+ */
+export function OVERVIEW_12(callCount?: number): MockHostScenario {
+  return OVERVIEW_12_DATA;
+}

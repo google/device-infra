@@ -21,7 +21,7 @@ describe('Permissions Component', () => {
     component = fixture.componentInstance;
     fixture.componentRef.setInput(
       'permissions',
-      SCENARIO_IN_SERVICE_IDLE.config!.permissions || {},
+      SCENARIO_IN_SERVICE_IDLE().config!.permissions || {},
     );
     fixture.detectChanges();
   });

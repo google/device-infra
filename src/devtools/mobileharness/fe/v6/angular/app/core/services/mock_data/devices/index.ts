@@ -1,4 +1,4 @@
-import {MockDeviceScenario} from '../models';
+import {MockDeviceScenario, MockDeviceScenarioWrapper} from '../models';
 import {SCENARIO_IN_SERVICE_IDLE} from './01_in_service_idle';
 import {SCENARIO_IN_SERVICE_BUSY} from './02_in_service_busy';
 import {SCENARIO_OUT_OF_SERVICE_INIT} from './03_out_of_service_init';
@@ -25,33 +25,46 @@ import {SCENARIO_WIFI_DIMENSIONS_ONLY} from './23_wifi_dimensions_only';
 import {SCENARIO_TESTBED_SINGLE_ELIGIBLE} from './24_testbed_single_eligible';
 import {SCENARIO_TESTBED_MIXED_ELIGIBILITY} from './25_testbed_mixed_eligibility';
 import {SCENARIO_COMING_SOON} from './26_coming_soon';
+import {deviceRefreshFactory} from './27_refresh_scenario';
 
-/** Central registry of all mock device scenarios. */
-export const MOCK_DEVICE_SCENARIOS: MockDeviceScenario[] = [
-  SCENARIO_IN_SERVICE_IDLE,
-  SCENARIO_IN_SERVICE_BUSY,
-  SCENARIO_OUT_OF_SERVICE_INIT,
-  SCENARIO_OUT_OF_SERVICE_RECOVERING,
-  SCENARIO_OUT_OF_SERVICE_DIRTY,
-  SCENARIO_OUT_OF_SERVICE_MISSING,
-  SCENARIO_OUT_OF_SERVICE_FAILED,
-  SCENARIO_OUT_OF_SERVICE_ABNORMAL_TYPE,
-  SCENARIO_OUT_OF_SERVICE_NO_TYPE,
-  SCENARIO_UI_TEST_LONG_ID,
-  SCENARIO_OUT_OF_SERVICE_UNKNOWN_TIME,
-  SCENARIO_HOST_MANAGED_DEVICE,
-  SCENARIO_EMPTY_CONFIG,
-  SCENARIO_EMPTY_CONFIG_WITH_HOST,
-  SCENARIO_IDLE_BUT_QUARANTINED,
-  SCENARIO_LINUX_DEVICE,
-  SCENARIO_ANDROID_MISSING,
-  SCENARIO_ANDROID_BUSY_NO_FLASH,
-  SCENARIO_ANDROID_NO_SCREENSHOT,
-  SCENARIO_TESTBED_DEVICE,
-  SCENARIO_TESTBED_EVEN_SUBDEVICES,
-  SCENARIO_TEST_RESULTS,
-  SCENARIO_WIFI_DIMENSIONS_ONLY,
-  SCENARIO_TESTBED_SINGLE_ELIGIBLE,
-  SCENARIO_TESTBED_MIXED_ELIGIBILITY,
-  SCENARIO_COMING_SOON,
+function wrapDevice(
+  factory: (callCount?: number) => MockDeviceScenario,
+): MockDeviceScenarioWrapper {
+  const peek = factory(0);
+  return {
+    id: peek.id,
+    scenarioName: peek.scenarioName,
+    factory,
+  };
+}
+
+/** List of mock device scenarios. */
+export const MOCK_DEVICE_SCENARIOS: MockDeviceScenarioWrapper[] = [
+  wrapDevice(deviceRefreshFactory),
+  wrapDevice(SCENARIO_IN_SERVICE_IDLE),
+  wrapDevice(SCENARIO_IN_SERVICE_BUSY),
+  wrapDevice(SCENARIO_OUT_OF_SERVICE_INIT),
+  wrapDevice(SCENARIO_OUT_OF_SERVICE_RECOVERING),
+  wrapDevice(SCENARIO_OUT_OF_SERVICE_DIRTY),
+  wrapDevice(SCENARIO_OUT_OF_SERVICE_MISSING),
+  wrapDevice(SCENARIO_OUT_OF_SERVICE_FAILED),
+  wrapDevice(SCENARIO_OUT_OF_SERVICE_ABNORMAL_TYPE),
+  wrapDevice(SCENARIO_OUT_OF_SERVICE_NO_TYPE),
+  wrapDevice(SCENARIO_UI_TEST_LONG_ID),
+  wrapDevice(SCENARIO_OUT_OF_SERVICE_UNKNOWN_TIME),
+  wrapDevice(SCENARIO_HOST_MANAGED_DEVICE),
+  wrapDevice(SCENARIO_EMPTY_CONFIG),
+  wrapDevice(SCENARIO_EMPTY_CONFIG_WITH_HOST),
+  wrapDevice(SCENARIO_IDLE_BUT_QUARANTINED),
+  wrapDevice(SCENARIO_LINUX_DEVICE),
+  wrapDevice(SCENARIO_ANDROID_MISSING),
+  wrapDevice(SCENARIO_ANDROID_BUSY_NO_FLASH),
+  wrapDevice(SCENARIO_ANDROID_NO_SCREENSHOT),
+  wrapDevice(SCENARIO_TESTBED_DEVICE),
+  wrapDevice(SCENARIO_TESTBED_EVEN_SUBDEVICES),
+  wrapDevice(SCENARIO_TEST_RESULTS),
+  wrapDevice(SCENARIO_WIFI_DIMENSIONS_ONLY),
+  wrapDevice(SCENARIO_TESTBED_SINGLE_ELIGIBLE),
+  wrapDevice(SCENARIO_TESTBED_MIXED_ELIGIBILITY),
+  wrapDevice(SCENARIO_COMING_SOON),
 ];

@@ -132,7 +132,7 @@ const DEVICES_PERMISSIONS_ALL: DeviceSummary[] = [
 ];
 
 /** Scenario covering various permission states for remote control. */
-export const SCENARIO_RC_PERMISSIONS_ALL: MockHostScenario = {
+const SCENARIO_RC_PERMISSIONS_ALL_DATA: MockHostScenario = {
   hostName: 'host-rc-permissions.example.com',
   scenarioName: 'RC: Permissions Validation (All Cases)',
   overview: createHostOverview('host-rc-permissions.example.com'),
@@ -141,3 +141,12 @@ export const SCENARIO_RC_PERMISSIONS_ALL: MockHostScenario = {
   defaultDeviceConfig: null,
   actions: createHostActions(),
 };
+
+/**
+ * Returns the mock scenario for rc permissions all.
+ */
+export function SCENARIO_RC_PERMISSIONS_ALL(
+  callCount?: number,
+): MockHostScenario {
+  return SCENARIO_RC_PERMISSIONS_ALL_DATA;
+}

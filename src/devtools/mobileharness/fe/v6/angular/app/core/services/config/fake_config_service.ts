@@ -44,8 +44,12 @@ export class FakeConfigService extends ConfigService {
 
   constructor() {
     super();
-    this.mockDeviceScenarios = deepCopy(MOCK_DEVICE_SCENARIOS);
-    this.mockHostScenarios = deepCopy(MOCK_HOST_SCENARIOS);
+    this.mockDeviceScenarios = MOCK_DEVICE_SCENARIOS.map((w) =>
+      deepCopy(w.factory()),
+    );
+    this.mockHostScenarios = MOCK_HOST_SCENARIOS.map((w) =>
+      deepCopy(w.factory()),
+    );
   }
 
   // ===== Device Config Methods =====

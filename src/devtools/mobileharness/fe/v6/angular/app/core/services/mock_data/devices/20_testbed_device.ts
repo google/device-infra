@@ -397,7 +397,7 @@ export const MOCK_TESTBED_CONFIG_TESTBED_DEVICE: TestbedConfig = {
 };
 
 /** Mock device scenario for TESTBED-001. */
-export const SCENARIO_TESTBED_DEVICE: MockDeviceScenario = {
+const SCENARIO_TESTBED_DEVICE_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: '20. Testbed Device with Sub-Devices',
   overview: MOCK_OVERVIEW_TESTBED_DEVICE,
@@ -405,3 +405,12 @@ export const SCENARIO_TESTBED_DEVICE: MockDeviceScenario = {
   isQuarantined: false,
   testbedConfig: MOCK_TESTBED_CONFIG_TESTBED_DEVICE,
 };
+
+/**
+ * Returns the mock scenario for testbed device.
+ */
+export function SCENARIO_TESTBED_DEVICE(
+  callCount?: number,
+): MockDeviceScenario {
+  return SCENARIO_TESTBED_DEVICE_DATA;
+}

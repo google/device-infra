@@ -57,7 +57,7 @@ const CONFIG: DeviceConfig = {
  * an unknown timestamp. This scenario is used for testing and development
  * purposes to simulate a device in a specific state.
  */
-export const SCENARIO_OUT_OF_SERVICE_UNKNOWN_TIME: MockDeviceScenario = {
+const SCENARIO_OUT_OF_SERVICE_UNKNOWN_TIME_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: '11. Out of Service, Unknown Time (Critical)',
   overview: OVERVIEW,
@@ -71,3 +71,12 @@ export const SCENARIO_OUT_OF_SERVICE_UNKNOWN_TIME: MockDeviceScenario = {
     quarantine: true,
   },
 };
+
+/**
+ * Returns the mock scenario for out of service unknown time.
+ */
+export function SCENARIO_OUT_OF_SERVICE_UNKNOWN_TIME(
+  callCount?: number,
+): MockDeviceScenario {
+  return SCENARIO_OUT_OF_SERVICE_UNKNOWN_TIME_DATA;
+}

@@ -51,7 +51,8 @@ export class FakeHostService extends HostService {
   }
 
   override getHostHeaderInfo(hostName: string): Observable<HostHeaderInfo> {
-    const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    const wrapper = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    const scenario = wrapper?.factory(this.getHostOverviewCallCount);
     const actions = scenario?.actions || createHostActions('RUNNING', false);
 
     return of({
@@ -68,26 +69,38 @@ export class FakeHostService extends HostService {
    *          or an error Observable if not found.
    */
   override getHostOverview(hostName: string): Observable<HostOverviewPageData> {
-    const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
-    if (scenario && scenario.overview) {
-      const actions = scenario.actions || createHostActions('RUNNING', false);
-      const overview = {...scenario.overview};
-
-      if (!overview.labServer.actions) {
-        const connectivityState =
-          overview.labServer.connectivity?.state || 'RUNNING';
-        const activityState = overview.labServer.activity?.state || 'STARTED';
-        const daemonState = overview.daemonServer?.status?.state || 'RUNNING';
-        const uiLabTypes = overview.uiLabTypes || [];
-
-        overview.labServer = {
-          ...overview.labServer,
-          actions: createLabServerActions(
-            connectivityState,
-            activityState,
-            daemonState,
-            uiLabTypes,
+    const wrapper = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    if (!wrapper) {
+      return timer(1000).pipe(
+        switchMap(() =>
+          throwError(
+            () => new Error(`Host with '${hostName}' not found in mock data.`),
           ),
+        ),
+      );
+    }
+
+    try {
+      this.getHostOverviewCallCount++;
+      const scenario = wrapper.factory(this.getHostOverviewCallCount);
+      const actions = scenario.actions || createHostActions('RUNNING', false);
+
+      let overview = scenario.overview
+        ? structuredClone(scenario.overview)
+        : undefined;
+
+      if (overview && overview.labServer && !overview.labServer.actions) {
+        overview = {
+          ...overview,
+          labServer: {
+            ...overview.labServer,
+            actions: createLabServerActions(
+              overview.labServer.connectivity?.state,
+              overview.labServer.activity?.state,
+              overview.daemonServer?.status?.state,
+              overview.uiLabTypes,
+            ),
+          },
         };
       }
 
@@ -96,26 +109,18 @@ export class FakeHostService extends HostService {
           hostName,
           actions,
         },
-        overviewContent: overview,
+        overviewContent: overview!,
       }).pipe(delay(1000));
-    } else {
-      return timer(1000).pipe(
-        switchMap(() =>
-          throwError(
-            () =>
-              new Error(
-                `Host with '${hostName}' not found or has no overview in mock data.`,
-              ),
-          ),
-        ),
-      );
+    } catch (e: unknown) {
+      return timer(1000).pipe(switchMap(() => throwError(() => e)));
     }
   }
 
   override getHostDeviceSummaries(
     hostName: string,
   ): Observable<GetHostDeviceSummariesResponse> {
-    const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    const wrapper = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    const scenario = wrapper?.factory(this.getHostOverviewCallCount);
     if (scenario && scenario.deviceSummaries) {
       return of({deviceSummaries: scenario.deviceSummaries}).pipe(delay(1000));
     }
@@ -318,7 +323,8 @@ TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0`,
     hostName: string,
     flags: string,
   ): Observable<UpdatePassThroughFlagsResponse> {
-    const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    const wrapper = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    const scenario = wrapper?.factory(this.getHostOverviewCallCount);
     if (scenario && scenario.overview) {
       scenario.overview.labServer.passThroughFlags = flags;
       return of({success: true}).pipe(delay(1000));
@@ -339,7 +345,8 @@ TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0`,
   override preflightLabServerRelease(
     hostName: string,
   ): Observable<PreflightLabServerReleaseResponse> {
-    const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    const wrapper = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    const scenario = wrapper?.factory(this.getHostOverviewCallCount);
     const preflightLabServerReleaseResponse =
       scenario?.releaseResponse || createDefaultReleaseResponse();
     return of(preflightLabServerReleaseResponse).pipe(delay(1000));
@@ -348,6 +355,7 @@ TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0`,
   private preflightStopCallCount = 0;
   private preflightStartCallCount = 0;
   private preflightRestartCallCount = 0;
+  private getHostOverviewCallCount = 0;
 
   override preflightLabServerLifecycle(
     hostName: string,
@@ -419,7 +427,8 @@ TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0`,
     hostName: string,
     deviceIds: string[],
   ): Observable<void> {
-    const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    const wrapper = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    const scenario = wrapper?.factory(this.getHostOverviewCallCount);
     if (scenario && scenario.deviceSummaries) {
       scenario.deviceSummaries = scenario.deviceSummaries.filter(
         (d) => !deviceIds.includes(d.id),
@@ -674,8 +683,8 @@ TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0`,
   override decommissionHost(
     hostName: string,
   ): Observable<DecommissionHostResponse> {
-    const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
-    if (scenario) {
+    const wrapper = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    if (wrapper) {
       // Simulate success if host is found in mock data.
       return of({}).pipe(delay(1000));
     } else {
@@ -747,7 +756,8 @@ TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0`,
     hostName: string,
     universe: string,
   ): Observable<ListTroubleshootScriptsResponse> {
-    const scenario = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    const wrapper = MOCK_HOST_SCENARIOS.find((s) => s.hostName === hostName);
+    const scenario = wrapper?.factory(this.getHostOverviewCallCount);
     if (scenario && scenario.troubleshootScriptsResponse) {
       return of(scenario.troubleshootScriptsResponse).pipe(delay(1000));
     }

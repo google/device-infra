@@ -44,7 +44,7 @@ UI_STATUS.hostProperties.sectionStatus = createPartStatus(
   'Managed by Config Pusher',
 );
 
-export const SCENARIO_HOST_PUSHER_PROPERTIES: MockHostScenario = {
+const SCENARIO_HOST_PUSHER_PROPERTIES_DATA: MockHostScenario = {
   hostName: 'host-pusher-properties.example.com',
   scenarioName: '4. Pusher - Properties Only',
   overview: createDefaultHostOverview('host-pusher-properties.example.com'),
@@ -59,3 +59,12 @@ export const SCENARIO_HOST_PUSHER_PROPERTIES: MockHostScenario = {
     permissionDenied: {},
   },
 };
+
+/**
+ * Returns the mock scenario for host pusher properties.
+ */
+export function SCENARIO_HOST_PUSHER_PROPERTIES(
+  callCount?: number,
+): MockHostScenario {
+  return SCENARIO_HOST_PUSHER_PROPERTIES_DATA;
+}

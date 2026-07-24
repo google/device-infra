@@ -61,7 +61,7 @@ const CONFIG: DeviceConfig = {
 };
 
 /** Mock data for a busy, non-flashable Android device scenario. */
-export const SCENARIO_ANDROID_BUSY_NO_FLASH: MockDeviceScenario = {
+const SCENARIO_ANDROID_BUSY_NO_FLASH_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: '18. Android Device (Busy, No Flash)',
   overview: OVERVIEW,
@@ -75,3 +75,12 @@ export const SCENARIO_ANDROID_BUSY_NO_FLASH: MockDeviceScenario = {
     quarantine: true,
   },
 };
+
+/**
+ * Returns the mock scenario for android busy no flash.
+ */
+export function SCENARIO_ANDROID_BUSY_NO_FLASH(
+  callCount?: number,
+): MockDeviceScenario {
+  return SCENARIO_ANDROID_BUSY_NO_FLASH_DATA;
+}

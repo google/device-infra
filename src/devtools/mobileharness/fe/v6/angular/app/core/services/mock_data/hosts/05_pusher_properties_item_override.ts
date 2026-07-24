@@ -43,7 +43,7 @@ UI_STATUS.hostProperties.itemEditabilityOverrides = {
   2: {editable: false, reason: 'Managed by Config Pusher'},
 };
 
-export const SCENARIO_HOST_PUSHER_ITEM_OVERRIDE: MockHostScenario = {
+const SCENARIO_HOST_PUSHER_ITEM_OVERRIDE_DATA: MockHostScenario = {
   hostName: 'host-pusher-item-override.example.com',
   scenarioName: '5. Pusher - Properties Item Override',
   overview: createDefaultHostOverview('host-pusher-item-override.example.com'),
@@ -55,3 +55,12 @@ export const SCENARIO_HOST_PUSHER_ITEM_OVERRIDE: MockHostScenario = {
   defaultDeviceConfig: DEFAULT_DEVICE_CONFIG,
   actions: createHostActions(),
 };
+
+/**
+ * Returns the mock scenario for host pusher item override.
+ */
+export function SCENARIO_HOST_PUSHER_ITEM_OVERRIDE(
+  callCount?: number,
+): MockHostScenario {
+  return SCENARIO_HOST_PUSHER_ITEM_OVERRIDE_DATA;
+}

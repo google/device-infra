@@ -14,8 +14,8 @@ import {
   MOCK_TEST_SCENARIOS,
 } from '../../core/services/mock_data';
 import {
-  MockDeviceScenario,
-  MockHostScenario,
+  MockDeviceScenarioWrapper,
+  MockHostScenarioWrapper,
   MockTestScenario,
 } from '../../core/services/mock_data/models';
 
@@ -24,16 +24,16 @@ import {
  * This page uses mock data to showcase different device states and configurations.
  */
 @Component({
-  selector: 'app-dev-harness-page',
+  selector: 'mh-dev-harness-page',
   standalone: true,
-  imports: [CommonModule, RouterLink, MatIconModule],
+  imports: [CommonModule, MatIconModule, RouterLink],
   templateUrl: './dev_harness_page.ng.html',
   styleUrl: './dev_harness_page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DevHarnessPage {
-  readonly deviceScenarios: MockDeviceScenario[];
-  readonly hostScenarios: MockHostScenario[];
+  readonly deviceScenarios: MockDeviceScenarioWrapper[];
+  readonly hostScenarios: MockHostScenarioWrapper[];
   readonly testScenarios: MockTestScenario[];
 
   readonly deviceCollapsed = signal(false);

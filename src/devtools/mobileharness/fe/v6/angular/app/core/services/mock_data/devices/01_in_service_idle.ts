@@ -212,7 +212,7 @@ const CONFIG: DeviceConfig = {
  * This scenario is used for testing and development purposes to simulate a
  * device in a specific state.
  */
-export const SCENARIO_IN_SERVICE_IDLE: MockDeviceScenario = {
+const SCENARIO_IN_SERVICE_IDLE_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: 'In Service - Idle',
   overview: OVERVIEW,
@@ -226,3 +226,12 @@ export const SCENARIO_IN_SERVICE_IDLE: MockDeviceScenario = {
     quarantine: true,
   },
 };
+
+/**
+ * Returns the mock scenario for in service idle.
+ */
+export function SCENARIO_IN_SERVICE_IDLE(
+  callCount?: number,
+): MockDeviceScenario {
+  return SCENARIO_IN_SERVICE_IDLE_DATA;
+}

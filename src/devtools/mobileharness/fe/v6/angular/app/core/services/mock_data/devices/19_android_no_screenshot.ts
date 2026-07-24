@@ -56,7 +56,7 @@ const CONFIG: DeviceConfig = {
 };
 
 /** Mock data for an Android device that does not support screenshots. */
-export const SCENARIO_ANDROID_NO_SCREENSHOT: MockDeviceScenario = {
+const SCENARIO_ANDROID_NO_SCREENSHOT_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: '19. Android Device (No Screenshot)',
   overview: OVERVIEW,
@@ -70,3 +70,12 @@ export const SCENARIO_ANDROID_NO_SCREENSHOT: MockDeviceScenario = {
     quarantine: true,
   },
 };
+
+/**
+ * Returns the mock scenario for android no screenshot.
+ */
+export function SCENARIO_ANDROID_NO_SCREENSHOT(
+  callCount?: number,
+): MockDeviceScenario {
+  return SCENARIO_ANDROID_NO_SCREENSHOT_DATA;
+}

@@ -33,7 +33,7 @@ UI_STATUS.deviceConfig = {
 };
 UI_STATUS.deviceConfigMode = createPartStatus(false);
 
-export const SCENARIO_HOST_DEVICE_CONFIG_HIDDEN: MockHostScenario = {
+const SCENARIO_HOST_DEVICE_CONFIG_HIDDEN_DATA: MockHostScenario = {
   hostName: 'host-device-config-hidden.example.com',
   scenarioName: '9. Device Config Hidden',
   overview: createDefaultHostOverview('host-device-config-hidden.example.com'),
@@ -45,3 +45,12 @@ export const SCENARIO_HOST_DEVICE_CONFIG_HIDDEN: MockHostScenario = {
   defaultDeviceConfig: null,
   actions: createHostActions(),
 };
+
+/**
+ * Returns the mock scenario for host device config hidden.
+ */
+export function SCENARIO_HOST_DEVICE_CONFIG_HIDDEN(
+  callCount?: number,
+): MockHostScenario {
+  return SCENARIO_HOST_DEVICE_CONFIG_HIDDEN_DATA;
+}

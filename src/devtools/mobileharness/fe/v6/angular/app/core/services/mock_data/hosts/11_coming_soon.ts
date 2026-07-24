@@ -9,8 +9,8 @@ import {createDefaultHostOverview} from './ui_status_utils';
  * This scenario is used for testing and development purposes to simulate a
  * host in a specific state.
  */
-export const SCENARIO_HOST_COMING_SOON: MockHostScenario = {
-  ...SCENARIO_HOST_BASIC_EDITABLE,
+const SCENARIO_HOST_COMING_SOON_DATA: MockHostScenario = {
+  ...SCENARIO_HOST_BASIC_EDITABLE(),
   hostName: 'buttons-not-implemented.host.example.com',
   scenarioName: '11. Coming Soon',
   overview: createDefaultHostOverview(
@@ -60,6 +60,20 @@ export const SCENARIO_HOST_COMING_SOON: MockHostScenario = {
     configuration: {enabled: true, visible: true, tooltip: '', isReady: false},
     debug: {enabled: true, visible: true, tooltip: '', isReady: false},
     decommission: {enabled: true, visible: true, tooltip: '', isReady: false},
-    advancedOperations: {enabled: false, visible: false, tooltip: '', isReady: false},
+    advancedOperations: {
+      enabled: false,
+      visible: false,
+      tooltip: '',
+      isReady: false,
+    },
   },
 };
+
+/**
+ * Returns the mock scenario for coming soon host.
+ */
+export function SCENARIO_HOST_COMING_SOON(
+  callCount?: number,
+): MockHostScenario {
+  return SCENARIO_HOST_COMING_SOON_DATA;
+}

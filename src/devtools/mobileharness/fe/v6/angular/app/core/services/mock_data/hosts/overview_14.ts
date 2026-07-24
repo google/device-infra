@@ -708,7 +708,7 @@ const deviceSummaries: DeviceSummary[] = [
 ];
 
 /** Mock host overview data. */
-export const OVERVIEW_14: MockHostScenario = {
+const OVERVIEW_14_DATA: MockHostScenario = {
   hostName: 'at1-ab7.atc.google.com',
   scenarioName: 'Overview 14: Sub Devices',
   overview,
@@ -720,3 +720,10 @@ export const OVERVIEW_14: MockHostScenario = {
   defaultDeviceConfig: null,
   actions: createHostActions('RUNNING', false),
 };
+
+/**
+ * Returns the mock scenario for 14.
+ */
+export function OVERVIEW_14(callCount?: number): MockHostScenario {
+  return OVERVIEW_14_DATA;
+}

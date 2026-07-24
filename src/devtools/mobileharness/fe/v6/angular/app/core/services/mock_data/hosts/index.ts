@@ -1,4 +1,4 @@
-import {MockHostScenario} from '../models';
+import {MockHostScenario, MockHostScenarioWrapper} from '../models';
 import {SCENARIO_HOST_NO_CONFIG} from './01_no_config';
 import {SCENARIO_HOST_BASIC_EDITABLE} from './02_basic_editable';
 import {SCENARIO_HOST_SHARED_MODE} from './03_shared_mode';
@@ -33,41 +33,54 @@ import {OVERVIEW_11} from './overview_11';
 import {OVERVIEW_12} from './overview_12';
 import {OVERVIEW_13} from './overview_13';
 import {OVERVIEW_14} from './overview_14';
+import {overviewRefreshFactory} from './overview_refresh';
 import {SCENARIO_RC_PERMISSIONS_ALL} from './remote_control_permissions';
 
+function wrapHost(
+  factory: (callCount?: number) => MockHostScenario,
+): MockHostScenarioWrapper {
+  const peek = factory(0);
+  return {
+    hostName: peek.hostName,
+    scenarioName: peek.scenarioName,
+    factory,
+  };
+}
+
 /** Central registry of all mock host scenarios. */
-export const MOCK_HOST_SCENARIOS: MockHostScenario[] = [
-  SCENARIO_HOST_NO_CONFIG,
-  SCENARIO_HOST_BASIC_EDITABLE,
-  SCENARIO_HOST_SHARED_MODE,
-  SCENARIO_HOST_PUSHER_PROPERTIES,
-  SCENARIO_HOST_PUSHER_ITEM_OVERRIDE,
-  SCENARIO_HOST_PUSHER_ALL,
-  SCENARIO_HOST_SSH_HIDDEN,
-  SCENARIO_HOST_DISCOVERY_HIDDEN,
-  SCENARIO_HOST_DEVICE_CONFIG_HIDDEN,
-  SCENARIO_HOST_DEVICE_CONFIG_WIFI_DIMENSIONS_ONLY,
-  SCENARIO_HOST_X_PROD,
-  SCENARIO_HOST_Z_PROD,
-  SCENARIO_HOST_COMING_SOON,
-  SCENARIO_HOST_NO_VALID_VERSIONS,
-  SCENARIO_HOST_PERMISSIONS_WIFI_STA,
-  SCENARIO_RC_ALL_VALID,
-  SCENARIO_RC_MIXED_ALL,
-  SCENARIO_RC_PROXY_MISMATCH,
-  SCENARIO_RC_PERMISSIONS_ALL,
-  OVERVIEW_01,
-  OVERVIEW_02,
-  OVERVIEW_03,
-  OVERVIEW_04,
-  OVERVIEW_05,
-  OVERVIEW_06,
-  OVERVIEW_07,
-  OVERVIEW_08,
-  OVERVIEW_09,
-  OVERVIEW_10,
-  OVERVIEW_11,
-  OVERVIEW_12,
-  OVERVIEW_13,
-  OVERVIEW_14,
+export const MOCK_HOST_SCENARIOS: MockHostScenarioWrapper[] = [
+  wrapHost(overviewRefreshFactory),
+  wrapHost(SCENARIO_HOST_NO_CONFIG),
+  wrapHost(SCENARIO_HOST_BASIC_EDITABLE),
+  wrapHost(SCENARIO_HOST_SHARED_MODE),
+  wrapHost(SCENARIO_HOST_PUSHER_PROPERTIES),
+  wrapHost(SCENARIO_HOST_PUSHER_ITEM_OVERRIDE),
+  wrapHost(SCENARIO_HOST_PUSHER_ALL),
+  wrapHost(SCENARIO_HOST_SSH_HIDDEN),
+  wrapHost(SCENARIO_HOST_DISCOVERY_HIDDEN),
+  wrapHost(SCENARIO_HOST_DEVICE_CONFIG_HIDDEN),
+  wrapHost(SCENARIO_HOST_DEVICE_CONFIG_WIFI_DIMENSIONS_ONLY),
+  wrapHost(SCENARIO_HOST_X_PROD),
+  wrapHost(SCENARIO_HOST_Z_PROD),
+  wrapHost(SCENARIO_HOST_COMING_SOON),
+  wrapHost(SCENARIO_HOST_NO_VALID_VERSIONS),
+  wrapHost(SCENARIO_HOST_PERMISSIONS_WIFI_STA),
+  wrapHost(SCENARIO_RC_ALL_VALID),
+  wrapHost(SCENARIO_RC_MIXED_ALL),
+  wrapHost(SCENARIO_RC_PROXY_MISMATCH),
+  wrapHost(SCENARIO_RC_PERMISSIONS_ALL),
+  wrapHost(OVERVIEW_01),
+  wrapHost(OVERVIEW_02),
+  wrapHost(OVERVIEW_03),
+  wrapHost(OVERVIEW_04),
+  wrapHost(OVERVIEW_05),
+  wrapHost(OVERVIEW_06),
+  wrapHost(OVERVIEW_07),
+  wrapHost(OVERVIEW_08),
+  wrapHost(OVERVIEW_09),
+  wrapHost(OVERVIEW_10),
+  wrapHost(OVERVIEW_11),
+  wrapHost(OVERVIEW_12),
+  wrapHost(OVERVIEW_13),
+  wrapHost(OVERVIEW_14),
 ];

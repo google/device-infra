@@ -60,7 +60,7 @@ const CONFIG: DeviceConfig = {
 };
 
 /** Mock data for a missing Android device scenario. */
-export const SCENARIO_ANDROID_MISSING: MockDeviceScenario = {
+const SCENARIO_ANDROID_MISSING_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: '17. Android Device (Missing)',
   overview: OVERVIEW,
@@ -74,3 +74,12 @@ export const SCENARIO_ANDROID_MISSING: MockDeviceScenario = {
     quarantine: true,
   },
 };
+
+/**
+ * Returns the mock scenario for android missing.
+ */
+export function SCENARIO_ANDROID_MISSING(
+  callCount?: number,
+): MockDeviceScenario {
+  return SCENARIO_ANDROID_MISSING_DATA;
+}

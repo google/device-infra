@@ -52,7 +52,7 @@ const UI_STATUS: HostConfigUiStatus = {
   deviceDiscovery: {...NON_EDITABLE},
 };
 
-export const SCENARIO_HOST_PUSHER_ALL: MockHostScenario = {
+const SCENARIO_HOST_PUSHER_ALL_DATA: MockHostScenario = {
   hostName: 'host-pusher-all.example.com',
   scenarioName: '6. Pusher - All Locked',
   overview: createDefaultHostOverview('host-pusher-all.example.com'),
@@ -64,3 +64,10 @@ export const SCENARIO_HOST_PUSHER_ALL: MockHostScenario = {
   defaultDeviceConfig: DEFAULT_DEVICE_CONFIG,
   actions: createHostActions(),
 };
+
+/**
+ * Returns the mock scenario for host pusher all.
+ */
+export function SCENARIO_HOST_PUSHER_ALL(callCount?: number): MockHostScenario {
+  return SCENARIO_HOST_PUSHER_ALL_DATA;
+}

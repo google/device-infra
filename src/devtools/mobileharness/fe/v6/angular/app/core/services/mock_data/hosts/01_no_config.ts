@@ -7,7 +7,7 @@ import {
   createHostActions,
 } from './ui_status_utils';
 
-export const SCENARIO_HOST_NO_CONFIG: MockHostScenario = {
+const SCENARIO_HOST_NO_CONFIG_DATA: MockHostScenario = {
   hostName: 'host-no-config.example.com',
   scenarioName: '1. No Config',
   overview: createDefaultHostOverview('host-no-config.example.com'),
@@ -22,3 +22,10 @@ export const SCENARIO_HOST_NO_CONFIG: MockHostScenario = {
     permissionDenied: {},
   },
 };
+
+/**
+ * Returns the mock scenario for host no config.
+ */
+export function SCENARIO_HOST_NO_CONFIG(callCount?: number): MockHostScenario {
+  return SCENARIO_HOST_NO_CONFIG_DATA;
+}

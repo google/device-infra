@@ -35,7 +35,7 @@ const HOST_CONFIG: HostConfig = {
 
 const UI_STATUS = createDefaultUiStatus();
 
-export const SCENARIO_HOST_SSH_HIDDEN: MockHostScenario = {
+const SCENARIO_HOST_SSH_HIDDEN_DATA: MockHostScenario = {
   hostName: 'host-ssh-hidden.example.com',
   scenarioName: '7. Minimal Hidden Features',
   overview: createDefaultHostOverview('host-ssh-hidden.example.com'),
@@ -47,3 +47,10 @@ export const SCENARIO_HOST_SSH_HIDDEN: MockHostScenario = {
   defaultDeviceConfig: DEFAULT_DEVICE_CONFIG,
   actions: createHostActions(),
 };
+
+/**
+ * Returns the mock scenario for host ssh hidden.
+ */
+export function SCENARIO_HOST_SSH_HIDDEN(callCount?: number): MockHostScenario {
+  return SCENARIO_HOST_SSH_HIDDEN_DATA;
+}

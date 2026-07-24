@@ -66,6 +66,24 @@ export interface MockHostScenario extends BaseMockScenario {
 }
 
 /**
+ * Wrapper for mock host scenario to allow functional simulation.
+ */
+export interface MockHostScenarioWrapper {
+  readonly hostName: string;
+  readonly scenarioName: string;
+  readonly factory: (callCount?: number) => MockHostScenario;
+}
+
+/**
+ * Wrapper for mock device scenario to allow functional simulation.
+ */
+export interface MockDeviceScenarioWrapper {
+  readonly id: string;
+  readonly scenarioName: string;
+  readonly factory: (callCount?: number) => MockDeviceScenario;
+}
+
+/**
  * Defines the data set for a mock test scenario.
  */
 export interface MockTestScenario extends BaseMockScenario {

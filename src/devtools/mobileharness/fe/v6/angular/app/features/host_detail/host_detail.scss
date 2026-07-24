@@ -1,3 +1,5 @@
+@use '../../shared/styles/action_bar';
+
 $labconsole-font: Roboto, sans-serif;
 
 :host {
@@ -26,7 +28,6 @@ $labconsole-font: Roboto, sans-serif;
   box-shadow:
     0 10px 15px -3px rgba(0, 0, 0, 0.1),
     0 4px 6px -2px rgba(0, 0, 0, 0.05); // shadow-lg
-  // overflow: hidden;
 }
 
 .card-header {
@@ -155,8 +156,8 @@ $labconsole-font: Roboto, sans-serif;
     }
 
     &:disabled {
-      background-color: #f1f3f4 !important;
-      color: #bdc1c6 !important;
+      background-color: #f1f3f4;
+      color: #bdc1c6;
       cursor: not-allowed;
       pointer-events: none;
     }
@@ -206,18 +207,5 @@ $labconsole-font: Roboto, sans-serif;
       font-weight: 500;
       color: #1f2937;
     }
-  }
-
-  .copy-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    cursor: pointer;
-    width: 2.5rem;
-    height: 2.5rem;
-    color: #6b7280;
-    background-color: transparent;
-    border: none;
   }
 }

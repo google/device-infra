@@ -71,7 +71,7 @@ const CONFIG: DeviceConfig = {
  * This scenario is used for testing and development purposes to simulate a
  * device in a specific state.
  */
-export const SCENARIO_IN_SERVICE_BUSY: MockDeviceScenario = {
+const SCENARIO_IN_SERVICE_BUSY_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: 'In Service - Busy',
   overview: OVERVIEW,
@@ -85,3 +85,12 @@ export const SCENARIO_IN_SERVICE_BUSY: MockDeviceScenario = {
     quarantine: true,
   },
 };
+
+/**
+ * Returns the mock scenario for in service busy.
+ */
+export function SCENARIO_IN_SERVICE_BUSY(
+  callCount?: number,
+): MockDeviceScenario {
+  return SCENARIO_IN_SERVICE_BUSY_DATA;
+}

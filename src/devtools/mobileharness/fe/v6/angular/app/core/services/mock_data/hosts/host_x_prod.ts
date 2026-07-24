@@ -57,7 +57,7 @@ const HOST_CONFIG: HostConfig = {
  * device configuration. This scenario is used for testing and development
  * purposes to simulate a host with specific settings.
  */
-export const SCENARIO_HOST_X_PROD: MockHostScenario = {
+const SCENARIO_HOST_X_PROD_DATA: MockHostScenario = {
   hostName: HOST_NAME,
   scenarioName: 'X. Host X Prod',
   hostConfigResult: {
@@ -67,3 +67,10 @@ export const SCENARIO_HOST_X_PROD: MockHostScenario = {
   defaultDeviceConfig: DEFAULT_CONFIG,
   actions: createHostActions(),
 };
+
+/**
+ * Returns the mock scenario for host x prod.
+ */
+export function SCENARIO_HOST_X_PROD(callCount?: number): MockHostScenario {
+  return SCENARIO_HOST_X_PROD_DATA;
+}

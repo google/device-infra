@@ -34,7 +34,7 @@ const HOST_CONFIG: HostConfig = {
   },
 };
 
-export const SCENARIO_HOST_BASIC_EDITABLE: MockHostScenario = {
+const SCENARIO_HOST_BASIC_EDITABLE_DATA: MockHostScenario = {
   hostName: 'host-basic-editable.example.com',
   scenarioName: '2. Basic Editable',
   overview: {
@@ -50,3 +50,12 @@ export const SCENARIO_HOST_BASIC_EDITABLE: MockHostScenario = {
   actions: createHostActions('RUNNING', false, true),
   releaseResponse: createDefaultReleaseResponse(),
 };
+
+/**
+ * Returns the mock scenario for host basic editable.
+ */
+export function SCENARIO_HOST_BASIC_EDITABLE(
+  callCount?: number,
+): MockHostScenario {
+  return SCENARIO_HOST_BASIC_EDITABLE_DATA;
+}

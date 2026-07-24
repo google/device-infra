@@ -65,7 +65,7 @@ const deviceSummaries: DeviceSummary[] = [
 ];
 
 /** Mock host overview data. */
-export const OVERVIEW_10: MockHostScenario = {
+const OVERVIEW_10_DATA: MockHostScenario = {
   hostName: 'pusher-host-j-10.example.com',
   scenarioName: 'Overview 10: Fully Managed by Pusher',
   overview,
@@ -77,3 +77,10 @@ export const OVERVIEW_10: MockHostScenario = {
   defaultDeviceConfig: null,
   actions: createHostActions('RUNNING', false),
 };
+
+/**
+ * Returns the mock scenario for 10.
+ */
+export function OVERVIEW_10(callCount?: number): MockHostScenario {
+  return OVERVIEW_10_DATA;
+}

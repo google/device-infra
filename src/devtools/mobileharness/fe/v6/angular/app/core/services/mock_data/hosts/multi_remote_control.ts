@@ -154,7 +154,7 @@ const DEVICES_ALL_VALID: DeviceSummary[] = [
 ];
 
 /** Scenario where all devices are eligible for remote control. */
-export const SCENARIO_RC_ALL_VALID: MockHostScenario = {
+const SCENARIO_RC_ALL_VALID_DATA: MockHostScenario = {
   hostName: 'host-rc-all-valid.example.com',
   scenarioName: 'RC: All Devices Valid',
   overview: createHostOverview('host-rc-all-valid.example.com'),
@@ -258,7 +258,7 @@ const DEVICES_MIXED_ALL: DeviceSummary[] = [
 ];
 
 /** Scenario with a mix of eligible and ineligible devices. */
-export const SCENARIO_RC_MIXED_ALL: MockHostScenario = {
+const SCENARIO_RC_MIXED_ALL_DATA: MockHostScenario = {
   hostName: 'host-rc-mixed-status.example.com',
   scenarioName: 'RC: Mixed Status & Capabilities',
   overview: createHostOverview('host-rc-mixed-status.example.com'),
@@ -333,7 +333,7 @@ const DEVICES_PROXY_MISMATCH: DeviceSummary[] = [
 ];
 
 /** Scenario where proxy types do not match across selected devices. */
-export const SCENARIO_RC_PROXY_MISMATCH: MockHostScenario = {
+const SCENARIO_RC_PROXY_MISMATCH_DATA: MockHostScenario = {
   hostName: 'host-rc-proxy-mismatch.example.com',
   scenarioName: 'RC: Proxy Mismatch',
   overview: createHostOverview('host-rc-proxy-mismatch.example.com'), // Running host
@@ -342,3 +342,26 @@ export const SCENARIO_RC_PROXY_MISMATCH: MockHostScenario = {
   defaultDeviceConfig: null,
   actions: createHostActions(),
 };
+
+/**
+ * Returns the mock scenario for rc all valid.
+ */
+export function SCENARIO_RC_ALL_VALID(callCount?: number): MockHostScenario {
+  return SCENARIO_RC_ALL_VALID_DATA;
+}
+
+/**
+ * Returns the mock scenario for rc mixed all.
+ */
+export function SCENARIO_RC_MIXED_ALL(callCount?: number): MockHostScenario {
+  return SCENARIO_RC_MIXED_ALL_DATA;
+}
+
+/**
+ * Returns the mock scenario for rc proxy mismatch.
+ */
+export function SCENARIO_RC_PROXY_MISMATCH(
+  callCount?: number,
+): MockHostScenario {
+  return SCENARIO_RC_PROXY_MISMATCH_DATA;
+}

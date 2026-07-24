@@ -22,7 +22,7 @@ describe('Dimensions Component', () => {
     component = fixture.componentInstance;
     fixture.componentRef.setInput(
       'dimensions',
-      SCENARIO_IN_SERVICE_IDLE.config!.dimensions!,
+      SCENARIO_IN_SERVICE_IDLE().config!.dimensions!,
     );
     fixture.detectChanges();
   });

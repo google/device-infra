@@ -58,7 +58,7 @@ const CONFIG: DeviceConfig = {
  * missing. This scenario is used for testing and development purposes to
  * simulate a device in a specific state.
  */
-export const SCENARIO_OUT_OF_SERVICE_MISSING: MockDeviceScenario = {
+const SCENARIO_OUT_OF_SERVICE_MISSING_DATA: MockDeviceScenario = {
   id: DEVICE_ID,
   scenarioName: 'Out of Service - Missing',
   overview: OVERVIEW,
@@ -72,3 +72,12 @@ export const SCENARIO_OUT_OF_SERVICE_MISSING: MockDeviceScenario = {
     quarantine: true,
   },
 };
+
+/**
+ * Returns the mock scenario for out of service missing.
+ */
+export function SCENARIO_OUT_OF_SERVICE_MISSING(
+  callCount?: number,
+): MockDeviceScenario {
+  return SCENARIO_OUT_OF_SERVICE_MISSING_DATA;
+}

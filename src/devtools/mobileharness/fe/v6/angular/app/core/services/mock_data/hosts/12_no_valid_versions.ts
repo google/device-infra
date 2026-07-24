@@ -7,8 +7,8 @@ import {createDefaultHostOverview} from './ui_status_utils';
 /**
  * Represents a mock host scenario where there are no valid versions for release.
  */
-export const SCENARIO_HOST_NO_VALID_VERSIONS: MockHostScenario = {
-  ...SCENARIO_HOST_BASIC_EDITABLE,
+const SCENARIO_HOST_NO_VALID_VERSIONS_DATA: MockHostScenario = {
+  ...SCENARIO_HOST_BASIC_EDITABLE(),
   hostName: 'no-valid-versions.host.example.com',
   scenarioName: '12. No Valid Versions',
   overview: createDefaultHostOverview('no-valid-versions.host.example.com'),
@@ -19,3 +19,12 @@ export const SCENARIO_HOST_NO_VALID_VERSIONS: MockHostScenario = {
     },
   },
 };
+
+/**
+ * Returns the mock scenario for no valid versions.
+ */
+export function SCENARIO_HOST_NO_VALID_VERSIONS(
+  callCount?: number,
+): MockHostScenario {
+  return SCENARIO_HOST_NO_VALID_VERSIONS_DATA;
+}

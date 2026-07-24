@@ -53,7 +53,7 @@ uiStatus.deviceConfig = {
 /**
  * A mock host scenario where only Wifi and Dimensions configuration sections are visible in the device config section.
  */
-export const SCENARIO_HOST_DEVICE_CONFIG_WIFI_DIMENSIONS_ONLY: MockHostScenario =
+const SCENARIO_HOST_DEVICE_CONFIG_WIFI_DIMENSIONS_ONLY_DATA: MockHostScenario =
   {
     hostName: 'host-wifi-dims-only.example.com',
     scenarioName: '10. Device Config Wifi & Dims Only',
@@ -66,3 +66,12 @@ export const SCENARIO_HOST_DEVICE_CONFIG_WIFI_DIMENSIONS_ONLY: MockHostScenario 
     defaultDeviceConfig: DEFAULT_DEVICE_CONFIG,
     actions: createHostActions(),
   };
+
+/**
+ * Returns the mock scenario for host device config wifi dimensions only.
+ */
+export function SCENARIO_HOST_DEVICE_CONFIG_WIFI_DIMENSIONS_ONLY(
+  callCount?: number,
+): MockHostScenario {
+  return SCENARIO_HOST_DEVICE_CONFIG_WIFI_DIMENSIONS_ONLY_DATA;
+}
