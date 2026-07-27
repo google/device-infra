@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.client.api.mode.local;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.getUnchecked;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.util.Objects.requireNonNull;
@@ -64,11 +65,14 @@ import com.google.devtools.mobileharness.infra.controller.test.local.utp.control
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.TestFlowConverter;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.IncompatibleReasonProto;
 import com.google.devtools.mobileharness.infra.lab.controller.LocalFileBasedDeviceConfigManager;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabInfoGrpcStub;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
 import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoService;
 import com.google.devtools.mobileharness.shared.labinfo.LocalLabInfoProvider;
+import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;
@@ -83,10 +87,12 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import io.grpc.BindableService;
+import io.grpc.ManagedChannel;
 import java.time.Duration;
 import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.logging.Level;
@@ -291,6 +297,17 @@ public class LocalMode implements ExecMode, ServiceProvider {
   public DeviceQuerier createDeviceQuerier() {
     return new LocalDeviceQuerier(
         localDeviceManagerFuture, firstDeviceLatch, LazyInitializer.tempRequiredDimensionManager);
+  }
+
+  @Override
+  public Optional<LabInfoStub> createLabInfoStub() {
+    // Diagnosis goes over the in-process OLC channel to the local LabInfoService.
+    ManagedChannel channel =
+        ChannelFactory.createLocalChannel(Flags.olcServerPort.getNonNull(), directExecutor());
+    return Optional.of(
+        new LabInfoGrpcStub(
+            LabInfoGrpcStub.newBlockingInterface(channel),
+            LabInfoGrpcStub.newFutureInterface(channel)));
   }
 
   @Override
