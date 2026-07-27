@@ -52,8 +52,18 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import javax.inject.Inject;
 
-/** Decorator to run apk precondition checks before test. */
-@DecoratorAnnotation(help = "Decorator to run apk precondition checks before test.")
+/**
+ * Decorator to run apk precondition checks before test.
+ *
+ * <p>Note: This decorator is specifically designed as an xTS suite-level target preparer
+ * (equivalent to TradeFed's {@code ApkInstrumentationPreparer}). It requires the target APK to be
+ * located within an xTS test directory specified by {@code xts_test_dir} and runs precondition
+ * check instrumentation tests.
+ *
+ * <p>For general APK installation prior to test execution, use {@link AndroidInstallAppsDecorator}
+ * instead.
+ */
+@DecoratorAnnotation(help = "Decorator to run apk precondition checks for xTS suites before test.")
 public class ApkPreconditionCheckDecorator extends StepSkippableLifecycleDecorator
     implements SpecConfigable<ApkPreconditionCheckDecoratorSpec> {
 
