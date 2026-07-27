@@ -845,7 +845,7 @@ public final class ServerJobCreatorTest {
               return jobInfo;
             });
     when(sessionRequestHandlerUtil.getFilteredTradefedModules(any()))
-        .thenReturn(ImmutableList.of());
+        .thenReturn(ImmutableList.of("mcts-module"));
 
     ImmutableList<JobInfo> jobInfos = jobCreator.createXtsTradefedTestJob(sessionRequestInfo);
 

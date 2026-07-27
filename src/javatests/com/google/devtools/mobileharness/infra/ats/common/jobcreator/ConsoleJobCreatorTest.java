@@ -39,6 +39,8 @@ import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.DeviceInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationMetadata;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
@@ -55,6 +57,8 @@ import com.google.wireless.qa.mobileharness.shared.api.decorator.base.StepSkippa
 import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
@@ -729,5 +733,146 @@ public final class ConsoleJobCreatorTest {
     assertThat(pullerSpec).isNotNull();
     assertThat(pullerSpec.getFilePathOnDevice()).isEqualTo("/sys/fs/selinux/policy");
     assertThat(pullerSpec.getPulledFileDir()).isEqualTo("vintf-files/sepolicy");
+  }
+
+  @Test
+  public void createXtsTradefedTestJob_dynamicDownloadEnabled_hasNoMoblyTests_prunesMctsJob()
+      throws Exception {
+    Configuration moduleConfig =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder()
+                    .setXtsModule("module1")
+                    .setIsConfigV2(true)
+                    .build())
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("com.android.MyStandardTestClass")
+                    .build())
+            .build();
+
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.newBuilder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts -m module1")
+            .setXtsType("cts")
+            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .addAllModuleNames(ImmutableList.of("module1"))
+            .putAllExpandedModules(ImmutableMap.of("module1", moduleConfig))
+            .setIsXtsDynamicDownloadEnabled(true)
+            .build();
+
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
+        .thenReturn(JobConfig.getDefaultInstance());
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(eq(sessionRequestInfo), any()))
+        .thenAnswer(invocation -> createMockJobInfo());
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(eq(sessionRequestInfo)))
+        .thenReturn(ImmutableList.of("module1"));
+    when(sessionRequestHandlerUtil.getStaticMctsModules()).thenReturn(ImmutableSet.of());
+
+    ImmutableList<JobInfo> jobInfos = jobCreator.createXtsTradefedTestJob(sessionRequestInfo);
+
+    // One job runs: STATIC_XTS. MCTS job is pruned!
+    assertThat(jobInfos).hasSize(1);
+    assertThat(jobInfos.get(0).properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+        .isEqualTo(XtsConstants.STATIC_XTS_JOB_NAME);
+  }
+
+  @Test
+  public void createXtsTradefedTestJob_dynamicDownloadEnabled_hasMoblyTests_doesNotPruneMctsJob()
+      throws Exception {
+    Configuration moblyConfig =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder()
+                    .setXtsModule("module1")
+                    .setIsConfigV2(true)
+                    .build())
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("com.android.tradefed.testtype.mobly.MoblyBinaryHostTest")
+                    .build())
+            .build();
+
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.newBuilder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts -m module1")
+            .setXtsType("cts")
+            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .addAllModuleNames(ImmutableList.of("module1"))
+            .putAllExpandedModules(ImmutableMap.of("module1", moblyConfig))
+            .setIsXtsDynamicDownloadEnabled(true)
+            .build();
+
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
+        .thenReturn(JobConfig.getDefaultInstance());
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(eq(sessionRequestInfo), any()))
+        .thenAnswer(invocation -> createMockJobInfo());
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(eq(sessionRequestInfo)))
+        .thenReturn(ImmutableList.of("module1"));
+    when(sessionRequestHandlerUtil.getStaticMctsModules()).thenReturn(ImmutableSet.of());
+
+    ImmutableList<JobInfo> jobInfos = jobCreator.createXtsTradefedTestJob(sessionRequestInfo);
+
+    // Two jobs run: STATIC_XTS and MCTS.
+    assertThat(jobInfos).hasSize(2);
+    assertThat(jobInfos.get(0).properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+        .isEqualTo(XtsConstants.STATIC_XTS_JOB_NAME);
+    assertThat(jobInfos.get(1).properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+        .isEqualTo(XtsConstants.DYNAMIC_MCTS_JOB_NAME);
+  }
+
+  @Test
+  public void
+      createXtsTradefedTestJob_dynamicDownloadEnabled_hasNoMoblyTests_includeFilterSet_prunesMctsJob()
+          throws Exception {
+    Configuration moduleConfig =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder()
+                    .setXtsModule("module1")
+                    .setIsConfigV2(true)
+                    .build())
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("com.android.MyStandardTestClass")
+                    .build())
+            .build();
+
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.newBuilder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts --include-filter module1")
+            .setXtsType("cts")
+            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .addAllIncludeFilters(ImmutableList.of("module1"))
+            .putAllExpandedModules(ImmutableMap.of("module1", moduleConfig))
+            .setIsXtsDynamicDownloadEnabled(true)
+            .build();
+
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
+        .thenReturn(JobConfig.getDefaultInstance());
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(eq(sessionRequestInfo), any()))
+        .thenAnswer(invocation -> createMockJobInfo());
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(eq(sessionRequestInfo)))
+        .thenReturn(ImmutableList.of("module1"));
+    when(sessionRequestHandlerUtil.getStaticMctsModules()).thenReturn(ImmutableSet.of());
+
+    ImmutableList<JobInfo> jobInfos = jobCreator.createXtsTradefedTestJob(sessionRequestInfo);
+
+    // One job runs: STATIC_XTS. MCTS job is pruned!
+    assertThat(jobInfos).hasSize(1);
+    assertThat(jobInfos.get(0).properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+        .isEqualTo(XtsConstants.STATIC_XTS_JOB_NAME);
+  }
+
+  private static JobInfo createMockJobInfo() {
+    JobInfo mockJob = Mockito.mock(JobInfo.class);
+    when(mockJob.properties()).thenReturn(new Properties(new Timing()));
+    return mockJob;
   }
 }
