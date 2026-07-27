@@ -1,0 +1,135 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package devtools.mobileharness.fe.v6.service.proto.session;
+
+import "google/api/annotations.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/common/common_resources.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/session/session_resources.proto";
+
+option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.session";
+option java_multiple_files = true;
+option java_outer_classname = "SessionServiceProto";
+
+service SessionService {
+  // Retrieves the detailed Session overview by its ID. Session is a top-level
+  // resource, so the path is flat: /v6/sessions/{session_id}.
+  rpc GetSession(GetSessionRequest) returns (GetSessionResponse) {
+    option (google.api.http) = {
+      get: "/v6/sessions/{session_id}"
+    };
+  }
+
+  // Gets the log of a session by its ID, returning the log from `offset` to the
+  // end.
+  //
+  // Non-path fields (offset, content_hash) are automatically mapped to query
+  // parameters by the gRPC-JSON transcoder.
+  rpc GetSessionLog(GetSessionLogRequest) returns (GetSessionLogResponse) {
+    option (google.api.http) = {
+      get: "/v6/sessions/{session_id}/log"
+    };
+  }
+
+  // Retrieves the content of a specific file associated with a Session.
+  //
+  // Non-path fields (file_path) are automatically mapped to query parameters
+  // by the gRPC-JSON transcoder.
+  rpc GetSessionFile(GetSessionFileRequest) returns (GetSessionFileResponse) {
+    option (google.api.http) = {
+      get: "/v6/sessions/{session_id}/file"
+    };
+  }
+}
+
+message GetSessionRequest {
+  string session_id = 1;
+}
+
+message GetSessionResponse {
+  SessionDetail session = 1;
+}
+
+message GetSessionLogRequest {
+  // The ID of the session whose log to retrieve.
+  string session_id = 1;
+
+  // The starting byte offset to read from. Pass 0 for the first call; pass
+  // back `next_offset` from the previous response for subsequent polls to get
+  // only newly-appended content.
+  int64 offset = 2;
+
+  // Optional log integrity token, echoed verbatim from the previous response's
+  // `content_hash`. The server uses it to verify that the log content the
+  // client has cached (bytes [0, offset)) has not changed since the last
+  // response:
+  //   - Match (or empty) → normal response from `offset` onward.
+  //   - Mismatch → `log_reset = true`, full log returned from byte 0.
+  //
+  // The client treats this as an opaque string — it never computes or inspects
+  // it. On the first request (offset=0), omit this field.
+  string content_hash = 3;
+}
+
+message GetSessionLogResponse {
+  // Log content starting from:
+  //   - the request `offset` (normal case), OR
+  //   - byte 0 (if `log_reset` is true, indicating a content_hash mismatch).
+  string log_content = 1;
+
+  // The byte offset immediately after `log_content` (i.e. the current total log
+  // length). Pass this as `offset` on the next poll to get only new content.
+  int64 next_offset = 2;
+
+  // The session's current lifecycle status, read from MOSS at query time. The
+  // frontend uses this to decide whether to keep polling:
+  //   - RUNNING / NEW / ASSIGNED → schedule another poll after a delay
+  //   - DONE / SUSPENDED → stop polling (log is final)
+  //
+  // This is authoritative (fresh from MOSS), so the frontend does NOT need a
+  // separate GetSession call just for status during log tailing.
+  devtools.mobileharness.fe.v6.service.proto.common.SessionStatus
+      session_status = 3;
+
+  // True if the server detected that the log content before the requested
+  // `offset` has changed (content_hash mismatch). When set:
+  //   - `log_content` contains the FULL log from byte 0 (not from `offset`).
+  //   - `next_offset` reflects the full log length.
+  //   - The client should discard its cached log and replace it entirely.
+  //
+  // Always false when the request omits `content_hash`.
+  bool log_reset = 4;
+
+  // Server-computed integrity token covering the log content from byte 0 to
+  // `next_offset`. The client stores this opaquely and passes it back as
+  // `content_hash` in the next request so the server can detect if content
+  // before the client's `offset` has changed.
+  //
+  // Always present. On `log_reset`, this covers the full log (since the
+  // response returned the full log from byte 0).
+  string content_hash = 5;
+}
+
+message GetSessionFileRequest {
+  string session_id = 1;
+  string file_path = 2;
+}
+
+message GetSessionFileResponse {
+  string content = 1;
+}
