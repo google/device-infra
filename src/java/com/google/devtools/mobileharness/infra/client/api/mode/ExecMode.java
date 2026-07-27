@@ -25,8 +25,10 @@ import com.google.devtools.mobileharness.infra.client.api.controller.allocation.
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import java.util.Optional;
 
 /**
  * Execution mode of Mobile Harness client. Implements this interface for running against different
@@ -48,6 +50,14 @@ public interface ExecMode {
 
   /** Creates a querier to query the information of the available devices/labs. */
   DeviceQuerier createDeviceQuerier();
+
+  /**
+   * Creates a stub for diagnosing job allocation failures, or empty if this mode does not support
+   * allocation diagnosis.
+   */
+  default Optional<LabInfoStub> createLabInfoStub() {
+    return Optional.empty();
+  }
 
   /** Creates a test runner for executing the given test on the given device. */
   DirectTestRunner createTestRunner(
