@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.DeviceActionsBuilder;
+import com.google.devtools.mobileharness.fe.v6.service.device.provider.RunningTestInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceActions;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceType;
@@ -60,6 +61,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.Device.SubDeviceDimensi
 import java.time.Instant;
 import java.time.InstantSource;
 import java.util.Base64;
+import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -127,6 +129,7 @@ public final class GetHostDeviceSummariesHandlerTest {
 
   @Bind @Mock private RemoteControlEligibilityChecker remoteControlEligibilityChecker;
   @Bind @Mock private DeviceActionsBuilder deviceActionsBuilder;
+  @Bind @Mock private RunningTestInfoProvider runningTestInfoProvider;
   @Bind private InstantSource instantSource = InstantSource.fixed(NOW);
 
   @Inject private GetHostDeviceSummariesHandler getHostDeviceSummariesHandler;
@@ -134,6 +137,8 @@ public final class GetHostDeviceSummariesHandlerTest {
   @Before
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+    when(runningTestInfoProvider.getRunningTest(any()))
+        .thenReturn(immediateFuture(Optional.empty()));
     when(remoteControlEligibilityChecker.checkTechnicalEligibility(any()))
         .thenReturn(RemoteControlEligibilityResult.builder().setIsEligible(true).build());
     when(deviceActionsBuilder.buildDeviceActions(any(), any())).thenReturn(MOCKED_ACTIONS);

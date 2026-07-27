@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.fe.v6.service.device.provider.DeviceOpsStubProvider;
+import com.google.devtools.mobileharness.fe.v6.service.device.provider.RunningTestInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.builder.RemoteControlUrlBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLabServerLifecycleActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLabServerReleaseActionHelper;
@@ -87,6 +88,7 @@ public final class HostServiceLogicImplTest {
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
   @Bind @Mock private LabInfoProvider labInfoProvider;
+  @Bind @Mock private RunningTestInfoProvider runningTestInfoProvider;
   @Bind @Mock private HostAuxiliaryInfoProvider hostAuxiliaryInfoProvider;
   @Bind @Mock private HostLatestVersionProvider hostLatestVersionProvider;
   @Bind @Mock private SubDeviceInfoListFactory subDeviceInfoListFactory;
@@ -124,6 +126,8 @@ public final class HostServiceLogicImplTest {
     when(hostAuxiliaryInfoProvider.getHostReleaseInfo(anyString(), any()))
         .thenReturn(immediateFuture(Optional.empty()));
     when(deviceOpsStubProvider.createStub(anyString(), any())).thenReturn(deviceOpsStub);
+    when(runningTestInfoProvider.getRunningTest(anyString()))
+        .thenReturn(immediateFuture(Optional.empty()));
     when(environment.isAts()).thenReturn(false);
     hostServiceLogicImpl =
         Guice.createInjector(BoundFieldModule.of(this)).getInstance(HostServiceLogicImpl.class);

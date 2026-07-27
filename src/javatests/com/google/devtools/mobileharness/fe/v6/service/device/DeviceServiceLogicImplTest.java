@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.fe.v6.service.device.handlers.DeviceHea
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.LogcatActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.ScreenshotActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.TestbedConfigBuilder;
+import com.google.devtools.mobileharness.fe.v6.service.device.provider.RunningTestInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHeaderInfoRequest;
@@ -75,6 +76,7 @@ public final class DeviceServiceLogicImplTest {
 
   @Bind @Mock private DeviceDataLoader deviceDataLoader;
   @Bind @Mock private LabInfoProvider labInfoProvider;
+  @Bind @Mock private RunningTestInfoProvider runningTestInfoProvider;
   @Bind @Mock private ConfigurationProvider configurationProvider;
   @Bind @Mock private TestbedConfigBuilder testbedConfigBuilder;
   @Bind @Mock private DeviceHeaderInfoBuilder deviceHeaderInfoBuilder;
@@ -91,6 +93,8 @@ public final class DeviceServiceLogicImplTest {
   @Before
   public void setUp() {
     when(universeFactory.create(anyString())).thenReturn(new UniverseScope.SelfUniverse());
+    when(runningTestInfoProvider.getRunningTest(anyString()))
+        .thenReturn(immediateFuture(Optional.empty()));
     deviceServiceLogicImpl =
         Guice.createInjector(BoundFieldModule.of(this)).getInstance(DeviceServiceLogicImpl.class);
   }

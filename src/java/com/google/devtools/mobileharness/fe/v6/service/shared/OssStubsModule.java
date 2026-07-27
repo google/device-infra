@@ -31,6 +31,8 @@ import com.google.devtools.mobileharness.fe.v6.service.device.handlers.Screensho
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.TestbedConfigBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.device.provider.DeviceOpsStubProvider;
 import com.google.devtools.mobileharness.fe.v6.service.device.provider.NoOpDeviceOpsStubProvider;
+import com.google.devtools.mobileharness.fe.v6.service.device.provider.NoOpRunningTestInfoProvider;
+import com.google.devtools.mobileharness.fe.v6.service.device.provider.RunningTestInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.builder.NoOpRemoteControlUrlBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.host.builder.RemoteControlUrlBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.NoOpPreflightLabServerLifecycleActionHelper;
@@ -145,6 +147,7 @@ public final class OssStubsModule extends AbstractModule {
         .in(Singleton.class);
     bind(LogcatActionHelper.class).to(NoOpLogcatActionHelper.class).in(Singleton.class);
     bind(DeviceOpsStubProvider.class).to(NoOpDeviceOpsStubProvider.class).in(Singleton.class);
+    bind(RunningTestInfoProvider.class).to(NoOpRunningTestInfoProvider.class).in(Singleton.class);
     bind(RemoteControlUrlBuilder.class).to(NoOpRemoteControlUrlBuilder.class);
     bind(ScreenshotActionHelper.class).to(NoOpScreenshotActionHelper.class).in(Singleton.class);
     bind(WifiCredentialsStore.class).to(NoOpWifiCredentialsStore.class).in(Singleton.class);

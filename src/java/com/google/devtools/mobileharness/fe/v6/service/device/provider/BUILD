@@ -28,6 +28,8 @@ java_library(
         "CloudFileTransferStubProvider.java",
         "DeviceOpsStubProvider.java",
         "NoOpDeviceOpsStubProvider.java",
+        "NoOpRunningTestInfoProvider.java",
+        "RunningTestInfoProvider.java",
     ],
     visibility = [
         "//java/com/google/devtools/mobileharness/fe/v6/service:__subpackages__",
@@ -39,5 +41,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:device_ops",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/cloud/rpc/stub:cloud_file_transfer_stub",
+        "@maven//:com_google_guava_guava",
     ],
 )
