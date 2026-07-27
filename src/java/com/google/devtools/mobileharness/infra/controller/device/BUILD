@@ -31,6 +31,7 @@ package(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/stat:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api/mode/local:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/shared/labinfo:__subpackages__",
     ],
 )
@@ -139,7 +140,11 @@ java_library(
     name = "device_id_manager_shim",
     srcs = ["DeviceIdManagerShim.java"],
     # DO NOT change this. This is a hack to allow code in an allowlist to access the DeviceIdManager's package private methods.
-    visibility = ["//src/java/com/google/devtools/omnilab/device/lab/server/framework/internal/device:__pkg__"],
+    visibility = [
+        "//:omnilab_fusion",
+        "//src/java/com/google/devtools/omnilab/device/lab/server/framework/internal/device:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
+    ],
     deps = [
         ":device_id_manager",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:device_id_descriptor",
