@@ -133,6 +133,12 @@ export class App implements OnDestroy {
       this.showContent = true;
     } else if (path === 'hosts/:hostName' && params['hostName']) {
       this.showContent = true;
+    } else if (
+      path === 'jobs/:jobId/tests/:id' &&
+      params['id'] &&
+      params['jobId']
+    ) {
+      this.showContent = true;
     } else {
       this.showContent = false;
     }

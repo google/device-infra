@@ -47,6 +47,16 @@ service TestService {
       get: "/v6/tests/{test_id}/log"
     };
   }
+
+  // Gets the content of a test file by its path.
+  //
+  // Non-path fields (job_id, file_path) are automatically mapped to query
+  // parameters by the gRPC-JSON transcoder.
+  rpc GetTestFile(GetTestFileRequest) returns (GetTestFileResponse) {
+    option (google.api.http) = {
+      get: "/v6/tests/{test_id}/file"
+    };
+  }
 }
 
 message GetTestRequest {
@@ -129,4 +139,20 @@ message GetTestLogResponse {
   // Always present. On `log_reset`, this covers the full log (since the
   // response returned the full log from byte 0).
   string content_hash = 5;
+}
+
+message GetTestFileRequest {
+  // The ID of the test whose file to retrieve.
+  string test_id = 1;
+
+  // The ID of the parent job.
+  string job_id = 2;
+
+  // The relative path of the file to retrieve.
+  string file_path = 3;
+}
+
+message GetTestFileResponse {
+  // The retrieved file content.
+  string content = 1;
 }

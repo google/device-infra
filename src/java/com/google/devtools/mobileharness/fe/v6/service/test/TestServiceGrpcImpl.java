@@ -18,6 +18,8 @@ package com.google.devtools.mobileharness.fe.v6.service.test;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
+import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestFileRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestFileResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestLogRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestLogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestRequest;
@@ -59,5 +61,17 @@ public final class TestServiceGrpcImpl extends TestServiceGrpc.TestServiceImplBa
         executor,
         TestServiceGrpc.getServiceDescriptor(),
         TestServiceGrpc.getGetTestLogMethod());
+  }
+
+  @Override
+  public void getTestFile(
+      GetTestFileRequest request, StreamObserver<GetTestFileResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::getTestFile,
+        executor,
+        TestServiceGrpc.getServiceDescriptor(),
+        TestServiceGrpc.getGetTestFileMethod());
   }
 }

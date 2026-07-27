@@ -4,4 +4,5 @@ import {TestOverviewData} from '@deviceinfra/app/core/models/test_overview';
 export interface TestPageData {
   readonly testOverviewData: TestOverviewData | null;
   readonly error?: string;
+  readonly jobId?: string;
 }

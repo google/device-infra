@@ -68,14 +68,19 @@ describe('TestDetail Component', () => {
     mockTestService = jasmine.createSpyObj('TestService', [
       'getTest',
       'getTestLog',
+      'getTestFile',
     ]);
     mockTestService.getTest.and.returnValue(of(mockOverviewData));
     mockTestService.getTestLog.and.returnValue(
       of({
         logContent: '',
         nextOffset: 0,
+        testStatus: TestStatus.TEST_STATUS_DONE,
+        logReset: false,
+        contentHash: 'hash-test-detail',
       }),
     );
+    mockTestService.getTestFile.and.returnValue(of(''));
 
     mockClipboardService = jasmine.createSpyObj('ClipboardService', [
       'copyToClipboard',
@@ -116,7 +121,10 @@ describe('TestDetail Component', () => {
   });
 
   it('should fetch test details on init', () => {
-    expect(mockTestService.getTest).toHaveBeenCalledWith({testId: 'test_123'});
+    expect(mockTestService.getTest).toHaveBeenCalledWith({
+      testId: 'test_123',
+      jobId: '',
+    });
     const pageData = component.testPageData();
     expect(pageData).toBeTruthy();
     expect(pageData!.testOverviewData!.id).toBe('test_123');
@@ -130,5 +138,30 @@ describe('TestDetail Component', () => {
     expect(mockSnackBarService.showSuccess).toHaveBeenCalledWith(
       'Copied to clipboard!',
     );
+  });
+
+  it('should render "Devices" label when there are multiple devices', () => {
+    const multiDeviceData = {
+      ...mockOverviewData,
+      devices: {
+        device: [
+          {id: 'device_01', type: 'AndroidRealDevice'},
+          {id: 'device_02', type: 'AndroidRealDevice'},
+        ],
+      },
+    };
+    mockTestService.getTest.and.returnValue(of(multiDeviceData));
+
+    const multiFixture = TestBed.createComponent(TestDetail);
+    multiFixture.detectChanges();
+    const compiled = multiFixture.nativeElement as HTMLElement;
+    const labels = compiled.querySelectorAll('.executed-on-grid .grid-label');
+    expect(labels[0]?.textContent?.trim()).toBe('Devices');
+  });
+
+  it('should render "Device" label when there is only one device', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const labels = compiled.querySelectorAll('.executed-on-grid .grid-label');
+    expect(labels[0]?.textContent?.trim()).toBe('Device');
   });
 });

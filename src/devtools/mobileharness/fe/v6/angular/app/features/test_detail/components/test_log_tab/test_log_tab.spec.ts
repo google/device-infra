@@ -24,10 +24,13 @@ import {TestLogTab} from './test_log_tab';
   standalone: true,
   imports: [TestLogTab],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<app-test-log-tab [testId]="testId"></app-test-log-tab>`,
+  template: `<app-test-log-tab [testId]="testId" [jobId]="jobId" [cloudLogLink]="cloudLogLink" [initialStatus]="initialStatus"></app-test-log-tab>`,
 })
 class TestHostComponent {
   testId!: string;
+  jobId = 'job_123';
+  cloudLogLink = 'http://cloud-log-link';
+  initialStatus = TestStatus.TEST_STATUS_DONE;
 }
 
 describe('TestLogTab Component', () => {
@@ -53,6 +56,9 @@ describe('TestLogTab Component', () => {
         of({
           logContent: 'Log Content 1\nLog Content 2',
           nextOffset: 27,
+          testStatus: TestStatus.TEST_STATUS_DONE,
+          logReset: false,
+          contentHash: 'hash-done',
         }),
       );
 
@@ -74,16 +80,16 @@ describe('TestLogTab Component', () => {
     });
 
     it('should fetch logs and bind inputs correctly', () => {
-      expect(mockTestService.getTest).toHaveBeenCalledWith({
-        testId: 'test_123',
-      });
+      expect(mockTestService.getTest).not.toHaveBeenCalled();
       expect(mockTestService.getTestLog).toHaveBeenCalledWith({
         testId: 'test_123',
+        jobId: 'job_123',
         offset: 0,
-        length: 100000,
+        contentHash: undefined,
       });
       expect(component.logLines()).toEqual(['Log Content 1', 'Log Content 2']);
       expect(component.cloudLogLink()).toBe('http://cloud-log-link');
+      expect(component.logViewport()).toBeTruthy();
     });
   });
 
@@ -114,11 +120,17 @@ describe('TestLogTab Component', () => {
           return of({
             logContent: 'Line 1\nLine 2\n',
             nextOffset: 13,
+            testStatus: TestStatus.TEST_STATUS_RUNNING,
+            logReset: false,
+            contentHash: 'hash-running-1',
           });
         }
         return of({
           logContent: 'Line 3\nLine 4\n',
           nextOffset: 27,
+          testStatus: TestStatus.TEST_STATUS_RUNNING,
+          logReset: false,
+          contentHash: 'hash-running-2',
         });
       });
 
@@ -129,6 +141,9 @@ describe('TestLogTab Component', () => {
 
       runningFixture = TestBed.createComponent(TestHostComponent);
       runningFixture.componentInstance.testId = 'test_running';
+      runningFixture.componentInstance.jobId = 'job_123';
+      runningFixture.componentInstance.initialStatus =
+        TestStatus.TEST_STATUS_RUNNING;
       runningComponent = runningFixture.debugElement.query(
         By.directive(TestLogTab),
       ).componentInstance;

@@ -464,6 +464,7 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      line-height: 1.375;
 
       &.font-mono {
         font-family: 'Roboto Mono', monospace;

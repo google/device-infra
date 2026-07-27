@@ -1,3 +1,7 @@
+import {
+  CdkVirtualScrollViewport,
+  ScrollingModule,
+} from '@angular/cdk/scrolling';
 import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -5,7 +9,6 @@ import {
   computed,
   DestroyRef,
   effect,
-  ElementRef,
   inject,
   input,
   OnInit,
@@ -23,13 +26,12 @@ import {TEST_SERVICE} from '../../../../core/services/test/test_service';
 import {FetchState} from '../../models';
 
 const POLLING_INTERVAL_MS = 2000;
-const CHUNK_SIZE = 100000;
 
 /** Component for rendering the test log tab content. */
 @Component({
   selector: 'app-test-log-tab',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatTooltipModule],
+  imports: [CommonModule, MatIconModule, MatTooltipModule, ScrollingModule],
   templateUrl: './test_log_tab.ng.html',
   styleUrl: './test_log_tab.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -37,14 +39,20 @@ const CHUNK_SIZE = 100000;
 export class TestLogTab implements OnInit {
   /** The unique test ID passed from the parent component. */
   readonly testId = input.required<string>();
+  readonly jobId = input.required<string>();
 
   private readonly testService = inject(TEST_SERVICE);
   private readonly destroyRef = inject(DestroyRef);
 
   /** Signal holding the array of log lines currently rendered in the log viewport. */
   readonly logLines = signal<string[]>(['Loading logs...']);
-  /** Signal holding the external cloud log explorer URL for this test. */
-  readonly cloudLogLink = signal<string>('');
+  /** The external cloud log explorer URL for this test. */
+  readonly cloudLogLink = input<string>('');
+
+  /** The initial test status of the test. */
+  readonly initialStatus = input<TestStatus>(
+    TestStatus.TEST_STATUS_UNSPECIFIED,
+  );
 
   /** Buffer preserving incomplete line string fragments across network fetch boundaries. */
   private trailingBuffer = '';
@@ -67,7 +75,7 @@ export class TestLogTab implements OnInit {
   });
 
   /** Reference to the log viewer scroll container. */
-  readonly logViewport = viewChild<ElementRef<HTMLElement>>('logViewport');
+  readonly logViewport = viewChild<CdkVirtualScrollViewport>('logViewport');
 
   constructor() {
     effect(() => {
@@ -87,36 +95,27 @@ export class TestLogTab implements OnInit {
   private startLiveLogStreaming() {
     const id = this.testId();
 
-    const initialFetch$: Observable<FetchState> = this.testService
-      .getTest({testId: id})
-      .pipe(
-        concatMap((testDetail) => {
-          const link = testDetail.executionDetails?.cloudLogLink;
-          if (link) {
-            this.cloudLogLink.set(link);
-          }
-          return this.fetchLogChunk(id, 0, testDetail.status);
-        }),
-      );
+    // Fetch the initial chunk starting at offset 0.
+    const initialFetch$: Observable<FetchState> = this.fetchLogChunk(id, 0);
 
     initialFetch$
       .pipe(
+        // Use expand to recursively schedule subsequent page polls.
         expand((state: FetchState): Observable<FetchState> => {
-          if (state.status === TestStatus.TEST_STATUS_DONE) {
+          // If the test has terminated (DONE or SUSPENDED), stop polling since logs are final.
+          if (
+            state.status === TestStatus.TEST_STATUS_DONE ||
+            state.status === TestStatus.TEST_STATUS_SUSPENDED
+          ) {
             return EMPTY;
           }
 
-          // Test is still running: wait, re-check status, then fetch the log
-          // newly appended since the last offset.
+          // Test is still running: wait for POLLING_INTERVAL_MS and query again
+          // passing back the previous offset and its associated contentHash.
           return timer(POLLING_INTERVAL_MS).pipe(
-            concatMap(() => this.testService.getTest({testId: id})),
-            concatMap((testDetail) => {
-              const link = testDetail.executionDetails?.cloudLogLink;
-              if (link) {
-                this.cloudLogLink.set(link);
-              }
-              return this.fetchLogChunk(id, state.offset, testDetail.status);
-            }),
+            concatMap(() =>
+              this.fetchLogChunk(id, state.offset, state.contentHash),
+            ),
           );
         }),
         catchError((err) => {
@@ -135,10 +134,18 @@ export class TestLogTab implements OnInit {
       )
       .subscribe({
         next: (state: FetchState) => {
+          // If the server signals logReset, it implies a contentHash mismatch has occurred
+          // (e.g. log rotated/cleared). In this case we clear the cache and show the fresh log.
+          if (state.logReset) {
+            this.logLines.set([]);
+            this.trailingBuffer = '';
+          }
           if (state.logContent) {
             this.appendLogs(state.logContent);
           }
-          const isStreamingDone = state.status === TestStatus.TEST_STATUS_DONE;
+          const isStreamingDone =
+            state.status === TestStatus.TEST_STATUS_DONE ||
+            state.status === TestStatus.TEST_STATUS_SUSPENDED;
           const currentLines = this.logLines();
           const remainsLoading =
             currentLines.length === 1 && currentLines[0] === 'Loading logs...';
@@ -154,22 +161,30 @@ export class TestLogTab implements OnInit {
    *
    * @param id The unique test ID.
    * @param offset The starting byte offset for the log fetch.
-   * @param status The current test status.
+   * @param contentHash Optional log integrity hash covering bytes [0, offset).
    * @return An observable emitting the resulting fetch state.
    */
   private fetchLogChunk(
     id: string,
     offset: number,
-    status: TestStatus,
+    contentHash?: string,
   ): Observable<FetchState> {
     return this.testService
-      .getTestLog({testId: id, offset, length: CHUNK_SIZE})
+      .getTestLog({
+        testId: id,
+        jobId: this.jobId(),
+        offset,
+        contentHash,
+      })
       .pipe(
         map((logResp) => {
+          // Map to FetchState, copying the authoritative test status and log-reset signals.
           return {
             offset: logResp.nextOffset,
-            status,
+            status: logResp.testStatus,
             logContent: logResp.logContent || '',
+            contentHash: logResp.contentHash,
+            logReset: logResp.logReset,
           };
         }),
       );
@@ -182,6 +197,9 @@ export class TestLogTab implements OnInit {
    * @param newLogs The byte-slice log string to append.
    */
   private appendLogs(newLogs: string) {
+    if (!newLogs) {
+      return;
+    }
     this.logLines.update((current) => {
       const lines =
         current.length === 1 &&
@@ -190,14 +208,18 @@ export class TestLogTab implements OnInit {
           ? []
           : [...current];
 
-      const rawLines = newLogs.split('\n');
+      // Normalize \r\n and terminal progress bar \r (carriage return) to \n before splitting.
+      const normalizedLogs = newLogs
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n');
+      const rawLines = normalizedLogs.split('\n');
       const hasPrefixMatch = this.trailingBuffer && lines.length > 0;
       if (hasPrefixMatch) {
         lines[lines.length - 1] += rawLines[0];
         rawLines.shift();
       }
 
-      const endsWithNewline = newLogs.endsWith('\n');
+      const endsWithNewline = normalizedLogs.endsWith('\n');
       this.trailingBuffer = endsWithNewline ? '' : rawLines.pop() || '';
 
       const lastIndex = rawLines.length - 1;
@@ -216,33 +238,21 @@ export class TestLogTab implements OnInit {
     });
   }
 
-  /**
-   * Automatically scrolls the viewport container to the absolute bottom
-   * if the user is currently positioned near the bottom of the log stream.
-   */
-  private scrollToBottom() {
-    const el = this.logViewport()?.nativeElement;
-    if (el) {
-      setTimeout(() => {
-        const offsetFromBottom =
-          el.scrollHeight - el.scrollTop - el.clientHeight;
-        if (
-          offsetFromBottom < 250 ||
-          el.scrollHeight <= el.clientHeight + 200
-        ) {
-          el.scrollTop = el.scrollHeight;
-        }
-      }, 50);
-    }
+  trackByIndex(index: number, _item: string): number {
+    return index;
   }
 
-  /**
-   * Tracking function for loop performance optimization.
-   *
-   * @param index The current array index.
-   * @return The numeric index tracking reference.
-   */
-  trackByFn(index: number) {
-    return index;
+  private scrollToBottom() {
+    const viewport = this.logViewport();
+    if (viewport) {
+      setTimeout(() => {
+        try {
+          viewport.checkViewportSize();
+          viewport.scrollTo({bottom: 0});
+        } catch {
+          // Fallback if viewport measurement fails.
+        }
+      }, 100);
+    }
   }
 }

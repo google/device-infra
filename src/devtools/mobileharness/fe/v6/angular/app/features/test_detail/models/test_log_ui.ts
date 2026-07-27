@@ -10,4 +10,6 @@ export interface FetchState {
   readonly status: TestStatus;
   /** The raw textual log content downloaded in this specific chunk. */
   readonly logContent: string;
+  readonly contentHash?: string;
+  readonly logReset?: boolean;
 }

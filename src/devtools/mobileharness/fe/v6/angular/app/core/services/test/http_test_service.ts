@@ -25,24 +25,44 @@ export class HttpTestService extends TestService {
   }
 
   override getTest(request: GetTestRequest): Observable<TestOverviewData> {
-    let url = `${this.apiUrl}/${request.testId}`;
+    const params: {[key: string]: string} = {
+      'job_id': request.jobId,
+    };
     if (request.subTestId) {
-      url += `?sub_test_id=${request.subTestId}`;
+      params['sub_test_id'] = request.subTestId;
     }
     return this.http
-      .get<GetTestResponse>(url)
+      .get<GetTestResponse>(`${this.apiUrl}/${request.testId}`, {params})
       .pipe(map((response) => response.test));
   }
 
   override getTestLog(
     request: GetTestLogRequest,
   ): Observable<GetTestLogResponse> {
-    return this.http.post<GetTestLogResponse>(
-      `${this.apiUrl}/${request.testId}:getTestLog`,
-      {
-        'offset': request.offset,
-        'length': request.length,
-      },
+    const params: {[key: string]: string | number} = {
+      'job_id': request.jobId,
+      'offset': request.offset,
+    };
+    if (request.contentHash) {
+      params['content_hash'] = request.contentHash;
+    }
+    return this.http.get<GetTestLogResponse>(
+      `${this.apiUrl}/${request.testId}/log`,
+      {params},
     );
+  }
+
+  override getTestFile(
+    testId: string,
+    jobId: string,
+    filePath: string,
+  ): Observable<string> {
+    const params: {[key: string]: string} = {
+      'job_id': jobId,
+      'file_path': filePath,
+    };
+    return this.http
+      .get<{content: string}>(`${this.apiUrl}/${testId}/file`, {params})
+      .pipe(map((resp) => resp.content || ''));
   }
 }

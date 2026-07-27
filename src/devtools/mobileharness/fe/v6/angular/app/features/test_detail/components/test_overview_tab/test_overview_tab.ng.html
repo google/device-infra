@@ -46,22 +46,23 @@
   }
 
   <!-- Execution Details -->
+  @let details = test().executionDetails;
   <app-info-card id="overview-execution" class="execution-card" cardTitle="Execution Details" [collapsible]="false">
     <div class="info-card-content">
       <dl class="detail-list-grid">
-        @if (test().executionDetails?.user) {
+        @if (details?.user) {
           <dt class="label-with-help">
             <span>Run As</span>
             <mat-icon matTooltip="The identity under which the test actually executed (Run As)." class="help-icon">info_outline</mat-icon>
           </dt>
-          <dd>{{ test().executionDetails?.user }}</dd>
+          <dd>{{ details?.user }}</dd>
         }
-        @if (test().executionDetails?.actualUser) {
+        @if (details?.actualUser) {
           <dt class="label-with-help">
             <span>Actual User</span>
             <mat-icon matTooltip="The credentialed person or system who actually submitted the test." class="help-icon">info_outline</mat-icon>
           </dt>
-          <dd>{{ test().executionDetails?.actualUser }}</dd>
+          <dd>{{ details?.actualUser }}</dd>
         }
         @for (item of timestampKeys; track item.key) {
           @let info = timestampInfoMap()[item.key];

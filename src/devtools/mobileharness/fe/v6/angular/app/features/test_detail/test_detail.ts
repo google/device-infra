@@ -32,6 +32,7 @@ import {
   TestStatus,
 } from '../../core/models/test_overview';
 import {TEST_SERVICE} from '../../core/services/test/test_service';
+import {FilesTab} from '../../shared/components/files_tab/files_tab';
 import {TestLogTab} from './components/test_log_tab/test_log_tab';
 import {TestOverviewTab} from './components/test_overview_tab/test_overview_tab';
 import {TestTimelineTab} from './components/test_timeline_tab/test_timeline_tab';
@@ -60,6 +61,7 @@ import {
     TestOverviewTab,
     TestTimelineTab,
     TestLogTab,
+    FilesTab,
     NavLink,
   ],
 })
@@ -76,7 +78,9 @@ export class TestDetail {
     {initialValue: null},
   );
 
-  readonly activeTab = signal<'overview' | 'timeline' | 'log'>('overview');
+  readonly activeTab = signal<'overview' | 'timeline' | 'log' | 'files'>(
+    'overview',
+  );
 
   readonly testPageData = toSignal(
     combineLatest([this.route.paramMap, this.route.queryParamMap]).pipe(
@@ -86,23 +90,28 @@ export class TestDetail {
           queryParams.get('sub_test_id') ||
           queryParams.get('sub_test') ||
           undefined,
+        jobId: params.get('jobId') || '',
       })),
       distinctUntilChanged(
-        (a, b) => a.testId === b.testId && a.subTestId === b.subTestId,
+        (a, b) =>
+          a.testId === b.testId &&
+          a.subTestId === b.subTestId &&
+          a.jobId === b.jobId,
       ),
       tap(() => {
         this.loadingService.show();
       }),
-      switchMap(({testId, subTestId}) => {
+      switchMap(({testId, subTestId, jobId}) => {
         if (!testId) {
           this.loadingService.hide();
           return of<TestPageData>({
             testOverviewData: null,
             error: 'No test ID provided in the route.',
+            jobId,
           });
         }
 
-        const request: GetTestRequest = {testId};
+        const request: GetTestRequest = {testId, jobId};
         if (subTestId) {
           request.subTestId = subTestId;
         }
@@ -110,7 +119,9 @@ export class TestDetail {
         const idForErrorLogging = subTestId || testId;
 
         return this.testService.getTest(request).pipe(
-          map((testOverviewData) => ({testOverviewData}) as TestPageData),
+          map(
+            (testOverviewData) => ({testOverviewData, jobId}) as TestPageData,
+          ),
           tap((data) => {
             if (data?.testOverviewData) {
               const test = data.testOverviewData;
@@ -126,6 +137,7 @@ export class TestDetail {
             return of<TestPageData>({
               testOverviewData: null,
               error: `Failed to load test data for ID: ${idForErrorLogging}. ${err.message || ''}`,
+              jobId,
             });
           }),
           finalize(() => {
@@ -172,7 +184,14 @@ export class TestDetail {
       : TEST_RESULT_DISPLAY_MAP[result];
   });
 
-  setActiveTab(tab: 'overview' | 'timeline' | 'log') {
+  readonly getTestFileContent = (path: string) => {
+    const test = this.testOverview();
+    const jobId = test?.job?.id || this.testPageData()?.jobId || '';
+    const testId = this.testId() || '';
+    return this.testService.getTestFile(testId, jobId, path);
+  };
+
+  setActiveTab(tab: 'overview' | 'timeline' | 'log' | 'files') {
     this.activeTab.set(tab);
   }
 }

@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.fe.v6.service.test;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestFileRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestFileResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestLogRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestLogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestRequest;
@@ -30,4 +32,7 @@ public interface TestServiceLogic {
 
   /** Gets the test log from the request offset to the end of the log. */
   ListenableFuture<GetTestLogResponse> getTestLog(GetTestLogRequest request);
+
+  /** Gets the content of a test file. */
+  ListenableFuture<GetTestFileResponse> getTestFile(GetTestFileRequest request);
 }

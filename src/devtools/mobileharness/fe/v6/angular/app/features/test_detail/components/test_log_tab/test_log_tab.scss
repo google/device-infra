@@ -59,7 +59,7 @@
 
 .log-viewer-viewport {
   color: #e8eaed;
-  overflow: hidden auto;
+  overflow: auto;
   font-family: 'Roboto Mono', monospace;
   font-size: 0.8125rem;
   @include common.shared-scrollbar-style();
@@ -70,8 +70,6 @@
   line-height: 20px;
   padding-left: 1.5rem;
   padding-right: 1.5rem;
-  white-space: pre-wrap;
-  word-break: break-all;
-  overflow-wrap: anywhere;
+  white-space: pre;
   box-sizing: border-box;
 }

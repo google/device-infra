@@ -27,4 +27,13 @@ export abstract class TestService {
   abstract getTestLog(
     request: GetTestLogRequest,
   ): Observable<GetTestLogResponse>;
+
+  /**
+   * Retrieves the content of a specific file associated with a Test.
+   */
+  abstract getTestFile(
+    testId: string,
+    jobId: string,
+    filePath: string,
+  ): Observable<string>;
 }

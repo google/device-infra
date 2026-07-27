@@ -6,13 +6,13 @@ import {
 } from '@deviceinfra/app/core/models/test_overview';
 import {MockTestScenario} from '../models';
 
-/** A mock test scenario representing a passed test. */
-export const SCENARIO_TEST_PASSED: MockTestScenario = {
-  id: 'f52aeb45-f80d-4072-870e-4d01b90f09ec',
-  scenarioName: 'Passed Test',
+/** A mock test scenario representing a test with various files populated. */
+export const SCENARIO_TEST_FILES: MockTestScenario = {
+  id: 'test-with-files-id-1234',
+  scenarioName: 'Test With Files',
   overview: {
-    id: 'f52aeb45-f80d-4072-870e-4d01b90f09ec',
-    name: 'com.google.codelab.mobileharness.android.hellomobileharness.HelloMobileHarnessTest#buttonText',
+    id: 'test-with-files-id-1234',
+    name: 'com.google.devsite.test.TestWithFiles#run',
     status: TestStatus.TEST_STATUS_DONE,
     result: TestResult.TEST_RESULT_PASS,
     job: {
@@ -26,9 +26,6 @@ export const SCENARIO_TEST_PASSED: MockTestScenario = {
       device: [
         {
           id: '99061FFAZ004AA',
-        },
-        {
-          id: '88051FFAZ003BB',
         },
       ],
     },
@@ -46,7 +43,6 @@ export const SCENARIO_TEST_PASSED: MockTestScenario = {
     },
     properties: {
       'dimension_rooted': 'false',
-      'abibaseband_version': '0c-250327-250401-b-13296697,g5400c-25032',
     },
     timingBreakdown: {
       createTime: '2025-07-09T10:11:15Z',
@@ -54,33 +50,45 @@ export const SCENARIO_TEST_PASSED: MockTestScenario = {
       endTime: '2025-07-09T10:11:25Z',
       stages: [
         {
-          name: 'Pre-run Test',
-          tag: 'client',
-          startTime: '2025-07-09T10:11:15Z',
-          endTime: '2025-07-09T10:11:17Z',
-        },
-        {
-          name: 'Pre-run Test',
-          tag: 'lab',
-          startTime: '2025-07-09T10:11:17Z',
-          endTime: '2025-07-09T10:11:19Z',
-        },
-        {
           name: 'Run Test',
           tag: 'client',
           startTime: '2025-07-09T10:11:19Z',
-          endTime: '2025-07-09T10:11:21Z',
-        },
-        {
-          name: 'Run Test',
-          tag: 'lab',
-          startTime: '2025-07-09T10:11:21Z',
           endTime: '2025-07-09T10:11:25Z',
         },
       ],
     },
+    fileExplorer: {
+      cnsPath: '/cns-fake/lz-d/home/dafeng/mobileharness/experiments/run_1',
+      files: [
+        {
+          path: 'test_run.log',
+          size: 1048,
+          type: 'log',
+        },
+        {
+          path: 'screenshot.png',
+          size: 143520,
+          type: 'image/png',
+        },
+        {
+          path: 'nested/folder/config.json',
+          size: 429,
+          type: 'application/json',
+        },
+        {
+          path: 'nested/folder/output.txt',
+          size: 12054,
+          type: 'text/plain',
+        },
+        {
+          path: 'large_file.db',
+          size: 25 * 1024 * 1024, // 25MB
+          type: 'binary/octet-stream',
+        },
+      ],
+    },
   },
-  log: '[10:11:15] Test started\n[10:11:18] Clicking button...\n[10:11:25] Assertion passed: Button text matches.\n[10:11:25] Test finished successfully.',
+  log: '[10:11:15] Loading files...\n[10:11:25] Test execution complete.',
   cloudLogLink:
-    'https://console.cloud.example.com/logs/query;query=resource.type%3D%22mobileharness_test%22%20AND%20labels.test_id%3D%22test-passed-1%22',
+    'https://console.cloud.example.com/logs/query;query=labels.test_id%3D%22test-with-files-id-1234%22',
 };

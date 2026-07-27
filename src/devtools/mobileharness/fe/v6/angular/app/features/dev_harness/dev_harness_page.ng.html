@@ -38,7 +38,7 @@
     @if (!testCollapsed()) {
       <nav class="sidebar-nav">
         @for (scenario of testScenarios; track scenario.id) {
-          <a [routerLink]="['/tests', scenario.id]" queryParamsHandling="preserve" class="nav-link">
+          <a [routerLink]="['/jobs', scenario.overview.job?.id || 'job_123', 'tests', scenario.id]" queryParamsHandling="preserve" class="nav-link">
             {{ scenario.scenarioName }}
           </a>
         }

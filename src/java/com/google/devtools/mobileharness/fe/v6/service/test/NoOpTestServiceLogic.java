@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.fe.v6.service.test;
 import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestFileRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestFileResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestLogRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestLogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestRequest;
@@ -37,5 +39,11 @@ public final class NoOpTestServiceLogic implements TestServiceLogic {
   public ListenableFuture<GetTestLogResponse> getTestLog(GetTestLogRequest request) {
     return immediateFailedFuture(
         new UnsupportedOperationException("TestService.GetTestLog is not available."));
+  }
+
+  @Override
+  public ListenableFuture<GetTestFileResponse> getTestFile(GetTestFileRequest request) {
+    return immediateFailedFuture(
+        new UnsupportedOperationException("TestService.GetTestFile is not available."));
   }
 }
