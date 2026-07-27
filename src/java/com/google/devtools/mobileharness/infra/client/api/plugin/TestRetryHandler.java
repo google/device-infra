@@ -39,6 +39,7 @@ import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -191,42 +192,44 @@ public class TestRetryHandler {
       return;
     }
 
-    RetryInfo retryInfo = getRetryStrategy(jobInfo).decideRetryOnTestEnd(currentTestInfo);
+    List<RetryInfo> retryInfos = getRetryStrategy(jobInfo).decideRetryOnTestEnd(currentTestInfo);
 
-    if (retryInfo.retryReason().isEmpty()) {
+    if (retryInfos.isEmpty()) {
       addFinalAttemptProperty(currentTestInfo);
     } else {
-      String retryReason = retryInfo.retryReason().orElse("");
-      String testName = currentTestInfo.locator().getName();
-      TestInfo newTest = addNewTest(jobInfo, currentTestInfo);
+      for (RetryInfo retryInfo : retryInfos) {
+        String retryReason = retryInfo.retryReason();
+        String testName = currentTestInfo.locator().getName();
+        TestInfo newTest = addNewTest(jobInfo, currentTestInfo);
 
-      newTest.properties().add(Test.RETRY_REASON, retryReason);
-      newTest.properties().addAll(retryInfo.newTestProperties());
+        newTest.properties().add(Test.RETRY_REASON, retryReason);
+        newTest.properties().addAll(retryInfo.newTestProperties());
 
-      String message =
-          String.format(
-              "Retry MH test [%s], reason=%s, old_id=%s, new_id=%s, job_remaining_time=%s",
-              testName,
-              retryReason,
-              currentTestInfo.locator().getId(),
-              newTest.locator().getId(),
-              jobInfo.timer().remainingTimeJava());
-      jobInfo.log().atInfo().alsoTo(logger).log("%s", message);
-      currentTestInfo.log().atInfo().log("%s", message);
-      newTest.log().atInfo().log("%s", message);
+        String message =
+            String.format(
+                "Retry MH test [%s], reason=%s, old_id=%s, new_id=%s, job_remaining_time=%s",
+                testName,
+                retryReason,
+                currentTestInfo.locator().getId(),
+                newTest.locator().getId(),
+                jobInfo.timer().remainingTimeJava());
+        jobInfo.log().atInfo().alsoTo(logger).log("%s", message);
+        currentTestInfo.log().atInfo().log("%s", message);
+        newTest.log().atInfo().log("%s", message);
 
-      try {
-        deviceAllocator.extraAllocation(newTest);
-      } catch (MobileHarnessException e) {
-        // Does nothing here. Even if it failed to add the new test to master here, it has
-        // been added to job. So the MasterDeviceAllocator will check and reopen it to master
-        // again.
-        currentTestInfo
-            .log()
-            .atWarning()
-            .alsoTo(logger)
-            .withCause(e)
-            .log("Failed to add allocation for retry test [%s]", newTest.locator().getId());
+        try {
+          deviceAllocator.extraAllocation(newTest);
+        } catch (MobileHarnessException e) {
+          // Does nothing here. Even if it failed to add the new test to master here, it has
+          // been added to job. So the MasterDeviceAllocator will check and reopen it to master
+          // again.
+          jobInfo
+              .log()
+              .atWarning()
+              .alsoTo(logger)
+              .withCause(e)
+              .log("Failed to add allocation for retry test [%s]", newTest.locator().getId());
+        }
       }
       currentTestInfo.properties().add(Ascii.toLowerCase(Test.IS_FINAL_ATTEMPT.name()), "false");
     }
@@ -248,7 +251,15 @@ public class TestRetryHandler {
         .properties()
         .add(Test.FOREGOING_TEST_RESULT, currentTestInfo.resultWithCause().get().type().name());
 
-    currentTestInfo.properties().add(Test.RETRY_TEST_ID, newTestInfo.locator().getId());
+    currentTestInfo
+        .properties()
+        .add(
+            Test.RETRY_TEST_ID,
+            currentTestInfo
+                .properties()
+                .getOptional(Test.RETRY_TEST_ID)
+                .map(id -> id + "," + newTestInfo.locator().getId())
+                .orElse(newTestInfo.locator().getId()));
 
     return newTestInfo;
   }
@@ -263,7 +274,7 @@ public class TestRetryHandler {
           .alsoTo(logger)
           .log(
               "%s is set to %d. Using FlakyTestRetryStrategy. All retry_level/test_attempts args"
-                  + " will be ignored.",
+                  + " are ignored.",
               FlakyTestRetryConstants.PARAM_FLAKY_TEST_ATTEMPTS, flakyTestAttempts);
       return flakyTestRetryStrategy;
     }
