@@ -26,7 +26,8 @@ type LocalCache struct {
 	cacheLock     cacheLock
 	// If true, use hardlink to push/pull items to/from cache. Otherwise, use copy.
 	// When there are too many hard links, it may fall back to copy.
-	useHardlink bool
+	useHardlink    bool
+	lockWaitTimeMS int64
 }
 
 type cacheLock struct {
@@ -62,7 +63,9 @@ func (c *LocalCache) lockAndInitCache() error {
 	if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX); err != nil {
 		return fmt.Errorf("failed to lock local cache %s: %v", c.cacheDir, err)
 	}
-	log.Infof("local cache lock: lock obtained, took %v", time.Since(start))
+	elapsed := time.Since(start)
+	c.lockWaitTimeMS += elapsed.Milliseconds()
+	log.Infof("local cache lock: lock obtained, took %v", elapsed)
 
 	client, err := c.initCache()
 	if err != nil {
@@ -72,6 +75,11 @@ func (c *LocalCache) lockAndInitCache() error {
 	c.cacheClient = client
 	c.cacheLock.lockFile = lockFile
 	return nil
+}
+
+// LockWaitTimeMS returns the total time in milliseconds spent waiting for the local cache lock.
+func (c *LocalCache) LockWaitTimeMS() int64 {
+	return c.lockWaitTimeMS
 }
 
 func (c *LocalCache) unlockAndCloseCache() error {

@@ -15,4 +15,4 @@
 
 """Version of the casdownloader binary and packages."""
 
-VERSION = "2.3"
+VERSION = "2.4"

@@ -55,6 +55,7 @@ type Stats struct {
 	DirPrepareTimeMS   int64  `json:"dir_prepare_time_ms"`
 	FileDownloadTimeMS int64  `json:"file_download_time_ms"`
 	ChunkRestoreTimeMS int64  `json:"chunk_restore_time_ms"`
+	CacheLockWaitTimeMS int64 `json:"cache_lock_wait_time_ms"`
 	DownloadError      string `json:"download_error"`
 	Notes              string `json:"notes"`
 }
@@ -563,6 +564,9 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 		}
 	} else {
 		err = d.downloadWithLocalCache(ctx, d.Cache, outputs)
+		if lc, ok := d.Cache.(interface{ LockWaitTimeMS() int64 }); ok {
+			d.DownloadStats.CacheLockWaitTimeMS = lc.LockWaitTimeMS()
+		}
 		d.Cache.Close()
 		if err != nil {
 			return err
