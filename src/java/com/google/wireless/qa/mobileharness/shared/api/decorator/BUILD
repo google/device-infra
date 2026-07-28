@@ -30,7 +30,9 @@ java_library(
     name = "decorator",
     srcs = ["Decorator.java"],
     deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:lifecycle_decorator_subclass",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "@maven//:com_google_errorprone_error_prone_annotations",
     ],
 )
 

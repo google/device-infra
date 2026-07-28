@@ -47,6 +47,7 @@ java_library(
     srcs = ["LifecycleDecorator.java"],
     deps = [
         ":base_decorator",
+        ":lifecycle_decorator_subclass",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
@@ -57,6 +58,15 @@ java_library(
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "lifecycle_decorator_subclass",
+    srcs = ["LifecycleDecoratorSubclass.java"],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:__pkg__",
     ],
 )
 

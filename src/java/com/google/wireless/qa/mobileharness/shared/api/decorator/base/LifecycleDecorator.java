@@ -46,6 +46,7 @@ import javax.annotation.Nullable;
  * }
  * }</pre>
  */
+@LifecycleDecoratorSubclass
 public abstract class LifecycleDecorator extends BaseDecorator {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
