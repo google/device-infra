@@ -78,4 +78,29 @@ public final class DeviceInfoUtilTest {
 
     assertThat(dimensions).containsExactly("dim1", "val1,val2");
   }
+
+  @Test
+  public void getVersion_releaseVersionPresent_returnsReleaseVersion() {
+    ImmutableMap<String, String> dimensions = ImmutableMap.of("release_version", "15.0");
+    assertThat(DeviceInfoUtil.getVersion(dimensions)).isEqualTo("15.0");
+  }
+
+  @Test
+  public void getVersion_onlySoftwareVersionPresent_returnsSoftwareVersion() {
+    ImmutableMap<String, String> dimensions = ImmutableMap.of("software_version", "15.0.1");
+    assertThat(DeviceInfoUtil.getVersion(dimensions)).isEqualTo("15.0.1");
+  }
+
+  @Test
+  public void getVersion_bothPresent_returnsReleaseVersion() {
+    ImmutableMap<String, String> dimensions =
+        ImmutableMap.of("release_version", "15.0", "software_version", "15.0.1");
+    assertThat(DeviceInfoUtil.getVersion(dimensions)).isEqualTo("15.0");
+  }
+
+  @Test
+  public void getVersion_bothMissing_returnsEmptyString() {
+    ImmutableMap<String, String> dimensions = ImmutableMap.of("other", "val");
+    assertThat(DeviceInfoUtil.getVersion(dimensions)).isEmpty();
+  }
 }

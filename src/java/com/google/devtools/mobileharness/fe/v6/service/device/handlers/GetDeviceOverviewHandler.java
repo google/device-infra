@@ -246,14 +246,7 @@ public final class GetDeviceOverviewHandler {
         .setHardware(allDimensions.getOrDefault("hardware", ""))
         .setBuild(allDimensions.getOrDefault("build", ""));
 
-    String os = allDimensions.getOrDefault("os", "");
-    if (os.equals("Android")) {
-      basicInfo.setVersion(allDimensions.getOrDefault("sdk_version", ""));
-    } else {
-      basicInfo.setVersion(
-          allDimensions.getOrDefault(
-              "software_version", allDimensions.getOrDefault("sdk_version", "")));
-    }
+    basicInfo.setVersion(DeviceInfoUtil.getVersion(allDimensions));
 
     try {
       basicInfo.setBatteryLevel(

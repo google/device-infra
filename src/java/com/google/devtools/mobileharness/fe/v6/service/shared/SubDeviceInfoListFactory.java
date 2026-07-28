@@ -121,10 +121,8 @@ public class SubDeviceInfoListFactory {
         .ifPresent(subDeviceInfoBuilder::setModel);
 
     // Version extraction with fallback.
-    String version =
-        Optional.ofNullable(dimensionMap.get(Dimension.Name.RELEASE_VERSION.lowerCaseName()))
-            .orElseGet(() -> dimensionMap.get(Dimension.Name.SOFTWARE_VERSION.lowerCaseName()));
-    if (version != null) {
+    String version = DeviceInfoUtil.getVersion(dimensionMap);
+    if (!version.isEmpty()) {
       subDeviceInfoBuilder.setVersion(version);
     }
 

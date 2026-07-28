@@ -200,7 +200,7 @@ public final class GetHostDeviceSummariesHandlerTest {
                                 DeviceDimension.newBuilder().setName("model").setValue("iphone10"))
                             .addSupportedDimension(
                                 DeviceDimension.newBuilder()
-                                    .setName("sdk_version")
+                                    .setName("software_version")
                                     .setValue("15"))))
             .build();
     GetLabInfoResponse labInfoResponseMultiple =

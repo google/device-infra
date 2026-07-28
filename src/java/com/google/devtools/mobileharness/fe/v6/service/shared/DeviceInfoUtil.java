@@ -21,13 +21,25 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.stream.Stream;
 
 /** Utility for extracting information from {@link DeviceInfo}. */
 public final class DeviceInfoUtil {
 
   private DeviceInfoUtil() {}
+
+  /**
+   * Gets the version of a device from its dimensions. Prioritizes 'release_version' over
+   * 'software_version', defaulting to an empty string.
+   */
+  public static String getVersion(Map<String, String> dimensions) {
+    return dimensions.getOrDefault(
+        Dimension.Name.RELEASE_VERSION.lowerCaseName(),
+        dimensions.getOrDefault(Dimension.Name.SOFTWARE_VERSION.lowerCaseName(), ""));
+  }
 
   /**
    * Extracts device dimensions from {@link DeviceInfo} and converts them to an {@link

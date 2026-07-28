@@ -89,6 +89,45 @@
     line-height: 1rem;
   }
 
+  .hint-callout {
+    background-color: #eff6ff; // blue-50
+    border: 1px solid #bfdbfe; // blue-200
+    border-radius: 0.5rem; // rounded-lg
+    padding: 0.75rem 1rem;
+    font-size: 0.75rem;
+    line-height: 1.25rem;
+    color: #1e3a8a; // blue-900
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .hint-title {
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin: 0;
+    color: #1e3a8a;
+
+    .info-icon-small {
+      font-size: 1rem;
+      width: 1rem;
+      height: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  .hint-text {
+    margin: 0;
+    line-height: 1rem;
+  }
+
   .link-container {
     border: 1px solid #e5e7eb;
     border-radius: 0.25rem;

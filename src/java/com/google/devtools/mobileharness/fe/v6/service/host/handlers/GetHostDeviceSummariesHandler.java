@@ -59,8 +59,6 @@ public final class GetHostDeviceSummariesHandler {
 
   private static final String DIMENSION_LABEL = "label";
   private static final String DIMENSION_MODEL = "model";
-  private static final String DIMENSION_SOFTWARE_VERSION = "software_version";
-  private static final String DIMENSION_SDK_VERSION = "sdk_version";
 
   private final LabInfoProvider labInfoProvider;
   private final HealthAndActivityBuilder healthAndActivityBuilder;
@@ -132,9 +130,7 @@ public final class GetHostDeviceSummariesHandler {
             .setLabel(dimensions.getOrDefault(DIMENSION_LABEL, ""))
             .setRequiredDims(requiredDims)
             .setModel(dimensions.getOrDefault(DIMENSION_MODEL, ""))
-            .setVersion(
-                dimensions.getOrDefault(
-                    DIMENSION_SOFTWARE_VERSION, dimensions.getOrDefault(DIMENSION_SDK_VERSION, "")))
+            .setVersion(DeviceInfoUtil.getVersion(dimensions))
             .setActions(createDeviceActions(deviceInfo, universe));
 
     // If it is a testbed device, decode sub-device information.

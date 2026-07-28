@@ -752,6 +752,11 @@ public final class GetDeviceOverviewHandlerTest {
                                     .build())
                             .addSupportedDimension(
                                 DeviceDimension.newBuilder()
+                                    .setName("release_version")
+                                    .setValue("12")
+                                    .build())
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder()
                                     .setName("sdk_version")
                                     .setValue("31")
                                     .build())))
@@ -764,7 +769,7 @@ public final class GetDeviceOverviewHandlerTest {
             .get()
             .getOverview();
 
-    assertThat(response.getBasicInfo().getVersion()).isEqualTo("31");
+    assertThat(response.getBasicInfo().getVersion()).isEqualTo("12");
     assertThat(response.getIsAndroid()).isTrue();
 
     DeviceInfo otherDevice =
