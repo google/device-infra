@@ -31,6 +31,7 @@ go_binary(
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/otelutil",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/mesh",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/transport",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/version",
         "@com_github_rsocket_rsocket_go//core/transport",
         "@org_golang_google_grpc//:grpc",
     ],

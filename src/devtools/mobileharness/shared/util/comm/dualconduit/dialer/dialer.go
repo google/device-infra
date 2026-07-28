@@ -25,6 +25,7 @@ import (
 	dconpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb"
 	dconsvcpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconsvcpb"
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/session"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel"
@@ -54,6 +55,7 @@ type Service struct {
 	ForwardAddress      string
 	DefaultRetryPolicy  RetryPolicy
 	KeepAliveTickPeriod time.Duration
+	rttHistogram        metric.Float64Histogram
 }
 
 // New creates a new Service with an initialized conduit.Manager, session.Manager, and default retry policy.
@@ -75,6 +77,18 @@ func New(ctx context.Context, hostname string, forwardAddress string, newTranspo
 		tickPeriod = defaultKeepAliveTickPeriod
 	}
 
+	meter := otel.Meter("dualconduit/conduit")
+	boundaries := []float64{1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000}
+	rttHistogram, err := meter.Float64Histogram(
+		"conduit.probe_rtt",
+		metric.WithDescription("Round-trip time (RTT) of data transfer during dialer pre-flight check to acceptor"),
+		metric.WithUnit("ms"),
+		metric.WithExplicitBucketBoundaries(boundaries...),
+	)
+	if err != nil {
+		slog.ErrorContext(ctx, "Failed to create conduit.probe_rtt histogram", "error", err)
+	}
+
 	s := &Service{
 		ServiceCtx:          ctx,
 		Manager:             cm,
@@ -84,6 +98,7 @@ func New(ctx context.Context, hostname string, forwardAddress string, newTranspo
 		ForwardAddress:      forwardAddress,
 		DefaultRetryPolicy:  policy,
 		KeepAliveTickPeriod: tickPeriod,
+		rttHistogram:        rttHistogram,
 	}
 	cm.SubscribeToRemove(s.handleConduitRemoved)
 	return s
@@ -352,9 +367,16 @@ func (s *Service) CheckConnection(ctx context.Context) error {
 
 		reqCtx, cancel := context.WithTimeout(ctx, checkConnectionRequestTimeout)
 		defer cancel()
+		startTime := time.Now()
 		resp, err := client.RequestResponse(payload.New([]byte(hostname), nil)).Block(reqCtx)
+		rtt := time.Since(startTime)
 		if err != nil {
 			return fmt.Errorf("pre-flight check request failed: %v", err)
+		}
+		if s.rttHistogram != nil {
+			s.rttHistogram.Record(ctx, float64(rtt.Microseconds())/1000.0, metric.WithAttributes(
+				attribute.String("acceptor.address", s.ForwardAddress),
+			))
 		}
 
 		expectedAck := "ACK " + hostname

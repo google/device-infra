@@ -16,6 +16,7 @@ import (
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/otelutil"
 	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/mesh"
 	dcontransport "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/transport"
+	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/version"
 	rsockettransport "github.com/rsocket/rsocket-go/core/transport"
 	"google.golang.org/grpc"
 )
@@ -24,6 +25,7 @@ const serviceName = "dualconduit-acceptor"
 
 func main() {
 	logutil.Setup("/logs/acceptor.log", serviceName)
+	printVersion := flag.Bool("version", false, "Print version information and exit")
 	port := flag.Int("port", 7878, "The RSocket server port")
 	transportType := flag.String("transport", "tcp", "The transport protocol to use (tcp, websocket)")
 	xdsPort := flag.Int("xds_port", 18000, "The xDS gRPC server port")
@@ -33,8 +35,15 @@ func main() {
 	clusterDiscoveryType := flag.String("cluster_discovery_type", "strict_dns", "The cluster discovery type for registered services in xDS (static, strict_dns, logical_dns)")
 	flag.Parse()
 
+	version.PrintBanner()
+	if *printVersion {
+		os.Exit(0)
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	slog.InfoContext(ctx, "Starting dualconduit-acceptor", "version", version.Version)
 
 	// Initialize OpenTelemetry telemetry (traces and metrics)
 	shutdownTelemetry, err := otelutil.InitTelemetry(ctx, serviceName)

@@ -61,6 +61,7 @@ type Conduit struct {
 	startTime         time.Time
 	telemetry         *Telemetry
 	durationHistogram metric.Float64Histogram
+	brokenCounter     metric.Int64Counter
 
 	// Tracks active logical connections in this conduit. For each accepted TCP
 	// connection or incoming RSocket channel, one connection is added.
@@ -73,7 +74,7 @@ func (c *Conduit) Context() context.Context {
 }
 
 // New creates the tunnel and sets up the bidirectional lifecycle bridge.
-func New(ctx context.Context, id string, meta *dconpb.EstablishConduitRequest, rs rsocket.CloseableRSocket, onRemove func(), beforeClose func(), openSpanContext trace.SpanContext, durationHistogram metric.Float64Histogram) *Conduit {
+func New(ctx context.Context, id string, meta *dconpb.EstablishConduitRequest, rs rsocket.CloseableRSocket, onRemove func(), beforeClose func(), openSpanContext trace.SpanContext, durationHistogram metric.Float64Histogram, brokenCounter metric.Int64Counter) *Conduit {
 	if meta != nil {
 		slog.InfoContext(ctx, "Creating Conduit", "id", id, "type", meta.Type, "destination", meta.DestinationEndpoint, "entry_port", meta.EntryPort)
 	} else {
@@ -91,6 +92,7 @@ func New(ctx context.Context, id string, meta *dconpb.EstablishConduitRequest, r
 		startTime:         time.Now(),
 		telemetry:         NewTelemetry(openSpanContext),
 		durationHistogram: durationHistogram,
+		brokenCounter:     brokenCounter,
 	}
 
 	// 1. Context -> RSocket: If the IO pump context is canceled (e.g., when the parent
@@ -123,9 +125,10 @@ func (c *Conduit) Close() error {
 	c.closeOnce.Do(func() {
 		slog.DebugContext(c.pumpCtx, "Conduit teardown started", "id", c.ID)
 
-		// 1. Record Metrics (Duration)
+		// 1. Record Metrics (Duration & Broken Counter)
 		duration := time.Since(c.startTime)
 		c.recordDurationMetric(duration)
+		c.recordBrokenMetric()
 
 		// 2. Record Close Trace
 		c.recordCloseTrace()
@@ -186,4 +189,19 @@ func (c *Conduit) recordDurationMetric(duration time.Duration) {
 	if c.durationHistogram != nil {
 		c.durationHistogram.Record(context.Background(), duration.Seconds())
 	}
+}
+
+func (c *Conduit) recordBrokenMetric() {
+	if c.brokenCounter == nil {
+		return
+	}
+	var attrs []attribute.KeyValue
+	if c.metadata != nil {
+		attrs = append(attrs,
+			attribute.String("conduit.destination", c.metadata.DestinationEndpoint),
+			attribute.Int("conduit.entry_port", int(c.metadata.EntryPort)),
+			attribute.String("conduit.type", c.metadata.Type.String()),
+		)
+	}
+	c.brokenCounter.Add(context.Background(), 1, metric.WithAttributes(attrs...))
 }

@@ -20,9 +20,13 @@ import (
 	dconpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb"
 	dconsvcpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconsvcpb"
 	dcontransport "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/transport"
+	"github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/version"
 	rsockettransport "github.com/rsocket/rsocket-go/core/transport"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/reflection"
+	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 type config struct {
@@ -34,10 +38,14 @@ type config struct {
 	ForwardAddress string
 }
 
-const serviceName = "dualconduit-dialer"
+const (
+	serviceName            = "dualconduit-dialer"
+	dualConduitServiceName = "mobileharness.shared.util.comm.dualconduit.DualConduitService"
+)
 
 func main() {
 	logutil.Setup("/logs/dialer.log", serviceName)
+	printVersion := flag.Bool("version", false, "Print version information and exit")
 	var cfg config
 	var port int
 	var retryStrategy string
@@ -46,6 +54,7 @@ func main() {
 	var retryMultiplier float64
 	var retryMaxAttempts int
 	var keepAliveTickPeriod time.Duration
+	var healthCheckPeriod time.Duration
 
 	flag.StringVar(&cfg.AcceptorTarget, "acceptor_target", "localhost:7878", "Acceptor target address (host:port or ws://host:port)")
 	flag.BoolVar(&cfg.UseSAToken, "use_sa_token", false, "Use Self-Signed JWT from Service Account key")
@@ -63,8 +72,16 @@ func main() {
 	flag.Float64Var(&retryMultiplier, "retry_multiplier", 2.0, "Multiplier for exponential retry backoff")
 	flag.IntVar(&retryMaxAttempts, "retry_max_attempts", 0, "Maximum retry attempts (0 for infinite, 1 for no retry)")
 	flag.DurationVar(&keepAliveTickPeriod, "keep_alive_tick_period", 20*time.Second, "Keep-alive tick period for the dialer connection")
+	flag.DurationVar(&healthCheckPeriod, "health_check_period", 1*time.Minute, "Health check period for checking connection status")
 
 	flag.Parse()
+
+	version.PrintBanner()
+	if *printVersion {
+		os.Exit(0)
+	}
+
+	slog.InfoContext(context.Background(), "Starting dualconduit-dialer", "version", version.Version)
 
 	if cfg.UseSAToken && cfg.SAKeyFile == "" {
 		slog.ErrorContext(context.Background(), "sa_key_file must be set when use_sa_token is true")
@@ -170,6 +187,35 @@ func main() {
 	s := grpc.NewServer()
 	dconsvcpb.RegisterDualConduitServiceServer(s, dialerSvc)
 
+	healthServer := health.NewServer()
+	healthgrpc.RegisterHealthServer(s, healthServer)
+	updateHealthStatus := func(status healthpb.HealthCheckResponse_ServingStatus) {
+		healthServer.SetServingStatus("", status)
+		healthServer.SetServingStatus(dualConduitServiceName, status)
+	}
+	updateHealthStatus(healthpb.HealthCheckResponse_SERVING)
+
+	if healthCheckPeriod > 0 {
+		go func() {
+			ticker := time.NewTicker(healthCheckPeriod)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-dialerCtx.Done():
+					updateHealthStatus(healthpb.HealthCheckResponse_NOT_SERVING)
+					return
+				case <-ticker.C:
+					if err := dialerSvc.CheckConnection(dialerCtx); err != nil {
+						slog.WarnContext(dialerCtx, "Health check failed", "error", err)
+						updateHealthStatus(healthpb.HealthCheckResponse_NOT_SERVING)
+					} else {
+						updateHealthStatus(healthpb.HealthCheckResponse_SERVING)
+					}
+				}
+			}
+		}()
+	}
+
 	if cfg.Debug {
 		reflection.Register(s)
 	}
@@ -188,6 +234,7 @@ func main() {
 	}()
 
 	slog.InfoContext(dialerCtx, "Dialer gRPC server listening", "port", port)
+	slog.InfoContext(dialerCtx, "\033[0;32mDialer server is ready\033[0m")
 	if err := s.Serve(lis); err != nil {
 		slog.ErrorContext(dialerCtx, "Failed to serve", "error", err)
 		os.Exit(1)

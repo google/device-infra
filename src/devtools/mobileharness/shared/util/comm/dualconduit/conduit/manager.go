@@ -33,6 +33,7 @@ type Manager struct {
 	conduits          map[string]*Conduit
 	removeHandlers    []RemoveHandler // List of removal subscribers.
 	durationHistogram metric.Float64Histogram
+	brokenCounter     metric.Int64Counter
 }
 
 // NewManager creates an empty manager for Conduits.
@@ -58,6 +59,17 @@ func (m *Manager) registerMetrics() {
 		slog.ErrorContext(context.Background(), "Failed to create conduit.duration histogram", "error", err)
 	} else {
 		m.durationHistogram = durationHistogram
+	}
+
+	brokenCounter, err := meter.Int64Counter(
+		"conduit.broken_count",
+		metric.WithDescription("Number of broken conduits"),
+		metric.WithUnit("1"),
+	)
+	if err != nil {
+		slog.ErrorContext(context.Background(), "Failed to create conduit.broken_count counter", "error", err)
+	} else {
+		m.brokenCounter = brokenCounter
 	}
 
 	ageGauge, err := meter.Float64ObservableGauge(
@@ -135,7 +147,7 @@ func (m *Manager) Add(ctx context.Context, id string, meta *dconpb.EstablishCond
 		}
 	}
 
-	c := New(ctx, id, meta, rs, onRemove, beforeClose, openSpanContext, m.durationHistogram)
+	c := New(ctx, id, meta, rs, onRemove, beforeClose, openSpanContext, m.durationHistogram, m.brokenCounter)
 	m.conduits[id] = c
 	return c, nil
 }

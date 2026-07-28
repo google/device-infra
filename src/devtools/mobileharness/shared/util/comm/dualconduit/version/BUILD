@@ -13,22 +13,17 @@
 # limitations under the License.
 #
 
-load("@bazel_gazelle//:def.bzl", "gazelle")
-load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+load("@rules_go//go:def.bzl", "go_library")
 
-# Make go.mod and go.sum visible to the root package for MODULE.bazel
-exports_files([
-    "go.mod",
-    "go.sum",
-])
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = [
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit:__subpackages__",
+    ],
+)
 
-# gazelle: prefix com_google_deviceinfra/src/devtools/mobileharness/shared/util/comm/dualconduit
-# gazelle:resolve go cel.dev/expr @dev_cel//:expr
-gazelle(name = "gazelle")
-
-pkg_tar(
-    name = "grpc_health_probe_tar",
-    srcs = ["@grpc_health_probe//file"],
-    package_dir = "/bin",
-    visibility = ["//visibility:public"],
+go_library(
+    name = "version",
+    srcs = ["version.go"],
+    importpath = "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/version",
 )

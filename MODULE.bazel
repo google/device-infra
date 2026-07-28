@@ -24,6 +24,16 @@ bazel_dep(name = "rules_python", version = "1.6.0")
 bazel_dep(name = "rules_swift", version = "2.1.1")
 bazel_dep(name = "cel-spec", version = "0.24.0", repo_name = "dev_cel")
 
+http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
+
+http_file(
+    name = "grpc_health_probe",
+    downloaded_file_path = "grpc_health_probe",
+    executable = True,
+    sha256 = "1c569de478b27292544e03bee75bd12e292f3ab040b00e8630162dcf9cd2cb0a",
+    url = "https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.53/grpc_health_probe-linux-amd64",
+)
+
 ##############
 # googleapis #
 ##############

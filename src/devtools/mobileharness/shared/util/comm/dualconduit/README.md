@@ -1,5 +1,13 @@
 # DualConduit Project
 
+```
+ ____   _   _     _     _         ____   ___   _   _  ____   _   _  ___  _____
+|  _ \ | | | |   / \   | |       / ___| / _ \ | \ | ||  _ \ | | | ||_ _||_   _|
+| | | || | | |  / _ \  | |      | |    | | | ||  \| || | | || | | | | |   | |
+| |_| || |_| | / ___ \ | |___   | |___ | |_| || |\  || |_| || |_| | | |   | |
+|____/  \___/ /_/   \_\|_____|   \____| \___/ |_| \_||____/  \___/ |___|  |_|
+```
+
 DualConduit is a service that converts restricted unidirectional connections
 into full-duplex communication pathways.
 

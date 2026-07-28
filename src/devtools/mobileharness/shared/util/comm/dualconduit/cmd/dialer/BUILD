@@ -33,9 +33,12 @@ go_binary(
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_go_proto",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/proto:dual_conduit_service_go_grpc",
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/transport",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit/version",
         "@com_github_rsocket_rsocket_go//core/transport",
         "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//health",
         "@org_golang_google_grpc//reflection",
+        "@org_golang_google_grpc//health/grpc_health_v1",
     ],
 )
 
@@ -53,7 +56,10 @@ oci_image(
     base = "@distroless_static",
     entrypoint = ["/dualconduit/dialer"],
     tags = ["deviceinfra_need_gcloud_auth"],
-    tars = [":dialer_tar"],
+    tars = [
+        ":dialer_tar",
+        "//src/devtools/mobileharness/shared/util/comm/dualconduit:grpc_health_probe_tar",
+    ],
 )
 
 oci_load(

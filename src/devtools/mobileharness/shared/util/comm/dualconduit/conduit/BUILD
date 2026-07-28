@@ -58,5 +58,6 @@ go_test(
         "@com_github_rsocket_rsocket_go//rx/flux",
         "@com_github_rsocket_rsocket_go//rx/mono",
         "@io_opentelemetry_go_otel_trace//:trace",
+        "@io_opentelemetry_go_otel//:otel",
     ],
 )
