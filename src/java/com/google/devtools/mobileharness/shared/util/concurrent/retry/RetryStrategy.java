@@ -24,13 +24,13 @@ import static com.google.common.math.LongMath.saturatedAdd;
 import static com.google.common.math.LongMath.saturatedMultiply;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Ticker;
 import com.google.common.collect.AbstractIterator;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.Serializable;
 import java.time.Duration;
+import java.util.Objects;
 import javax.annotation.Nullable;
 
 /**
@@ -333,7 +333,7 @@ public abstract class RetryStrategy implements Serializable {
 
     @Override
     public int hashCode() {
-      return Objects.hashCode(numAttempts, firstDelay, multiplier);
+      return Objects.hash(numAttempts, firstDelay, multiplier);
     }
   }
 
@@ -392,7 +392,7 @@ public abstract class RetryStrategy implements Serializable {
 
     @Override
     public int hashCode() {
-      return Objects.hashCode(retryStrategy, randomnessFactor);
+      return Objects.hash(retryStrategy, randomnessFactor);
     }
 
     private Duration randomizeWait(Duration delay) {
@@ -446,7 +446,7 @@ public abstract class RetryStrategy implements Serializable {
 
     @Override
     public int hashCode() {
-      return Objects.hashCode(delay, totalRetryTime);
+      return Objects.hash(delay, totalRetryTime);
     }
 
     @Override
@@ -494,7 +494,7 @@ public abstract class RetryStrategy implements Serializable {
 
     @Override
     public int hashCode() {
-      return Objects.hashCode(firstRetryStrategy, secondRetryStrategy);
+      return Objects.hash(firstRetryStrategy, secondRetryStrategy);
     }
   }
 
