@@ -57,6 +57,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -128,7 +129,8 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+  protected SetupResult setUp(SetupContext context)
+      throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
     spec = testInfo.jobInfo().combinedSpec(this);
     testInfo
@@ -174,6 +176,7 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
             String.format("logcat -v threadtime -T \"%s\"", timeOnDevice),
             testInfo.jobInfo().timer().remainingTimeJava(),
             logcatLineProxy);
+    return SetupResult.continueDecorated();
   }
 
   @Override

@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.gson.JsonSyntaxException;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.StepSkippableLifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -105,7 +106,7 @@ public class AndroidAtsDynamicConfigPusherDecorator extends StepSkippableLifecyc
   }
 
   @Override
-  protected void skippableSetUp(SetupContext context)
+  protected SetupResult skippableSetUp(SetupContext context)
       throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
     String deviceId = getDevice().getDeviceId();
@@ -153,6 +154,7 @@ public class AndroidAtsDynamicConfigPusherDecorator extends StepSkippableLifecyc
         apkInstaller.installApkIfNotExist(
             getDevice(), ApkInstallArgs.builder().setApkPath(apkPath).build(), getTest().log());
     setState(testInfo.jobInfo(), deviceId, STATE_KEY_CONTENT_PROVIDER, contentProvider);
+    return SetupResult.continueDecorated();
   }
 
   @Override

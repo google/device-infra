@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidDumpSysSpec;
@@ -120,11 +121,12 @@ public final class AndroidDumpSysDecorator extends LifecycleDecorator {
   }
 
   @Override
-  protected void setUp(SetupContext context) {
+  protected SetupResult setUp(SetupContext context) {
     TestInfo testInfo = context.testInfo();
     JobInfo jobInfo = testInfo.jobInfo();
     logToFile = jobInfo.params().isTrue(AndroidDumpSysSpec.PARAM_LOG_TO_FILE);
     dumpSysCommands = makeDumpSysCommands(jobInfo);
+    return SetupResult.continueDecorated();
   }
 
   @Override

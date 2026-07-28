@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -68,7 +69,8 @@ public class AndroidDisplayDeviceInfoDecorator extends LifecycleDecorator {
   }
 
   @Override
-  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+  protected SetupResult setUp(SetupContext context)
+      throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
     String serial = getDevice().getDeviceId();
 
@@ -108,6 +110,7 @@ public class AndroidDisplayDeviceInfoDecorator extends LifecycleDecorator {
           "Failed to start the bootstrap app.",
           e);
     }
+    return SetupResult.continueDecorated();
   }
 
   @Override

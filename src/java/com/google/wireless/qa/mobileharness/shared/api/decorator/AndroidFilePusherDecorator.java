@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidFilePusherSpec;
@@ -88,7 +89,8 @@ public class AndroidFilePusherDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+  protected SetupResult setUp(SetupContext context)
+      throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
     String deviceId = getDevice().getDeviceId();
     JobInfo jobInfo = testInfo.jobInfo();
@@ -206,6 +208,7 @@ public class AndroidFilePusherDecorator extends LifecycleDecorator
         throw new MobileHarnessException(errorId, message, e);
       }
     }
+    return SetupResult.continueDecorated();
   }
 
   @Override

@@ -39,6 +39,7 @@ import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.StepSkippableLifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -91,7 +92,7 @@ public class ApkPreconditionCheckDecorator extends StepSkippableLifecycleDecorat
   }
 
   @Override
-  protected void skippableSetUp(SetupContext context)
+  protected SetupResult skippableSetUp(SetupContext context)
       throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
     String deviceId = getDevice().getDeviceId();
@@ -131,6 +132,7 @@ public class ApkPreconditionCheckDecorator extends StepSkippableLifecycleDecorat
         getDevice(), ApkInstallArgs.builder().addApkPaths(apkPath).build(), testInfo.log());
 
     runPreconditionTests(testInfo, deviceId, packageName, apkPath);
+    return SetupResult.continueDecorated();
   }
 
   private String locateApk(String xtsTestDir, String apk) throws MobileHarnessException {

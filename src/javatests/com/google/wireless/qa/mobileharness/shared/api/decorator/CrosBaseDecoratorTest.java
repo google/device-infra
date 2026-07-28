@@ -33,6 +33,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -73,8 +74,9 @@ public class CrosBaseDecoratorTest {
     }
 
     @Override
-    protected void setUp(SetupContext context) throws MobileHarnessException {
+    protected SetupResult setUp(SetupContext context) throws MobileHarnessException {
       // Do nothing.
+      return SetupResult.continueDecorated();
     }
 
     @Override

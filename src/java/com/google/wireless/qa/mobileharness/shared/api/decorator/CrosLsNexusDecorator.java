@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -89,7 +90,8 @@ public class CrosLsNexusDecorator extends CrosBaseDecorator {
    * @throws InterruptedException if the thread is interrupted during service startup.
    */
   @Override
-  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+  protected SetupResult setUp(SetupContext context)
+      throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
     testInfo
         .log()
@@ -110,6 +112,7 @@ public class CrosLsNexusDecorator extends CrosBaseDecorator {
     testInfo.log().atInfo().alsoTo(logger).log("LSNexus service started: %s", serviceAddress);
     // Populate service address for device config generation.
     testInfo.properties().add(LSNEXUS_PARAM_SUFFIX + deviceName, serviceAddress);
+    return SetupResult.continueDecorated();
   }
 
   /**

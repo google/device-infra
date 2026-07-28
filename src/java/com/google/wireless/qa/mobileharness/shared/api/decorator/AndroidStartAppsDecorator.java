@@ -27,6 +27,7 @@ import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnot
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
@@ -84,7 +85,8 @@ public class AndroidStartAppsDecorator extends LifecycleDecorator {
   }
 
   @Override
-  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+  protected SetupResult setUp(SetupContext context)
+      throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
     Instant startTime = clock.instant();
 
@@ -122,6 +124,7 @@ public class AndroidStartAppsDecorator extends LifecycleDecorator {
         .add(
             PropertyName.Test.PREFIX_DECORATOR_RUN_TIME_MS + getClass().getSimpleName(),
             Long.toString(runTimeMs));
+    return SetupResult.continueDecorated();
   }
 
   @Override

@@ -50,6 +50,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -1630,7 +1631,8 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+  protected SetupResult setUp(SetupContext context)
+      throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
     if (!"AndroidRealDevice".equals(getDevice().getClass().getSimpleName())) {
       testInfo
@@ -1695,6 +1697,7 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
             .log("Temperature check only enforced with API level lower than 28");
       }
     }
+    return SetupResult.continueDecorated();
   }
 
   @Override

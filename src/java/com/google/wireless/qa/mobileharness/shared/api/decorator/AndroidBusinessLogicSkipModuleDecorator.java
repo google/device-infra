@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.platform.android.xts.businesslogic.Busi
 import com.google.devtools.mobileharness.platform.android.xts.businesslogic.BusinessLogicFetcher;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -126,7 +127,8 @@ public class AndroidBusinessLogicSkipModuleDecorator extends LifecycleDecorator
   @Nullable private MobileHarnessException evaluationResultException;
 
   @Override
-  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+  protected SetupResult setUp(SetupContext context)
+      throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
     String deviceId = getDevice().getDeviceId();
     AndroidBusinessLogicSkipModuleDecoratorSpec spec =
@@ -198,6 +200,7 @@ public class AndroidBusinessLogicSkipModuleDecorator extends LifecycleDecorator
         throw this.evaluationResultException;
       }
     }
+    return SetupResult.continueDecorated();
   }
 
   @Override

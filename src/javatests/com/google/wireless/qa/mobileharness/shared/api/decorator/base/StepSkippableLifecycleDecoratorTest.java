@@ -66,8 +66,10 @@ public final class StepSkippableLifecycleDecoratorTest {
     }
 
     @Override
-    protected void skippableSetUp(SetupContext context)
-        throws MobileHarnessException, InterruptedException {}
+    protected SetupResult skippableSetUp(SetupContext context)
+        throws MobileHarnessException, InterruptedException {
+      return SetupResult.continueDecorated();
+    }
 
     @Override
     protected void skippableTearDown(TeardownContext context)

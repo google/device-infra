@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.platform.android.lightning.networkconne
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -62,7 +63,8 @@ public class AndroidSetWifiDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+  protected SetupResult setUp(SetupContext context)
+      throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
     Device device = getDevice();
     String deviceId = device.getDeviceId();
@@ -104,7 +106,7 @@ public class AndroidSetWifiDecorator extends LifecycleDecorator
                   "Could not get default ssid for the device %s from device properties. Skipping"
                       + " wifi setup.",
                   deviceId);
-          return;
+          return SetupResult.continueDecorated();
         }
       }
     } else {
@@ -123,7 +125,7 @@ public class AndroidSetWifiDecorator extends LifecycleDecorator
               .alsoTo(logger)
               .log(
                   "SSID for the device %s is not present or empty. Skipping wifi setup.", deviceId);
-          return;
+          return SetupResult.continueDecorated();
         }
       }
 
@@ -139,6 +141,7 @@ public class AndroidSetWifiDecorator extends LifecycleDecorator
             .setRetryNum(retryNum)
             .build();
     networkConnector.connectToWifi(device, connectArgs, testInfo.log());
+    return SetupResult.continueDecorated();
   }
 
   @Override

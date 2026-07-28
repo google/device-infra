@@ -48,6 +48,7 @@ import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSyst
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -132,7 +133,8 @@ public class AndroidAccountDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+  protected SetupResult setUp(SetupContext context)
+      throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
     Device device = getDevice();
     String deviceId = device.getDeviceId();
@@ -197,6 +199,7 @@ public class AndroidAccountDecorator extends LifecycleDecorator
     loginAccounts(testInfo, accountsToAdd, credentialTypes);
     // An empty line to separate the log.
     testInfo.log().atInfo().alsoTo(logger).log("\n");
+    return SetupResult.continueDecorated();
   }
 
   @Override

@@ -31,9 +31,12 @@ import static org.mockito.Mockito.withSettings;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.out.Result;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.junit.rule.CaptureLogs;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -66,7 +69,7 @@ public final class LifecycleDecoratorTest {
   private String logPrefix;
 
   @Before
-  public void setUp() {
+  public void setUp() throws Exception {
     when(decorated.getDevice()).thenReturn(device);
     when(testInfo.log()).thenReturn(new Log(new Timing()));
     decorator =
@@ -74,6 +77,7 @@ public final class LifecycleDecoratorTest {
             LifecycleDecorator.class,
             withSettings().useConstructor(decorated, testInfo).defaultAnswer(CALLS_REAL_METHODS));
     logPrefix = "Decorator [" + decorator.getClass().getSimpleName() + "] ";
+    when(decorator.setUp(any(SetupContext.class))).thenReturn(SetupResult.continueDecorated());
   }
 
   @Test
@@ -86,9 +90,80 @@ public final class LifecycleDecoratorTest {
     inOrder.verify(decorator).tearDown(any(TeardownContext.class));
 
     assertThat(captureLogs.getLogs()).contains(logPrefix + "setup starting.");
-    assertThat(captureLogs.getLogs()).contains(logPrefix + "setup finished.");
+    assertThat(captureLogs.getLogs())
+        .contains(logPrefix + "setup finished with result [CONTINUE_DECORATED].");
     assertThat(captureLogs.getLogs()).contains(logPrefix + "teardown starting.");
     assertThat(captureLogs.getLogs()).contains(logPrefix + "teardown finished.");
+  }
+
+  @Test
+  public void run_setupReturnsSkipWithoutResult_skipsDecoratedAndLogs() throws Exception {
+    when(decorator.setUp(any(SetupContext.class)))
+        .thenReturn(SetupResult.skipDecoratedWithoutResult());
+
+    decorator.run(testInfo);
+
+    verify(decorated, never()).run(testInfo);
+    verify(decorator).tearDown(any(TeardownContext.class));
+
+    assertThat(captureLogs.getLogs()).contains(logPrefix + "setup starting.");
+    assertThat(captureLogs.getLogs())
+        .contains(logPrefix + "setup finished with result [SKIP_DECORATED].");
+    assertThat(captureLogs.getLogs()).contains(logPrefix + "teardown starting.");
+    assertThat(captureLogs.getLogs()).contains(logPrefix + "teardown finished.");
+  }
+
+  @Test
+  public void run_setupReturnsSkipWithPass_skipsDecoratedSetsPassAndLogs() throws Exception {
+    Result resultWithCause = mock(Result.class);
+    when(testInfo.resultWithCause()).thenReturn(resultWithCause);
+    when(decorator.setUp(any(SetupContext.class))).thenReturn(SetupResult.skipDecoratedWithPass());
+
+    decorator.run(testInfo);
+
+    verify(decorated, never()).run(testInfo);
+    verify(resultWithCause).setPass();
+    verify(decorator).tearDown(any(TeardownContext.class));
+
+    assertThat(captureLogs.getLogs())
+        .contains(logPrefix + "setup finished with result [SKIP_DECORATED (test_result=PASS)].");
+  }
+
+  @Test
+  public void run_setupReturnsSkipWithNonPassing_skipsDecoratedSetsNonPassingAndLogs()
+      throws Exception {
+    Result resultWithCause = mock(Result.class);
+    when(testInfo.resultWithCause()).thenReturn(resultWithCause);
+    MobileHarnessException cause =
+        new MobileHarnessException(BasicErrorId.JOB_TIMEOUT, "Precondition failed");
+    when(decorator.setUp(any(SetupContext.class)))
+        .thenReturn(SetupResult.skipDecoratedWithNonPassing(TestResult.SKIP, cause));
+
+    decorator.run(testInfo);
+
+    verify(decorated, never()).run(testInfo);
+    verify(resultWithCause).setNonPassing(TestResult.SKIP, cause);
+    verify(decorator).tearDown(any(TeardownContext.class));
+
+    assertThat(captureLogs.getLogs())
+        .contains(
+            logPrefix
+                + "setup finished with result [SKIP_DECORATED (test_result=SKIP, cause="
+                + MoreThrowables.shortDebugString(cause)
+                + ")].");
+  }
+
+  @Test
+  public void setupResult_skipDecoratedWithNonPassing_validatesArgs() {
+    MobileHarnessException cause = new MobileHarnessException(BasicErrorId.JOB_TIMEOUT, "Error");
+    assertThrows(
+        NullPointerException.class, () -> SetupResult.skipDecoratedWithNonPassing(null, cause));
+    assertThrows(
+        NullPointerException.class,
+        () -> SetupResult.skipDecoratedWithNonPassing(TestResult.SKIP, null));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> SetupResult.skipDecoratedWithNonPassing(TestResult.PASS, cause));
   }
 
   @Test
@@ -105,7 +180,8 @@ public final class LifecycleDecoratorTest {
     verify(decorator).setUp(any(SetupContext.class));
     verify(decorator).tearDown(any(TeardownContext.class));
 
-    assertThat(captureLogs.getLogs()).contains(logPrefix + "setup finished.");
+    assertThat(captureLogs.getLogs())
+        .contains(logPrefix + "setup finished with result [CONTINUE_DECORATED].");
     assertThat(captureLogs.getLogs()).contains(logPrefix + "teardown finished.");
   }
 

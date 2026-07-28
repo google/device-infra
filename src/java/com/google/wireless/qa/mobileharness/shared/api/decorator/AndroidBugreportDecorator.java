@@ -32,6 +32,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidBugreportSpec;
@@ -108,7 +109,8 @@ public class AndroidBugreportDecorator extends LifecycleDecorator implements And
   }
 
   @Override
-  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+  protected SetupResult setUp(SetupContext context)
+      throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
     String serial = getDevice().getDeviceId();
     JobInfo jobInfo = testInfo.jobInfo();
@@ -130,6 +132,7 @@ public class AndroidBugreportDecorator extends LifecycleDecorator implements And
             AndroidErrorId.ANDROID_BUGREPORT_DECORATOR_SET_LOGICAL_DISCHARGE_ERROR, e.getMessage());
       }
     }
+    return SetupResult.continueDecorated();
   }
 
   @CanIgnoreReturnValue

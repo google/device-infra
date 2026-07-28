@@ -19,6 +19,7 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator.base;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.util.StepSkippableLifecycleDecoratorUtil;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -89,18 +90,20 @@ public abstract class StepSkippableLifecycleDecorator extends LifecycleDecorator
     return mode == ExecutionMode.FULL || mode == ExecutionMode.TEARDOWN_ONLY;
   }
 
+  @CanIgnoreReturnValue
   @Override
-  protected final void setUp(SetupContext context)
+  protected final SetupResult setUp(SetupContext context)
       throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
     if (shouldRunSetup()) {
-      skippableSetUp(context);
+      return skippableSetUp(context);
     } else {
       testInfo
           .log()
           .atInfo()
           .alsoTo(logger)
           .log("Decorator %s setup skipped.", getClass().getSimpleName());
+      return SetupResult.continueDecorated();
     }
   }
 
@@ -120,8 +123,11 @@ public abstract class StepSkippableLifecycleDecorator extends LifecycleDecorator
   }
 
   /** Subclasses implement their setup logic here, which can be skipped. */
-  protected void skippableSetUp(SetupContext context)
-      throws MobileHarnessException, InterruptedException {}
+  @CanIgnoreReturnValue
+  protected SetupResult skippableSetUp(SetupContext context)
+      throws MobileHarnessException, InterruptedException {
+    return SetupResult.continueDecorated();
+  }
 
   /** Subclasses implement their teardown logic here, which can be skipped. */
   protected void skippableTearDown(TeardownContext context)

@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyTestSpec;
@@ -52,7 +53,8 @@ public class CrosDutTopologyDecorator extends CrosBaseDecorator {
   }
 
   @Override
-  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+  protected SetupResult setUp(SetupContext context)
+      throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
     testInfo
         .log()
@@ -71,6 +73,7 @@ public class CrosDutTopologyDecorator extends CrosBaseDecorator {
     testInfo.log().atInfo().alsoTo(logger).log("Converter output: \n%s", output);
     // Parse the output and override device config.
     updateTestInfo(output, testInfo);
+    return SetupResult.continueDecorated();
   }
 
   @Override

@@ -16,10 +16,15 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator.base;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.auto.value.AutoValue;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.BaseDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -33,8 +38,10 @@ import javax.annotation.Nullable;
  * <pre>{@code
  * // Conceptual execution flow:
  * try {
- *   setUp();                      // Phase 1: Setup
- *   getDecorated().run();         // Phase 2: Decorated driver
+ *   SetupResult result = setUp(); // Phase 1: Setup
+ *   if (result.action() == CONTINUE_DECORATED) {
+ *     getDecorated().run();       // Phase 2: Decorated driver
+ *   }
  * } finally {
  *   tearDown();                   // Phase 3: Guaranteed cleanup (suppresses teardown error if setup or driver failed)
  * }
@@ -57,25 +64,28 @@ public abstract class LifecycleDecorator extends BaseDecorator {
    * <ul>
    *   <li>Executed as the first lifecycle phase when this decorator's {@link #run(TestInfo)} is
    *       invoked.
-   *   <li>If {@code setUp} completes successfully (does not throw an exception), execution proceeds
-   *       to the decorated driver.
+   *   <li>If {@code setUp} completes successfully returning {@link
+   *       SetupResult#continueDecorated()}, execution proceeds to the decorated driver.
+   *   <li>If {@code setUp} completes returning a skip result (such as {@link
+   *       SetupResult#skipDecoratedWithoutResult()}, {@link SetupResult#skipDecoratedWithPass()},
+   *       or {@link SetupResult#skipDecoratedWithNonPassing(TestResult, MobileHarnessException)}),
+   *       execution skips the decorated driver and proceeds directly to {@link
+   *       #tearDown(TeardownContext)}.
    *   <li>If {@code setUp} throws an exception (e.g., {@link MobileHarnessException} or {@link
    *       InterruptedException}), execution skips the decorated driver and proceeds directly to
    *       {@link #tearDown(TeardownContext)}. The exception thrown by {@code setUp} is preserved
    *       and rethrown after cleanup.
-   *   <li>Regardless of whether {@code setUp} throws an exception or not, {@link
-   *       #tearDown(TeardownContext)} will always run.
-   *   <li>Therefore, if {@code setUp} needs to skip the decorated driver's execution, the
-   *       recommended approach is to set the test result (e.g., calling {@code
-   *       testInfo.resultWithCause().setNonPassing(...)}) and throw a {@link
-   *       MobileHarnessException}.
+   *   <li>Regardless of whether {@code setUp} returns continue, skip, or throws an exception,
+   *       {@link #tearDown(TeardownContext)} will always run.
    * </ul>
    *
    * @param context the context containing setup metadata
+   * @return the setup result indicating whether to continue to the decorated driver or skip it
    * @throws MobileHarnessException if setup fails due to a MobileHarness error
    * @throws InterruptedException if setup is interrupted
    */
-  protected abstract void setUp(SetupContext context)
+  @CanIgnoreReturnValue
+  protected abstract SetupResult setUp(SetupContext context)
       throws MobileHarnessException, InterruptedException;
 
   /**
@@ -116,9 +126,11 @@ public abstract class LifecycleDecorator extends BaseDecorator {
     Throwable decoratedException = null;
     try {
       SetupContext setupContext = SetupContext.create(testInfo);
-      executePhase(testInfo, "setup", this::setUp, setupContext, /* primaryException= */ null);
+      SetupResult setupResult = executeSetupPhase(testInfo, setupContext);
       setUpSuccess = true;
-      getDecorated().run(testInfo);
+      if (setupResult.action() == SetupResult.Action.CONTINUE_DECORATED) {
+        getDecorated().run(testInfo);
+      }
     } catch (Throwable e) {
       if (!setUpSuccess) {
         setUpException = e;
@@ -129,35 +141,60 @@ public abstract class LifecycleDecorator extends BaseDecorator {
     } finally {
       TeardownContext teardownContext =
           TeardownContext.create(testInfo, setUpException, decoratedException);
-      executePhase(
-          testInfo,
-          "teardown",
-          this::tearDown,
-          teardownContext,
-          setUpException != null ? setUpException : decoratedException);
+      executeTeardownPhase(
+          testInfo, teardownContext, setUpException != null ? setUpException : decoratedException);
     }
   }
 
-  @FunctionalInterface
-  private interface LifecyclePhase<T> {
-    void run(T context) throws MobileHarnessException, InterruptedException;
+  private SetupResult executeSetupPhase(TestInfo testInfo, SetupContext context)
+      throws MobileHarnessException, InterruptedException {
+    testInfo.log().atInfo().alsoTo(logger).log("Decorator [%s] setup starting.", classSimpleName);
+    SetupResult setupResult = null;
+    Throwable phaseError = null;
+    try {
+      setupResult = setUp(context);
+      applySetupResult(testInfo, setupResult);
+      return setupResult;
+    } catch (Throwable e) {
+      phaseError = e;
+      throw e;
+    } finally {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "Decorator [%s] setup finished%s.",
+              classSimpleName,
+              phaseError != null
+                  ? getFailureSuffix(phaseError)
+                  : String.format(" with result [%s]", setupResult));
+    }
   }
 
-  private <T> void executePhase(
-      TestInfo testInfo,
-      String phaseName,
-      LifecyclePhase<T> phase,
-      T context,
-      Throwable primaryException)
+  private static void applySetupResult(TestInfo testInfo, SetupResult setupResult) {
+    if (setupResult.action() == SetupResult.Action.SKIP_DECORATED
+        && setupResult.testResult().isPresent()) {
+      TestResult result = setupResult.testResult().get();
+      if (result == TestResult.PASS) {
+        testInfo.resultWithCause().setPass();
+      } else {
+        testInfo.resultWithCause().setNonPassing(result, setupResult.cause().orElseThrow());
+      }
+    }
+  }
+
+  private void executeTeardownPhase(
+      TestInfo testInfo, TeardownContext context, Throwable primaryException)
       throws MobileHarnessException, InterruptedException {
     testInfo
         .log()
         .atInfo()
         .alsoTo(logger)
-        .log("Decorator [%s] %s starting.", classSimpleName, phaseName);
+        .log("Decorator [%s] teardown starting.", classSimpleName);
     Throwable phaseError = null;
     try {
-      phase.run(context);
+      tearDown(context);
     } catch (Throwable e) {
       phaseError = e;
       if (primaryException != null) {
@@ -174,8 +211,7 @@ public abstract class LifecycleDecorator extends BaseDecorator {
           .atInfo()
           .alsoTo(logger)
           .log(
-              "Decorator [%s] %s finished%s.",
-              classSimpleName, phaseName, getFailureSuffix(phaseError));
+              "Decorator [%s] teardown finished%s.", classSimpleName, getFailureSuffix(phaseError));
     }
   }
 
@@ -183,6 +219,88 @@ public abstract class LifecycleDecorator extends BaseDecorator {
     return error == null
         ? ""
         : String.format(" with failure [%s]", MoreThrowables.shortDebugString(error));
+  }
+
+  /**
+   * Result of the {@link #setUp(SetupContext)} phase, controlling whether to proceed to the
+   * decorated driver or skip it.
+   */
+  @AutoValue
+  public abstract static class SetupResult {
+
+    /** Action to take after {@link #setUp(SetupContext)} completes. */
+    public enum Action {
+      /** Proceed to execute the decorated driver's {@code run()} method. */
+      CONTINUE_DECORATED,
+
+      /**
+       * Skip the decorated driver's {@code run()} method and proceed directly to {@code
+       * tearDown()}.
+       */
+      SKIP_DECORATED,
+    }
+
+    public abstract Action action();
+
+    public abstract Optional<TestResult> testResult();
+
+    public abstract Optional<MobileHarnessException> cause();
+
+    /** Continues execution to the decorated driver. */
+    public static SetupResult continueDecorated() {
+      return new AutoValue_LifecycleDecorator_SetupResult(
+          Action.CONTINUE_DECORATED, Optional.empty(), Optional.empty());
+    }
+
+    /** Skips the decorated driver, leaving the test result as currently set on {@code testInfo}. */
+    public static SetupResult skipDecoratedWithoutResult() {
+      return new AutoValue_LifecycleDecorator_SetupResult(
+          Action.SKIP_DECORATED, Optional.empty(), Optional.empty());
+    }
+
+    /** Skips the decorated driver and sets the test result to PASS. */
+    public static SetupResult skipDecoratedWithPass() {
+      return new AutoValue_LifecycleDecorator_SetupResult(
+          Action.SKIP_DECORATED, Optional.of(TestResult.PASS), Optional.empty());
+    }
+
+    /**
+     * Skips the decorated driver and sets the specified non-passing test result with cause.
+     *
+     * @param testResult non-passing test result (e.g., FAIL, ERROR, SKIP, TIMEOUT)
+     * @param cause non-null exception explaining why the test is non-passing
+     */
+    public static SetupResult skipDecoratedWithNonPassing(
+        TestResult testResult, MobileHarnessException cause) {
+      checkNotNull(testResult, "testResult must not be null");
+      checkNotNull(cause, "cause must not be null for non-passing result [%s]", testResult);
+      checkArgument(
+          testResult != TestResult.PASS,
+          "Use skipDecoratedWithPass() for PASS result instead of skipDecoratedWithNonPassing().");
+      return new AutoValue_LifecycleDecorator_SetupResult(
+          Action.SKIP_DECORATED, Optional.of(testResult), Optional.of(cause));
+    }
+
+    @Override
+    public final String toString() {
+      StringBuilder sb = new StringBuilder(action().name());
+      if (testResult().isPresent() || cause().isPresent()) {
+        sb.append(" (");
+        boolean needsComma = false;
+        if (testResult().isPresent()) {
+          sb.append("test_result=").append(testResult().get());
+          needsComma = true;
+        }
+        if (cause().isPresent()) {
+          if (needsComma) {
+            sb.append(", ");
+          }
+          sb.append("cause=").append(MoreThrowables.shortDebugString(cause().get()));
+        }
+        sb.append(")");
+      }
+      return sb.toString();
+    }
   }
 
   /** Context containing metadata for the decorator setup phase. */

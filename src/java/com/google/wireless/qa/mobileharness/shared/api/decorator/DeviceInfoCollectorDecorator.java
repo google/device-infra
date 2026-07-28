@@ -42,6 +42,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.StepSkippableLifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -95,21 +96,21 @@ public class DeviceInfoCollectorDecorator extends StepSkippableLifecycleDecorato
   }
 
   @Override
-  protected void skippableSetUp(SetupContext context)
+  protected SetupResult skippableSetUp(SetupContext context)
       throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
     String deviceId = getDevice().getDeviceId();
 
     if (testInfo.properties().has(PROPERTY_COLLECTED)) {
       testInfo.log().atInfo().alsoTo(logger).log("Device info already collected, skipping.");
-      return;
+      return SetupResult.continueDecorated();
     }
 
     DeviceInfoCollectorDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this, deviceId);
 
     if (spec.getSkipDeviceInfo() && !spec.getForceCollectDeviceInfo()) {
       testInfo.log().atInfo().alsoTo(logger).log("Skip device info collection.");
-      return;
+      return SetupResult.continueDecorated();
     }
 
     String apk = spec.getApk();
@@ -182,6 +183,7 @@ public class DeviceInfoCollectorDecorator extends StepSkippableLifecycleDecorato
     }
 
     testInfo.properties().add(PROPERTY_COLLECTED, "true");
+    return SetupResult.continueDecorated();
   }
 
   @Override

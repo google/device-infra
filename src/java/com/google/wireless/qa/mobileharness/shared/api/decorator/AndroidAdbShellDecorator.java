@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -91,7 +92,8 @@ public class AndroidAdbShellDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+  protected SetupResult setUp(SetupContext context)
+      throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
     String deviceId = getDevice().getDeviceId();
     spec = testInfo.jobInfo().combinedSpec(this, deviceId);
@@ -113,6 +115,7 @@ public class AndroidAdbShellDecorator extends LifecycleDecorator
             testInfo,
             spec.getAdbShellIgnoreError(),
             syncCommandTimeout));
+    return SetupResult.continueDecorated();
   }
 
   @Override

@@ -20,6 +20,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -36,7 +37,8 @@ public class CrossOverAndroidDesktopProvisionDecorator extends CrosBaseDecorator
   }
 
   @Override
-  protected void setUp(SetupContext context) throws MobileHarnessException, InterruptedException {
+  protected SetupResult setUp(SetupContext context)
+      throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
     testInfo
         .log()
@@ -45,6 +47,7 @@ public class CrossOverAndroidDesktopProvisionDecorator extends CrosBaseDecorator
         .log(
             "CrossOverAndroidDesktopProvisionDecorator is not ready yet and will be implemented as"
                 + " part of b/487343637. It will use foil-provision CIPD from CTP.");
+    return SetupResult.continueDecorated();
   }
 
   @Override

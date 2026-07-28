@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -76,7 +77,8 @@ public class AndroidShowInstructionDecorator extends LifecycleDecorator
   }
 
   @Override
-  protected void setUp(SetupContext context) throws InterruptedException, MobileHarnessException {
+  protected SetupResult setUp(SetupContext context)
+      throws InterruptedException, MobileHarnessException {
     TestInfo testInfo = context.testInfo();
     String serial = getDevice().getDeviceId();
     AndroidShowInstructionDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this, serial);
@@ -93,6 +95,7 @@ public class AndroidShowInstructionDecorator extends LifecycleDecorator
             .log("Failed to show the instruction. Continue the test.");
       }
     }
+    return SetupResult.continueDecorated();
   }
 
   @Override
