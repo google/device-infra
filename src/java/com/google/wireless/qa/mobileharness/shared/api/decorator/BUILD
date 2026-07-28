@@ -47,17 +47,6 @@ java_library(
     ],
 )
 
-java_library(
-    name = "base_decorator",
-    srcs = ["BaseDecorator.java"],
-    deps = [
-        ":decorator",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:base_driver",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-    ],
-)
-
 ################################################################################
 # Decorator libraries in alphabetical order
 ################################################################################
@@ -849,12 +838,12 @@ java_library(
         "CompositeDeviceDecoratorAdapter.java",
     ],
     deps = [
-        ":base_decorator",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:exception_handler",
         "//src/java/com/google/devtools/mobileharness/platform/testbed:runner_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:base_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:composite_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",

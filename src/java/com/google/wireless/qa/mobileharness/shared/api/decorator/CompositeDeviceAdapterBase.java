@@ -22,6 +22,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.platform.testbed.SubDeviceDecoratorStack;
 import com.google.devtools.mobileharness.platform.testbed.TestbedTestRunnerUtil;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.BaseDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent;

@@ -39,8 +39,8 @@ import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil.
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
 import com.google.wireless.qa.mobileharness.shared.api.ClassUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.StepAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.BaseDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.BaseDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.device.TestbedDevice;

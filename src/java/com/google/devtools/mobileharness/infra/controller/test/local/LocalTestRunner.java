@@ -41,8 +41,8 @@ import com.google.devtools.mobileharness.infra.controller.test.local.annotation.
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.TestFlowConverter;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionResult;
 import com.google.wireless.qa.mobileharness.shared.api.ClassUtil;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.BaseDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.BaseDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;

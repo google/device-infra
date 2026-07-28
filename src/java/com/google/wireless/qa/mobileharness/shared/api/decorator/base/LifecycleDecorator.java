@@ -25,7 +25,6 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.BaseDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.Optional;
