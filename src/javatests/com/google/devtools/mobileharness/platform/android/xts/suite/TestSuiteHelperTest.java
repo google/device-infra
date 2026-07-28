@@ -142,6 +142,23 @@ public final class TestSuiteHelperTest {
   }
 
   @Test
+  public void getAbis_primaryAbiOnly_returnsPrimaryAbi() throws Exception {
+    testSuiteHelper = spy(testSuiteHelper);
+    doReturn(ImmutableSet.of("arm64-v8a", "armeabi-v7a"))
+        .when(testSuiteHelper)
+        .getAbisForBuildTargetArchFromSuite();
+    DeviceInfo deviceInfo =
+        DeviceInfo.newBuilder()
+            .setDeviceId("device_id")
+            .setSupportedAbiList("arm64-v8a,armeabi-v7a,armeabi")
+            .setSupportedAbi("arm64-v8a")
+            .build();
+    testSuiteHelper.setPrimaryAbiOnly(true);
+
+    assertThat(testSuiteHelper.getAbis(deviceInfo)).containsExactly(Abi.of("arm64-v8a", "64"));
+  }
+
+  @Test
   public void loadTestsUsingAbisForArchFromSuite_success() throws Exception {
     File xtsRootDir = tmpFolder.getRoot();
     when(localFileUtil.isDirExist(xtsRootDir.getAbsolutePath())).thenReturn(true);
@@ -172,5 +189,49 @@ public final class TestSuiteHelperTest {
 
     assertThat(testSuiteHelper.loadTestsUsingAbisForArchFromSuite().keySet())
         .containsExactly("arm64-v8a Foo", "armeabi-v7a Foo");
+  }
+
+  @Test
+  public void loadTestsUsingAbisForArchFromSuite_primaryAbiOnlyFromXml_returnsPrimaryAbiOnly()
+      throws Exception {
+    File xtsRootDir = tmpFolder.getRoot();
+    when(localFileUtil.isDirExist(xtsRootDir.getAbsolutePath())).thenReturn(true);
+    File toolsDir = tmpFolder.newFolder("android-cts-v-host", "tools");
+    File testcasesDir = tmpFolder.newFolder("android-cts-v-host", "testcases");
+    File tradefedJar = new File(toolsDir, "cts-v-host-tradefed.jar");
+    try (JarOutputStream target = new JarOutputStream(new FileOutputStream(tradefedJar))) {
+      target.putNextEntry(new ZipEntry("test-suite-info.properties"));
+      byte[] propertiesBytes = "target_arch=arm64".getBytes(UTF_8);
+      target.write(propertiesBytes, 0, propertiesBytes.length);
+      target.closeEntry();
+
+      target.putNextEntry(new ZipEntry("config/cts-v-host.xml"));
+      String xmlContent =
+          """
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration description="CTS-V">
+              <option name="compatibility:primary-abi-only" value="true" />
+          </configuration>\
+          """;
+      target.write(xmlContent.getBytes(UTF_8));
+      target.closeEntry();
+    }
+    File fooConfig = new File(testcasesDir, "Foo.config");
+    String configContent =
+        "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+            + "<configuration description=\"Dummy module config\">\n"
+            + "    <option name=\"config-descriptor:metadata\" key=\"component\" value=\"dummy\""
+            + " />\n"
+            + "</configuration>";
+    try (FileOutputStream fos = new FileOutputStream(fooConfig)) {
+      fos.write(configContent.getBytes(UTF_8));
+    }
+
+    testSuiteHelper =
+        new TestSuiteHelper(xtsRootDir.getAbsolutePath(), "cts-v-host", localFileUtil);
+
+    assertThat(testSuiteHelper.getPrimaryAbiOnly()).isTrue();
+    assertThat(testSuiteHelper.loadTestsUsingAbisForArchFromSuite().keySet())
+        .containsExactly("arm64-v8a Foo");
   }
 }

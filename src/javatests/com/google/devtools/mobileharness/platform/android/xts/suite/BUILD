@@ -29,6 +29,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:jar_file_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:abi",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:module_arg",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_config_fetcher",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_result_reporter",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_test_filter",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_helper",

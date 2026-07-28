@@ -35,8 +35,6 @@ class ListModulesCommandHandler {
       throws MobileHarnessException, InterruptedException {
     TestSuiteHelper testSuiteHelper =
         getTestSuiteHelper(command.getXtsRootDir(), command.getXtsType());
-    testSuiteHelper.setParameterizedModules(true);
-    testSuiteHelper.setOptionalParameterizedModules(true);
     if (!command.getModuleParameter().isEmpty()) {
       testSuiteHelper.setModuleParameter(
           ModuleParameters.valueOf(Ascii.toUpperCase(command.getModuleParameter())));

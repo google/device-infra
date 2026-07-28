@@ -1585,9 +1585,13 @@ public class SessionRequestHandlerUtil {
   TestSuiteHelper getTestSuiteHelper(
       String xtsRootDir, String xtsType, SessionRequestInfo sessionRequestInfo) {
     TestSuiteHelper testSuiteHelper = new TestSuiteHelper(xtsRootDir, xtsType);
-    testSuiteHelper.setParameterizedModules(sessionRequestInfo.getEnableModuleParameter());
-    testSuiteHelper.setOptionalParameterizedModules(
-        sessionRequestInfo.getEnableModuleOptionalParameter());
+    if (sessionRequestInfo.hasEnableModuleParameter()) {
+      testSuiteHelper.setParameterizedModules(sessionRequestInfo.getEnableModuleParameter());
+    }
+    if (sessionRequestInfo.hasEnableModuleOptionalParameter()) {
+      testSuiteHelper.setOptionalParameterizedModules(
+          sessionRequestInfo.getEnableModuleOptionalParameter());
+    }
     return testSuiteHelper;
   }
 

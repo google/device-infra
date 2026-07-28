@@ -30,6 +30,7 @@ java_library(
     ],
     deps = [
         ":abi",
+        ":suite_config_fetcher",
         ":suite_module_loader",
         ":test_suite_info_provider",
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
@@ -44,6 +45,21 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "suite_config_fetcher",
+    srcs = ["SuiteConfigFetcher.java"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:jar_file_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_xml_parser",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
     ],
 )

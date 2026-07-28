@@ -77,8 +77,8 @@ message SessionRequestInfo {
   map<string, xts.config.Configuration> v2_configs_map = 30;
   // Key is expanded module name (e.g. `arm64-v8a CtsBatteryHealthTestCases`).
   map<string, xts.config.Configuration> expanded_modules = 31;
-  bool enable_module_parameter = 32;
-  bool enable_module_optional_parameter = 33;
+  optional bool enable_module_parameter = 32;
+  optional bool enable_module_optional_parameter = 33;
   google.protobuf.Duration job_timeout = 34;
   google.protobuf.Duration start_timeout = 35;
   map<string, string> env_vars = 36;

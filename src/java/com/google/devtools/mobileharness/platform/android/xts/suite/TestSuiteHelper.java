@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiFor
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteConfigFetcher.SuiteConfig;
 import com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.io.File;
@@ -56,20 +57,35 @@ public class TestSuiteHelper {
   private ModuleParameters forcedModuleParameter = null;
   private boolean allowParameterizedModules = false;
   private boolean allowOptionalParameterizedModules = false;
+  private boolean primaryAbiOnly = false;
 
   private final String xtsRootDir;
   private final String xtsType;
   private final LocalFileUtil localFileUtil;
 
   public TestSuiteHelper(String xtsRootDir, String xtsType) {
-    this(xtsRootDir, xtsType, new LocalFileUtil());
+    this(xtsRootDir, xtsType, new LocalFileUtil(), new SuiteConfigFetcher());
   }
 
   @VisibleForTesting
   TestSuiteHelper(String xtsRootDir, String xtsType, LocalFileUtil localFileUtil) {
+    this(xtsRootDir, xtsType, localFileUtil, new SuiteConfigFetcher());
+  }
+
+  @VisibleForTesting
+  TestSuiteHelper(
+      String xtsRootDir,
+      String xtsType,
+      LocalFileUtil localFileUtil,
+      SuiteConfigFetcher suiteConfigFetcher) {
     this.xtsRootDir = xtsRootDir;
     this.xtsType = xtsType;
     this.localFileUtil = localFileUtil;
+    SuiteConfig suiteConfig = suiteConfigFetcher.fetchConfig(xtsRootDir, xtsType);
+    this.allowParameterizedModules = suiteConfig.allowParameterizedModules().orElse(true);
+    this.allowOptionalParameterizedModules =
+        suiteConfig.allowOptionalParameterizedModules().orElse(true);
+    this.primaryAbiOnly = suiteConfig.primaryAbiOnly().orElse(false);
   }
 
   /** Sets the abis that should be run against. */
@@ -90,6 +106,16 @@ public class TestSuiteHelper {
   /** Sets whether or not to allow optional parameterized modules. */
   public void setOptionalParameterizedModules(boolean allowed) {
     allowOptionalParameterizedModules = allowed;
+  }
+
+  /** Sets whether or not to run against primary ABI only. */
+  public void setPrimaryAbiOnly(boolean primaryAbiOnly) {
+    this.primaryAbiOnly = primaryAbiOnly;
+  }
+
+  /** Returns whether or not to run against primary ABI only. */
+  public boolean getPrimaryAbiOnly() {
+    return primaryAbiOnly;
   }
 
   /**
@@ -118,11 +144,18 @@ public class TestSuiteHelper {
    */
   public Map<String, Configuration> loadTestsUsingAbisForArchFromSuite()
       throws MobileHarnessException, InterruptedException {
-    setAbis(
+    ImmutableSet<Abi> abis =
         getAbisForBuildTargetArchFromSuite().stream()
             .filter(AbiUtil::isAbiSupportedByCompatibility)
             .map(abi -> Abi.of(abi, AbiUtil.getBitness(abi)))
-            .collect(toImmutableSet()));
+            .collect(toImmutableSet());
+    if (primaryAbiOnly && !abis.isEmpty()) {
+      Abi primaryAbi = abis.iterator().next();
+      logger.atInfo().log(
+          "primaryAbiOnly is true. Restricting suite arch abis to primary abi: %s", primaryAbi);
+      abis = ImmutableSet.of(primaryAbi);
+    }
+    setAbis(abis);
 
     return loadTests(/* deviceInfo= */ null);
   }
@@ -169,6 +202,12 @@ public class TestSuiteHelper {
                   + " device ('%s').",
               archAbis, deviceAbis),
           /* cause= */ null);
+    }
+    if (primaryAbiOnly && !abis.isEmpty()) {
+      Abi primaryAbi = abis.iterator().next();
+      logger.atInfo().log(
+          "primaryAbiOnly is true. Restricting device abis to primary abi: %s", primaryAbi);
+      return ImmutableSet.of(primaryAbi);
     }
     return abis;
   }
