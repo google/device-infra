@@ -16,9 +16,10 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 
-import static com.google.common.util.concurrent.Futures.immediateFuture;
+import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatResponse;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
@@ -29,9 +30,8 @@ public final class NoOpLogcatActionHelper implements LogcatActionHelper {
   @Override
   public ListenableFuture<GetLogcatResponse> getLogcat(
       GetLogcatRequest request, UniverseScope universe) {
-    return immediateFuture(
-        GetLogcatResponse.newBuilder()
-            .setErrorMsg("Getting logcat is not supported in the current environment.")
-            .build());
+    return immediateFailedFuture(
+        FeServiceException.unimplemented(
+            "Getting logcat is not supported in the current environment."));
   }
 }

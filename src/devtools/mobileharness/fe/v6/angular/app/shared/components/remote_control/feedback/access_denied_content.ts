@@ -15,4 +15,5 @@ import {MatIconModule} from '@angular/material/icon';
 })
 export class AccessDeniedContent {
   @Input() devices: Array<{id: string}> = [];
+  @Input() action = 'remote control';
 }

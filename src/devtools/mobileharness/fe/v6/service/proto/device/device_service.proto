@@ -227,8 +227,9 @@ message GetLogcatResponse {
   string log_url = 1;
   // The time when the logcat was captured.
   google.protobuf.Timestamp captured_at = 2;
+  // deprecated as we've already implemented error handling in the service.
   // The error message if any.
-  string error_msg = 3;
+  string error_msg = 3 [deprecated = true];
 }
 
 // Request for QuarantineDevice.

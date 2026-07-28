@@ -1,7 +1,14 @@
 import {Injectable, inject} from '@angular/core';
 import {MatDialog} from '@angular/material/dialog';
 import {Observable, throwError} from 'rxjs';
-import {catchError, filter, switchMap, take, tap} from 'rxjs/operators';
+import {
+  catchError,
+  filter,
+  finalize,
+  switchMap,
+  take,
+  tap,
+} from 'rxjs/operators';
 
 import {
   GetLogcatResponse,
@@ -20,7 +27,10 @@ import {FlashDialog} from '../../features/device_detail/components/flash_dialog/
 import {LogcatLinkDialog} from '../../features/device_detail/components/logcat_link_dialog/logcat_link_dialog';
 import {QuarantineDialog} from '../../features/device_detail/components/quarantine_dialog/quarantine_dialog';
 import {ScreenshotDialog} from '../../features/device_detail/components/screenshot_dialog/screenshot_dialog';
+import {ActionErrorContent} from '../components/action_error_content/action_error_content';
 import {ConfirmDialog} from '../components/confirm_dialog/confirm_dialog';
+import {AccessDeniedContent} from '../components/remote_control/feedback/access_denied_content';
+import {getErrorMessage} from '../utils/error_utils';
 import {openInNewTab} from '../utils/safe_dom';
 import {SnackBarService} from './snackbar_service';
 
@@ -36,7 +46,7 @@ export class DeviceActionService {
   private readonly environment = inject(Environment);
 
   takeScreenshot(deviceId: string): Observable<TakeScreenshotResponse> {
-    this.snackBar.showInfo('Taking screenshot...');
+    const snackBarRef = this.snackBar.showInProgress('Taking screenshot...');
     return this.deviceService.takeScreenshot(deviceId).pipe(
       tap((response) => {
         this.snackBar.showSuccess('Screenshot taken successfully.');
@@ -48,16 +58,22 @@ export class DeviceActionService {
           } as ScreenshotDialogData,
         });
       }),
-      catchError((err) => {
-        this.snackBar.showError('Failed to take screenshot.');
-        console.error(err);
-        return throwError(() => err);
+      catchError((err) =>
+        this.handleActionError(
+          err,
+          deviceId,
+          'take screenshot of',
+          'Failed to take screenshot',
+        ),
+      ),
+      finalize(() => {
+        snackBarRef.dismiss();
       }),
     );
   }
 
   getLogcat(deviceId: string): Observable<GetLogcatResponse> {
-    this.snackBar.showInfo('Getting logcat...');
+    const snackBarRef = this.snackBar.showInProgress('Getting logcat...');
     return this.deviceService.getLogcat(deviceId).pipe(
       tap((response) => {
         this.snackBar.showSuccess(
@@ -72,10 +88,16 @@ export class DeviceActionService {
           },
         });
       }),
-      catchError((err) => {
-        this.snackBar.showError('Failed to get logcat.');
-        console.error(err);
-        return throwError(() => err);
+      catchError((err) =>
+        this.handleActionError(
+          err,
+          deviceId,
+          'get logcat of',
+          'Failed to get logcat',
+        ),
+      ),
+      finalize(() => {
+        snackBarRef.dismiss();
       }),
     );
   }
@@ -319,5 +341,78 @@ export class DeviceActionService {
           );
         }
       });
+  }
+
+  private handleActionError(
+    err: unknown,
+    deviceId: string,
+    actionDesc: string,
+    failedActionMsg: string,
+  ): Observable<never> {
+    const errorMsg = getErrorMessage(err);
+    const isPermissionDenied = isPermissionDeniedError(err);
+
+    if (isPermissionDenied) {
+      this.dialog.open(ConfirmDialog, {
+        data: {
+          title: 'Access Denied',
+          contentComponent: AccessDeniedContent,
+          contentComponentInputs: {
+            devices: [{id: deviceId}],
+            action: actionDesc,
+          },
+          type: 'error',
+          primaryButtonLabel: 'Close',
+        },
+      });
+    } else {
+      this.snackBar.showError(`${failedActionMsg}.`);
+      console.error(err);
+      this.dialog.open(ActionErrorContent, {
+        data: {
+          errorMessage: errorMsg || failedActionMsg,
+          errorDetails: formatErrorDetails(err),
+          errorTitle: failedActionMsg,
+        },
+      });
+    }
+    return throwError(() => err);
+  }
+}
+
+function isPermissionDeniedError(err: unknown): boolean {
+  if (err && typeof err === 'object') {
+    const errObj = err as Record<string, unknown>;
+    if (errObj['status'] === 403) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function formatErrorDetails(err: unknown): string {
+  if (!err) {
+    return '';
+  }
+  if (err instanceof Error && err.stack) {
+    return err.stack;
+  }
+  if (typeof err === 'object') {
+    const errObj = err as Record<string, unknown>;
+    if ('error' in errObj && errObj['error']) {
+      return typeof errObj['error'] === 'object'
+        ? safeJsonStringify(errObj['error'])
+        : String(errObj['error']);
+    }
+    return safeJsonStringify(err);
+  }
+  return String(err);
+}
+
+function safeJsonStringify(obj: unknown): string {
+  try {
+    return JSON.stringify(obj, null, 2);
+  } catch (e) {
+    return String(obj);
   }
 }

@@ -32,6 +32,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DeviceProxyType;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.IneligibilityReasonCode;
+import com.google.devtools.mobileharness.fe.v6.service.shared.auth.DeviceAccessResolver;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
 import org.junit.Before;
 import org.junit.Rule;
@@ -49,11 +50,13 @@ public final class RemoteControlEligibilityCheckerTest {
   @Mock private GroupMembershipProvider groupMembershipProvider;
 
   private final ListeningExecutorService executor = MoreExecutors.newDirectExecutorService();
+  private DeviceAccessResolver deviceAccessResolver;
   private RemoteControlEligibilityChecker checker;
 
   @Before
   public void setUp() {
-    checker = new RemoteControlEligibilityChecker(groupMembershipProvider, executor);
+    deviceAccessResolver = new DeviceAccessResolver(groupMembershipProvider, executor);
+    checker = new RemoteControlEligibilityChecker(deviceAccessResolver, executor);
   }
 
   @Test

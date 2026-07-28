@@ -1,0 +1,113 @@
+@use '@angular/material' as mat;
+@use '../../styles/common';
+@use '../../styles/typography';
+
+.action-error-dialog-container {
+  padding: 1.5rem;
+  min-width: 24rem;
+  max-width: 32rem;
+  font-family: typography.$labconsole-font;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  mat-icon {
+    font-size: 2.5rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    color: #c5221f;
+  }
+
+  .dialog-title {
+    font-weight: 600;
+    margin: 0;
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+    color: #1f2937;
+    margin-bottom: 1rem;
+  }
+}
+
+.dialog-content {
+  padding: 0;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 60vh;
+  overflow-y: auto;
+  @include common.shared-scrollbar-style();
+}
+
+.error-message-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.message-label {
+  font-weight: 500;
+  font-size: 14px;
+  color: #5f6368;
+}
+
+.error-message {
+  margin: 0;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #dadce0;
+  font-size: 14px;
+  color: #3c4043;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.error-details-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.details-label {
+  font-weight: 500;
+  font-size: 14px;
+  color: #5f6368;
+}
+
+.error-details {
+  margin: 0;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #dadce0;
+  font-family: monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 200px;
+  overflow-y: auto;
+  @include common.shared-scrollbar-style();
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0;
+  min-height: fit-content;
+
+  .left-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .close-button {
+    @include common.shared-button('destructive');
+  }
+}

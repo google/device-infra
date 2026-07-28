@@ -1,3 +1,4 @@
+import {HttpErrorResponse} from '@angular/common/http';
 import {Injectable} from '@angular/core';
 import {Observable, of, throwError} from 'rxjs';
 import {delay} from 'rxjs/operators';
@@ -162,6 +163,46 @@ export class FakeDeviceService extends DeviceService {
 
   override takeScreenshot(id: string): Observable<TakeScreenshotResponse> {
     console.log(`FakeService: Taking screenshot for ${id}`);
+    if (id.includes('permission-denied')) {
+      return throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 403,
+            statusText: 'Forbidden',
+            error: {
+              code: 7,
+              message: `User does not have permission to take screenshot of device ${id}.`,
+            },
+          }),
+      ).pipe(delay(1000));
+    }
+    if (id.includes('logical-error')) {
+      return throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 404,
+            statusText: 'Not Found',
+            error: {
+              code: 5,
+              message: 'Device was disconnected during screenshot',
+            },
+          }),
+      ).pipe(delay(1000));
+    }
+    if (id.includes('rpc-error')) {
+      return throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 500,
+            statusText: 'Internal Server Error',
+            error: {
+              code: 13,
+              message: 'RPC Failure: Connection reset by peer',
+            },
+          }),
+      ).pipe(delay(1000));
+    }
+
     return of({
       screenshotUrl:
         'http://0.0.0.0:8000/device_detail/action_bar/resource/screenshot-demo.png',
@@ -171,6 +212,46 @@ export class FakeDeviceService extends DeviceService {
 
   override getLogcat(id: string): Observable<GetLogcatResponse> {
     console.log(`FakeService: Getting logcat for ${id}`);
+    if (id.includes('permission-denied')) {
+      return throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 403,
+            statusText: 'Forbidden',
+            error: {
+              code: 7,
+              message: `User does not have permission to get logcat of device ${id}.`,
+            },
+          }),
+      ).pipe(delay(1000));
+    }
+    if (id.includes('logical-error')) {
+      return throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 404,
+            statusText: 'Not Found',
+            error: {
+              code: 5,
+              message: 'Device was disconnected while retrieving logcat',
+            },
+          }),
+      ).pipe(delay(1000));
+    }
+    if (id.includes('rpc-error')) {
+      return throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 500,
+            statusText: 'Internal Server Error',
+            error: {
+              code: 13,
+              message: 'RPC Failure: Connection timed out',
+            },
+          }),
+      ).pipe(delay(1000));
+    }
+
     return of({
       logUrl:
         'http://0.0.0.0:8000/device_detail/action_bar/resource/logcat-demo.log',
@@ -257,6 +338,7 @@ export class FakeDeviceService extends DeviceService {
     const remoteControlVisible =
       scenario.actionVisibility?.remoteControl ?? true;
     const quarantineVisible = scenario.actionVisibility?.quarantine ?? true;
+    const decommissionVisible = isMissing;
 
     return {
       id: overview.id,
@@ -325,7 +407,7 @@ export class FakeDeviceService extends DeviceService {
         },
         decommission: {
           enabled: true,
-          visible: true,
+          visible: decommissionVisible,
           tooltip: 'Decommission device',
           isReady: !scenario.allActionsNotReady,
         },

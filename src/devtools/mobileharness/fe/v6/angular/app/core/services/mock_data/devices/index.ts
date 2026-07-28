@@ -25,6 +25,11 @@ import {SCENARIO_WIFI_DIMENSIONS_ONLY} from './23_wifi_dimensions_only';
 import {SCENARIO_TESTBED_SINGLE_ELIGIBLE} from './24_testbed_single_eligible';
 import {SCENARIO_TESTBED_MIXED_ELIGIBILITY} from './25_testbed_mixed_eligibility';
 import {SCENARIO_COMING_SOON} from './26_coming_soon';
+import {
+  scenarioErrorLogical,
+  scenarioErrorPermissionDenied,
+  scenarioErrorRpc,
+} from './27_error_scenarios';
 import {deviceRefreshFactory} from './27_refresh_scenario';
 
 function wrapDevice(
@@ -67,4 +72,7 @@ export const MOCK_DEVICE_SCENARIOS: MockDeviceScenarioWrapper[] = [
   wrapDevice(SCENARIO_TESTBED_SINGLE_ELIGIBLE),
   wrapDevice(SCENARIO_TESTBED_MIXED_ELIGIBILITY),
   wrapDevice(SCENARIO_COMING_SOON),
+  wrapDevice(scenarioErrorPermissionDenied),
+  wrapDevice(scenarioErrorLogical),
+  wrapDevice(scenarioErrorRpc),
 ];

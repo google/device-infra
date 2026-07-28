@@ -74,9 +74,14 @@ public final class FeServiceException extends RuntimeException {
     return new FeServiceException(Status.Code.NOT_FOUND, message);
   }
 
-  /** Creates an exception with the {@code PERMISSION_DENIED} code. */
+  /** Creates an exception with the {@code PERMISSION_DENIEPD} code. */
   public static FeServiceException permissionDenied(String message) {
     return new FeServiceException(Status.Code.PERMISSION_DENIED, message);
+  }
+
+  /** Creates an exception with the {@code UNAUTHENTICATED} code. */
+  public static FeServiceException unauthenticated(String message) {
+    return new FeServiceException(Status.Code.UNAUTHENTICATED, message);
   }
 
   /** Creates an exception with the {@code FAILED_PRECONDITION} code (wrong system state). */

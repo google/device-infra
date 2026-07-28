@@ -49,6 +49,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.Unquarantine
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.UnquarantineDeviceResponse;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
+import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -141,25 +142,27 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
   }
 
   @Override
-  public ListenableFuture<TakeScreenshotResponse> takeScreenshot(TakeScreenshotRequest request) {
+  public ListenableFuture<TakeScreenshotResponse> takeScreenshot(
+      TakeScreenshotRequest request, Optional<String> username) {
     UniverseScope universe;
     try {
       universe = universeFactory.create(request.getUniverse());
     } catch (IllegalArgumentException e) {
       return immediateFailedFuture(e);
     }
-    return takeScreenshotHandler.takeScreenshot(request, universe);
+    return takeScreenshotHandler.takeScreenshot(request, universe, username);
   }
 
   @Override
-  public ListenableFuture<GetLogcatResponse> getLogcat(GetLogcatRequest request) {
+  public ListenableFuture<GetLogcatResponse> getLogcat(
+      GetLogcatRequest request, Optional<String> username) {
     UniverseScope universe;
     try {
       universe = universeFactory.create(request.getUniverse());
     } catch (IllegalArgumentException e) {
       return immediateFailedFuture(e);
     }
-    return getLogcatHandler.getLogcat(request, universe);
+    return getLogcatHandler.getLogcat(request, universe, username);
   }
 
   @Override

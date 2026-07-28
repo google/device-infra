@@ -1,0 +1,13 @@
+.login-required-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+  color: #374151;
+}
+
+.explanation-text {
+  margin: 0;
+  line-height: 1.5;
+  font-size: 14px;
+}

@@ -1,5 +1,7 @@
+import {HttpErrorResponse} from '@angular/common/http';
 import {TestBed} from '@angular/core/testing';
 import {MatDialog} from '@angular/material/dialog';
+import {MatSnackBarRef} from '@angular/material/snack-bar';
 import {of, throwError} from 'rxjs';
 
 import {DeviceHeaderInfo} from '../../core/models/device_action';
@@ -11,7 +13,10 @@ import {FlashDialog} from '../../features/device_detail/components/flash_dialog/
 import {LogcatLinkDialog} from '../../features/device_detail/components/logcat_link_dialog/logcat_link_dialog';
 import {QuarantineDialog} from '../../features/device_detail/components/quarantine_dialog/quarantine_dialog';
 import {ScreenshotDialog} from '../../features/device_detail/components/screenshot_dialog/screenshot_dialog';
+import {ActionErrorContent} from '../components/action_error_content/action_error_content';
 import {ConfirmDialog} from '../components/confirm_dialog/confirm_dialog';
+import {AccessDeniedContent} from '../components/remote_control/feedback/access_denied_content';
+import {SnackBar} from '../components/snackbar/snackbar';
 import {DeviceActionService} from './device_action_service';
 import {SnackBarService} from './snackbar_service';
 
@@ -20,6 +25,7 @@ describe('DeviceActionService', () => {
   let deviceServiceSpy: jasmine.SpyObj<DeviceService>;
   let dialogSpy: jasmine.SpyObj<MatDialog>;
   let snackBarSpy: jasmine.SpyObj<SnackBarService>;
+  let mockSnackBarRef: jasmine.SpyObj<MatSnackBarRef<SnackBar>>;
 
   beforeEach(() => {
     deviceServiceSpy = jasmine.createSpyObj('DeviceService', [
@@ -33,7 +39,10 @@ describe('DeviceActionService', () => {
       'showInfo',
       'showSuccess',
       'showError',
+      'showInProgress',
     ]);
+    mockSnackBarRef = jasmine.createSpyObj('MatSnackBarRef', ['dismiss']);
+    snackBarSpy.showInProgress.and.returnValue(mockSnackBarRef);
 
     TestBed.configureTestingModule({
       providers: [
@@ -60,7 +69,10 @@ describe('DeviceActionService', () => {
 
     service.takeScreenshot('device-1').subscribe();
 
-    expect(snackBarSpy.showInfo).toHaveBeenCalledWith('Taking screenshot...');
+    expect(snackBarSpy.showInProgress).toHaveBeenCalledWith(
+      'Taking screenshot...',
+    );
+    expect(mockSnackBarRef.dismiss).toHaveBeenCalled();
     expect(deviceServiceSpy.takeScreenshot).toHaveBeenCalledWith('device-1');
     expect(snackBarSpy.showSuccess).toHaveBeenCalledWith(
       'Screenshot taken successfully.',
@@ -88,6 +100,10 @@ describe('DeviceActionService', () => {
       },
     });
 
+    expect(snackBarSpy.showInProgress).toHaveBeenCalledWith(
+      'Taking screenshot...',
+    );
+    expect(mockSnackBarRef.dismiss).toHaveBeenCalled();
     expect(snackBarSpy.showError).toHaveBeenCalledWith(
       'Failed to take screenshot.',
     );
@@ -103,7 +119,10 @@ describe('DeviceActionService', () => {
 
     service.getLogcat('device-1').subscribe();
 
-    expect(snackBarSpy.showInfo).toHaveBeenCalledWith('Getting logcat...');
+    expect(snackBarSpy.showInProgress).toHaveBeenCalledWith(
+      'Getting logcat...',
+    );
+    expect(mockSnackBarRef.dismiss).toHaveBeenCalled();
     expect(deviceServiceSpy.getLogcat).toHaveBeenCalledWith('device-1');
     expect(snackBarSpy.showSuccess).toHaveBeenCalledWith(
       'Logcat retrieved successfully. And opened in a new browser tab.',
@@ -134,6 +153,10 @@ describe('DeviceActionService', () => {
       },
     });
 
+    expect(snackBarSpy.showInProgress).toHaveBeenCalledWith(
+      'Getting logcat...',
+    );
+    expect(mockSnackBarRef.dismiss).toHaveBeenCalled();
     expect(snackBarSpy.showError).toHaveBeenCalledWith('Failed to get logcat.');
   });
 
@@ -343,5 +366,181 @@ describe('DeviceActionService', () => {
         }),
       }),
     );
+  });
+
+  describe('takeScreenshot error handling', () => {
+    it('should open AccessDeniedContent when status is 403 (PERMISSION_DENIED)', () => {
+      const errorResponse = new HttpErrorResponse({
+        status: 403,
+        statusText: 'Forbidden',
+        error: {code: 7, message: 'Lacks permission'},
+      });
+      deviceServiceSpy.takeScreenshot.and.returnValue(
+        throwError(() => errorResponse),
+      );
+
+      service.takeScreenshot('device-1').subscribe({
+        error: () => {},
+      });
+
+      expect(snackBarSpy.showInProgress).toHaveBeenCalledWith(
+        'Taking screenshot...',
+      );
+      expect(mockSnackBarRef.dismiss).toHaveBeenCalled();
+      expect(dialogSpy.open).toHaveBeenCalledWith(
+        ConfirmDialog,
+        jasmine.objectContaining({
+          data: jasmine.objectContaining({
+            title: 'Access Denied',
+            contentComponent: AccessDeniedContent,
+            contentComponentInputs: {
+              devices: [{id: 'device-1'}],
+              action: 'take screenshot of',
+            },
+          }),
+        }),
+      );
+    });
+
+    it('should open ActionErrorContent when error status is non-403 (e.g. 404)', () => {
+      const errorResponse = new HttpErrorResponse({
+        status: 404,
+        statusText: 'Not Found',
+        error: {code: 5, message: 'Device not found'},
+      });
+      deviceServiceSpy.takeScreenshot.and.returnValue(
+        throwError(() => errorResponse),
+      );
+
+      service.takeScreenshot('device-1').subscribe({
+        error: () => {},
+      });
+
+      expect(snackBarSpy.showInProgress).toHaveBeenCalledWith(
+        'Taking screenshot...',
+      );
+      expect(mockSnackBarRef.dismiss).toHaveBeenCalled();
+      expect(dialogSpy.open).toHaveBeenCalledWith(
+        ActionErrorContent,
+        jasmine.objectContaining({
+          data: jasmine.objectContaining({
+            errorMessage: 'Device not found',
+          }),
+        }),
+      );
+    });
+
+    it('should open ActionErrorContent when RPC fails', () => {
+      const error = new Error('RPC Failure');
+      error.stack = 'mock stack trace';
+      deviceServiceSpy.takeScreenshot.and.returnValue(throwError(() => error));
+
+      service.takeScreenshot('device-1').subscribe({
+        error: () => {},
+      });
+
+      expect(snackBarSpy.showInProgress).toHaveBeenCalledWith(
+        'Taking screenshot...',
+      );
+      expect(mockSnackBarRef.dismiss).toHaveBeenCalled();
+      expect(dialogSpy.open).toHaveBeenCalledWith(
+        ActionErrorContent,
+        jasmine.objectContaining({
+          data: {
+            errorMessage: 'RPC Failure',
+            errorDetails: 'mock stack trace',
+            errorTitle: 'Failed to take screenshot',
+          },
+        }),
+      );
+    });
+  });
+
+  describe('getLogcat error handling', () => {
+    it('should open AccessDeniedContent when status is 403 (PERMISSION_DENIED)', () => {
+      const errorResponse = new HttpErrorResponse({
+        status: 403,
+        statusText: 'Forbidden',
+        error: {code: 7, message: 'Lacks permission'},
+      });
+      deviceServiceSpy.getLogcat.and.returnValue(
+        throwError(() => errorResponse),
+      );
+
+      service.getLogcat('device-1').subscribe({
+        error: () => {},
+      });
+
+      expect(snackBarSpy.showInProgress).toHaveBeenCalledWith(
+        'Getting logcat...',
+      );
+      expect(mockSnackBarRef.dismiss).toHaveBeenCalled();
+      expect(dialogSpy.open).toHaveBeenCalledWith(
+        ConfirmDialog,
+        jasmine.objectContaining({
+          data: jasmine.objectContaining({
+            title: 'Access Denied',
+            contentComponent: AccessDeniedContent,
+            contentComponentInputs: {
+              devices: [{id: 'device-1'}],
+              action: 'get logcat of',
+            },
+          }),
+        }),
+      );
+    });
+
+    it('should open ActionErrorContent when error status is non-403 (e.g. 404)', () => {
+      const errorResponse = new HttpErrorResponse({
+        status: 404,
+        statusText: 'Not Found',
+        error: {code: 5, message: 'Device not found'},
+      });
+      deviceServiceSpy.getLogcat.and.returnValue(
+        throwError(() => errorResponse),
+      );
+
+      service.getLogcat('device-1').subscribe({
+        error: () => {},
+      });
+
+      expect(snackBarSpy.showInProgress).toHaveBeenCalledWith(
+        'Getting logcat...',
+      );
+      expect(mockSnackBarRef.dismiss).toHaveBeenCalled();
+      expect(dialogSpy.open).toHaveBeenCalledWith(
+        ActionErrorContent,
+        jasmine.objectContaining({
+          data: jasmine.objectContaining({
+            errorMessage: 'Device not found',
+          }),
+        }),
+      );
+    });
+
+    it('should open ActionErrorContent when RPC fails', () => {
+      const error = new Error('RPC Failure');
+      error.stack = 'mock stack trace';
+      deviceServiceSpy.getLogcat.and.returnValue(throwError(() => error));
+
+      service.getLogcat('device-1').subscribe({
+        error: () => {},
+      });
+
+      expect(snackBarSpy.showInProgress).toHaveBeenCalledWith(
+        'Getting logcat...',
+      );
+      expect(mockSnackBarRef.dismiss).toHaveBeenCalled();
+      expect(dialogSpy.open).toHaveBeenCalledWith(
+        ActionErrorContent,
+        jasmine.objectContaining({
+          data: {
+            errorMessage: 'RPC Failure',
+            errorDetails: 'mock stack trace',
+            errorTitle: 'Failed to get logcat',
+          },
+        }),
+      );
+    });
   });
 });

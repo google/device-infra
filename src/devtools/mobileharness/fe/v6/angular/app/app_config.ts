@@ -11,6 +11,7 @@ import {ActivatedRoute, provideRouter} from '@angular/router';
 import {routes} from './app_routes';
 import {authInterceptor} from './core/interceptors/auth_interceptor';
 import {forceReadyInterceptor} from './core/interceptors/force_ready_interceptor';
+import {loginInterceptor} from './core/interceptors/login_interceptor';
 import {universeInterceptor} from './core/interceptors/universe_interceptor';
 import {APP_DATA, getAppData} from './core/models/app_data';
 import {CONFIG_SERVICE} from './core/services/config/config_service';
@@ -37,6 +38,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(
       withInterceptors([
         authInterceptor,
+        loginInterceptor,
         universeInterceptor,
         forceReadyInterceptor,
       ]),

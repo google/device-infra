@@ -37,6 +37,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.TestResultSt
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.TestbedConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.UnquarantineDeviceRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.UnquarantineDeviceResponse;
+import java.util.Optional;
 
 /** Interface for the core logic of the Device Service. */
 public interface DeviceServiceLogic {
@@ -53,9 +54,11 @@ public interface DeviceServiceLogic {
   ListenableFuture<RecoveryTaskStats> getDeviceRecoveryTaskStats(
       GetDeviceRecoveryTaskStatsRequest request);
 
-  ListenableFuture<TakeScreenshotResponse> takeScreenshot(TakeScreenshotRequest request);
+  ListenableFuture<TakeScreenshotResponse> takeScreenshot(
+      TakeScreenshotRequest request, Optional<String> username);
 
-  ListenableFuture<GetLogcatResponse> getLogcat(GetLogcatRequest request);
+  ListenableFuture<GetLogcatResponse> getLogcat(
+      GetLogcatRequest request, Optional<String> username);
 
   ListenableFuture<QuarantineDeviceResponse> quarantineDevice(QuarantineDeviceRequest request);
 
