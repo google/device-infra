@@ -586,6 +586,9 @@ public interface PropertyName {
       /** Whether the test is using the MH flashstation key. */
       USE_MH_FLASHSTATION_KEY,
 
+      /** Whether the test is using the MH flashstation key illegally. */
+      USE_MH_FLASHSTATION_KEY_ILLEGALLY,
+
       /** The project ID retrieved from the key file. */
       FLASHSTATION_PROJECT_ID,
 
