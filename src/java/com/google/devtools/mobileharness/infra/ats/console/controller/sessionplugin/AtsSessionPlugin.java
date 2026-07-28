@@ -153,6 +153,9 @@ public class AtsSessionPlugin {
   @GuardedBy("itself")
   private final Map<String, Boolean> runningTradefedJobs = new HashMap<>();
 
+  @GuardedBy("itself")
+  private final Map<String, Boolean> runningNonTradefedJobs = new HashMap<>();
+
   @GuardedBy("runningTestsLock")
   private final Map<String, RunningTradefedTest> runningTradefedTests = new ConcurrentHashMap<>();
 
@@ -427,26 +430,36 @@ public class AtsSessionPlugin {
     }
 
     synchronized (runningTradefedJobs) {
-      if (!runningTradefedJobs.containsKey(jobId)) {
+      if (runningTradefedJobs.containsKey(jobId)) {
+        runningTradefedJobs.put(jobId, false);
+
+        // Add the additional tradefed jobs if needed.
+        JobInfo nextJobToAdd = additionalTradefedJobs.poll();
+        if (nextJobToAdd != null) {
+          ImmutableSet<String> devicesOfCurrentJob = getDeviceSerials(currentJob);
+          // Add the device ids of the current job to the sub device specs of the next tradefed job.
+          addDeviceIdsToSubDeviceSpecs(
+              nextJobToAdd.subDeviceSpecs().getAllSubDevices(), devicesOfCurrentJob);
+          copyDynamicDownloadProperties(currentJob, nextJobToAdd);
+          addAndTrackTradefedJobs(ImmutableList.of(nextJobToAdd));
+        }
+
+        if (runningTradefedJobs.values().stream().noneMatch(running -> running)) {
+          logger.atInfo().log(
+              "All added tradefed jobs have been done, try add non-tradefed jobs if needed.");
+          addMainNonTradefedJobs();
+        }
         return;
       }
-      runningTradefedJobs.put(jobId, false);
+    }
 
-      // Add the additional tradefed jobs if needed.
-      JobInfo nextJobToAdd = additionalTradefedJobs.poll();
-      if (nextJobToAdd != null) {
-        ImmutableSet<String> devicesOfCurrentJob = getDeviceSerials(currentJob);
-        // Add the device ids of the current job to the sub device specs of the next tradefed job.
-        addDeviceIdsToSubDeviceSpecs(
-            nextJobToAdd.subDeviceSpecs().getAllSubDevices(), devicesOfCurrentJob);
-        copyDynamicDownloadProperties(currentJob, nextJobToAdd);
-        addAndTrackTradefedJobs(ImmutableList.of(nextJobToAdd));
-      }
-
-      if (runningTradefedJobs.values().stream().noneMatch(running -> running)) {
-        logger.atInfo().log(
-            "All added tradefed jobs have been done, try add non-tradefed jobs if needed.");
-        addJobsToSession(nonTradefedJobs);
+    synchronized (runningNonTradefedJobs) {
+      if (runningNonTradefedJobs.containsKey(jobId)) {
+        runningNonTradefedJobs.put(jobId, false);
+        if (runningNonTradefedJobs.values().stream().noneMatch(running -> running)) {
+          logger.atInfo().log("All non-tradefed main jobs have completed.");
+        }
+        return;
       }
     }
   }
@@ -852,7 +865,7 @@ public class AtsSessionPlugin {
           "On session [%s] starting, no tradefed job was added, try add non-tradefed jobs if"
               + " needed.",
           sessionInfo.getSessionId());
-      addJobsToSession(nonTradefedJobs);
+      addMainNonTradefedJobs();
     }
   }
 
@@ -886,6 +899,23 @@ public class AtsSessionPlugin {
     if (!tradefedJobIds.isEmpty()) {
       synchronized (runningTradefedJobs) {
         tradefedJobIds.forEach(id -> runningTradefedJobs.putIfAbsent(id, true));
+      }
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Adds main non-Tradefed jobs to the session and records them in {@code runningNonTradefedJobs}.
+   *
+   * @return true if at least one non-Tradefed job was added and tracked; false otherwise
+   */
+  @CanIgnoreReturnValue
+  private boolean addMainNonTradefedJobs() {
+    ImmutableList<String> nonTfJobIds = addJobsToSession(nonTradefedJobs);
+    if (!nonTfJobIds.isEmpty()) {
+      synchronized (runningNonTradefedJobs) {
+        nonTfJobIds.forEach(id -> runningNonTradefedJobs.putIfAbsent(id, true));
       }
       return true;
     }
