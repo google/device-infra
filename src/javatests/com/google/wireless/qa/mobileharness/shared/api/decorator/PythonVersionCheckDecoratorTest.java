@@ -33,6 +33,8 @@ import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.PythonVersionCheckDecoratorSpec;
 import org.junit.Before;
 import org.junit.Rule;
@@ -73,6 +75,7 @@ public class PythonVersionCheckDecoratorTest {
     when(testInfo.resultWithCause()).thenReturn(result);
     when(testInfo.getRootTest()).thenReturn(rootTestInfo);
     when(rootTestInfo.resultWithCause()).thenReturn(rootResult);
+    when(testInfo.log()).thenReturn(new Log(new Timing()));
   }
 
   @Test

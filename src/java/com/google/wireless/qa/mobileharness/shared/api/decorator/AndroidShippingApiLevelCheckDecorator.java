@@ -23,10 +23,15 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidShippingApiLevelCheckDecoratorSpec;
+import java.util.Optional;
 import javax.inject.Inject;
 
 /** Decorator to check if the device's shipping API level meets the required minimum. */
@@ -34,7 +39,7 @@ import javax.inject.Inject;
     help =
         "Decorator to skip the test if the device's shipping API level is lower than the"
             + " required one.")
-public class AndroidShippingApiLevelCheckDecorator extends BaseDecorator
+public class AndroidShippingApiLevelCheckDecorator extends LifecycleDecorator
     implements SpecConfigable<AndroidShippingApiLevelCheckDecoratorSpec> {
 
   @VisibleForTesting
@@ -61,16 +66,18 @@ public class AndroidShippingApiLevelCheckDecorator extends BaseDecorator
   }
 
   @Override
-  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  protected SetupResult setUp(SetupContext context)
+      throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
     String deviceId = getDevice().getDeviceId();
     AndroidShippingApiLevelCheckDecoratorSpec spec =
         testInfo.jobInfo().combinedSpec(this, deviceId);
 
-    boolean shouldRun = true;
+    Optional<SetupResult> result = Optional.empty();
     if (spec.getMinApiLevel() > 0) {
-      shouldRun = checkShippingApiLevel(testInfo, deviceId, spec.getMinApiLevel());
+      result = checkShippingApiLevel(testInfo, deviceId, spec.getMinApiLevel());
     }
-    if (shouldRun && spec.getVsrMinApiLevel() > 0) {
+    if (result.isEmpty() && spec.getVsrMinApiLevel() > 0) {
       int vsrMinApiLevel = spec.getVsrMinApiLevel();
       if (vsrMinApiLevel > 34 && vsrMinApiLevel < 202404) {
         throw new MobileHarnessException(
@@ -78,9 +85,9 @@ public class AndroidShippingApiLevelCheckDecorator extends BaseDecorator
             "vsr-min-api-level must have YYYYMM format if it has a value greater than 34, but has "
                 + vsrMinApiLevel);
       }
-      shouldRun = checkVsrApiLevel(testInfo, deviceId, vsrMinApiLevel);
+      result = checkVsrApiLevel(testInfo, deviceId, vsrMinApiLevel);
     }
-    if (shouldRun && spec.getVendorMinApiLevel() > 0) {
+    if (result.isEmpty() && spec.getVendorMinApiLevel() > 0) {
       int vendorMinApiLevel = spec.getVendorMinApiLevel();
       if (vendorMinApiLevel < 202404) {
         throw new MobileHarnessException(
@@ -88,73 +95,81 @@ public class AndroidShippingApiLevelCheckDecorator extends BaseDecorator
             "vendor-min-api-level must have YYYYMM format greater than or equal to 202404, but has "
                 + vendorMinApiLevel);
       }
-      shouldRun = checkVendorApiLevel(testInfo, deviceId, vendorMinApiLevel);
+      result = checkVendorApiLevel(testInfo, deviceId, vendorMinApiLevel);
     }
 
-    if (shouldRun) {
-      getDecorated().run(testInfo);
-    }
+    return result.orElseGet(SetupResult::continueDecorated);
   }
 
-  private boolean checkShippingApiLevel(TestInfo testInfo, String deviceId, int minApiLevel)
+  @Override
+  protected void tearDown(TeardownContext context)
+      throws MobileHarnessException, InterruptedException {}
+
+  private Optional<SetupResult> checkShippingApiLevel(
+      TestInfo testInfo, String deviceId, int minApiLevel)
       throws MobileHarnessException, InterruptedException {
     String shippingApiLevel = androidAdbUtil.getProperty(deviceId, SYSTEM_SHIPPING_API_LEVEL_PROPS);
     int shippingApiLevelInt =
         shippingApiLevel.isEmpty() ? VALUE_NOT_FOUND : Integer.parseInt(shippingApiLevel);
     if (shippingApiLevelInt < minApiLevel) {
-      skipTest(
-          testInfo,
-          String.format(
-              "Skipping test because %s: %d on %s is less than %d.",
-              SYSTEM_SHIPPING_API_LEVEL_PROPS, shippingApiLevelInt, deviceId, minApiLevel));
-      return false;
+      return Optional.of(
+          skipTest(
+              testInfo,
+              String.format(
+                  "Skipping test because %s: %d on %s is less than %d.",
+                  SYSTEM_SHIPPING_API_LEVEL_PROPS, shippingApiLevelInt, deviceId, minApiLevel)));
     }
-    return true;
+    return Optional.empty();
   }
 
-  private boolean checkVsrApiLevel(TestInfo testInfo, String deviceId, int vsrMinApiLevel)
+  private Optional<SetupResult> checkVsrApiLevel(
+      TestInfo testInfo, String deviceId, int vsrMinApiLevel)
       throws MobileHarnessException, InterruptedException {
     // Android T or newer defines "ro.vendor.api_level".
     String vsrApiLevel = androidAdbUtil.getProperty(deviceId, VSR_VENDOR_API_LEVEL_PROPS);
     if (!vsrApiLevel.isEmpty()) {
       int vsrApiLevelInt = Integer.parseInt(vsrApiLevel);
       if (vsrApiLevelInt < vsrMinApiLevel) {
-        skipTest(
-            testInfo,
-            String.format(
-                "Skipping test because %s: %d on device %s is less than %d.",
-                VSR_VENDOR_API_LEVEL_PROPS, vsrApiLevelInt, deviceId, vsrMinApiLevel));
-        return false;
+        return Optional.of(
+            skipTest(
+                testInfo,
+                String.format(
+                    "Skipping test because %s: %d on device %s is less than %d.",
+                    VSR_VENDOR_API_LEVEL_PROPS, vsrApiLevelInt, deviceId, vsrMinApiLevel)));
       } else {
-        return true;
+        return Optional.empty();
       }
     }
     // For older devices, fallback to check both shipping api level and vendor api level.
-    return checkShippingApiLevel(testInfo, deviceId, vsrMinApiLevel)
-        && checkVendorApiLevel(testInfo, deviceId, vsrMinApiLevel);
+    Optional<SetupResult> result = checkShippingApiLevel(testInfo, deviceId, vsrMinApiLevel);
+    if (result.isPresent()) {
+      return result;
+    }
+    return checkVendorApiLevel(testInfo, deviceId, vsrMinApiLevel);
   }
 
-  private boolean checkVendorApiLevel(TestInfo testInfo, String deviceId, int vendorMinApiLevel)
+  private Optional<SetupResult> checkVendorApiLevel(
+      TestInfo testInfo, String deviceId, int vendorMinApiLevel)
       throws MobileHarnessException, InterruptedException {
     String vendorApiLevel = androidAdbUtil.getProperty(deviceId, VENDOR_API_LEVEL_PROPS);
     int vendorApiLevelInt =
         vendorApiLevel.isEmpty() ? VALUE_NOT_FOUND : Integer.parseInt(vendorApiLevel);
     if (vendorApiLevelInt < vendorMinApiLevel) {
-      skipTest(
-          testInfo,
-          String.format(
-              "Skipping test because %s: %d on device %s is less than %d.",
-              VENDOR_API_LEVEL_PROPS, vendorApiLevelInt, deviceId, vendorMinApiLevel));
-      return false;
+      return Optional.of(
+          skipTest(
+              testInfo,
+              String.format(
+                  "Skipping test because %s: %d on device %s is less than %d.",
+                  VENDOR_API_LEVEL_PROPS, vendorApiLevelInt, deviceId, vendorMinApiLevel)));
     }
-    return true;
+    return Optional.empty();
   }
 
-  private void skipTest(TestInfo testInfo, String reason) {
+  private SetupResult skipTest(TestInfo testInfo, String reason) {
     MobileHarnessException error =
         new MobileHarnessException(
             AndroidErrorId.ANDROID_SHIPPING_API_LEVEL_CHECK_DECORATOR_API_LEVEL_TOO_LOW, reason);
-    testInfo.resultWithCause().setNonPassing(TestResult.SKIP, error);
     testInfo.getRootTest().resultWithCause().setNonPassing(TestResult.SKIP, error);
+    return SetupResult.skipDecoratedWithNonPassing(TestResult.SKIP, error);
   }
 }
