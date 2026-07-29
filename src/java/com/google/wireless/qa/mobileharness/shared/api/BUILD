@@ -277,7 +277,7 @@ java_library(
 java_library(
     name = "base",
     exports = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:async_timer_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:async_timer_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:base_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:base_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:device_factory",
