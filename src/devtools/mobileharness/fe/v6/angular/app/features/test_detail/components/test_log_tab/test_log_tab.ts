@@ -49,11 +49,6 @@ export class TestLogTab implements OnInit {
   /** The external cloud log explorer URL for this test. */
   readonly cloudLogLink = input<string>('');
 
-  /** The initial test status of the test. */
-  readonly initialStatus = input<TestStatus>(
-    TestStatus.TEST_STATUS_UNSPECIFIED,
-  );
-
   /** Buffer preserving incomplete line string fragments across network fetch boundaries. */
   private trailingBuffer = '';
 

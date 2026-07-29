@@ -19,7 +19,7 @@ export declare interface HostPermissions {
 /**
  * Interface for a select option with label and value.
  */
-export interface SelectOption {
+export declare interface SelectOption {
   label: string;
   value: string;
 }

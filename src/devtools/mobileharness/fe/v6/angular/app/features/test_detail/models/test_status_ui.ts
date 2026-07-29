@@ -4,7 +4,7 @@ import {
 } from '@deviceinfra/app/core/models/test_overview';
 
 /** UI status display metadata structure. */
-export interface StatusDisplayMeta {
+export declare interface StatusDisplayMeta {
   readonly label: string;
   readonly cssClass: string;
   readonly icon: string;

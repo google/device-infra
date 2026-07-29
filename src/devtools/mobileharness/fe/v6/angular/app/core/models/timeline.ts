@@ -4,13 +4,13 @@
  */
 
 /** Represents a single mark point inside a stage (e.g. checkpoint). */
-export interface TimelineStageMarkPoint {
+export declare interface TimelineStageMarkPoint {
   readonly name: string;
   readonly time: string;
 }
 
 /** Represents a logical stage of execution (e.g. Allocation, Run). */
-export interface TimelineStage {
+export declare interface TimelineStage {
   /** The structured name of the stage (e.g., "Device Allocation", "Pre-run Test"). */
   readonly name: string;
   /** Optional tag for extra context (e.g., the test ID being allocated, or file path). */
@@ -24,7 +24,7 @@ export interface TimelineStage {
 }
 
 /** The timing breakdown of a test or job. */
-export interface TimeBreakdown {
+export declare interface TimeBreakdown {
   readonly createTime: string;
   readonly startTime?: string;
   readonly endTime?: string;

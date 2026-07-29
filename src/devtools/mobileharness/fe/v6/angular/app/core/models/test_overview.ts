@@ -34,7 +34,7 @@ export type {
   Troubleshooting,
 };
 /** Minimal reference to the parent job. */
-export interface ParentJobInfo {
+export declare interface ParentJobInfo {
   id: string;
   name: string;
   status?: JobStatus;
@@ -42,15 +42,15 @@ export interface ParentJobInfo {
   spongeLink?: string;
 }
 /** One device the test was executed on. */
-export interface TestDevice {
+export declare interface TestDevice {
   id: string;
 }
 /** Wrapper for a list of devices. */
-export interface TestDevices {
+export declare interface TestDevices {
   device?: TestDevice[];
 }
 /** The host the test ran on. */
-export interface HostInfo {
+export declare interface HostInfo {
   name: string;
   ip: string;
 }
@@ -59,7 +59,7 @@ export type TestWarning = WarningInfo;
 /** Alias for an error info item belonging to a test. */
 export type TestError = ErrorInfo;
 /** A lightweight summary of a test (for nested sub-tests). */
-export interface TestSummary {
+export declare interface TestSummary {
   id: string;
   name: string;
   status: TestStatus;
@@ -69,16 +69,16 @@ export interface TestSummary {
   devices?: TestDevices;
 }
 /** Wrapper for a list of test summaries. */
-export interface TestSummaries {
+export declare interface TestSummaries {
   test?: TestSummary[];
 }
 /** Nested sub-tests list details. */
-export interface SubTestsInfo {
+export declare interface SubTestsInfo {
   rootTestId?: string;
   subTests?: TestSummaries;
 }
 /** The full overview data for a single test (matches TestDetail proto). */
-export interface TestOverviewData {
+export declare interface TestOverviewData {
   id: string;
   name: string;
   status: TestStatus;
@@ -94,24 +94,24 @@ export interface TestOverviewData {
   fileExplorer?: FileExplorer;
 }
 /** Request structure for the getTest API. */
-export interface GetTestRequest {
+export declare interface GetTestRequest {
   testId: string;
   subTestId?: string;
   jobId: string;
 }
 /** Request structure for the getTestLog API. */
-export interface GetTestLogRequest {
+export declare interface GetTestLogRequest {
   testId: string;
   offset: number;
   jobId: string;
   contentHash?: string;
 }
 /** Response structure for the getTest API. */
-export interface GetTestResponse {
+export declare interface GetTestResponse {
   test: TestOverviewData;
 }
 /** Response structure for the getTestLog API. */
-export interface GetTestLogResponse {
+export declare interface GetTestLogResponse {
   logContent: string;
   nextOffset: number;
   testStatus: TestStatus;

@@ -26,32 +26,39 @@ describe('dateUtils', () => {
     });
   });
 
-  describe('parsePdtTimestamp', () => {
-    it('should parse PDT timestamp with space separator', () => {
-      const parsed = dateUtils.parsePdtTimestamp('2025-07-09 10:11:15');
-      expect(parsed.toISOString()).toBe('2025-07-09T17:11:15.000Z');
+  describe('parseUtcTimestamp', () => {
+    it('should parse UTC timestamp with space separator', () => {
+      const parsed = dateUtils.parseUtcTimestamp('2025-07-09 10:11:15');
+      expect(parsed.toISOString()).toBe('2025-07-09T10:11:15.000Z');
     });
 
-    it('should parse PDT timestamp with T separator and Z suffix', () => {
-      const parsed = dateUtils.parsePdtTimestamp('2025-07-09T10:11:15Z');
-      expect(parsed.toISOString()).toBe('2025-07-09T17:11:15.000Z');
+    it('should parse UTC timestamp with T separator and Z suffix', () => {
+      const parsed = dateUtils.parseUtcTimestamp('2025-07-09T10:11:15Z');
+      expect(parsed.toISOString()).toBe('2025-07-09T10:11:15.000Z');
     });
 
-    it('should parse PST timestamp during winter time', () => {
-      const parsed = dateUtils.parsePdtTimestamp('2025-01-15 10:11:15');
-      expect(parsed.toISOString()).toBe('2025-01-15T18:11:15.000Z');
+    it('should parse timestamp during winter time', () => {
+      const parsed = dateUtils.parseUtcTimestamp('2025-01-15 10:11:15');
+      expect(parsed.toISOString()).toBe('2025-01-15T10:11:15.000Z');
     });
 
-    it('should parse formatted PDT timestamp without hyphen', () => {
-      const parsed = dateUtils.parsePdtTimestamp('Jul 9, 2025, 11:30:00 AM');
-      expect(parsed.toISOString()).toBe('2025-07-09T18:30:00.000Z');
+    it('should parse formatted timestamp without hyphen', () => {
+      const parsed = dateUtils.parseUtcTimestamp('Jul 9, 2025, 11:30:00 AM');
+      expect(parsed.toISOString()).toBe('2025-07-09T11:30:00.000Z');
     });
 
     it('should return invalid date for invalid inputs', () => {
-      expect(isNaN(dateUtils.parsePdtTimestamp(null).getTime())).toBeTrue();
+      expect(isNaN(dateUtils.parseUtcTimestamp(null).getTime())).toBeTrue();
       expect(
-        isNaN(dateUtils.parsePdtTimestamp('invalid').getTime()),
+        isNaN(dateUtils.parseUtcTimestamp('invalid').getTime()),
       ).toBeTrue();
+    });
+  });
+
+  describe('parsePdtTimestamp (deprecated alias)', () => {
+    it('should delegate to parseUtcTimestamp', () => {
+      const parsed = dateUtils['parsePdtTimestamp']('2025-07-09 10:11:15');
+      expect(parsed.toISOString()).toBe('2025-07-09T10:11:15.000Z');
     });
   });
 
@@ -67,6 +74,15 @@ describe('dateUtils', () => {
       const date = new Date('2025-01-15T18:11:15Z');
       expect(dateUtils.formatPdt(date)).toMatch(
         /Jan 15, 2025, 10:11:15\s+AM\s+PST/,
+      );
+    });
+  });
+
+  describe('formatDetailedUtc', () => {
+    it('should format Date to detailed UTC string', () => {
+      const date = new Date('2025-07-09T10:11:15Z');
+      expect(dateUtils.formatDetailedUtc(date)).toMatch(
+        /Jul 9, 2025, 10:11:15\s+AM\s+UTC/,
       );
     });
   });

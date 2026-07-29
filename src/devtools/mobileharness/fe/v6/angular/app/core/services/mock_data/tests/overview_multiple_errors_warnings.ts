@@ -8,19 +8,19 @@ import {MockTestScenario} from '../models';
 
 /** A mock test scenario representing a test with multiple errors and warnings. */
 export const SCENARIO_TEST_MULTIPLE_ERRORS_WARNINGS: MockTestScenario = {
-  id: 'test-multiple-errors-warnings-1',
+  id: 'c0a4b01d-b7f9-4008-adf9-26d1a70e5f61',
   scenarioName: 'Test with Multiple Errors and Warnings',
   overview: {
-    id: 'test-multiple-errors-warnings-1',
+    id: 'c0a4b01d-b7f9-4008-adf9-26d1a70e5f61',
     name: 'com.google.devtools.mobileharness.infra.ComplexFailureTest#testExecute',
     status: TestStatus.TEST_STATUS_DONE,
     result: TestResult.TEST_RESULT_ERROR,
     job: {
-      id: 'fa789cda-123d-456e-b065-c77724b9d888',
+      id: 'b65cadd7-6ad6-440e-a3b7-bfe1948557e6',
       name: 'com.google.android.gm.GmailInstrumentationTest',
       status: JobStatus.JOB_STATUS_DONE,
       result: JobResult.JOB_RESULT_ERROR,
-      spongeLink: 'http://sponge/mock-job-link',
+      spongeLink: 'http://sponge2/fa789cda-123d-456e-b065-c77724b9d888',
     },
     devices: {
       device: [
@@ -30,7 +30,7 @@ export const SCENARIO_TEST_MULTIPLE_ERRORS_WARNINGS: MockTestScenario = {
       ],
     },
     host: {
-      name: 'mt31-dm01-a-x04.moma.google.com',
+      name: 'mt31-dm01-a-x04.moma.example.com',
       ip: '100.107.201.12',
     },
     executionDetails: {
@@ -39,7 +39,7 @@ export const SCENARIO_TEST_MULTIPLE_ERRORS_WARNINGS: MockTestScenario = {
       endTime: '2025-07-09T10:15:20Z',
       updateTime: '2025-07-09T10:15:20Z',
       user: 'dafeni',
-      actualUser: 'dafeni@google.com',
+      actualUser: 'dafeni@example.com',
     },
     properties: {
       'infra_version': 'v6.2.1',
@@ -322,9 +322,9 @@ at io.grpc.Context.run(Context.java:536)
 at com.google.tracing.LocalTraceSpanRunnable.run(LocalTraceSpanRunnable.java:59)
 at com.google.devtools.mobileharness.shared.context.InvocationContext$RunnableWithContext.run(InvocationContext.java:149)
 at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:572)
-at com.google.common.util.concurrent.TrustedListenableFutureTask$TrustedFutureInterruptibleTask.runInterruptibly(TrustedListenableFutureTask.java:131)
-at com.google.common.util.concurrent.InterruptibleTask.run(InterruptibleTask.java:74)
-at com.google.common.util.concurrent.TrustedListenableFutureTask$TrustedFutureInterruptibleTask.run(TrustedListenableFutureTask.java:83)
+at com.example.common.util.concurrent.TrustedListenableFutureTask$TrustedFutureInterruptibleTask.runInterruptibly(TrustedListenableFutureTask.java:131)
+at com.example.common.util.concurrent.InterruptibleTask.run(InterruptibleTask.java:74)
+at com.example.common.util.concurrent.TrustedListenableFutureTask$TrustedFutureInterruptibleTask.run(TrustedListenableFutureTask.java:83)
 at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
 at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 at java.base/java.lang.Thread.run(Thread.java:1656)
@@ -477,8 +477,8 @@ enable_grpc: true
 - file_lazy_resolve_flashstation = true
 - flash_result_HA8POBAQLVFYQKKZ = FLASH_FAILED
 - flash_wait_millis_for_quota_HA8POBAQLVFYQKKZ = 0
-- flashstation_client_email = mh-web-flashstation@mobile-harness-lab-server.google.com.iam.gserviceaccount.com
-- flashstation_project_id = google.com:mobile-harness-lab-server
+- flashstation_client_email = mh-web-flashstation@mobile-harness-lab-server.example.com.iam.gserviceaccount.com
+- flashstation_project_id = example.com:mobile-harness-lab-server
 - hybrid_utp_detailed_incompatible_reason_AcidRemoteDriver = no_converter
 - hybrid_utp_summary_incompatible_reason = no_converter(AcidRemoteDriver)
 - lab_test_gen_file_dir = /var/www/mh_lab_gen_files/3a5b6e45-d7be-40c6-933f-0067198a67f5/test_71f02572-1262-4dce-9cab-20e7d3011c24
@@ -507,5 +507,6 @@ get 1 files; total size: 3.95KB; total time: PT3.912818S; speed: 822.95 B/s
 2026-06-09 20:32:58:976 PDT I No external_storage_path specified, skip copying test generated files to CNS.
 2026-06-09 20:32:58:977 PDT I Start uploading test data to GoogleAnalytics
 2026-06-09 20:32:58:983 PDT I Finished uploading test data to GoogleAnalytics`,
-  cloudLogLink: '#',
+  cloudLogLink:
+    'https://console.cloud.example.com/logs/query;query=resource.type%3D%22mobileharness_test%22%20AND%20labels.test_id%3D%2271f02572-1262-4dce-9cab-20e7d3011c24%22',
 };

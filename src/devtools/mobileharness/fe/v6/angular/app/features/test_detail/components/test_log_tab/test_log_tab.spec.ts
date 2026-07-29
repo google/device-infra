@@ -24,13 +24,12 @@ import {TestLogTab} from './test_log_tab';
   standalone: true,
   imports: [TestLogTab],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<app-test-log-tab [testId]="testId" [jobId]="jobId" [cloudLogLink]="cloudLogLink" [initialStatus]="initialStatus"></app-test-log-tab>`,
+  template: `<app-test-log-tab [testId]="testId" [jobId]="jobId" [cloudLogLink]="cloudLogLink"></app-test-log-tab>`,
 })
 class TestHostComponent {
   testId!: string;
   jobId = 'job_123';
   cloudLogLink = 'http://cloud-log-link';
-  initialStatus = TestStatus.TEST_STATUS_DONE;
 }
 
 describe('TestLogTab Component', () => {
@@ -142,8 +141,6 @@ describe('TestLogTab Component', () => {
       runningFixture = TestBed.createComponent(TestHostComponent);
       runningFixture.componentInstance.testId = 'test_running';
       runningFixture.componentInstance.jobId = 'job_123';
-      runningFixture.componentInstance.initialStatus =
-        TestStatus.TEST_STATUS_RUNNING;
       runningComponent = runningFixture.debugElement.query(
         By.directive(TestLogTab),
       ).componentInstance;

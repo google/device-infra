@@ -164,4 +164,36 @@ describe('TestDetail Component', () => {
     const labels = compiled.querySelectorAll('.executed-on-grid .grid-label');
     expect(labels[0]?.textContent?.trim()).toBe('Device');
   });
+
+  it('should hide executed on card when both devices and host are missing or empty', () => {
+    const emptyData: TestOverviewData = {
+      ...mockOverviewData,
+      devices: {},
+      host: undefined,
+    };
+    mockTestService.getTest.and.returnValue(of(emptyData));
+
+    const emptyFixture = TestBed.createComponent(TestDetail);
+    emptyFixture.detectChanges();
+    const compiled = emptyFixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.executed-on-card')).toBeNull();
+  });
+
+  it('should render N/A for host when devices are present but host is undefined', () => {
+    const noHostData: TestOverviewData = {
+      ...mockOverviewData,
+      host: undefined,
+    };
+    mockTestService.getTest.and.returnValue(of(noHostData));
+
+    const noHostFixture = TestBed.createComponent(TestDetail);
+    noHostFixture.detectChanges();
+    const compiled = noHostFixture.nativeElement as HTMLElement;
+    const card = compiled.querySelector('.executed-on-card');
+    expect(card).not.toBeNull();
+    const values = compiled.querySelectorAll('.executed-on-grid .grid-value');
+    expect(values.length).toBe(2);
+    expect(values[0]?.textContent?.trim()).toContain('device_01');
+    expect(values[1]?.textContent?.trim()).toBe('N/A');
+  });
 });

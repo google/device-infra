@@ -3,7 +3,7 @@ import {TestStatus} from '@deviceinfra/app/core/models/test_overview';
 /**
  * Internal state representing the outcome of a log chunk fetch operation.
  */
-export interface FetchState {
+export declare interface FetchState {
   /** The byte offset representing the end of the downloaded log chunk. */
   readonly offset: number;
   /** The current execution status of the test being monitored. */

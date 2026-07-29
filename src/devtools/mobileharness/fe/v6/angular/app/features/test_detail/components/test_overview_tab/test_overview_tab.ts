@@ -100,7 +100,7 @@ export class TestOverviewTab {
     const test = this.test();
     const createVal = test.executionDetails?.createTime;
     const baseCreateDate = createVal
-      ? dateUtils.parsePdtTimestamp(createVal)
+      ? dateUtils.parseUtcTimestamp(createVal)
       : null;
     const result: Record<string, ReturnType<typeof this.getTimestampInfo>> = {};
     for (const item of this.timestampKeys) {
@@ -143,7 +143,7 @@ export class TestOverviewTab {
           rawValue = undefined;
       }
     }
-    const date = rawValue ? dateUtils.parsePdtTimestamp(rawValue) : null;
+    const date = rawValue ? dateUtils.parseUtcTimestamp(rawValue) : null;
     const isValid = date && !isNaN(date.getTime());
 
     if (!rawValue || !isValid) {
@@ -160,7 +160,7 @@ export class TestOverviewTab {
     const createDate =
       baseCreateDate ??
       (test.executionDetails?.createTime
-        ? dateUtils.parsePdtTimestamp(test.executionDetails.createTime)
+        ? dateUtils.parseUtcTimestamp(test.executionDetails.createTime)
         : null);
 
     const elapsed =
@@ -173,7 +173,7 @@ export class TestOverviewTab {
       displayValue: dateUtils.formatPdt(date),
       durationText: elapsed.durationText,
       localStr: dateUtils.formatDetailedLocal(date),
-      utcStr: date.toUTCString(),
+      utcStr: dateUtils.formatDetailedUtc(date),
       elapsedHtml: elapsed.elapsedHtml,
     };
   }

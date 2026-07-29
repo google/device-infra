@@ -21,7 +21,7 @@ export const SCENARIO_TEST_FAILED: MockTestScenario = {
       name: 'com.google.android.gm.GmailInstrumentationTest',
       // status: JobStatus.JOB_STATUS_DONE,
       result: JobResult.JOB_RESULT_FAIL,
-      spongeLink: 'http://sponge/mock-job-link',
+      spongeLink: 'http://sponge2/c3578d2a-776d-49e3-b065-c66624b9d665',
     },
     devices: {
       device: [
@@ -31,7 +31,7 @@ export const SCENARIO_TEST_FAILED: MockTestScenario = {
       ],
     },
     host: {
-      name: 'mt31-dm01-a-x04.moma.google.com',
+      name: 'mt31-dm01-a-x04.moma.example.com',
       ip: '100.107.201.12',
     },
     executionDetails: {
@@ -40,7 +40,7 @@ export const SCENARIO_TEST_FAILED: MockTestScenario = {
       endTime: '2025-07-09T10:12:40Z',
       updateTime: '2025-07-09T10:12:40Z',
       user: 'dafeni',
-      actualUser: 'dafeni@google.com',
+      actualUser: 'dafeni@example.com',
     },
     properties: {
       'abi': 'arm64-v8a',
@@ -52,16 +52,16 @@ export const SCENARIO_TEST_FAILED: MockTestScenario = {
             message:
               'com.google.apps.framework.data.DataErrorException: generic::INTERNAL: MobileHarnessException: Failed to get test detail from Moss [MH|INFRA_ISSUE|FE_JOB_SERVICE_RPC_ERROR|40002]',
             trace: `com.google.apps.framework.data.DataErrorException: <eye3 title='n3GXKd: INTERNAL'/> generic::INTERNAL: MobileHarnessException: Failed to get test detail from Moss [MH|INFRA_ISSUE|FE_JOB_SERVICE_RPC_ERROR|40002] at com.google.devtools.mobileharness.fe.v5.job.service.GetTestDetailProducerModule.produceFeResponse(GetTestDetailProducerModule.java:64)
-Suppressed: com.google.common.labs.concurrent.LabsFutures$LabeledExecutionException: GraphFuture{key=@com.google.devtools.mobileharness.fe.v5.job.service.Annotation$GetTestDetail com.google.devtools.mobileharness.fe.job.proto.GetTestDetail$GetTestDetailResponse} failed: MobileHarnessException: Failed to get test detail from Moss [MH|INFRA_ISSUE|FE_JOB_SERVICE_RPC_ERROR|40002]
+Suppressed: com.example.common.labs.concurrent.LabsFutures$LabeledExecutionException: GraphFuture{key=@com.google.devtools.mobileharness.fe.v5.job.service.Annotation$GetTestDetail com.google.devtools.mobileharness.fe.job.proto.GetTestDetail$GetTestDetailResponse} failed: MobileHarnessException: Failed to get test detail from Moss [MH|INFRA_ISSUE|FE_JOB_SERVICE_RPC_ERROR|40002]
 Caused by: java.util.concurrent.ExecutionException: GraphFuture{key=@com.google.apps.framework.producers.PrivateVisibility(module=com.google.devtools.mobileharness.fe.v5.job.service.GetTestDetailProducerModule.class) com.google.devtools.mobileharness.service.moss.proto.MossServiceProto$GetTestDetailResponse} failed: java.lang.NullPointerException: Attempted to inject null into the 2nd parameter of com.google.devtools.mobileharness.fe.v5.job.service.GetTestDetailProducerModule.produceMossResponse but it is not @Nullable
-  at com.google.common.util.concurrent.AbstractFuture$Failure.newExecutionException(AbstractFuture.java:170)
-  at com.google.common.util.concurrent.AbstractFuture.getDoneValue(AbstractFuture.java:300)
-  at com.google.common.util.concurrent.AbstractFutureState.blockingGet(AbstractFutureState.java:236)
-  at com.google.common.util.concurrent.Platform.get(Platform.java:54)
-  at com.google.common.util.concurrent.AbstractFuture.get(AbstractFuture.java:265)
-  at com.google.common.labs.concurrent.LabsFutures.getWithLabel(LabsFutures.java:845)
+  at com.example.common.util.concurrent.AbstractFuture$Failure.newExecutionException(AbstractFuture.java:170)
+  at com.example.common.util.concurrent.AbstractFuture.getDoneValue(AbstractFuture.java:300)
+  at com.example.common.util.concurrent.AbstractFutureState.blockingGet(AbstractFutureState.java:236)
+  at com.example.common.util.concurrent.Platform.get(Platform.java:54)
+  at com.example.common.util.concurrent.AbstractFuture.get(AbstractFuture.java:265)
+  at com.example.common.labs.concurrent.LabsFutures.getWithLabel(LabsFutures.java:845)
   at com.google.apps.framework.producers.GraphFuture.get(GraphFuture.java:115)
-  at com.google.common.util.concurrent.Uninterruptibles.getUninterruptibly(Uninterruptibles.java:340)
+  at com.example.common.util.concurrent.Uninterruptibles.getUninterruptibly(Uninterruptibles.java:340)
   at com.google.apps.framework.producers.PresentImpl.get(PresentImpl.java:32)
   at com.google.devtools.mobileharness.fe.v5.job.service.GetTestDetailProducerModule.produceFeResponse(GetTestDetailProducerModule.java:62)
   at com.google.devtools.mobileharness.fe.v5.job.service.GetTestDetailProducerModule_produceFeResponse$$invoker.doProduce(Unknown Source)

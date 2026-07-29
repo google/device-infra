@@ -28,7 +28,7 @@ export interface ExternalUrlResponse {
  */
 export interface NavigatedMessage {
   type: 'NAVIGATED';
-  page: 'host_details' | 'device_details' | 'job_details';
+  page: 'host_details' | 'device_details' | 'job_details' | 'test_details';
   params: Record<string, string>;
 }
 
@@ -156,7 +156,7 @@ export class UrlService implements OnDestroy {
    * @param params Parameters for the current page.
    */
   notifyNavigated(
-    page: 'host_details' | 'device_details' | 'job_details',
+    page: 'host_details' | 'device_details' | 'job_details' | 'test_details',
     params: Record<string, string>,
   ) {
     if (!this.isEmbeddedMode || !this.win) {

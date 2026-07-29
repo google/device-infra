@@ -120,49 +120,59 @@
                 </div>
               </div>
 
-               <div class="executed-on-card">
-                @let host = test.host;
-                @let devices = test.devices?.device;
-                <div class="executed-on-title">Executed on</div>
-                <div class="executed-on-grid">
-                  <span class="grid-label">{{ devices && devices.length > 1 ? 'Devices' : 'Device' }}</span>
-                  @if (host && host.name && host.ip) {
-                    <div class="grid-value value-stack-container">
-                      @for (dev of devices; track dev.id) {
-                        <a app-nav-link
-                          [config]="{type: 'device', hostName: host.name, hostIp: host.ip, deviceId: dev.id}"
-                          queryParamsHandling="merge"
-                          class="grid-link-value font-mono"
-                          [matTooltip]="'View Device Details: ' + dev.id"
-                          >{{ dev.id }}</a
-                        >
-                      }
-                    </div>
-                  } @else {
-                    <div class="grid-value value-stack-container font-mono">
-                      @for (dev of devices; track dev.id) {
-                        <span>{{ dev.id }}</span>
-                      }
-                    </div>
-                  }
+               @let host = test.host;
+               @let devices = test.devices?.device;
+               @let hasDevices = devices && devices.length > 0;
+               @let hasHost = host && host.name && host.ip;
+               @if (hasDevices || hasHost) {
+                 <div class="executed-on-card">
+                   <div class="executed-on-title">Executed on</div>
+                   <div class="executed-on-grid">
+                     <span class="grid-label">{{ devices && devices.length > 1 ? 'Devices' : 'Device' }}</span>
+                     @if (hasDevices) {
+                       @if (hasHost) {
+                         <div class="grid-value value-stack-container">
+                           @for (dev of devices; track dev.id) {
+                             <a app-nav-link
+                               [config]="{type: 'device', hostName: host.name, hostIp: host.ip, deviceId: dev.id}"
+                               queryParamsHandling="merge"
+                               class="grid-link-value font-mono"
+                               [matTooltip]="'View Device Details: ' + dev.id"
+                               >{{ dev.id }}</a
+                             >
+                           }
+                         </div>
+                       } @else {
+                         <div class="grid-value value-stack-container font-mono">
+                           @for (dev of devices; track dev.id) {
+                             <span>{{ dev.id }}</span>
+                           }
+                         </div>
+                       }
+                     } @else {
+                       <div class="grid-value font-mono na-value">N/A</div>
+                     }
 
-                  @if (host && host.name && host.ip) {
-                    <div class="grid-divider"></div>
+                     <div class="grid-divider"></div>
 
-                    <span class="grid-label">Host</span>
-                    <div class="grid-value font-mono">
-                      <a app-nav-link
-                        [config]="{type: 'host', hostName: host.name, hostIp: host.ip}"
-                        queryParamsHandling="merge"
-                        class="grid-link-value"
-                        [matTooltip]="host.name"
-                        >{{ host.name }}</a
-                      >
-                      <div class="host-ip-text">{{ host.ip }}</div>
-                    </div>
-                  }
-                </div>
-              </div>
+                     <span class="grid-label">Host</span>
+                     @if (hasHost) {
+                       <div class="grid-value font-mono">
+                         <a app-nav-link
+                           [config]="{type: 'host', hostName: host.name, hostIp: host.ip}"
+                           queryParamsHandling="merge"
+                           class="grid-link-value"
+                           [matTooltip]="host.name"
+                           >{{ host.name }}</a
+                         >
+                         <div class="host-ip-text">{{ host.ip }}</div>
+                       </div>
+                     } @else {
+                       <div class="grid-value font-mono na-value">N/A</div>
+                     }
+                   </div>
+                 </div>
+               }
           </div>
 
           <!-- Tabs -->
@@ -215,7 +225,6 @@
                     [testId]="test.id"
                     [jobId]="test.job?.id || data?.jobId || ''"
                     [cloudLogLink]="test.executionDetails?.cloudLogLink || ''"
-                    [initialStatus]="test.status"
                   ></app-test-log-tab>
                 } @placeholder {
                   <div class="tab-loading-placeholder">Loading logs...</div>

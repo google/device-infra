@@ -1,5 +1,5 @@
 /** Represents a parsed timeline event for UI display. */
-export interface TestTimelineEvent {
+export declare interface TestTimelineEvent {
   readonly name: string;
   readonly duration: number;
   readonly offset: number;
@@ -9,7 +9,7 @@ export interface TestTimelineEvent {
 /**
  * Detailed self-contained lifecycle summary and timing breakdown for standalone timeline rendering.
  */
-export interface TimelineSelfContainedSummary {
+export declare interface TimelineSelfContainedSummary {
   readonly createTimeStr: string;
   readonly startTimeStr: string;
   readonly endTimeStr: string;

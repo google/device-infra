@@ -490,6 +490,11 @@
     &.font-mono {
       font-family: 'Roboto Mono', monospace;
     }
+
+    &.na-value {
+      color: #9ca3af;
+      font-style: italic;
+    }
   }
 
   .host-ip-text {

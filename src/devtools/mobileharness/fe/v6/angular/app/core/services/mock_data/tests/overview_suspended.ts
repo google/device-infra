@@ -20,7 +20,7 @@ export const SCENARIO_TEST_SUSPENDED: MockTestScenario = {
       name: 'standalone_blaze_test_run',
       status: JobStatus.JOB_STATUS_DONE,
       result: JobResult.JOB_RESULT_PASS,
-      spongeLink: 'http://sponge/mock-job-link',
+      spongeLink: 'http://sponge2/a1e8e532-0ac4-4d89-8260-8012626e2e4f',
     },
     devices: {
       device: [
@@ -30,7 +30,7 @@ export const SCENARIO_TEST_SUSPENDED: MockTestScenario = {
       ],
     },
     host: {
-      name: '4b-cm-01-12-02.acs.google.com',
+      name: '4b-cm-01-12-02.acs.example.com',
       ip: '100.107.202.19',
     },
     executionDetails: {
@@ -46,5 +46,6 @@ export const SCENARIO_TEST_SUSPENDED: MockTestScenario = {
     },
   },
   log: 'Test suspended. Waiting for device quota...',
-  cloudLogLink: '#',
+  cloudLogLink:
+    'https://console.cloud.example.com/logs/query;query=resource.type%3D%22mobileharness_test%22%20AND%20labels.test_id%3D%22test-suspended-1%22',
 };

@@ -20,7 +20,7 @@ export const SCENARIO_TEST_WARNING: MockTestScenario = {
       name: 'hello_mobile_harness_test_on_mh',
       status: JobStatus.JOB_STATUS_DONE,
       result: JobResult.JOB_RESULT_PASS,
-      spongeLink: 'http://sponge/mock-job-link',
+      spongeLink: 'http://sponge2/b65cadd7-6ad6-440e-a3b7-bfe1948557e6',
     },
     devices: {
       device: [
@@ -30,7 +30,7 @@ export const SCENARIO_TEST_WARNING: MockTestScenario = {
       ],
     },
     host: {
-      name: '3a-cm-10-18-01.acs.google.com',
+      name: '3a-cm-10-18-01.acs.example.com',
       ip: '100.107.200.155',
     },
     executionDetails: {
@@ -39,7 +39,7 @@ export const SCENARIO_TEST_WARNING: MockTestScenario = {
       endTime: '2025-07-09T10:11:25Z',
       updateTime: '2025-07-09T10:11:25Z',
       user: 'dafeni',
-      actualUser: 'dafeni@google.com',
+      actualUser: 'dafeni@example.com',
     },
     properties: {
       'dimension_rooted': 'false',
@@ -97,5 +97,6 @@ export const SCENARIO_TEST_WARNING: MockTestScenario = {
     },
   },
   log: 'Test passed with warnings.',
-  cloudLogLink: '#',
+  cloudLogLink:
+    'https://console.cloud.example.com/logs/query;query=resource.type%3D%22mobileharness_test%22%20AND%20labels.test_id%3D%22test-warning-1%22',
 };

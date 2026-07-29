@@ -39,37 +39,37 @@ export class FakeTestService extends TestService {
     const scenario = MOCK_TEST_SCENARIOS.find(
       (s) => s.id === id || s.overview.id === id,
     );
-    if (scenario) {
-      let status = scenario.overview.status;
-      // In production, running tests eventually transition to DONE.
-      // Once all logs of a running test have been streamed, simulate test completion.
-      if (
-        status === TestStatus.TEST_STATUS_RUNNING &&
-        this.completedRunningTests.has(scenario.id)
-      ) {
-        status = TestStatus.TEST_STATUS_DONE;
-      }
-      console.log(
-        `[FakeTestService] getTest id=${scenario.id} status=${status} completedHas=${this.completedRunningTests.has(scenario.id)}`,
-      );
-
-      const execDetails = scenario.overview.executionDetails;
-      const overview: TestOverviewData = {
-        ...scenario.overview,
-        status,
-        executionDetails: execDetails
-          ? {
-              ...execDetails,
-              cloudLogLink: scenario.cloudLogLink,
-            }
-          : undefined,
-      };
-      return of(overview).pipe(delay(1000));
-    } else {
+    if (!scenario) {
       return throwError(
         () => new Error(`Test with ID '${id}' not found in mock data.`),
       ).pipe(delay(1000));
     }
+
+    let status = scenario.overview.status;
+    // In production, running tests eventually transition to DONE.
+    // Once all logs of a running test have been streamed, simulate test completion.
+    if (
+      status === TestStatus.TEST_STATUS_RUNNING &&
+      this.completedRunningTests.has(scenario.id)
+    ) {
+      status = TestStatus.TEST_STATUS_DONE;
+    }
+    console.log(
+      `[FakeTestService] getTest id=${scenario.id} status=${status} completedHas=${this.completedRunningTests.has(scenario.id)}`,
+    );
+
+    const execDetails = scenario.overview.executionDetails;
+    const overview: TestOverviewData = {
+      ...scenario.overview,
+      status,
+      executionDetails: execDetails
+        ? {
+            ...execDetails,
+            cloudLogLink: scenario.cloudLogLink,
+          }
+        : undefined,
+    };
+    return of(overview).pipe(delay(1000));
   }
 
   /**
@@ -83,61 +83,66 @@ export class FakeTestService extends TestService {
     const scenario = MOCK_TEST_SCENARIOS.find(
       (s) => s.id === id || s.overview.id === id,
     );
-    if (scenario) {
-      const fullLog = scenario.log || '';
-      const status = scenario.overview.status;
-
-      // When starting fresh from offset 0, reset completion status to simulate a new run.
-      if (numOffset === 0) {
-        this.completedRunningTests.delete(scenario.id);
-        this.runningLineOffsets.delete(scenario.id);
-      }
-
-      if (status === TestStatus.TEST_STATUS_RUNNING) {
-        const lines = fullLog.split('\n');
-        const currentLineOffset = this.runningLineOffsets.get(scenario.id) || 0;
-        // Progressively add 3 lines on each poll to simulate production logs growing.
-        const newLineOffset = Math.min(currentLineOffset + 3, lines.length);
-        this.runningLineOffsets.set(scenario.id, newLineOffset);
-
-        const visibleLog =
-          lines.slice(0, newLineOffset).join('\n') +
-          (newLineOffset < lines.length ? '\n' : '');
-        const chunk = visibleLog.substring(numOffset);
-        const nextOffset = numOffset + chunk.length;
-
-        console.log(
-          `[FakeTestService] getTestLog id=${scenario.id} offset=${numOffset} chunkLen=${chunk.length} nextOffset=${nextOffset} fullLogLen=${fullLog.length} linesEmitted=${newLineOffset}/${lines.length}`,
-        );
-
-        if (newLineOffset >= lines.length) {
-          this.completedRunningTests.add(scenario.id);
-        }
-
-        return of({
-          logContent: chunk,
-          nextOffset,
-          testStatus: TestStatus.TEST_STATUS_RUNNING,
-          logReset: false,
-          contentHash: 'mock-hash',
-        }).pipe(delay(300));
-      } else {
-        // If test is DONE/terminated, return remaining log content.
-        const chunk = fullLog.substring(numOffset);
-        const nextOffset = numOffset + chunk.length;
-        return of({
-          logContent: chunk,
-          nextOffset,
-          testStatus: TestStatus.TEST_STATUS_DONE,
-          logReset: false,
-          contentHash: 'mock-hash',
-        }).pipe(delay(300));
-      }
-    } else {
+    if (!scenario) {
       return throwError(
         () => new Error(`Test with ID '${id}' not found in mock data.`),
       ).pipe(delay(300));
     }
+
+    const fullLog = scenario.log || '';
+    const status = scenario.overview.status;
+
+    // When starting fresh from offset 0, reset completion status to simulate a new run.
+    if (numOffset === 0) {
+      this.completedRunningTests.delete(scenario.id);
+      this.runningLineOffsets.delete(scenario.id);
+    }
+
+    if (status !== TestStatus.TEST_STATUS_RUNNING) {
+      // If test is DONE/terminated, return remaining log content.
+      const chunk = fullLog.substring(numOffset);
+      const nextOffset = numOffset + chunk.length;
+
+      console.log(
+        `[FakeTestService] getTestLog DONE id=${scenario.id} offset=${numOffset} chunkLen=${chunk.length} nextOffset=${nextOffset} fullLogLen=${fullLog.length}`,
+      );
+
+      return of({
+        logContent: chunk,
+        nextOffset,
+        testStatus: status,
+        logReset: false,
+        contentHash: 'mock-hash',
+      }).pipe(delay(300));
+    }
+
+    const lines = fullLog.split('\n');
+    const currentLineOffset = this.runningLineOffsets.get(scenario.id) || 0;
+    // Progressively add 3 lines on each poll to simulate production logs growing.
+    const newLineOffset = Math.min(currentLineOffset + 3, lines.length);
+    this.runningLineOffsets.set(scenario.id, newLineOffset);
+
+    const visibleLog =
+      lines.slice(0, newLineOffset).join('\n') +
+      (newLineOffset < lines.length ? '\n' : '');
+    const chunk = visibleLog.substring(numOffset);
+    const nextOffset = numOffset + chunk.length;
+
+    console.log(
+      `[FakeTestService] getTestLog id=${scenario.id} offset=${numOffset} chunkLen=${chunk.length} nextOffset=${nextOffset} fullLogLen=${fullLog.length} linesEmitted=${newLineOffset}/${lines.length}`,
+    );
+
+    if (newLineOffset >= lines.length) {
+      this.completedRunningTests.add(scenario.id);
+    }
+
+    return of({
+      logContent: chunk,
+      nextOffset,
+      testStatus: TestStatus.TEST_STATUS_RUNNING,
+      logReset: false,
+      contentHash: 'mock-hash',
+    }).pipe(delay(300));
   }
 
   override getTestFile(
