@@ -64,6 +64,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
+import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -444,8 +445,8 @@ public final class AtsSessionPluginTest {
     when(tfJob.properties()).thenReturn(new Properties(new Timing()));
 
     when(runCommandHandler.createTradefedJobs(runCommand)).thenReturn(ImmutableList.of(tfJob));
-    when(runCommandHandler.createNonTradefedJobs(runCommand))
-        .thenReturn(ImmutableList.of(setupJob));
+    when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
+    when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
 
     atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
@@ -475,8 +476,8 @@ public final class AtsSessionPluginTest {
     when(tfJob.properties()).thenReturn(new Properties(new Timing()));
 
     when(runCommandHandler.createTradefedJobs(runCommand)).thenReturn(ImmutableList.of(tfJob));
-    when(runCommandHandler.createNonTradefedJobs(runCommand))
-        .thenReturn(ImmutableList.of(setupJob));
+    when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
+    when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
 
     atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
@@ -512,7 +513,8 @@ public final class AtsSessionPluginTest {
 
     when(runCommandHandler.createTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
     when(runCommandHandler.createNonTradefedJobs(runCommand))
-        .thenReturn(ImmutableList.of(setupJob, nonTfJob));
+        .thenReturn(ImmutableList.of(nonTfJob));
+    when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
 
     atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
@@ -545,6 +547,7 @@ public final class AtsSessionPluginTest {
     when(runCommandHandler.createTradefedJobs(runCommand)).thenReturn(ImmutableList.of(tfJob));
     when(runCommandHandler.createNonTradefedJobs(runCommand))
         .thenReturn(ImmutableList.of(nonTfJob));
+    when(runCommandHandler.createSetupJob()).thenReturn(Optional.empty());
 
     atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
@@ -583,7 +586,9 @@ public final class AtsSessionPluginTest {
 
     when(runCommandHandler.createTradefedJobs(runCommand)).thenReturn(ImmutableList.of(tfJob));
     when(runCommandHandler.createNonTradefedJobs(runCommand))
-        .thenReturn(ImmutableList.of(setupJob, nonTfJob, teardownJob));
+        .thenReturn(ImmutableList.of(nonTfJob));
+    when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
+    when(runCommandHandler.createTeardownJob()).thenReturn(Optional.of(teardownJob));
 
     atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
@@ -641,8 +646,9 @@ public final class AtsSessionPluginTest {
 
     when(runCommandHandler.createTradefedJobs(runCommand))
         .thenReturn(ImmutableList.of(tfJob1, tfJob2));
-    when(runCommandHandler.createNonTradefedJobs(runCommand))
-        .thenReturn(ImmutableList.of(setupJob, teardownJob));
+    when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
+    when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
+    when(runCommandHandler.createTeardownJob()).thenReturn(Optional.of(teardownJob));
 
     atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 

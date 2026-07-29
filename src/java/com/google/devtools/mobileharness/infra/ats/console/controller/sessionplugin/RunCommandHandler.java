@@ -171,6 +171,14 @@ class RunCommandHandler {
     return jobInfos;
   }
 
+  Optional<JobInfo> createSetupJob() throws MobileHarnessException, InterruptedException {
+    return xtsJobCreator.createXtsSetupJob(sessionRequestInfo);
+  }
+
+  Optional<JobInfo> createTeardownJob() throws MobileHarnessException, InterruptedException {
+    return xtsJobCreator.createXtsTearDownJob(sessionRequestInfo);
+  }
+
   /**
    * Copies xTS tradefed and non-tradefed generated logs/results into proper locations within the
    * given xts root dir.

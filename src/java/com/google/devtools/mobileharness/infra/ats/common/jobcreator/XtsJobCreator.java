@@ -543,11 +543,59 @@ public abstract class XtsJobCreator {
       validateNonTfSubPlan(subPlan);
     }
 
-    ImmutableList<JobInfo> nonTfJobs =
-        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-            sessionRequestInfo, subPlan, extraJobProperties.buildOrThrow());
+    return sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+        sessionRequestInfo, subPlan, extraJobProperties.buildOrThrow());
+  }
 
-    boolean hasNonTradefedJobs = nonTfJobs != null && !nonTfJobs.isEmpty();
+  /**
+   * Creates a synthetic job responsible for running all precondition decorators in setup mode
+   * (equivalent to Tradefed's target preparers setUp) if needed.
+   */
+  public Optional<JobInfo> createXtsSetupJob(SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException, InterruptedException {
+    if (!shouldCreatePreconditionJobs(sessionRequestInfo)) {
+      return Optional.empty();
+    }
+    ImmutableList<PreconditionDecorator> preconditionDecorators =
+        parsePreconditionDecorators(sessionRequestInfo);
+    if (preconditionDecorators.isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.of(createSetUpJob(sessionRequestInfo, preconditionDecorators));
+  }
+
+  /**
+   * Creates a synthetic job responsible for running all precondition decorators in teardown mode
+   * (equivalent to Tradefed's target preparers tearDown) if needed.
+   */
+  public Optional<JobInfo> createXtsTearDownJob(SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException, InterruptedException {
+    if (!shouldCreatePreconditionJobs(sessionRequestInfo)) {
+      return Optional.empty();
+    }
+    ImmutableList<PreconditionDecorator> preconditionDecorators =
+        parsePreconditionDecorators(sessionRequestInfo);
+    if (preconditionDecorators.isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.of(createTearDownJob(sessionRequestInfo, preconditionDecorators));
+  }
+
+  /**
+   * Whether to create synthetic setup and teardown jobs for the session.
+   *
+   * <p>Precondition (setup and teardown) jobs are created when:
+   * <li>Module sharding is enabled
+   * <li>or the session contains only non-Tradefed (e.g., Mobly) jobs.
+   */
+  private boolean shouldCreatePreconditionJobs(SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException {
+    if (SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)) {
+      return true;
+    }
+    if (!sessionRequestHandlerUtil.canCreateNonTradefedJobs(sessionRequestInfo)) {
+      return false;
+    }
 
     boolean hasTradefedJobs = true;
     try {
@@ -561,29 +609,7 @@ public abstract class XtsJobCreator {
         throw e;
       }
     }
-
-    boolean isModuleSharding =
-        SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo);
-    boolean hasOnlyMoblyJobs = hasNonTradefedJobs && !hasTradefedJobs;
-
-    // We'll create setup and teardown jobs to run precondition decorators (Tradefed's target
-    // preparers equivalents) when the session has module sharding enabled or contains only Mobly
-    // modules.
-    if (isModuleSharding || hasOnlyMoblyJobs) {
-      ImmutableList<PreconditionDecorator> preconditionDecorators =
-          parsePreconditionDecorators(sessionRequestInfo);
-      if (!preconditionDecorators.isEmpty()) {
-        JobInfo setUpJob = createSetUpJob(sessionRequestInfo, preconditionDecorators);
-        JobInfo tearDownJob = createTearDownJob(sessionRequestInfo, preconditionDecorators);
-        nonTfJobs =
-            ImmutableList.<JobInfo>builder()
-                .add(setUpJob)
-                .addAll(nonTfJobs)
-                .add(tearDownJob)
-                .build();
-      }
-    }
-    return nonTfJobs;
+    return !hasTradefedJobs;
   }
 
   /**

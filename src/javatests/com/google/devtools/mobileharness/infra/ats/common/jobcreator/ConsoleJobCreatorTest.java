@@ -700,16 +700,20 @@ public final class ConsoleJobCreatorTest {
 
     ImmutableList<JobInfo> jobs = jobCreator.createXtsNonTradefedJobs(sessionRequestInfo);
 
-    assertThat(jobs).hasSize(3);
-    assertThat(jobs.get(0).locator().getName()).isEqualTo(XtsConstants.SETUP_JOB_NAME);
-    assertThat(jobs.get(0).properties().get(StepSkippableDecoratorConstants.PROP_EXECUTION_MODE))
+    assertThat(jobs).containsExactly(mockJobInfo);
+
+    Optional<JobInfo> setupJobOpt = jobCreator.createXtsSetupJob(sessionRequestInfo);
+    assertThat(setupJobOpt).isPresent();
+    JobInfo setupJob = setupJobOpt.get();
+    assertThat(setupJob.locator().getName()).isEqualTo(XtsConstants.SETUP_JOB_NAME);
+    assertThat(setupJob.properties().get(StepSkippableDecoratorConstants.PROP_EXECUTION_MODE))
         .isEqualTo(StepSkippableDecoratorConstants.ExecutionMode.SETUP_ONLY.name());
-    assertThat(jobs.get(0).type().getDriver()).isEqualTo("NoOpDriver");
-    assertThat(jobs.get(0).subDeviceSpecs().getAllSubDevices().get(0).decorators().getAll())
+    assertThat(setupJob.type().getDriver()).isEqualTo("NoOpDriver");
+    assertThat(setupJob.subDeviceSpecs().getAllSubDevices().get(0).decorators().getAll())
         .containsExactly("DeviceInfoCollectorDecorator", "AndroidFilePullerDecorator")
         .inOrder();
     DeviceInfoCollectorDecoratorSpec spec =
-        jobs.get(0)
+        setupJob
             .subDeviceSpecs()
             .getAllSubDevices()
             .get(0)
@@ -719,7 +723,7 @@ public final class ConsoleJobCreatorTest {
     assertThat(spec).isNotNull();
     assertThat(spec.getApk()).isEqualTo("CtsDeviceInfo.apk");
     AndroidFilePullerDecoratorSpec pullerSpec =
-        jobs.get(0)
+        setupJob
             .subDeviceSpecs()
             .getAllSubDevices()
             .get(0)
@@ -730,13 +734,14 @@ public final class ConsoleJobCreatorTest {
     assertThat(pullerSpec.getFilePathOnDevice()).isEqualTo("/sys/fs/selinux/policy");
     assertThat(pullerSpec.getPulledFileDir()).isEqualTo("vintf-files/sepolicy");
 
-    assertThat(jobs.get(1).locator().getName()).isEqualTo("mobly_job");
-
-    assertThat(jobs.get(2).locator().getName()).isEqualTo(XtsConstants.TEARDOWN_JOB_NAME);
-    assertThat(jobs.get(2).properties().get(StepSkippableDecoratorConstants.PROP_EXECUTION_MODE))
+    Optional<JobInfo> teardownJobOpt = jobCreator.createXtsTearDownJob(sessionRequestInfo);
+    assertThat(teardownJobOpt).isPresent();
+    JobInfo teardownJob = teardownJobOpt.get();
+    assertThat(teardownJob.locator().getName()).isEqualTo(XtsConstants.TEARDOWN_JOB_NAME);
+    assertThat(teardownJob.properties().get(StepSkippableDecoratorConstants.PROP_EXECUTION_MODE))
         .isEqualTo(StepSkippableDecoratorConstants.ExecutionMode.TEARDOWN_ONLY.name());
-    assertThat(jobs.get(2).type().getDriver()).isEqualTo("NoOpDriver");
-    assertThat(jobs.get(2).subDeviceSpecs().getAllSubDevices().get(0).decorators().getAll())
+    assertThat(teardownJob.type().getDriver()).isEqualTo("NoOpDriver");
+    assertThat(teardownJob.subDeviceSpecs().getAllSubDevices().get(0).decorators().getAll())
         .containsExactly("DeviceInfoCollectorDecorator", "AndroidFilePullerDecorator")
         .inOrder();
   }

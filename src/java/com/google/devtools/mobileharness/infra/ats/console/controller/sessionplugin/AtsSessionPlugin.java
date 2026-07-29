@@ -32,7 +32,6 @@ import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.partitioningBy;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.Subscribe;
@@ -44,7 +43,6 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionF
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
-import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
@@ -344,18 +342,10 @@ public class AtsSessionPlugin {
             /* cause= */ null);
       }
 
-      Optional<JobInfo> setupJobOpt = nonTradefedJobs.stream().filter(this::isSetupJob).findFirst();
-      Optional<JobInfo> teardownJobOpt =
-          nonTradefedJobs.stream().filter(this::isTeardownJob).findFirst();
+      Optional<JobInfo> setupJobOpt = runCommandHandler.createSetupJob();
+      Optional<JobInfo> teardownJobOpt = runCommandHandler.createTeardownJob();
 
-      if (teardownJobOpt.isPresent()) {
-        teardownJobRef.set(teardownJobOpt.get());
-      }
-
-      nonTradefedJobs =
-          nonTradefedJobs.stream()
-              .filter(job -> !isSetupJob(job) && !isTeardownJob(job))
-              .collect(toImmutableList());
+      teardownJobOpt.ifPresent(teardownJobRef::set);
 
       if (setupJobOpt.isPresent()) {
         addSetupJob(setupJobOpt.get());
@@ -823,20 +813,6 @@ public class AtsSessionPlugin {
       String deviceId = deviceIdIterator.next();
       subDeviceSpec.dimensions().add(Name.ID.lowerCaseName(), deviceId);
     }
-  }
-
-  private boolean isSetupJob(JobInfo jobInfo) {
-    return Ascii.equalsIgnoreCase(jobInfo.locator().getName(), XtsConstants.SETUP_JOB_NAME)
-        || Ascii.equalsIgnoreCase(
-            jobInfo.properties().getOptional(SessionHandlerHelper.XTS_MODULE_NAME_PROP).orElse(""),
-            XtsConstants.SETUP_JOB_NAME);
-  }
-
-  private boolean isTeardownJob(JobInfo jobInfo) {
-    return Ascii.equalsIgnoreCase(jobInfo.locator().getName(), XtsConstants.TEARDOWN_JOB_NAME)
-        || Ascii.equalsIgnoreCase(
-            jobInfo.properties().getOptional(SessionHandlerHelper.XTS_MODULE_NAME_PROP).orElse(""),
-            XtsConstants.TEARDOWN_JOB_NAME);
   }
 
   /**
