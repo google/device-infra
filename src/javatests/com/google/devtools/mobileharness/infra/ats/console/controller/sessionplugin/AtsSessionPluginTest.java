@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
+import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.mock;
@@ -566,10 +567,13 @@ public final class AtsSessionPluginTest {
                 .build());
     atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
 
+    Properties setupJobProperties = new Properties(new Timing());
+    setupJobProperties.add(
+        "step_skippable_lifecycle_decorator_state::device1::decorator1::key1", "val1");
     JobInfo setupJob = mock(JobInfo.class);
     when(setupJob.locator())
         .thenReturn(new JobLocator("setup_job_id", XtsConstants.SETUP_JOB_NAME));
-    when(setupJob.properties()).thenReturn(new Properties(new Timing()));
+    when(setupJob.properties()).thenReturn(setupJobProperties);
 
     JobInfo tfJob = mock(JobInfo.class);
     when(tfJob.locator()).thenReturn(new JobLocator("tf_job_id", "tf_job"));
@@ -579,10 +583,11 @@ public final class AtsSessionPluginTest {
     when(nonTfJob.locator()).thenReturn(new JobLocator("nontf_job_id", "nontf_job"));
     when(nonTfJob.properties()).thenReturn(new Properties(new Timing()));
 
+    Properties teardownJobProperties = new Properties(new Timing());
     JobInfo teardownJob = mock(JobInfo.class);
     when(teardownJob.locator())
         .thenReturn(new JobLocator("teardown_job_id", XtsConstants.TEARDOWN_JOB_NAME));
-    when(teardownJob.properties()).thenReturn(new Properties(new Timing()));
+    when(teardownJob.properties()).thenReturn(teardownJobProperties);
 
     when(runCommandHandler.createTradefedJobs(runCommand)).thenReturn(ImmutableList.of(tfJob));
     when(runCommandHandler.createNonTradefedJobs(runCommand))
@@ -611,6 +616,10 @@ public final class AtsSessionPluginTest {
     // Non-TF job ends -> Teardown job scheduled
     atsSessionPlugin.onJobEnd(new JobEndEvent(nonTfJob, /* jobError= */ null));
     verify(sessionInfo).addJob(teardownJob);
+    assertThat(
+            teardownJobProperties.get(
+                "step_skippable_lifecycle_decorator_state::device1::decorator1::key1"))
+        .isEqualTo("val1");
   }
 
   @Test

@@ -86,6 +86,7 @@ import com.google.protobuf.TextFormat;
 import com.google.protobuf.Timestamp;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.util.StepSkippableLifecycleDecoratorUtil;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
@@ -182,6 +183,7 @@ public class AtsSessionPlugin {
   private volatile ImmutableList<JobInfo> tradefedJobs = ImmutableList.of();
   private volatile ImmutableList<JobInfo> nonTradefedJobs = ImmutableList.of();
 
+  private final AtomicReference<JobInfo> setupJobRef = new AtomicReference<>();
   private final AtomicReference<JobInfo> teardownJobRef = new AtomicReference<>();
   private final AtomicReference<String> runningSetupJobId = new AtomicReference<>();
   private final AtomicReference<String> runningTeardownJobId = new AtomicReference<>();
@@ -345,6 +347,7 @@ public class AtsSessionPlugin {
       Optional<JobInfo> setupJobOpt = runCommandHandler.createSetupJob();
       Optional<JobInfo> teardownJobOpt = runCommandHandler.createTeardownJob();
 
+      setupJobOpt.ifPresent(setupJobRef::set);
       teardownJobOpt.ifPresent(teardownJobRef::set);
 
       if (setupJobOpt.isPresent()) {
@@ -929,6 +932,10 @@ public class AtsSessionPlugin {
   private void addTeardownJobIfAny() {
     JobInfo teardownJob = teardownJobRef.getAndSet(null);
     if (teardownJob != null) {
+      JobInfo setupJob = setupJobRef.get();
+      if (setupJob != null) {
+        StepSkippableLifecycleDecoratorUtil.relayStates(setupJob, teardownJob);
+      }
       logger.atInfo().log("Adding teardown job [%s].", teardownJob.locator().getId());
       ImmutableList<String> jobIds = addJobsToSession(ImmutableList.of(teardownJob));
       if (!jobIds.isEmpty()) {
