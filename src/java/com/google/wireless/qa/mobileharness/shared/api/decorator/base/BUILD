@@ -23,12 +23,14 @@ package(
 )
 
 java_library(
-    name = "decorator",
-    srcs = ["Decorator.java"],
+    name = "async_timer_decorator",
+    srcs = ["AsyncTimerDecorator.java"],
     deps = [
-        ":lifecycle_decorator_subclass",
+        ":lifecycle_decorator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
-        "@maven//:com_google_errorprone_error_prone_annotations",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
     ],
 )
 
@@ -49,6 +51,16 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:base_driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+    ],
+)
+
+java_library(
+    name = "decorator",
+    srcs = ["Decorator.java"],
+    deps = [
+        ":lifecycle_decorator_subclass",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "@maven//:com_google_errorprone_error_prone_annotations",
     ],
 )
 
@@ -80,6 +92,16 @@ java_library(
 )
 
 java_library(
+    name = "setup_only_decorator",
+    srcs = ["SetupOnlyDecorator.java"],
+    deps = [
+        ":lifecycle_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+    ],
+)
+
+java_library(
     name = "step_skippable_lifecycle_decorator",
     srcs = ["StepSkippableLifecycleDecorator.java"],
     deps = [
@@ -95,12 +117,10 @@ java_library(
 )
 
 java_library(
-    name = "async_timer_decorator",
-    srcs = ["AsyncTimerDecorator.java"],
+    name = "teardown_only_decorator",
+    srcs = ["TeardownOnlyDecorator.java"],
     deps = [
         ":lifecycle_decorator",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
     ],
