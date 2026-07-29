@@ -318,7 +318,9 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
       }
 
       // Calls runTest().
-      if (!skipRunTest && !Thread.currentThread().isInterrupted()) {
+      if (!skipRunTest
+          && testInfo.resultWithCause().get().type() == TestResult.UNKNOWN
+          && !Thread.currentThread().isInterrupted()) {
         testInfo
             .log()
             .atInfo()
@@ -335,6 +337,20 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
               .alsoTo(logger)
               .log("Run test %s finished", testInfo.locator().getName());
         }
+      } else if (testInfo.resultWithCause().get().type() != TestResult.UNKNOWN) {
+        testInfo
+            .log()
+            .atInfo()
+            .alsoTo(logger)
+            .log(
+                "Skip runTest() because test result is already set to %s with cause: %s",
+                testInfo.resultWithCause().get().type(),
+                testInfo
+                    .resultWithCause()
+                    .get()
+                    .causeException()
+                    .map(MoreThrowables::shortDebugString)
+                    .orElse("null"));
       }
     } catch (InterruptedException e) {
       if (testInfo.jobInfo().timer().isExpired()) {
