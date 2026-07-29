@@ -22,7 +22,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.test.local.annotation.DoNotSubscribeTestEvent;
 import com.google.devtools.mobileharness.shared.util.reflection.ClassConstants;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.StepAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.validator.env.EnvValidator;

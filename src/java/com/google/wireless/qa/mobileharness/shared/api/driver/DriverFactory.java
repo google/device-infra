@@ -29,7 +29,7 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Stage;
 import com.google.wireless.qa.mobileharness.shared.api.CommonLibraryModule;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.util.ReflectionUtil;

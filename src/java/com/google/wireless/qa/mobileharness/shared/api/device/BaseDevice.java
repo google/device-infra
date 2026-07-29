@@ -42,7 +42,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.ParseException;
 import com.google.wireless.qa.mobileharness.shared.api.ClassUtil;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.validator.ValidatorFactory;
 import com.google.wireless.qa.mobileharness.shared.api.validator.env.EnvValidator;

@@ -33,7 +33,7 @@ import com.google.common.reflect.ClassPath.ClassInfo;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ConstraintsForTesting;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.driver.DriverFactory;

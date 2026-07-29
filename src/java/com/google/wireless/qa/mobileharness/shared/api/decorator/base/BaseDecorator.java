@@ -16,7 +16,6 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator.base;
 
-import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.BaseDriver;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;

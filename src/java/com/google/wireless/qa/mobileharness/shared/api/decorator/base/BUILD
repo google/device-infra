@@ -23,6 +23,16 @@ package(
 )
 
 java_library(
+    name = "decorator",
+    srcs = ["Decorator.java"],
+    deps = [
+        ":lifecycle_decorator_subclass",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+    ],
+)
+
+java_library(
     name = "base_decorator",
     srcs = ["BaseDecorator.java"],
     visibility = [
@@ -35,7 +45,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:__pkg__",
     ],
     deps = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator",
+        ":decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:base_driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
@@ -65,7 +75,6 @@ java_library(
     name = "lifecycle_decorator_subclass",
     srcs = ["LifecycleDecoratorSubclass.java"],
     visibility = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:__pkg__",
     ],
 )

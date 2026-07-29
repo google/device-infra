@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.wireless.qa.mobileharness.shared.api.decorator;
+package com.google.wireless.qa.mobileharness.shared.api.decorator.base;
 
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 
