@@ -75,7 +75,8 @@ final class AllDetectorsAndDispatchers {
 
     // Android JIT emulator detector.
     if (Flags.enableEmulatorDetection.getNonNull()) {
-      if (Flags.androidJitEmulatorNum.getNonNull() > 0) {
+      if (Flags.androidJitEmulatorNum.getNonNull() > 0
+          || Flags.remoteAndroidJitEmulatorNum.getNonNull() > 0) {
         detectorCandidates.add(createDetector("AndroidJitEmulatorDetector"));
       }
     }
@@ -115,7 +116,8 @@ final class AllDetectorsAndDispatchers {
 
     // Android JIT emulator dispatcher.
     if (Flags.enableEmulatorDetection.getNonNull()) {
-      if (Flags.androidJitEmulatorNum.getNonNull() > 0) {
+      if (Flags.androidJitEmulatorNum.getNonNull() > 0
+          || Flags.remoteAndroidJitEmulatorNum.getNonNull() > 0) {
         dispatcherManager.add(loadDispatcherClass("AndroidJitEmulatorDispatcher"));
       }
     }

@@ -25,8 +25,9 @@ java_library(
     name = "tests",
     srcs = glob(["*.java"]),
     deps = [
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:android_jit_emulator_detector",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/bootstrap:all_detectors_and_dispatchers",
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:junit_junit",
     ],
