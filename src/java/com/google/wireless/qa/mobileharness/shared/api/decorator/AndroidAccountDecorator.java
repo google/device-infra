@@ -190,8 +190,7 @@ public class AndroidAccountDecorator extends LifecycleDecorator
           new MobileHarnessException(
               AndroidErrorId.ANDROID_ACCOUNT_DECORATOR_USE_LST_ON_RELEASE_KEYS_DEVICE_ERROR,
               "LOGIN_SCOPED_TOKEN can not be supported by release-key device");
-      testInfo.resultWithCause().setNonPassing(FAIL, exception);
-      throw exception;
+      return SetupResult.skipDecoratedWithNonPassing(FAIL, exception);
     }
     removeExistingAndGetAccountsToUpdate(device, forceRemove, accountsToAdd, testInfo.log());
 

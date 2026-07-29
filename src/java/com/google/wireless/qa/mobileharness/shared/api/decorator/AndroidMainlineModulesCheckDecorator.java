@@ -85,9 +85,8 @@ public class AndroidMainlineModulesCheckDecorator extends LifecycleDecorator
               String.format(
                   "None of %s is active on device %s or error happened, skipping the test",
                   spec.getMainlineModulePackageNameList(), deviceId));
-      testInfo.resultWithCause().setNonPassing(TestResult.SKIP, error);
       testInfo.getRootTest().resultWithCause().setNonPassing(TestResult.SKIP, error);
-      throw error;
+      return SetupResult.skipDecoratedWithNonPassing(TestResult.SKIP, error);
     }
     return SetupResult.continueDecorated();
   }

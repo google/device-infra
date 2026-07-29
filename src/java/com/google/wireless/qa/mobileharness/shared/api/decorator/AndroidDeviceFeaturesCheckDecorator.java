@@ -96,9 +96,8 @@ public class AndroidDeviceFeaturesCheckDecorator extends LifecycleDecorator
                 existentForbiddenFeatures,
                 supportedFeatures,
                 deviceId));
-    testInfo.resultWithCause().setNonPassing(TestResult.SKIP, error);
     testInfo.getRootTest().resultWithCause().setNonPassing(TestResult.SKIP, error);
-    throw error;
+    return SetupResult.skipDecoratedWithNonPassing(TestResult.SKIP, error);
   }
 
   @Override

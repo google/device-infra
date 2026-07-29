@@ -193,11 +193,10 @@ public class AndroidBusinessLogicSkipModuleDecorator extends LifecycleDecorator
             .log("Failed to evaluate business logic. Continuing with module execution.");
       }
 
-      // If the exception is non-null, throw it to skip the decorated execution (the test result has
-      // already
+      // If the exception is non-null, skip the decorated execution (the test result has already
       // been set). Otherwise, the execution continues normally.
       if (this.evaluationResultException != null) {
-        throw this.evaluationResultException;
+        return SetupResult.skipDecoratedWithoutResult();
       }
     }
     return SetupResult.continueDecorated();

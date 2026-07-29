@@ -64,9 +64,8 @@ public class AndroidMinSdkVersionCheckDecorator extends LifecycleDecorator
               String.format(
                   "Device %s has SDK version %s, which is lower than the required minSdkVersion %s",
                   deviceId, androidSystemSettingUtil.getDeviceSdkVersion(deviceId), minSdkVersion));
-      testInfo.resultWithCause().setNonPassing(TestResult.SKIP, error);
       testInfo.getRootTest().resultWithCause().setNonPassing(TestResult.SKIP, error);
-      throw error;
+      return SetupResult.skipDecoratedWithNonPassing(TestResult.SKIP, error);
     }
     return SetupResult.continueDecorated();
   }
