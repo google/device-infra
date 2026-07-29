@@ -36,6 +36,7 @@ import com.google.api.client.http.json.JsonHttpContent;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ascii;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
@@ -164,8 +165,9 @@ public class CloudOrchestratorClient {
     return res.items;
   }
 
-  public void deleteHost(String hostName) throws MobileHarnessException {
-    delete("/hosts/" + hostName);
+  @CanIgnoreReturnValue
+  public Operation deleteHost(String hostName) throws MobileHarnessException {
+    return deleteWithResponse("/hosts/" + hostName, Operation.class);
   }
 
   public void fetchArtifactsAndWait(String hostId, String branch, String target)
@@ -417,6 +419,11 @@ public class CloudOrchestratorClient {
     vm.put("memory_mb", 8192);
     vm.put("setupwizard_mode", "OPTIONAL");
     vm.put("cpus", 4);
+    if (isX86Target(target)) {
+      Map<String, Object> crosvm = new HashMap<>();
+      crosvm.put("vhost_user_vsock", "true");
+      vm.put("crosvm", crosvm);
+    }
     instance.put("vm", vm);
     Map<String, Object> disk = new HashMap<>();
     disk.put("default_build", buildStr);
@@ -451,6 +458,17 @@ public class CloudOrchestratorClient {
   public Cvd createCvdWithLocalImageAndWait(
       String hostId, String cvdId, String hostImageDirId, String deviceImageDirId)
       throws MobileHarnessException, InterruptedException {
+    return createCvdWithLocalImageAndWait(hostId, cvdId, hostImageDirId, deviceImageDirId, null);
+  }
+
+  /** Creates a CVD using local images. */
+  public Cvd createCvdWithLocalImageAndWait(
+      String hostId,
+      String cvdId,
+      String hostImageDirId,
+      String deviceImageDirId,
+      @Nullable String target)
+      throws MobileHarnessException, InterruptedException {
     Map<String, Object> envConfig = new HashMap<>();
     Map<String, Object> common = new HashMap<>();
     common.put("host_package", "@image_dirs/" + hostImageDirId);
@@ -464,6 +482,11 @@ public class CloudOrchestratorClient {
     vm.put("memory_mb", 8192);
     vm.put("setupwizard_mode", "OPTIONAL");
     vm.put("cpus", 4);
+    if (isX86Target(target)) {
+      Map<String, Object> crosvm = new HashMap<>();
+      crosvm.put("vhost_user_vsock", "true");
+      vm.put("crosvm", crosvm);
+    }
     instance.put("vm", vm);
     Map<String, Object> disk = new HashMap<>();
     disk.put("default_build", "@image_dirs/" + deviceImageDirId);
@@ -559,10 +582,6 @@ public class CloudOrchestratorClient {
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_NETWORK_ERROR, "Failed to send POST request after retries", e);
     }
-  }
-
-  private void delete(String path) throws MobileHarnessException {
-    deleteWithResponse(path, null);
   }
 
   @CanIgnoreReturnValue
@@ -842,5 +861,13 @@ public class CloudOrchestratorClient {
       cause = cause.getCause();
     }
     return false;
+  }
+
+  private static boolean isX86Target(@Nullable String target) {
+    if (target == null) {
+      return false;
+    }
+    String lowercaseTarget = Ascii.toLowerCase(target);
+    return lowercaseTarget.contains("x86") || lowercaseTarget.contains("i686");
   }
 }

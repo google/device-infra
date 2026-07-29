@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudO
 import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudOrchestratorMessages.Cvd;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudOrchestratorMessages.DockerInstance;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudOrchestratorMessages.HostInstance;
+import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudOrchestratorMessages.Operation;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -46,10 +47,10 @@ import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.locks.ReentrantLock;
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
 
 /**
  * Android emulator device class. This emulator is created by Cloud Orchestrator on demand of test
@@ -76,26 +77,18 @@ public class AndroidJitEmulator extends AndroidDevice {
   @FileAnnotation(help = "The device image zip file for the JIT emulator.", required = false)
   public static final String FILE_TAG_DEVICE_IMAGE = "cvd_device_image";
 
-  // A static lock to ensure only one thread is interacting with Cloud Orchestrator at a time
-  // across all instances.
-  private static final ReentrantLock cloudOrchestratorLock = new ReentrantLock();
+  private static final ReentrantLock imagePreparationLock = new ReentrantLock();
 
   private final String deviceId;
   private final AndroidAdbUtil androidAdbUtil;
   private final CloudOrchestratorClientFactory cloudOrchestratorClientFactory;
   private final Sleeper sleeper;
 
-  @GuardedBy("cloudOrchestratorLock")
-  @Nullable
-  private String cvdHostId;
+  @Nullable private String cvdHostId;
 
-  @GuardedBy("cloudOrchestratorLock")
-  @Nullable
-  private String cvdGroup;
+  @Nullable private String cvdGroup;
 
-  @GuardedBy("cloudOrchestratorLock")
-  @Nullable
-  private String cvdName;
+  @Nullable private String cvdName;
 
   @Nullable private AdbWebSocketBridge adbWebSocketBridge;
 
@@ -168,12 +161,7 @@ public class AndroidJitEmulator extends AndroidDevice {
           BasicErrorId.LOCAL_NETWORK_ERROR,
           "cloud_orchestrator_service_url flag is required for JIT emulator setup.");
     }
-    // TODO: Remove this lock once we find better way of managing concurrent hosts
-    // creation through the Cloud Orchestrator API.
-    logger.atInfo().log("Waiting for Cloud Orchestrator lock...");
-    cloudOrchestratorLock.lockInterruptibly();
     try {
-      logger.atInfo().log("Acquired Cloud Orchestrator lock.");
       createCvdWithClient(serviceUrl, testInfo);
     } catch (MobileHarnessException | InterruptedException | RuntimeException e) {
       logger.atWarning().log("Failed to set up JIT emulator. Cleaning up...");
@@ -181,12 +169,9 @@ public class AndroidJitEmulator extends AndroidDevice {
       fetchLogsWithClient(serviceUrl, testInfo);
       deleteCvdWithClient(serviceUrl);
       throw e;
-    } finally {
-      cloudOrchestratorLock.unlock();
     }
   }
 
-  @GuardedBy("cloudOrchestratorLock")
   private void createCvdWithClient(String serviceUrl, TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
     String zone = Flags.cloudOrchestratorZone.getNonNull();
@@ -194,31 +179,19 @@ public class AndroidJitEmulator extends AndroidDevice {
     client.setBasicAuth("user", "");
 
     int port = AndroidJitEmulatorUtil.getPortFromDeviceId(deviceId);
-    String cvdId = "cvd-" + port;
+    String cvdId = "cvd_" + port;
 
-    List<HostInstance> hosts = client.listHosts();
-    String hostId;
+    logger.atInfo().log("Creating a new host...");
+    HostInstance hostReq = new HostInstance();
+    hostReq.docker = new DockerInstance();
+    hostReq.docker.imageName = "cuttlefish-orchestration:latest";
 
-    if (hosts == null || hosts.isEmpty()) {
-      logger.atInfo().log("No hosts found, creating a new one...");
-      HostInstance hostReq = new HostInstance();
-      hostReq.docker = new DockerInstance();
-      hostReq.docker.imageName = "cuttlefish-orchestration:latest";
-
-      HostInstance host = client.createHostAndWait(new CreateHostRequest(hostReq));
-      hostId = host.name;
-    } else {
-      hostId = hosts.get(0).name;
-    }
+    HostInstance host = client.createHostAndWait(new CreateHostRequest(hostReq));
+    String hostId = host.name;
 
     this.cvdHostId = hostId;
     this.cvdGroup = cvdId;
     this.cvdName = cvdId;
-
-    String branch = testInfo.jobInfo().params().get(PARAM_BRANCH, "aosp-android-latest-release");
-    String target =
-        testInfo.jobInfo().params().get(PARAM_TARGET, "aosp_cf_x86_64_only_phone-userdebug");
-    String buildId = testInfo.jobInfo().params().get(PARAM_BUILD_ID, "");
 
     String hostImagePath =
         Optional.ofNullable(testInfo.jobInfo().files().get(FILE_TAG_HOST_IMAGE))
@@ -237,23 +210,61 @@ public class AndroidJitEmulator extends AndroidDevice {
               FILE_TAG_HOST_IMAGE, FILE_TAG_DEVICE_IMAGE, hostImagePath, deviceImagePath));
     }
 
+    String branch = testInfo.jobInfo().params().get(PARAM_BRANCH, "aosp-android-latest-release");
+    String target = testInfo.jobInfo().params().get(PARAM_TARGET);
+    if (target == null) {
+      if (!deviceImagePath.isEmpty()
+          && (deviceImagePath.contains("arm64")
+              || deviceImagePath.contains("aarch64")
+              || deviceImagePath.contains("arm"))) {
+        target = "aosp_cf_arm64_phone-userdebug";
+      } else {
+        target = "aosp_cf_x86_64_only_phone-userdebug";
+      }
+    } else {
+      if (!deviceImagePath.isEmpty()
+          && (deviceImagePath.contains("arm64")
+              || deviceImagePath.contains("aarch64")
+              || deviceImagePath.contains("arm"))
+          && (Ascii.toLowerCase(target).contains("x86")
+              || Ascii.toLowerCase(target).contains("i686"))) {
+        logger.atWarning().log(
+            "Target parameter %s indicates x86, but local device image %s indicates ARM. "
+                + "Overriding target architecture to ARM.",
+            target, deviceImagePath);
+        target = "aosp_cf_arm64_phone-userdebug";
+      }
+    }
+    String buildId = testInfo.jobInfo().params().get(PARAM_BUILD_ID, "");
+
     Cvd cvd;
     if (!hostImagePath.isEmpty() && !deviceImagePath.isEmpty()) {
       logger.atInfo().log("Using local images to launch AVD.");
       CloudOrchestratorLocalImagePreparer manager = new CloudOrchestratorLocalImagePreparer(client);
       try {
-        CloudOrchestratorLocalImagePreparer.ImagePreparationResult result =
-            manager.prepareImagesAndWait(
-                hostId, new File(hostImagePath), new File(deviceImagePath));
+        CloudOrchestratorLocalImagePreparer.ImagePreparationResult result;
+        imagePreparationLock.lockInterruptibly();
+        try {
+          result =
+              manager.prepareImagesAndWait(
+                  hostId, new File(hostImagePath), new File(deviceImagePath));
+        } finally {
+          imagePreparationLock.unlock();
+        }
         cvd =
             client.createCvdWithLocalImageAndWait(
-                hostId, cvdId, result.hostImageDirId(), result.deviceImageDirId());
+                hostId, cvdId, result.hostImageDirId(), result.deviceImageDirId(), target);
       } catch (IOException e) {
         throw new MobileHarnessException(
             BasicErrorId.LOCAL_FILE_OR_DIR_NOT_FOUND, "Failed to prepare local images", e);
       }
     } else {
-      client.fetchArtifactsAndWait(hostId, branch, buildId, target);
+      imagePreparationLock.lockInterruptibly();
+      try {
+        client.fetchArtifactsAndWait(hostId, branch, buildId, target);
+      } finally {
+        imagePreparationLock.unlock();
+      }
       cvd = client.createCvdWithEnvConfigAndWait(hostId, cvdId, branch, buildId, target);
     }
 
@@ -298,20 +309,8 @@ public class AndroidJitEmulator extends AndroidDevice {
       logger.atWarning().log("cloud_orchestrator_service_url flag is NOT set, skipping log fetch.");
       return;
     }
-    logger.atInfo().log("Waiting for Cloud Orchestrator lock for log fetch...");
-    try {
-      cloudOrchestratorLock.lockInterruptibly();
-      try {
-        logger.atInfo().log("Acquired Cloud Orchestrator lock for log fetch.");
-        fetchLogsWithClient(serviceUrl, testInfo);
-        testInfo.properties().add(propertyKey, "true");
-      } finally {
-        cloudOrchestratorLock.unlock();
-      }
-    } catch (InterruptedException e) {
-      logger.atWarning().withCause(e).log("Interrupted during log fetch lock");
-      Thread.currentThread().interrupt();
-    }
+    fetchLogsWithClient(serviceUrl, testInfo);
+    testInfo.properties().add(propertyKey, "true");
   }
 
   @CanIgnoreReturnValue
@@ -328,29 +327,12 @@ public class AndroidJitEmulator extends AndroidDevice {
     pullCvdLogs(testInfo);
 
     String serviceUrl = Flags.cloudOrchestratorServiceUrl.getNonNull();
-    if (serviceUrl.isEmpty()) {
-      logger.atWarning().log(
-          "cloud_orchestrator_service_url flag is NOT set, skipping CVD deletion.");
-      return PostTestDeviceOp.NONE;
-    }
-
-    logger.atInfo().log("Waiting for Cloud Orchestrator lock for cleanup...");
-    try {
-      cloudOrchestratorLock.lockInterruptibly();
-      try {
-        logger.atInfo().log("Acquired Cloud Orchestrator lock for cleanup.");
-        deleteCvdWithClient(serviceUrl);
-      } finally {
-        cloudOrchestratorLock.unlock();
-      }
-    } catch (InterruptedException e) {
-      logger.atWarning().withCause(e).log("Interrupted during cleanup lock");
-      Thread.currentThread().interrupt();
+    if (!serviceUrl.isEmpty()) {
+      deleteCvdWithClient(serviceUrl);
     }
     return PostTestDeviceOp.NONE;
   }
 
-  @GuardedBy("cloudOrchestratorLock")
   private void fetchLogsWithClient(String serviceUrl, TestInfo testInfo) {
     if (cvdHostId == null || cvdGroup == null || cvdName == null) {
       logger.atWarning().log("Skipping log fetch as cvdHostId, cvdGroup, or cvdName is null");
@@ -396,19 +378,30 @@ public class AndroidJitEmulator extends AndroidDevice {
     }
   }
 
-  @GuardedBy("cloudOrchestratorLock")
   private void deleteCvdWithClient(String serviceUrl) throws InterruptedException {
     String zone = Flags.cloudOrchestratorZone.getNonNull();
     CloudOrchestratorClient client = cloudOrchestratorClientFactory.create(serviceUrl, "v1", zone);
     client.setBasicAuth("user", "");
 
-    if (cvdHostId != null && cvdGroup != null) {
+    if (cvdHostId != null) {
+      if (cvdGroup != null) {
+        try {
+          logger.atInfo().log("Deleting CVD %s on host %s", cvdGroup, cvdHostId);
+          client.deleteCvdAndWait(cvdHostId, cvdGroup);
+        } catch (MobileHarnessException e) {
+          logger.atWarning().withCause(e).log(
+              "Failed to delete CVD %s on host %s", cvdGroup, cvdHostId);
+        }
+      }
       try {
-        logger.atInfo().log("Deleting CVD %s on host %s", cvdGroup, cvdHostId);
-        client.deleteCvdAndWait(cvdHostId, cvdGroup);
+        logger.atInfo().log("Deleting host %s", cvdHostId);
+        Operation op = client.deleteHost(cvdHostId);
+        if (op != null && !op.done) {
+          logger.atInfo().log("Waiting for host %s deletion...", cvdHostId);
+          client.waitOperation(cvdHostId, op.name, Map.class);
+        }
       } catch (MobileHarnessException e) {
-        logger.atWarning().withCause(e).log(
-            "Failed to delete CVD %s on host %s", cvdGroup, cvdHostId);
+        logger.atWarning().withCause(e).log("Failed to delete host %s", cvdHostId);
       }
       return;
     }
