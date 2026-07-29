@@ -51,7 +51,7 @@ import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.StepSkippableLifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.StepSkippableDecoratorConstants;
 import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
@@ -702,8 +702,8 @@ public final class ConsoleJobCreatorTest {
 
     assertThat(jobs).hasSize(2);
     assertThat(jobs.get(0).locator().getName()).isEqualTo(XtsConstants.SETUP_JOB_NAME);
-    assertThat(jobs.get(0).properties().get(StepSkippableLifecycleDecorator.PROP_EXECUTION_MODE))
-        .isEqualTo(StepSkippableLifecycleDecorator.ExecutionMode.SETUP_ONLY.name());
+    assertThat(jobs.get(0).properties().get(StepSkippableDecoratorConstants.PROP_EXECUTION_MODE))
+        .isEqualTo(StepSkippableDecoratorConstants.ExecutionMode.SETUP_ONLY.name());
     assertThat(jobs.get(0).type().getDriver()).isEqualTo("NoOpDriver");
     assertThat(jobs.get(0).subDeviceSpecs().getAllSubDevices().get(0).decorators().getAll())
         .containsExactly("DeviceInfoCollectorDecorator", "AndroidFilePullerDecorator")

@@ -55,6 +55,7 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.StepSkippableDecoratorConstants;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
@@ -628,7 +629,11 @@ public abstract class XtsJobCreator {
             sessionRequestHandlerUtil.createJobGenDir(name).toString(),
             sessionRequestHandlerUtil.createJobTmpDir(name).toString());
 
-    jobInfo.properties().add("step_skippable_lifecycle_decorator_execution_mode", "SETUP_ONLY");
+    jobInfo
+        .properties()
+        .add(
+            StepSkippableDecoratorConstants.PROP_EXECUTION_MODE,
+            StepSkippableDecoratorConstants.ExecutionMode.SETUP_ONLY.name());
 
     jobInfo
         .subDeviceSpecs()
