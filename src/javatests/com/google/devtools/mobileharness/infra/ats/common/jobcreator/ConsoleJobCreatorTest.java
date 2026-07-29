@@ -646,7 +646,7 @@ public final class ConsoleJobCreatorTest {
   }
 
   @Test
-  public void createXtsNonTradefedJobs_moblyOnly_setupJobInjected() throws Exception {
+  public void createXtsNonTradefedJobs_moblyOnly_setupAndTeardownJobsInjected() throws Exception {
     SessionRequestInfo.Builder builder =
         SessionRequestInfo.newBuilder()
             .setTestPlan("cts")
@@ -700,7 +700,7 @@ public final class ConsoleJobCreatorTest {
 
     ImmutableList<JobInfo> jobs = jobCreator.createXtsNonTradefedJobs(sessionRequestInfo);
 
-    assertThat(jobs).hasSize(2);
+    assertThat(jobs).hasSize(3);
     assertThat(jobs.get(0).locator().getName()).isEqualTo(XtsConstants.SETUP_JOB_NAME);
     assertThat(jobs.get(0).properties().get(StepSkippableDecoratorConstants.PROP_EXECUTION_MODE))
         .isEqualTo(StepSkippableDecoratorConstants.ExecutionMode.SETUP_ONLY.name());
@@ -729,5 +729,15 @@ public final class ConsoleJobCreatorTest {
     assertThat(pullerSpec).isNotNull();
     assertThat(pullerSpec.getFilePathOnDevice()).isEqualTo("/sys/fs/selinux/policy");
     assertThat(pullerSpec.getPulledFileDir()).isEqualTo("vintf-files/sepolicy");
+
+    assertThat(jobs.get(1).locator().getName()).isEqualTo("mobly_job");
+
+    assertThat(jobs.get(2).locator().getName()).isEqualTo(XtsConstants.TEARDOWN_JOB_NAME);
+    assertThat(jobs.get(2).properties().get(StepSkippableDecoratorConstants.PROP_EXECUTION_MODE))
+        .isEqualTo(StepSkippableDecoratorConstants.ExecutionMode.TEARDOWN_ONLY.name());
+    assertThat(jobs.get(2).type().getDriver()).isEqualTo("NoOpDriver");
+    assertThat(jobs.get(2).subDeviceSpecs().getAllSubDevices().get(0).decorators().getAll())
+        .containsExactly("DeviceInfoCollectorDecorator", "AndroidFilePullerDecorator")
+        .inOrder();
   }
 }

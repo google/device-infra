@@ -566,27 +566,60 @@ public abstract class XtsJobCreator {
         SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo);
     boolean hasOnlyMoblyJobs = hasNonTradefedJobs && !hasTradefedJobs;
 
-    // We'll create a setup job to run precondition decorators (Tradefed's target preparers
-    // equivalents) when the session has module sharding enabled or contains only Mobly modules.
+    // We'll create setup and teardown jobs to run precondition decorators (Tradefed's target
+    // preparers equivalents) when the session has module sharding enabled or contains only Mobly
+    // modules.
     if (isModuleSharding || hasOnlyMoblyJobs) {
       ImmutableList<PreconditionDecorator> preconditionDecorators =
           parsePreconditionDecorators(sessionRequestInfo);
       if (!preconditionDecorators.isEmpty()) {
         JobInfo setUpJob = createSetUpJob(sessionRequestInfo, preconditionDecorators);
-        nonTfJobs = ImmutableList.<JobInfo>builder().add(setUpJob).addAll(nonTfJobs).build();
+        JobInfo tearDownJob = createTearDownJob(sessionRequestInfo, preconditionDecorators);
+        nonTfJobs =
+            ImmutableList.<JobInfo>builder()
+                .add(setUpJob)
+                .addAll(nonTfJobs)
+                .add(tearDownJob)
+                .build();
       }
     }
     return nonTfJobs;
   }
 
   /**
-   * Creates a synthetic job responsible for running all precondition decorators (equivalent to
-   * Tradefed's target preparers).
+   * Creates a synthetic job responsible for running all precondition decorators in teardown mode
+   * (equivalent to Tradefed's target preparers tearDown).
+   */
+  private JobInfo createTearDownJob(
+      SessionRequestInfo sessionRequestInfo, ImmutableList<PreconditionDecorator> decorators)
+      throws MobileHarnessException, InterruptedException {
+    return createPreconditionJob(
+        sessionRequestInfo,
+        decorators,
+        XtsConstants.TEARDOWN_JOB_NAME,
+        StepSkippableDecoratorConstants.ExecutionMode.TEARDOWN_ONLY);
+  }
+
+  /**
+   * Creates a synthetic job responsible for running all precondition decorators in setup mode
+   * (equivalent to Tradefed's target preparers setUp).
    */
   private JobInfo createSetUpJob(
       SessionRequestInfo sessionRequestInfo, ImmutableList<PreconditionDecorator> decorators)
       throws MobileHarnessException, InterruptedException {
-    String name = XtsConstants.SETUP_JOB_NAME;
+    return createPreconditionJob(
+        sessionRequestInfo,
+        decorators,
+        XtsConstants.SETUP_JOB_NAME,
+        StepSkippableDecoratorConstants.ExecutionMode.SETUP_ONLY);
+  }
+
+  private JobInfo createPreconditionJob(
+      SessionRequestInfo sessionRequestInfo,
+      ImmutableList<PreconditionDecorator> decorators,
+      String name,
+      StepSkippableDecoratorConstants.ExecutionMode executionMode)
+      throws MobileHarnessException, InterruptedException {
     ImmutableList<JobConfig.SubDeviceSpec> subDeviceSpecList =
         sessionRequestHandlerUtil
             .getSessionSubDeviceSpecList(sessionRequestInfo, /* forMultiDeviceJob= */ true)
@@ -631,9 +664,7 @@ public abstract class XtsJobCreator {
 
     jobInfo
         .properties()
-        .add(
-            StepSkippableDecoratorConstants.PROP_EXECUTION_MODE,
-            StepSkippableDecoratorConstants.ExecutionMode.SETUP_ONLY.name());
+        .add(StepSkippableDecoratorConstants.PROP_EXECUTION_MODE, executionMode.name());
 
     jobInfo
         .subDeviceSpecs()

@@ -551,4 +551,113 @@ public final class AtsSessionPluginTest {
     verify(sessionInfo).addJob(tfJob);
     verify(sessionInfo, never()).addJob(nonTfJob);
   }
+
+  @Test
+  public void onJobEnd_allMainJobsCompleted_schedulesTeardownJob() throws Exception {
+    RunCommand runCommand = RunCommand.getDefaultInstance();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
+                .build());
+    atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    JobInfo setupJob = mock(JobInfo.class);
+    when(setupJob.locator())
+        .thenReturn(new JobLocator("setup_job_id", XtsConstants.SETUP_JOB_NAME));
+    when(setupJob.properties()).thenReturn(new Properties(new Timing()));
+
+    JobInfo tfJob = mock(JobInfo.class);
+    when(tfJob.locator()).thenReturn(new JobLocator("tf_job_id", "tf_job"));
+    when(tfJob.properties()).thenReturn(new Properties(new Timing()));
+
+    JobInfo nonTfJob = mock(JobInfo.class);
+    when(nonTfJob.locator()).thenReturn(new JobLocator("nontf_job_id", "nontf_job"));
+    when(nonTfJob.properties()).thenReturn(new Properties(new Timing()));
+
+    JobInfo teardownJob = mock(JobInfo.class);
+    when(teardownJob.locator())
+        .thenReturn(new JobLocator("teardown_job_id", XtsConstants.TEARDOWN_JOB_NAME));
+    when(teardownJob.properties()).thenReturn(new Properties(new Timing()));
+
+    when(runCommandHandler.createTradefedJobs(runCommand)).thenReturn(ImmutableList.of(tfJob));
+    when(runCommandHandler.createNonTradefedJobs(runCommand))
+        .thenReturn(ImmutableList.of(setupJob, nonTfJob, teardownJob));
+
+    atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+
+    verify(sessionInfo).addJob(setupJob);
+    verify(sessionInfo, never()).addJob(tfJob);
+    verify(sessionInfo, never()).addJob(nonTfJob);
+    verify(sessionInfo, never()).addJob(teardownJob);
+
+    // Setup job ends -> TF job scheduled
+    atsSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
+    verify(sessionInfo).addJob(tfJob);
+    verify(sessionInfo, never()).addJob(nonTfJob);
+    verify(sessionInfo, never()).addJob(teardownJob);
+
+    // TF job ends -> Non-TF main job scheduled
+    atsSessionPlugin.onJobEnd(new JobEndEvent(tfJob, /* jobError= */ null));
+    verify(sessionInfo).addJob(nonTfJob);
+    verify(sessionInfo, never()).addJob(teardownJob);
+
+    // Non-TF job ends -> Teardown job scheduled
+    atsSessionPlugin.onJobEnd(new JobEndEvent(nonTfJob, /* jobError= */ null));
+    verify(sessionInfo).addJob(teardownJob);
+  }
+
+  @Test
+  public void onJobEnd_multipleMainTradefedJobsCompleted_schedulesTeardownJob() throws Exception {
+    RunCommand runCommand = RunCommand.getDefaultInstance();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
+                .build());
+    atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    JobInfo setupJob = mock(JobInfo.class);
+    when(setupJob.locator())
+        .thenReturn(new JobLocator("setup_job_id", XtsConstants.SETUP_JOB_NAME));
+    when(setupJob.properties()).thenReturn(new Properties(new Timing()));
+
+    JobInfo tfJob1 = mock(JobInfo.class);
+    when(tfJob1.locator())
+        .thenReturn(new JobLocator("tf_job_1", XtsConstants.STATIC_XTS_JOB_NAME + "_1"));
+    when(tfJob1.properties()).thenReturn(new Properties(new Timing()));
+
+    JobInfo tfJob2 = mock(JobInfo.class);
+    when(tfJob2.locator())
+        .thenReturn(new JobLocator("tf_job_2", XtsConstants.STATIC_XTS_JOB_NAME + "_2"));
+    when(tfJob2.properties()).thenReturn(new Properties(new Timing()));
+
+    JobInfo teardownJob = mock(JobInfo.class);
+    when(teardownJob.locator())
+        .thenReturn(new JobLocator("teardown_job_id", XtsConstants.TEARDOWN_JOB_NAME));
+    when(teardownJob.properties()).thenReturn(new Properties(new Timing()));
+
+    when(runCommandHandler.createTradefedJobs(runCommand))
+        .thenReturn(ImmutableList.of(tfJob1, tfJob2));
+    when(runCommandHandler.createNonTradefedJobs(runCommand))
+        .thenReturn(ImmutableList.of(setupJob, teardownJob));
+
+    atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+
+    // Setup job ends -> TF jobs scheduled
+    atsSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
+    verify(sessionInfo).addJob(tfJob1);
+    verify(sessionInfo).addJob(tfJob2);
+    verify(sessionInfo, never()).addJob(teardownJob);
+
+    // TF job 1 ends -> Teardown NOT yet scheduled (TF job 2 still running)
+    atsSessionPlugin.onJobEnd(new JobEndEvent(tfJob1, /* jobError= */ null));
+    verify(sessionInfo, never()).addJob(teardownJob);
+
+    // TF job 2 ends -> Teardown scheduled
+    atsSessionPlugin.onJobEnd(new JobEndEvent(tfJob2, /* jobError= */ null));
+    verify(sessionInfo).addJob(teardownJob);
+  }
 }

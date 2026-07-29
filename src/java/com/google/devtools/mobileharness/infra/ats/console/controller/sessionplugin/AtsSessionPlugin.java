@@ -184,7 +184,9 @@ public class AtsSessionPlugin {
   private volatile ImmutableList<JobInfo> tradefedJobs = ImmutableList.of();
   private volatile ImmutableList<JobInfo> nonTradefedJobs = ImmutableList.of();
 
+  private final AtomicReference<JobInfo> teardownJobRef = new AtomicReference<>();
   private final AtomicReference<String> runningSetupJobId = new AtomicReference<>();
+  private final AtomicReference<String> runningTeardownJobId = new AtomicReference<>();
 
   @Inject
   AtsSessionPlugin(
@@ -343,6 +345,17 @@ public class AtsSessionPlugin {
       }
 
       Optional<JobInfo> setupJobOpt = nonTradefedJobs.stream().filter(this::isSetupJob).findFirst();
+      Optional<JobInfo> teardownJobOpt =
+          nonTradefedJobs.stream().filter(this::isTeardownJob).findFirst();
+
+      if (teardownJobOpt.isPresent()) {
+        teardownJobRef.set(teardownJobOpt.get());
+      }
+
+      nonTradefedJobs =
+          nonTradefedJobs.stream()
+              .filter(job -> !isSetupJob(job) && !isTeardownJob(job))
+              .collect(toImmutableList());
 
       if (setupJobOpt.isPresent()) {
         addSetupJob(setupJobOpt.get());
@@ -429,6 +442,12 @@ public class AtsSessionPlugin {
       return;
     }
 
+    boolean isTeardownJobEnd = runningTeardownJobId.compareAndSet(jobId, null);
+    if (isTeardownJobEnd) {
+      logger.atInfo().log("Teardown job [%s] ended.", jobId);
+      return;
+    }
+
     synchronized (runningTradefedJobs) {
       if (runningTradefedJobs.containsKey(jobId)) {
         runningTradefedJobs.put(jobId, false);
@@ -446,8 +465,10 @@ public class AtsSessionPlugin {
 
         if (runningTradefedJobs.values().stream().noneMatch(running -> running)) {
           logger.atInfo().log(
-              "All added tradefed jobs have been done, try add non-tradefed jobs if needed.");
-          addMainNonTradefedJobs();
+              "All added tradefed jobs have been done, trying to add non-tradefed jobs if needed.");
+          if (!addMainNonTradefedJobs()) {
+            addTeardownJobIfAny();
+          }
         }
         return;
       }
@@ -458,6 +479,7 @@ public class AtsSessionPlugin {
         runningNonTradefedJobs.put(jobId, false);
         if (runningNonTradefedJobs.values().stream().noneMatch(running -> running)) {
           logger.atInfo().log("All non-tradefed main jobs have completed.");
+          addTeardownJobIfAny();
         }
         return;
       }
@@ -810,13 +832,19 @@ public class AtsSessionPlugin {
             XtsConstants.SETUP_JOB_NAME);
   }
 
+  private boolean isTeardownJob(JobInfo jobInfo) {
+    return Ascii.equalsIgnoreCase(jobInfo.locator().getName(), XtsConstants.TEARDOWN_JOB_NAME)
+        || Ascii.equalsIgnoreCase(
+            jobInfo.properties().getOptional(SessionHandlerHelper.XTS_MODULE_NAME_PROP).orElse(""),
+            XtsConstants.TEARDOWN_JOB_NAME);
+  }
+
   /**
    * Adds the ATS setup job to the session and records its execution ID in {@code
    * runningSetupJobId}.
    */
   private void addSetupJob(JobInfo setupJob) {
-    nonTradefedJobs =
-        nonTradefedJobs.stream().filter(job -> !job.equals(setupJob)).collect(toImmutableList());
+    logger.atInfo().log("Adding setup job [%s].", setupJob.locator().getId());
     ImmutableList<String> setupJobIds = addJobsToSession(ImmutableList.of(setupJob));
     if (!setupJobIds.isEmpty()) {
       runningSetupJobId.set(setupJobIds.get(0));
@@ -861,11 +889,10 @@ public class AtsSessionPlugin {
     }
 
     if (!startedTfJobs) {
-      logger.atInfo().log(
-          "On session [%s] starting, no tradefed job was added, try add non-tradefed jobs if"
-              + " needed.",
-          sessionInfo.getSessionId());
-      addMainNonTradefedJobs();
+      logger.atInfo().log("No tradefed job was added, trying to add non-tradefed jobs if needed.");
+      if (!addMainNonTradefedJobs()) {
+        addTeardownJobIfAny();
+      }
     }
   }
 
@@ -920,6 +947,18 @@ public class AtsSessionPlugin {
       return true;
     }
     return false;
+  }
+
+  /** Adds the teardown job to the session if present. */
+  private void addTeardownJobIfAny() {
+    JobInfo teardownJob = teardownJobRef.getAndSet(null);
+    if (teardownJob != null) {
+      logger.atInfo().log("Adding teardown job [%s].", teardownJob.locator().getId());
+      ImmutableList<String> jobIds = addJobsToSession(ImmutableList.of(teardownJob));
+      if (!jobIds.isEmpty()) {
+        runningTeardownJobId.set(jobIds.get(0));
+      }
+    }
   }
 
   private class RunningTradefedTest {
