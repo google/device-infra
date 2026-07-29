@@ -210,7 +210,8 @@ public class LabFileNotifier {
   }
 
   @GuardedBy("fileCache")
-  private void handleJobFile(JobFileUnit jobFileUnit)
+  @VisibleForTesting
+  protected void handleJobFile(JobFileUnit jobFileUnit)
       throws MobileHarnessException, InterruptedException {
     JobInfo jobInfo = testInfo.jobInfo();
     // TODO: Deprecate AddFileHandler Interface as it is not needed.

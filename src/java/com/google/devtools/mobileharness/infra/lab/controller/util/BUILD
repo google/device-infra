@@ -28,6 +28,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/infra/lab/proto:file_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in",
