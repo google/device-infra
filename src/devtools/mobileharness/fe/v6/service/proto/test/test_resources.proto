@@ -46,6 +46,10 @@ message TestSummary {
   google.protobuf.Timestamp start_time = 5;
   google.protobuf.Timestamp end_time = 6;
   TestDevices devices = 7;
+
+  // The host the test ran on. Same type as TestDetail.host, so a row and the
+  // detail page describe the host the same way.
+  HostInfo host = 8;
 }
 
 // ---------- List wrapper types ----------
