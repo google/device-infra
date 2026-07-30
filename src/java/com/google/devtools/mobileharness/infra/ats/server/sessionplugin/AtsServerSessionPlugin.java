@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.infra.ats.common.AtsSessionPluginUtil.copyTestPropertiesForDynamicDownloadJobs;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
@@ -27,6 +28,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
@@ -493,123 +495,144 @@ final class AtsServerSessionPlugin {
     if (requestDetail.getState().equals(RequestState.CANCELED) || isAborted()) {
       return;
     }
-    if (jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)) {
-      newMultiCommandRequestHandler.prepareMoblyJobLogDirName(jobInfo, requestDetail);
-      for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
-        ResultTypeWithCause resultWithCause = testInfo.resultWithCause().get();
-        ModuleRunResult.Builder resultBuilder =
-            ModuleRunResult.newBuilder().setResult(resultWithCause.type());
-        if (resultWithCause.causeProto().isPresent()) {
-          resultBuilder.setCause(resultWithCause.toStringWithDetail());
-        }
-        localFileUtil.writeToFile(
-            Path.of(testInfo.getGenFileDir())
-                .resolve("ats_module_run_result.textproto")
-                .toAbsolutePath()
-                .toString(),
-            TextFormat.printer().printToString(resultBuilder.build()));
-      }
-    }
+    handleNonTradefedJobEnd(jobInfo, requestDetail);
+    ensureTradefedJobsInitialized(requestDetail);
+    scheduleNextTradefedJob(jobInfo);
+    scheduleNonTradefedJobsIfNeeded(jobInfo, requestDetail);
+  }
 
-    // If all tradefed jobs have ended, create non tradefed jobs.
-    // Tradefed jobs might be lost in the resumed sessions. Re-initialize them to ensure
-    // they are executed and also remove the jobs that are already added to the session.
+  /**
+   * Handles post-processing when a non-Tradefed xTS job completes, such as preparing Mobly log
+   * directory names and writing module run result files.
+   */
+  @GuardedBy("sessionLock")
+  private void handleNonTradefedJobEnd(JobInfo jobInfo, RequestDetail.Builder requestDetail)
+      throws MobileHarnessException {
+    if (!jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)) {
+      return;
+    }
+    newMultiCommandRequestHandler.prepareMoblyJobLogDirName(jobInfo, requestDetail);
+    for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
+      ResultTypeWithCause resultWithCause = testInfo.resultWithCause().get();
+      ModuleRunResult.Builder resultBuilder =
+          ModuleRunResult.newBuilder().setResult(resultWithCause.type());
+      if (resultWithCause.causeProto().isPresent()) {
+        resultBuilder.setCause(resultWithCause.toStringWithDetail());
+      }
+      localFileUtil.writeToFile(
+          Path.of(testInfo.getGenFileDir())
+              .resolve("ats_module_run_result.textproto")
+              .toAbsolutePath()
+              .toString(),
+          TextFormat.printer().printToString(resultBuilder.build()));
+    }
+  }
+
+  /**
+   * Re-initializes Tradefed jobs if they are uninitialized (e.g., when resuming a session).
+   *
+   * <p>Tradefed jobs might be lost in resumed sessions. This method re-creates them to ensure they
+   * are executed, while removing jobs that have already been triggered in the session.
+   */
+  @GuardedBy("sessionLock")
+  private void ensureTradefedJobsInitialized(RequestDetail.Builder requestDetail)
+      throws InterruptedException {
     if (tradefedJobs == null) {
       CreateJobsResult createTradefedJobsResult =
           newMultiCommandRequestHandler.createTradefedJobs(
               requestDetail.getOriginalRequest(), sessionInfo);
       tradefedJobs = createTradefedJobsResult.jobInfos();
-      List<JobInfo> triggeredTradefedJobs = sessionInfo.getAllJobs();
-      tradefedJobs.removeIf(
-          job ->
-              triggeredTradefedJobs.stream()
-                  .anyMatch(
-                      triggeredJob ->
-                          job.locator().getName().equals(triggeredJob.locator().getName())));
+      ImmutableSet<String> triggeredJobNames =
+          sessionInfo.getAllJobs().stream()
+              .map(job -> job.locator().getName())
+              .collect(toImmutableSet());
+      tradefedJobs.removeIf(job -> triggeredJobNames.contains(job.locator().getName()));
     }
-    // if we have multiple TF jobs execute serially, we need to only add the job one by one
-    // after the previous job is ended.
-    if (!tradefedJobs.isEmpty()) {
-      boolean isStaticXtsJobAndFailed =
-          jobInfo
-                  .properties()
-                  .getBoolean(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED)
-                  .orElse(false)
-              && jobInfo
-                  .properties()
-                  .getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME)
-                  .orElse("")
-                  .contains(XtsConstants.STATIC_XTS_JOB_NAME)
-              && jobInfo.tests().getAll().values().stream()
-                  .noneMatch(
-                      testInfo ->
-                          testInfo.resultWithCause().get().type() == TestResult.PASS
-                              && testInfo
-                                  .properties()
-                                  .getBoolean(XtsConstants.TRADEFED_JOBS_HAS_RESULT_FILE)
-                                  .orElse(false));
-      // The static xts job is the first job in the list, if the test result is not complete, we
-      // don't execute any MCTS jobs.
-      if (isStaticXtsJobAndFailed) {
-        logger.atInfo().log(
-            "Session [%s]: Static XTS job [%s] ended but result is not complete, clearing"
-                + " remaining tradefed jobs.",
-            sessionInfo.getSessionId(), jobInfo.locator().getId());
-        tradefedJobs.clear();
-      } else {
-        JobInfo nextJob = tradefedJobs.remove(0);
-        logger.atInfo().log(
-            "Session [%s]: Adding next tradefed job [%s] to session.",
-            sessionInfo.getSessionId(), nextJob.locator().getId());
-        if (nextJob
+  }
+
+  /**
+   * Schedules the next Tradefed job when executing multiple Tradefed jobs serially.
+   *
+   * <p>Each subsequent Tradefed job is added to the session only after the previous job has
+   * finished.
+   */
+  @GuardedBy("sessionLock")
+  private void scheduleNextTradefedJob(JobInfo completedJob) {
+    if (tradefedJobs.isEmpty()) {
+      return;
+    }
+    // The static xts job is the first job in the list, if the test result is not complete, we
+    // don't execute any MCTS jobs.
+    if (isStaticXtsJobAndFailed(completedJob)) {
+      logger.atInfo().log(
+          "Session [%s]: Static XTS job [%s] ended but result is not complete, clearing"
+              + " remaining tradefed jobs.",
+          sessionInfo.getSessionId(), completedJob.locator().getId());
+      tradefedJobs.clear();
+      return;
+    }
+    JobInfo nextJob = tradefedJobs.remove(0);
+    logger.atInfo().log(
+        "Session [%s]: Adding next tradefed job [%s] to session.",
+        sessionInfo.getSessionId(), nextJob.locator().getId());
+    if (nextJob
+        .properties()
+        .getBoolean(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED)
+        .orElse(false)) {
+      // Copy test properties needed by xTS dynamic download jobs from the current test to
+      // the next tests.
+      completedJob.tests().getAll().values().stream()
+          .findFirst()
+          .ifPresent(
+              currentTest ->
+                  nextJob
+                      .tests()
+                      .getAll()
+                      .values()
+                      .forEach(
+                          nextTest ->
+                              copyTestPropertiesForDynamicDownloadJobs(currentTest, nextTest)));
+    }
+    sessionInfo.addJob(nextJob);
+  }
+
+  /**
+   * Checks whether the given job is a static xTS dynamic-download job that ended without complete
+   * passing results.
+   */
+  private static boolean isStaticXtsJobAndFailed(JobInfo jobInfo) {
+    return jobInfo
             .properties()
             .getBoolean(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED)
-            .orElse(false)) {
-          // Copy test properties needed by xTS dynamic download jobs from the current test to
-          // the next tests.
-          jobInfo.tests().getAll().values().stream()
-              .findFirst()
-              .ifPresent(
-                  currentTest ->
-                      nextJob
-                          .tests()
-                          .getAll()
-                          .values()
-                          .forEach(
-                              nextTest ->
-                                  copyTestPropertiesForDynamicDownloadJobs(currentTest, nextTest)));
-        }
-        sessionInfo.addJob(nextJob);
-      }
-    }
+            .orElse(false)
+        && jobInfo
+            .properties()
+            .getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME)
+            .orElse("")
+            .contains(XtsConstants.STATIC_XTS_JOB_NAME)
+        && jobInfo.tests().getAll().values().stream()
+            .noneMatch(
+                testInfo ->
+                    testInfo.resultWithCause().get().type() == TestResult.PASS
+                        && testInfo
+                            .properties()
+                            .getBoolean(XtsConstants.TRADEFED_JOBS_HAS_RESULT_FILE)
+                            .orElse(false));
+  }
 
-    if (requestDetail.getState() == RequestState.CANCELED) {
-      return;
-    }
-
-    // If a non-tradefed tests ended, that means all non-tradefed tests had already been created
-    // and no need to create more.
-    if (!jobInfo.type().getDriver().equals(TRADEFED_DRIVER_NAME)) {
-      return;
-    }
-
-    boolean sessionHasUnfinishedTradefedJob =
-        sessionInfo.getAllJobs().stream()
-            .anyMatch(
-                job ->
-                    job.type().getDriver().equals(TRADEFED_DRIVER_NAME)
-                        && !job.status().get().equals(TestStatus.DONE));
-    if (sessionHasUnfinishedTradefedJob) {
-      // If there are still running tradefed jobs, wait and not add non-tradefed jobs.
-      return;
-    }
-
-    boolean sessionHasNonTradefedJobs =
-        sessionInfo.getAllJobs().stream()
-            .anyMatch(job -> !job.type().getDriver().equals(TRADEFED_DRIVER_NAME));
-    if (sessionHasNonTradefedJobs) {
-      // If there are non-tradefed jobs, that means all non-tradefed tests had already been
-      // added. So no need to add again. This can happen when two jobs end at the same time.
+  /**
+   * Schedules non-Tradefed jobs once all Tradefed jobs in the session have completed.
+   *
+   * <p>If there are non-tradefed jobs, that means all non-tradefed tests had already been added. So
+   * no need to add again. This can happen when two jobs end at the same time.
+   */
+  @GuardedBy("sessionLock")
+  private void scheduleNonTradefedJobsIfNeeded(
+      JobInfo completedJob, RequestDetail.Builder requestDetail) throws InterruptedException {
+    if (requestDetail.getState() == RequestState.CANCELED
+        || !completedJob.type().getDriver().equals(TRADEFED_DRIVER_NAME)
+        || hasUnfinishedTradefedJobs()
+        || hasNonTradefedJobs()) {
       return;
     }
 
@@ -624,6 +647,30 @@ final class AtsServerSessionPlugin {
     if (!nonTradefedJobs.isEmpty()) {
       nonTradefedJobs.forEach(sessionInfo::addJob);
     }
+  }
+
+  /**
+   * Checks whether the session has any unfinished Tradefed jobs.
+   *
+   * <p>If there are still running tradefed jobs, wait and not add non-tradefed jobs.
+   */
+  private boolean hasUnfinishedTradefedJobs() {
+    return sessionInfo.getAllJobs().stream()
+        .anyMatch(
+            job ->
+                job.type().getDriver().equals(TRADEFED_DRIVER_NAME)
+                    && !job.status().get().equals(TestStatus.DONE));
+  }
+
+  /**
+   * Checks whether the session already has non-Tradefed jobs added.
+   *
+   * <p>If there are non-tradefed jobs, that means all non-tradefed tests had already been added. So
+   * no need to add again. This can happen when two jobs end at the same time.
+   */
+  private boolean hasNonTradefedJobs() {
+    return sessionInfo.getAllJobs().stream()
+        .anyMatch(job -> !job.type().getDriver().equals(TRADEFED_DRIVER_NAME));
   }
 
   @GuardedBy("sessionLock")
