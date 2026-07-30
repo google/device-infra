@@ -158,6 +158,15 @@ export class FakeConfigService extends ConfigService {
 
     switch (request.section) {
       case ConfigSection.PERMISSIONS:
+        // input `iam-error` to test error handling for the invalid user ID.
+        if ((request.config.permissions?.owners || []).includes('iam-error')) {
+          return throwError(() => ({
+            error: {
+              message:
+                'Failed to update config of device 2A131FDH200MS1, please make sure those user IDs are correct, or try again later.',
+            },
+          })).pipe(delay(1000));
+        }
         if (
           !(request.config.permissions?.owners || []).includes(CURRENT_USER) &&
           !request.options?.overrideSelfLockout

@@ -43,3 +43,36 @@ export function getErrorMessage(err: unknown): string {
 
   return 'An unknown error occurred.';
 }
+
+/**
+ * Formats error details into a string, handling different types of error objects.
+ */
+export function formatErrorDetails(err: unknown): string {
+  if (!err) {
+    return '';
+  }
+  if (err instanceof Error && err.stack) {
+    return err.stack;
+  }
+  if (typeof err === 'object') {
+    const errObj = err as Record<string, unknown>;
+    if ('error' in errObj && errObj['error']) {
+      return typeof errObj['error'] === 'object'
+        ? safeJsonStringify(errObj['error'])
+        : String(errObj['error']);
+    }
+    return safeJsonStringify(err);
+  }
+  return String(err);
+}
+
+/**
+ * Safely stringifies an object to JSON, falling back to String() on error.
+ */
+export function safeJsonStringify(obj: unknown): string {
+  try {
+    return JSON.stringify(obj, null, 2);
+  } catch (e) {
+    return String(obj);
+  }
+}

@@ -74,7 +74,7 @@ public final class FeServiceException extends RuntimeException {
     return new FeServiceException(Status.Code.NOT_FOUND, message);
   }
 
-  /** Creates an exception with the {@code PERMISSION_DENIEPD} code. */
+  /** Creates an exception with the {@code PERMISSION_DENIED} code. */
   public static FeServiceException permissionDenied(String message) {
     return new FeServiceException(Status.Code.PERMISSION_DENIED, message);
   }
@@ -97,5 +97,14 @@ public final class FeServiceException extends RuntimeException {
   /** Creates an exception with the {@code INTERNAL} code (unexpected server error). */
   public static FeServiceException internal(String message) {
     return new FeServiceException(Status.Code.INTERNAL, message);
+  }
+
+  /**
+   * Creates an exception with the {@code INTERNAL} code and a cause. For a internal unexpected
+   * error, for debugging purpose, we need to keep the full exception, including the original stack
+   * trace of the exception. Thus we add this overload to the internal method
+   */
+  public static FeServiceException internal(String message, Throwable cause) {
+    return new FeServiceException(Status.Code.INTERNAL, message, cause);
   }
 }

@@ -25,6 +25,7 @@ import {MatMenuModule} from '@angular/material/menu';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {finalize} from 'rxjs/operators';
 
+import {ActionErrorContent} from '@deviceinfra/app/shared/components/action_error_content/action_error_content';
 import {
   DEFAULT_DEVICE_CONFIG,
   DEFAULT_DEVICE_CONFIG_UI_STATUS,
@@ -49,6 +50,10 @@ import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/con
 import {Dialog} from '../../../../../shared/components/dialog/dialog';
 import {useConfigDialogActions} from '../../../../../shared/composables/config_dialog_actions';
 import {useSaveInterceptors} from '../../../../../shared/composables/save_interceptors';
+import {
+  formatErrorDetails,
+  getErrorMessage,
+} from '../../../../../shared/utils/error_utils';
 import {objectUtils} from '../../../../../shared/utils/object_utils';
 import {Dimensions} from '../steps/dimensions/dimensions';
 import {Permissions} from '../steps/permissions/permissions';
@@ -443,18 +448,48 @@ export class DeviceSettings implements OnInit {
           this.saving.set(false);
         }),
       )
-      .subscribe((result) => {
-        if (!result.success) {
-          this.dialogActions.error(result.error?.code);
-          return;
-        }
+      .subscribe(
+        (result) => {
+          // we used to also return 200 OK for failures, and put the error in the
+          // response body.
+          // But now, because of b/535368215, we prefer to throw an error in the
+          // case of failure at backend.
+          if (!result.success) {
+            this.dialogActions.error(result.error?.code);
+            return;
+          }
 
-        this.originalConfig = objectUtils.deepCopy(
-          this.newConfig(),
-        ) as DeviceConfig;
+          this.originalConfig = objectUtils.deepCopy(
+            this.newConfig(),
+          ) as DeviceConfig;
 
-        this.dialogActions.success();
-      });
+          this.dialogActions.success();
+        },
+        (err) => {
+          this.dialog.open(ActionErrorContent, {
+            data: {
+              errorMessage: getErrorMessage(err),
+              errorDetails: formatErrorDetails(err),
+              errorTitle: `Failed to update ${this.getSectionTitle(section)}`,
+            },
+          });
+        },
+      );
+  }
+
+  private getSectionTitle(section: ConfigSection): string {
+    switch (section) {
+      case ConfigSection.PERMISSIONS:
+        return 'Owner/Executor';
+      case ConfigSection.WIFI:
+        return 'Wi-Fi';
+      case ConfigSection.DIMENSIONS:
+        return 'Dimensions';
+      case ConfigSection.STABILITY:
+        return 'Stability & Reboot';
+      default:
+        return 'Configuration';
+    }
   }
 
   discard() {

@@ -13,9 +13,9 @@ import {FlashDialog} from '../../features/device_detail/components/flash_dialog/
 import {LogcatLinkDialog} from '../../features/device_detail/components/logcat_link_dialog/logcat_link_dialog';
 import {QuarantineDialog} from '../../features/device_detail/components/quarantine_dialog/quarantine_dialog';
 import {ScreenshotDialog} from '../../features/device_detail/components/screenshot_dialog/screenshot_dialog';
+import {AccessDeniedContent} from '../components/access_denied_content/access_denied_content';
 import {ActionErrorContent} from '../components/action_error_content/action_error_content';
 import {ConfirmDialog} from '../components/confirm_dialog/confirm_dialog';
-import {AccessDeniedContent} from '../components/remote_control/feedback/access_denied_content';
 import {SnackBar} from '../components/snackbar/snackbar';
 import {DeviceActionService} from './device_action_service';
 import {SnackBarService} from './snackbar_service';

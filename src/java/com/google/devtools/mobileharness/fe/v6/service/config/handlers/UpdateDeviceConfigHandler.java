@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDevic
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigConverter;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
+import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateError;
@@ -185,15 +186,28 @@ public final class UpdateDeviceConfigHandler {
         .catching(
             Exception.class,
             e -> {
-              logger.atWarning().withCause(e).log(
-                  "Failed to save device configuration for %s", request.getId());
-              return UpdateDeviceConfigResponse.newBuilder()
-                  .setSuccess(false)
-                  .setError(
-                      UpdateError.newBuilder()
-                          .setCode(UpdateError.Code.UNKNOWN)
-                          .setMessage("Failed to save device configuration."))
-                  .build();
+              UpdateDeviceConfigRequest sanitizedRequest = sanitizeRequest(request);
+              logger.atWarning().log(
+                  "Failed to save device configuration for %s. Request: %s",
+                  request.getId(), sanitizedRequest);
+
+              // normalize the error message
+              String errorMessage =
+                  e.getMessage() != null && !e.getMessage().isEmpty()
+                      ? e.getMessage()
+                      : "Failed to save device configuration.";
+
+              // after tested with invalid user IDs, we found it will return a error message with
+              // "IAM_SET_DEVICE_POLICY_ERROR", thus we assume if the error message contains this
+              // string, it is due to invalid user IDs.
+              if (errorMessage.contains("IAM_SET_DEVICE_POLICY_ERROR")) {
+                errorMessage =
+                    String.format(
+                        "Failed to update config of device %s, please make sure the provided user"
+                            + " IDs are correct, or try again later.",
+                        request.getId());
+              }
+              throw FeServiceException.internal(errorMessage, e);
             },
             executor);
   }
@@ -273,5 +287,16 @@ public final class UpdateDeviceConfigHandler {
         groupMembershipProvider.isMemberOfAny(user, newOwners),
         (Boolean isMember) -> !isMember,
         executor);
+  }
+
+  private static UpdateDeviceConfigRequest sanitizeRequest(UpdateDeviceConfigRequest request) {
+    if (!request.hasConfig()) {
+      return request;
+    }
+    UpdateDeviceConfigRequest.Builder builder = request.toBuilder();
+    if (builder.getConfig().hasWifi()) {
+      builder.getConfigBuilder().getWifiBuilder().setPsk("******");
+    }
+    return builder.build();
   }
 }

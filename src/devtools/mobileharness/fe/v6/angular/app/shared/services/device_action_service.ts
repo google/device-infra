@@ -27,10 +27,10 @@ import {FlashDialog} from '../../features/device_detail/components/flash_dialog/
 import {LogcatLinkDialog} from '../../features/device_detail/components/logcat_link_dialog/logcat_link_dialog';
 import {QuarantineDialog} from '../../features/device_detail/components/quarantine_dialog/quarantine_dialog';
 import {ScreenshotDialog} from '../../features/device_detail/components/screenshot_dialog/screenshot_dialog';
+import {AccessDeniedContent} from '../components/access_denied_content/access_denied_content';
 import {ActionErrorContent} from '../components/action_error_content/action_error_content';
 import {ConfirmDialog} from '../components/confirm_dialog/confirm_dialog';
-import {AccessDeniedContent} from '../components/remote_control/feedback/access_denied_content';
-import {getErrorMessage} from '../utils/error_utils';
+import {formatErrorDetails, getErrorMessage} from '../utils/error_utils';
 import {openInNewTab} from '../utils/safe_dom';
 import {SnackBarService} from './snackbar_service';
 
@@ -388,31 +388,4 @@ function isPermissionDeniedError(err: unknown): boolean {
     }
   }
   return false;
-}
-
-function formatErrorDetails(err: unknown): string {
-  if (!err) {
-    return '';
-  }
-  if (err instanceof Error && err.stack) {
-    return err.stack;
-  }
-  if (typeof err === 'object') {
-    const errObj = err as Record<string, unknown>;
-    if ('error' in errObj && errObj['error']) {
-      return typeof errObj['error'] === 'object'
-        ? safeJsonStringify(errObj['error'])
-        : String(errObj['error']);
-    }
-    return safeJsonStringify(err);
-  }
-  return String(err);
-}
-
-function safeJsonStringify(obj: unknown): string {
-  try {
-    return JSON.stringify(obj, null, 2);
-  } catch (e) {
-    return String(obj);
-  }
 }

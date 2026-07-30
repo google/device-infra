@@ -1,7 +1,5 @@
 import {Injectable, inject} from '@angular/core';
 import {MatDialog} from '@angular/material/dialog';
-import {Observable, of, throwError} from 'rxjs';
-import {catchError, filter, switchMap, tap} from 'rxjs/operators';
 import {
   CheckRemoteControlEligibilityResponse,
   DeviceProxyType,
@@ -13,8 +11,10 @@ import {HOST_SERVICE} from '@deviceinfra/app/core/services/host/host_service';
 import {ConfirmDialog} from '@deviceinfra/app/shared/components/confirm_dialog/confirm_dialog';
 import {SnackBarService} from '@deviceinfra/app/shared/services/snackbar_service';
 import {openInNewTab} from '@deviceinfra/app/shared/utils/safe_dom';
+import {Observable, of, throwError} from 'rxjs';
+import {catchError, filter, switchMap, tap} from 'rxjs/operators';
+import {AccessDeniedContent} from '../components/access_denied_content/access_denied_content';
 import {RemoteControlDialog} from '../components/remote_control/dialog/remote_control_dialog';
-import {AccessDeniedContent} from '../components/remote_control/feedback/access_denied_content';
 import {ConnectionErrorContent} from '../components/remote_control/feedback/connection_error_content';
 import {IncompatibleDevicesContent} from '../components/remote_control/feedback/incompatible_devices_content';
 import {

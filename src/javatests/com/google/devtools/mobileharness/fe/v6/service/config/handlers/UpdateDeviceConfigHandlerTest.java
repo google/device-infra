@@ -21,6 +21,7 @@ import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -34,6 +35,7 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.Device;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapability;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
+import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.PermissionInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfig;
@@ -57,7 +59,9 @@ import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.protobuf.Int32Value;
+import io.grpc.Status;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -658,7 +662,7 @@ public final class UpdateDeviceConfigHandlerTest {
   }
 
   @Test
-  public void updateDeviceConfig_providerFails_returnsErrorResponse() throws Exception {
+  public void updateDeviceConfig_providerFails_returnsValidationError() throws Exception {
     String deviceId = "test_device";
     DeviceConfig feConfig =
         DeviceConfig.newBuilder()
@@ -691,13 +695,65 @@ public final class UpdateDeviceConfigHandlerTest {
         .thenReturn(
             immediateFailedFuture(new IllegalStateException("Failed to update config: IAM error")));
 
-    UpdateDeviceConfigResponse response =
-        updateDeviceConfigHandler
-            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.of("owner1"))
-            .get();
+    ExecutionException e =
+        assertThrows(
+            ExecutionException.class,
+            () ->
+                updateDeviceConfigHandler
+                    .updateDeviceConfig(request, SELF_UNIVERSE, Optional.of("owner1"))
+                    .get());
 
-    assertThat(response.getSuccess()).isFalse();
-    assertThat(response.getError().getCode()).isEqualTo(UpdateError.Code.UNKNOWN);
-    assertThat(response.getError().getMessage()).contains("Failed to save device configuration");
+    assertThat(e).hasCauseThat().isInstanceOf(FeServiceException.class);
+    FeServiceException fe = (FeServiceException) e.getCause();
+    assertThat(fe.getCode()).isEqualTo(Status.Code.INTERNAL);
+    assertThat(fe.getMessage()).contains("Failed to update config: IAM error");
+  }
+
+  @Test
+  public void updateDeviceConfig_providerFailsWithUnexpectedException_returnsUnknownError()
+      throws Exception {
+    String deviceId = "test_device";
+    DeviceConfig feConfig =
+        DeviceConfig.newBuilder()
+            .setPermissions(PermissionInfo.newBuilder().addOwners("owner1").addExecutors("exec1"))
+            .build();
+    UpdateDeviceConfigRequest request =
+        UpdateDeviceConfigRequest.newBuilder()
+            .setId(deviceId)
+            .setConfig(feConfig)
+            .setSection(DeviceConfigSection.PERMISSIONS)
+            .build();
+
+    Device.DeviceConfig existingConfig =
+        Device.DeviceConfig.newBuilder()
+            .setUuid(deviceId)
+            .setBasicConfig(BasicDeviceConfig.newBuilder().addOwner("owner1"))
+            .build();
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
+        .thenReturn(
+            immediateFuture(
+                DeviceData.create(
+                    DeviceInfo.getDefaultInstance(),
+                    existingConfig,
+                    ManagementMode.PER_DEVICE,
+                    Optional.empty(),
+                    Optional.of(existingConfig))));
+    when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
+    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
+        .thenReturn(immediateFailedFuture(new RuntimeException("Unexpected backend failure")));
+
+    ExecutionException e =
+        assertThrows(
+            ExecutionException.class,
+            () ->
+                updateDeviceConfigHandler
+                    .updateDeviceConfig(request, SELF_UNIVERSE, Optional.of("owner1"))
+                    .get());
+
+    assertThat(e).hasCauseThat().isInstanceOf(FeServiceException.class);
+    FeServiceException fe = (FeServiceException) e.getCause();
+    assertThat(fe.getCode()).isEqualTo(Status.Code.INTERNAL);
+    assertThat(fe.getMessage()).contains("Unexpected backend failure");
   }
 }
