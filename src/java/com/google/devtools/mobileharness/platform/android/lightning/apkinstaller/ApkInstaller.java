@@ -88,12 +88,10 @@ public class ApkInstaller {
           + DEVICE_PROP_PREFIX_DELIMITER;
 
   @VisibleForTesting
-  static final String INSTALL_VERSION_DOWNGRADE_ERROR =
-      "Failure [INSTALL_FAILED_VERSION_DOWNGRADE]";
+  static final String INSTALL_VERSION_DOWNGRADE_ERROR = "INSTALL_FAILED_VERSION_DOWNGRADE";
 
   @VisibleForTesting
-  static final String INSTALL_FAILED_UPDATE_INCOMPATIBLE =
-      "Failure [INSTALL_FAILED_UPDATE_INCOMPATIBLE";
+  static final String INSTALL_FAILED_UPDATE_INCOMPATIBLE = "INSTALL_FAILED_UPDATE_INCOMPATIBLE";
 
   @VisibleForTesting static final String NOT_INSTALL_FOR_USER_ERROR = "Failure [not installed for";
 
