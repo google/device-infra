@@ -21,6 +21,7 @@ package devtools.mobileharness.fe.v6.service.proto.device;
 import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
 import "google/type/date.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/common/common_resources.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/device/device_resources.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/device/device_stats.proto";
 
@@ -111,6 +112,15 @@ service DeviceService {
   rpc GetTestbedConfig(GetTestbedConfigRequest) returns (TestbedConfig) {
     option (google.api.http) = {
       get: "/v6/devices/{id}/testbed-config"
+    };
+  }
+
+  // Retrieves test history for a device.
+  rpc GetDeviceTestHistory(GetDeviceTestHistoryRequest)
+      returns (GetDeviceTestHistoryResponse) {
+    option (google.api.http) = {
+      post: "/v6/devices/{id}/test-history",
+      body: "*"
     };
   }
 }
@@ -258,3 +268,36 @@ message UnquarantineDeviceRequest {
 
 // Response for UnquarantineDevice.
 message UnquarantineDeviceResponse {}
+
+// Request message for GetDeviceTestHistory.
+message GetDeviceTestHistoryRequest {
+  // The device ID.
+  string id = 1;
+
+  // Optional. The maximum number of items to return.
+  int32 page_size = 2;
+
+  // Optional. The next_page_token value returned from a previous List request,
+  // if any.
+  string page_token = 3;
+
+  // Optional. Search query to filter by test ID or name.
+  string search_query = 4;
+
+  // Optional. Filter by test result. If empty, returns all results.
+  repeated devtools.mobileharness.fe.v6.service.proto.common.TestResult
+      result_filter = 5;
+}
+
+// Response message for GetDeviceTestHistory.
+message GetDeviceTestHistoryResponse {
+  repeated DeviceTestHistoryInfo test_history_list = 1;
+
+  // Optional. Token to retrieve the next page of results, or empty if there are
+  // no more results in the list.
+  string next_page_token = 2;
+
+  // Optional. The total number of test history items matching the filter,
+  // disregarding pagination.
+  int32 total_size = 3;
+}
