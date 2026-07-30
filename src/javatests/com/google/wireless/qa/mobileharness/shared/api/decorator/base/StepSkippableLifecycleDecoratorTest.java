@@ -84,6 +84,7 @@ public final class StepSkippableLifecycleDecoratorTest {
     when(testInfo.jobInfo()).thenReturn(jobInfo);
     when(testInfo.log()).thenReturn(new Log(new Timing()));
     when(jobInfo.properties()).thenReturn(properties);
+    when(testInfo.properties()).thenReturn(properties);
 
     // BaseDriver calls getDevice(). checkNotNull(device) means we shouldn't return null.
     when(decorated.getDevice()).thenReturn(Mockito.mock(Device.class));
@@ -153,9 +154,9 @@ public final class StepSkippableLifecycleDecoratorTest {
   @Test
   public void statePersistance_success() throws Exception {
     decorator = new TestStepSkippableLifecycleDecorator(decorated, testInfo);
-    decorator.setState(jobInfo, "device_id", "key1", "value1");
+    decorator.setState(testInfo, "device_id", "key1", "value1");
 
-    Optional<String> val = decorator.getState(jobInfo, "device_id", "key1");
+    Optional<String> val = decorator.getState(testInfo, "device_id", "key1");
     assertThat(val).hasValue("value1");
     String expectedKey =
         "step_skippable_lifecycle_decorator_state::device_id::com.google.wireless.qa.mobileharness.shared.api.decorator.base.StepSkippableLifecycleDecoratorTest$TestStepSkippableLifecycleDecorator::key1";

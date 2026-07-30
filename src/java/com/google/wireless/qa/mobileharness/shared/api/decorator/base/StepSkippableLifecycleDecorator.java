@@ -127,31 +127,32 @@ public abstract class StepSkippableLifecycleDecorator extends LifecycleDecorator
       throws MobileHarnessException, InterruptedException {}
 
   /**
-   * Saves state into JobInfo properties to be relayed (e.g. by session plugin) to a subsequent job.
+   * Saves state into TestInfo properties to be relayed (e.g. by session plugin) to a subsequent
+   * test.
    *
-   * <p><b>Note:</b> The state is namespaced to the combination of job (via {@link JobInfo}),
+   * <p><b>Note:</b> The state is namespaced to the combination of test (via {@link TestInfo}),
    * decorator, and device to avoid collisions.
    *
-   * @param deviceId The device identifier. Any identifier that is unique among devices within a job
-   *     is acceptable (e.g., device UUID or Control ID). It is the caller's responsibility to
+   * @param deviceId The device identifier. Any identifier that is unique among devices within a
+   *     test is acceptable (e.g., device UUID or Control ID). It is the caller's responsibility to
    *     ensure that the same ID type is used for both {@link #setState} and {@link #getState}.
-   * @implNote The property key in {@link JobInfo} is formatted as: {@code
+   * @implNote The property key in {@link TestInfo} is formatted as: {@code
    *     step_skippable_lifecycle_decorator_state::<device-id>::<decorator-class-name>::<key>}.
    */
-  protected final void setState(JobInfo jobInfo, String deviceId, String key, String value) {
+  protected final void setState(TestInfo testInfo, String deviceId, String key, String value) {
     StepSkippableLifecycleDecoratorUtil.setState(
-        jobInfo, deviceId, getClass().getName(), key, value);
+        testInfo, deviceId, getClass().getName(), key, value);
   }
 
   /**
-   * Retrieves state that was saved by this decorator (e.g. from a prior job).
+   * Retrieves state that was saved by this decorator (e.g. from a prior test).
    *
-   * @param deviceId The device identifier. Any identifier that is unique among devices within a job
-   *     is acceptable (e.g., device UUID or Control ID). It is the caller's responsibility to
+   * @param deviceId The device identifier. Any identifier that is unique among devices within a
+   *     test is acceptable (e.g., device UUID or Control ID). It is the caller's responsibility to
    *     ensure that the same ID type is used for both {@link #setState} and {@link #getState}.
    */
-  protected final Optional<String> getState(JobInfo jobInfo, String deviceId, String key) {
+  protected final Optional<String> getState(TestInfo testInfo, String deviceId, String key) {
     return StepSkippableLifecycleDecoratorUtil.getState(
-        jobInfo, deviceId, getClass().getName(), key);
+        testInfo, deviceId, getClass().getName(), key);
   }
 }

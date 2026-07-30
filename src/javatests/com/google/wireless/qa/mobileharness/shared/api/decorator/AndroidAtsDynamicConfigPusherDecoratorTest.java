@@ -86,6 +86,7 @@ public final class AndroidAtsDynamicConfigPusherDecoratorTest {
     when(testInfo.jobInfo()).thenReturn(jobInfo);
     when(testInfo.log()).thenReturn(new Log(new Timing()));
     when(jobInfo.properties()).thenReturn(properties);
+    when(testInfo.properties()).thenReturn(properties);
     when(decorated.getDevice()).thenReturn(device);
     when(device.getDeviceId()).thenReturn("device_id");
 
@@ -139,14 +140,14 @@ public final class AndroidAtsDynamicConfigPusherDecoratorTest {
 
     assertThat(
             StepSkippableLifecycleDecoratorUtil.getState(
-                jobInfo,
+                testInfo,
                 "device_id",
                 "com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidAtsDynamicConfigPusherDecorator",
                 "device_file_pushed_path"))
         .isPresent();
     assertThat(
             StepSkippableLifecycleDecoratorUtil.getState(
-                jobInfo,
+                testInfo,
                 "device_id",
                 "com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidAtsDynamicConfigPusherDecorator",
                 "content_provider"))
@@ -156,13 +157,13 @@ public final class AndroidAtsDynamicConfigPusherDecoratorTest {
   @Test
   public void skippableTearDown_success() throws Exception {
     StepSkippableLifecycleDecoratorUtil.setState(
-        jobInfo,
+        testInfo,
         "device_id",
         "com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidAtsDynamicConfigPusherDecorator",
         "device_file_pushed_path",
         "device_path");
     StepSkippableLifecycleDecoratorUtil.setState(
-        jobInfo,
+        testInfo,
         "device_id",
         "com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidAtsDynamicConfigPusherDecorator",
         "content_provider",

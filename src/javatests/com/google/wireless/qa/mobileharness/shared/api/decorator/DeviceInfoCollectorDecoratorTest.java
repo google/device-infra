@@ -213,7 +213,7 @@ public final class DeviceInfoCollectorDecoratorTest {
   public void skippableTearDown_success() throws Exception {
     // Set state to simulate installed
     StepSkippableLifecycleDecoratorUtil.setState(
-        jobInfo, DEVICE_ID, DeviceInfoCollectorDecorator.class.getName(), "installed", "true");
+        testInfo, DEVICE_ID, DeviceInfoCollectorDecorator.class.getName(), "installed", "true");
 
     decorator.skippableTearDown(TeardownContext.create(testInfo, null, null));
 
@@ -221,7 +221,7 @@ public final class DeviceInfoCollectorDecoratorTest {
 
     String state =
         StepSkippableLifecycleDecoratorUtil.getState(
-                jobInfo, DEVICE_ID, DeviceInfoCollectorDecorator.class.getName(), "installed")
+                testInfo, DEVICE_ID, DeviceInfoCollectorDecorator.class.getName(), "installed")
             .orElse("");
     assertThat(state).isEqualTo("false");
   }

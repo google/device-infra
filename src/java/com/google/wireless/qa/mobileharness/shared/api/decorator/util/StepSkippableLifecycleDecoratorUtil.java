@@ -16,12 +16,22 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator.util;
 
-import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.Optional;
 
 /**
  * Utility class for {@link
  * com.google.wireless.qa.mobileharness.shared.api.decorator.base.StepSkippableLifecycleDecorator}.
+ *
+ * <p>Note on multi-device test executions: When running a multi-device test (e.g., in {@code
+ * AdhocTestbedDriver}), MobileHarness creates a separate child sub-test ({@code subTestInfo}) for
+ * each device's decorator stack so that device-specific logs and generated files remain isolated.
+ * Consequently, decorators in multi-device runs execute against child sub-test objects rather than
+ * the root test.
+ *
+ * <p>To ensure decorator lifecycle states are consistently visible across all sub-devices and can
+ * be reliably relayed between jobs in the session, all state read/write operations must be routed
+ * to the root {@link TestInfo}'s property map via {@link #getRootTest(TestInfo)}.
  */
 public final class StepSkippableLifecycleDecoratorUtil {
 
@@ -31,29 +41,41 @@ public final class StepSkippableLifecycleDecoratorUtil {
   private StepSkippableLifecycleDecoratorUtil() {}
 
   /**
-   * Saves state into JobInfo properties to be relayed (e.g. by session plugin) to a subsequent job.
+   * Saves state into the root TestInfo properties to be relayed (e.g. by session plugin) to a
+   * subsequent job's tests.
    */
   public static void setState(
-      JobInfo jobInfo, String deviceId, String className, String key, String value) {
+      TestInfo testInfo, String deviceId, String className, String key, String value) {
     String namespacedKey = createNamespacedKey(deviceId, className, key);
-    jobInfo.properties().add(namespacedKey, value);
+    getRootTest(testInfo).properties().add(namespacedKey, value);
   }
 
-  /** Retrieves state that was saved previously (e.g. from a prior job). */
+  /** Retrieves state that was saved previously (e.g. from a prior job's test). */
   public static Optional<String> getState(
-      JobInfo jobInfo, String deviceId, String className, String key) {
+      TestInfo testInfo, String deviceId, String className, String key) {
     String namespacedKey = createNamespacedKey(deviceId, className, key);
-    return jobInfo.properties().getOptional(namespacedKey);
+    return getRootTest(testInfo).properties().getOptional(namespacedKey);
   }
 
   private static String createNamespacedKey(String deviceId, String className, String key) {
     return String.join(KEY_SEPARATOR, STATE_PREFIX, deviceId, className, key);
   }
 
-  /** Relays relevant states from {@code job1} to {@code job2}. */
-  public static void relayStates(JobInfo job1, JobInfo job2) {
-    job1.properties().getAll().entrySet().stream()
+  /** Relays relevant states from {@code test1} to {@code test2}. */
+  public static void relayStates(TestInfo test1, TestInfo test2) {
+    getRootTest(test1).properties().getAll().entrySet().stream()
         .filter(entry -> entry.getKey().startsWith(STATE_PREFIX + KEY_SEPARATOR))
-        .forEach(entry -> job2.properties().add(entry.getKey(), entry.getValue()));
+        .forEach(entry -> getRootTest(test2).properties().add(entry.getKey(), entry.getValue()));
+  }
+
+  /**
+   * Returns the root TestInfo of the given test to ensure properties are stored and retrieved at
+   * the root level even when decorators execute inside child sub-tests (such as in {@code
+   * AdhocTestbedDriver} multi-device runs). When {@code testInfo} is already the root test, this
+   * returns itself.
+   */
+  private static TestInfo getRootTest(TestInfo testInfo) {
+    TestInfo root = testInfo.getRootTest();
+    return root != null ? root : testInfo;
   }
 }

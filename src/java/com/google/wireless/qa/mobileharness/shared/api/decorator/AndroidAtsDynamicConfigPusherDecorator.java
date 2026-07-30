@@ -143,7 +143,7 @@ public class AndroidAtsDynamicConfigPusherDecorator extends StepSkippableLifecyc
           androidSystemSettingUtil.getDeviceSdkVersion(deviceId),
           hostFile.getAbsolutePath(),
           deviceDest);
-      setState(testInfo.jobInfo(), deviceId, STATE_KEY_DEVICE_FILE_PUSHED_PATH, deviceDest);
+      setState(testInfo, deviceId, STATE_KEY_DEVICE_FILE_PUSHED_PATH, deviceDest);
       logger.atInfo().log("Pushed dynamic config file %s to device %s", deviceDest, deviceId);
     }
     String apkPath =
@@ -153,7 +153,7 @@ public class AndroidAtsDynamicConfigPusherDecorator extends StepSkippableLifecyc
     String contentProvider =
         apkInstaller.installApkIfNotExist(
             getDevice(), ApkInstallArgs.builder().setApkPath(apkPath).build(), getTest().log());
-    setState(testInfo.jobInfo(), deviceId, STATE_KEY_CONTENT_PROVIDER, contentProvider);
+    setState(testInfo, deviceId, STATE_KEY_CONTENT_PROVIDER, contentProvider);
     return SetupResult.continueDecorated();
   }
 
@@ -166,9 +166,8 @@ public class AndroidAtsDynamicConfigPusherDecorator extends StepSkippableLifecyc
         testInfo.jobInfo().combinedSpec(this, deviceId);
 
     Optional<String> deviceFilePushedPathOpt =
-        getState(testInfo.jobInfo(), deviceId, STATE_KEY_DEVICE_FILE_PUSHED_PATH);
-    Optional<String> contentProviderOpt =
-        getState(testInfo.jobInfo(), deviceId, STATE_KEY_CONTENT_PROVIDER);
+        getState(testInfo, deviceId, STATE_KEY_DEVICE_FILE_PUSHED_PATH);
+    Optional<String> contentProviderOpt = getState(testInfo, deviceId, STATE_KEY_CONTENT_PROVIDER);
 
     if (deviceFilePushedPathOpt.isPresent() && spec.getCleanup()) {
       String path = deviceFilePushedPathOpt.get();

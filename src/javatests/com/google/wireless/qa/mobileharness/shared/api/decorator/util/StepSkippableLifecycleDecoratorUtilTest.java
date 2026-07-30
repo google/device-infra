@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job;
 import org.junit.Before;
 import org.junit.Test;
@@ -29,77 +30,81 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public final class StepSkippableLifecycleDecoratorUtilTest {
 
-  private JobInfo jobInfo;
+  private TestInfo testInfo;
 
   @Before
   public void setUp() throws Exception {
-    jobInfo =
+    JobInfo jobInfo =
         JobInfo.newBuilder()
             .setLocator(new JobLocator("job_id", "job_name"))
             .setType(
                 Job.JobType.newBuilder().setDevice("device_type").setDriver("NoOpDriver").build())
             .build();
+    testInfo = jobInfo.tests().add("test_id", "test_name");
   }
 
   @Test
   public void setState_getState_success() {
     StepSkippableLifecycleDecoratorUtil.setState(
-        jobInfo, "device_id", "MyDecorator", "my_key", "my_value");
+        testInfo, "device_id", "MyDecorator", "my_key", "my_value");
 
     assertThat(
             StepSkippableLifecycleDecoratorUtil.getState(
-                jobInfo, "device_id", "MyDecorator", "my_key"))
+                testInfo, "device_id", "MyDecorator", "my_key"))
         .hasValue("my_value");
 
-    // Also verify the exact property name stored in JobInfo properties
+    // Also verify the exact property name stored in TestInfo properties
     String expectedKey = "step_skippable_lifecycle_decorator_state::device_id::MyDecorator::my_key";
-    assertThat(jobInfo.properties().get(expectedKey)).isEqualTo("my_value");
+    assertThat(testInfo.properties().get(expectedKey)).isEqualTo("my_value");
   }
 
   @Test
   public void getState_notFound_returnsEmpty() {
     assertThat(
             StepSkippableLifecycleDecoratorUtil.getState(
-                jobInfo, "device_id", "MyDecorator", "unknown_key"))
+                testInfo, "device_id", "MyDecorator", "unknown_key"))
         .isEmpty();
   }
 
   @Test
   public void setState_differentTestsDevicesDecorators_noCollision() throws Exception {
     StepSkippableLifecycleDecoratorUtil.setState(
-        jobInfo, "device_id", "Decorator1", "key", "value1");
+        testInfo, "device_id", "Decorator1", "key", "value1");
     StepSkippableLifecycleDecoratorUtil.setState(
-        jobInfo, "device_id", "Decorator1", "key", "value2");
+        testInfo, "device_id", "Decorator1", "key", "value2");
     StepSkippableLifecycleDecoratorUtil.setState(
-        jobInfo, "device_id_2", "Decorator1", "key", "value3");
+        testInfo, "device_id_2", "Decorator1", "key", "value3");
     StepSkippableLifecycleDecoratorUtil.setState(
-        jobInfo, "device_id", "Decorator2", "key", "value4");
+        testInfo, "device_id", "Decorator2", "key", "value4");
 
     // Different tests on the same device will collide if they use the same key
     assertThat(
-            StepSkippableLifecycleDecoratorUtil.getState(jobInfo, "device_id", "Decorator1", "key"))
-        .hasValue("value2");
-    assertThat(
-            StepSkippableLifecycleDecoratorUtil.getState(jobInfo, "device_id", "Decorator1", "key"))
+            StepSkippableLifecycleDecoratorUtil.getState(
+                testInfo, "device_id", "Decorator1", "key"))
         .hasValue("value2");
     assertThat(
             StepSkippableLifecycleDecoratorUtil.getState(
-                jobInfo, "device_id_2", "Decorator1", "key"))
+                testInfo, "device_id", "Decorator1", "key"))
+        .hasValue("value2");
+    assertThat(
+            StepSkippableLifecycleDecoratorUtil.getState(
+                testInfo, "device_id_2", "Decorator1", "key"))
         .hasValue("value3");
     assertThat(
-            StepSkippableLifecycleDecoratorUtil.getState(jobInfo, "device_id", "Decorator2", "key"))
+            StepSkippableLifecycleDecoratorUtil.getState(
+                testInfo, "device_id", "Decorator2", "key"))
         .hasValue("value4");
   }
 
   @Test
   public void relayStates_success() throws Exception {
     StepSkippableLifecycleDecoratorUtil.setState(
-        jobInfo, "device_id", "MyDecorator", "key1", "val1");
+        testInfo, "device_id", "MyDecorator", "key1", "val1");
     StepSkippableLifecycleDecoratorUtil.setState(
-        jobInfo, "device_id", "MyDecorator", "key2", "val2");
+        testInfo, "device_id", "MyDecorator", "key2", "val2");
 
     // Add an unrelated property to ensure it's filtered out
-    jobInfo.properties().add("some_other_key", "some_value");
+    testInfo.properties().add("some_other_key", "some_value");
 
     JobInfo jobInfo2 =
         JobInfo.newBuilder()
@@ -107,18 +112,19 @@ public final class StepSkippableLifecycleDecoratorUtilTest {
             .setType(
                 Job.JobType.newBuilder().setDevice("device_type").setDriver("NoOpDriver").build())
             .build();
+    TestInfo testInfo2 = jobInfo2.tests().add("test_id_2", "test_name_2");
 
-    StepSkippableLifecycleDecoratorUtil.relayStates(jobInfo, jobInfo2);
+    StepSkippableLifecycleDecoratorUtil.relayStates(testInfo, testInfo2);
 
     // Relayed state should be retrievable if we use the same device id and key
     assertThat(
             StepSkippableLifecycleDecoratorUtil.getState(
-                jobInfo2, "device_id", "MyDecorator", "key1"))
+                testInfo2, "device_id", "MyDecorator", "key1"))
         .hasValue("val1");
     assertThat(
             StepSkippableLifecycleDecoratorUtil.getState(
-                jobInfo2, "device_id", "MyDecorator", "key2"))
+                testInfo2, "device_id", "MyDecorator", "key2"))
         .hasValue("val2");
-    assertThat(jobInfo2.properties().get("some_other_key")).isNull();
+    assertThat(testInfo2.properties().get("some_other_key")).isNull();
   }
 }

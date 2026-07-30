@@ -933,8 +933,19 @@ public class AtsSessionPlugin {
     JobInfo teardownJob = teardownJobRef.getAndSet(null);
     if (teardownJob != null) {
       JobInfo setupJob = setupJobRef.get();
-      if (setupJob != null) {
-        StepSkippableLifecycleDecoratorUtil.relayStates(setupJob, teardownJob);
+      if (setupJob != null && setupJob.tests() != null && teardownJob.tests() != null) {
+        setupJob.tests().getAll().values().stream()
+            .findFirst()
+            .ifPresent(
+                setupTest ->
+                    teardownJob
+                        .tests()
+                        .getAll()
+                        .values()
+                        .forEach(
+                            teardownTest ->
+                                StepSkippableLifecycleDecoratorUtil.relayStates(
+                                    setupTest, teardownTest)));
       }
       logger.atInfo().log("Adding teardown job [%s].", teardownJob.locator().getId());
       ImmutableList<String> jobIds = addJobsToSession(ImmutableList.of(teardownJob));

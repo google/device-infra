@@ -145,7 +145,7 @@ public class DeviceInfoCollectorDecorator extends StepSkippableLifecycleDecorato
             .setForceQueryable(true)
             .build(),
         testInfo.log());
-    setState(testInfo.jobInfo(), deviceId, STATE_INSTALLED, "true");
+    setState(testInfo, deviceId, STATE_INSTALLED, "true");
 
     runCollectDeviceInfoTests(testInfo, deviceId, packageName, apkPath);
 
@@ -194,11 +194,11 @@ public class DeviceInfoCollectorDecorator extends StepSkippableLifecycleDecorato
     DeviceInfoCollectorDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this, deviceId);
     String packageName = spec.getPackageName();
 
-    Optional<String> installed = getState(testInfo.jobInfo(), deviceId, STATE_INSTALLED);
+    Optional<String> installed = getState(testInfo, deviceId, STATE_INSTALLED);
     if (installed.isPresent() && installed.get().equals("true") && !packageName.isEmpty()) {
       testInfo.log().atInfo().alsoTo(logger).log("Uninstalling package: %s", packageName);
       apkInstaller.uninstallApk(getDevice(), packageName, /* logFailures= */ false, testInfo.log());
-      setState(testInfo.jobInfo(), deviceId, STATE_INSTALLED, "false");
+      setState(testInfo, deviceId, STATE_INSTALLED, "false");
     }
   }
 
