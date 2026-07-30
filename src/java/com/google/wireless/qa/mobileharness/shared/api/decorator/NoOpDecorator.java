@@ -20,10 +20,8 @@ import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.TeardownOnlyDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -32,17 +30,12 @@ import javax.inject.Inject;
 
 /** Simple {@link Decorator} implementation for tests only. */
 @DecoratorAnnotation(help = "Do nothing in the decorator.")
-public class NoOpDecorator extends LifecycleDecorator implements SpecConfigable<NoOpDecoratorSpec> {
+public class NoOpDecorator extends TeardownOnlyDecorator
+    implements SpecConfigable<NoOpDecoratorSpec> {
 
   @Inject
   NoOpDecorator(Driver decoratedDriver, TestInfo testInfo) {
     super(decoratedDriver, testInfo);
-  }
-
-  @Override
-  protected SetupResult setUp(SetupContext context)
-      throws MobileHarnessException, InterruptedException {
-    return SetupResult.continueDecorated();
   }
 
   @Override

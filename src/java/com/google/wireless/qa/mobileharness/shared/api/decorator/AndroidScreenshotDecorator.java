@@ -26,10 +26,8 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.TeardownOnlyDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -38,7 +36,7 @@ import java.text.SimpleDateFormat;
 
 /** Driver decorator for taking screenshot on Android device when test finish. */
 @DecoratorAnnotation(help = "For taking screenshot when the test finish.")
-public class AndroidScreenshotDecorator extends LifecycleDecorator {
+public class AndroidScreenshotDecorator extends TeardownOnlyDecorator {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   @ParamAnnotation(
@@ -80,12 +78,6 @@ public class AndroidScreenshotDecorator extends LifecycleDecorator {
     this.androidFileUtil = androidFileUtil;
     this.androidMediaUtil = androidMediaUtil;
     this.fileUtil = fileUtil;
-  }
-
-  @Override
-  protected SetupResult setUp(SetupContext context)
-      throws MobileHarnessException, InterruptedException {
-    return SetupResult.continueDecorated();
   }
 
   @Override

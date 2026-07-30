@@ -30,10 +30,8 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.DumpSysTyp
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.TeardownOnlyDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidDumpSysSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -72,7 +70,7 @@ import java.util.Locale;
 @DecoratorAnnotation(
     help =
         "For retrieving Android dumpsys log and send them back to client or test result service.")
-public final class AndroidDumpSysDecorator extends LifecycleDecorator {
+public final class AndroidDumpSysDecorator extends TeardownOnlyDecorator {
 
   /** Template which adds header and footer to the dumpsys log. */
   private static final String LOG_TEMPLATE =
@@ -90,9 +88,6 @@ public final class AndroidDumpSysDecorator extends LifecycleDecorator {
 
   /** Logger for this device. */
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  private ImmutableList<DumpSysCommandInfo> dumpSysCommands;
-  private boolean logToFile;
 
   /**
    * Constructor. Do NOT modify the parameter list. This constructor is required by the lab server
@@ -121,23 +116,14 @@ public final class AndroidDumpSysDecorator extends LifecycleDecorator {
   }
 
   @Override
-  protected SetupResult setUp(SetupContext context) {
-    TestInfo testInfo = context.testInfo();
-    JobInfo jobInfo = testInfo.jobInfo();
-    logToFile = jobInfo.params().isTrue(AndroidDumpSysSpec.PARAM_LOG_TO_FILE);
-    dumpSysCommands = makeDumpSysCommands(jobInfo);
-    return SetupResult.continueDecorated();
-  }
-
-  @Override
   protected void tearDown(TeardownContext context) throws InterruptedException {
     TestInfo testInfo = context.testInfo();
+    JobInfo jobInfo = testInfo.jobInfo();
+    boolean logToFile = jobInfo.params().isTrue(AndroidDumpSysSpec.PARAM_LOG_TO_FILE);
+    ImmutableList<DumpSysCommandInfo> dumpSysCommands = makeDumpSysCommands(jobInfo);
     if (testInfo.getRootTest().resultWithCause().get().type() == TestResult.PASS
-        && !testInfo.jobInfo().params().getBool(AndroidDumpSysSpec.PARAM_DUMPSYS_ON_PASS, true)) {
+        && !jobInfo.params().getBool(AndroidDumpSysSpec.PARAM_DUMPSYS_ON_PASS, true)) {
       testInfo.log().atInfo().alsoTo(logger).log("Skip dumpsys when test passed");
-      return;
-    }
-    if (dumpSysCommands == null) {
       return;
     }
     String deviceId = getDevice().getDeviceId();
