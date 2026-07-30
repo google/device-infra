@@ -12,6 +12,7 @@ import (
 	dconpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel"
 )
 
@@ -96,23 +97,34 @@ func (m *Manager) registerMetrics() {
 
 	_, err = meter.RegisterCallback(func(ctx context.Context, obs metric.Observer) error {
 		type conduitInfo struct {
-			id  string
-			age float64
+			id       string
+			dialerID string
+			age      float64
 		}
 		var active []conduitInfo
+		countsByDialerID := make(map[string]int64)
 
 		m.mu.RLock()
-		obs.ObserveInt64(activeCounter, int64(len(m.conduits)))
 		for _, c := range m.conduits {
+			var dialerID string
+			if c.metadata != nil {
+				dialerID = c.metadata.GetInstanceId()
+			}
+			countsByDialerID[dialerID]++
 			active = append(active, conduitInfo{
-				id:  c.ID,
-				age: time.Since(c.startTime).Seconds(),
+				id:       c.ID,
+				dialerID: dialerID,
+				age:      time.Since(c.startTime).Seconds(),
 			})
 		}
 		m.mu.RUnlock()
 
+		for dialerID, count := range countsByDialerID {
+			obs.ObserveInt64(activeCounter, count, metric.WithAttributes(attribute.String("conduit.dialer_id", dialerID)))
+		}
+
 		for _, info := range active {
-			obs.ObserveFloat64(ageGauge, info.age)
+			obs.ObserveFloat64(ageGauge, info.age, metric.WithAttributes(attribute.String("conduit.dialer_id", info.dialerID)))
 		}
 		return nil
 	}, ageGauge, activeCounter)

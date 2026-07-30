@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	dconpb "github.com/google/device-infra/src/devtools/mobileharness/shared/util/comm/dualconduit/proto/dconpb"
 	"github.com/rsocket/rsocket-go/payload"
 	"github.com/rsocket/rsocket-go"
 	"github.com/rsocket/rsocket-go/rx/flux"
@@ -155,7 +156,14 @@ func TestConduitBrokenCounter(t *testing.T) {
 	meter := otel.Meter("test-conduit")
 	counter, _ := meter.Int64Counter("test.broken_count")
 
-	c := New(ctx, "test-id-broken", nil, mrs, nil, nil, trace.SpanContext{}, nil, counter)
+	meta := &dconpb.EstablishConduitRequest{
+		InstanceId:          "dialer-123",
+		DestinationEndpoint: "localhost:8080",
+		EntryPort:           9000,
+		Type:                dconpb.EstablishConduitRequest_CONDUIT_TYPE_FORWARD,
+	}
+
+	c := New(ctx, "test-id-broken", meta, mrs, nil, nil, trace.SpanContext{}, nil, counter)
 	if err := c.Close(); err != nil {
 		t.Errorf("Close() err = %v, want %v", err, nil)
 	}

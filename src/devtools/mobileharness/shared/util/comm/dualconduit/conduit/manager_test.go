@@ -322,3 +322,33 @@ func TestManagerSubscribeToRemove_ContextCancel(t *testing.T) {
 		t.Errorf("handler was not called within 1s after context cancellation")
 	}
 }
+
+func TestManagerActiveCounterWithDialerID(t *testing.T) {
+	m := NewManager()
+
+	var mockRS rsocket.CloseableRSocket
+	meta1 := &dconpb.EstablishConduitRequest{InstanceId: "dialer-1"}
+	meta2 := &dconpb.EstablishConduitRequest{InstanceId: "dialer-2"}
+
+	c1, err := m.Add(t.Context(), "conduit-1", meta1, mockRS, nil, trace.SpanContext{})
+	if err != nil {
+		t.Fatalf("Add() for conduit-1 failed: %v", err)
+	}
+	defer c1.Close()
+
+	c2, err := m.Add(t.Context(), "conduit-2", meta2, mockRS, nil, trace.SpanContext{})
+	if err != nil {
+		t.Fatalf("Add() for conduit-2 failed: %v", err)
+	}
+	defer c2.Close()
+
+	fetched1, err := m.Conduit("conduit-1")
+	if err != nil || fetched1 != c1 {
+		t.Errorf("Conduit(conduit-1) = (%v, %v), want (%v, nil)", fetched1, err, c1)
+	}
+
+	fetched2, err := m.Conduit("conduit-2")
+	if err != nil || fetched2 != c2 {
+		t.Errorf("Conduit(conduit-2) = (%v, %v), want (%v, nil)", fetched2, err, c2)
+	}
+}

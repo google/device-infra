@@ -201,6 +201,7 @@ func (c *Conduit) recordBrokenMetric() {
 			attribute.String("conduit.destination", c.metadata.DestinationEndpoint),
 			attribute.Int("conduit.entry_port", int(c.metadata.EntryPort)),
 			attribute.String("conduit.type", c.metadata.Type.String()),
+			attribute.String("conduit.dialer_id", c.metadata.GetInstanceId()),
 		)
 	}
 	c.brokenCounter.Add(context.Background(), 1, metric.WithAttributes(attrs...))

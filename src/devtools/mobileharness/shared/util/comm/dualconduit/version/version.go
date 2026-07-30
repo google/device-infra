@@ -4,7 +4,7 @@ package version
 import "fmt"
 
 // Version is the current semantic version of DualConduit (acceptor, dialer, etc.).
-const Version = "0.1.0"
+const Version = "0.1.1"
 
 // Banner is the ASCII art banner for DualConduit.
 const Banner = `
