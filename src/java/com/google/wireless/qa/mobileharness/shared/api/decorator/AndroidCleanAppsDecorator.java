@@ -38,10 +38,9 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.android.WifiUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.SetupOnlyDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidCleanAppsSpec;
@@ -72,7 +71,7 @@ import javax.inject.Inject;
             + "and cleaning system packages under tests before running test. Note you should use "
             + "this decorator \"outside\" of the other decorators need to install and use some "
             + "apks.")
-public class AndroidCleanAppsDecorator extends LifecycleDecorator implements AndroidCleanAppsSpec {
+public class AndroidCleanAppsDecorator extends SetupOnlyDecorator implements AndroidCleanAppsSpec {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -187,10 +186,6 @@ public class AndroidCleanAppsDecorator extends LifecycleDecorator implements And
     }
     return SetupResult.continueDecorated();
   }
-
-  @Override
-  protected void tearDown(TeardownContext context)
-      throws MobileHarnessException, InterruptedException {}
 
   /** Cleans data of system apps that are being tested. */
   private void cleanApps(List<String> packagesToKeep, TestInfo testInfo)

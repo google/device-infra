@@ -32,10 +32,9 @@ import com.google.devtools.mobileharness.platform.android.packagemanager.Package
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.SetupOnlyDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidInstallMainlineModulesDecoratorSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -54,7 +53,7 @@ import javax.inject.Inject;
  * version >= 29.
  */
 @DecoratorAnnotation(help = "Decorator that installs Android Mainline modules.")
-public class AndroidInstallMainlineModulesDecorator extends LifecycleDecorator
+public class AndroidInstallMainlineModulesDecorator extends SetupOnlyDecorator
     implements AndroidInstallMainlineModulesDecoratorSpec {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -95,10 +94,6 @@ public class AndroidInstallMainlineModulesDecorator extends LifecycleDecorator
     installModules(testInfo);
     return SetupResult.continueDecorated();
   }
-
-  @Override
-  protected void tearDown(TeardownContext context)
-      throws MobileHarnessException, InterruptedException {}
 
   private void installModules(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {

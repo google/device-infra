@@ -27,10 +27,9 @@ import com.google.devtools.mobileharness.platform.android.packagemanager.Android
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.SetupOnlyDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidLabTestSupportSettingsSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -49,7 +48,7 @@ import javax.inject.Inject;
     help =
         "Decorator to set phenotype flags to turn on/off specific features on the device via"
             + " LabTestSupport.")
-public class AndroidLabTestSupportSettingsDecorator extends LifecycleDecorator
+public class AndroidLabTestSupportSettingsDecorator extends SetupOnlyDecorator
     implements AndroidLabTestSupportSettingsSpec,
         SpecConfigable<AndroidLabTestSupportSettingsDecoratorSpec> {
 
@@ -150,10 +149,6 @@ public class AndroidLabTestSupportSettingsDecorator extends LifecycleDecorator
     }
     return SetupResult.continueDecorated();
   }
-
-  @Override
-  protected void tearDown(TeardownContext context)
-      throws MobileHarnessException, InterruptedException {}
 
   private Optional<Integer> getUidOfPackage(
       String deviceId, int deviceSdkVersion, String packageName)

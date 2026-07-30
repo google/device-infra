@@ -25,10 +25,9 @@ import com.google.devtools.mobileharness.platform.android.packagemanager.Package
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.SetupOnlyDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -42,7 +41,7 @@ import javax.inject.Inject;
     help =
         "Decorator for managing whether to run the test based on device preloaded mainline modules."
             + " See AndroidMainlineModulesCheckDecoratorSpec for more details.")
-public class AndroidMainlineModulesCheckDecorator extends LifecycleDecorator
+public class AndroidMainlineModulesCheckDecorator extends SetupOnlyDecorator
     implements SpecConfigable<AndroidMainlineModulesCheckDecoratorSpec> {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -90,10 +89,6 @@ public class AndroidMainlineModulesCheckDecorator extends LifecycleDecorator
     }
     return SetupResult.continueDecorated();
   }
-
-  @Override
-  protected void tearDown(TeardownContext context)
-      throws MobileHarnessException, InterruptedException {}
 
   private boolean ifSkipTest(
       AndroidMainlineModulesCheckDecoratorSpec spec, TestInfo testInfo, String deviceId)

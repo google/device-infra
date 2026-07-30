@@ -21,10 +21,9 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.SetupOnlyDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -36,7 +35,7 @@ import javax.inject.Inject;
     help =
         "Decorator to skip the test if the device's SDK version is lower than the required"
             + " minSdkVersion.")
-public class AndroidMinSdkVersionCheckDecorator extends LifecycleDecorator
+public class AndroidMinSdkVersionCheckDecorator extends SetupOnlyDecorator
     implements SpecConfigable<AndroidMinSdkVersionCheckDecoratorSpec> {
 
   private final AndroidSystemSettingUtil androidSystemSettingUtil;
@@ -69,8 +68,4 @@ public class AndroidMinSdkVersionCheckDecorator extends LifecycleDecorator
     }
     return SetupResult.continueDecorated();
   }
-
-  @Override
-  protected void tearDown(TeardownContext context)
-      throws MobileHarnessException, InterruptedException {}
 }

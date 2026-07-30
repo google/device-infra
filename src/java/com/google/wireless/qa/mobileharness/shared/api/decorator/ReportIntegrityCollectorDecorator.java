@@ -24,10 +24,9 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidRemoteProvisioningUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.SetupOnlyDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.Base64;
@@ -37,7 +36,7 @@ import javax.inject.Inject;
 
 /** A decorator that collects data from devices to validate report integrity. */
 @DecoratorAnnotation(help = "Collects data from devices to validate report integrity.")
-public class ReportIntegrityCollectorDecorator extends LifecycleDecorator {
+public class ReportIntegrityCollectorDecorator extends SetupOnlyDecorator {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
   private static final String VB_META_DIGEST = "ro.boot.vbmeta.digest";
@@ -85,10 +84,5 @@ public class ReportIntegrityCollectorDecorator extends LifecycleDecorator {
           .log("Failed to collect csr values from %s", deviceId);
     }
     return SetupResult.continueDecorated();
-  }
-
-  @Override
-  protected void tearDown(TeardownContext context) throws InterruptedException {
-    // No action needed for tearDown.
   }
 }

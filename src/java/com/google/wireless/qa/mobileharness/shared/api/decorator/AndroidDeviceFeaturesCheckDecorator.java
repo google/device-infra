@@ -25,8 +25,8 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.SetupOnlyDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -40,7 +40,7 @@ import javax.inject.Inject;
     help =
         "Decorator for skipping the test based on device features (pm list features). See"
             + " AndroidDeviceFeaturesCheckDecoratorSpec for more details.")
-public class AndroidDeviceFeaturesCheckDecorator extends LifecycleDecorator
+public class AndroidDeviceFeaturesCheckDecorator extends SetupOnlyDecorator
     implements SpecConfigable<AndroidDeviceFeaturesCheckDecoratorSpec> {
 
   private static final String FEATURE_PREFIX = "feature:";
@@ -99,10 +99,6 @@ public class AndroidDeviceFeaturesCheckDecorator extends LifecycleDecorator
     testInfo.getRootTest().resultWithCause().setNonPassing(TestResult.SKIP, error);
     return SetupResult.skipDecoratedWithNonPassing(TestResult.SKIP, error);
   }
-
-  @Override
-  protected void tearDown(TeardownContext context)
-      throws MobileHarnessException, InterruptedException {}
 
   private static String formatFeature(String feature) {
     return feature.startsWith(FEATURE_PREFIX) ? feature : FEATURE_PREFIX + feature;

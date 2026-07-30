@@ -27,10 +27,9 @@ import com.google.devtools.mobileharness.platform.android.process.AndroidProcess
 import com.google.devtools.mobileharness.shared.util.command.linecallback.ScanSignalOutputCallback;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.SetupOnlyDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -45,7 +44,7 @@ import javax.inject.Inject;
         "Decorator for showing a setup instruction on the device for interactive tests. After the"
             + " user clicks the OK button or the timeout is reached, the dialog will be closed and"
             + " the test will continue.")
-public class AndroidShowInstructionDecorator extends LifecycleDecorator
+public class AndroidShowInstructionDecorator extends SetupOnlyDecorator
     implements SpecConfigable<AndroidShowInstructionDecoratorSpec> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -97,10 +96,6 @@ public class AndroidShowInstructionDecorator extends LifecycleDecorator
     }
     return SetupResult.continueDecorated();
   }
-
-  @Override
-  protected void tearDown(TeardownContext context)
-      throws MobileHarnessException, InterruptedException {}
 
   private void showInstruction(String serial, AndroidShowInstructionDecoratorSpec spec)
       throws MobileHarnessException, InterruptedException {

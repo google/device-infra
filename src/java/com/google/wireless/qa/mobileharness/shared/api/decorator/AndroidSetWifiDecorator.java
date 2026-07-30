@@ -25,10 +25,9 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.lightning.networkconnector.NetworkConnector;
 import com.google.devtools.mobileharness.platform.android.lightning.networkconnector.WifiConnectArgs;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.SetupOnlyDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
@@ -39,7 +38,7 @@ import java.time.Duration;
 
 /** Driver decorator for setting Wifi SSID on the device. */
 @DecoratorAnnotation(help = "For setting the device wifi ssid before the test is run.")
-public class AndroidSetWifiDecorator extends LifecycleDecorator
+public class AndroidSetWifiDecorator extends SetupOnlyDecorator
     implements SpecConfigable<AndroidSetWifiDecoratorSpec> {
   /**
    * The waiting time of timeout to connect to the ssid. 5 mins are useful when using 6G WiFi AP
@@ -143,8 +142,4 @@ public class AndroidSetWifiDecorator extends LifecycleDecorator
     networkConnector.connectToWifi(device, connectArgs, testInfo.log());
     return SetupResult.continueDecorated();
   }
-
-  @Override
-  protected void tearDown(TeardownContext context)
-      throws MobileHarnessException, InterruptedException {}
 }

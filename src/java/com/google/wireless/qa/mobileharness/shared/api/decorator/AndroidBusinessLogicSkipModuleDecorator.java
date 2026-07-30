@@ -40,8 +40,8 @@ import com.google.devtools.mobileharness.platform.android.xts.businesslogic.Busi
 import com.google.devtools.mobileharness.platform.android.xts.businesslogic.BusinessLogicExecutor;
 import com.google.devtools.mobileharness.platform.android.xts.businesslogic.BusinessLogicFetcher;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.SetupOnlyDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -58,7 +58,7 @@ import javax.inject.Inject;
  * types.
  */
 @DecoratorAnnotation(help = "Skips module execution if specified by business logic.")
-public class AndroidBusinessLogicSkipModuleDecorator extends LifecycleDecorator
+public class AndroidBusinessLogicSkipModuleDecorator extends SetupOnlyDecorator
     implements SpecConfigable<AndroidBusinessLogicSkipModuleDecoratorSpec> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -201,10 +201,6 @@ public class AndroidBusinessLogicSkipModuleDecorator extends LifecycleDecorator
     }
     return SetupResult.continueDecorated();
   }
-
-  @Override
-  protected void tearDown(TeardownContext context)
-      throws MobileHarnessException, InterruptedException {}
 
   /** Called via reflection by {@link BusinessLogicExecutor}. */
   public void continueTest() {

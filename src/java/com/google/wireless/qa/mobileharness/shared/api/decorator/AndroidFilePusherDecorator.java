@@ -31,10 +31,9 @@ import com.google.devtools.mobileharness.platform.android.lightning.systemstate.
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.SetupOnlyDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidFilePusherSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -49,7 +48,7 @@ import java.util.Set;
 
 /** Driver decorator for pushing files to device before running test. */
 @DecoratorAnnotation(help = "For pushing files to device before running test")
-public class AndroidFilePusherDecorator extends LifecycleDecorator
+public class AndroidFilePusherDecorator extends SetupOnlyDecorator
     implements AndroidFilePusherSpec {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -210,10 +209,6 @@ public class AndroidFilePusherDecorator extends LifecycleDecorator
     }
     return SetupResult.continueDecorated();
   }
-
-  @Override
-  protected void tearDown(TeardownContext context)
-      throws MobileHarnessException, InterruptedException {}
 
   private boolean isPushFailedWithTimeout(MobileHarnessException e) {
     Throwable cause = e;
