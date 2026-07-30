@@ -31,6 +31,34 @@ function deepCopy<T>(obj: T): T {
 }
 
 /**
+ * Generates a specific error message for invalid user ID scenarios in testing.
+ * Mirrors the backend logic in UpdateHostConfigHandler to provide realistic test cases.
+ */
+function getInvalidUserErrorMessage(hostName: string, paths: string[]): string {
+  let sections = '';
+  const hasNoPaths = paths.length === 0;
+  const updatingHost = hasNoPaths || paths.includes('permissions');
+  const updatingDevice =
+    hasNoPaths ||
+    paths.includes('device_config.permissions') ||
+    paths.includes('device_config');
+
+  if (updatingHost && updatingDevice) {
+    sections = 'Host Permissions or Device Executors';
+  } else if (updatingHost) {
+    sections = 'Host Permissions';
+  } else if (updatingDevice) {
+    sections = 'Device Executors';
+  }
+
+  if (!sections) {
+    return `Failed to update config of host ${hostName}, please make sure the provided user IDs are correct, or try again later.`;
+  }
+
+  return `Failed to update config of host ${hostName}, please make sure the provided user IDs in ${sections} are correct, or try again later.`;
+}
+
+/**
  * A fake implementation of the ConfigService for development and testing.
  * It uses the mock data defined in the central mock_data registry and simulates
  * backend logic like permission checks and config updates.
@@ -147,6 +175,17 @@ export class FakeConfigService extends ConfigService {
     }
 
     if (request.section === ConfigSection.ALL) {
+      // Magic string 'iam-error' to simulate invalid user ID backend error during full update.
+      if ((request.config.permissions?.owners || []).includes('iam-error')) {
+        return throwError(() => ({
+          error: {
+            message:
+              'Failed to update config of device ' +
+              request.id +
+              ', please make sure the provided user IDs in owner/executor fields are correct, or try again later.',
+          },
+        })).pipe(delay(1000));
+      }
       const newConfig = deepCopy(request.config);
       this.mockDeviceScenarios[scenarioIndex].config = newConfig;
       return of({
@@ -163,7 +202,7 @@ export class FakeConfigService extends ConfigService {
           return throwError(() => ({
             error: {
               message:
-                'Failed to update config of device 2A131FDH200MS1, please make sure those user IDs are correct, or try again later.',
+                'Failed to update config of device 2A131FDH200MS1, please make sure the provided user IDs in owner/executor fields are correct, or try again later.',
             },
           })).pipe(delay(1000));
         }
@@ -293,9 +332,31 @@ export class FakeConfigService extends ConfigService {
 
     if (paths.length === 0) {
       // Full update
+      // Magic string 'iam-error' in either Host Admins or Device Owners simulates backend error.
+      if (
+        (request.config.permissions?.hostAdmins || []).includes('iam-error') ||
+        (request.config.deviceConfig?.permissions?.owners || []).includes(
+          'iam-error',
+        )
+      ) {
+        return throwError(() => ({
+          error: {
+            message: getInvalidUserErrorMessage(request.hostName, paths),
+          },
+        })).pipe(delay(1000));
+      }
       updatedConfig = deepCopy(request.config);
     } else {
       if (paths.includes('permissions')) {
+        if (
+          (request.config.permissions?.hostAdmins || []).includes('iam-error')
+        ) {
+          return throwError(() => ({
+            error: {
+              message: getInvalidUserErrorMessage(request.hostName, paths),
+            },
+          })).pipe(delay(1000));
+        }
         if (
           !request.config.permissions.hostAdmins.includes(CURRENT_USER) &&
           !request.options?.overrideSelfLockout
@@ -311,6 +372,22 @@ export class FakeConfigService extends ConfigService {
         updatedConfig.deviceConfigMode = request.config.deviceConfigMode;
       }
       if (paths.some((p) => p.startsWith('device_config'))) {
+        if (
+          paths.includes('device_config.permissions') ||
+          paths.includes('device_config')
+        ) {
+          if (
+            (request.config.deviceConfig?.permissions?.owners || []).includes(
+              'iam-error',
+            )
+          ) {
+            return throwError(() => ({
+              error: {
+                message: getInvalidUserErrorMessage(request.hostName, paths),
+              },
+            })).pipe(delay(1000));
+          }
+        }
         updatedConfig.deviceConfig = deepCopy(request.config.deviceConfig);
       }
       if (paths.includes('host_properties')) {

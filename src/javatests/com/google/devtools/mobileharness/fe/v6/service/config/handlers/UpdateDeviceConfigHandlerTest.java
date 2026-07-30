@@ -710,6 +710,58 @@ public final class UpdateDeviceConfigHandlerTest {
   }
 
   @Test
+  public void updateDeviceConfig_invalidUserError_returnsTailoredMessage() throws Exception {
+    String deviceId = "test_device";
+    DeviceConfig feConfig =
+        DeviceConfig.newBuilder()
+            .setPermissions(PermissionInfo.newBuilder().addOwners("invalid_user"))
+            .build();
+    UpdateDeviceConfigRequest request =
+        UpdateDeviceConfigRequest.newBuilder()
+            .setId(deviceId)
+            .setConfig(feConfig)
+            .setSection(DeviceConfigSection.PERMISSIONS)
+            .build();
+
+    Device.DeviceConfig existingConfig =
+        Device.DeviceConfig.newBuilder()
+            .setUuid(deviceId)
+            .setBasicConfig(BasicDeviceConfig.newBuilder().addOwner("owner1"))
+            .build();
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
+        .thenReturn(
+            immediateFuture(
+                DeviceData.create(
+                    DeviceInfo.getDefaultInstance(),
+                    existingConfig,
+                    ManagementMode.PER_DEVICE,
+                    Optional.empty(),
+                    Optional.of(existingConfig))));
+    when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
+
+    // Simulate an IAM_SET_DEVICE_POLICY_ERROR from the backend
+    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
+        .thenReturn(
+            immediateFailedFuture(
+                new RuntimeException("Some backend error: IAM_SET_DEVICE_POLICY_ERROR")));
+
+    ExecutionException e =
+        assertThrows(
+            ExecutionException.class,
+            () ->
+                updateDeviceConfigHandler
+                    .updateDeviceConfig(request, SELF_UNIVERSE, Optional.empty())
+                    .get());
+
+    assertThat(e).hasCauseThat().isInstanceOf(FeServiceException.class);
+    FeServiceException fe = (FeServiceException) e.getCause();
+    assertThat(fe.getCode()).isEqualTo(Status.Code.INTERNAL);
+    assertThat(fe.getMessage())
+        .contains("please make sure the provided user IDs in owner/executor fields are correct");
+  }
+
+  @Test
   public void updateDeviceConfig_providerFailsWithUnexpectedException_returnsUnknownError()
       throws Exception {
     String deviceId = "test_device";

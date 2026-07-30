@@ -32,4 +32,28 @@ public final class ConfigUtil {
     return uniqueOwners.isEmpty()
         || (uniqueOwners.size() == 1 && uniqueOwners.contains(DEVICE_DEFAULT_OWNER));
   }
+
+  /**
+   * Checks whether the exception or any of its causes or suppressed exceptions indicates an invalid
+   * user error (e.g. Cloud IAM policy failure for an unknown user ID).
+   */
+  public static boolean isInvalidUserError(Throwable t) {
+    Throwable current = t;
+    while (current != null) {
+      String msg = current.getMessage();
+      if (msg != null) {
+        if (msg.contains("IAM_SET_DEVICE_POLICY_ERROR")
+            || msg.contains("IAM_SET_LAB_DEFAULT_DEVICE_POLICY_ERROR")) {
+          return true;
+        }
+      }
+      for (Throwable suppressed : current.getSuppressed()) {
+        if (isInvalidUserError(suppressed)) {
+          return true;
+        }
+      }
+      current = current.getCause();
+    }
+    return false;
+  }
 }

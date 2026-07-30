@@ -10,9 +10,10 @@ import {
 } from '@angular/material/dialog/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
-import {of} from 'rxjs';
+import {of, throwError} from 'rxjs';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {Environment} from '../../../../../core/services/environment';
+import {ActionErrorContent} from '../../../../../shared/components/action_error_content/action_error_content';
 import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/confirm_dialog';
 import {HostWizard} from './host_wizard';
 
@@ -647,5 +648,48 @@ describe('HostWizard Component', () => {
     expect(updateSpy).toHaveBeenCalledTimes(1);
     const callArgs = updateSpy.calls.first().args[0];
     expect(callArgs.options?.overrideSelfLockout).toBeTrue();
+  });
+
+  it('should open ActionErrorContent dialog on submit error', async () => {
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostWizard, {
+        data: {
+          hostName: 'test-host',
+          source: 'new',
+        },
+      }),
+    ) as ComponentFixture<MatTestDialogOpener<HostWizard>>;
+    dialogOpener.detectChanges();
+    await dialogOpener.whenStable();
+
+    const comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    const configService = TestBed.inject(CONFIG_SERVICE);
+
+    // Simulate API throwing an error
+    spyOn(configService, 'updateHostConfig').and.returnValue(
+      throwError(() => ({error: {message: 'Invalid user ID'}})),
+    );
+
+    const dialog = TestBed.inject(MatDialog);
+    const dialogOpenSpy = spyOn(dialog, 'open').and.callThrough();
+
+    comp.hostConfig.set({
+      ...comp.hostConfig(),
+      permissions: {
+        hostAdmins: ['admin'],
+      },
+    });
+
+    comp.submit();
+
+    expect(dialogOpenSpy).toHaveBeenCalledWith(
+      ActionErrorContent,
+      jasmine.objectContaining({
+        data: jasmine.objectContaining({
+          errorTitle: 'Failed to update Host Configuration',
+          errorMessage: 'Invalid user ID',
+        }),
+      }),
+    );
   });
 });

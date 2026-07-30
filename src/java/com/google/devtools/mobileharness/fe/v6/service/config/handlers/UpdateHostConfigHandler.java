@@ -21,6 +21,7 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.FluentFuture;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -33,6 +34,8 @@ import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigConverter;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigPusherHelper;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigUtil;
+import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfigMode;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceDiscoverySettings;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostConfig;
@@ -192,10 +195,33 @@ public final class UpdateHostConfigHandler {
 
     updateLabConfigBuilder(builder, request.getConfig(), request.getScope());
 
-    return Futures.transform(
-        configurationProvider.updateLabConfig(request.getHostName(), builder.build(), universe),
-        unused -> UpdateHostConfigResponse.newBuilder().setSuccess(true).build(),
-        executor);
+    return FluentFuture.from(
+            configurationProvider.updateLabConfig(request.getHostName(), builder.build(), universe))
+        .transform(
+            unused -> UpdateHostConfigResponse.newBuilder().setSuccess(true).build(), executor)
+        .catching(
+            Exception.class,
+            e -> {
+              UpdateHostConfigRequest sanitizedRequest = sanitizeRequest(request);
+              logger.atWarning().log(
+                  "Failed to save host configuration for %s. Request: %s",
+                  request.getHostName(), sanitizedRequest);
+
+              String errorMessage =
+                  e.getMessage() != null && !e.getMessage().isEmpty()
+                      ? e.getMessage()
+                      : "Failed to save host configuration.";
+
+              // If the error is due to invalid user IDs (e.g., misspelled LDAPs), we generate a
+              // specific
+              // error message indicating which section(s) likely contain the invalid IDs to help
+              // the user fix it quickly.
+              if (ConfigUtil.isInvalidUserError(e)) {
+                errorMessage = getInvalidUserErrorMessage(request);
+              }
+              throw FeServiceException.internal(errorMessage, e);
+            },
+            executor);
   }
 
   private ListenableFuture<Boolean> isSelfLockout(
@@ -446,5 +472,58 @@ public final class UpdateHostConfigHandler {
     } else {
       builder.clearDefaultWifi();
     }
+  }
+
+  /**
+   * Generates a detailed error message when an invalid user ID error occurs during host config
+   * update.
+   *
+   * <p>To give a clearer error message to users, we inspect the {@link FieldMask} to determine
+   * which specific sections (Host Permissions or Device Executors) were being updated, and point
+   * the user to those sections.
+   */
+  private static String getInvalidUserErrorMessage(UpdateHostConfigRequest request) {
+    // If no update mask is provided, it implies a full update (ALL scope), so we treat both
+    // 'permissions' and 'device_config' as being updated to ensure all potential invalid ID
+    // sections are covered in the error message.
+    FieldMask mask =
+        request.getScope().hasUpdateMask()
+            ? request.getScope().getUpdateMask()
+            : FieldMask.newBuilder().addPaths("permissions").addPaths("device_config").build();
+
+    boolean updatingHostPermissions = isPathInFieldMask("permissions", mask);
+    boolean updatingDevicePermissions = isPathInFieldMask("device_config.permissions", mask);
+
+    String sections = "";
+    if (updatingHostPermissions && updatingDevicePermissions) {
+      sections = " in Host Permissions or Device Executors";
+    } else if (updatingHostPermissions) {
+      sections = " in Host Permissions";
+    } else if (updatingDevicePermissions) {
+      sections = " in Device Executors";
+    }
+
+    return String.format(
+        "Failed to update config of host %s, please make sure the provided user"
+            + " IDs%s are correct, or try again later.",
+        request.getHostName(), sections);
+  }
+
+  private static UpdateHostConfigRequest sanitizeRequest(UpdateHostConfigRequest request) {
+    if (!request.hasConfig()) {
+      return request;
+    }
+    UpdateHostConfigRequest.Builder builder = request.toBuilder();
+    if (builder.getConfig().getDeviceConfig().hasWifi()) {
+      builder.getConfigBuilder().getDeviceConfigBuilder().getWifiBuilder().setPsk("******");
+    }
+    if (builder.getConfig().hasDeviceDiscovery()) {
+      builder
+          .getConfigBuilder()
+          .getDeviceDiscoveryBuilder()
+          .getOverSshDevicesBuilderList()
+          .forEach(sshBuilder -> sshBuilder.setPassword("******"));
+    }
+    return builder.build();
   }
 }

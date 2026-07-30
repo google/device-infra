@@ -12,7 +12,7 @@ import {
 } from '@angular/material/dialog/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
-import {Observable, of, Subject} from 'rxjs';
+import {Observable, of, Subject, throwError} from 'rxjs';
 
 import {
   type StabilitySettings,
@@ -30,6 +30,7 @@ import {
   ConfigService,
 } from '../../../../../core/services/config/config_service';
 import {HostConfigStateService} from '../../../../../core/services/config/host_config_state_service';
+import {ActionErrorContent} from '../../../../../shared/components/action_error_content/action_error_content';
 import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/confirm_dialog';
 
 import {HostSettings} from './host_settings';
@@ -340,6 +341,40 @@ describe('HostSettings Component', () => {
     comp.save();
 
     expect(mockConfigService.updateHostConfig).toHaveBeenCalled();
+  });
+
+  it('should open ActionErrorContent dialog on save error', () => {
+    setupDialogData();
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostSettings, {
+        data: dialogData,
+      }),
+    );
+    comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    dialogRef = dialogOpener.componentInstance.dialogRef;
+    TestBed.inject(ApplicationRef).tick();
+
+    comp.activeSection.set('host-permissions');
+
+    // Simulate API throwing an error
+    mockConfigService.updateHostConfig.and.returnValue(
+      throwError(() => ({error: {message: 'Invalid user ID'}})),
+    );
+
+    const dialog = TestBed.inject(MatDialog);
+    const dialogOpenSpy = spyOn(dialog, 'open').and.callThrough();
+
+    comp.save();
+
+    expect(dialogOpenSpy).toHaveBeenCalledWith(
+      ActionErrorContent,
+      jasmine.objectContaining({
+        data: jasmine.objectContaining({
+          errorTitle: 'Failed to update Host Permissions',
+          errorMessage: 'Invalid user ID',
+        }),
+      }),
+    );
   });
 
   it('should prompt warning dialog when saving with empty dimensions, and clear empty dimensions on confirm without calling API if no other changes', async () => {

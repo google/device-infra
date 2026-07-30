@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDevic
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigConverter;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigUtil;
 import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigResponse;
@@ -197,14 +198,15 @@ public final class UpdateDeviceConfigHandler {
                       ? e.getMessage()
                       : "Failed to save device configuration.";
 
-              // after tested with invalid user IDs, we found it will return a error message with
+              // After testing with invalid user IDs, we found it will return an error message with
               // "IAM_SET_DEVICE_POLICY_ERROR", thus we assume if the error message contains this
-              // string, it is due to invalid user IDs.
-              if (errorMessage.contains("IAM_SET_DEVICE_POLICY_ERROR")) {
+              // string, it is due to invalid user IDs. We provide a tailored error message to guide
+              // the user to check the 'owner' or 'executor' fields.
+              if (ConfigUtil.isInvalidUserError(e)) {
                 errorMessage =
                     String.format(
                         "Failed to update config of device %s, please make sure the provided user"
-                            + " IDs are correct, or try again later.",
+                            + " IDs in owner/executor fields are correct, or try again later.",
                         request.getId());
               }
               throw FeServiceException.internal(errorMessage, e);

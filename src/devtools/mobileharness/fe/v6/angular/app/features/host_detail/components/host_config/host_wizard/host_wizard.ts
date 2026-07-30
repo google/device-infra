@@ -11,12 +11,19 @@ import {
 import {MatChipsModule} from '@angular/material/chips';
 import {
   MAT_DIALOG_DATA,
+  MatDialog,
   MatDialogModule,
   MatDialogRef,
 } from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {finalize} from 'rxjs/operators';
+
+import {ActionErrorContent} from '@deviceinfra/app/shared/components/action_error_content/action_error_content';
+import {
+  formatErrorDetails,
+  getErrorMessage,
+} from '@deviceinfra/app/shared/utils/error_utils';
 
 import {HostConfig} from '../../../../../core/models/host_config_models';
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
@@ -62,11 +69,13 @@ import {HostPermissionList} from '../steps/host_permissions/host_permissions';
     Wifi,
     Dialog,
     ReviewTable,
+    ActionErrorContent,
   ],
 })
 export class HostWizard implements OnInit {
   readonly data = inject(MAT_DIALOG_DATA); // to receive hostDetail openDialog
   // params source, config, etc.
+  private readonly dialog = inject(MatDialog);
   private readonly dialogRef = inject(MatDialogRef<HostWizard>); // to close the dialog
 
   private readonly dialogActions = useConfigDialogActions({
@@ -378,12 +387,25 @@ export class HostWizard implements OnInit {
           }
         }),
       )
-      .subscribe((result) => {
-        if (!result.success) {
-          this.dialogActions.error(result.error?.code);
-          return;
-        }
-        this.dialogActions.success();
-      });
+      .subscribe(
+        (result) => {
+          if (!result.success) {
+            this.dialogActions.error(result.error?.code);
+            return;
+          }
+          this.dialogActions.success();
+        },
+        (err) => {
+          // Use ActionErrorContent to display detailed error messages (e.g., specific section with
+          // invalid user IDs) to the user with structured layout.
+          this.dialog.open(ActionErrorContent, {
+            data: {
+              errorMessage: getErrorMessage(err),
+              errorDetails: formatErrorDetails(err),
+              errorTitle: 'Failed to update Host Configuration',
+            },
+          });
+        },
+      );
   }
 }

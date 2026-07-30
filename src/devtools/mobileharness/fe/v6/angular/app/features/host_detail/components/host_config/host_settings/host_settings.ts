@@ -24,6 +24,7 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 import {of, throwError} from 'rxjs';
 import {concatMap, finalize} from 'rxjs/operators';
 
+import {ActionErrorContent} from '@deviceinfra/app/shared/components/action_error_content/action_error_content';
 import {type DeviceConfig} from '../../../../../core/models/device_config_models';
 import {
   type Editability,
@@ -49,6 +50,10 @@ import {Dialog} from '../../../../../shared/components/dialog/dialog';
 import {useConfigDialogActions} from '../../../../../shared/composables/config_dialog_actions';
 import {useSaveInterceptors} from '../../../../../shared/composables/save_interceptors';
 import {SnackBarService} from '../../../../../shared/services/snackbar_service';
+import {
+  formatErrorDetails,
+  getErrorMessage,
+} from '../../../../../shared/utils/error_utils';
 import {objectUtils} from '../../../../../shared/utils/object_utils';
 import {Dimensions} from '../../../../device_detail/components/device_config/steps/dimensions/dimensions';
 import {Permissions} from '../../../../device_detail/components/device_config/steps/permissions/permissions';
@@ -87,6 +92,7 @@ import {HostProperties} from '../steps/host_properties/host_properties';
     Stability,
     DeviceDiscovery,
     HostProperties,
+    ActionErrorContent,
   ],
 })
 export class HostSettings implements OnInit {
@@ -855,22 +861,33 @@ export class HostSettings implements OnInit {
           this.saving.set(false);
         }),
       )
-      .subscribe((result) => {
-        if (!result.success) {
-          this.dialogActions.error(result.error?.code);
-          return;
-        }
+      .subscribe(
+        (result) => {
+          if (!result.success) {
+            this.dialogActions.error(result.error?.code);
+            return;
+          }
 
-        // Immediately update baseline to prevent phantom warning
-        this.originalHostConfig = objectUtils.deepCopy(
-          this.hostConfig(),
-        ) as HostConfig;
-        this.originalDeviceConfig = objectUtils.deepCopy(
-          this.deviceConfig(),
-        ) as DeviceConfig;
+          // Immediately update baseline to prevent phantom warning
+          this.originalHostConfig = objectUtils.deepCopy(
+            this.hostConfig(),
+          ) as HostConfig;
+          this.originalDeviceConfig = objectUtils.deepCopy(
+            this.deviceConfig(),
+          ) as DeviceConfig;
 
-        this.dialogActions.success();
-      });
+          this.dialogActions.success();
+        },
+        (err) => {
+          this.dialog.open(ActionErrorContent, {
+            data: {
+              errorMessage: getErrorMessage(err),
+              errorDetails: formatErrorDetails(err),
+              errorTitle: `Failed to update ${this.getSectionTitle(section)}`,
+            },
+          });
+        },
+      );
   }
 
   discard() {
@@ -950,5 +967,28 @@ export class HostSettings implements OnInit {
           this.closeDialogIfOpen();
         },
       });
+  }
+
+  private getSectionTitle(section: string): string {
+    switch (section) {
+      case 'host-permissions':
+        return 'Host Permissions';
+      case 'permissions':
+        return 'Permissions';
+      case 'wifi':
+        return 'Wi-Fi';
+      case 'dimensions':
+        return 'Dimensions';
+      case 'stability':
+        return 'Stability & Reboot';
+      case 'config-mode':
+        return 'Configuration Mode';
+      case 'device-discovery':
+        return 'Device Discovery';
+      case 'host-properties':
+        return 'Host Properties';
+      default:
+        return 'Configuration';
+    }
   }
 }

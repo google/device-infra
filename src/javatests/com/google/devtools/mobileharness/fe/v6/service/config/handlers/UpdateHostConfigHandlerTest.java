@@ -17,9 +17,11 @@
 package com.google.devtools.mobileharness.fe.v6.service.config.handlers;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -39,6 +41,7 @@ import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigPusherHelper;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapability;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
+import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.PermissionInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfig;
@@ -66,7 +69,9 @@ import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.protobuf.FieldMask;
 import com.google.protobuf.Int32Value;
+import io.grpc.Status;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -1131,5 +1136,98 @@ public final class UpdateHostConfigHandlerTest {
     return HostConfigUpdateScope.newBuilder()
         .setUpdateMask(FieldMask.newBuilder().addAllPaths(ImmutableList.copyOf(paths)).build())
         .build();
+  }
+
+  @Test
+  public void updateHostConfig_invalidUserError_hostPermissionsScope_returnsTailoredMessage()
+      throws Exception {
+    String hostName = "test_host";
+    UpdateHostConfigRequest request =
+        UpdateHostConfigRequest.newBuilder()
+            .setHostName(hostName)
+            .setScope(createScope("permissions"))
+            .build();
+
+    when(configurationProvider.updateLabConfig(eq(hostName), any(), eq(SELF_UNIVERSE)))
+        .thenReturn(
+            immediateFailedFuture(
+                new RuntimeException("Backend error: IAM_SET_DEVICE_POLICY_ERROR")));
+
+    ExecutionException e =
+        assertThrows(
+            ExecutionException.class,
+            () ->
+                updateHostConfigHandler
+                    .updateHostConfig(request, SELF_UNIVERSE, Optional.empty())
+                    .get());
+
+    assertThat(e).hasCauseThat().isInstanceOf(FeServiceException.class);
+    FeServiceException fe = (FeServiceException) e.getCause();
+    assertThat(fe.getCode()).isEqualTo(Status.Code.INTERNAL);
+    assertThat(fe.getMessage())
+        .contains("please make sure the provided user IDs in Host Permissions are correct");
+  }
+
+  @Test
+  public void updateHostConfig_invalidUserError_deviceExecutorsScope_returnsTailoredMessage()
+      throws Exception {
+    String hostName = "test_host";
+    UpdateHostConfigRequest request =
+        UpdateHostConfigRequest.newBuilder()
+            .setHostName(hostName)
+            .setScope(createScope("device_config.permissions"))
+            .build();
+
+    when(configurationProvider.updateLabConfig(eq(hostName), any(), eq(SELF_UNIVERSE)))
+        .thenReturn(
+            immediateFailedFuture(
+                new RuntimeException("Backend error: " + "IAM_SET_DEVICE_POLICY_ERROR")));
+
+    ExecutionException e =
+        assertThrows(
+            ExecutionException.class,
+            () ->
+                updateHostConfigHandler
+                    .updateHostConfig(request, SELF_UNIVERSE, Optional.empty())
+                    .get());
+
+    assertThat(e).hasCauseThat().isInstanceOf(FeServiceException.class);
+    FeServiceException fe = (FeServiceException) e.getCause();
+    assertThat(fe.getCode()).isEqualTo(Status.Code.INTERNAL);
+    assertThat(fe.getMessage())
+        .contains("please make sure the provided user IDs in Device Executors are correct");
+  }
+
+  @Test
+  public void updateHostConfig_invalidUserError_allScope_returnsTailoredMessage() throws Exception {
+    String hostName = "test_host";
+    // Empty scope implies ALL
+    UpdateHostConfigRequest request =
+        UpdateHostConfigRequest.newBuilder()
+            .setHostName(hostName)
+            .setScope(HostConfigUpdateScope.getDefaultInstance())
+            .build();
+
+    when(configurationProvider.updateLabConfig(eq(hostName), any(), eq(SELF_UNIVERSE)))
+        .thenReturn(
+            immediateFailedFuture(
+                new RuntimeException(
+                    "Backend error: " + "IAM_SET_LAB_DEFAULT_DEVICE_POLICY_ERROR")));
+
+    ExecutionException e =
+        assertThrows(
+            ExecutionException.class,
+            () ->
+                updateHostConfigHandler
+                    .updateHostConfig(request, SELF_UNIVERSE, Optional.empty())
+                    .get());
+
+    assertThat(e).hasCauseThat().isInstanceOf(FeServiceException.class);
+    FeServiceException fe = (FeServiceException) e.getCause();
+    assertThat(fe.getCode()).isEqualTo(Status.Code.INTERNAL);
+    assertThat(fe.getMessage())
+        .contains(
+            "please make sure the provided user IDs in Host Permissions or Device Executors are"
+                + " correct");
   }
 }

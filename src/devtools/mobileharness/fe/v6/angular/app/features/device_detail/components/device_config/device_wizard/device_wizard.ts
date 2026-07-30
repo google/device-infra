@@ -12,6 +12,7 @@ import {
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
 import {
   MAT_DIALOG_DATA,
+  MatDialog,
   MatDialogModule,
   MatDialogRef,
 } from '@angular/material/dialog';
@@ -20,6 +21,12 @@ import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatStepperModule} from '@angular/material/stepper';
 import {MatTableModule} from '@angular/material/table';
 import {finalize} from 'rxjs/operators';
+
+import {ActionErrorContent} from '@deviceinfra/app/shared/components/action_error_content/action_error_content';
+import {
+  formatErrorDetails,
+  getErrorMessage,
+} from '@deviceinfra/app/shared/utils/error_utils';
 
 import {DEFAULT_DEVICE_CONFIG} from '../../../../../core/constants/device_config_constants';
 import {
@@ -71,11 +78,13 @@ import {Wifi} from '../steps/wifi/wifi';
     Wifi,
     Dimensions,
     ReviewTable,
+    ActionErrorContent,
   ],
 })
 export class DeviceWizard implements OnInit {
   readonly data = inject(MAT_DIALOG_DATA);
   readonly configService = inject(CONFIG_SERVICE);
+  private readonly dialog = inject(MatDialog);
   private readonly dialogRef = inject(MatDialogRef<DeviceWizard>);
   private readonly environment = inject(Environment);
 
@@ -283,13 +292,26 @@ export class DeviceWizard implements OnInit {
           }
         }),
       )
-      .subscribe((result) => {
-        if (!result.success) {
-          this.dialogActions.error(result.error?.code);
-          return;
-        }
+      .subscribe(
+        (result) => {
+          if (!result.success) {
+            this.dialogActions.error(result.error?.code);
+            return;
+          }
 
-        this.dialogActions.success();
-      });
+          this.dialogActions.success();
+        },
+        (err) => {
+          // Use ActionErrorContent to display detailed error messages (e.g., specific section with
+          // invalid user IDs) to the user with structured layout.
+          this.dialog.open(ActionErrorContent, {
+            data: {
+              errorMessage: getErrorMessage(err),
+              errorDetails: formatErrorDetails(err),
+              errorTitle: 'Failed to update Device Configuration',
+            },
+          });
+        },
+      );
   }
 }

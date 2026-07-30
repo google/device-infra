@@ -3,13 +3,14 @@ import {MatDialog, MatDialogModule} from '@angular/material/dialog';
 import {MatTestDialogOpener} from '@angular/material/dialog/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
-import {of} from 'rxjs';
+import {of, throwError} from 'rxjs';
 
 import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {FakeConfigService} from '../../../../../core/services/config/fake_config_service';
 import {DEVICE_SERVICE} from '../../../../../core/services/device/device_service';
 import {FakeDeviceService} from '../../../../../core/services/device/fake_device_service';
 import {Environment} from '../../../../../core/services/environment';
+import {ActionErrorContent} from '../../../../../shared/components/action_error_content/action_error_content';
 
 import {DeviceWizard} from './device_wizard';
 
@@ -497,5 +498,42 @@ describe('Device Wizard Component', () => {
     expect(updateSpy).toHaveBeenCalledTimes(1);
     const callArgs = updateSpy.calls.first().args[0];
     expect(callArgs.options?.overrideSelfLockout).toBeTrue();
+  });
+
+  it('should open ActionErrorContent dialog on submit error', async () => {
+    const fixture = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(DeviceWizard, {
+        data: {
+          deviceId: 'test-id',
+          source: 'new',
+        },
+      }),
+    );
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const component = fixture.componentInstance.dialogRef.componentInstance;
+    const configService = TestBed.inject(CONFIG_SERVICE);
+
+    // Simulate API throwing an error
+    spyOn(configService, 'updateDeviceConfig').and.returnValue(
+      throwError(() => ({error: {message: 'Invalid user ID'}})),
+    );
+
+    const dialog = TestBed.inject(MatDialog);
+    const dialogOpenSpy = spyOn(dialog, 'open').and.callThrough();
+
+    component.config.permissions = {owners: ['user1'], executors: []};
+    component.submit();
+
+    expect(dialogOpenSpy).toHaveBeenCalledWith(
+      ActionErrorContent,
+      jasmine.objectContaining({
+        data: jasmine.objectContaining({
+          errorTitle: 'Failed to update Device Configuration',
+          errorMessage: 'Invalid user ID',
+        }),
+      }),
+    );
   });
 });
