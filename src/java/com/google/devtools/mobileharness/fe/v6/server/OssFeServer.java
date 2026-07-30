@@ -27,6 +27,8 @@ import com.google.devtools.mobileharness.fe.v6.service.device.DeviceServiceGrpcI
 import com.google.devtools.mobileharness.fe.v6.service.device.DeviceServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.host.HostServiceGrpcImpl;
 import com.google.devtools.mobileharness.fe.v6.service.host.HostServiceModule;
+import com.google.devtools.mobileharness.fe.v6.service.job.JobServiceGrpcImpl;
+import com.google.devtools.mobileharness.fe.v6.service.job.OssJobServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.shared.OssStubsModule;
 import com.google.devtools.mobileharness.fe.v6.service.test.OssTestServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.test.TestServiceGrpcImpl;
@@ -53,6 +55,7 @@ public final class OssFeServer {
   private final ConfigServiceGrpcImpl configService;
   private final AdminServiceGrpcImpl adminService;
   private final TestServiceGrpcImpl testService;
+  private final JobServiceGrpcImpl jobService;
   private volatile Server grpcServer;
 
   @Inject
@@ -62,12 +65,14 @@ public final class OssFeServer {
       ConfigServiceGrpcImpl configService,
       AdminServiceGrpcImpl adminService,
       TestServiceGrpcImpl testService,
+      JobServiceGrpcImpl jobService,
       @ServerPort int port) {
     this.deviceService = deviceService;
     this.hostService = hostService;
     this.configService = configService;
     this.adminService = adminService;
     this.testService = testService;
+    this.jobService = jobService;
     this.port = port;
   }
 
@@ -80,6 +85,7 @@ public final class OssFeServer {
             .addService(configService)
             .addService(adminService)
             .addService(testService)
+            .addService(jobService)
             .addService(ProtoReflectionService.newInstance())
             .build();
     grpcServer.start();
@@ -114,6 +120,7 @@ public final class OssFeServer {
             new ConfigServiceModule(),
             new AdminServiceModule(),
             new OssTestServiceModule(),
+            new OssJobServiceModule(),
             new OssStubsModule(),
             new AbstractModule() {
               @Override
