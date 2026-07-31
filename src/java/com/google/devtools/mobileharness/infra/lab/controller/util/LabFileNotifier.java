@@ -83,7 +83,8 @@ public class LabFileNotifier {
   }
 
   /** Handles all cached job/test files. */
-  public void onTestStarting(TestInfo testInfo, Allocation allocation) {
+  public void onTestStarting(TestInfo testInfo, Allocation allocation)
+      throws MobileHarnessException {
     synchronized (fileCache) {
       testInfo
           .log()
@@ -96,7 +97,9 @@ public class LabFileNotifier {
       this.testInfo = testInfo;
       this.allocation = allocation;
       // This access should be guarded by 'this.fileCache', which is not currently held
-      fileCache.forEach(this::handleJobOrTestFile);
+      for (JobOrTestFileUnit fileUnit : fileCache) {
+        handleJobOrTestFile(fileUnit);
+      }
       // This access should be guarded by 'this.fileCache', which is not currently held
       fileCache.forEach(this::addJobOrTestFile);
       fileCache.clear();
@@ -112,7 +115,11 @@ public class LabFileNotifier {
     synchronized (fileCache) {
       if (isTestStarted) {
         addJobOrTestFile(fileUnit);
-        handleJobOrTestFile(fileUnit);
+        try {
+          handleJobOrTestFile(fileUnit);
+        } catch (MobileHarnessException e) {
+          testInfo.warnings().addAndLog(e, logger);
+        }
       } else {
         fileCache.add(fileUnit);
       }
@@ -147,7 +154,7 @@ public class LabFileNotifier {
 
   @GuardedBy("fileCache")
   @VisibleForTesting
-  protected void handleJobOrTestFile(JobOrTestFileUnit fileUnit) {
+  protected void handleJobOrTestFile(JobOrTestFileUnit fileUnit) throws MobileHarnessException {
     testInfo
         .log()
         .at(Level.FINE)
