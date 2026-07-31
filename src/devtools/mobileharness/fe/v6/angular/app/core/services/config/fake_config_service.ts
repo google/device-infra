@@ -34,14 +34,39 @@ function deepCopy<T>(obj: T): T {
  * Generates a specific error message for invalid user ID scenarios in testing.
  * Mirrors the backend logic in UpdateHostConfigHandler to provide realistic test cases.
  */
+/**
+ * Helper that checks if a target configuration path is inside the update mask.
+ * Matches both exact paths, sub-paths of the path, or parent paths.
+ * Mirrors the logic in UpdateHostConfigHandler.java.
+ */
+function isPathInFieldMask(path: string, maskPaths: string[]): boolean {
+  for (const maskPath of maskPaths) {
+    if (
+      maskPath === path ||
+      maskPath.startsWith(path + '.') ||
+      path.startsWith(maskPath + '.')
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Generates a specific error message for invalid user ID scenarios in testing.
+ * Mirrors the backend logic in UpdateHostConfigHandler to provide realistic test cases.
+ */
 function getInvalidUserErrorMessage(hostName: string, paths: string[]): string {
   let sections = '';
-  const hasNoPaths = paths.length === 0;
-  const updatingHost = hasNoPaths || paths.includes('permissions');
-  const updatingDevice =
-    hasNoPaths ||
-    paths.includes('device_config.permissions') ||
-    paths.includes('device_config');
+  // If no paths provided, it implies a full update.
+  const effectivePaths =
+    paths.length === 0 ? ['permissions', 'device_config'] : paths;
+
+  const updatingHost = isPathInFieldMask('permissions', effectivePaths);
+  const updatingDevice = isPathInFieldMask(
+    'device_config.permissions',
+    effectivePaths,
+  );
 
   if (updatingHost && updatingDevice) {
     sections = 'Host Permissions or Device Executors';
@@ -347,7 +372,7 @@ export class FakeConfigService extends ConfigService {
       }
       updatedConfig = deepCopy(request.config);
     } else {
-      if (paths.includes('permissions')) {
+      if (isPathInFieldMask('permissions', paths)) {
         if (
           (request.config.permissions?.hostAdmins || []).includes('iam-error')
         ) {
@@ -368,14 +393,11 @@ export class FakeConfigService extends ConfigService {
         }
         updatedConfig.permissions = deepCopy(request.config.permissions);
       }
-      if (paths.includes('device_config_mode')) {
+      if (isPathInFieldMask('device_config_mode', paths)) {
         updatedConfig.deviceConfigMode = request.config.deviceConfigMode;
       }
-      if (paths.some((p) => p.startsWith('device_config'))) {
-        if (
-          paths.includes('device_config.permissions') ||
-          paths.includes('device_config')
-        ) {
+      if (isPathInFieldMask('device_config', paths)) {
+        if (isPathInFieldMask('device_config.permissions', paths)) {
           if (
             (request.config.deviceConfig?.permissions?.owners || []).includes(
               'iam-error',
@@ -390,10 +412,10 @@ export class FakeConfigService extends ConfigService {
         }
         updatedConfig.deviceConfig = deepCopy(request.config.deviceConfig);
       }
-      if (paths.includes('host_properties')) {
+      if (isPathInFieldMask('host_properties', paths)) {
         updatedConfig.hostProperties = deepCopy(request.config.hostProperties);
       }
-      if (paths.includes('device_discovery')) {
+      if (isPathInFieldMask('device_discovery', paths)) {
         updatedConfig.deviceDiscovery = deepCopy(
           request.config.deviceDiscovery,
         );

@@ -876,7 +876,10 @@ export class HostSettings implements OnInit {
             this.deviceConfig(),
           ) as DeviceConfig;
 
-          this.dialogActions.success();
+          this.dialogActions.success({
+            showPermissionsHint:
+              section === 'host-permissions' || section === 'permissions',
+          });
         },
         (err) => {
           this.dialog.open(ActionErrorContent, {

@@ -463,7 +463,9 @@ export class DeviceSettings implements OnInit {
             this.newConfig(),
           ) as DeviceConfig;
 
-          this.dialogActions.success();
+          this.dialogActions.success({
+            showPermissionsHint: section === ConfigSection.PERMISSIONS,
+          });
         },
         (err) => {
           this.dialog.open(ActionErrorContent, {

@@ -299,7 +299,7 @@ export class DeviceWizard implements OnInit {
             return;
           }
 
-          this.dialogActions.success();
+          this.dialogActions.success({showPermissionsHint: true});
         },
         (err) => {
           // Use ActionErrorContent to display detailed error messages (e.g., specific section with

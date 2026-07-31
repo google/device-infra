@@ -18,10 +18,20 @@ export function useConfigDialogActions<T>(
   const dialog = inject(MatDialog);
 
   /** Handles the save success action by showing a success dialog. */
-  const success = () => {
+  const success = (successOptions?: {showPermissionsHint?: boolean}) => {
+    const hasHint = successOptions?.showPermissionsHint;
+
+    let content: string | undefined =
+      'Your configuration has been saved successfully.';
+
+    if (hasHint) {
+      content =
+        'Your configuration has been saved successfully, and changes to Owners/Executors may take up to 5 minutes to propagate and take effect.';
+    }
+
     const dialogData = {
       title: 'Configuration Saved',
-      content: 'Your configuration has been saved successfully. ',
+      content,
       type: 'success',
       primaryButtonLabel: 'OK',
     };

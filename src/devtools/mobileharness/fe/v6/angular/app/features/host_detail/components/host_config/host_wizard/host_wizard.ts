@@ -393,7 +393,9 @@ export class HostWizard implements OnInit {
             this.dialogActions.error(result.error?.code);
             return;
           }
-          this.dialogActions.success();
+          this.dialogActions.success({
+            showPermissionsHint: paths.includes('permissions'),
+          });
         },
         (err) => {
           // Use ActionErrorContent to display detailed error messages (e.g., specific section with
