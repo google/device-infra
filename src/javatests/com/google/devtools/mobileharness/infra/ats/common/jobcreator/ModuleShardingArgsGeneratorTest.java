@@ -73,8 +73,28 @@ public final class ModuleShardingArgsGeneratorTest {
     assertThat(shardingArgs)
         .containsExactly(
             "--include-filter \"mock_module1[instant]\""
-                + " --exclude-filter \"mock_module1[instant] class#test\"",
-            "--include-filter \"mock_module2\"");
+                + " --exclude-filter \"mock_module1[instant] class#test\""
+                + " --skip-preconditions",
+            "--include-filter \"mock_module2\" --skip-preconditions");
+  }
+
+  @Test
+  public void generateShardingArgs_alreadyHasSkipPreconditions_notDuplicated() throws Exception {
+    ImmutableSet<String> shardingArgs =
+        moduleShardingArgsGenerator.generateShardingArgs(
+            SessionRequestInfoUtil.buildAndValidate(
+                SessionRequestInfo.newBuilder()
+                    .setTestPlan("cts")
+                    .setCommandLineArgs("cts")
+                    .setXtsType("cts")
+                    .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                    .setShardingMode(ShardingMode.MODULE)
+                    .addAllIncludeFilters(ImmutableList.of("mock_module1"))
+                    .addExtraArgs("--skip-preconditions")),
+            ImmutableList.of("mock_module1"));
+
+    assertThat(shardingArgs)
+        .containsExactly("--include-filter \"mock_module1\" --skip-preconditions");
   }
 
   @Test

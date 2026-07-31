@@ -214,6 +214,9 @@ class ModuleShardingArgsGenerator {
                             Stream.of(String.format("--shard-count %s", shardCount)),
                             Stream.of(String.format("--shard-index %s", shardIndex)))
                         : Stream.empty(),
+                    extraArgs.contains("--skip-preconditions")
+                        ? Stream.empty()
+                        : Stream.of("--skip-preconditions"),
                     extraArgs.stream()
                         .map(arg -> arg.contains(" ") ? String.format("\"%s\"", arg) : arg))
                 .collect(toImmutableList()));
