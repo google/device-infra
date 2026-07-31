@@ -423,23 +423,57 @@ final class AtsServerSessionPlugin {
   void createXtsJobs(
       RequestDetail.Builder requestDetail, NewMultiCommandRequest newMultiCommandRequest)
       throws InterruptedException {
+    if (!createTradefedJobs(requestDetail, newMultiCommandRequest)
+        || !createNonTradefedJobs(requestDetail, newMultiCommandRequest)
+        || hasNoJobsCreated(requestDetail)) {
+      return;
+    }
+
+    addMainJobs();
+  }
+
+  /**
+   * Creates Tradefed jobs from the request, updates request detail state and error messages, and
+   * saves the generated jobs in {@link #tradefedJobs}.
+   *
+   * @return true if the creation state is {@link RequestState#RUNNING}, false otherwise
+   */
+  @GuardedBy("sessionLock")
+  private boolean createTradefedJobs(
+      RequestDetail.Builder requestDetail, NewMultiCommandRequest newMultiCommandRequest)
+      throws InterruptedException {
     CreateJobsResult createTradefedJobsResult =
         newMultiCommandRequestHandler.createTradefedJobs(newMultiCommandRequest, sessionInfo);
     tradefedJobs = new ArrayList<>(createTradefedJobsResult.jobInfos());
     updateRequestDetailWithCreateJobsResult(requestDetail, createTradefedJobsResult);
-    if (!createTradefedJobsResult.state().equals(RequestState.RUNNING)) {
-      return;
-    }
+    return createTradefedJobsResult.state().equals(RequestState.RUNNING);
+  }
 
-    // Create non-tradefed jobs.
+  /**
+   * Creates non-Tradefed jobs from the request, updates request detail state and error messages,
+   * and saves the generated jobs in {@link #nonTradefedJobs}.
+   *
+   * @return true if the creation state is {@link RequestState#RUNNING}, false otherwise
+   */
+  @GuardedBy("sessionLock")
+  private boolean createNonTradefedJobs(
+      RequestDetail.Builder requestDetail, NewMultiCommandRequest newMultiCommandRequest)
+      throws InterruptedException {
     CreateJobsResult createNonTradefedJobsResult =
         newMultiCommandRequestHandler.createNonTradefedJobs(newMultiCommandRequest, sessionInfo);
     nonTradefedJobs = createNonTradefedJobsResult.jobInfos();
     updateRequestDetailWithCreateJobsResult(requestDetail, createNonTradefedJobsResult);
-    if (!createNonTradefedJobsResult.state().equals(RequestState.RUNNING)) {
-      return;
-    }
+    return createNonTradefedJobsResult.state().equals(RequestState.RUNNING);
+  }
 
+  /**
+   * Verifies that at least one Tradefed or non-Tradefed job was created for the session, updating
+   * the request state and logging an error if none were created.
+   *
+   * @return true if no jobs were created, false otherwise
+   */
+  @GuardedBy("sessionLock")
+  private boolean hasNoJobsCreated(RequestDetail.Builder requestDetail) {
     if (tradefedJobs.isEmpty() && nonTradefedJobs.isEmpty()) {
       requestDetail
           .setState(RequestState.ERROR)
@@ -449,16 +483,25 @@ final class AtsServerSessionPlugin {
       logger.atWarning().log(
           "Session [%s] interrupted: No tradefed or non-tradefed jobs were created.",
           sessionInfo.getSessionId());
-      return;
+      return true;
     }
+    return false;
+  }
 
-    // Ensure non-tradefed jobs are added only if no tradefed jobs exist or all tradefed jobs
-    // have ended.
-    if (!tradefedJobs.isEmpty()) {
+  /**
+   * Schedules main Tradefed and non-Tradefed jobs into the session.
+   *
+   * <p>If any Tradefed jobs exist, schedules the first Tradefed job (subsequent Tradefed jobs will
+   * execute sequentially when the previous one ends in {@link #handleXtsJobEnd}). If no Tradefed
+   * jobs exist, adds all non-Tradefed jobs directly.
+   */
+  @GuardedBy("sessionLock")
+  private void addMainJobs() {
+    if (tradefedJobs != null && !tradefedJobs.isEmpty()) {
       // Add one tradefed job to session, if we have multiple TF jobs execute serially. The
       // following jobs will be added when the previous job hits onJobEnded.
       sessionInfo.addJob(tradefedJobs.remove(0));
-    } else {
+    } else if (nonTradefedJobs != null && !nonTradefedJobs.isEmpty()) {
       // If no tradefed job was added, add non tradefed jobs directly.
       nonTradefedJobs.forEach(sessionInfo::addJob);
     }
