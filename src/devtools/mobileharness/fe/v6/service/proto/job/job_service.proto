@@ -53,6 +53,7 @@ message GetJobRequest {
 
 message GetJobResponse {
   JobDetail job = 1;
+  JobActions actions = 2;
 }
 
 message GetJobLogRequest {

@@ -67,6 +67,7 @@ export declare interface TestSummary {
   startTime?: string;
   endTime?: string;
   devices?: TestDevices;
+  host?: HostInfo;
 }
 /** Wrapper for a list of test summaries. */
 export declare interface TestSummaries {

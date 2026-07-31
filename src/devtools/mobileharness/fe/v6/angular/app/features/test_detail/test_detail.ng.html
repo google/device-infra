@@ -38,7 +38,7 @@
                   <div class="metadata-grid">
                     <!-- Row 1: Test ID -->
                     <span class="metadata-label">Test ID:</span>
-                    <div class="metadata-value font-mono bg-gray-box">
+                    <div class="metadata-value">
                       <span class="value-text" [matTooltip]="test.id">{{ test.id }}</span>
                       <button (click)="copyToClipboard(test.id)" class="inline-copy-button" matTooltip="Copy Test ID">
                         <mat-icon>content_copy</mat-icon>
@@ -69,7 +69,7 @@
                     <!-- Row 2: Part of Job -->
                     @if (test.job; as job) {
                       <span class="metadata-label">Part of Job:</span>
-                      <div class="metadata-value font-mono bg-gray-box">
+                      <div class="metadata-value">
                         <div class="job-hover-container">
                           <a app-nav-link
                             [config]="{type: 'job', jobId: job.id}"
@@ -137,28 +137,28 @@
                              <a app-nav-link
                                [config]="universe ? {type: 'device', hostName: host.name, hostIp: host.ip, deviceId: dev.id, universe: universe} : {type: 'device', hostName: host.name, hostIp: host.ip, deviceId: dev.id}"
                                queryParamsHandling="merge"
-                               class="grid-link-value font-mono"
+                               class="grid-link-value"
                                [matTooltip]="'View Device Details: ' + dev.id"
                                >{{ dev.id }}</a
                              >
                            }
                          </div>
                        } @else {
-                         <div class="grid-value value-stack-container font-mono">
+                         <div class="grid-value value-stack-container">
                            @for (dev of devices; track dev.id) {
                              <span>{{ dev.id }}</span>
                            }
                          </div>
                        }
                      } @else {
-                       <div class="grid-value font-mono na-value">N/A</div>
+                       <div class="grid-value na-value">N/A</div>
                      }
 
                      <div class="grid-divider"></div>
 
                      <span class="grid-label">Host</span>
                      @if (hasHost) {
-                       <div class="grid-value font-mono">
+                       <div class="grid-value">
                          <a app-nav-link
                            [config]="universe ? {type: 'host', hostName: host.name, hostIp: host.ip, universe: universe} : {type: 'host', hostName: host.name, hostIp: host.ip}"
                            queryParamsHandling="merge"
@@ -169,7 +169,7 @@
                          <div class="host-ip-text">{{ host.ip }}</div>
                        </div>
                      } @else {
-                       <div class="grid-value font-mono na-value">N/A</div>
+                       <div class="grid-value na-value">N/A</div>
                      }
                    </div>
                  </div>

@@ -1,6 +1,7 @@
 import {InjectionToken} from '@angular/core';
 import {DeviceActions} from '../models/device_action';
 import {HostActions, LabServerActions} from '../models/host_action';
+import {JobActions} from '../models/job_overview';
 
 /**
  * Enum representing all unimplemented features that will show a "Coming Soon" dialog.
@@ -25,6 +26,9 @@ export enum ActionBarAction {
   DEVICE_LOGCAT = 'DEVICE_LOGCAT',
   DEVICE_QUARANTINE = 'DEVICE_QUARANTINE',
   DEVICE_DECOMMISSION = 'DEVICE_DECOMMISSION',
+
+  // Job Actions
+  JOB_KILL = 'JOB_KILL',
 }
 
 /**
@@ -97,6 +101,9 @@ export const ACTION_BAR_CONFIG: Record<ActionBarAction, ActionMetadata> = {
   },
   [ActionBarAction.DEVICE_QUARANTINE]: {
     displayName: 'Quarantine',
+  },
+  [ActionBarAction.JOB_KILL]: {
+    displayName: 'Kill Job',
   },
 };
 
@@ -265,3 +272,31 @@ export const LAB_SERVER_ACTION_UI_CONFIG: Record<
     feature: ActionBarAction.HOST_STOP,
   },
 };
+
+/**
+ * Interface defining the UI configuration for a job action.
+ */
+export interface JobActionUiConfig {
+  readonly label: string;
+  readonly icon: string;
+  readonly testIdPrefix: string;
+  readonly feature: ActionBarAction;
+  readonly loadingLabel?: string;
+  readonly customClass?: string;
+}
+
+/**
+ * UI configuration metadata for job actions.
+ * Maps each job action to its display properties.
+ */
+export const JOB_ACTION_UI_CONFIG: Record<keyof JobActions, JobActionUiConfig> =
+  {
+    'kill': {
+      label: 'Kill Job',
+      icon: 'cancel',
+      testIdPrefix: 'kill-job',
+      feature: ActionBarAction.JOB_KILL,
+      loadingLabel: 'Killing...',
+      customClass: 'kill-job-btn',
+    },
+  };

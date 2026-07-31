@@ -44,6 +44,21 @@
         }
       </nav>
     }
+
+    <!-- Job Scenarios -->
+    <h3 class="sidebar-title mt-6" (click)="toggleJobScenarios()">
+      <span>Job Scenarios</span>
+      <mat-icon [style.transform]="jobCollapsed() ? 'rotate(-90deg)' : 'rotate(0deg)'" class="transition-transform">expand_more</mat-icon>
+    </h3>
+    @if (!jobCollapsed()) {
+      <nav class="sidebar-nav">
+        @for (scenario of jobScenarios; track scenario.id) {
+          <a [routerLink]="['/jobs', scenario.id]" queryParamsHandling="preserve" class="nav-link">
+            {{ scenario.scenarioName }}
+          </a>
+        }
+      </nav>
+    }
   </aside>
   <div class="harness-main">
     <p class="placeholder-text">Select a scenario from the left sidebar to view the details.</p>
