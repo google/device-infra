@@ -40,8 +40,8 @@ service TestService {
   // Gets the log of a test by its ID, returning the log from `offset` to the
   // end.
   //
-  // Non-path fields (job_id, offset) are automatically mapped to query
-  // parameters by the gRPC-JSON transcoder.
+  // Non-path fields (job_id, offset, content_hash) are automatically mapped to
+  // query parameters by the gRPC-JSON transcoder.
   rpc GetTestLog(GetTestLogRequest) returns (GetTestLogResponse) {
     option (google.api.http) = {
       get: "/v6/tests/{test_id}/log"
