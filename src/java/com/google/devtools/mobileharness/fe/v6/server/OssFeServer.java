@@ -29,6 +29,8 @@ import com.google.devtools.mobileharness.fe.v6.service.host.HostServiceGrpcImpl;
 import com.google.devtools.mobileharness.fe.v6.service.host.HostServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.job.JobServiceGrpcImpl;
 import com.google.devtools.mobileharness.fe.v6.service.job.OssJobServiceModule;
+import com.google.devtools.mobileharness.fe.v6.service.session.OssSessionServiceModule;
+import com.google.devtools.mobileharness.fe.v6.service.session.SessionServiceGrpcImpl;
 import com.google.devtools.mobileharness.fe.v6.service.shared.OssStubsModule;
 import com.google.devtools.mobileharness.fe.v6.service.test.OssTestServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.test.TestServiceGrpcImpl;
@@ -56,6 +58,7 @@ public final class OssFeServer {
   private final AdminServiceGrpcImpl adminService;
   private final TestServiceGrpcImpl testService;
   private final JobServiceGrpcImpl jobService;
+  private final SessionServiceGrpcImpl sessionService;
   private volatile Server grpcServer;
 
   @Inject
@@ -66,6 +69,7 @@ public final class OssFeServer {
       AdminServiceGrpcImpl adminService,
       TestServiceGrpcImpl testService,
       JobServiceGrpcImpl jobService,
+      SessionServiceGrpcImpl sessionService,
       @ServerPort int port) {
     this.deviceService = deviceService;
     this.hostService = hostService;
@@ -73,6 +77,7 @@ public final class OssFeServer {
     this.adminService = adminService;
     this.testService = testService;
     this.jobService = jobService;
+    this.sessionService = sessionService;
     this.port = port;
   }
 
@@ -86,6 +91,7 @@ public final class OssFeServer {
             .addService(adminService)
             .addService(testService)
             .addService(jobService)
+            .addService(sessionService)
             .addService(ProtoReflectionService.newInstance())
             .build();
     grpcServer.start();
@@ -121,6 +127,7 @@ public final class OssFeServer {
             new AdminServiceModule(),
             new OssTestServiceModule(),
             new OssJobServiceModule(),
+            new OssSessionServiceModule(),
             new OssStubsModule(),
             new AbstractModule() {
               @Override

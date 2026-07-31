@@ -22,6 +22,7 @@ import com.google.devtools.mobileharness.fe.v6.service.config.ConfigServiceModul
 import com.google.devtools.mobileharness.fe.v6.service.device.DeviceServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.host.HostServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.job.OssJobServiceModule;
+import com.google.devtools.mobileharness.fe.v6.service.session.OssSessionServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.shared.OssStubsModule;
 import com.google.devtools.mobileharness.fe.v6.service.test.OssTestServiceModule;
 import com.google.devtools.mobileharness.fe.v6.shared.util.concurrent.OssExecutorModule;
@@ -47,6 +48,7 @@ public final class OssFeServerTest {
             new AdminServiceModule(),
             new OssTestServiceModule(),
             new OssJobServiceModule(),
+            new OssSessionServiceModule(),
             new OssStubsModule(),
             new AbstractModule() {
               @Override
