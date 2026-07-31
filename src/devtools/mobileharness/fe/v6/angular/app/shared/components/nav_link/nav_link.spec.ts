@@ -74,6 +74,28 @@ describe('NavLink', () => {
     });
   });
 
+  it('should include universe parameter in navigation when provided in config', () => {
+    component.config = {
+      type: 'host',
+      hostName: 'host1',
+      hostIp: '1.1.1.1',
+      universe: 'my_universe',
+    };
+    mockUrlService.getExternalUrl.and.returnValue(of('http://parent/host1'));
+    mockUrlService.isInEmbeddedMode.and.returnValue(false);
+    fixture.detectChanges();
+
+    const event = new MouseEvent('click');
+    spyOn(event, 'preventDefault');
+    component.handleClick(event);
+
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/hosts/host1'], {
+      queryParams: {universe: 'my_universe'},
+      queryParamsHandling: '',
+    });
+  });
+
   it('should navigate with router and merge query params if queryParamsHandling="merge" is set', () => {
     component.config = {type: 'host', hostName: 'host1', hostIp: '1.1.1.1'};
     mockUrlService.getExternalUrl.and.returnValue(of('http://parent/host1'));

@@ -86,6 +86,7 @@ export declare interface TestOverviewData {
   job?: ParentJobInfo;
   devices?: TestDevices;
   host?: HostInfo;
+  labUniverse?: string;
   executionDetails?: ExecutionDetails;
   properties?: Record<string, string>;
   troubleshooting?: Troubleshooting;

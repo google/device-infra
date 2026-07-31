@@ -15,6 +15,7 @@ export const SCENARIO_TEST_PASSED: MockTestScenario = {
     name: 'com.google.codelab.mobileharness.android.hellomobileharness.HelloMobileHarnessTest#customTestArgs',
     status: TestStatus.TEST_STATUS_DONE,
     result: TestResult.TEST_RESULT_PASS,
+    labUniverse: 'google_1p',
     job: {
       id: 'd29b84c4-9e7f-4104-8cc8-c5d70bc9d481',
       name: 'hello_mobile_harness_test_on_mh',
@@ -25,13 +26,13 @@ export const SCENARIO_TEST_PASSED: MockTestScenario = {
     devices: {
       device: [
         {
-          id: '23221FDF6001BT',
+          id: '43021FDAQ000UM',
         },
       ],
     },
     host: {
-      name: 'mt85-dm08.iad65.mtaas.example.com',
-      ip: '10.11.48.179',
+      name: 'host-a-1.example.com',
+      ip: '192.168.1.101',
     },
     executionDetails: {
       user: 'qiupingf',

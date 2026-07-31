@@ -10,8 +10,14 @@ import {UrlService} from '@deviceinfra/app/core/services/url_service';
  * Enforces that deviceId is required for 'device' type and forbidden for 'host' type.
  */
 export type NavLinkConfig =
-  | {type: 'host'; hostName: string; hostIp: string}
-  | {type: 'device'; hostName: string; hostIp: string; deviceId: string}
+  | {type: 'host'; hostName: string; hostIp: string; universe?: string}
+  | {
+      type: 'device';
+      hostName: string;
+      hostIp: string;
+      deviceId: string;
+      universe?: string;
+    }
   | {type: 'job'; jobId: string}
   | {type: 'test'; jobId: string; testId: string};
 
@@ -68,6 +74,12 @@ export class NavLink implements OnInit, OnDestroy {
     const urlParams = new URLSearchParams(search);
     for (const [key, value] of Object.entries(this.customQueryParams)) {
       urlParams.set(key, value);
+    }
+    if (
+      (this.config.type === 'host' || this.config.type === 'device') &&
+      this.config.universe
+    ) {
+      urlParams.set('universe', this.config.universe);
     }
     const newSearch = urlParams.toString();
 
@@ -164,10 +176,18 @@ export class NavLink implements OnInit, OnDestroy {
     // We notify immediately to speed up the synchronization with parent window.
     this.urlService.notifyNavigated(page, params);
 
+    const queryParams: Record<string, string> = {
+      ...this.customQueryParams,
+    };
+    if (
+      (this.config.type === 'host' || this.config.type === 'device') &&
+      this.config.universe
+    ) {
+      queryParams['universe'] = this.config.universe;
+    }
+
     this.router.navigate([this.routerLink], {
-      ...(Object.keys(this.customQueryParams).length > 0
-        ? {queryParams: this.customQueryParams}
-        : {}),
+      ...(Object.keys(queryParams).length > 0 ? {queryParams} : {}),
       queryParamsHandling: this.queryParamsHandling,
     });
   }
@@ -202,6 +222,9 @@ export class NavLink implements OnInit, OnDestroy {
       'host_ip': this.config.hostIp,
       ...this.customQueryParams,
     };
+    if (this.config.universe) {
+      params['universe'] = this.config.universe;
+    }
     return {page, params};
   }
 }

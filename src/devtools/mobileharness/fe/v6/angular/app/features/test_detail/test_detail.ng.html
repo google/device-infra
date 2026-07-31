@@ -122,6 +122,7 @@
 
                @let host = test.host;
                @let devices = test.devices?.device;
+               @let universe = test.labUniverse;
                @let hasDevices = devices && devices.length > 0;
                @let hasHost = host && host.name && host.ip;
                @if (hasDevices || hasHost) {
@@ -134,7 +135,7 @@
                          <div class="grid-value value-stack-container">
                            @for (dev of devices; track dev.id) {
                              <a app-nav-link
-                               [config]="{type: 'device', hostName: host.name, hostIp: host.ip, deviceId: dev.id}"
+                               [config]="universe ? {type: 'device', hostName: host.name, hostIp: host.ip, deviceId: dev.id, universe: universe} : {type: 'device', hostName: host.name, hostIp: host.ip, deviceId: dev.id}"
                                queryParamsHandling="merge"
                                class="grid-link-value font-mono"
                                [matTooltip]="'View Device Details: ' + dev.id"
@@ -159,7 +160,7 @@
                      @if (hasHost) {
                        <div class="grid-value font-mono">
                          <a app-nav-link
-                           [config]="{type: 'host', hostName: host.name, hostIp: host.ip}"
+                           [config]="universe ? {type: 'host', hostName: host.name, hostIp: host.ip, universe: universe} : {type: 'host', hostName: host.name, hostIp: host.ip}"
                            queryParamsHandling="merge"
                            class="grid-link-value"
                            [matTooltip]="host.name"
