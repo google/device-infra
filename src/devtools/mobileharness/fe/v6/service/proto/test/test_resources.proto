@@ -84,7 +84,9 @@ message ParentJobInfo {
 message HostInfo {
   string name = 1;
   string ip = 2;
-  string universe = 3;
+
+  // The lab universe is reported by TestDetail.lab_universe.
+  reserved 3;
 }
 
 // Nested sub-tests list details.
@@ -111,6 +113,13 @@ message TestDetail {
   // Executed on.
   TestDevices devices = 6;
   HostInfo host = 7;
+
+  // The lab universe the devices and host belong to. Empty for this
+  // deployment's own universe, which is `google_1p` internally and the only
+  // possibility in ATS. Otherwise the ATS controller that owns them, e.g.
+  // "ats_dev", which is also the value the device and host pages take as their
+  // `universe` parameter.
+  string lab_universe = 14;
 
   // Execution details card (shared layout).
   .devtools.mobileharness.fe.v6.service.proto.common.ExecutionDetails
