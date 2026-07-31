@@ -19,7 +19,6 @@ syntax = "proto3";
 package devtools.mobileharness.fe.v6.service.proto.session;
 
 import "google/api/annotations.proto";
-import "src/devtools/mobileharness/fe/v6/service/proto/common/common_resources.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/session/session_resources.proto";
 
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.session";
@@ -35,11 +34,11 @@ service SessionService {
     };
   }
 
-  // Gets the log of a session by its ID, returning the log from `offset` to the
-  // end.
+  // Gets the whole log of a session by its ID.
   //
-  // Non-path fields (offset, content_hash) are automatically mapped to query
-  // parameters by the gRPC-JSON transcoder.
+  // Unlike a job or a test, a session log is not tailed: the console reads it
+  // once when the Session Log tab is opened. It is also not stored on the
+  // session itself, it is a file in the session's CNS directory.
   rpc GetSessionLog(GetSessionLogRequest) returns (GetSessionLogResponse) {
     option (google.api.http) = {
       get: "/v6/sessions/{session_id}/log"
@@ -69,60 +68,19 @@ message GetSessionLogRequest {
   // The ID of the session whose log to retrieve.
   string session_id = 1;
 
-  // The starting byte offset to read from. Pass 0 for the first call; pass
-  // back `next_offset` from the previous response for subsequent polls to get
-  // only newly-appended content.
-  int64 offset = 2;
-
-  // Optional log integrity token, echoed verbatim from the previous response's
-  // `content_hash`. The server uses it to verify that the log content the
-  // client has cached (bytes [0, offset)) has not changed since the last
-  // response:
-  //   - Match (or empty) → normal response from `offset` onward.
-  //   - Mismatch → `log_reset = true`, full log returned from byte 0.
-  //
-  // The client treats this as an opaque string — it never computes or inspects
-  // it. On the first request (offset=0), omit this field.
-  string content_hash = 3;
+  // Held for the incremental-read fields (offset, content_hash) that job and
+  // test logs use for tailing.
+  reserved 2, 3;
 }
 
 message GetSessionLogResponse {
-  // Log content starting from:
-  //   - the request `offset` (normal case), OR
-  //   - byte 0 (if `log_reset` is true, indicating a content_hash mismatch).
+  // The session's whole log. Empty if the session recorded no log file.
   string log_content = 1;
 
-  // The byte offset immediately after `log_content` (i.e. the current total log
-  // length). Pass this as `offset` on the next poll to get only new content.
-  int64 next_offset = 2;
-
-  // The session's current lifecycle status, read from MOSS at query time. The
-  // frontend uses this to decide whether to keep polling:
-  //   - RUNNING / NEW / ASSIGNED → schedule another poll after a delay
-  //   - DONE / SUSPENDED → stop polling (log is final)
-  //
-  // This is authoritative (fresh from MOSS), so the frontend does NOT need a
-  // separate GetSession call just for status during log tailing.
-  devtools.mobileharness.fe.v6.service.proto.common.SessionStatus
-      session_status = 3;
-
-  // True if the server detected that the log content before the requested
-  // `offset` has changed (content_hash mismatch). When set:
-  //   - `log_content` contains the FULL log from byte 0 (not from `offset`).
-  //   - `next_offset` reflects the full log length.
-  //   - The client should discard its cached log and replace it entirely.
-  //
-  // Always false when the request omits `content_hash`.
-  bool log_reset = 4;
-
-  // Server-computed integrity token covering the log content from byte 0 to
-  // `next_offset`. The client stores this opaquely and passes it back as
-  // `content_hash` in the next request so the server can detect if content
-  // before the client's `offset` has changed.
-  //
-  // Always present. On `log_reset`, this covers the full log (since the
-  // response returned the full log from byte 0).
-  string content_hash = 5;
+  // Held for the tailing fields (next_offset, session_status, log_reset,
+  // content_hash) that job and test logs use. The session's status comes from
+  // GetSession, which the Session Detail page loads anyway.
+  reserved 2 to 5;
 }
 
 message GetSessionFileRequest {
