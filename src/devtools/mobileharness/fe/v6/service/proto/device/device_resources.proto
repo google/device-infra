@@ -251,6 +251,7 @@ message DeviceActions {
   common.ActionButtonState configuration = 6;
   // used to decommission device from lab
   common.ActionButtonState decommission = 7;
+  common.ActionButtonState prepare = 8;
 }
 
 // Information for device header.

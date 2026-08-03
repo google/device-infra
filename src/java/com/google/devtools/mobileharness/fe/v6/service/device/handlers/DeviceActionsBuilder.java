@@ -49,6 +49,7 @@ public class DeviceActionsBuilder {
   private final ConfigurationButtonBuilder configurationButtonBuilder;
   private final RemoteControlButtonBuilder remoteControlButtonBuilder;
   private final DeviceDecommissionButtonBuilder decommissionButtonBuilder;
+  private final PrepareButtonBuilder prepareButtonBuilder;
 
   @Inject
   DeviceActionsBuilder(
@@ -58,7 +59,8 @@ public class DeviceActionsBuilder {
       ScreenshotButtonBuilder screenshotButtonBuilder,
       ConfigurationButtonBuilder configurationButtonBuilder,
       RemoteControlButtonBuilder remoteControlButtonBuilder,
-      DeviceDecommissionButtonBuilder decommissionButtonBuilder) {
+      DeviceDecommissionButtonBuilder decommissionButtonBuilder,
+      PrepareButtonBuilder prepareButtonBuilder) {
     this.flashButtonBuilder = flashButtonBuilder;
     this.logcatButtonBuilder = logcatButtonBuilder;
     this.quarantineButtonBuilder = quarantineButtonBuilder;
@@ -66,6 +68,7 @@ public class DeviceActionsBuilder {
     this.configurationButtonBuilder = configurationButtonBuilder;
     this.remoteControlButtonBuilder = remoteControlButtonBuilder;
     this.decommissionButtonBuilder = decommissionButtonBuilder;
+    this.prepareButtonBuilder = prepareButtonBuilder;
   }
 
   /** Builds DeviceActions based on device info. */
@@ -78,6 +81,7 @@ public class DeviceActionsBuilder {
         .setQuarantine(quarantineButtonBuilder.build(deviceInfo, universe))
         .setConfiguration(configurationButtonBuilder.build(deviceInfo, universe))
         .setDecommission(decommissionButtonBuilder.build(deviceInfo, universe))
+        .setPrepare(prepareButtonBuilder.build(deviceInfo, universe))
         .build();
   }
 }

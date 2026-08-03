@@ -61,6 +61,7 @@ public final class DeviceActionsBuilderTest {
   @Mock private ConfigurationButtonBuilder mockConfigurationButtonBuilder;
   @Mock private RemoteControlButtonBuilder mockRemoteControlButtonBuilder;
   @Mock private DeviceDecommissionButtonBuilder mockDecommissionButtonBuilder;
+  @Mock private PrepareButtonBuilder mockPrepareButtonBuilder;
 
   private DeviceActionsBuilder deviceActionsBuilder;
   private static final UniverseScope UNIVERSE = new UniverseScope.SelfUniverse();
@@ -76,7 +77,8 @@ public final class DeviceActionsBuilderTest {
             mockScreenshotButtonBuilder,
             mockConfigurationButtonBuilder,
             mockRemoteControlButtonBuilder,
-            mockDecommissionButtonBuilder);
+            mockDecommissionButtonBuilder,
+            mockPrepareButtonBuilder);
   }
 
   @Test
@@ -96,6 +98,7 @@ public final class DeviceActionsBuilderTest {
         ActionButtonState.newBuilder().setTooltip("config").build();
     ActionButtonState decommissionState =
         ActionButtonState.newBuilder().setTooltip("decommission").build();
+    ActionButtonState prepareState = ActionButtonState.newBuilder().setTooltip("prepare").build();
 
     when(mockScreenshotButtonBuilder.build(DEVICE_INFO, UNIVERSE)).thenReturn(screenshotState);
     when(mockLogcatButtonBuilder.build(DEVICE_INFO, UNIVERSE)).thenReturn(logcatState);
@@ -106,6 +109,7 @@ public final class DeviceActionsBuilderTest {
     when(mockConfigurationButtonBuilder.build(DEVICE_INFO, UNIVERSE))
         .thenReturn(configurationState);
     when(mockDecommissionButtonBuilder.build(DEVICE_INFO, UNIVERSE)).thenReturn(decommissionState);
+    when(mockPrepareButtonBuilder.build(DEVICE_INFO, UNIVERSE)).thenReturn(prepareState);
 
     DeviceActions result = deviceActionsBuilder.buildDeviceActions(DEVICE_INFO, UNIVERSE);
 
@@ -118,6 +122,7 @@ public final class DeviceActionsBuilderTest {
             .setQuarantine(quarantineState)
             .setConfiguration(configurationState)
             .setDecommission(decommissionState)
+            .setPrepare(prepareState)
             .build();
 
     assertThat(result).isEqualTo(expected);

@@ -55,6 +55,11 @@ public class FeatureReadiness {
     return true;
   }
 
+  // TODO: Return true once the PrepareDevice RPC and the frontend button have shipped.
+  public boolean isPrepareDeviceReady() {
+    return false;
+  }
+
   public boolean isLabServerStartReady() {
     return true;
   }

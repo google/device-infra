@@ -112,6 +112,16 @@ public class FeatureManager {
     return environment.isGoogleInternal() && universe instanceof UniverseScope.SelfUniverse;
   }
 
+  /**
+   * Checks if the prepare device feature is enabled.
+   *
+   * <p>This feature is only available in the {@code google_1p} universe within Google internal
+   * builds.
+   */
+  public boolean isPrepareDeviceFeatureEnabled() {
+    return environment.isGoogleInternal() && universe instanceof UniverseScope.SelfUniverse;
+  }
+
   /** Checks if the lab server release feature is enabled. */
   public boolean isLabServerReleaseFeatureEnabled() {
     return environment.isGoogleInternal() && universe instanceof UniverseScope.SelfUniverse;
