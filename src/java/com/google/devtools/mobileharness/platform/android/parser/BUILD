@@ -26,6 +26,7 @@ java_library(
         "XmlTreeAttributeParser.java",
     ],
     visibility = [
+        "//java/com/google/devtools/mobileharness/infra/client/api/plugin/ddp:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkfile:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/parser:__subpackages__",
     ],
