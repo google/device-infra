@@ -18,7 +18,10 @@
 <!-- Actions -->
 <div class="coming-soon-dialog-actions-container">
   <mat-dialog-actions align="center" class="coming-soon-dialog-actions">
-    @if(data?.legacyPageUrl) {
+    <!-- Only show confirm button if legacy page url and screenshot link are provided.
+        when a feature does not exist in the legacy system(no screenshot),
+        no need to go to the legacy page. -->
+    @if(data?.legacyPageUrl && data?.legacyScreenshotLink) {
       <button class="secondary-button" (click)="onCancel()" mat-dialog-close>
         Cancel
       </button>

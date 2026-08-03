@@ -41,7 +41,11 @@ export class ComingSoonService {
     const legacyScreenshotLink = legacyScreenshotLinks
       ? legacyScreenshotLinks[context] || legacyScreenshotLinks.default
       : undefined;
-    const message = `The <b>${displayName}</b> feature is not yet available in the new console. Please switch to the legacy page to use this feature.`;
+    let message = `The <b>${displayName}</b> feature is not yet available in the new console.`;
+    // Only show the legacy page link if both the legacy page URL and screenshot link are provided.
+    if (legacyPageUrl && legacyScreenshotLink) {
+      message += ` Please switch to the legacy page to use this feature.`;
+    }
 
     this.dialog.open(ComingSoonDialog, {
       data: {
