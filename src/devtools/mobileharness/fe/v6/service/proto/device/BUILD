@@ -30,6 +30,7 @@ proto_library(
     srcs = ["device_resources.proto"],
     deps = [
         "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_proto",
+        "@protobuf//:duration_proto",
         "@protobuf//:timestamp_proto",
     ],
 )
@@ -58,6 +59,7 @@ proto_library(
     deps = [
         ":device_resources_proto",
         ":device_stats_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/common:common_resources_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_proto",
         "@googleapis//google/api:annotations_proto",
         "@googleapis//google/type:date_proto",
