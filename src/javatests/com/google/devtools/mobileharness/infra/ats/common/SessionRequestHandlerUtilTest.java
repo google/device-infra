@@ -1702,6 +1702,21 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(
             SessionRequestHandlerUtil.needTestHarnessPropertyFalse(
                 SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder().setXtsType("CTS"))))
+        .isTrue();
+    assertThat(
+            SessionRequestHandlerUtil.needTestHarnessPropertyFalse(
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder().setXtsType("CTS-on-gts-on-s"))))
+        .isTrue();
+    assertThat(
+            SessionRequestHandlerUtil.needTestHarnessPropertyFalse(
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder().setXtsType("MCTS"))))
+        .isTrue();
+    assertThat(
+            SessionRequestHandlerUtil.needTestHarnessPropertyFalse(
+                SessionRequestInfoUtil.buildAndValidate(
                     defaultSessionRequestInfoBuilder().setXtsType("gts"))))
         .isFalse();
   }

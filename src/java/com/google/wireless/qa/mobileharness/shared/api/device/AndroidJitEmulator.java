@@ -140,6 +140,9 @@ public class AndroidJitEmulator extends AndroidDevice {
 
     addSupportedDeviceType(AndroidJitEmulator.class.getSimpleName());
     addSupportedDeviceType(AndroidDevice.class.getSimpleName());
+    if (Flags.keepTestHarnessFalse.getNonNull()) {
+      addRequiredDimension(Ascii.toLowerCase(AndroidProperty.PERSIST_TEST_HARNESS.name()), "false");
+    }
     basicAndroidDecoratorConfiguration();
 
     logger.atInfo().log("JIT emulator %s is Ready", deviceId);

@@ -1699,6 +1699,6 @@ public class SessionRequestHandlerUtil {
   @VisibleForTesting
   static boolean needTestHarnessPropertyFalse(SessionRequestInfo sessionRequestInfo) {
     return XTS_TYPE_THAT_NEED_TEST_HARNESS_PROPERTY_FALSE.stream()
-        .anyMatch(xtsType -> sessionRequestInfo.getXtsType().startsWith(xtsType));
+        .anyMatch(toLowerCase(sessionRequestInfo.getXtsType())::startsWith);
   }
 }
