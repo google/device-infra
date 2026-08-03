@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.master.central.model.lab;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
@@ -25,11 +26,14 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeD
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
+import com.google.devtools.mobileharness.api.model.proto.Job.JobLocator;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestLocator;
+import com.google.devtools.mobileharness.infra.master.central.model.lab.DeviceConditionUtil.HealthCategory;
 import com.google.devtools.mobileharness.infra.master.central.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.infra.master.central.proto.Device.DeviceProfile;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -586,5 +590,235 @@ public class DeviceConditionUtilTest {
                 .build(),
             DeviceCondition.getDefaultInstance());
     assertThat(DeviceConditionUtil.getDeviceVersion(deviceDao)).isEmpty();
+  }
+
+  @Test
+  public void calculateHealthCategory_nonAndroid_returnsUnspecified() {
+    DeviceDao device = createDevice(DeviceStatus.IDLE, ImmutableList.of("IosRealDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_UNSPECIFIED);
+  }
+
+  @Test
+  public void calculateHealthCategory_androidIdle_returnsInService() {
+    DeviceDao device = createDevice(DeviceStatus.IDLE, ImmutableList.of("AndroidRealDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.IN_SERVICE);
+  }
+
+  @Test
+  public void calculateHealthCategory_androidOnlineDeviceOnly_returnsNeedManualRepair() {
+    DeviceDao device = createDevice(DeviceStatus.IDLE, ImmutableList.of("AndroidOnlineDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.NEED_MANUAL_REPAIR);
+  }
+
+  @Test
+  public void calculateHealthCategory_androidBusy_returnsInService() {
+    DeviceDao device =
+        createDevice(
+            DeviceStatus.BUSY,
+            ImmutableList.of("AndroidRealDevice"),
+            TestLocator.newBuilder()
+                .setJobLocator(JobLocator.newBuilder().setName("some_job").build())
+                .build());
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.IN_SERVICE);
+  }
+
+  @Test
+  public void calculateHealthCategory_androidBusyRecovery_returnsAutoMaintenance() {
+    DeviceDao device =
+        createDevice(
+            DeviceStatus.BUSY,
+            ImmutableList.of("AndroidRealDevice"),
+            TestLocator.newBuilder()
+                .setJobLocator(JobLocator.newBuilder().setName("recover_android_device").build())
+                .build());
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.IN_AUTO_MAINTENANCE);
+  }
+
+  @Test
+  public void calculateHealthCategory_androidInit_returnsAutoMaintenance() {
+    DeviceDao device = createDevice(DeviceStatus.INIT, ImmutableList.of("AndroidRealDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.IN_AUTO_MAINTENANCE);
+  }
+
+  @Test
+  public void calculateHealthCategory_androidPrepping_returnsAutoMaintenance() {
+    DeviceDao device = createDevice(DeviceStatus.PREPPING, ImmutableList.of("AndroidRealDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.IN_AUTO_MAINTENANCE);
+  }
+
+  @Test
+  public void calculateHealthCategory_androidDirty_returnsAutoMaintenance() {
+    DeviceDao device = createDevice(DeviceStatus.DIRTY, ImmutableList.of("AndroidRealDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.IN_AUTO_MAINTENANCE);
+  }
+
+  @Test
+  public void calculateHealthCategory_androidDying_returnsAutoMaintenance() {
+    DeviceDao device = createDevice(DeviceStatus.DYING, ImmutableList.of("AndroidRealDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.IN_AUTO_MAINTENANCE);
+  }
+
+  @Test
+  public void calculateHealthCategory_androidFastbootTypeNoRecovery_returnsNeedManualRepair() {
+    DeviceDao device = createDevice(DeviceStatus.IDLE, ImmutableList.of("AndroidFastbootDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.NEED_MANUAL_REPAIR);
+  }
+
+  @Test
+  public void calculateHealthCategory_androidRecoveryTypeNoRecovery_returnsNeedManualRepair() {
+    DeviceDao device = createDevice(DeviceStatus.IDLE, ImmutableList.of("AndroidRecoveryDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.NEED_MANUAL_REPAIR);
+  }
+
+  @Test
+  public void calculateHealthCategory_androidFastbootTypeWithRecovery_returnsAutoMaintenance() {
+    DeviceDao device =
+        createDevice(
+            DeviceStatus.IDLE,
+            ImmutableList.of("AndroidFastbootDevice"),
+            TestLocator.newBuilder()
+                .setJobLocator(JobLocator.newBuilder().setName("recover_android_device").build())
+                .build());
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.IN_AUTO_MAINTENANCE);
+  }
+
+  @Test
+  public void calculateHealthCategory_androidRecoveryTypeWithRecovery_returnsAutoMaintenance() {
+    DeviceDao device =
+        createDevice(
+            DeviceStatus.IDLE,
+            ImmutableList.of("AndroidRecoveryDevice"),
+            TestLocator.newBuilder()
+                .setJobLocator(JobLocator.newBuilder().setName("recover_android_device").build())
+                .build());
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.IN_AUTO_MAINTENANCE);
+  }
+
+  @Test
+  public void calculateHealthCategory_androidFailedRealDeviceWithRecovery_returnsAutoMaintenance() {
+    DeviceDao device =
+        createDevice(
+            DeviceStatus.BUSY,
+            ImmutableList.of("FailedAndroidRealDevice"),
+            TestLocator.newBuilder()
+                .setJobLocator(JobLocator.newBuilder().setName("recover_android_device").build())
+                .build());
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.IN_AUTO_MAINTENANCE);
+  }
+
+  @Test
+  public void
+      calculateHealthCategory_androidRealDeviceWithFailedDeviceRecovery_returnsAutoMaintenance() {
+    DeviceDao device =
+        createDevice(
+            DeviceStatus.BUSY,
+            ImmutableList.of("AndroidRealDevice"),
+            TestLocator.newBuilder()
+                .setJobLocator(JobLocator.newBuilder().setName("failed_device_recovery").build())
+                .build());
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.IN_AUTO_MAINTENANCE);
+  }
+
+  @Test
+  public void
+      calculateHealthCategory_androidRealDeviceWithRecoverFailedAndroidDevice_returnsAutoMaintenance() {
+    DeviceDao device =
+        createDevice(
+            DeviceStatus.BUSY,
+            ImmutableList.of("AndroidRealDevice"),
+            TestLocator.newBuilder()
+                .setJobLocator(
+                    JobLocator.newBuilder().setName("recover_failed_android_device").build())
+                .build());
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.IN_AUTO_MAINTENANCE);
+  }
+
+  @Test
+  public void
+      calculateHealthCategory_androidRealDeviceWithRecoverFailedFlashableDevice_returnsAutoMaintenance() {
+    DeviceDao device =
+        createDevice(
+            DeviceStatus.BUSY,
+            ImmutableList.of("AndroidRealDevice"),
+            TestLocator.newBuilder()
+                .setJobLocator(
+                    JobLocator.newBuilder().setName("recover_failed_flashable_device").build())
+                .build());
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.IN_AUTO_MAINTENANCE);
+  }
+
+  @Test
+  public void calculateHealthCategory_androidMissing_returnsNeedManualRepair() {
+    DeviceDao device = createDevice(DeviceStatus.MISSING, ImmutableList.of("AndroidRealDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.NEED_MANUAL_REPAIR);
+  }
+
+  @Test
+  public void calculateHealthCategory_androidFailed_returnsNeedManualRepair() {
+    DeviceDao device = createDevice(DeviceStatus.FAILED, ImmutableList.of("AndroidRealDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.NEED_MANUAL_REPAIR);
+  }
+
+  @Test
+  public void calculateHealthCategory_androidFailedRealDeviceNoRecovery_returnsNeedManualRepair() {
+    DeviceDao device = createDevice(DeviceStatus.IDLE, ImmutableList.of("FailedAndroidRealDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.NEED_MANUAL_REPAIR);
+  }
+
+  @Test
+  public void calculateHealthCategory_androidDisconnected_returnsNeedManualRepair() {
+    DeviceDao device = createDevice(DeviceStatus.IDLE, ImmutableList.of("DisconnectedDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.NEED_MANUAL_REPAIR);
+  }
+
+  @Test
+  public void calculateHealthCategory_androidUnauthorized_returnsNeedManualRepair() {
+    DeviceDao device =
+        createDevice(DeviceStatus.IDLE, ImmutableList.of("UnauthorizedAndroidDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.NEED_MANUAL_REPAIR);
+  }
+
+  private DeviceDao createDevice(DeviceStatus status, List<String> types) {
+    return createDevice(status, types, null);
+  }
+
+  private DeviceDao createDevice(
+      DeviceStatus status, List<String> types, TestLocator allocatedTest) {
+    DeviceCondition.Builder conditionBuilder = DeviceCondition.newBuilder();
+    if (status == DeviceStatus.DIRTY) {
+      conditionBuilder.setDirty(true);
+      conditionBuilder.setStatusFromLab(DeviceStatus.IDLE);
+    } else {
+      conditionBuilder.setStatusFromLab(status);
+    }
+    if (allocatedTest != null) {
+      conditionBuilder.setAllocatedTestLocator(allocatedTest);
+    }
+    return DeviceDao.create(
+        deviceLocator,
+        DeviceProfile.newBuilder().setFeature(DeviceFeature.newBuilder().addAllType(types)).build(),
+        conditionBuilder.build());
   }
 }

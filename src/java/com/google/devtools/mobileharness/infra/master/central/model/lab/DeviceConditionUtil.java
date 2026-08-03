@@ -19,8 +19,11 @@ package com.google.devtools.mobileharness.infra.master.central.model.lab;
 import static com.google.devtools.mobileharness.shared.constant.device.DeviceConstants.HEALTHY_STATUS;
 
 import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.proto.Device;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestLocator;
 import com.google.devtools.mobileharness.infra.master.central.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.infra.master.central.proto.Device.DeviceConditionOrBuilder;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -38,6 +41,14 @@ import java.util.Set;
 
 /** Utils for processing {@link DeviceCondition}. */
 public final class DeviceConditionUtil {
+  /** Health category of a device. */
+  public enum HealthCategory {
+    HEALTH_CATEGORY_UNSPECIFIED,
+    IN_SERVICE,
+    IN_AUTO_MAINTENANCE,
+    NEED_MANUAL_REPAIR,
+  }
+
   /** If the last modify time of a non-MISSING lab/device exceed this, will be mark as MISSING. */
   public static final Duration EXPIRATION_THRESHOLD = Duration.ofMinutes(4);
 
@@ -48,6 +59,21 @@ public final class DeviceConditionUtil {
   private static final String IOS_REAL_DEVICE_TYPE = "IosRealDevice";
   private static final String CLOUD_TF_AVD_DEVICE_TYPE = "CloudTFAvdDevice";
   private static final String ANDROID_LOCAL_EMULATOR_TYPE = "AndroidLocalEmulator";
+
+  private static final ImmutableList<String> RECOVERY_JOB_PATTERNS =
+      ImmutableList.of(
+          "device_recovery",
+          "recover_android_device",
+          "recover_failed_android_device",
+          "recover_failed_flashable_device");
+
+  private static final ImmutableSet<DeviceStatus> TRANSIT_STATUSES =
+      ImmutableSet.of(
+          DeviceStatus.INIT,
+          DeviceStatus.PREPPING,
+          DeviceStatus.LAMEDUCK,
+          DeviceStatus.DIRTY,
+          DeviceStatus.DYING);
 
   /**
    * Summarizes the final device status.
@@ -311,6 +337,53 @@ public final class DeviceConditionUtil {
         .filter(d -> dimension.equals(d.getName()))
         .findFirst()
         .map(Common.StrPair::getValue);
+  }
+
+  /** Calculates the health category of a device based on Phase 1 rules. */
+  public static HealthCategory calculateHealthCategory(DeviceDao deviceDao) {
+    List<String> types = deviceDao.profile().getFeature().getTypeList();
+    // TODO: Only support Android devices in the short term. Need to expand to
+    // non-Android devices.
+    boolean isSupported =
+        types.stream().anyMatch(t -> t.contains("Android") || t.equals("DisconnectedDevice"));
+    if (!isSupported) {
+      return HealthCategory.HEALTH_CATEGORY_UNSPECIFIED;
+    }
+
+    DeviceStatus status = deviceDao.getStatus();
+    boolean hasActiveRecovery = false;
+    if (deviceDao.condition().hasAllocatedTestLocator()) {
+      hasActiveRecovery = isRecoveryTask(deviceDao.condition().getAllocatedTestLocator());
+    }
+
+    // 1. In Service
+    if ((status == DeviceStatus.IDLE || status == DeviceStatus.BUSY)
+        && !hasActiveRecovery
+        && types.contains(ANDROID_REAL_DEVICE_TYPE)) {
+      return HealthCategory.IN_SERVICE;
+    }
+
+    // 2. In Infra Maintenance
+    // Status-based: INIT, PREPPING, LAMEDUCK, DIRTY, DYING
+    if (TRANSIT_STATUSES.contains(status)) {
+      return HealthCategory.IN_AUTO_MAINTENANCE;
+    }
+
+    // Active Recovery: Any supported device with active recovery task
+    if (hasActiveRecovery) {
+      return HealthCategory.IN_AUTO_MAINTENANCE;
+    }
+
+    // 3. Need Manual Repair (Fallback for all other supported devices)
+    return HealthCategory.NEED_MANUAL_REPAIR;
+  }
+
+  private static boolean isRecoveryTask(TestLocator testLocator) {
+    if (testLocator == null || !testLocator.hasJobLocator()) {
+      return false;
+    }
+    String jobName = testLocator.getJobLocator().getName();
+    return RECOVERY_JOB_PATTERNS.stream().anyMatch(jobName::contains);
   }
 
   private DeviceConditionUtil() {}
