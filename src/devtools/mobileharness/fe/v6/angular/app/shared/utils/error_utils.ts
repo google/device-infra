@@ -1,3 +1,5 @@
+import {openInNewTab} from './safe_dom';
+
 /**
  * Extracts a human-readable error message from an HTTP error response.
  *
@@ -45,6 +47,39 @@ export function getErrorMessage(err: unknown): string {
 }
 
 /**
+ * Checks if the error represents a "Not Found" error (HTTP 404 or gRPC Code 5).
+ */
+export function isNotFoundError(err: unknown): boolean {
+  if (err != null && typeof err === 'object') {
+    const httpErr = err as Record<string, unknown>;
+
+    // Check standard Angular HttpErrorResponse status
+    if (httpErr['status'] === 404) {
+      return true;
+    }
+
+    // Try the structured backend message body
+    const body = httpErr['error'];
+    if (body != null && typeof body === 'object') {
+      const bodyObj = body as Record<string, unknown>;
+
+      // Internal (ESF): err.error = {"error": {"code": 404}}
+      const inner = bodyObj['error'];
+      if (inner != null && typeof inner === 'object') {
+        const code = (inner as Record<string, unknown>)['code'];
+        if (code === 404) return true;
+      }
+
+      // OSS (Envoy): err.error = {"code": 5}
+      const directCode = bodyObj['code'];
+      if (directCode === 5) return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Formats error details into a string, handling different types of error objects.
  */
 export function formatErrorDetails(err: unknown): string {
@@ -75,4 +110,31 @@ export function safeJsonStringify(obj: unknown): string {
   } catch (e) {
     return String(obj);
   }
+}
+
+/**
+ * Opens a new tab to report a bug to Buganizer with the given error details.
+ */
+export function reportBug(
+  errorTitle: string,
+  errorMessage: string,
+  errorDetails: string,
+  copyHint = 'please use "Copy Error" button to get full details',
+) {
+  const maxDetailsLength = 1000;
+  let detailsForBug = errorDetails;
+
+  if (detailsForBug.length > maxDetailsLength) {
+    detailsForBug =
+      detailsForBug.substring(0, maxDetailsLength) +
+      `\n\n... (details truncated, ${copyHint})`;
+  }
+
+  const title = encodeURIComponent(`[MHFE] ${errorTitle}: ${errorMessage}`);
+  const body = encodeURIComponent(
+    `Action failed.\n\nError: ${errorMessage}\n\nDetails:\n${detailsForBug}`,
+  );
+
+  const url = `https://issuetracker.google.com/issues/new?component=94628&title=${title}&description=${body}`;
+  openInNewTab(url);
 }
