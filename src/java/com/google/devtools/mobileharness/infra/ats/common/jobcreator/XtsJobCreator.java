@@ -55,7 +55,7 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.StepSkippableDecoratorConstants;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.PhaseSkippableDecoratorConstants;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
@@ -623,7 +623,7 @@ public abstract class XtsJobCreator {
         sessionRequestInfo,
         decorators,
         XtsConstants.TEARDOWN_JOB_NAME,
-        StepSkippableDecoratorConstants.ExecutionMode.TEARDOWN_ONLY);
+        PhaseSkippableDecoratorConstants.ExecutionMode.TEARDOWN_ONLY);
   }
 
   /**
@@ -637,14 +637,14 @@ public abstract class XtsJobCreator {
         sessionRequestInfo,
         decorators,
         XtsConstants.SETUP_JOB_NAME,
-        StepSkippableDecoratorConstants.ExecutionMode.SETUP_ONLY);
+        PhaseSkippableDecoratorConstants.ExecutionMode.SETUP_ONLY);
   }
 
   private JobInfo createPreconditionJob(
       SessionRequestInfo sessionRequestInfo,
       ImmutableList<PreconditionDecorator> decorators,
       String name,
-      StepSkippableDecoratorConstants.ExecutionMode executionMode)
+      PhaseSkippableDecoratorConstants.ExecutionMode executionMode)
       throws MobileHarnessException, InterruptedException {
     ImmutableList<JobConfig.SubDeviceSpec> subDeviceSpecList =
         sessionRequestHandlerUtil
@@ -690,7 +690,7 @@ public abstract class XtsJobCreator {
 
     jobInfo
         .properties()
-        .add(StepSkippableDecoratorConstants.PROP_EXECUTION_MODE, executionMode.name());
+        .add(PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE, executionMode.name());
 
     jobInfo
         .subDeviceSpecs()

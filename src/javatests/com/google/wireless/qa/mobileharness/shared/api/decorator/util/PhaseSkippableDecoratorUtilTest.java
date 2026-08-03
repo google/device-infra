@@ -21,8 +21,8 @@ import static org.junit.Assert.assertThrows;
 
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.StepSkippableDecoratorConstants;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.StepSkippableDecoratorConstants.ExecutionMode;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.PhaseSkippableDecoratorConstants;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.PhaseSkippableDecoratorConstants.ExecutionMode;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -157,7 +157,7 @@ public final class PhaseSkippableDecoratorUtilTest {
     testInfo
         .jobInfo()
         .properties()
-        .add(StepSkippableDecoratorConstants.PROP_EXECUTION_MODE, "SETUP_ONLY");
+        .add(PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE, "SETUP_ONLY");
     assertThat(PhaseSkippableDecoratorUtil.getExecutionMode(testInfo.jobInfo()))
         .isEqualTo(ExecutionMode.SETUP_ONLY);
   }
@@ -167,7 +167,7 @@ public final class PhaseSkippableDecoratorUtilTest {
     testInfo
         .jobInfo()
         .properties()
-        .add(StepSkippableDecoratorConstants.PROP_EXECUTION_MODE, "TEARDOWN_ONLY");
+        .add(PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE, "TEARDOWN_ONLY");
     assertThat(PhaseSkippableDecoratorUtil.getExecutionMode(testInfo.jobInfo()))
         .isEqualTo(ExecutionMode.TEARDOWN_ONLY);
   }
@@ -177,7 +177,7 @@ public final class PhaseSkippableDecoratorUtilTest {
     testInfo
         .jobInfo()
         .properties()
-        .add(StepSkippableDecoratorConstants.PROP_EXECUTION_MODE, "INVALID_MODE");
+        .add(PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE, "INVALID_MODE");
     MobileHarnessException exception =
         assertThrows(
             MobileHarnessException.class,

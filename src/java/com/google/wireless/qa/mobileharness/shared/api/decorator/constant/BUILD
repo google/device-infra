@@ -23,6 +23,6 @@ package(
 )
 
 java_library(
-    name = "step_skippable_decorator_constants",
-    srcs = ["StepSkippableDecoratorConstants.java"],
+    name = "phase_skippable_decorator_constants",
+    srcs = ["PhaseSkippableDecoratorConstants.java"],
 )

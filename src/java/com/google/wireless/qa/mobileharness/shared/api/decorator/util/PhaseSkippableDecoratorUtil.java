@@ -20,8 +20,8 @@ import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.protobuf.Message;
 import com.google.protobuf.TextFormat;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.StepSkippableDecoratorConstants;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.StepSkippableDecoratorConstants.ExecutionMode;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.PhaseSkippableDecoratorConstants;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.PhaseSkippableDecoratorConstants.ExecutionMode;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.Optional;
@@ -73,12 +73,12 @@ public final class PhaseSkippableDecoratorUtil {
    * Gets the execution mode from job properties.
    *
    * @return The execution mode specified in {@link
-   *     StepSkippableDecoratorConstants#PROP_EXECUTION_MODE} or {@link ExecutionMode#FULL} if
+   *     PhaseSkippableDecoratorConstants#PROP_EXECUTION_MODE} or {@link ExecutionMode#FULL} if
    *     unspecified.
    */
   public static ExecutionMode getExecutionMode(JobInfo jobInfo) throws MobileHarnessException {
     Optional<String> modeStr =
-        jobInfo.properties().getOptional(StepSkippableDecoratorConstants.PROP_EXECUTION_MODE);
+        jobInfo.properties().getOptional(PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE);
     if (modeStr.isEmpty()) {
       return ExecutionMode.FULL;
     }

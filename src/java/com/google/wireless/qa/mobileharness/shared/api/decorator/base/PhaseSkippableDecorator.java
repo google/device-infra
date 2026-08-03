@@ -20,8 +20,8 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.reflect.TypeToken;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.StepSkippableDecoratorConstants;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.StepSkippableDecoratorConstants.ExecutionMode;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.PhaseSkippableDecoratorConstants;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.PhaseSkippableDecoratorConstants.ExecutionMode;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.util.PhaseSkippableDecoratorUtil;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.driver.DriverFactory;
@@ -34,7 +34,7 @@ import javax.annotation.Nullable;
  * single-phase decorators ({@link SetupOnlyDecorator} and {@link TeardownOnlyDecorator}).
  *
  * <p>Supports dynamic execution skipping based on job properties ({@link
- * StepSkippableDecoratorConstants#PROP_EXECUTION_MODE}: FULL, SETUP_ONLY, TEARDOWN_ONLY).
+ * PhaseSkippableDecoratorConstants#PROP_EXECUTION_MODE}: FULL, SETUP_ONLY, TEARDOWN_ONLY).
  */
 public abstract class PhaseSkippableDecorator<
         S extends SetupOnlyDecorator, T extends TeardownOnlyDecorator>

@@ -20,8 +20,8 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.StepSkippableDecoratorConstants;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.StepSkippableDecoratorConstants.ExecutionMode;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.PhaseSkippableDecoratorConstants;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.PhaseSkippableDecoratorConstants.ExecutionMode;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.util.StepSkippableLifecycleDecoratorUtil;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -59,7 +59,7 @@ public abstract class StepSkippableLifecycleDecorator extends LifecycleDecorator
    */
   private static ExecutionMode extractMode(JobInfo jobInfo) throws MobileHarnessException {
     Optional<String> modeStr =
-        jobInfo.properties().getOptional(StepSkippableDecoratorConstants.PROP_EXECUTION_MODE);
+        jobInfo.properties().getOptional(PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE);
     if (modeStr.isEmpty()) {
       return ExecutionMode.FULL;
     }

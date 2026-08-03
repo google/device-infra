@@ -34,7 +34,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:setup_only_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:step_skippable_lifecycle_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:teardown_only_decorator",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/constant:step_skippable_decorator_constants",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/constant:phase_skippable_decorator_constants",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/util:phase_skippable_decorator_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",

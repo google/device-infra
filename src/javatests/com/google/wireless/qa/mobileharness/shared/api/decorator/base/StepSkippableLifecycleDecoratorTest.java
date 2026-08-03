@@ -28,8 +28,8 @@ import static org.mockito.Mockito.when;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.StepSkippableDecoratorConstants;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.StepSkippableDecoratorConstants.ExecutionMode;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.PhaseSkippableDecoratorConstants;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.PhaseSkippableDecoratorConstants.ExecutionMode;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -108,7 +108,7 @@ public final class StepSkippableLifecycleDecoratorTest {
   @Test
   public void run_setupOnlyMode_skipsTeardown() throws Exception {
     properties.add(
-        StepSkippableDecoratorConstants.PROP_EXECUTION_MODE, ExecutionMode.SETUP_ONLY.name());
+        PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE, ExecutionMode.SETUP_ONLY.name());
     initDecorator();
 
     decorator.run(testInfo);
@@ -121,7 +121,7 @@ public final class StepSkippableLifecycleDecoratorTest {
   @Test
   public void run_teardownOnlyMode_skipsSetup() throws Exception {
     properties.add(
-        StepSkippableDecoratorConstants.PROP_EXECUTION_MODE, ExecutionMode.TEARDOWN_ONLY.name());
+        PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE, ExecutionMode.TEARDOWN_ONLY.name());
     initDecorator();
 
     decorator.run(testInfo);
@@ -133,7 +133,7 @@ public final class StepSkippableLifecycleDecoratorTest {
 
   @Test
   public void run_explicitFullMode_executesAll() throws Exception {
-    properties.add(StepSkippableDecoratorConstants.PROP_EXECUTION_MODE, ExecutionMode.FULL.name());
+    properties.add(PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE, ExecutionMode.FULL.name());
     initDecorator();
 
     decorator.run(testInfo);
@@ -146,7 +146,7 @@ public final class StepSkippableLifecycleDecoratorTest {
 
   @Test
   public void run_invalidMode_throwsException() throws Exception {
-    properties.add(StepSkippableDecoratorConstants.PROP_EXECUTION_MODE, "INVALID_MODE");
+    properties.add(PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE, "INVALID_MODE");
 
     assertThrows(MobileHarnessException.class, () -> initDecorator());
   }

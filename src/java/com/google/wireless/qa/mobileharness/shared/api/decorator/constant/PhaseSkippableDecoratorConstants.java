@@ -16,18 +16,17 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator.constant;
 
-/** Constants for step skippable lifecycle decorators. */
-public final class StepSkippableDecoratorConstants {
+/** Constants for phase skippable decorators. */
+public final class PhaseSkippableDecoratorConstants {
 
-  public static final String PROP_EXECUTION_MODE =
-      "step_skippable_lifecycle_decorator_execution_mode";
+  public static final String PROP_EXECUTION_MODE = "phase_skippable_decorator_execution_mode";
 
-  /** Execution mode of step skippable lifecycle decorators. */
+  /** Execution mode of phase skippable decorators. */
   public enum ExecutionMode {
     FULL,
     SETUP_ONLY,
     TEARDOWN_ONLY;
   }
 
-  private StepSkippableDecoratorConstants() {}
+  private PhaseSkippableDecoratorConstants() {}
 }
