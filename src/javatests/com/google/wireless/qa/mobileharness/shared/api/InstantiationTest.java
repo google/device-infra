@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.util.Arrays.stream;
 import static java.util.function.Predicate.not;
@@ -30,10 +31,12 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.reflect.ClassPath;
 import com.google.common.reflect.ClassPath.ClassInfo;
+import com.google.common.reflect.TypeToken;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ConstraintsForTesting;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.Decorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.PhaseSkippableDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.driver.DriverFactory;
@@ -43,6 +46,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.DriverDecoratorSpecMapper;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
 import java.io.IOException;
+import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -154,6 +158,59 @@ public class InstantiationTest {
           .isEqualTo(DriverDecoratorSpecMapper.getDriverDecoratorSpecMap());
     } catch (Throwable e) {
       throw addSpecMismatchHelp(e);
+    }
+  }
+
+  // Safe to ignore unchecked warning because decoratorClass is verified to be a subclass of
+  // PhaseSkippableDecorator.
+  @SuppressWarnings("unchecked")
+  @Test
+  public void checkPhaseSkippableDecoratorTriadContract() throws Exception {
+    for (Class<? extends Decorator> decoratorClass : decoratorClasses) {
+      if (PhaseSkippableDecorator.class.isAssignableFrom(decoratorClass)
+          && !decoratorClass.equals(PhaseSkippableDecorator.class)) {
+        ParameterizedType type =
+            (ParameterizedType)
+                TypeToken.of((Class<? extends PhaseSkippableDecorator<?, ?>>) decoratorClass)
+                    .getSupertype(PhaseSkippableDecorator.class)
+                    .getType();
+        Class<?> setupClass =
+            TypeToken.of(decoratorClass).resolveType(type.getActualTypeArguments()[0]).getRawType();
+        Class<?> teardownClass =
+            TypeToken.of(decoratorClass).resolveType(type.getActualTypeArguments()[1]).getRawType();
+
+        boolean anyConfigable =
+            JobSpecHelper.isSpecConfigable(decoratorClass)
+                || JobSpecHelper.isSpecConfigable(setupClass)
+                || JobSpecHelper.isSpecConfigable(teardownClass);
+        if (anyConfigable) {
+          assertWithMessage(
+                  "For A extends PhaseSkippableDecorator<B, C>, if any of A, B, or C implements"
+                      + " SpecConfigable, all three must explicitly implement SpecConfigable.")
+              .that(JobSpecHelper.isSpecConfigable(decoratorClass))
+              .isTrue();
+          assertWithMessage(
+                  "For A extends PhaseSkippableDecorator<B, C>, setup decorator B must explicitly"
+                      + " implement SpecConfigable.")
+              .that(JobSpecHelper.isSpecConfigable(setupClass))
+              .isTrue();
+          assertWithMessage(
+                  "For A extends PhaseSkippableDecorator<B, C>, teardown decorator C must"
+                      + " explicitly implement SpecConfigable.")
+              .that(JobSpecHelper.isSpecConfigable(teardownClass))
+              .isTrue();
+
+          Class<?> specClass = JobSpecHelper.getSpecClass(decoratorClass);
+          assertWithMessage(
+                  "Setup decorator Spec class must match PhaseSkippableDecorator Spec class.")
+              .that(JobSpecHelper.getSpecClass(setupClass))
+              .isEqualTo(specClass);
+          assertWithMessage(
+                  "Teardown decorator Spec class must match PhaseSkippableDecorator Spec class.")
+              .that(JobSpecHelper.getSpecClass(teardownClass))
+              .isEqualTo(specClass);
+        }
+      }
     }
   }
 

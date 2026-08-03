@@ -92,6 +92,26 @@ java_library(
 )
 
 java_library(
+    name = "phase_skippable_decorator",
+    srcs = ["PhaseSkippableDecorator.java"],
+    deps = [
+        ":lifecycle_decorator",
+        ":setup_only_decorator",
+        ":teardown_only_decorator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/constant:step_skippable_decorator_constants",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/util:phase_skippable_decorator_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:driver_factory",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "setup_only_decorator",
     srcs = ["SetupOnlyDecorator.java"],
     deps = [

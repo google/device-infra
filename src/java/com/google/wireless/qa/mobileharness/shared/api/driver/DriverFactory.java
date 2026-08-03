@@ -148,7 +148,7 @@ public class DriverFactory {
    * @throws MobileHarnessException if fails to create a new {@link Decorator} instance
    */
   @VisibleForTesting
-  protected Decorator decorateDriver(
+  public Decorator decorateDriver(
       Driver decoratedDriver, TestInfo testInfo, Class<? extends Decorator> decoratorClass)
       throws MobileHarnessException {
     // Gets the module class if any.

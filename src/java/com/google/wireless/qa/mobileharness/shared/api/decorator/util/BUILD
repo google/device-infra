@@ -29,6 +29,17 @@ java_library(
 )
 
 java_library(
+    name = "phase_skippable_decorator_util",
+    srcs = ["PhaseSkippableDecoratorUtil.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/constant:step_skippable_decorator_constants",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@protobuf//:protobuf_java",
+    ],
+)
+
+java_library(
     name = "report_log_collector_util",
     srcs = ["ReportLogCollectorUtil.java"],
     deps = [
