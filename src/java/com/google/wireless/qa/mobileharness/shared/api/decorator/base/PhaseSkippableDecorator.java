@@ -27,6 +27,7 @@ import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.driver.DriverFactory;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.lang.reflect.ParameterizedType;
+import java.util.Optional;
 import javax.annotation.Nullable;
 
 /**
@@ -77,6 +78,14 @@ public abstract class PhaseSkippableDecorator<
         (mode == ExecutionMode.FULL || mode == ExecutionMode.TEARDOWN_ONLY)
             ? (T) driverFactory.decorateDriver(decorated, testInfo, teardownDecoratorClass)
             : null;
+  }
+
+  public Optional<S> getSetupDecorator() {
+    return Optional.ofNullable(setupDecorator);
+  }
+
+  public Optional<T> getTeardownDecorator() {
+    return Optional.ofNullable(teardownDecorator);
   }
 
   @CanIgnoreReturnValue

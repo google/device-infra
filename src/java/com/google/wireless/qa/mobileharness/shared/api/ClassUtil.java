@@ -23,6 +23,7 @@ import com.google.devtools.mobileharness.infra.controller.test.local.annotation.
 import com.google.devtools.mobileharness.shared.util.reflection.ClassConstants;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.StepAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.Decorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.PhaseSkippableDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.validator.env.EnvValidator;
@@ -222,6 +223,18 @@ public final class ClassUtil {
       // Handles the decorated driver if any.
       if (object instanceof Decorator) {
         getObjectsWithDecoratedAndAllSteps(((Decorator) object).getDecorated(), result);
+      }
+      if (object instanceof PhaseSkippableDecorator) {
+        PhaseSkippableDecorator<?, ?> phaseSkippableDecorator =
+            (PhaseSkippableDecorator<?, ?>) object;
+        if (phaseSkippableDecorator.getSetupDecorator().isPresent()) {
+          getObjectsWithDecoratedAndAllSteps(
+              phaseSkippableDecorator.getSetupDecorator().get(), result);
+        }
+        if (phaseSkippableDecorator.getTeardownDecorator().isPresent()) {
+          getObjectsWithDecoratedAndAllSteps(
+              phaseSkippableDecorator.getTeardownDecorator().get(), result);
+        }
       }
     }
   }

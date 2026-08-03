@@ -197,4 +197,34 @@ public final class PhaseSkippableDecoratorTest {
     assertThat(TestTeardownOnlyDecorator.retrievedState.get().get().getDriver())
         .isEqualTo("test_driver");
   }
+
+  @Test
+  public void getSetupAndTeardownDecorators_fullMode_returnsBoth() throws Exception {
+    properties.add(PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE, ExecutionMode.FULL.name());
+    TestPhaseSkippableDecorator decorator = new TestPhaseSkippableDecorator(decorated, testInfo);
+
+    assertThat(decorator.getSetupDecorator()).isPresent();
+    assertThat(decorator.getTeardownDecorator()).isPresent();
+  }
+
+  @Test
+  public void getSetupAndTeardownDecorators_setupOnlyMode_returnsSetupOnly() throws Exception {
+    properties.add(
+        PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE, ExecutionMode.SETUP_ONLY.name());
+    TestPhaseSkippableDecorator decorator = new TestPhaseSkippableDecorator(decorated, testInfo);
+
+    assertThat(decorator.getSetupDecorator()).isPresent();
+    assertThat(decorator.getTeardownDecorator()).isEmpty();
+  }
+
+  @Test
+  public void getSetupAndTeardownDecorators_teardownOnlyMode_returnsTeardownOnly()
+      throws Exception {
+    properties.add(
+        PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE, ExecutionMode.TEARDOWN_ONLY.name());
+    TestPhaseSkippableDecorator decorator = new TestPhaseSkippableDecorator(decorated, testInfo);
+
+    assertThat(decorator.getSetupDecorator()).isEmpty();
+    assertThat(decorator.getTeardownDecorator()).isPresent();
+  }
 }

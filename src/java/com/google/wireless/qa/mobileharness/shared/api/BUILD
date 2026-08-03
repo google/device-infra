@@ -296,6 +296,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/reflection:class_constants",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:phase_skippable_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/env:env_validator",
