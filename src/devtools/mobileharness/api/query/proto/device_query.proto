@@ -129,6 +129,10 @@ message DeviceInfo {
   repeated .mobileharness.api.model.DeviceError device_error_from_lab = 14;
   // Device properties.
   .mobileharness.api.model.DeviceProperties properties = 15;
+  // Optional. The health category of the device (HEALTH_CATEGORY_IN_SERVICE,
+  // HEALTH_CATEGORY_IN_TRANSITION, HEALTH_CATEGORY_IN_AUTO_RECOVERY,
+  // HEALTH_CATEGORY_NEED_MANUAL_REPAIR).
+  .mobileharness.api.model.HealthCategory health_category = 16;
 }
 
 // The Dimension is a <name, value> pair specifying a device dimension.
