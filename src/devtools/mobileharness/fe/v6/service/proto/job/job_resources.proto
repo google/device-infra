@@ -43,12 +43,13 @@ message DeviceRequirements {
 
 // ---------- Reference / grouping types ----------
 
-// Reference link back to the parent session.
+// Reference link back to the parent session: just its id. A session has no
+// name, and its status/result (if ever needed) are fetched separately by id
+// rather than embedded here.
 message ParentSessionInfo {
   string id = 1;
-  string name = 2;
-  .devtools.mobileharness.fe.v6.service.proto.common.SessionStatus status = 3;
-  .devtools.mobileharness.fe.v6.service.proto.common.SessionResult result = 4;
+  reserved 2, 3, 4;
+  reserved "name", "status", "result";
 }
 
 // Concrete execution settings parameter mapping.
@@ -74,7 +75,10 @@ message JobConfig {
 message JobFile {
   string path = 1;
   int64 size = 2;
-  string type = 3;
+  // Whether the file can be previewed inline by the console (small enough and
+  // not a known binary type). The frontend only needs this hint, not the raw
+  // MIME type.
+  bool viewable = 3;
 }
 
 // File explorer resources.

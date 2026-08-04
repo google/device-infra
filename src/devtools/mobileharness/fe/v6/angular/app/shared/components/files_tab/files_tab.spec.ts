@@ -29,9 +29,9 @@ class TestHostComponent {
   fileExplorer: FileExplorer = {
     cnsPath: '/cns-fake/test-cns-path',
     files: [
-      {path: 'folder/file1.txt', size: 100, type: 'text/plain'},
-      {path: 'folder/subfolder/file2.txt', size: 400, type: 'text/plain'},
-      {path: 'image.png', size: 1024, type: 'image/png'},
+      {path: 'folder/file1.txt', size: 100, viewable: true},
+      {path: 'folder/subfolder/file2.txt', size: 400, viewable: true},
+      {path: 'image.png', size: 1024, viewable: false},
     ],
   };
   emptyMessage = 'No files found';

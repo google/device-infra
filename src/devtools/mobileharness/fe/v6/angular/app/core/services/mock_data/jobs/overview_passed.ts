@@ -116,43 +116,43 @@ export const SCENARIO_JOB_PASSED: MockJobScenario = {
         {
           path: 'job_output.txt',
           size: 16384,
-          type: 'text/plain',
+          viewable: true,
           content:
             'Talking to master: stubby_server_locator { server_spec: "gslb:mobileharness-masterv5-api-prod:20:" } grpc_server_locator { hostname: "mobileharnessmasterv5-pa.googleapis.com" }\n2026-07-12 23:51:54:121 PDT I Loaded internal plugin: com.google.userplatform.accountprovider.mobileharness.TestAccountProviderClientPlugin\n2026-07-12 23:51:54:121 PDT I Loaded internal plugin: com.google.devtools.mobileharness.infra.client.api.plugin.utp.UtpCommandHistoryRenderer\n2026-07-12 23:51:54:121 PDT I Loaded internal plugin: com.google.devtools.mobileharness.infra.client.api.plugin.utp.UserUtpConfigValidator\n2026-07-12 23:51:54:122 PDT I Loaded internal plugin: com.google.devtools.mobileharness.infra.client.api.plugin.orchestration.AutoLoginAccountProviderClientPlugin\n2026-07-12 23:51:54:122 PDT I Loaded internal plugin: com.google.devtools.mobileharness.infra.client.api.plugin.resultstore.ResultStoreUploaderPlugin\n2026-07-12 23:51:54:122 PDT I Loaded API plugin: com.google.devtools.mobileharness.service.gateway.controller.SessionRunnerImpl\n2026-07-12 23:51:54:122 PDT I Started job 1845eb94-459b-4028-a9b4-0f13558fdc61\n2026-07-12 23:51:54:122 PDT I TIMELINE:PRE_RUN_JOB:START:1845eb94-459b-4028-a9b4-0f13558fdc61 Job started\n2026-07-12 23:51:54:123 PDT I TIMELINE:FILE_RESOLVE:START:1845eb94-459b-4028-a9b4-0f13558fdc61 File resolve started\n2026-07-12 23:51:54:127 PDT I Successfully resolved build_apk:hello_mobile_harness.apk with [/tmp/mobileharness-gateway/tmp/mh_gateway/session_tmp/s_726e8c21-7e1c-4576-aa0f-51e0d4c3d86a/j_1845eb94-459b-4028-a9b4-0f13558fdc61/run/google3/java/com/google/codelab/mobileharness/android/hellomobileharness/hello_mobile_harness.apk]\n2026-07-12 23:51:54:128 PDT I Successfully resolved test_apk:hello_mobile_harness_test.apk with [/tmp/mobileharness-gateway/tmp/mh_gateway/session_tmp/s_726e8c21-7e1c-4576-aa0f-51e0d4c3d86a/j_1845eb94-459b-4028-a9b4-0f13558fdc61/run/google3/javatests/com/google/codelab/mobileharness/android/hellomobileharness/hello_mobile_harness_test.apk]\n2026-07-12 23:51:54:128 PDT I Successfully resolved test_data:example_test_data.txt with [/tmp/mobileharness-gateway/tmp/mh_gateway/session_tmp/s_726e8c21-7e1c-4576-aa0f-51e0d4c3d86a/j_1845eb94-459b-4028-a9b4-0f13558fdc61/run/google3/javatests/com/google/codelab/mobileharness/android/hellomobileharness/example_test_data.txt]\n2026-07-12 23:51:54:129 PDT I TIMELINE:FILE_RESOLVE:END:1845eb94-459b-4028-a9b4-0f13558fdc61 File resolve finished\n2026-07-12 23:51:54:129 PDT I Loading client jar plugins for job 1845eb94-459b-4028-a9b4-0f13558fdc61\n2026-07-12 23:51:54:129 PDT I Loading plugins from jars []\n2026-07-12 23:51:54:129 PDT I No plugin module class name given, scanning the jars to search plugin module classes by plugin module annotation\n2026-07-12 23:51:54:132 PDT I No plugin class name given, searching plugin class by plugin annotation\n2026-07-12 23:51:54:132 PDT I Plugin creator has already scanned all jars: [[]]\n2026-07-12 23:51:54:132 PDT I No plugin is loaded\n2026-07-12 23:52:03:406 PDT I Generated tests:\n- com.google.codelab.mobileharness.android.hellomobileharness.HelloMobileHarnessTest#accessTestData\n- com.google.codelab.mobileharness.android.hellomobileharness.HelloMobileHarnessTest#addStatsToSponge\n- com.google.codelab.mobileharness.android.hellomobileharness.HelloMobileHarnessTest#buttonText\n- com.google.codelab.mobileharness.android.hellomobileharness.HelloMobileHarnessTest#customTestArgs\n- com.google.codelab.mobileharness.android.hellomobileharness.HelloMobileHarnessTest#outputFile\n- com.google.codelab.mobileharness.android.hellomobileharness.HelloMobileHarnessTest#plusOneButton\n- com.google.codelab.mobileharness.android.hellomobileharness.HelloMobileHarnessTest#takeScreenshot\n\n2026-07-12 23:52:03:407 PDT I Fetching hybrid UTP mode config: /google_src/files/head/depot/google3/devtools/mobileharness/infra/controller/test/local/utp/config/config.textproto\n2026-07-12 23:52:03:419 PDT I Add job 1845eb94-459b-4028-a9b4-0f13558fdc61 to Moss\n2026-07-12 23:52:32:442 PDT I Device allocation finished\n2026-07-12 23:53:17:484 PDT I Job done\n2026-07-12 23:53:21:538 PDT I The job hello_mobile_harness_test_on_mh PASS!',
         },
         {
           path: 'undeclared_outputs.zip',
           size: 140288,
-          type: 'application/zip',
+          viewable: false,
           content: '',
         },
         {
           path: 'undetermined_size_manifest.txt',
-          type: 'text/plain',
+          viewable: true,
           content: 'This is a file with undetermined size.',
         },
         {
           path: 'logs/device_1.log',
           size: 46080,
-          type: 'Log File',
+          viewable: true,
           content: '[DEVICE 1] Init\n[DEVICE 1] App launched\n',
         },
         {
           path: 'hybrid_utp_mode/config.textproto',
           size: 512,
-          type: 'text/plain',
+          viewable: true,
           content: 'hybrid_utm_mode: true\noption: 1',
         },
         {
           path: 'large_system_logs.log',
           size: 15728640, // 15 MB
-          type: 'text/plain',
+          viewable: false,
           content: '',
         },
         {
           path: 'undeclared_outputs_annotations.pb',
           size: 184320,
-          type: 'application/x-protobuf',
+          viewable: true,
           content: '',
         },
       ] as unknown as JobFile[],

@@ -106,7 +106,9 @@ export declare interface Troubleshooting {
 export declare interface FileInfo {
   path: string;
   size?: number;
-  type?: string;
+  // Whether the file can be previewed inline (small enough and not a known
+  // binary type). Computed by the backend; the UI does not see the MIME type.
+  viewable?: boolean;
 }
 
 /** Group of files and their common metadata. */

@@ -107,7 +107,7 @@
                        (click)="selectFile(node); $event.preventDefault();"
                   >
                     <div class="node-content-wrapper" [style.padding-left.px]="(node.depth * 12) + 16">
-                      <mat-icon class="file-icon">{{ getFileIcon(node.typeStr) }}</mat-icon>
+                      <mat-icon class="file-icon">{{ getFileIcon(node.name) }}</mat-icon>
                       <a href="#"
                          (click)="selectFile(node); $event.preventDefault();"
                          class="file-link"
@@ -120,7 +120,7 @@
                               (mouseenter)="checkOverflowTooltip(nodeNameEl, nodeTooltip)"
                         >{{ node.name }}</span>
                       </a>
-                      @if (getFileMetaString(node.typeStr, node.size); as metaStr) {
+                      @if (getFileMetaString(node.size); as metaStr) {
                         <span class="file-meta-subline">
                           <span class="meta-sep">•</span>
                           <span class="meta-text font-mono">{{ metaStr }}</span>
@@ -148,7 +148,7 @@
                      (click)="selectFile(file); $event.preventDefault();"
                 >
                   <div class="node-content-wrapper">
-                    <mat-icon class="file-icon">{{ getFileIcon(file.type) }}</mat-icon>
+                    <mat-icon class="file-icon">{{ getFileIcon(file.path) }}</mat-icon>
                     <a href="#"
                        (click)="selectFile(file); $event.preventDefault();"
                        class="file-link"
@@ -161,7 +161,7 @@
                             (mouseenter)="checkOverflowTooltip(fileNameEl, fileTooltip)"
                       >{{ file.path }}</span>
                     </a>
-                    @if (getFileMetaString(file.type, file.size); as metaStr) {
+                    @if (getFileMetaString(file.size); as metaStr) {
                       <span class="file-meta-subline">
                         <span class="meta-sep">•</span>
                         <span class="meta-text font-mono">{{ metaStr }}</span>

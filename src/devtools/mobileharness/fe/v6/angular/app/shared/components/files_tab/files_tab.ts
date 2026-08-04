@@ -27,7 +27,6 @@ export interface FileNode {
   type: 'dir' | 'file';
   path: string; // unique hierarchical path, e.g. "google3/java/com"
   size?: number;
-  typeStr?: string;
   depth: number;
   children: FileNode[];
 }
@@ -248,61 +247,32 @@ export class FilesTab {
     }
   }
 
-  getFileIcon(typeStr?: string): string {
-    if (!typeStr) return 'insert_drive_file';
-    const type = typeStr.toLowerCase();
-    if (
-      type.includes('png') ||
-      type.includes('jpg') ||
-      type.includes('jpeg') ||
-      type.includes('image')
-    ) {
+  getFileIcon(fileName?: string): string {
+    const name = (fileName || '').toLowerCase();
+    if (/\.(png|jpe?g|gif|webp|bmp|svg)$/.test(name)) {
       return 'image';
     }
-    if (
-      type.includes('yaml') ||
-      type.includes('yml') ||
-      type.includes('json') ||
-      type.includes('text/plain') ||
-      type.includes('config')
-    ) {
+    if (/\.(ya?ml|json|txt|config|conf|ini|textproto|pbtxt)$/.test(name)) {
       return 'description';
     }
-    if (type.includes('log')) {
+    if (/\.log$/.test(name)) {
       return 'article';
     }
-    if (type.includes('zip') || type.includes('archive')) {
+    if (/\.(zip|tar|gz|jar)$/.test(name)) {
       return 'archive';
     }
     return 'insert_drive_file';
   }
 
   isPreviewable(file: FileInfo): boolean {
-    const type = file.type?.toLowerCase() || '';
-    return (
-      type.includes('yaml') ||
-      type.includes('yml') ||
-      type.includes('json') ||
-      type.includes('text/plain') ||
-      type.includes('log') ||
-      type.includes('config') ||
-      type.includes('image') ||
-      type.includes('png') ||
-      type.includes('jpg') ||
-      type.includes('jpeg')
-    );
+    return !!file.viewable;
   }
 
-  getFileMetaString(typeStr?: string, size?: number): string | null {
-    const parts: string[] = [];
-    const trimmedType = typeStr?.trim();
-    if (trimmedType) {
-      parts.push(trimmedType);
+  getFileMetaString(size?: number): string | null {
+    if (size === undefined || size === null) {
+      return null;
     }
-    if (size !== undefined && size !== null) {
-      parts.push(this.formatBytes(size));
-    }
-    return parts.length ? parts.join(' • ') : null;
+    return this.formatBytes(size);
   }
 
   checkOverflowTooltip(element: HTMLElement, tooltip: MatTooltip) {
@@ -310,13 +280,7 @@ export class FilesTab {
   }
 
   isImageFile(file: FileInfo): boolean {
-    const type = file.type?.toLowerCase() || '';
-    return (
-      type.includes('image') ||
-      type.includes('png') ||
-      type.includes('jpg') ||
-      type.includes('jpeg')
-    );
+    return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(file.path);
   }
 
   private buildTree(files: FileInfo[]): FileNode[] {
@@ -371,7 +335,6 @@ export class FilesTab {
         type: 'file',
         path: file.path,
         size: file.size,
-        typeStr: file.type || '',
         depth,
         children: [],
       };

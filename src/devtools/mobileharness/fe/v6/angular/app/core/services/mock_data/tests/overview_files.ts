@@ -63,27 +63,27 @@ export const SCENARIO_TEST_FILES: MockTestScenario = {
         {
           path: 'test_run.log',
           size: 1048,
-          type: 'log',
+          viewable: true,
         },
         {
           path: 'screenshot.png',
           size: 143520,
-          type: 'image/png',
+          viewable: false,
         },
         {
           path: 'nested/folder/config.json',
           size: 429,
-          type: 'application/json',
+          viewable: true,
         },
         {
           path: 'nested/folder/output.txt',
           size: 12054,
-          type: 'text/plain',
+          viewable: true,
         },
         {
           path: 'large_file.db',
           size: 25 * 1024 * 1024, // 25MB
-          type: 'binary/octet-stream',
+          viewable: false,
         },
       ],
     },

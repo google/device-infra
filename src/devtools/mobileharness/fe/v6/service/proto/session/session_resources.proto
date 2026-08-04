@@ -39,7 +39,10 @@ message SessionJob {
 message SessionFile {
   string path = 1;
   int64 size = 2;
-  string type = 3;
+  // Whether the file can be previewed inline by the console (small enough and
+  // not a known binary type). The frontend only needs this hint, not the raw
+  // MIME type.
+  bool viewable = 3;
 }
 
 // File explorer resources.
