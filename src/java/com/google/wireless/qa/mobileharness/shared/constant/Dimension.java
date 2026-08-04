@@ -156,6 +156,18 @@ public final class Dimension {
      * shared/shared_without_recovery/group_shared/partner_shared/dedicated.
      */
     POOL,
+    /**
+     * The connection mode for Playback Analysis Tool (PAT), either 'usb' or 'wifi'. See
+     * https://developers.google.com/youtube/pat for more info.
+     */
+    PAT_CONNECTION_MODE,
+    /** Whether the device has Playback Analysis Tool (PAT) device configured. */
+    PAT_DEVICE_CONFIGURED,
+    /**
+     * The identifier for the Playback Analysis Tool (PAT) device, such as a hostname for wifi or a
+     * serial port for usb. See https://developers.google.com/youtube/pat for more info.
+     */
+    PAT_ID,
     /** Whether the device is reachable from the host via ping. */
     /** Whether the device is reachable from the host via DIAL. */
     /** The release version of the device. */
