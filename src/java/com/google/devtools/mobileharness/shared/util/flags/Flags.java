@@ -775,6 +775,11 @@ public class Flags {
   @FlagSpec(name = "enable_grpc_relay", help = "Whether to enable gRPC relay. Default is false.")
   public static final Flag<Boolean> enableGrpcRelay = Flag.value(false);
 
+  @FlagSpec(
+      name = "enable_ios_simulator_proxy",
+      help = "Whether to enable the iOS simulator proxy port bridge inside the lab server.")
+  public static final Flag<Boolean> enableIosSimulatorProxy = Flag.value(false);
+
   @FlagSpec(name = "enable_master_syncer", help = "Whether to enable master syncer in lab.")
   public static final Flag<Boolean> enableMasterSyncer = Flag.value(true);
 
@@ -1025,6 +1030,11 @@ public class Flags {
               + " than the threshold, the device dimension 'internal_storage_status' will go from"
               + " 'ok' to 'low'. Unit is MB. Default is 200 MB.")
   public static final Flag<Integer> internalStorageAlert = Flag.value(200);
+
+  @FlagSpec(
+      name = "ios_simulator_proxy_port",
+      help = "The local TCP port where the iOS simulator proxy bridge daemon listens on the host.")
+  public static final Flag<Integer> iosSimulatorProxyPort = Flag.value(9876);
 
   @FlagSpec(
       name = "is_omni_mode",
