@@ -26,6 +26,7 @@ java_library(
     srcs = glob(["*.java"]),
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/infra/master/central/proto:device_java_proto",
         "//src/devtools/mobileharness/infra/master/central/proto:lab_java_proto",
