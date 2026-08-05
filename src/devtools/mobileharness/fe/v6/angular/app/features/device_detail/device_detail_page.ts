@@ -40,18 +40,29 @@ import {APP_DATA, getLegacyFeUrl} from '../../core/models/app_data';
 import {DeviceOverviewPageData} from '../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../core/services/device/device_service';
 import {EnvUniverseService} from '../../core/services/env_universe_service';
+import {ErrorContent} from '../../shared/components/error_content/error_content';
 import {NavLink} from '../../shared/components/nav_link/nav_link';
+import {
+  BackActionType,
+  NotFoundContent,
+} from '../../shared/components/not_found_content/not_found_content';
 import {ClipboardService} from '../../shared/services/clipboard_service';
 import {SnackBarService} from '../../shared/services/snackbar_service';
-import {getErrorMessage} from '../../shared/utils/error_utils';
+import {
+  formatErrorDetails,
+  getErrorMessage,
+  isNotFoundError,
+} from '../../shared/utils/error_utils';
 import {DeviceActionBar} from './components/device_action_bar/device_action_bar';
 import {DeviceOverviewTab} from './components/device_overview_tab/device_overview_tab';
 import {HealthStatisticTab} from './components/health_statistic_tab/health_statistic_tab';
 
-declare interface DevicePageData {
+interface DevicePageData {
   pageData: DeviceOverviewPageData | null;
   error?: string | null;
+  errorDetails?: string;
   id?: string | null;
+  isNotFound?: boolean;
 }
 
 /**
@@ -72,6 +83,8 @@ declare interface DevicePageData {
     HealthStatisticTab,
     MatTooltipModule,
     NavLink,
+    NotFoundContent,
+    ErrorContent,
   ],
   templateUrl: './device_detail_page.ng.html',
   styleUrl: './device_detail_page.scss',
@@ -82,6 +95,7 @@ declare interface DevicePageData {
 })
 export class DeviceDetailPage implements OnInit, OnDestroy {
   hasBackground = true;
+  protected readonly BackActionType = BackActionType;
 
   @ViewChild(DeviceActionBar) actionBar!: DeviceActionBar;
   private readonly cdr = inject(ChangeDetectorRef);
@@ -205,10 +219,15 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
                   `Failed to refresh device data for device: ${id}.`,
                 );
               }
+              const isNotFound = isNotFoundError(err);
               return of<DevicePageData>({
                 pageData: null,
-                error: `Failed to load device data for device: ${id}. ${getErrorMessage(err)}`,
+                error: isNotFound
+                  ? undefined
+                  : `Failed to load device data for device: ${id}. ${getErrorMessage(err)}`,
+                errorDetails: isNotFound ? undefined : formatErrorDetails(err),
                 id,
+                isNotFound,
               });
             }),
           );
@@ -216,6 +235,10 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
       scan<DevicePageData, DevicePageData>(
         (acc, curr) => {
           if (curr.pageData) {
+            return curr;
+          }
+          // If explicitly not found, do not use stale data
+          if (curr.isNotFound) {
             return curr;
           }
           // If failure, check if ID matches previous success
@@ -232,10 +255,18 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
       shareReplay(1),
     );
 
+  /**
+   * Sets the active detail tab.
+   *
+   * @param tab The tab identifier to activate ('overview', 'test-history', 'health', or 'record').
+   */
   setActiveTab(tab: 'overview' | 'test-history' | 'health' | 'record'): void {
     this.activeTab.set(tab);
   }
 
+  /**
+   * Initiates the unquarantine action for the device via the action bar.
+   */
   unquarantineDevice() {
     if (this.actionBar.getAction('quarantine')?.isReady) {
       this.actionBar.onQuarantine();
@@ -244,6 +275,9 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Opens the dialog to change the device quarantine duration via the action bar.
+   */
   changeQuarantine() {
     if (this.actionBar.getAction('quarantine')?.isReady) {
       this.actionBar.onChangeQuarantine();
@@ -252,6 +286,12 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Formats the remaining time until quarantine expiration into a human-readable string.
+   *
+   * @param expiry The ISO date/time string representing the quarantine expiration time.
+   * @return A human-readable remaining time string (e.g. " (2 days left)") or empty string.
+   */
   formatRemainingTime(expiry: string | undefined): string {
     if (!expiry) return '';
     const diffMs = new Date(expiry).getTime() - new Date().getTime();
@@ -273,6 +313,11 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Copies the provided text to the system clipboard and displays a snackbar notification.
+   *
+   * @param text The string to copy to the clipboard.
+   */
   copyToClipboard(text: string): void {
     const success = this.clipboardService.copyToClipboard(text);
     if (success) {
@@ -282,6 +327,12 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Formats a quarantine expiration timestamp using standard date formatting.
+   *
+   * @param expiry The ISO date/time string to format.
+   * @return The localized, human-readable date/time string.
+   */
   getFormattedQuarantineExpiry(expiry: string): string {
     return dateUtils.format(expiry);
   }

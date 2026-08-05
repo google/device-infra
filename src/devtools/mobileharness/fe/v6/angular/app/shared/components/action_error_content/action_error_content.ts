@@ -8,7 +8,7 @@ import {
 } from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {SnackBarService} from '../../services/snackbar_service';
-import {openInNewTab} from '../../utils/safe_dom';
+import {reportBug} from '../../utils/error_utils';
 
 /** Data passed to the ActionErrorContent dialog. */
 export interface ActionErrorDialogData {
@@ -56,21 +56,11 @@ export class ActionErrorContent {
   }
 
   reportBug() {
-    const maxDetailsLength = 1000;
-    let detailsForBug = this.errorDetails;
-    if (detailsForBug.length > maxDetailsLength) {
-      detailsForBug =
-        detailsForBug.substring(0, maxDetailsLength) +
-        '\n\n... (details truncated, please use "Copy Error" button in the dialog to get full details)';
-    }
-
-    const title = encodeURIComponent(
-      `[MHFE] ${this.errorTitle}: ${this.errorMessage}`,
+    reportBug(
+      this.errorTitle,
+      this.errorMessage,
+      this.errorDetails,
+      'please use "Copy Error" button in the dialog to get full details',
     );
-    const body = encodeURIComponent(
-      `Action failed.\n\nError: ${this.errorMessage}\n\nDetails:\n${detailsForBug}`,
-    );
-    const url = `https://issuetracker.google.com/issues/new?component=94628&title=${title}&description=${body}`;
-    openInNewTab(url);
   }
 }

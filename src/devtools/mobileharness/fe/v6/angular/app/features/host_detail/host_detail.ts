@@ -35,16 +35,27 @@ import {
 
 import {HostOverviewPageData} from '../../core/models/host_overview';
 import {HOST_SERVICE} from '../../core/services/host/host_service';
+import {ErrorContent} from '../../shared/components/error_content/error_content';
+import {
+  BackActionType,
+  NotFoundContent,
+} from '../../shared/components/not_found_content/not_found_content';
 import {ClipboardService} from '../../shared/services/clipboard_service';
 import {SnackBarService} from '../../shared/services/snackbar_service';
-import {getErrorMessage} from '../../shared/utils/error_utils';
+import {
+  formatErrorDetails,
+  getErrorMessage,
+  isNotFoundError,
+} from '../../shared/utils/error_utils';
 import {HostActionBar} from './components/host_action_bar/host_action_bar';
 import {HostOverviewPage} from './components/host_overview/host_overview';
 
 interface HostPageData {
   hostOverviewPageData: HostOverviewPageData | null;
   error?: string;
+  errorDetails?: string;
   hostName: string | null;
+  isNotFound?: boolean;
 }
 
 /**
@@ -64,6 +75,8 @@ interface HostPageData {
     HostActionBar,
     MatMenuModule,
     RouterModule,
+    NotFoundContent,
+    ErrorContent,
   ],
   host: {
     '[class.has-background]': 'hasBackground',
@@ -71,6 +84,7 @@ interface HostPageData {
 })
 export class HostDetail implements OnInit, OnDestroy {
   hasBackground = true;
+  protected readonly BackActionType = BackActionType;
 
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly route = inject(ActivatedRoute);
@@ -93,6 +107,11 @@ export class HostDetail implements OnInit, OnDestroy {
     this.refreshSubject$.next(true);
   }
 
+  /**
+   * Copies the provided text to the system clipboard and displays a snackbar notification.
+   *
+   * @param text The string to copy to the clipboard.
+   */
   copyToClipboard(text: string): void {
     const success = this.clipboardService.copyToClipboard(text);
     if (success) {
@@ -159,10 +178,15 @@ export class HostDetail implements OnInit, OnDestroy {
                 `Failed to refresh host data for host: ${hostName}.`,
               );
             }
+            const isNotFound = isNotFoundError(err);
             return of<HostPageData>({
               hostOverviewPageData: null,
-              error: `Failed to load host data for host: ${hostName}. ${getErrorMessage(err)}`,
+              error: isNotFound
+                ? undefined
+                : `Failed to load host data for host: ${hostName}. ${getErrorMessage(err)}`,
+              errorDetails: isNotFound ? undefined : formatErrorDetails(err),
               hostName,
+              isNotFound,
             });
           }),
         );
@@ -172,7 +196,11 @@ export class HostDetail implements OnInit, OnDestroy {
           if (curr.hostOverviewPageData) {
             return curr;
           }
-          // If failure, check if ID matches previous success
+          // If explicitly not found, do not use stale data
+          if (curr.isNotFound) {
+            return curr;
+          }
+          // If other failure, check if ID matches previous success
           if (acc.hostOverviewPageData && acc.hostName === curr.hostName) {
             return {
               ...acc,
@@ -186,6 +214,10 @@ export class HostDetail implements OnInit, OnDestroy {
       shareReplay(1),
     );
 
+  /**
+   * Angular lifecycle hook executed upon component initialization.
+   * Listens to route parameters and updates page title and layout background.
+   */
   ngOnInit() {
     combineLatest([
       this.route.paramMap.pipe(map((params) => params.get('hostName'))),
@@ -207,6 +239,10 @@ export class HostDetail implements OnInit, OnDestroy {
       });
   }
 
+  /**
+   * Angular lifecycle hook executed when the component is destroyed.
+   * Cleans up snackbars, loading states, and active subscriptions.
+   */
   ngOnDestroy() {
     this.refreshSnackBarRef?.dismiss();
     this.refreshSnackBarRef = undefined;

@@ -1,3 +1,4 @@
+import {HttpErrorResponse} from '@angular/common/http';
 import {Injectable} from '@angular/core';
 import {Observable, of, throwError, timer} from 'rxjs';
 import {delay, switchMap} from 'rxjs/operators';
@@ -74,7 +75,15 @@ export class FakeHostService extends HostService {
       return timer(1000).pipe(
         switchMap(() =>
           throwError(
-            () => new Error(`Host with '${hostName}' not found in mock data.`),
+            () =>
+              new HttpErrorResponse({
+                error: {
+                  code: 5,
+                  message: `Host with '${hostName}' not found in mock data.`,
+                },
+                status: 404,
+                statusText: 'Not Found',
+              }),
           ),
         ),
       );
