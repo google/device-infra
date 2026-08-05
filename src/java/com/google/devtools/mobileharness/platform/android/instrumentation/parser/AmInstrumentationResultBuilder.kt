@@ -42,7 +42,7 @@ class AmInstrumentationResultBuilder(private val testSuiteResultBuilder: TestSui
     testResult.stackTrace?.let {
       resultBuilder.setError(
         Error.newBuilder()
-          .setErrorMessage(it.lineSequence().first())
+          .setErrorMessage(it)
           .setErrorType(it.substringAfter("Caused by: ").substringBefore(":"))
           .setStackTrace(it)
       )
