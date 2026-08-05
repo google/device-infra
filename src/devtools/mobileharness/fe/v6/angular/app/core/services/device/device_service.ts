@@ -101,6 +101,14 @@ export abstract class DeviceService {
    */
   abstract unquarantineDevice(id: string): Observable<void>;
 
+  /**
+   * Prepares the device.
+   *
+   * @param id The ID of the device to prepare.
+   * @return An Observable that completes when the prepare operation finishes.
+   */
+  abstract prepareDevice(id: string): Observable<void>;
+
   // /**
   //  * Starts a remote control session for the device.
   //  */

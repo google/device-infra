@@ -30,7 +30,7 @@ export class LabServerActionService {
 
   // States
   readonly isOpeningUpgrade = signal(false);
-  readonly isOpeningRedeploy = signal(false); // TODO: it seems that this one is not used? right?
+  readonly isOpeningRedeploy = signal(false);
   readonly isOpeningRelease = signal(false);
   readonly isPreflightingStop = signal(false);
   readonly isStopping = signal(false);

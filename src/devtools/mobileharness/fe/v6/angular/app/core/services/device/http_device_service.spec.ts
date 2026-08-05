@@ -182,4 +182,15 @@ describe('HttpDeviceService', () => {
     expect(req.request.method).toBe('GET');
     req.flush({id: 'test-device'});
   });
+
+  it('should prepare device via POST to :prepare', () => {
+    service.prepareDevice('test-device').subscribe();
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/devices/test-device:prepare',
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({});
+    req.flush(null);
+  });
 });

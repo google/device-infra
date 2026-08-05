@@ -56,8 +56,9 @@ export declare interface DeviceActions {
   remoteControl: ActionButtonState;
   quarantine: ActionButtonState;
   configuration: ActionButtonState;
-  // used for decommission device in host overview and device header
+  // used to decommission device in host overview and device header
   decommission: ActionButtonState;
+  prepare?: ActionButtonState;
 }
 
 /**

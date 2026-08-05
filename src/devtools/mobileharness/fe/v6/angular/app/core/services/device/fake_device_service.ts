@@ -279,6 +279,17 @@ export class FakeDeviceService extends DeviceService {
     return of(undefined).pipe(delay(1000));
   }
 
+  /**
+   * Prepares the device (Fake implementation).
+   *
+   * @param id The ID of the device to prepare.
+   * @return An Observable that completes after a delay.
+   */
+  override prepareDevice(id: string): Observable<void> {
+    console.log(`FakeService: Preparing device ${id}`);
+    return of(undefined).pipe(delay(1000));
+  }
+
   // override remoteControl(
   //   id: string,
   //   req: RemoteControlRequest,
