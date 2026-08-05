@@ -33,7 +33,7 @@ import java.util.Optional;
 public interface RunningTestInfoProvider {
 
   /** Minimal info about the test/job currently running on a device. */
-  record RunningTestInfo(String testId, String jobId) {}
+  record RunningTestInfo(String testId, String jobId, String testName) {}
 
   /**
    * Looks up the currently running test on the given device.

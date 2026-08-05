@@ -234,6 +234,41 @@ describe('DeviceOverviewTab Component', () => {
     });
   });
 
+  it('getHealthUI should render TRANSITIONING from uiState (e.g. lameduck)', async () => {
+    component.device.healthAndActivity.uiState = 'TRANSITIONING';
+    component.device.healthAndActivity.state = 'OUT_OF_SERVICE_TEMP_MAINT';
+    component.device.healthAndActivity.title = 'In Transition (Lameduck)';
+    component.device.healthAndActivity.subtitle =
+      'The device is draining and finishing current work before its host is updated.';
+    component.device.healthAndActivity.deviceStatus = {
+      status: 'LAMEDUCK',
+      isCritical: false,
+    };
+    expect(component.getHealthUI(component.device.healthAndActivity)).toEqual({
+      icon: 'warning',
+      iconColorClass: 'text-amber-600',
+      iconBgColorClass: 'bg-amber-100',
+      borderColorClass: 'border-l-amber-500',
+      isSpinning: false,
+    });
+  });
+
+  it('getHealthUI should fall back to legacy state when uiState is unset', async () => {
+    component.device.healthAndActivity.uiState = undefined;
+    component.device.healthAndActivity.state = 'IN_SERVICE_IDLE';
+    component.device.healthAndActivity.deviceStatus = {
+      status: 'IDLE',
+      isCritical: false,
+    };
+    expect(component.getHealthUI(component.device.healthAndActivity)).toEqual({
+      icon: 'check_circle',
+      iconColorClass: 'text-green-600',
+      iconBgColorClass: 'bg-green-100',
+      borderColorClass: 'border-l-green-500',
+      isSpinning: false,
+    });
+  });
+
   it('should return OUT_OF_SERVICE_RECOVERING when device is recovering', async () => {
     component.device.healthAndActivity.state = 'OUT_OF_SERVICE_RECOVERING';
     component.device.healthAndActivity.title = 'Out of Service (Recovering)';
