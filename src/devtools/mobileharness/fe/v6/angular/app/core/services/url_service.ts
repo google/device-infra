@@ -41,6 +41,14 @@ export interface NavigateMessage {
 }
 
 /**
+ * Interface for the message sent to the parent window to trigger navigation to a search page.
+ */
+export interface NavigateToMessage {
+  type: 'NAVIGATE_TO';
+  target: 'host_search' | 'device_search';
+}
+
+/**
  * Service to handle URL generation and cross-window communication for navigation.
  */
 @Injectable({providedIn: 'root'})
@@ -63,12 +71,12 @@ export class UrlService implements OnDestroy {
   private readonly document = inject(DOCUMENT, {optional: true});
 
   constructor() {
-    // Initialise the window object from the injected document (to support SSR/Testing).
+    // Initialize the window object from the injected document (to support SSR/Testing).
     this.win =
       this.document?.defaultView ??
       (typeof window !== 'undefined' ? window : null);
 
-    // Initialise the embedded mode flag by checking the URL query parameter
+    // Initialize the embedded mode flag by checking the URL query parameter
     // AND verifying that the app is actually running inside an iframe.
     // This prevents false positives if the param is set but the app is standalone.
     const search = this.win?.location?.search ?? '';
@@ -85,6 +93,10 @@ export class UrlService implements OnDestroy {
     }
   }
 
+  /**
+   * Angular lifecycle hook executed when the service is destroyed.
+   * Cleans up window event listeners and completes subjects.
+   */
   ngOnDestroy() {
     if (this.win) {
       this.win.removeEventListener('message', this.messageListener);
@@ -144,7 +156,11 @@ export class UrlService implements OnDestroy {
     );
   }
 
-  /** Returns whether the application is running in embedded mode. */
+  /**
+   * Returns whether the application is running in embedded mode.
+   *
+   * @return True if running inside an iframe in embedded mode.
+   */
   isInEmbeddedMode(): boolean {
     return this.isEmbeddedMode;
   }
@@ -172,5 +188,33 @@ export class UrlService implements OnDestroy {
     const urlParams = new URLSearchParams(this.win.location.search);
     const origin = urlParams.get('origin') || '*';
     this.win.parent.postMessage(message, origin);
+  }
+
+  /**
+   * Navigates to a specific target search page in the parent window, or goes back in history if standalone.
+   *
+   * @param target The target page ('host_search' or 'device_search').
+   */
+  navigateToParent(target: 'host_search' | 'device_search') {
+    if (this.isEmbeddedMode && this.win) {
+      const message: NavigateToMessage = {
+        type: 'NAVIGATE_TO',
+        target,
+      };
+
+      const urlParams = new URLSearchParams(this.win.location.search);
+      const origin = urlParams.get('origin') || '*';
+      this.win.parent.postMessage(message, origin);
+    } else {
+      // TODO: update below code to navigate to search page of V6
+      // when V6 search page is ready.
+
+      // Fallback for standalone mode: go back in history.
+      // Note: currently, there are no search pages in standalone mode to navigate to
+      // directly.
+      if (this.win) {
+        this.win.history.back();
+      }
+    }
   }
 }

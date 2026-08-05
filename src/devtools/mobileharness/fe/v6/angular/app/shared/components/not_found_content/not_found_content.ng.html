@@ -1,0 +1,33 @@
+<div class="not-found-container">
+  <div class="icon-wrapper">
+    <mat-icon class="not-found-icon">search_off</mat-icon>
+  </div>
+
+  <h2 class="title">{{ entityType }} Not Found</h2>
+
+  <p class="message">
+    The {{ entityType.toLowerCase() }} <code class="entity-id">{{ entityId }}</code> could not be found.
+  </p>
+
+  <div class="reasons-section">
+    <p class="reasons-title">Possible reasons:</p>
+    <ul class="reasons-list">
+      <li>The {{ entityType.toLowerCase() }} ID/name might be <strong>misspelled</strong>.</li>
+      <li>The {{ entityType.toLowerCase() }} may have been <strong>decommissioned</strong>.</li>
+    </ul>
+  </div>
+
+  <div class="actions">
+    <button (click)="onBack()" class="back-button m3-button">
+      <mat-icon>arrow_back</mat-icon>
+      {{ backLabel }}
+    </button>
+
+    @if (debugService.isDebug()) {
+      <button (click)="refresh.emit()" class="refresh-button m3-button">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+    }
+  </div>
+</div>

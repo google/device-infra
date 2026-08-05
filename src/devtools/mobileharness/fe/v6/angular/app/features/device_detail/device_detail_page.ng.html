@@ -1,11 +1,21 @@
 <div class="page-container">
   @if (devicePageData$ | async; as data) {
-    @if (data.error) {
-      <div class="error-message">
-        <mat-icon class="error-icon">error_outline</mat-icon>
-        <p>{{ data.error }}</p>
-        <a routerLink="/dev/device-harness" queryParamsHandling="merge" class="m3-button">Back to Harness</a>
-      </div>
+    @if (data.isNotFound) {
+      <app-not-found-content
+        entityType="Device"
+        [entityId]="data.id ?? ''"
+        [backActionType]="BackActionType.DEVICE"
+        (refresh)="triggerRefresh()"
+      ></app-not-found-content>
+
+    } @else if (data.error) {
+      <app-error-content
+        [errorMessage]="data.error"
+        [errorDetails]="data.errorDetails || ''"
+        errorTitle="Failed to Load Device"
+        pageType="device"
+        (refresh)="triggerRefresh()">
+      </app-error-content>
     } @else if (data.pageData; as pageData) {
       @let device = pageData.overview;
       <div class="main-card">

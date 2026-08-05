@@ -1,4 +1,4 @@
-import {getErrorMessage} from './error_utils';
+import {getErrorMessage, isNotFoundError} from './error_utils';
 
 describe('getErrorMessage', () => {
   it('extracts message from internal (ESF) error shape', () => {
@@ -49,5 +49,51 @@ describe('getErrorMessage', () => {
 
   it('returns default for string input', () => {
     expect(getErrorMessage('some error')).toBe('An unknown error occurred.');
+  });
+});
+
+describe('isNotFoundError', () => {
+  it('identifies internal (ESF) 404 error', () => {
+    const err = {
+      error: {
+        error: {code: 404, message: 'Host X not found.', status: 'NOT_FOUND'},
+      },
+    };
+    expect(isNotFoundError(err)).toBeTrue();
+  });
+
+  it('identifies OSS (Envoy) code 5 error', () => {
+    const err = {
+      error: {code: 5, message: 'Host X not found.'},
+    };
+    expect(isNotFoundError(err)).toBeTrue();
+  });
+
+  it('identifies root level status 404', () => {
+    const err = {
+      status: 404,
+      message: 'Not Found',
+    };
+    expect(isNotFoundError(err)).toBeTrue();
+  });
+
+  it('returns false for other errors', () => {
+    const err = {
+      error: {code: 13, message: 'Internal error'},
+    };
+    expect(isNotFoundError(err)).toBeFalse();
+  });
+
+  it('returns false for other status codes', () => {
+    const err = {
+      status: 500,
+    };
+    expect(isNotFoundError(err)).toBeFalse();
+  });
+
+  it('returns false for null/undefined/string', () => {
+    expect(isNotFoundError(null)).toBeFalse();
+    expect(isNotFoundError(undefined)).toBeFalse();
+    expect(isNotFoundError('not found')).toBeFalse();
   });
 });

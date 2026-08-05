@@ -1,0 +1,44 @@
+<div class="error-container">
+  <div class="error-header">
+    <div class="icon-wrapper">
+      <mat-icon class="error-icon">error_outline</mat-icon>
+    </div>
+    <h2 class="title">{{ errorTitle }}</h2>
+    <p class="message">{{ errorMessage }}</p>
+  </div>
+
+  <div class="actions">
+    <button (click)="refresh.emit()" class="action-button primary-action m3-button">
+      <mat-icon>refresh</mat-icon>
+      Refresh
+    </button>
+
+    @if (errorDetails) {
+      <button (click)="toggleDetails()" class="action-button secondary-action m3-button" [class.active]="showDetails">
+        <mat-icon>{{ showDetails ? 'unfold_less' : 'unfold_more' }}</mat-icon>
+        {{ showDetails ? 'Hide Stack Trace' : 'Show Stack Trace' }}
+      </button>
+
+      <div class="grouped-actions">
+        <button (click)="copyError()" class="action-button outline-action m3-button" title="Copy Error to Clipboard">
+          <mat-icon>content_copy</mat-icon>
+          Copy
+        </button>
+
+        <button (click)="reportBug()" class="action-button outline-action m3-button" title="Report Bug to Buganizer">
+          <mat-icon>bug_report</mat-icon>
+          Report Bug
+        </button>
+      </div>
+    }
+  </div>
+
+  @if (showDetails && errorDetails) {
+    <div class="error-details-container">
+      <div class="details-header">
+        <span class="details-title">Detailed Stack Trace</span>
+      </div>
+      <pre class="error-details">{{ errorDetails }}</pre>
+    </div>
+  }
+</div>

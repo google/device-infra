@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.api.query.proto.FilterProto;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
+import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
@@ -226,7 +227,7 @@ public class DeviceDataLoader {
                 .findFirst()
                 .orElseThrow(
                     () ->
-                        new RuntimeException(
+                        FeServiceException.notFound(
                             "Device not found: " + deviceId + " in universe: " + universe)),
         executor);
   }

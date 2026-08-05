@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.DeviceView;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapability;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
+import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.DeviceData;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader.ManagementMode;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
@@ -230,7 +231,7 @@ public final class DeviceDataLoaderTest {
 
     ExecutionException exception =
         Assert.assertThrows(ExecutionException.class, () -> future.get());
-    assertThat(exception).hasCauseThat().isInstanceOf(RuntimeException.class);
+    assertThat(exception).hasCauseThat().isInstanceOf(FeServiceException.class);
     assertThat(exception).hasCauseThat().hasMessageThat().contains("Device not found");
   }
 }

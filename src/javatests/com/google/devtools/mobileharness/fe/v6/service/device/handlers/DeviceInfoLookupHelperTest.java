@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.GroupedDevices;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.DeviceView;
+import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
@@ -107,7 +108,7 @@ public final class DeviceInfoLookupHelperTest {
             labInfoProvider, DEVICE_ID, SELF_UNIVERSE, directExecutor());
 
     ExecutionException exception = assertThrows(ExecutionException.class, deviceInfoFuture::get);
-    assertThat(exception).hasCauseThat().isInstanceOf(RuntimeException.class);
+    assertThat(exception).hasCauseThat().isInstanceOf(FeServiceException.class);
     assertThat(exception).hasCauseThat().hasMessageThat().contains("Device not found");
   }
 }
