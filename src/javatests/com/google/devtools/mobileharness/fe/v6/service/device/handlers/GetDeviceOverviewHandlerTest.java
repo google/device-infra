@@ -680,6 +680,30 @@ public final class GetDeviceOverviewHandlerTest {
   }
 
   @Test
+  public void healthAndActivity_outOfService_tempMaint_lameduck() throws Exception {
+    DeviceInfo lameduckDevice =
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceStatus(DeviceStatus.LAMEDUCK)
+            .setDeviceCondition(
+                DEFAULT_DEVICE_INFO.getDeviceCondition().toBuilder()
+                    .setLastHealthyTime(HALF_HOUR_AGO_TIMESTAMP))
+            .build();
+    mockDeviceInfo(lameduckDevice);
+    HealthAndActivityInfo info =
+        getDeviceOverviewHandler
+            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
+            .get()
+            .getOverview()
+            .getHealthAndActivity();
+
+    assertThat(info.getTitle()).isEqualTo("Out of Service (may be temporary)");
+    assertThat(info.getState()).isEqualTo(HealthState.OUT_OF_SERVICE_TEMP_MAINT);
+    assertThat(info.getDeviceStatus().getStatus()).isEqualTo("LAMEDUCK");
+    assertThat(info.getDeviceStatus().getIsCritical()).isFalse();
+    assertThat(info.getDiagnostics().getDiagnosis()).contains("LAMEDUCK");
+  }
+
+  @Test
   public void healthAndActivity_outOfService_needsFixing_missing() throws Exception {
     DeviceInfo missingDevice =
         DEFAULT_DEVICE_INFO.toBuilder()
