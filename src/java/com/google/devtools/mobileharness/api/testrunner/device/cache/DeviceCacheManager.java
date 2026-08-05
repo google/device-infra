@@ -20,6 +20,8 @@ import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.Timestamp;
@@ -28,6 +30,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -112,6 +115,7 @@ public class DeviceCacheManager {
       Duration timeout,
       @Nullable String leaseId) {
     synchronized (cachesByCacheType) {
+      Set<CacheType> oldTypes = getCacheTypesOfDevice(deviceControlId);
       Map<String, CacheInfo> caches = cachesByCacheType.get(cacheType);
       if (caches.containsKey(deviceControlId) && overriddenCount.incrementAndGet() % 100 == 0) {
         logger.atWarning().log(
@@ -133,6 +137,11 @@ public class DeviceCacheManager {
               deviceType,
               Timestamps.fromNanos(deadline.getEpochSecond() * 1_000_000_000 + deadline.getNano()),
               leaseId));
+      Set<CacheType> newTypes = getCacheTypesOfDevice(deviceControlId);
+      if (!oldTypes.equals(newTypes)) {
+        logger.atInfo().log(
+            "Device [%s] cache types changed: %s -> %s", deviceControlId, oldTypes, newTypes);
+      }
       return true;
     }
   }
@@ -140,6 +149,7 @@ public class DeviceCacheManager {
   @CanIgnoreReturnValue
   boolean invalidate(CacheType cacheType, String deviceControlId, @Nullable String leaseId) {
     synchronized (cachesByCacheType) {
+      Set<CacheType> oldTypes = getCacheTypesOfDevice(deviceControlId);
       Map<String, CacheInfo> caches = cachesByCacheType.get(cacheType);
       CacheInfo oldCache = caches.get(deviceControlId);
       if (oldCache == null) {
@@ -160,6 +170,11 @@ public class DeviceCacheManager {
       caches.remove(deviceControlId);
       logger.atInfo().log(
           "Invalidating [%s] cache for device [%s] succeeded.", cacheType, deviceControlId);
+      Set<CacheType> newTypes = getCacheTypesOfDevice(deviceControlId);
+      if (!oldTypes.equals(newTypes)) {
+        logger.atInfo().log(
+            "Device [%s] cache types changed: %s -> %s", deviceControlId, oldTypes, newTypes);
+      }
       return true;
     }
   }
@@ -211,5 +226,29 @@ public class DeviceCacheManager {
           });
     }
     return cachedIds;
+  }
+
+  public ImmutableMap<CacheType, ImmutableSet<String>> getCachedDevicesByCacheType() {
+    synchronized (cachesByCacheType) {
+      ImmutableMap.Builder<CacheType, ImmutableSet<String>> result = ImmutableMap.builder();
+      for (CacheType cacheType : CacheType.values()) {
+        Set<String> devices = getCachedDevices(cacheType, /* deviceType= */ null);
+        if (!devices.isEmpty()) {
+          result.put(cacheType, ImmutableSet.copyOf(devices));
+        }
+      }
+      return result.buildOrThrow();
+    }
+  }
+
+  @GuardedBy("cachesByCacheType")
+  private Set<CacheType> getCacheTypesOfDevice(String deviceControlId) {
+    Set<CacheType> types = EnumSet.noneOf(CacheType.class);
+    for (Map.Entry<CacheType, Map<String, CacheInfo>> entry : cachesByCacheType.entrySet()) {
+      if (entry.getValue().containsKey(deviceControlId)) {
+        types.add(entry.getKey());
+      }
+    }
+    return types;
   }
 }

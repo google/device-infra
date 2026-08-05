@@ -68,6 +68,18 @@ java_library(
 )
 
 java_library(
+    name = "device_cache_info_printer",
+    srcs = ["DeviceCacheInfoPrinter.java"],
+    visibility = [
+        "//javatests/com/google/devtools/mobileharness/infra/controller/device/util:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:__pkg__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache_manager",
+    ],
+)
+
+java_library(
     name = "conditioned_device_config_util",
     srcs = ["ConditionedDeviceConfigUtil.java"],
     visibility = [

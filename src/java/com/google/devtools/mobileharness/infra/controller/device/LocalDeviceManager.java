@@ -25,6 +25,7 @@ import com.google.common.cache.Cache;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.api.devicemanager.detector.Detector;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResults;
@@ -33,7 +34,9 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatusWithTimestamp;
+import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCacheManager;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager;
+import com.google.devtools.mobileharness.infra.controller.device.util.DeviceCacheInfoPrinter;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -127,6 +130,24 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
   @Override
   public void run() {
     logger.atInfo().log("Running...");
+    // Starts periodic device cache info printer.
+    Duration printDeviceCacheInfoInterval = Duration.ofMinutes(30L);
+    ListeningScheduledExecutorService printCacheThreadPool =
+        ThreadPools.createStandardScheduledThreadPool("device-cache-info-printer", 1);
+    logFailure(
+        printCacheThreadPool.scheduleWithFixedDelay(
+            threadRenaming(
+                () ->
+                    logger.atInfo().log(
+                        "%s",
+                        DeviceCacheInfoPrinter.printDeviceCacheInfos(
+                            DeviceCacheManager.getInstance().getCachedDevicesByCacheType())),
+                () -> "device-cache-info-printer"),
+            printDeviceCacheInfoInterval,
+            printDeviceCacheInfoInterval),
+        Level.WARNING,
+        "Error when printing device cache info");
+
     // Starts multiple threads for each detector.
     ListeningExecutorService detectorThreadPool =
         ThreadPools.createStandardThreadPool("detector-thread-pool");
