@@ -58,7 +58,7 @@ public final class Dimension {
     DEVICE,
     /** Class simple name of the {@code Device} class. */
     DEVICE_CLASS_NAME,
-    /** The form of the device. The value can be one of [virtual/physical]. */
+    /** The form of the device. The value can be one of [virtual/virtual_arm/physical]. */
     DEVICE_FORM,
     /** The OS of the device. The value can be one of [android/ios/testbed]. */
     OS,
@@ -550,6 +550,9 @@ public final class Dimension {
 
     /** Dimension value for virtual device. */
     public static final String VIRTUAL = "virtual";
+
+    /** Dimension value for virtual device on Arm. */
+    public static final String VIRTUAL_ARM = "virtual_arm";
 
     /** Dimension value for physical device. */
     public static final String PHYSICAL = "physical";
