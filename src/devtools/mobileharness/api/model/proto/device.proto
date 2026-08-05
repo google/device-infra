@@ -59,6 +59,15 @@ enum DeviceStatus {
   FAILED = 8;
 }
 
+// Health category of a device.
+enum HealthCategory {
+  HEALTH_CATEGORY_UNSPECIFIED = 0;
+  IN_SERVICE = 1;
+  IN_TRANSITION = 2;
+  IN_AUTO_RECOVERY = 3;
+  NEED_MANUAL_REPAIR = 4;
+}
+
 // Status of a device, with the timestamp of the status.
 message DeviceStatusWithTimestamp {
   DeviceStatus status = 1;  // required
