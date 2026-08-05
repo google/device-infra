@@ -43,6 +43,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
+import com.google.devtools.mobileharness.api.model.proto.Device.HealthCategory;
 import com.google.devtools.mobileharness.api.model.proto.Device.TempDimension;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
@@ -65,6 +66,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndAct
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HostInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.SubDeviceInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.UiState;
 import com.google.devtools.mobileharness.fe.v6.service.shared.SubDeviceInfoListFactory;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
@@ -79,7 +81,6 @@ import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.protobuf.Timestamp;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
 import java.util.Optional;
@@ -94,6 +95,8 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
+@SuppressWarnings("deprecation") // Tests verify the transitional dual-written deprecated state
+// field; removed by the follow-up cleanup CL.
 @RunWith(JUnit4.class)
 public final class GetDeviceOverviewHandlerTest {
 
@@ -103,9 +106,6 @@ public final class GetDeviceOverviewHandlerTest {
   private static final String HOST_NAME = "test_host.google.com";
   private static final Instant NOW = Instant.parse("2025-11-21T10:00:00Z");
   private static final Timestamp NOW_TIMESTAMP = toProtoTimestamp(NOW);
-  private static final Timestamp ONE_HOUR_AGO_TIMESTAMP = toProtoTimestamp(NOW.minusSeconds(3601));
-  private static final Timestamp HALF_HOUR_AGO_TIMESTAMP =
-      toProtoTimestamp(NOW.minus(Duration.ofMinutes(30)));
 
   private static final GetDeviceOverviewRequest DEFAULT_REQUEST =
       GetDeviceOverviewRequest.newBuilder().setId(DEVICE_ID).setUniverse(UNIVERSE).build();
@@ -553,20 +553,25 @@ public final class GetDeviceOverviewHandlerTest {
                 .build());
   }
 
-  // Tests for HealthAndActivityInfo
+  // Tests for HealthAndActivityInfo (standard device health categories).
+
+  private HealthAndActivityInfo getHealthAndActivity() throws Exception {
+    return getDeviceOverviewHandler
+        .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
+        .get()
+        .getOverview()
+        .getHealthAndActivity();
+  }
 
   @Test
   public void healthAndActivity_inService_idle() throws Exception {
     mockDeviceInfo(DEFAULT_DEVICE_INFO.toBuilder().setDeviceStatus(DeviceStatus.IDLE).build());
-    HealthAndActivityInfo info =
-        getDeviceOverviewHandler
-            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
-            .get()
-            .getOverview()
-            .getHealthAndActivity();
+    HealthAndActivityInfo info = getHealthAndActivity();
 
     assertThat(info.getTitle()).isEqualTo("In Service (Idle)");
     assertThat(info.getSubtitle()).isEqualTo("The device is healthy and ready for new tasks.");
+    assertThat(info.getUiState()).isEqualTo(UiState.HEALTHY);
+    // Transitional dual-write for older frontends; removed by the cleanup CL.
     assertThat(info.getState()).isEqualTo(HealthState.IN_SERVICE_IDLE);
     assertThat(info.getDeviceStatus().getStatus()).isEqualTo("IDLE");
     assertThat(info.getDeviceStatus().getIsCritical()).isFalse();
@@ -583,30 +588,45 @@ public final class GetDeviceOverviewHandlerTest {
             .setDeviceCondition(
                 DEFAULT_DEVICE_INFO.getDeviceCondition().toBuilder().clearLastHealthyTime())
             .build());
-    HealthAndActivityInfo info =
-        getDeviceOverviewHandler
-            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
-            .get()
-            .getOverview()
-            .getHealthAndActivity();
 
-    assertThat(info.hasLastInServiceTime()).isFalse();
+    assertThat(getHealthAndActivity().hasLastInServiceTime()).isFalse();
   }
 
   @Test
   public void healthAndActivity_inService_busy() throws Exception {
     mockDeviceInfo(DEFAULT_DEVICE_INFO.toBuilder().setDeviceStatus(DeviceStatus.BUSY).build());
-    HealthAndActivityInfo info =
-        getDeviceOverviewHandler
-            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
-            .get()
-            .getOverview()
-            .getHealthAndActivity();
+    HealthAndActivityInfo info = getHealthAndActivity();
 
     assertThat(info.getTitle()).isEqualTo("In Service (Busy)");
     assertThat(info.getSubtitle()).isEqualTo("The device is healthy and currently running a task.");
+    assertThat(info.getUiState()).isEqualTo(UiState.BUSY);
     assertThat(info.getState()).isEqualTo(HealthState.IN_SERVICE_BUSY);
     assertThat(info.getCurrentTask().getType()).isEqualTo("Test");
+  }
+
+  @Test
+  public void healthAndActivity_inTransition_lameduck() throws Exception {
+    mockDeviceInfo(DEFAULT_DEVICE_INFO.toBuilder().setDeviceStatus(DeviceStatus.LAMEDUCK).build());
+    HealthAndActivityInfo info = getHealthAndActivity();
+
+    assertThat(info.getTitle()).isEqualTo("In Transition (Lameduck)");
+    assertThat(info.getUiState()).isEqualTo(UiState.TRANSITIONING);
+    assertThat(info.getState()).isEqualTo(HealthState.OUT_OF_SERVICE_TEMP_MAINT);
+    assertThat(info.getDeviceStatus().getStatus()).isEqualTo("LAMEDUCK");
+    assertThat(info.getDeviceStatus().getIsCritical()).isFalse();
+    assertThat(info.getSubtitle()).contains("draining");
+  }
+
+  @Test
+  public void healthAndActivity_inTransition_init() throws Exception {
+    mockDeviceInfo(DEFAULT_DEVICE_INFO.toBuilder().setDeviceStatus(DeviceStatus.INIT).build());
+    HealthAndActivityInfo info = getHealthAndActivity();
+
+    assertThat(info.getTitle()).isEqualTo("In Transition (Initializing)");
+    assertThat(info.getUiState()).isEqualTo(UiState.TRANSITIONING);
+    assertThat(info.getState()).isEqualTo(HealthState.OUT_OF_SERVICE_TEMP_MAINT);
+    assertThat(info.getDeviceStatus().getIsCritical()).isFalse();
+    assertThat(info.getDiagnostics().getDiagnosis()).contains("INIT");
   }
 
   @Test
@@ -624,22 +644,20 @@ public final class GetDeviceOverviewHandlerTest {
                                     .setValue("true"))))
             .build();
     mockDeviceInfo(quarantinedDevice);
-    HealthAndActivityInfo info =
-        getDeviceOverviewHandler
-            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
-            .get()
-            .getOverview()
-            .getHealthAndActivity();
+    HealthAndActivityInfo info = getHealthAndActivity();
 
     assertThat(info.getTitle()).isEqualTo("Quarantined");
-    assertThat(info.getState()).isEqualTo(HealthState.OUT_OF_SERVICE_NEEDS_FIXING);
+    assertThat(info.getUiState()).isEqualTo(UiState.BLOCKED);
+    assertThat(info.getState()).isEqualTo(HealthState.IDLE_BUT_QUARANTINED);
     assertThat(info.getDeviceStatus().getIsCritical()).isTrue();
     assertThat(info.getDiagnostics().getDiagnosis())
         .contains("Device has been manually quarantined");
   }
 
   @Test
-  public void healthAndActivity_outOfService_recovering() throws Exception {
+  public void healthAndActivity_inAutoRecovery_busyWithAbnormalType() throws Exception {
+    // BUSY + abnormal type = Auto Recovery (upstream standard: any BUSY device with unhealthy
+    // device types is treated as in automated recovery, without inspecting the running job).
     DeviceInfo recoveringDevice =
         DEFAULT_DEVICE_INFO.toBuilder()
             .setDeviceStatus(DeviceStatus.BUSY)
@@ -648,19 +666,12 @@ public final class GetDeviceOverviewHandlerTest {
                     .clearType()
                     .addType("AndroidRealDevice")
                     .addType("DisconnectedDevice"))
-            .setDeviceCondition(
-                DEFAULT_DEVICE_INFO.getDeviceCondition().toBuilder()
-                    .setLastHealthyTime(HALF_HOUR_AGO_TIMESTAMP))
             .build();
     mockDeviceInfo(recoveringDevice);
-    HealthAndActivityInfo info =
-        getDeviceOverviewHandler
-            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
-            .get()
-            .getOverview()
-            .getHealthAndActivity();
+    HealthAndActivityInfo info = getHealthAndActivity();
 
-    assertThat(info.getTitle()).isEqualTo("Out of Service (Recovering)");
+    assertThat(info.getTitle()).isEqualTo("Auto Recovery");
+    assertThat(info.getUiState()).isEqualTo(UiState.RECOVERING);
     assertThat(info.getState()).isEqualTo(HealthState.OUT_OF_SERVICE_RECOVERING);
     assertThat(info.getDeviceStatus().getIsCritical()).isFalse();
     assertThat(info.getDeviceTypesList())
@@ -671,30 +682,7 @@ public final class GetDeviceOverviewHandlerTest {
   }
 
   @Test
-  public void healthAndActivity_outOfService_tempMaint_init() throws Exception {
-    DeviceInfo initDevice =
-        DEFAULT_DEVICE_INFO.toBuilder()
-            .setDeviceStatus(DeviceStatus.INIT)
-            .setDeviceCondition(
-                DEFAULT_DEVICE_INFO.getDeviceCondition().toBuilder()
-                    .setLastHealthyTime(HALF_HOUR_AGO_TIMESTAMP))
-            .build();
-    mockDeviceInfo(initDevice);
-    HealthAndActivityInfo info =
-        getDeviceOverviewHandler
-            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
-            .get()
-            .getOverview()
-            .getHealthAndActivity();
-
-    assertThat(info.getTitle()).isEqualTo("Out of Service (may be temporary)");
-    assertThat(info.getState()).isEqualTo(HealthState.OUT_OF_SERVICE_TEMP_MAINT);
-    assertThat(info.getDeviceStatus().getIsCritical()).isFalse();
-    assertThat(info.getDiagnostics().getDiagnosis()).contains("INIT");
-  }
-
-  @Test
-  public void healthAndActivity_outOfService_needsFixing_missing() throws Exception {
+  public void healthAndActivity_needsManualRepair_missing() throws Exception {
     DeviceInfo missingDevice =
         DEFAULT_DEVICE_INFO.toBuilder()
             .setDeviceStatus(DeviceStatus.MISSING)
@@ -703,19 +691,12 @@ public final class GetDeviceOverviewHandlerTest {
                     .clearType()
                     .addType("AndroidRealDevice")
                     .addType("DisconnectedDevice"))
-            .setDeviceCondition(
-                DEFAULT_DEVICE_INFO.getDeviceCondition().toBuilder()
-                    .setLastHealthyTime(ONE_HOUR_AGO_TIMESTAMP))
             .build();
     mockDeviceInfo(missingDevice);
-    HealthAndActivityInfo info =
-        getDeviceOverviewHandler
-            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
-            .get()
-            .getOverview()
-            .getHealthAndActivity();
+    HealthAndActivityInfo info = getHealthAndActivity();
 
-    assertThat(info.getTitle()).isEqualTo("Out of Service (Needs Fixing)");
+    assertThat(info.getTitle()).isEqualTo("Needs Manual Repair");
+    assertThat(info.getUiState()).isEqualTo(UiState.ERROR);
     assertThat(info.getState()).isEqualTo(HealthState.OUT_OF_SERVICE_NEEDS_FIXING);
     assertThat(info.getDeviceStatus().getIsCritical()).isTrue();
     assertThat(info.getDiagnostics().getDiagnosis()).contains("MISSING");
@@ -725,28 +706,119 @@ public final class GetDeviceOverviewHandlerTest {
   }
 
   @Test
-  public void healthAndActivity_outOfService_needsFixing_noTypes() throws Exception {
+  public void healthAndActivity_needsManualRepair_noTypes() throws Exception {
     DeviceInfo noTypeDevice =
         DEFAULT_DEVICE_INFO.toBuilder()
             .setDeviceStatus(DeviceStatus.FAILED)
             .setDeviceFeature(DEFAULT_DEVICE_INFO.getDeviceFeature().toBuilder().clearType())
-            .setDeviceCondition(
-                DEFAULT_DEVICE_INFO.getDeviceCondition().toBuilder()
-                    .setLastHealthyTime(ONE_HOUR_AGO_TIMESTAMP))
             .build();
     mockDeviceInfo(noTypeDevice);
-    HealthAndActivityInfo info =
-        getDeviceOverviewHandler
-            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
-            .get()
-            .getOverview()
-            .getHealthAndActivity();
+    HealthAndActivityInfo info = getHealthAndActivity();
 
-    assertThat(info.getTitle()).isEqualTo("Out of Service (Needs Fixing)");
+    assertThat(info.getTitle()).isEqualTo("Needs Manual Repair");
+    assertThat(info.getUiState()).isEqualTo(UiState.ERROR);
     assertThat(info.getState()).isEqualTo(HealthState.OUT_OF_SERVICE_NEEDS_FIXING);
     assertThat(info.getDeviceStatus().getIsCritical()).isTrue();
     assertThat(info.getDiagnostics().getDiagnosis()).contains("no type detected");
     assertThat(info.getDiagnostics().getDiagnosis()).contains("FAILED");
+  }
+
+  @Test
+  public void healthAndActivity_needsManualRepair_idleNoTypes() throws Exception {
+    // A device with no detected type cannot be allocated, so even when IDLE it needs manual repair
+    // (not In Service).
+    DeviceInfo idleNoTypeDevice =
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(DEFAULT_DEVICE_INFO.getDeviceFeature().toBuilder().clearType())
+            .build();
+    mockDeviceInfo(idleNoTypeDevice);
+    HealthAndActivityInfo info = getHealthAndActivity();
+
+    assertThat(info.getTitle()).isEqualTo("Needs Manual Repair");
+    assertThat(info.getUiState()).isEqualTo(UiState.ERROR);
+    assertThat(info.getState()).isEqualTo(HealthState.OUT_OF_SERVICE_NEEDS_FIXING);
+    assertThat(info.getDeviceStatus().getIsCritical()).isTrue();
+    assertThat(info.getDiagnostics().getDiagnosis()).contains("no type detected");
+    assertThat(info.getDiagnostics().getDiagnosis()).contains("IDLE");
+  }
+
+  @Test
+  public void healthAndActivity_nonAndroid_iosIdle_inService() throws Exception {
+    // Categorization is device-agnostic: a healthy non-Android device is In Service, not Unknown.
+    DeviceInfo iosDevice =
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(
+                DEFAULT_DEVICE_INFO.getDeviceFeature().toBuilder()
+                    .clearType()
+                    .addType("IosRealDevice"))
+            .build();
+    mockDeviceInfo(iosDevice);
+    HealthAndActivityInfo info = getHealthAndActivity();
+
+    assertThat(info.getTitle()).isEqualTo("In Service (Idle)");
+    assertThat(info.getUiState()).isEqualTo(UiState.HEALTHY);
+  }
+
+  @Test
+  public void healthAndActivity_withUpstreamHealthCategory_inService() throws Exception {
+    // Upstream 1P Master GetLabInfo sets health_category directly on DeviceInfo.
+    DeviceInfo device =
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setHealthCategory(HealthCategory.HEALTH_CATEGORY_IN_SERVICE)
+            .build();
+    mockDeviceInfo(device);
+    HealthAndActivityInfo info = getHealthAndActivity();
+
+    assertThat(info.getTitle()).isEqualTo("In Service (Idle)");
+    assertThat(info.getUiState()).isEqualTo(UiState.HEALTHY);
+    assertThat(info.getState()).isEqualTo(HealthState.IN_SERVICE_IDLE);
+  }
+
+  @Test
+  public void healthAndActivity_withUpstreamHealthCategory_inAutoRecovery() throws Exception {
+    DeviceInfo device =
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceStatus(DeviceStatus.BUSY)
+            .setHealthCategory(HealthCategory.HEALTH_CATEGORY_IN_AUTO_RECOVERY)
+            .build();
+    mockDeviceInfo(device);
+    HealthAndActivityInfo info = getHealthAndActivity();
+
+    assertThat(info.getTitle()).isEqualTo("Auto Recovery");
+    assertThat(info.getUiState()).isEqualTo(UiState.RECOVERING);
+    assertThat(info.getState()).isEqualTo(HealthState.OUT_OF_SERVICE_RECOVERING);
+    assertThat(info.getCurrentTask().getType()).isEqualTo("Recovery Task");
+  }
+
+  @Test
+  public void healthAndActivity_withUpstreamHealthCategory_inTransition() throws Exception {
+    DeviceInfo device =
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceStatus(DeviceStatus.LAMEDUCK)
+            .setHealthCategory(HealthCategory.HEALTH_CATEGORY_IN_TRANSITION)
+            .build();
+    mockDeviceInfo(device);
+    HealthAndActivityInfo info = getHealthAndActivity();
+
+    assertThat(info.getTitle()).isEqualTo("In Transition (Lameduck)");
+    assertThat(info.getUiState()).isEqualTo(UiState.TRANSITIONING);
+  }
+
+  @Test
+  public void healthAndActivity_withUpstreamHealthCategory_needManualRepair() throws Exception {
+    DeviceInfo device =
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceStatus(DeviceStatus.FAILED)
+            .setHealthCategory(HealthCategory.HEALTH_CATEGORY_NEED_MANUAL_REPAIR)
+            .build();
+    mockDeviceInfo(device);
+    HealthAndActivityInfo info = getHealthAndActivity();
+
+    assertThat(info.getTitle()).isEqualTo("Needs Manual Repair");
+    assertThat(info.getUiState()).isEqualTo(UiState.ERROR);
   }
 
   @Test
