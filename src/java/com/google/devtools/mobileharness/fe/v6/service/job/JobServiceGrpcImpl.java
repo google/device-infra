@@ -23,7 +23,10 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobLogRespon
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.JobServiceGrpc;
+import com.google.devtools.mobileharness.fe.v6.service.proto.job.KillJobRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.job.KillJobResponse;
 import io.grpc.stub.StreamObserver;
+import java.util.Optional;
 import javax.inject.Inject;
 
 /** gRPC implementation of the JobService. */
@@ -43,7 +46,7 @@ public final class JobServiceGrpcImpl extends JobServiceGrpc.JobServiceImplBase 
     GrpcServiceUtil.invokeAsync(
         request,
         responseObserver,
-        logic::getJob,
+        req -> logic.getJob(req, Optional.empty()),
         executor,
         JobServiceGrpc.getServiceDescriptor(),
         JobServiceGrpc.getGetJobMethod());
@@ -59,5 +62,16 @@ public final class JobServiceGrpcImpl extends JobServiceGrpc.JobServiceImplBase 
         executor,
         JobServiceGrpc.getServiceDescriptor(),
         JobServiceGrpc.getGetJobLogMethod());
+  }
+
+  @Override
+  public void killJob(KillJobRequest request, StreamObserver<KillJobResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        req -> logic.killJob(req, Optional.empty()),
+        executor,
+        JobServiceGrpc.getServiceDescriptor(),
+        JobServiceGrpc.getKillJobMethod());
   }
 }

@@ -45,6 +45,18 @@ service JobService {
       get: "/v6/jobs/{job_id}/log"
     };
   }
+
+  // Terminates a running job. The caller may kill a job only if it is the
+  // job's run_as owner (or, when run_as is a group, a member of that group) or
+  // a member of the OmniLab admin group; otherwise the RPC fails with
+  // PERMISSION_DENIED. FE v6 performs this permission check itself and calls
+  // the master as the FE server, so the caller end-user is not propagated.
+  rpc KillJob(KillJobRequest) returns (KillJobResponse) {
+    option (google.api.http) = {
+      post: "/v6/jobs/{job_id}:kill"
+      body: "*"
+    };
+  }
 }
 
 message GetJobRequest {
@@ -55,6 +67,13 @@ message GetJobResponse {
   JobDetail job = 1;
   JobActions actions = 2;
 }
+
+message KillJobRequest {
+  // The ID of the job to terminate.
+  string job_id = 1;
+}
+
+message KillJobResponse {}
 
 message GetJobLogRequest {
   // The ID of the job whose log to retrieve.

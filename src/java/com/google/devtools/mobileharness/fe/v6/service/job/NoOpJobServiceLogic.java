@@ -23,12 +23,15 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobLogReques
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobLogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.job.KillJobRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.job.KillJobResponse;
+import java.util.Optional;
 
 /** No-op implementation of {@link JobServiceLogic} used when no MOSS backend is available. */
 public final class NoOpJobServiceLogic implements JobServiceLogic {
 
   @Override
-  public ListenableFuture<GetJobResponse> getJob(GetJobRequest request) {
+  public ListenableFuture<GetJobResponse> getJob(GetJobRequest request, Optional<String> caller) {
     return immediateFailedFuture(
         new UnsupportedOperationException("JobService.GetJob is not available."));
   }
@@ -37,5 +40,12 @@ public final class NoOpJobServiceLogic implements JobServiceLogic {
   public ListenableFuture<GetJobLogResponse> getJobLog(GetJobLogRequest request) {
     return immediateFailedFuture(
         new UnsupportedOperationException("JobService.GetJobLog is not available."));
+  }
+
+  @Override
+  public ListenableFuture<KillJobResponse> killJob(
+      KillJobRequest request, Optional<String> caller) {
+    return immediateFailedFuture(
+        new UnsupportedOperationException("JobService.KillJob is not available."));
   }
 }

@@ -21,15 +21,27 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobLogReques
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobLogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.job.KillJobRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.job.KillJobResponse;
+import java.util.Optional;
 
 /** Logic interface for the Job Detail service. */
 public interface JobServiceLogic {
 
   /**
    * Gets the full job detail (overview, execution details, config, troubleshooting, child tests).
+   *
+   * @param caller the authenticated caller's LDAP, used to compute the kill button's enabled state
    */
-  ListenableFuture<GetJobResponse> getJob(GetJobRequest request);
+  ListenableFuture<GetJobResponse> getJob(GetJobRequest request, Optional<String> caller);
 
   /** Gets a paginated chunk of the job log. */
   ListenableFuture<GetJobLogResponse> getJobLog(GetJobLogRequest request);
+
+  /**
+   * Kills a running job after verifying the caller's kill permission.
+   *
+   * @param caller the authenticated caller's LDAP, or empty when the request is unauthenticated
+   */
+  ListenableFuture<KillJobResponse> killJob(KillJobRequest request, Optional<String> caller);
 }
