@@ -171,6 +171,15 @@ public class JobSyncGrpcStub implements JobSyncStub {
   }
 
   @Override
+  public ListenableFuture<KillJobResponse> killJobAsync(KillJobRequest request) {
+    return GrpcStubUtil.invokeAsync(
+        jobSyncGrpcFutureStub::killJob,
+        request,
+        InfraErrorId.MASTER_RPC_STUB_JOB_SYNC_KILL_JOB_ERROR,
+        String.format("Failed to kill job %s", request.getJobId()));
+  }
+
+  @Override
   public void close() {
     closeable.close();
   }

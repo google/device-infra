@@ -124,4 +124,7 @@ public interface JobSyncStub extends AutoCloseable {
       throws RpcExceptionWithErrorId {
     return killJob(request);
   }
+
+  /** Kill a job asynchronously. */
+  ListenableFuture<KillJobResponse> killJobAsync(KillJobRequest request);
 }
