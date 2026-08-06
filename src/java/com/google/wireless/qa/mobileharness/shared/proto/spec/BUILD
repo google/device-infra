@@ -51,6 +51,7 @@ proto_library(
         ":android_switch_language_decorator_spec_proto",
         ":android_switch_user_decorator_spec_proto",
         ":android_test_loop_test_spec_proto",
+        ":android_video_decorator_spec_proto",
         ":apk_precondition_check_decorator_spec_proto",
         ":base_spec_proto",
         ":install_apk_step_spec_proto",
@@ -358,6 +359,20 @@ proto_library(
 java_proto_library(
     name = "android_switch_user_decorator_spec_java_proto",
     deps = [":android_switch_user_decorator_spec_proto"],
+)
+
+proto_library(
+    name = "android_video_decorator_spec_proto",
+    srcs = ["decorator/android_video_decorator_spec.proto"],
+    deps = [
+        ":base_spec_proto",
+        "@protobuf//:timestamp_proto",
+    ],
+)
+
+java_proto_library(
+    name = "android_video_decorator_spec_java_proto",
+    deps = [":android_video_decorator_spec_proto"],
 )
 
 proto_library(
