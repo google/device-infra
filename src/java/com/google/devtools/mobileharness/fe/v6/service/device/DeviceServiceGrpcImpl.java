@@ -28,6 +28,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatReq
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetTestbedConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthinessStats;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.PrepareDeviceRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.PrepareDeviceResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineDeviceRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineDeviceResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.RecoveryTaskStats;
@@ -161,5 +163,17 @@ public final class DeviceServiceGrpcImpl extends DeviceServiceGrpc.DeviceService
         executor,
         DeviceServiceGrpc.getServiceDescriptor(),
         DeviceServiceGrpc.getGetTestbedConfigMethod());
+  }
+
+  @Override
+  public void prepareDevice(
+      PrepareDeviceRequest request, StreamObserver<PrepareDeviceResponse> responseObserver) {
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        req -> logic.prepareDevice(req, Optional.empty()),
+        executor,
+        DeviceServiceGrpc.getServiceDescriptor(),
+        DeviceServiceGrpc.getPrepareDeviceMethod());
   }
 }

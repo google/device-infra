@@ -113,6 +113,14 @@ service DeviceService {
       get: "/v6/devices/{id}/testbed-config"
     };
   }
+
+  // Prepares the device (resets it to a known good state).
+  rpc PrepareDevice(PrepareDeviceRequest) returns (PrepareDeviceResponse) {
+    option (google.api.http) = {
+      post: "/v6/devices/{id}:prepare",
+      body: "*"
+    };
+  }
 }
 
 // Request message for GetTestbedConfig.
@@ -258,3 +266,15 @@ message UnquarantineDeviceRequest {
 
 // Response for UnquarantineDevice.
 message UnquarantineDeviceResponse {}
+
+// Request for PrepareDevice.
+message PrepareDeviceRequest {
+  // The device ID.
+  string id = 1;
+
+  // The universe the device belongs to.
+  string universe = 2;
+}
+
+// Response for PrepareDevice.
+message PrepareDeviceResponse {}

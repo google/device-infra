@@ -27,12 +27,15 @@ java_library(
         exclude = [
             "LogcatActionHelper.java",
             "NoOpLogcatActionHelper.java",
+            "NoOpPrepareDeviceActionHelper.java",
             "NoOpScreenshotActionHelper.java",
+            "PrepareDeviceActionHelper.java",
             "ScreenshotActionHelper.java",
         ],
     ),
     deps = [
         ":logcat_action_helper",
+        ":prepare_device_action_helper",
         ":screenshot_action_helper",
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
@@ -71,6 +74,20 @@ java_library(
     srcs = [
         "LogcatActionHelper.java",
         "NoOpLogcatActionHelper.java",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/device:device_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/errors",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "prepare_device_action_helper",
+    srcs = [
+        "NoOpPrepareDeviceActionHelper.java",
+        "PrepareDeviceActionHelper.java",
     ],
     deps = [
         "//src/devtools/mobileharness/fe/v6/service/proto/device:device_service_java_proto",

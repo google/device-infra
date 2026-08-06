@@ -24,9 +24,11 @@ import com.google.devtools.mobileharness.fe.v6.service.device.handlers.GetDevice
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.GetDeviceOverviewHandler;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.GetLogcatHandler;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.GetTestbedConfigHandler;
+import com.google.devtools.mobileharness.fe.v6.service.device.handlers.PrepareDeviceHandler;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.QuarantineDeviceHandler;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.TakeScreenshotHandler;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.UnquarantineDeviceHandler;
+import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHeaderInfoRequest;
@@ -38,6 +40,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatReq
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetTestbedConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthinessStats;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.PrepareDeviceRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.PrepareDeviceResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineDeviceRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineDeviceResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.RecoveryTaskStats;
@@ -65,6 +69,7 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
   private final QuarantineDeviceHandler quarantineDeviceHandler;
   private final TakeScreenshotHandler takeScreenshotHandler;
   private final UnquarantineDeviceHandler unquarantineDeviceHandler;
+  private final PrepareDeviceHandler prepareDeviceHandler;
 
   @Inject
   DeviceServiceLogicImpl(
@@ -75,7 +80,8 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
       UniverseFactory universeFactory,
       QuarantineDeviceHandler quarantineDeviceHandler,
       TakeScreenshotHandler takeScreenshotHandler,
-      UnquarantineDeviceHandler unquarantineDeviceHandler) {
+      UnquarantineDeviceHandler unquarantineDeviceHandler,
+      PrepareDeviceHandler prepareDeviceHandler) {
     this.getDeviceHeaderInfoHandler = getDeviceHeaderInfoHandler;
     this.getDeviceOverviewHandler = getDeviceOverviewHandler;
     this.getTestbedConfigHandler = getTestbedConfigHandler;
@@ -84,6 +90,7 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
     this.quarantineDeviceHandler = quarantineDeviceHandler;
     this.takeScreenshotHandler = takeScreenshotHandler;
     this.unquarantineDeviceHandler = unquarantineDeviceHandler;
+    this.prepareDeviceHandler = prepareDeviceHandler;
   }
 
   @Override
@@ -198,5 +205,17 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
       return immediateFailedFuture(e);
     }
     return getTestbedConfigHandler.getTestbedConfig(request, universe);
+  }
+
+  @Override
+  public ListenableFuture<PrepareDeviceResponse> prepareDevice(
+      PrepareDeviceRequest request, Optional<String> username) {
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(FeServiceException.invalidArgument(e.getMessage()));
+    }
+    return prepareDeviceHandler.prepareDevice(request, universe, username);
   }
 }

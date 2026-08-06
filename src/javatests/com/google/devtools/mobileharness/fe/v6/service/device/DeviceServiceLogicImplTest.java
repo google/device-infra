@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.DeviceView;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.DeviceHeaderInfoBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.LogcatActionHelper;
+import com.google.devtools.mobileharness.fe.v6.service.device.handlers.PrepareDeviceActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.ScreenshotActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.TestbedConfigBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.device.provider.RunningTestInfoProvider;
@@ -83,6 +84,7 @@ public final class DeviceServiceLogicImplTest {
   @Bind @Mock private DeviceHeaderInfoBuilder deviceHeaderInfoBuilder;
   @Bind @Mock private LogcatActionHelper logcatActionHelper;
   @Bind @Mock private ScreenshotActionHelper screenshotActionHelper;
+  @Bind @Mock private PrepareDeviceActionHelper prepareDeviceActionHelper;
   @Bind @Mock private SubDeviceInfoListFactory subDeviceInfoListFactory;
   @Bind @Mock private InstantSource instantSource;
   @Bind @Mock private UniverseFactory universeFactory;

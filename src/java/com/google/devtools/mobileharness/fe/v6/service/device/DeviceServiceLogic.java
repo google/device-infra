@@ -28,6 +28,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatReq
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetTestbedConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthinessStats;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.PrepareDeviceRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.PrepareDeviceResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineDeviceRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.QuarantineDeviceResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.RecoveryTaskStats;
@@ -66,4 +68,7 @@ public interface DeviceServiceLogic {
       UnquarantineDeviceRequest request);
 
   ListenableFuture<TestbedConfig> getTestbedConfig(GetTestbedConfigRequest request);
+
+  ListenableFuture<PrepareDeviceResponse> prepareDevice(
+      PrepareDeviceRequest request, Optional<String> username);
 }
