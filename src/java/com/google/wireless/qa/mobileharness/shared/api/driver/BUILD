@@ -331,6 +331,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message/event",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:tradefed_test_spec_java_proto",

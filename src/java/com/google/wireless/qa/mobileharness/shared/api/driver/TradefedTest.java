@@ -90,6 +90,7 @@ import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.TradefedTestDriverSpec;
@@ -130,6 +131,11 @@ public class TradefedTest extends BaseDriver
           "--compatibility:exclude-filter");
 
   private static final String TF_PATH_KEY = "TF_PATH";
+
+  private static final String INVOCATION_ID_PROPERTY = "ab_invocation_id";
+  private static final String WORKUNIT_ID_PROPERTY = "ab_workunit_id";
+  private static final String APPEND_ANTS_INVOCATION_DATA_KEY = "APPEND_ANTS_INVOCATION_DATA";
+  private static final String APPEND_RDB_INVOCATION_DATA_KEY = "APPEND_RDB_INVOCATION_DATA";
 
   private static final Duration KILL_TF_AFTER_FINISH_TIME = Duration.ofMinutes(4L);
 
@@ -926,8 +932,52 @@ public class TradefedTest extends BaseDriver
     } else {
       getDeviceIds().forEach(serial -> tradefedRunCommand.add("-s", serial));
     }
+    appendInvocationDataFromTestInfo(tradefedRunCommand, testInfo);
     appendInvocationDataFromHelper(tradefedRunCommand);
     return tradefedRunCommand.build();
+  }
+
+  private void appendInvocationDataFromTestInfo(
+      ImmutableList.Builder<String> tradefedRunCommand, TestInfo testInfo) {
+    boolean appendAnts = Boolean.parseBoolean(systemUtil.getEnv(APPEND_ANTS_INVOCATION_DATA_KEY));
+    boolean appendRdb = Boolean.parseBoolean(systemUtil.getEnv(APPEND_RDB_INVOCATION_DATA_KEY));
+
+    String workUnitId = testInfo.properties().get(WORKUNIT_ID_PROPERTY);
+    String invocationId = testInfo.jobInfo().properties().get(INVOCATION_ID_PROPERTY);
+    if (appendAnts && workUnitId != null && invocationId != null) {
+      addInvocationData(tradefedRunCommand, "invocation_id", invocationId);
+      addInvocationData(tradefedRunCommand, "work_unit_id", workUnitId);
+    }
+
+    String resultDbInvocationId =
+        testInfo.properties().getOptional(PropertyName.Test.RESULTDB_INVOCATION_ID).orElse("");
+    String resultDbUpdateToken =
+        testInfo.properties().getOptional(PropertyName.Test.RESULTDB_UPDATE_TOKEN).orElse("");
+    if (appendRdb && !resultDbInvocationId.isEmpty() && !resultDbUpdateToken.isEmpty()) {
+      addInvocationData(tradefedRunCommand, "resultdb_invocation_id", resultDbInvocationId);
+      addInvocationData(
+          tradefedRunCommand, "resultdb_invocation_update_token", resultDbUpdateToken);
+    }
+
+    String resultDbRootInvocationId =
+        testInfo.properties().getOptional(PropertyName.Test.RESULTDB_ROOT_INVOCATION_ID).orElse("");
+    String resultDbWorkUnitId =
+        testInfo.properties().getOptional(PropertyName.Test.RESULTDB_WORK_UNIT_ID).orElse("");
+    String resultDbWorkUnitUpdateToken =
+        testInfo
+            .properties()
+            .getOptional(PropertyName.Test.RESULTDB_WORK_UNIT_UPDATE_TOKEN)
+            .orElse("");
+    if (appendRdb
+        && !resultDbRootInvocationId.isEmpty()
+        && !resultDbWorkUnitId.isEmpty()
+        && !resultDbWorkUnitUpdateToken.isEmpty()) {
+      addInvocationData(
+          tradefedRunCommand, "resultdb_root_invocation_id", resultDbRootInvocationId);
+      addInvocationData(tradefedRunCommand, "resultdb_work_unit_id", resultDbWorkUnitId);
+      addInvocationData(
+          tradefedRunCommand, "resultdb_work_unit_update_token", resultDbWorkUnitUpdateToken);
+    }
   }
 
   private void appendInvocationDataFromHelper(ImmutableList.Builder<String> tradefedRunCommand)
