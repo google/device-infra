@@ -9,6 +9,7 @@ interface MockWindow {
   parent: {postMessage: jasmine.Spy};
   self: unknown;
   top: unknown;
+  history: {back: jasmine.Spy};
 }
 
 interface MockDocument {
@@ -32,7 +33,11 @@ describe('UrlService', () => {
       },
       self: {},
       top: {},
+      history: {
+        back: jasmine.createSpy('back'),
+      },
     };
+
     mockDocument = {
       defaultView: mockWin,
     };
@@ -173,6 +178,42 @@ describe('UrlService', () => {
 
       service.notifyNavigated('host_details', {'host_name': 'test-host'});
 
+      expect(mockWin.parent.postMessage).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('navigateToParent', () => {
+    it('should send postMessage to parent window if in embedded mode', () => {
+      mockWin.location.search = '?is_embedded_mode=true&origin=test-origin';
+      mockWin.self = {id: 'iframe'};
+      mockWin.top = {id: 'parent'};
+      TestBed.configureTestingModule({
+        providers: [UrlService, {provide: DOCUMENT, useValue: mockDocument}],
+      });
+      service = TestBed.inject(UrlService);
+
+      service.navigateToParent('host_search');
+
+      expect(mockWin.parent.postMessage).toHaveBeenCalledWith(
+        {
+          type: 'NAVIGATE_TO',
+          target: 'host_search',
+        },
+        'test-origin',
+      );
+      expect(mockWin.history.back).not.toHaveBeenCalled();
+    });
+
+    it('should call history.back() if not in embedded mode', () => {
+      mockWin.location.search = '';
+      TestBed.configureTestingModule({
+        providers: [UrlService, {provide: DOCUMENT, useValue: mockDocument}],
+      });
+      service = TestBed.inject(UrlService);
+
+      service.navigateToParent('host_search');
+
+      expect(mockWin.history.back).toHaveBeenCalled();
       expect(mockWin.parent.postMessage).not.toHaveBeenCalled();
     });
   });

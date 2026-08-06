@@ -1,11 +1,21 @@
 <div class="host-detail-container">
   @if (hostPageData$ | async; as data) {
-    @if (data.error) {
-      <div class="error-message">
-        <mat-icon class="error-icon">error_outline</mat-icon>
-        <p>{{ data.error }}</p>
-        <a routerLink="/dev/device-harness" class="m3-button">Back to Harness</a>
-      </div>
+    @if (data.isNotFound) {
+      <app-not-found-content
+        entityType="Host"
+        [entityId]="data.hostName || ''"
+        [backActionType]="BackActionType.HOST"
+        (refresh)="triggerRefresh()">
+      </app-not-found-content>
+
+    } @else if (data.error) {
+      <app-error-content
+        [errorMessage]="data.error"
+        [errorDetails]="data.errorDetails || ''"
+        errorTitle="Failed to Load Host"
+        pageType="host"
+        (refresh)="triggerRefresh()">
+      </app-error-content>
     } @else if (data.hostOverviewPageData; as pageData) {
       @let host = pageData.overviewContent;
       <div class="main-card">

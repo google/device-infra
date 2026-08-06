@@ -114,8 +114,8 @@ public final class GetHostOverviewHandler {
                     hostName, hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType), universe),
             executor);
 
-    // Only fetch the latest version for the self universe, as the routed universe(like vivo) is not
-    // supported.
+    // Only fetch the latest version for the self universe, as the routed universe (like vivo) is
+    // not supported.
     ListenableFuture<Optional<String>> latestVersionFuture =
         universe instanceof UniverseScope.SelfUniverse
             ? hostLatestVersionProvider.getLatestVersion(hostName, universe)
@@ -140,7 +140,7 @@ public final class GetHostOverviewHandler {
                       .map(LabData::getLabInfo)
                       .findFirst();
 
-              // A host is considered to exist iff it has a LabInfoService entry. Unknown hosts
+              // A host is considered to exist if it has a LabInfoService entry. Unknown hosts
               // (no labInfo) surface as NOT_FOUND instead of an empty 200 response.
               if (labInfoOpt.isEmpty()) {
                 throw FeServiceException.notFound(String.format("Host %s not found.", hostName));

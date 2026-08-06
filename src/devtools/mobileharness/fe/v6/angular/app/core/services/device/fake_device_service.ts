@@ -59,7 +59,14 @@ export class FakeDeviceService extends DeviceService {
     if (!wrapper) {
       return throwError(
         () =>
-          new Error(`Device with ID '${request.id}' not found in mock data.`),
+          new HttpErrorResponse({
+            error: {
+              code: 5,
+              message: `Device with ID '${request.id}' not found in mock data.`,
+            },
+            status: 404,
+            statusText: 'Not Found',
+          }),
       ).pipe(delay(1000));
     }
 

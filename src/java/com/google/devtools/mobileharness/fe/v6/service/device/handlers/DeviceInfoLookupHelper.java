@@ -24,6 +24,7 @@ import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilte
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
+import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
@@ -38,8 +39,12 @@ public final class DeviceInfoLookupHelper {
   /**
    * Looks up the {@link DeviceInfo} for a single device ID.
    *
+   * @param labInfoProvider the provider for querying lab and device information
+   * @param deviceId the unique ID of the device to look up
+   * @param universe the universe scope for the request
+   * @param executor the executor to run asynchronous transformations
    * @return a future that resolves to the DeviceInfo
-   * @throws RuntimeException if the device is not found during future transformation
+   * @throws FeServiceException if the device is not found during future transformation
    */
   public static ListenableFuture<DeviceInfo> lookUpDeviceInfoAsync(
       LabInfoProvider labInfoProvider, String deviceId, UniverseScope universe, Executor executor) {
@@ -84,7 +89,7 @@ public final class DeviceInfoLookupHelper {
         .findFirst()
         .orElseThrow(
             () ->
-                new RuntimeException(
+                FeServiceException.notFound(
                     "Device not found: "
                         + deviceId
                         + " in universe: "
