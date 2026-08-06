@@ -47,11 +47,13 @@ enum SearchEntity {
 }
 
 // Which fleet to search.
-// The OSS build omits this (UNSPECIFIED); the server treats it as ATS.
-// The internal build sends FLEET_INTERNAL or FLEET_ATS from its fleet switcher.
+//
+// FLEET_SELF = devices managed by this server's own lab infrastructure.
+// FLEET_UNSPECIFIED defaults to FLEET_SELF.
+//
 enum Fleet {
   FLEET_UNSPECIFIED = 0;
-  FLEET_INTERNAL = 1;
+  FLEET_SELF = 1;
   FLEET_ATS = 2;
 }
 
