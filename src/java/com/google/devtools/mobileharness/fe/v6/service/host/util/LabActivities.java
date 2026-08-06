@@ -17,92 +17,78 @@
 package com.google.devtools.mobileharness.fe.v6.service.host.util;
 
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostReleaseInfo;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostConnectivityStatus;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo.Activity;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo.ActivityState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerReleaseState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerReleaseStatus;
 import java.util.Optional;
 
-/** Utility class for creating {@link Activity}. */
+/** Utility class for creating {@link LabServerReleaseStatus}. */
 public final class LabActivities {
 
   private LabActivities() {}
 
   /**
-   * Creates the {@link Activity} based on the {@link HostReleaseInfo.ComponentInfo} and {@link
-   * HostConnectivityStatus}.
+   * Creates the {@link LabServerReleaseStatus} based on the {@link HostReleaseInfo.ComponentInfo}.
    */
-  public static Activity create(
-      Optional<HostReleaseInfo.ComponentInfo> labReleaseOpt,
-      HostConnectivityStatus connectivityStatus,
-      boolean isCoreLab) {
+  public static LabServerReleaseStatus create(
+      Optional<HostReleaseInfo.ComponentInfo> labReleaseOpt, boolean isCoreLab) {
     if (labReleaseOpt.isEmpty()) {
       if (isCoreLab) {
-        return Activity.newBuilder()
-            .setState(ActivityState.ACTIVITY_STATE_UNSPECIFIED)
+        return LabServerReleaseStatus.newBuilder()
+            .setState(LabServerReleaseState.LAB_SERVER_RELEASE_STATE_UNSPECIFIED)
             .setTitle("N/A")
-            .setTooltip("Lab Server activity is not applicable for Core Labs.")
+            .setTooltip("Lab Server release status is not applicable for Core Labs.")
             .build();
       } else {
-        return Activity.newBuilder()
-            .setState(ActivityState.UNKNOWN)
+        return LabServerReleaseStatus.newBuilder()
+            .setState(LabServerReleaseState.LAB_SERVER_RELEASE_STATE_UNKNOWN)
             .setTitle("Unknown")
-            .setTooltip("Lab Server activity is unknown.")
+            .setTooltip("Lab Server release status is unknown.")
             .build();
       }
     }
     String rawStatus = labReleaseOpt.get().status().orElse("UNKNOWN");
-    Activity.Builder builder = Activity.newBuilder();
-    ActivityState activityState = ActivityState.UNKNOWN;
+    LabServerReleaseStatus.Builder builder = LabServerReleaseStatus.newBuilder();
+    LabServerReleaseState state = LabServerReleaseState.LAB_SERVER_RELEASE_STATE_UNKNOWN;
     String title = "Unknown";
-    String tooltip = "The Lab Server activity state is unknown.";
+    String tooltip = "The Lab Server release status is unknown.";
 
     switch (rawStatus) {
       case "STARTING" -> {
-        activityState = ActivityState.STARTING;
+        state = LabServerReleaseState.LAB_SERVER_RELEASE_STATE_STARTING;
         title = "Starting";
         tooltip = "The release system is attempting to start the Lab Server process.";
       }
       case "RUNNING" -> {
-        if (connectivityStatus.getState() == HostConnectivityStatus.State.MISSING) {
-          activityState = ActivityState.STARTED_BUT_DISCONNECTED;
-          title = "Started (but disconnected)";
-          tooltip =
-              "The Lab Server process was started by the release system, but OmniLab is NOT"
-                  + " receiving heartbeats from this host.";
-        } else {
-          activityState = ActivityState.STARTED;
-          title = "Started";
-          tooltip =
-              "The Lab Server process was started by the release system, and OmniLab is receiving"
-                  + " heartbeats.";
-        }
+        state = LabServerReleaseState.LAB_SERVER_RELEASE_STATE_RUNNING;
+        title = "Running";
+        tooltip = "The Lab Server process is running as reported by the release system.";
       }
       case "ERROR" -> {
-        activityState = ActivityState.ERROR;
+        state = LabServerReleaseState.LAB_SERVER_RELEASE_STATE_ERROR;
         title = "Error";
         tooltip =
             "The release system encountered an error attempting to manage the Lab Server process"
                 + " on this host.";
       }
       case "DRAINING" -> {
-        activityState = ActivityState.DRAINING;
+        state = LabServerReleaseState.LAB_SERVER_RELEASE_STATE_DRAINING;
         title = "Draining";
         tooltip =
             "The Lab Server is finishing its current tasks and will not accept new ones before"
                 + " stopping.";
       }
       case "DRAINED" -> {
-        activityState = ActivityState.DRAINED;
+        state = LabServerReleaseState.LAB_SERVER_RELEASE_STATE_DRAINED;
         title = "Drained";
         tooltip = "The Lab Server has finished all tasks and is not accepting new ones.";
       }
       case "STOPPING" -> {
-        activityState = ActivityState.STOPPING;
+        state = LabServerReleaseState.LAB_SERVER_RELEASE_STATE_STOPPING;
         title = "Stopping";
         tooltip = "The release system is attempting to stop the Lab Server process.";
       }
       case "STOPPED" -> {
-        activityState = ActivityState.STOPPED;
+        state = LabServerReleaseState.LAB_SERVER_RELEASE_STATE_STOPPED;
         title = "Stopped";
         tooltip = "The Lab Server process is reported as stopped by the release system.";
       }
@@ -110,6 +96,6 @@ public final class LabActivities {
         // Defaults are already set
       }
     }
-    return builder.setState(activityState).setTitle(title).setTooltip(tooltip).build();
+    return builder.setState(state).setTitle(title).setTooltip(tooltip).build();
   }
 }

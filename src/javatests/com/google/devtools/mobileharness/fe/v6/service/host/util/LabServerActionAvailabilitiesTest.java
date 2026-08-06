@@ -18,8 +18,8 @@ package com.google.devtools.mobileharness.fe.v6.service.host.util;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo.Activity;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo.ActivityState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerReleaseState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerReleaseStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.LifecycleActionType;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -32,42 +32,49 @@ public final class LabServerActionAvailabilitiesTest {
 
   @Test
   public void start_targetActivities_true() {
-    for (ActivityState s :
-        new ActivityState[] {ActivityState.DRAINED, ActivityState.STOPPED, ActivityState.UNKNOWN}) {
+    for (LabServerReleaseState s :
+        new LabServerReleaseState[] {
+          LabServerReleaseState.LAB_SERVER_RELEASE_STATE_DRAINED,
+          LabServerReleaseState.LAB_SERVER_RELEASE_STATE_STOPPED,
+          LabServerReleaseState.LAB_SERVER_RELEASE_STATE_UNKNOWN
+        }) {
       assertThat(
               LabServerActionAvailabilities.isTargetActivity(
-                  LifecycleActionType.START, activity(s)))
+                  LifecycleActionType.START, releaseStatus(s)))
           .isTrue();
     }
   }
 
   @Test
   public void start_nonTargetActivities_false() {
-    for (ActivityState s :
-        new ActivityState[] {
-          ActivityState.STARTED, ActivityState.STARTED_BUT_DISCONNECTED, ActivityState.ERROR
+    for (LabServerReleaseState s :
+        new LabServerReleaseState[] {
+          LabServerReleaseState.LAB_SERVER_RELEASE_STATE_RUNNING,
+          LabServerReleaseState.LAB_SERVER_RELEASE_STATE_ERROR
         }) {
       assertThat(
               LabServerActionAvailabilities.isTargetActivity(
-                  LifecycleActionType.START, activity(s)))
+                  LifecycleActionType.START, releaseStatus(s)))
           .isFalse();
     }
   }
 
-  // Restart/Stop target activities: STARTED, STARTED_BUT_DISCONNECTED, ERROR.
+  // Restart/Stop target activities: RUNNING, ERROR.
 
   @Test
   public void restartAndStop_targetActivities_true() {
-    for (ActivityState s :
-        new ActivityState[] {
-          ActivityState.STARTED, ActivityState.STARTED_BUT_DISCONNECTED, ActivityState.ERROR
+    for (LabServerReleaseState s :
+        new LabServerReleaseState[] {
+          LabServerReleaseState.LAB_SERVER_RELEASE_STATE_RUNNING,
+          LabServerReleaseState.LAB_SERVER_RELEASE_STATE_ERROR
         }) {
       assertThat(
               LabServerActionAvailabilities.isTargetActivity(
-                  LifecycleActionType.RESTART, activity(s)))
+                  LifecycleActionType.RESTART, releaseStatus(s)))
           .isTrue();
       assertThat(
-              LabServerActionAvailabilities.isTargetActivity(LifecycleActionType.STOP, activity(s)))
+              LabServerActionAvailabilities.isTargetActivity(
+                  LifecycleActionType.STOP, releaseStatus(s)))
           .isTrue();
     }
   }
@@ -76,15 +83,17 @@ public final class LabServerActionAvailabilitiesTest {
   public void restartAndStop_stopped_false() {
     assertThat(
             LabServerActionAvailabilities.isTargetActivity(
-                LifecycleActionType.RESTART, activity(ActivityState.STOPPED)))
+                LifecycleActionType.RESTART,
+                releaseStatus(LabServerReleaseState.LAB_SERVER_RELEASE_STATE_STOPPED)))
         .isFalse();
     assertThat(
             LabServerActionAvailabilities.isTargetActivity(
-                LifecycleActionType.STOP, activity(ActivityState.STOPPED)))
+                LifecycleActionType.STOP,
+                releaseStatus(LabServerReleaseState.LAB_SERVER_RELEASE_STATE_STOPPED)))
         .isFalse();
   }
 
-  private static Activity activity(ActivityState state) {
-    return Activity.newBuilder().setState(state).build();
+  private static LabServerReleaseStatus releaseStatus(LabServerReleaseState state) {
+    return LabServerReleaseStatus.newBuilder().setState(state).build();
   }
 }

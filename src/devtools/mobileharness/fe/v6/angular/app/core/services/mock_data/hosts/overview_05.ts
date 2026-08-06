@@ -21,12 +21,7 @@ const overview: HostOverview = {
       tooltip:
         'Host is running and connected. OmniLab is receiving heartbeats.',
     },
-    activity: {
-      state: 'STOPPING',
-      title: 'Stopping',
-      tooltip:
-        'The release system is attempting to stop the Lab Server process.',
-    },
+
     version: 'R123.45.6',
     passThroughFlags: '',
   },
@@ -37,6 +32,12 @@ const overview: HostOverview = {
       tooltip: 'The Daemon Server is running.',
     },
     version: '24.08.01',
+    labServerReleaseStatus: {
+      state: 'LAB_SERVER_RELEASE_STATE_STOPPING' as const,
+      title: 'Stopping',
+      tooltip:
+        'The release system is attempting to stop the Lab Server process.',
+    },
   },
   properties: {},
 };

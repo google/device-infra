@@ -31,11 +31,7 @@ function createHostOverview(
         title: connectivityState,
         tooltip: 'Connectivity status',
       },
-      activity: {
-        state: 'STARTED',
-        title: 'Started',
-        tooltip: 'Activity status',
-      },
+
       version: 'R123.45.6',
       passThroughFlags: '',
     },
@@ -46,6 +42,11 @@ function createHostOverview(
         tooltip: 'Daemon running',
       },
       version: '24.08.01',
+      labServerReleaseStatus: {
+        state: 'LAB_SERVER_RELEASE_STATE_RUNNING' as const,
+        title: 'Running',
+        tooltip: 'Activity status',
+      },
     },
     properties: {},
   };

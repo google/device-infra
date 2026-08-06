@@ -16,13 +16,13 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 
-import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static org.mockito.Mockito.when;
 
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostConnectivityStatus;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerReleaseStatus;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.Optional;
 import org.junit.Before;
@@ -46,8 +46,8 @@ public final class LabServerActionsBuilderTest {
 
   private LabServerActionsBuilder labServerActionsBuilder;
   private static final UniverseScope UNIVERSE = new UniverseScope.SelfUniverse();
-  private static final LabServerInfo.Activity ACTIVITY =
-      LabServerInfo.Activity.getDefaultInstance();
+  private static final LabServerReleaseStatus RELEASE_STATUS =
+      LabServerReleaseStatus.getDefaultInstance();
   private static final HostConnectivityStatus CONNECTIVITY_STATUS =
       HostConnectivityStatus.getDefaultInstance();
   private static final DaemonServerInfo.Status DAEMON_STATUS =
@@ -74,7 +74,7 @@ public final class LabServerActionsBuilderTest {
             UNIVERSE,
             Optional.empty(),
             Optional.empty(),
-            ACTIVITY,
+            RELEASE_STATUS,
             CONNECTIVITY_STATUS,
             DAEMON_STATUS))
         .thenReturn(startState);
@@ -82,7 +82,7 @@ public final class LabServerActionsBuilderTest {
             UNIVERSE,
             Optional.empty(),
             Optional.empty(),
-            ACTIVITY,
+            RELEASE_STATUS,
             CONNECTIVITY_STATUS,
             DAEMON_STATUS))
         .thenReturn(restartState);
@@ -90,7 +90,7 @@ public final class LabServerActionsBuilderTest {
             UNIVERSE,
             Optional.empty(),
             Optional.empty(),
-            ACTIVITY,
+            RELEASE_STATUS,
             CONNECTIVITY_STATUS,
             DAEMON_STATUS))
         .thenReturn(stopState);
@@ -103,7 +103,7 @@ public final class LabServerActionsBuilderTest {
             UNIVERSE,
             Optional.empty(),
             Optional.empty(),
-            ACTIVITY,
+            RELEASE_STATUS,
             CONNECTIVITY_STATUS,
             DAEMON_STATUS);
 

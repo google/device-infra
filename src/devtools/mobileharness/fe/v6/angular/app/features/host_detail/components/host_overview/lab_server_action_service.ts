@@ -157,7 +157,7 @@ export class LabServerActionService {
             contentComponent: LabServerOperationContent,
             contentComponentInputs: {
               'hostName': host.hostName,
-              'status': host.labServer.activity?.state ?? 'UNKNOWN',
+              'status': host.daemonServer.labServerReleaseStatus?.state ?? 'UNKNOWN',
               'operation': 'START',
             },
             type: 'info',
@@ -209,7 +209,7 @@ export class LabServerActionService {
             contentComponent: LabServerOperationContent,
             contentComponentInputs: {
               'hostName': host.hostName,
-              'status': host.labServer.activity?.state ?? 'UNKNOWN',
+              'status': host.daemonServer.labServerReleaseStatus?.state ?? 'UNKNOWN',
               'operation': 'STOP',
             },
             type: 'error',
@@ -261,7 +261,7 @@ export class LabServerActionService {
             contentComponent: LabServerOperationContent,
             contentComponentInputs: {
               'hostName': host.hostName,
-              'status': host.labServer.activity?.state ?? 'UNKNOWN',
+              'status': host.daemonServer.labServerReleaseStatus?.state ?? 'UNKNOWN',
               'operation': 'RESTART',
             },
             type: 'warning',

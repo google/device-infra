@@ -21,7 +21,8 @@ import static org.mockito.Mockito.when;
 
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostConnectivityStatus;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerReleaseState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerReleaseStatus;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManager;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
@@ -64,7 +65,7 @@ public final class LabServerRestartButtonBuilderTest {
             UNIVERSE,
             Optional.empty(),
             Optional.empty(),
-            LabServerInfo.Activity.getDefaultInstance(),
+            LabServerReleaseStatus.getDefaultInstance(),
             HostConnectivityStatus.getDefaultInstance(),
             DaemonServerInfo.Status.getDefaultInstance());
 
@@ -80,7 +81,7 @@ public final class LabServerRestartButtonBuilderTest {
             UNIVERSE,
             Optional.empty(),
             Optional.of("fusion"),
-            LabServerInfo.Activity.getDefaultInstance(),
+            LabServerReleaseStatus.getDefaultInstance(),
             HostConnectivityStatus.getDefaultInstance(),
             DaemonServerInfo.Status.getDefaultInstance());
 
@@ -96,15 +97,17 @@ public final class LabServerRestartButtonBuilderTest {
         HostConnectivityStatus.newBuilder().setState(HostConnectivityStatus.State.RUNNING).build();
     DaemonServerInfo.Status daemonRunning =
         DaemonServerInfo.Status.newBuilder().setState(DaemonServerInfo.State.RUNNING).build();
-    LabServerInfo.Activity startedActivity =
-        LabServerInfo.Activity.newBuilder().setState(LabServerInfo.ActivityState.STARTED).build();
+    LabServerReleaseStatus runningLabStatus =
+        LabServerReleaseStatus.newBuilder()
+            .setState(LabServerReleaseState.LAB_SERVER_RELEASE_STATE_RUNNING)
+            .build();
 
     var result =
         labServerRestartButtonBuilder.build(
             UNIVERSE,
             Optional.empty(),
             Optional.empty(),
-            startedActivity,
+            runningLabStatus,
             runningStatus,
             daemonRunning);
 
@@ -122,8 +125,10 @@ public final class LabServerRestartButtonBuilderTest {
         HostConnectivityStatus.newBuilder().setState(HostConnectivityStatus.State.RUNNING).build();
     DaemonServerInfo.Status daemonNotRunning =
         DaemonServerInfo.Status.newBuilder().setState(DaemonServerInfo.State.MISSING).build();
-    LabServerInfo.Activity startedActivity =
-        LabServerInfo.Activity.newBuilder().setState(LabServerInfo.ActivityState.STARTED).build();
+    LabServerReleaseStatus runningLabStatus =
+        LabServerReleaseStatus.newBuilder()
+            .setState(LabServerReleaseState.LAB_SERVER_RELEASE_STATE_RUNNING)
+            .build();
 
     // Visible because the activity is a valid Restart target; disabled because daemon is missing.
     var result =
@@ -131,7 +136,7 @@ public final class LabServerRestartButtonBuilderTest {
             UNIVERSE,
             Optional.empty(),
             Optional.empty(),
-            startedActivity,
+            runningLabStatus,
             runningStatus,
             daemonNotRunning);
 
@@ -147,15 +152,17 @@ public final class LabServerRestartButtonBuilderTest {
         HostConnectivityStatus.newBuilder().setState(HostConnectivityStatus.State.RUNNING).build();
     DaemonServerInfo.Status daemonRunning =
         DaemonServerInfo.Status.newBuilder().setState(DaemonServerInfo.State.RUNNING).build();
-    LabServerInfo.Activity stoppedActivity =
-        LabServerInfo.Activity.newBuilder().setState(LabServerInfo.ActivityState.STOPPED).build();
+    LabServerReleaseStatus stoppedStatus =
+        LabServerReleaseStatus.newBuilder()
+            .setState(LabServerReleaseState.LAB_SERVER_RELEASE_STATE_STOPPED)
+            .build();
 
     var result =
         labServerRestartButtonBuilder.build(
             UNIVERSE,
             Optional.empty(),
             Optional.empty(),
-            stoppedActivity,
+            stoppedStatus,
             runningStatus,
             daemonRunning);
 
@@ -171,15 +178,17 @@ public final class LabServerRestartButtonBuilderTest {
         HostConnectivityStatus.newBuilder().setState(HostConnectivityStatus.State.MISSING).build();
     DaemonServerInfo.Status daemonRunning =
         DaemonServerInfo.Status.newBuilder().setState(DaemonServerInfo.State.RUNNING).build();
-    LabServerInfo.Activity startedActivity =
-        LabServerInfo.Activity.newBuilder().setState(LabServerInfo.ActivityState.STARTED).build();
+    LabServerReleaseStatus runningLabStatus =
+        LabServerReleaseStatus.newBuilder()
+            .setState(LabServerReleaseState.LAB_SERVER_RELEASE_STATE_RUNNING)
+            .build();
 
     var result =
         labServerRestartButtonBuilder.build(
             UNIVERSE,
             Optional.empty(),
             Optional.empty(),
-            startedActivity,
+            runningLabStatus,
             missingStatus,
             daemonRunning);
 

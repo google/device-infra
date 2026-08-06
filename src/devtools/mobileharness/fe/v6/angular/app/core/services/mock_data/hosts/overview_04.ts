@@ -23,12 +23,7 @@ const overview: HostOverview = {
       tooltip:
         'Heartbeat is missing. OmniLab has not received a heartbeat from this host since Nov 4, 2025, 10:00 PM PST.',
     },
-    activity: {
-      state: 'STOPPED',
-      title: 'Stopped',
-      tooltip:
-        'The Lab Server process is reported as stopped by the release system.',
-    },
+
     version: 'R122.0.5',
     passThroughFlags: '',
   },
@@ -41,6 +36,12 @@ const overview: HostOverview = {
         'The Daemon Server is missing. No heartbeat received since Nov 4, 2025, 10:00 PM PST.',
     },
     version: '24.07.05',
+    labServerReleaseStatus: {
+      state: 'LAB_SERVER_RELEASE_STATE_STOPPED' as const,
+      title: 'Stopped',
+      tooltip:
+        'The Lab Server process is reported as stopped by the release system.',
+    },
   },
   properties: {'cpu-arch': 'ARM64', 'gpu-type': 'none', 'ram-gb': '128'},
 };

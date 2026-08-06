@@ -23,12 +23,7 @@ const overview: HostOverview = {
       tooltip:
         'Heartbeat is missing. OmniLab has not received a heartbeat from this host since Nov 4, 2025, 11:30 PM PST.',
     },
-    activity: {
-      state: 'STARTED_BUT_DISCONNECTED',
-      title: 'Started (but disconnected)',
-      tooltip:
-        'The Lab Server process was started by the release system, but OmniLab is NOT receiving heartbeats from this host.',
-    },
+
     version: 'R123.45.7',
     passThroughFlags: '',
   },
@@ -39,6 +34,12 @@ const overview: HostOverview = {
       tooltip: 'The Daemon Server is running.',
     },
     version: '24.08.01',
+    labServerReleaseStatus: {
+      state: 'LAB_SERVER_RELEASE_STATE_RUNNING' as const,
+      title: 'Running',
+      tooltip:
+        'The Lab Server process was started by the release system, but OmniLab is NOT receiving heartbeats from this host.',
+    },
   },
   properties: {},
 };

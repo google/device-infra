@@ -22,7 +22,7 @@ const overview: HostOverview = {
       tooltip:
         'Host is running and connected. OmniLab is receiving heartbeats.',
     },
-    activity: undefined, // release_status is null for Core Lab
+
     version: 'R120.10.2',
     passThroughFlags: '',
   },

@@ -53,12 +53,7 @@ const overview: HostOverview = {
       tooltip:
         'Host is running and connected. OmniLab is receiving heartbeats.',
     },
-    activity: {
-      state: 'STARTED',
-      title: 'Started',
-      tooltip:
-        'The Lab Server process was started by the release system, and OmniLab is receiving heartbeats.',
-    },
+
     version: 'R123.45.6',
     passThroughFlags:
       '--nomute_android --noandroid_device_daemon --enable_linux_device --flashstation_cache_dir=/tmp/flashstation_cache --adb=/usr/bin/adb --fastboot=/usr/bin/fastboot',
@@ -70,6 +65,12 @@ const overview: HostOverview = {
       tooltip: 'The Daemon Server is running.',
     },
     version: '24.08.01',
+    labServerReleaseStatus: {
+      state: 'LAB_SERVER_RELEASE_STATE_RUNNING' as const,
+      title: 'Running',
+      tooltip:
+        'The Lab Server process was started by the release system, and OmniLab is receiving heartbeats.',
+    },
   },
   properties: {
     'cpu-arch': 'x86_64',

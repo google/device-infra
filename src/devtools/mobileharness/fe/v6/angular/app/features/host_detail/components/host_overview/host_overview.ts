@@ -59,7 +59,7 @@ import {
   DeviceSummary,
   DiagnosticLink,
   HostConnectivityStatus,
-  LabServerActivity,
+  LabServerReleaseStatus,
   UiLabType,
   type HostOverview,
 } from '../../../../core/models/host_overview';
@@ -124,18 +124,17 @@ const DEFAULT_HEALTH_SEMANTIC = {
   text: 'Unknown',
 };
 
-const LAB_ACTIVITY_SEMANTIC_MAP: Record<
+const LAB_RELEASE_STATUS_SEMANTIC_MAP: Record<
   string,
   {icon: string; colorClass: string; isSpinning?: boolean}
 > = {
-  'STARTED': {icon: 'check', colorClass: 'text-green-600'},
-  'STARTED_BUT_DISCONNECTED': {icon: 'warning', colorClass: 'text-amber-600'},
-  'STARTING': {icon: 'sync', colorClass: 'text-blue-600', isSpinning: true},
-  'ERROR': {icon: 'error_outline', colorClass: 'text-red-600'},
-  'DRAINING': {icon: 'timelapse', colorClass: 'text-amber-600'},
-  'DRAINED': {icon: 'hourglass_empty', colorClass: 'text-gray-600'},
-  'STOPPING': {icon: 'sync', colorClass: 'text-blue-600', isSpinning: true},
-  'STOPPED': {icon: 'stop_circle', colorClass: 'text-gray-700'},
+  'LAB_SERVER_RELEASE_STATE_RUNNING': {icon: 'check_circle', colorClass: 'text-green-600'},
+  'LAB_SERVER_RELEASE_STATE_STARTING': {icon: 'sync', colorClass: 'text-blue-600', isSpinning: true},
+  'LAB_SERVER_RELEASE_STATE_ERROR': {icon: 'error_outline', colorClass: 'text-red-600'},
+  'LAB_SERVER_RELEASE_STATE_DRAINING': {icon: 'timelapse', colorClass: 'text-amber-600'},
+  'LAB_SERVER_RELEASE_STATE_DRAINED': {icon: 'hourglass_empty', colorClass: 'text-gray-600'},
+  'LAB_SERVER_RELEASE_STATE_STOPPING': {icon: 'sync', colorClass: 'text-blue-600', isSpinning: true},
+  'LAB_SERVER_RELEASE_STATE_STOPPED': {icon: 'stop_circle', colorClass: 'text-gray-700'},
 };
 
 const STATUS_SEMANTIC_MAP: Record<string, {icon: string; colorClass: string}> =
@@ -506,14 +505,14 @@ export class HostOverviewPage {
     });
   }
 
-  getLabActivitySemantic(activity: LabServerActivity) {
-    const config = LAB_ACTIVITY_SEMANTIC_MAP[activity.state];
+  getReleaseStatusSemantic(releaseStatus: LabServerReleaseStatus) {
+    const config = LAB_RELEASE_STATUS_SEMANTIC_MAP[releaseStatus.state];
     return {
       icon: config?.icon ?? 'help_outline',
       colorClass: config?.colorClass ?? 'text-gray-700',
-      text: activity.title,
+      text: releaseStatus.title,
       isSpinning: config?.isSpinning ?? false,
-      tooltip: activity.tooltip,
+      tooltip: releaseStatus.tooltip,
     };
   }
 

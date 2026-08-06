@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -51,6 +52,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostHeaderInfo
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverview;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerReleaseStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UiLabType;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
@@ -117,7 +119,7 @@ public final class GetHostOverviewHandler {
     ListenableFuture<Optional<String>> latestVersionFuture =
         universe instanceof UniverseScope.SelfUniverse
             ? hostLatestVersionProvider.getLatestVersion(hostName, universe)
-            : Futures.immediateFuture(Optional.empty());
+            : immediateFuture(Optional.empty());
 
     return Futures.whenAllSucceed(
             labInfoFuture,
@@ -147,13 +149,22 @@ public final class GetHostOverviewHandler {
               Optional<String> currentVersionOpt =
                   HostVersionUtil.resolveCurrentVersion(labInfoOpt, hostReleaseInfoOpt);
 
+              Optional<HostReleaseInfo.ComponentInfo> labReleaseOpt =
+                  hostReleaseInfoOpt.flatMap(HostReleaseInfo::labServerReleaseInfo);
+              boolean isCoreLab =
+                  HostTypes.determineUiLabTypes(
+                          labInfoOpt, hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType))
+                      .contains(UiLabType.CORE);
+              LabServerReleaseStatus releaseStatus = LabActivities.create(labReleaseOpt, isCoreLab);
+
               LabServerInfo labServerInfo =
                   buildLabServerInfo(
                       labInfoOpt,
                       hostReleaseInfoOpt,
                       passThroughFlagsOpt,
                       currentVersionOpt,
-                      universe);
+                      universe,
+                      releaseStatus);
 
               boolean canUpgrade =
                   (universe instanceof UniverseScope.SelfUniverse)
@@ -166,7 +177,8 @@ public final class GetHostOverviewHandler {
                       hostReleaseInfoOpt,
                       diagnosticLinks,
                       labServerInfo,
-                      canUpgrade);
+                      canUpgrade,
+                      releaseStatus);
 
               Optional<String> labTypeOpt = hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType);
 
@@ -219,7 +231,8 @@ public final class GetHostOverviewHandler {
       Optional<HostReleaseInfo> hostReleaseInfoOpt,
       List<DiagnosticLink> diagnosticLinks,
       LabServerInfo labServerInfo,
-      boolean canUpgrade) {
+      boolean canUpgrade,
+      LabServerReleaseStatus releaseStatus) {
     HostOverview.Builder builder = HostOverview.newBuilder().setHostName(hostName);
 
     ImmutableMap<String, String> properties =
@@ -243,9 +256,7 @@ public final class GetHostOverviewHandler {
           builder.setIp(ip);
         });
 
-    builder.setOs(properties.getOrDefault("host_os", "Unknown"));
-
-    builder.setCanUpgrade(canUpgrade);
+    builder.setOs(properties.getOrDefault("host_os", "Unknown")).setCanUpgrade(canUpgrade);
 
     Optional<String> labTypeOpt = hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType);
     ImmutableList<UiLabType> uiLabTypes = HostTypes.determineUiLabTypes(labInfoOpt, labTypeOpt);
@@ -257,7 +268,7 @@ public final class GetHostOverviewHandler {
         .addAllUiLabTypes(uiLabTypes)
         .setShowPassThroughFlags(!isCoreOrFusion)
         .setLabServer(labServerInfo)
-        .setDaemonServer(buildDaemonServerInfo(hostReleaseInfoOpt))
+        .setDaemonServer(buildDaemonServerInfo(hostReleaseInfoOpt, releaseStatus))
         .addAllDiagnosticLinks(diagnosticLinks)
         .build();
   }
@@ -288,25 +299,14 @@ public final class GetHostOverviewHandler {
       Optional<HostReleaseInfo> hostReleaseInfoOpt,
       Optional<String> passThroughFlagsOpt,
       Optional<String> currentVersionOpt,
-      UniverseScope universe) {
+      UniverseScope universe,
+      LabServerReleaseStatus releaseStatus) {
     LabServerInfo.Builder builder = LabServerInfo.newBuilder();
 
     HostConnectivityStatus connectivityStatus = HostConnectivityStatuses.create(labInfoOpt);
     builder.setConnectivity(connectivityStatus);
 
     currentVersionOpt.ifPresent(builder::setVersion);
-
-    Optional<HostReleaseInfo.ComponentInfo> labReleaseOpt =
-        hostReleaseInfoOpt.flatMap(HostReleaseInfo::labServerReleaseInfo);
-
-    boolean isCoreLab =
-        HostTypes.determineLabTypeDisplayNames(
-                labInfoOpt, hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType))
-            .contains(HostTypes.LAB_TYPE_CORE);
-
-    LabServerInfo.Activity activity =
-        LabActivities.create(labReleaseOpt, connectivityStatus, isCoreLab);
-    builder.setActivity(activity);
 
     passThroughFlagsOpt.ifPresent(builder::setPassThroughFlags);
 
@@ -316,14 +316,15 @@ public final class GetHostOverviewHandler {
         hostReleaseInfoOpt.flatMap(HostReleaseInfo::daemonServerReleaseInfo);
     DaemonServerInfo.Status daemonStatus = DaemonStatuses.create(daemonReleaseOpt);
 
-    builder.setActions(
-        labServerActionsBuilder.build(
-            universe, labInfoOpt, labTypeOpt, activity, connectivityStatus, daemonStatus));
-
-    return builder.build();
+    return builder
+        .setActions(
+            labServerActionsBuilder.build(
+                universe, labInfoOpt, labTypeOpt, releaseStatus, connectivityStatus, daemonStatus))
+        .build();
   }
 
-  private DaemonServerInfo buildDaemonServerInfo(Optional<HostReleaseInfo> hostReleaseInfoOpt) {
+  private DaemonServerInfo buildDaemonServerInfo(
+      Optional<HostReleaseInfo> hostReleaseInfoOpt, LabServerReleaseStatus releaseStatus) {
     DaemonServerInfo.Builder builder = DaemonServerInfo.newBuilder();
 
     Optional<HostReleaseInfo.ComponentInfo> daemonReleaseOpt =
@@ -333,6 +334,9 @@ public final class GetHostOverviewHandler {
       daemonReleaseOpt.get().version().ifPresent(builder::setVersion);
     }
 
-    return builder.setStatus(DaemonStatuses.create(daemonReleaseOpt)).build();
+    return builder
+        .setStatus(DaemonStatuses.create(daemonReleaseOpt))
+        .setLabServerReleaseStatus(releaseStatus)
+        .build();
   }
 }

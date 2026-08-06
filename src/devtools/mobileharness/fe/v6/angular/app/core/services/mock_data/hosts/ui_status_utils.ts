@@ -18,7 +18,7 @@ import {
   DaemonServerState,
   HostConnectivityState,
   HostOverview,
-  LabServerActivityState,
+  LabServerReleaseState,
   UiLabType,
 } from '../../../models/host_overview';
 
@@ -323,14 +323,9 @@ export function createDefaultHostOverview(hostName: string): HostOverview {
         title: 'Running',
         tooltip: 'Host is running and connected.',
       },
-      activity: {
-        state: 'STARTED',
-        title: 'Started',
-        tooltip: 'Lab Server is started.',
-      },
       version: 'R123.45.6',
       passThroughFlags: '',
-      actions: createLabServerActions('RUNNING'),
+      actions: createLabServerActions(),
     },
     showPassThroughFlags: true,
     daemonServer: {
@@ -340,6 +335,11 @@ export function createDefaultHostOverview(hostName: string): HostOverview {
         tooltip: 'Daemon Server is running.',
       },
       version: '24.08.01',
+      labServerReleaseStatus: {
+        state: 'LAB_SERVER_RELEASE_STATE_RUNNING' as const,
+        title: 'Running',
+        tooltip: 'Lab Server is running.',
+      },
     },
     properties: {},
     diagnosticLinks: [
@@ -481,13 +481,13 @@ export function createHostActions(
 /**
  * Creates LabServerActions based on the host state.
  * @param connectivityState The connectivity state of the lab server.
- * @param activityState The activity state of the lab server.
+ * @param activityState The release state of the lab server.
  * @param daemonState The state of the daemon server.
  * @param uiLabTypes The types of the lab.
  */
 export function createLabServerActions(
   connectivityState: HostConnectivityState = 'RUNNING',
-  activityState: LabServerActivityState = 'STARTED',
+  activityState: LabServerReleaseState = 'LAB_SERVER_RELEASE_STATE_RUNNING',
   daemonState: DaemonServerState = 'RUNNING',
   uiLabTypes: UiLabType[] = ['SATELLITE'],
 ): LabServerActions {
@@ -498,13 +498,12 @@ export function createLabServerActions(
   // sync the fake logic with the real backend logic at:
   // third_party/deviceinfra/src/java/com/google/devtools/mobileharness/fe/v6/service/host/util/LabServerActionAvailabilities.java
   const isStartTarget =
-    activityState === 'DRAINED' ||
-    activityState === 'STOPPED' ||
-    activityState === 'UNKNOWN';
+    activityState === 'LAB_SERVER_RELEASE_STATE_DRAINED' ||
+    activityState === 'LAB_SERVER_RELEASE_STATE_STOPPED' ||
+    activityState === 'LAB_SERVER_RELEASE_STATE_UNKNOWN';
   const isRestartStopTarget =
-    activityState === 'STARTED' ||
-    activityState === 'STARTED_BUT_DISCONNECTED' ||
-    activityState === 'ERROR';
+    activityState === 'LAB_SERVER_RELEASE_STATE_RUNNING' ||
+    activityState === 'LAB_SERVER_RELEASE_STATE_ERROR';
 
   const canMutate = !isCoreOrFusion;
 

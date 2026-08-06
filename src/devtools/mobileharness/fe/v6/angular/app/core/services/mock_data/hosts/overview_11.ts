@@ -22,12 +22,7 @@ const overview: HostOverview = {
       tooltip:
         'Host is running and connected. OmniLab is receiving heartbeats.',
     },
-    activity: {
-      state: 'STARTED',
-      title: 'Started',
-      tooltip:
-        'The Lab Server process was started by the release system, and OmniLab is receiving heartbeats.',
-    },
+
     version: 'R124.0.0',
     passThroughFlags: '',
   },
@@ -38,6 +33,12 @@ const overview: HostOverview = {
       tooltip: 'The Daemon Server is running.',
     },
     version: '24.08.01',
+    labServerReleaseStatus: {
+      state: 'LAB_SERVER_RELEASE_STATE_RUNNING' as const,
+      title: 'Running',
+      tooltip:
+        'The Lab Server process was started by the release system, and OmniLab is receiving heartbeats.',
+    },
   },
   properties: {'pushed-by': 'config-pusher-service', 'user-editable': 'true'},
 };

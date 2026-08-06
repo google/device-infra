@@ -21,7 +21,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButton
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DaemonServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostConnectivityStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerActions;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerReleaseStatus;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -53,19 +53,19 @@ public class LabServerActionsBuilder {
       UniverseScope universe,
       Optional<LabInfo> labInfoOpt,
       Optional<String> labTypeOpt,
-      LabServerInfo.Activity activity,
+      LabServerReleaseStatus releaseStatus,
       HostConnectivityStatus connectivityStatus,
       DaemonServerInfo.Status daemonStatus) {
 
     ActionButtonState start =
         labServerStartButtonBuilder.build(
-            universe, labInfoOpt, labTypeOpt, activity, connectivityStatus, daemonStatus);
+            universe, labInfoOpt, labTypeOpt, releaseStatus, connectivityStatus, daemonStatus);
     ActionButtonState restart =
         labServerRestartButtonBuilder.build(
-            universe, labInfoOpt, labTypeOpt, activity, connectivityStatus, daemonStatus);
+            universe, labInfoOpt, labTypeOpt, releaseStatus, connectivityStatus, daemonStatus);
     ActionButtonState stop =
         labServerStopButtonBuilder.build(
-            universe, labInfoOpt, labTypeOpt, activity, connectivityStatus, daemonStatus);
+            universe, labInfoOpt, labTypeOpt, releaseStatus, connectivityStatus, daemonStatus);
 
     ActionButtonState release =
         labServerReleaseButtonBuilder.build(universe, labInfoOpt, labTypeOpt, daemonStatus);

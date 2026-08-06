@@ -22,12 +22,7 @@ const overview: HostOverview = {
       tooltip:
         'Host is running and connected. OmniLab is receiving heartbeats.',
     },
-    activity: {
-      state: 'DRAINED',
-      title: 'Drained',
-      tooltip:
-        'The Lab Server has finished all tasks and is not accepting new ones.',
-    },
+
     version: 'R123.45.9',
     passThroughFlags: '',
   },
@@ -38,6 +33,12 @@ const overview: HostOverview = {
       tooltip: 'The Daemon Server is running.',
     },
     version: '24.08.01',
+    labServerReleaseStatus: {
+      state: 'LAB_SERVER_RELEASE_STATE_DRAINED' as const,
+      title: 'Drained',
+      tooltip:
+        'The Lab Server has finished all tasks and is not accepting new ones.',
+    },
   },
   properties: {},
 };

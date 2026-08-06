@@ -23,12 +23,7 @@ const overview: HostOverview = {
       tooltip:
         'Host is running and connected. OmniLab is receiving heartbeats.',
     },
-    activity: {
-      state: 'STARTED',
-      title: 'Started',
-      tooltip:
-        'The Lab Server process was started by the release system, and OmniLab is receiving heartbeats.',
-    },
+
     version:
       'semantic_version \t {\n  major: "4"\n  minor: "353"\n  patch: "0"\n}\n',
     passThroughFlags: '',
@@ -41,6 +36,12 @@ const overview: HostOverview = {
     },
     version:
       'semantic_version \t {\n  major: "5"\n  minor: "2"\n  patch: "9"\n}\n',
+    labServerReleaseStatus: {
+      state: 'LAB_SERVER_RELEASE_STATE_RUNNING' as const,
+      title: 'Running',
+      tooltip:
+        'The Lab Server process was started by the release system, and OmniLab is receiving heartbeats.',
+    },
   },
   properties: {
     'lab': 'atc',

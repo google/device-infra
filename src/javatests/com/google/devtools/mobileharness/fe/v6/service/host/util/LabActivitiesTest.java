@@ -19,9 +19,8 @@ package com.google.devtools.mobileharness.fe.v6.service.host.util;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostReleaseInfo;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostConnectivityStatus;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo.Activity;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo.ActivityState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerReleaseState;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerReleaseStatus;
 import java.util.Optional;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -32,116 +31,107 @@ public final class LabActivitiesTest {
 
   @Test
   public void create_emptyReleaseInfo_coreLab_returnsNotApplicable() {
-    Activity activity =
-        LabActivities.create(Optional.empty(), HostConnectivityStatus.getDefaultInstance(), true);
-    assertThat(activity.getState()).isEqualTo(ActivityState.ACTIVITY_STATE_UNSPECIFIED);
-    assertThat(activity.getTitle()).isEqualTo("N/A");
+    LabServerReleaseStatus releaseStatus = LabActivities.create(Optional.empty(), true);
+    assertThat(releaseStatus.getState())
+        .isEqualTo(LabServerReleaseState.LAB_SERVER_RELEASE_STATE_UNSPECIFIED);
+    assertThat(releaseStatus.getTitle()).isEqualTo("N/A");
   }
 
   @Test
   public void create_emptyReleaseInfo_nonCoreLab_returnsUnknown() {
-    Activity activity =
-        LabActivities.create(Optional.empty(), HostConnectivityStatus.getDefaultInstance(), false);
-    assertThat(activity.getState()).isEqualTo(ActivityState.UNKNOWN);
-    assertThat(activity.getTitle()).isEqualTo("Unknown");
+    LabServerReleaseStatus releaseStatus = LabActivities.create(Optional.empty(), false);
+    assertThat(releaseStatus.getState())
+        .isEqualTo(LabServerReleaseState.LAB_SERVER_RELEASE_STATE_UNKNOWN);
+    assertThat(releaseStatus.getTitle()).isEqualTo("Unknown");
   }
 
   @Test
   public void create_starting() {
     HostReleaseInfo.ComponentInfo componentInfo =
         HostReleaseInfo.ComponentInfo.builder().setStatus("STARTING").build();
-    Activity activity =
-        LabActivities.create(
-            Optional.of(componentInfo), HostConnectivityStatus.getDefaultInstance(), false);
-    assertThat(activity.getState()).isEqualTo(ActivityState.STARTING);
-    assertThat(activity.getTitle()).isEqualTo("Starting");
+    LabServerReleaseStatus releaseStatus = LabActivities.create(Optional.of(componentInfo), false);
+    assertThat(releaseStatus.getState())
+        .isEqualTo(LabServerReleaseState.LAB_SERVER_RELEASE_STATE_STARTING);
+    assertThat(releaseStatus.getTitle()).isEqualTo("Starting");
   }
 
   @Test
-  public void create_runningAndConnected_returnsStarted() {
+  public void create_running_returnsRunning() {
     HostReleaseInfo.ComponentInfo componentInfo =
         HostReleaseInfo.ComponentInfo.builder().setStatus("RUNNING").build();
-    HostConnectivityStatus connectivityStatus =
-        HostConnectivityStatus.newBuilder().setState(HostConnectivityStatus.State.RUNNING).build();
-    Activity activity = LabActivities.create(Optional.of(componentInfo), connectivityStatus, false);
-    assertThat(activity.getState()).isEqualTo(ActivityState.STARTED);
-    assertThat(activity.getTitle()).isEqualTo("Started");
+    LabServerReleaseStatus releaseStatus = LabActivities.create(Optional.of(componentInfo), false);
+    assertThat(releaseStatus.getState())
+        .isEqualTo(LabServerReleaseState.LAB_SERVER_RELEASE_STATE_RUNNING);
+    assertThat(releaseStatus.getTitle()).isEqualTo("Running");
   }
 
   @Test
-  public void create_runningAndMissing_returnsStartedButDisconnected() {
+  public void create_running_disconnected_stillReturnsRunning() {
     HostReleaseInfo.ComponentInfo componentInfo =
         HostReleaseInfo.ComponentInfo.builder().setStatus("RUNNING").build();
-    HostConnectivityStatus connectivityStatus =
-        HostConnectivityStatus.newBuilder().setState(HostConnectivityStatus.State.MISSING).build();
-    Activity activity = LabActivities.create(Optional.of(componentInfo), connectivityStatus, false);
-    assertThat(activity.getState()).isEqualTo(ActivityState.STARTED_BUT_DISCONNECTED);
-    assertThat(activity.getTitle()).isEqualTo("Started (but disconnected)");
+    LabServerReleaseStatus releaseStatus = LabActivities.create(Optional.of(componentInfo), false);
+    assertThat(releaseStatus.getState())
+        .isEqualTo(LabServerReleaseState.LAB_SERVER_RELEASE_STATE_RUNNING);
+    assertThat(releaseStatus.getTitle()).isEqualTo("Running");
   }
 
   @Test
   public void create_error() {
     HostReleaseInfo.ComponentInfo componentInfo =
         HostReleaseInfo.ComponentInfo.builder().setStatus("ERROR").build();
-    Activity activity =
-        LabActivities.create(
-            Optional.of(componentInfo), HostConnectivityStatus.getDefaultInstance(), false);
-    assertThat(activity.getState()).isEqualTo(ActivityState.ERROR);
-    assertThat(activity.getTitle()).isEqualTo("Error");
+    LabServerReleaseStatus releaseStatus = LabActivities.create(Optional.of(componentInfo), false);
+    assertThat(releaseStatus.getState())
+        .isEqualTo(LabServerReleaseState.LAB_SERVER_RELEASE_STATE_ERROR);
+    assertThat(releaseStatus.getTitle()).isEqualTo("Error");
   }
 
   @Test
   public void create_draining() {
     HostReleaseInfo.ComponentInfo componentInfo =
         HostReleaseInfo.ComponentInfo.builder().setStatus("DRAINING").build();
-    Activity activity =
-        LabActivities.create(
-            Optional.of(componentInfo), HostConnectivityStatus.getDefaultInstance(), false);
-    assertThat(activity.getState()).isEqualTo(ActivityState.DRAINING);
-    assertThat(activity.getTitle()).isEqualTo("Draining");
+    LabServerReleaseStatus releaseStatus = LabActivities.create(Optional.of(componentInfo), false);
+    assertThat(releaseStatus.getState())
+        .isEqualTo(LabServerReleaseState.LAB_SERVER_RELEASE_STATE_DRAINING);
+    assertThat(releaseStatus.getTitle()).isEqualTo("Draining");
   }
 
   @Test
   public void create_drained() {
     HostReleaseInfo.ComponentInfo componentInfo =
         HostReleaseInfo.ComponentInfo.builder().setStatus("DRAINED").build();
-    Activity activity =
-        LabActivities.create(
-            Optional.of(componentInfo), HostConnectivityStatus.getDefaultInstance(), false);
-    assertThat(activity.getState()).isEqualTo(ActivityState.DRAINED);
-    assertThat(activity.getTitle()).isEqualTo("Drained");
+    LabServerReleaseStatus releaseStatus = LabActivities.create(Optional.of(componentInfo), false);
+    assertThat(releaseStatus.getState())
+        .isEqualTo(LabServerReleaseState.LAB_SERVER_RELEASE_STATE_DRAINED);
+    assertThat(releaseStatus.getTitle()).isEqualTo("Drained");
   }
 
   @Test
   public void create_stopping() {
     HostReleaseInfo.ComponentInfo componentInfo =
         HostReleaseInfo.ComponentInfo.builder().setStatus("STOPPING").build();
-    Activity activity =
-        LabActivities.create(
-            Optional.of(componentInfo), HostConnectivityStatus.getDefaultInstance(), false);
-    assertThat(activity.getState()).isEqualTo(ActivityState.STOPPING);
-    assertThat(activity.getTitle()).isEqualTo("Stopping");
+    LabServerReleaseStatus releaseStatus = LabActivities.create(Optional.of(componentInfo), false);
+    assertThat(releaseStatus.getState())
+        .isEqualTo(LabServerReleaseState.LAB_SERVER_RELEASE_STATE_STOPPING);
+    assertThat(releaseStatus.getTitle()).isEqualTo("Stopping");
   }
 
   @Test
   public void create_stopped() {
     HostReleaseInfo.ComponentInfo componentInfo =
         HostReleaseInfo.ComponentInfo.builder().setStatus("STOPPED").build();
-    Activity activity =
-        LabActivities.create(
-            Optional.of(componentInfo), HostConnectivityStatus.getDefaultInstance(), false);
-    assertThat(activity.getState()).isEqualTo(ActivityState.STOPPED);
-    assertThat(activity.getTitle()).isEqualTo("Stopped");
+    LabServerReleaseStatus releaseStatus = LabActivities.create(Optional.of(componentInfo), false);
+    assertThat(releaseStatus.getState())
+        .isEqualTo(LabServerReleaseState.LAB_SERVER_RELEASE_STATE_STOPPED);
+    assertThat(releaseStatus.getTitle()).isEqualTo("Stopped");
   }
 
   @Test
   public void create_unknownStatus_returnsUnknown() {
     HostReleaseInfo.ComponentInfo componentInfo =
         HostReleaseInfo.ComponentInfo.builder().setStatus("OTHER").build();
-    Activity activity =
-        LabActivities.create(
-            Optional.of(componentInfo), HostConnectivityStatus.getDefaultInstance(), false);
-    assertThat(activity.getState()).isEqualTo(ActivityState.UNKNOWN);
-    assertThat(activity.getTitle()).isEqualTo("Unknown");
+    LabServerReleaseStatus releaseStatus = LabActivities.create(Optional.of(componentInfo), false);
+    assertThat(releaseStatus.getState())
+        .isEqualTo(LabServerReleaseState.LAB_SERVER_RELEASE_STATE_UNKNOWN);
+    assertThat(releaseStatus.getTitle()).isEqualTo("Unknown");
   }
 }

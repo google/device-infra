@@ -21,12 +21,7 @@ const overview: HostOverview = {
       tooltip:
         'Host is running and connected. OmniLab is receiving heartbeats.',
     },
-    activity: {
-      state: 'ERROR',
-      title: 'Error',
-      tooltip:
-        'The release system encountered an error attempting to manage the Lab Server process on this host.',
-    },
+
     version: 'R123.45.6',
     passThroughFlags: '',
   },
@@ -39,6 +34,12 @@ const overview: HostOverview = {
         'The Daemon Server is missing. No heartbeat received since Nov 4, 2025, 10:30 PM PST.',
     },
     version: '24.08.01',
+    labServerReleaseStatus: {
+      state: 'LAB_SERVER_RELEASE_STATE_ERROR' as const,
+      title: 'Error',
+      tooltip:
+        'The release system encountered an error attempting to manage the Lab Server process on this host.',
+    },
   },
   properties: {},
 };

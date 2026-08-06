@@ -96,7 +96,7 @@ export class FakeHostService extends HostService {
             ...overview.labServer,
             actions: createLabServerActions(
               overview.labServer.connectivity?.state,
-              overview.labServer.activity?.state,
+              overview.daemonServer?.labServerReleaseStatus?.state,
               overview.daemonServer?.status?.state,
               overview.uiLabTypes,
             ),

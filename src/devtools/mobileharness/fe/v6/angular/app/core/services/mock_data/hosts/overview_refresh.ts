@@ -1,4 +1,8 @@
-import {UiLabType} from '../../../models/host_overview';
+import {
+  DaemonServerState,
+  LabServerReleaseState,
+  UiLabType,
+} from '../../../models/host_overview';
 import {MockHostScenario} from '../models';
 import {OVERVIEW_01} from './overview_01';
 import {createHostActions, createLabServerActions} from './ui_status_utils';
@@ -31,10 +35,11 @@ export function overviewRefreshFactory(callCount = 0): MockHostScenario {
   const connectivityState = isEven
     ? 'MISSING'
     : baseOverview.labServer?.connectivity?.state || 'RUNNING';
-  const activityState = isEven
-    ? 'STOPPED'
-    : baseOverview.labServer?.activity?.state || 'STARTED';
-  const daemonState = isEven
+  const activityState: LabServerReleaseState = isEven
+    ? 'LAB_SERVER_RELEASE_STATE_STOPPED'
+    : baseOverview.daemonServer?.labServerReleaseStatus?.state ||
+      'LAB_SERVER_RELEASE_STATE_RUNNING';
+  const daemonState: DaemonServerState = isEven
     ? 'MISSING'
     : baseOverview.daemonServer?.status?.state || 'RUNNING';
 
@@ -58,17 +63,6 @@ export function overviewRefreshFactory(callCount = 0): MockHostScenario {
         state: isEven ? 'MISSING' : baseOverview.labServer.connectivity.state,
         title: isEven ? 'Missing' : baseOverview.labServer.connectivity.title,
       },
-      activity: baseOverview.labServer.activity
-        ? {
-            ...baseOverview.labServer.activity,
-            state: isEven
-              ? 'STOPPED'
-              : baseOverview.labServer.activity?.state || 'STARTED',
-            title: isEven
-              ? 'Stopped'
-              : baseOverview.labServer.activity?.title || 'Started',
-          }
-        : undefined,
       passThroughFlags: isEven
         ? '--alt_flag=true'
         : baseOverview.labServer.passThroughFlags,
@@ -82,6 +76,19 @@ export function overviewRefreshFactory(callCount = 0): MockHostScenario {
         state: isEven ? 'MISSING' : baseOverview.daemonServer.status.state,
         title: isEven ? 'Missing' : baseOverview.daemonServer.status.title,
       },
+      labServerReleaseStatus: baseOverview.daemonServer.labServerReleaseStatus
+        ? {
+            ...baseOverview.daemonServer.labServerReleaseStatus,
+            state: (isEven
+              ? 'LAB_SERVER_RELEASE_STATE_STOPPED'
+              : baseOverview.daemonServer.labServerReleaseStatus?.state ||
+                'LAB_SERVER_RELEASE_STATE_RUNNING') as LabServerReleaseState,
+            title: isEven
+              ? 'Stopped'
+              : baseOverview.daemonServer.labServerReleaseStatus?.title ||
+                'Running',
+          }
+        : undefined,
     },
     properties: {
       ...baseOverview.properties,

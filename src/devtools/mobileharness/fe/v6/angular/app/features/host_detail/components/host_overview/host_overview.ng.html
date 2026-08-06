@@ -92,22 +92,7 @@
           <mat-icon matTooltip="{{ connectivitySemantic.tooltip }}" class="cursor-help">help_outline</mat-icon>
         </dd>
 
-        @if (isGoogle1p) {
-          @if (host.labServer.activity; as activity) {
-            @let activitySemantic = getLabActivitySemantic(activity);
-            <dt>Activity</dt>
-            <dd
-              class="grid-tight-dd {{ activitySemantic.colorClass }}"
-              title="{{ activitySemantic.tooltip }}"
-            >
-              <mat-icon matTooltip="{{ activitySemantic.tooltip }}" [class.spin-animation]="activitySemantic.isSpinning">{{
-                activitySemantic.icon
-              }}</mat-icon>
-              <span matTooltip="{{ activitySemantic.tooltip }}">{{ activitySemantic.text }}</span>
-              <mat-icon matTooltip="{{ activitySemantic.tooltip }}" class="cursor-help">help_outline</mat-icon>
-            </dd>
-          }
-        }
+
 
         <dt>Version</dt>
         <dd>

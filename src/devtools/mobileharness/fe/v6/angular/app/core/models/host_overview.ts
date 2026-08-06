@@ -39,30 +39,30 @@ export declare interface HostConnectivityStatus {
 }
 
 /**
- * Semantic state of Lab Server activity.
+ * Semantic state of Lab Server release status.
  * Frontend uses this to determine icon, color, and spinning animation.
  */
-export type LabServerActivityState =
-  | 'STARTED'
-  | 'STARTED_BUT_DISCONNECTED'
-  | 'STARTING'
-  | 'ERROR'
-  | 'DRAINING'
-  | 'DRAINED'
-  | 'STOPPING'
-  | 'STOPPED'
-  | 'UNKNOWN';
+export type LabServerReleaseState =
+  | 'LAB_SERVER_RELEASE_STATE_RUNNING'
+  | 'LAB_SERVER_RELEASE_STATE_STARTING'
+  | 'LAB_SERVER_RELEASE_STATE_ERROR'
+  | 'LAB_SERVER_RELEASE_STATE_DRAINING'
+  | 'LAB_SERVER_RELEASE_STATE_DRAINED'
+  | 'LAB_SERVER_RELEASE_STATE_STOPPING'
+  | 'LAB_SERVER_RELEASE_STATE_STOPPED'
+  | 'LAB_SERVER_RELEASE_STATE_UNKNOWN';
 
 /**
- * Represents the data needed to render Lab Server activity.
- * Corresponds to LabServerInfo.Activity in host_resources.proto.
+ * Represents the Lab Server release status as reported by the release system.
+ * Corresponds to LabServerReleaseStatus in host_resources.proto.
+ * Displayed in the Daemon Server card as "Lab Server Release Status".
  */
-export declare interface LabServerActivity {
+export declare interface LabServerReleaseStatus {
   /** The semantic state used by FE to determine styling (icon/color/spin). */
-  readonly state: LabServerActivityState;
-  /** The display text for the state, e.g., "Started", "Stopping". */
+  readonly state: LabServerReleaseState;
+  /** The display text for the state, e.g., "Running", "Stopping". */
   readonly title: string;
-  /** Tooltip text explaining the current activity state. */
+  /** Tooltip text explaining the current release state. */
   readonly tooltip: string;
 }
 
@@ -73,12 +73,6 @@ export declare interface LabServerActivity {
 export declare interface LabServerInfo {
   /** Host connectivity status details. */
   readonly connectivity: HostConnectivityStatus;
-  /**
-   * The activity of the lab server.
-   * This is optional because it is not applicable to all host types (e.g., Core
-   * Lab).
-   */
-  readonly activity?: LabServerActivity;
   /** The version of the lab server software. */
   readonly version: string;
   /** Pass-through flags configured for the lab server. */
@@ -123,6 +117,12 @@ export declare interface DaemonServerInfo {
   readonly status: DaemonServerStatus;
   /** The version of the daemon server software. */
   readonly version: string;
+  /**
+   * Lab Server release status, as reported by the release system.
+   * Displayed as "Lab Server Release Status" in the Daemon Server card.
+   * Optional; absent if release info is unavailable (e.g. Core Labs).
+   */
+  readonly labServerReleaseStatus?: LabServerReleaseStatus;
 }
 
 /**

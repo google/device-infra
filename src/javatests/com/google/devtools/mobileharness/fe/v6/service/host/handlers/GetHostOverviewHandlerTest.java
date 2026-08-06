@@ -50,7 +50,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.DiagnosticLink
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.GetHostOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverview;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerReleaseState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UiLabType;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
@@ -148,9 +148,10 @@ public final class GetHostOverviewHandlerTest {
     assertThat(overview.getHostName()).isEqualTo(HOST_NAME);
 
     // Verify default states when release info is missing
-    assertThat(overview.getLabServer().getActivity().getState())
-        .isEqualTo(LabServerInfo.ActivityState.UNKNOWN);
-    assertThat(overview.getLabServer().getActivity().getTitle()).isEqualTo("Unknown");
+    assertThat(overview.getDaemonServer().getLabServerReleaseStatus().getState())
+        .isEqualTo(LabServerReleaseState.LAB_SERVER_RELEASE_STATE_UNKNOWN);
+    assertThat(overview.getDaemonServer().getLabServerReleaseStatus().getTitle())
+        .isEqualTo("Unknown");
 
     assertThat(overview.getDaemonServer().getStatus().getState())
         .isEqualTo(DaemonServerInfo.State.MISSING);
@@ -169,11 +170,11 @@ public final class GetHostOverviewHandlerTest {
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
 
-    assertThat(overview.getLabServer().getActivity().getState())
-        .isEqualTo(LabServerInfo.ActivityState.ACTIVITY_STATE_UNSPECIFIED);
-    assertThat(overview.getLabServer().getActivity().getTitle()).isEqualTo("N/A");
-    assertThat(overview.getLabServer().getActivity().getTooltip())
-        .isEqualTo("Lab Server activity is not applicable for Core Labs.");
+    assertThat(overview.getDaemonServer().getLabServerReleaseStatus().getState())
+        .isEqualTo(LabServerReleaseState.LAB_SERVER_RELEASE_STATE_UNSPECIFIED);
+    assertThat(overview.getDaemonServer().getLabServerReleaseStatus().getTitle()).isEqualTo("N/A");
+    assertThat(overview.getDaemonServer().getLabServerReleaseStatus().getTooltip())
+        .isEqualTo("Lab Server release status is not applicable for Core Labs.");
   }
 
   @Test
