@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
+import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
@@ -48,6 +49,7 @@ public class PreProcessorTest {
   @Mock private ApkInstaller apkInstaller;
   @Mock private Adb adb;
   @Mock private AndroidDevice device;
+  @Mock private AndroidSystemSettingUtil systemSettingUtil;
   private PreProcessor preProcessor;
 
   private String crawlerPath;
@@ -57,7 +59,7 @@ public class PreProcessorTest {
   public void setUp() throws Exception {
     crawlerPath = temporaryFolder.newFile("crawler.apk").toPath().toString();
     stubPath = temporaryFolder.newFile("stub.apk").toPath().toString();
-    preProcessor = new PreProcessor(apkInstaller, adb);
+    preProcessor = new PreProcessor(apkInstaller, adb, systemSettingUtil);
     when(device.getDeviceId()).thenReturn("device_id");
   }
 
@@ -84,6 +86,19 @@ public class PreProcessorTest {
     preProcessor.installApks(testInfo, device, spec, stubPath);
 
     verifyNoInteractions(adb);
+  }
+
+  @Test
+  public void installApks_readsSdkVersionFromDeviceWhenNotCached() throws Exception {
+    TestInfo testInfo = setUpJobInfo().tests().add("some test");
+    when(device.getSdkVersion()).thenReturn(null);
+    when(systemSettingUtil.getDeviceSdkVersion("device_id")).thenReturn(35);
+    AndroidRoboTestSpec spec = AndroidRoboTestSpec.newBuilder().setCrawlerApk(crawlerPath).build();
+
+    preProcessor.installApks(testInfo, device, spec, stubPath);
+
+    verify(apkInstaller).installApk(device, setupInstallable(stubPath, true), testInfo.log());
+    verify(adb).runShell("device_id", "dumpsys deviceidle whitelist +androidx.test.tools.crawler");
   }
 
   private JobInfo setUpJobInfo() {

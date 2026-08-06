@@ -20,6 +20,7 @@ import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.a
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
+import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -32,11 +33,13 @@ public class PreProcessor {
   private static final String CRAWLER_PKG = "androidx.test.tools.crawler";
   private final ApkInstaller apkInstaller;
   private final Adb adb;
+  private final AndroidSystemSettingUtil systemSettingUtil;
 
   @Inject
-  PreProcessor(ApkInstaller apkInstaller, Adb adb) {
+  PreProcessor(ApkInstaller apkInstaller, Adb adb, AndroidSystemSettingUtil systemSettingUtil) {
     this.apkInstaller = apkInstaller;
     this.adb = adb;
+    this.systemSettingUtil = systemSettingUtil;
   }
 
   /** Install apks needed for the test. */
@@ -51,12 +54,18 @@ public class PreProcessor {
   private void addCrawlerToDeviceIdleWhitelist(AndroidDevice device, AndroidRoboTestSpec spec)
       throws InterruptedException, MobileHarnessException {
     // Not necessary for API level < 28.
-    if (device.getSdkVersion() < 28) {
+    if (getSdkVersion(device) < 28) {
       return;
     }
     var crawlerPackageId = spec.hasCrawlerPackageId() ? spec.getCrawlerPackageId() : CRAWLER_PKG;
     var command = String.format("dumpsys deviceidle whitelist +%s", crawlerPackageId);
     var unused = adb.runShell(device.getDeviceId(), command);
+  }
+
+  private int getSdkVersion(AndroidDevice device)
+      throws MobileHarnessException, InterruptedException {
+    Integer cached = device.getSdkVersion();
+    return cached != null ? cached : systemSettingUtil.getDeviceSdkVersion(device.getDeviceId());
   }
 
   private ApkInstallArgs setupInstallable(String path, boolean grantRuntimePermissions) {
