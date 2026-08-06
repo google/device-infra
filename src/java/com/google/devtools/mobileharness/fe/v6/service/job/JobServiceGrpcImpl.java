@@ -18,6 +18,8 @@ package com.google.devtools.mobileharness.fe.v6.service.job;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
+import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobFileRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobFileResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobLogRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobLogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobRequest;
@@ -73,5 +75,17 @@ public final class JobServiceGrpcImpl extends JobServiceGrpc.JobServiceImplBase 
         executor,
         JobServiceGrpc.getServiceDescriptor(),
         JobServiceGrpc.getKillJobMethod());
+  }
+
+  @Override
+  public void getJobFile(
+      GetJobFileRequest request, StreamObserver<GetJobFileResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::getJobFile,
+        executor,
+        JobServiceGrpc.getServiceDescriptor(),
+        JobServiceGrpc.getGetJobFileMethod());
   }
 }

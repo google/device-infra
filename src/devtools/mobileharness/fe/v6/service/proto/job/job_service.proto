@@ -57,6 +57,16 @@ service JobService {
       body: "*"
     };
   }
+
+  // Retrieves the content of a specific file associated with a Job.
+  //
+  // Non-path fields (file_path) are automatically mapped to query parameters
+  // by the gRPC-JSON transcoder.
+  rpc GetJobFile(GetJobFileRequest) returns (GetJobFileResponse) {
+    option (google.api.http) = {
+      get: "/v6/jobs/{job_id}/file"
+    };
+  }
 }
 
 message GetJobRequest {
@@ -94,6 +104,15 @@ message GetJobLogRequest {
   // The client treats this as an opaque string — it never computes or inspects
   // it. On the first request (offset=0), omit this field.
   string content_hash = 3;
+}
+
+message GetJobFileRequest {
+  string job_id = 1;
+  string file_path = 2;
+}
+
+message GetJobFileResponse {
+  string content = 1;
 }
 
 message GetJobLogResponse {

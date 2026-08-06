@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.fe.v6.service.job;
 import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobFileRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobFileResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobLogRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobLogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobRequest;
@@ -47,5 +49,11 @@ public final class NoOpJobServiceLogic implements JobServiceLogic {
       KillJobRequest request, Optional<String> caller) {
     return immediateFailedFuture(
         new UnsupportedOperationException("JobService.KillJob is not available."));
+  }
+
+  @Override
+  public ListenableFuture<GetJobFileResponse> getJobFile(GetJobFileRequest request) {
+    return immediateFailedFuture(
+        new UnsupportedOperationException("JobService.GetJobFile is not available."));
   }
 }

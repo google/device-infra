@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.fe.v6.service.job;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobFileRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobFileResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobLogRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobLogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobRequest;
@@ -44,4 +46,7 @@ public interface JobServiceLogic {
    * @param caller the authenticated caller's LDAP, or empty when the request is unauthenticated
    */
   ListenableFuture<KillJobResponse> killJob(KillJobRequest request, Optional<String> caller);
+
+  /** Gets the UTF-8 content of a file from the job's generated-file list. */
+  ListenableFuture<GetJobFileResponse> getJobFile(GetJobFileRequest request);
 }
