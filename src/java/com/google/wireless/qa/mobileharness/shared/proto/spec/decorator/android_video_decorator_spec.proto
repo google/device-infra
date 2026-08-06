@@ -1,0 +1,71 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared.spec;
+
+import "google/protobuf/timestamp.proto";
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.decorator";
+option java_multiple_files = true;
+option java_outer_classname = "AndroidVideoDecoratorSpecProto";
+
+message AndroidVideoDecoratorSpec {
+  extend DecoratorSpec {
+    optional AndroidVideoDecoratorSpec ext = 1028;
+  }
+
+  enum VideoType {
+    VIDEO_TYPE_UNSPECIFIED = 0;
+    AUTO = 1;
+    SCREENSHOTS = 2;
+    HD_SCREEN_RECORD = 3;
+    EMULATOR_CONSOLE = 4;
+    VIDEOCAT = 5;
+  }
+
+  optional VideoType video_type = 1 [default = AUTO];
+  optional bool video_on_pass = 2 [default = true];
+  optional int32 bit_rate = 3;
+  optional string resolution = 4;
+  optional int32 fps = 5;
+}
+
+message VideoOutput {
+  enum VideoType {
+    VIDEO_TYPE_UNSPECIFIED = 0;
+    SCREENSHOTS = 1;
+    EMULATOR_CONSOLE = 2;
+    VIDEOCAT = 3;
+    SCREENRECORD = 4;
+  }
+  optional VideoType video_type = 1;
+  // relative path to the test's gen_file_dir
+  repeated string generated_file_names = 2;
+  optional google.protobuf.Timestamp start_time = 3;
+  optional google.protobuf.Timestamp end_time = 4;
+
+  enum ContainerFormat {
+    CONTAINER_FORMAT_UNSPECIFIED = 0;
+    WEBM = 1;
+    MPEGTS = 2;
+    PNG = 3;
+    MP4 = 4;
+  }
+  optional ContainerFormat container_format = 5;
+}
