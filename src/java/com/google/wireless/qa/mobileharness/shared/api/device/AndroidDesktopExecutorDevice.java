@@ -17,17 +17,22 @@
 package com.google.wireless.qa.mobileharness.shared.api.device;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ascii;
+import com.google.common.base.Strings;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.androiddesktop.device.AndroidDesktopDeviceHelper;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import javax.annotation.Nullable;
 
 /** A placeholder device for Android Desktop executor devices. */
@@ -105,7 +110,62 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
       String dutName =
           lastColonIndex == -1 ? deviceIdOverride : deviceIdOverride.substring(0, lastColonIndex);
       testInfo.properties().add("dut_name", dutName);
+      Map<String, String> ufsDimensions = new HashMap<>();
+      try {
+        Map<String, String> dims = androidDesktopDeviceHelper.getDeviceDimensions(dutName);
+        if (dims != null) {
+          ufsDimensions = dims;
+        }
+      } catch (MobileHarnessException e) {
+        testInfo
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .log("Failed to get UFS dimensions for %s: %s", dutName, e.getMessage());
+      }
 
+      String ufsServoType = ufsDimensions.getOrDefault("servo_type", "");
+      String ufsServoSerial = ufsDimensions.getOrDefault("servo_serial", "");
+      boolean isMaui = Ascii.toLowerCase(ufsServoType).contains("maui");
+
+      if (isMaui) {
+        Set<String> connectedAdbDevices =
+            adbInternalUtil.getDeviceSerialsByState(DeviceState.DEVICE);
+        testInfo
+            .log()
+            .atInfo()
+            .alsoTo(logger)
+            .log("Connected ADB devices on bus: %s", connectedAdbDevices);
+
+        if (!connectedAdbDevices.contains(ufsServoSerial)) {
+          testInfo
+              .log()
+              .atWarning()
+              .alsoTo(logger)
+              .log(
+                  "Maui cable is assigned (%s), but device is not visible on ADB bus. Setting"
+                      + " device to needs_repair.",
+                  ufsServoSerial);
+
+          MobileHarnessException mauiException =
+              new MobileHarnessException(
+                  ExtErrorId.ANDROID_DESKTOP_DEVICE_HELPER_INFRA_ERROR,
+                  String.format(
+                      "Maui device %s is assigned in UFS, but is not visible on ADB bus.",
+                      ufsServoSerial));
+
+          markDeviceNeedsRepair(testInfo, dutName, mauiException);
+          throw mauiException;
+        }
+        testInfo
+            .log()
+            .atInfo()
+            .alsoTo(logger)
+            .log("Maui detected (%s). Skipping adb connect over IP.", ufsServoSerial);
+
+        this.deviceIdOverride = ufsServoSerial;
+        return;
+      }
       try {
         // TODO: Support multi-duts units in the future.
         adbInternalUtil.connect(deviceIdOverride);
@@ -113,19 +173,7 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
         testInfo.log().atWarning().alsoTo(logger).log("Failed to connect to %s", deviceIdOverride);
         testInfo.log().atWarning().log(
             "Failed to connect to %s. Setting device to needs_repair.", deviceIdOverride);
-        try {
-          androidDesktopDeviceHelper.updateDeviceDutState(
-              getDeviceId(),
-              "needs_repair",
-              /* provision= */ true,
-              /* reimage= */ false,
-              /* usbkey= */ false,
-              /* clearRepairRequests= */ false);
-        } catch (MobileHarnessException | InterruptedException ex) {
-          testInfo.log().atWarning().log(
-              "Failed to update device DUT state to needs_repair: %s", ex.getMessage());
-          e.addSuppressed(ex);
-        }
+        markDeviceNeedsRepair(testInfo, dutName, e);
         throw e;
       }
     }
@@ -153,6 +201,7 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
       }
     }
 
+    String targetHost = Strings.isNullOrEmpty(dutName) ? getDeviceId() : dutName;
     try {
       boolean skipHealthCheck = false;
       if (!skipHealthCheck) {
@@ -166,13 +215,7 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
                 .log(
                     "Test failed with repair_force_provision=true. Skipping health check and"
                         + " marking device as needs_repair.");
-            androidDesktopDeviceHelper.updateDeviceDutState(
-                getDeviceId(),
-                "needs_repair",
-                /* provision= */ true,
-                /* reimage= */ false,
-                /* usbkey= */ false,
-                /* clearRepairRequests= */ false);
+            markDeviceNeedsRepair(testInfo, targetHost, null);
           } else {
             testInfo
                 .log()
@@ -180,14 +223,14 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
                 .alsoTo(logger)
                 .log(
                     "Test failed. Running health check. Result: %s",
-                    androidDesktopDeviceHelper.isDeviceHealthy(getDeviceId()));
+                    androidDesktopDeviceHelper.isDeviceHealthy(targetHost));
           }
         } else {
           testInfo.log().atInfo().alsoTo(logger).log("Test passed, skipping health check.");
         }
       }
     } finally {
-      if (deviceIdOverride != null) {
+      if (deviceIdOverride != null && deviceIdOverride.contains(":")) {
         try {
           // TODO: Support multi-duts units in the future.
           adbInternalUtil.disconnect(deviceIdOverride);
@@ -202,6 +245,25 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
       deviceIdOverride = null;
     }
     return super.postRunTest(testInfo);
+  }
+
+  private void markDeviceNeedsRepair(
+      TestInfo testInfo, String targetHost, @Nullable Exception mainException) {
+    try {
+      androidDesktopDeviceHelper.updateDeviceDutState(
+          targetHost,
+          "needs_repair",
+          /* provision= */ true,
+          /* reimage= */ false,
+          /* usbkey= */ false,
+          /* clearRepairRequests= */ false);
+    } catch (MobileHarnessException | InterruptedException ex) {
+      testInfo.log().atWarning().log(
+          "Failed to update device DUT state to needs_repair: %s", ex.getMessage());
+      if (mainException != null) {
+        mainException.addSuppressed(ex);
+      }
+    }
   }
 
   /**
