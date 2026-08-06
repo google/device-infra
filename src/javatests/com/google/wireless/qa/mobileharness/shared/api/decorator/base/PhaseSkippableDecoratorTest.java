@@ -21,9 +21,7 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.protobuf.TextFormat;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
@@ -93,14 +91,9 @@ public final class PhaseSkippableDecoratorTest {
     public void tearDown(TeardownContext context)
         throws MobileHarnessException, InterruptedException {
       tearDownCalled.set(true);
-      try {
-        retrievedState.set(
-            PhaseSkippableDecoratorUtil.getState(
-                context.testInfo(), getDevice().getDeviceId(), JobType.getDefaultInstance()));
-      } catch (TextFormat.ParseException e) {
-        throw new MobileHarnessException(
-            BasicErrorId.JOB_SPEC_PARSE_PROTOBUF_ERROR, "Failed to parse text proto", e);
-      }
+      retrievedState.set(
+          PhaseSkippableDecoratorUtil.getState(
+              context.testInfo(), getDevice().getDeviceId(), JobType.class));
     }
   }
 

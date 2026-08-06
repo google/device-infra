@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator.util;
 
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat;
 import com.google.protobuf.Message;
 import com.google.protobuf.TextFormat;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.PhaseSkippableDecoratorConstants;
@@ -48,17 +49,17 @@ public final class PhaseSkippableDecoratorUtil {
    * Retrieves a strongly-typed Protobuf message scoped to its message class namespace from
    * TestInfo.
    *
-   * @param defaultInstance The default instance of the expected Protobuf message (e.g.,
-   *     FooState.getDefaultInstance()), used to resolve namespace and parse the Text Proto.
+   * @param protoClass The class of the expected Protobuf message (e.g., FooState.class), used to
+   *     resolve namespace and parse the Text Proto.
    */
   public static <M extends Message> Optional<M> getState(
-      TestInfo testInfo, String deviceId, M defaultInstance) throws TextFormat.ParseException {
-    String namespacedKey = createNamespacedKey(deviceId, defaultInstance.getClass());
+      TestInfo testInfo, String deviceId, Class<M> protoClass) throws MobileHarnessException {
+    String namespacedKey = createNamespacedKey(deviceId, protoClass);
     Optional<String> encoded = getRootTest(testInfo).properties().getOptional(namespacedKey);
     if (encoded.isEmpty()) {
       return Optional.empty();
     }
-    return Optional.of(decodeProto(encoded.get(), defaultInstance));
+    return Optional.of(decodeProto(encoded.get(), protoClass));
   }
 
   /** Relays all phase-skippable states from sourceTest to targetTest (e.g., in session plugins). */
@@ -100,13 +101,16 @@ public final class PhaseSkippableDecoratorUtil {
     return TextFormat.printer().printToString(message);
   }
 
-  // Safe to ignore unchecked warning because builder is created from defaultInstance of type M.
-  @SuppressWarnings("unchecked")
-  private static <M extends Message> M decodeProto(String encoded, M defaultInstance)
-      throws TextFormat.ParseException {
-    Message.Builder builder = defaultInstance.newBuilderForType();
-    TextFormat.Parser.newBuilder().setAllowUnknownFields(true).build().merge(encoded, builder);
-    return (M) builder.build();
+  private static <M extends Message> M decodeProto(String encoded, Class<M> protoClass)
+      throws MobileHarnessException {
+    try {
+      return ProtoTextFormat.parse(encoded, protoClass);
+    } catch (TextFormat.ParseException e) {
+      throw new MobileHarnessException(
+          ExtErrorId.PHASE_SKIPPABLE_DECORATOR_PARSE_STATE_ERROR,
+          "Failed to parse Text Proto state for " + protoClass.getSimpleName(),
+          e);
+    }
   }
 
   private static TestInfo getRootTest(TestInfo testInfo) {

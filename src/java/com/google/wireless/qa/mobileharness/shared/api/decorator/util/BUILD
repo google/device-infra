@@ -33,6 +33,7 @@ java_library(
     srcs = ["PhaseSkippableDecoratorUtil.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/constant:phase_skippable_decorator_constants",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@protobuf//:protobuf_java",

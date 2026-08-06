@@ -54,9 +54,7 @@ public final class PhaseSkippableDecoratorUtilTest {
 
     PhaseSkippableDecoratorUtil.setState(testInfo, "device_id_1", message);
 
-    assertThat(
-            PhaseSkippableDecoratorUtil.getState(
-                testInfo, "device_id_1", JobType.getDefaultInstance()))
+    assertThat(PhaseSkippableDecoratorUtil.getState(testInfo, "device_id_1", JobType.class))
         .hasValue(message);
 
     String expectedKey =
@@ -67,9 +65,7 @@ public final class PhaseSkippableDecoratorUtilTest {
 
   @Test
   public void getState_notFound_returnsEmpty() throws Exception {
-    assertThat(
-            PhaseSkippableDecoratorUtil.getState(
-                testInfo, "device_id_1", JobType.getDefaultInstance()))
+    assertThat(PhaseSkippableDecoratorUtil.getState(testInfo, "device_id_1", JobType.class))
         .isEmpty();
   }
 
@@ -81,11 +77,9 @@ public final class PhaseSkippableDecoratorUtilTest {
     PhaseSkippableDecoratorUtil.setState(testInfo, "dev_1", message1);
     PhaseSkippableDecoratorUtil.setState(testInfo, "dev_2", message2);
 
-    assertThat(
-            PhaseSkippableDecoratorUtil.getState(testInfo, "dev_1", JobType.getDefaultInstance()))
+    assertThat(PhaseSkippableDecoratorUtil.getState(testInfo, "dev_1", JobType.class))
         .hasValue(message1);
-    assertThat(
-            PhaseSkippableDecoratorUtil.getState(testInfo, "dev_2", JobType.getDefaultInstance()))
+    assertThat(PhaseSkippableDecoratorUtil.getState(testInfo, "dev_2", JobType.class))
         .hasValue(message2);
   }
 
@@ -106,9 +100,7 @@ public final class PhaseSkippableDecoratorUtilTest {
 
     PhaseSkippableDecoratorUtil.relayStates(testInfo, testInfo2);
 
-    assertThat(
-            PhaseSkippableDecoratorUtil.getState(
-                testInfo2, "device_id", JobType.getDefaultInstance()))
+    assertThat(PhaseSkippableDecoratorUtil.getState(testInfo2, "device_id", JobType.class))
         .hasValue(message);
     assertThat(testInfo2.properties().get("unrelated_key")).isNull();
   }
@@ -123,10 +115,21 @@ public final class PhaseSkippableDecoratorUtilTest {
 
     JobType expectedMessage =
         JobType.newBuilder().setDevice("test_device").setDriver("test_driver").build();
-    assertThat(
-            PhaseSkippableDecoratorUtil.getState(
-                testInfo, "device_id_1", JobType.getDefaultInstance()))
+    assertThat(PhaseSkippableDecoratorUtil.getState(testInfo, "device_id_1", JobType.class))
         .hasValue(expectedMessage);
+  }
+
+  @Test
+  public void getState_parseError_throwsException() throws Exception {
+    String namespacedKey =
+        "phase_skippable_decorator_state::device_id_1::com.google.wireless.qa.mobileharness.shared.proto.Job$JobType";
+    testInfo.properties().add(namespacedKey, "invalid text proto :::: :::");
+
+    MobileHarnessException e =
+        assertThrows(
+            MobileHarnessException.class,
+            () -> PhaseSkippableDecoratorUtil.getState(testInfo, "device_id_1", JobType.class));
+    assertThat(e.getErrorId()).isEqualTo(ExtErrorId.PHASE_SKIPPABLE_DECORATOR_PARSE_STATE_ERROR);
   }
 
   @Test
@@ -136,13 +139,9 @@ public final class PhaseSkippableDecoratorUtilTest {
     JobType message = JobType.newBuilder().setDevice("sub_device").setDriver("sub_driver").build();
     PhaseSkippableDecoratorUtil.setState(subTestInfo, "device_id_1", message);
 
-    assertThat(
-            PhaseSkippableDecoratorUtil.getState(
-                testInfo, "device_id_1", JobType.getDefaultInstance()))
+    assertThat(PhaseSkippableDecoratorUtil.getState(testInfo, "device_id_1", JobType.class))
         .hasValue(message);
-    assertThat(
-            PhaseSkippableDecoratorUtil.getState(
-                subTestInfo, "device_id_1", JobType.getDefaultInstance()))
+    assertThat(PhaseSkippableDecoratorUtil.getState(subTestInfo, "device_id_1", JobType.class))
         .hasValue(message);
   }
 
