@@ -1,0 +1,161 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package devtools.mobileharness.fe.v6.service.proto.search;
+
+import "google/api/annotations.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/search/search_fleet.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/search/search_tjs.proto";
+
+option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.search";
+option java_multiple_files = true;
+option java_outer_classname = "SearchServiceProto";
+
+// Unified search service for all FE v6 entity types.
+//
+// Two entity groups share response types (Cell, Column, Row, etc.) but have
+// different filter models:
+//
+//   Fleet (device/host): rich Filter with simple + complex modes, negation,
+//     facet counts, group-by, column customization, landing page.
+//
+//   TJS (test/job/session): simpler TjsFilter with exact/substring/enum/
+//     time-range/named-value. No negation, no group-by, no column
+//     customization, no sort (MOSS hardcodes create_time DESC), no facet
+//     counts.
+//
+// Each group's RPCs accept an entity parameter to distinguish within the group
+// (device vs host, or test vs job vs session).
+service SearchService {
+  // ===========================================================================
+  // Fleet (device/host) search — 7 RPCs
+  // ===========================================================================
+
+  // Returns page-load configuration: column setup and landing page content.
+  // Called once when the search page loads.
+  rpc GetFleetSearchConfig(FleetSearchConfigRequest)
+      returns (FleetSearchConfig) {
+    option (google.api.http) = {
+      get: "/v6/fleet-search/config"
+    };
+  }
+
+  // Executes a fleet search query. Supports three views via oneof:
+  //   - FleetFlatView: paginated rows with columns + sort
+  //   - FleetGroupHeaderView: group-by headers (collapsed cards)
+  //   - FleetGroupExpandView: rows inside one expanded group card
+  rpc SearchFleet(FleetSearchRequest) returns (FleetSearchResults) {
+    option (google.api.http) = {
+      post: "/v6/fleet-search"
+      body: "*"
+    };
+  }
+
+  // Returns ranked search-bar suggestions for fleet search.
+  // Each suggestion carries structured display text and a typed action.
+  rpc GetFleetSuggestions(FleetSuggestionRequest)
+      returns (FleetSuggestionResponse) {
+    option (google.api.http) = {
+      post: "/v6/fleet-search/suggestions"
+      body: "*"
+    };
+  }
+
+  // Stateless chip resolver: Filter structures → pill text + metadata.
+  // Used by URL cold-load (batch) and post-Apply (single chip).
+  rpc ResolveFleetChips(FleetChipResolverRequest)
+      returns (FleetChipResolverResponse) {
+    option (google.api.http) = {
+      post: "/v6/fleet-search/resolve-chips"
+      body: "*"
+    };
+  }
+
+  // Returns enumerated values for a key's value picker, with filtered/total
+  // counts. The backend excludes the requesting key's own filter from the
+  // count computation.
+  rpc GetFleetValueList(FleetValueListRequest)
+      returns (FleetValueListResponse) {
+    option (google.api.http) = {
+      get: "/v6/fleet-search/value-list"
+    };
+  }
+
+  // Returns dynamically promoted "Filter by:" and "Group by:" key rows,
+  // excluding already-applied filters and group-by keys. Called after every
+  // chip change.
+  rpc GetFleetPromotedKeys(FleetPromotedKeysRequest)
+      returns (FleetPromotedKeysResponse) {
+    option (google.api.http) = {
+      post: "/v6/fleet-search/promoted-keys"
+      body: "*"
+    };
+  }
+
+  // Returns the browsable column catalog for the column selector dialog.
+  // Called when the dialog opens (browse mode) and on each search keystroke
+  // within the dialog (search mode). The response contains ordered sections
+  // that the frontend renders generically — no hardcoded section logic.
+  rpc GetFleetColumnCatalog(FleetColumnCatalogRequest)
+      returns (FleetColumnCatalogResponse) {
+    option (google.api.http) = {
+      post: "/v6/fleet-search/column-catalog"
+      body: "*"
+    };
+  }
+
+  // ===========================================================================
+  // TJS (test/job/session) search — 4 RPCs
+  // ===========================================================================
+
+  // Returns page-load configuration: entity label, default chips, and
+  // promoted filter keys with picker types. Called once on page load.
+  rpc GetTjsSearchConfig(TjsSearchConfigRequest) returns (TjsSearchConfig) {
+    option (google.api.http) = {
+      get: "/v6/tjs-search/config"
+    };
+  }
+
+  // Executes a TJS search query. Always flat (no group-by), cursor-based
+  // pagination, no total count. Sort is always create_time DESC (MOSS
+  // hardcoded).
+  rpc SearchTjs(TjsSearchRequest) returns (TjsSearchResponse) {
+    option (google.api.http) = {
+      post: "/v6/tjs-search"
+      body: "*"
+    };
+  }
+
+  // Returns rule-based search-bar suggestions for TJS search. No facet counts.
+  rpc GetTjsSuggestions(TjsSuggestionRequest) returns (TjsSuggestionResponse) {
+    option (google.api.http) = {
+      post: "/v6/tjs-search/suggestions"
+      body: "*"
+    };
+  }
+
+  // Stateless TJS chip resolver: TjsFilter structures → pill text.
+  // Used by URL cold-load (batch) and post-Apply (single chip).
+  rpc ResolveTjsChips(TjsResolveChipsRequest)
+      returns (TjsResolveChipsResponse) {
+    option (google.api.http) = {
+      post: "/v6/tjs-search/resolve-chips"
+      body: "*"
+    };
+  }
+}

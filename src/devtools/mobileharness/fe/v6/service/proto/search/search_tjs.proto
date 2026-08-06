@@ -1,0 +1,383 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package devtools.mobileharness.fe.v6.service.proto.search;
+
+import "src/devtools/mobileharness/fe/v6/service/proto/search/search_common.proto";
+
+option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.search";
+option java_multiple_files = true;
+option java_outer_classname = "SearchTjsProto";
+
+// =============================================================================
+// Test / Job / Session (TJS) search types.
+//
+// TJS search queries MOSS (Mobile Harness Object Storage Service) for
+// historical test, job, and session records. The filter model is deliberately
+// simpler than fleet search: no negation, no complex match modes. The operator
+// (exact vs substring) is determined by the key, not chosen by the user.
+//
+// Key differences from fleet search:
+//   - No group-by, no column customization, no sort (MOSS hardcodes create_time
+//   DESC)
+//   - Cursor-based pagination with no total count (MOSS limitation)
+//   - Status/result are the only multi-select fields (cap 16 matchers,
+//   DNF-expanded)
+//   - "Filter by:" keys are static per entity (no dynamic zero-click API
+//   needed)
+// =============================================================================
+
+// --- Enum ---
+
+// Which TJS entity type to search.
+enum TjsEntity {
+  TJS_ENTITY_UNSPECIFIED = 0;
+  TJS_ENTITY_TEST = 1;
+  TJS_ENTITY_JOB = 2;
+  TJS_ENTITY_SESSION = 3;
+}
+
+// =============================================================================
+// Filter model
+//
+// The query contract for TJS search. Simpler than fleet's Filter: no negation,
+// no complex modes. The operator (IS_EXACT vs CONTAINS_SUBSTRING) is determined
+// by the key — the frontend doesn't choose or know the operator.
+// =============================================================================
+
+// A single TJS filter chip's query contract.
+message TjsFilter {
+  // Key identifier (e.g. "user", "name", "status", "create_time", "property").
+  string key = 1;
+
+  oneof match {
+    StringValue string_value = 2;
+    EnumValues enum_values = 3;
+    TimeRange time_range = 4;
+    NamedValue named_value = 5;
+  }
+}
+
+// Single string value. The backend decides the MOSS operator by key:
+//   - "name", "host_name" → CONTAINS_SUBSTRING
+//   - all others → IS_EXACT
+message StringValue {
+  string value = 1;
+}
+
+// Multiple enum values (OR-ed). Used for status and result fields.
+// The backend DNF-expands status × result into multiple MOSS matchers.
+// Cap enforced server-side (max 16 expanded matchers).
+message EnumValues {
+  repeated string values = 1;
+}
+
+// Time range filter for create_time.
+//
+// Both endpoints are absolute timestamps. Preset shortcuts (e.g. "last 1 hour")
+// are a frontend concern — the frontend computes now − delta and sends the
+// absolute timestamp. The backend only sees timestamps and the Now marker.
+message TimeRange {
+  // Lower bound (>=). The "From" in the UI.
+  TimeBound from = 1;
+
+  // Upper bound (<=). The "To" in the UI.
+  TimeBound to = 2;
+}
+
+// A single time bound: either an absolute timestamp or "now" (re-evaluated
+// per request so the query stays fresh on page refresh).
+message TimeBound {
+  oneof kind {
+    // Absolute timestamp in milliseconds since epoch.
+    int64 timestamp = 1;
+
+    // "Now" — the server substitutes the current time at query execution.
+    // Using this instead of a client-side timestamp means a saved/shared URL
+    // with a "since" filter stays fresh on reload.
+    Now now = 2;
+  }
+}
+
+// Marker for "current time", re-evaluated at query time by the server.
+message Now {}
+
+// Named key-value pair for property and dimension filters.
+//
+// For property: name is the property key (e.g. "dimension_model"), value is
+// the property value. Maps to MOSS `property { IS_EXACT "<name>:<value>" }`.
+//
+// For dimension (job only): name is the dimension key (e.g. "model"), value
+// is the dimension value. Maps to MOSS `dimension { IS_EXACT "<name>:<value>"
+// }`.
+//
+// "actual_user" is a first-class key (uses StringValue, not NamedValue) —
+// the backend maps it to `property { IS_EXACT "actual_user:<value>" }`.
+message NamedValue {
+  string name = 1;
+  string value = 2;
+}
+
+// =============================================================================
+// Search config (page-load)
+// =============================================================================
+
+// Request for TJS search page-load configuration.
+message TjsSearchConfigRequest {
+  TjsEntity entity = 1;
+}
+
+// Page-load configuration for TJS search.
+//
+// Contains everything the frontend needs to render the search page before the
+// first query: the entity label, default chips (auto-applied), and the
+// promoted filter keys for the "Filter by:" row.
+message TjsSearchConfig {
+  // Entity display label for the toolbar (e.g. "Tests", "Jobs", "Sessions").
+  string entity_label = 1;
+
+  // Chips auto-applied on page load (e.g. user:current_user).
+  // Includes pill text so the chip renders instantly without a resolve call.
+  repeated TjsDefaultChip default_chips = 2;
+
+  // "Filter by:" row keys. Static per entity (unlike fleet's dynamic promoted
+  // keys, TJS keys don't change with filter state — single-value chips mean
+  // clicking an already-applied key re-opens its picker).
+  repeated TjsPromotedKey promoted_keys = 3;
+}
+
+// A default chip auto-applied at page load.
+message TjsDefaultChip {
+  // The filter to apply.
+  TjsFilter filter = 1;
+
+  // Text displayed on the chip pill (prefix-stripped key, e.g. "User").
+  string pill_key = 2;
+
+  // Pill condition text (e.g. "dafeng").
+  string pill_condition = 3;
+
+  // Full display name of the key (e.g. "User"). Used as the picker title
+  // if the user clicks the chip to edit.
+  string key_display_name = 4;
+}
+
+// A promoted filter key in the "Filter by:" row.
+//
+// When the user clicks a promoted key, the frontend opens the appropriate
+// picker (text input, enum selector, time range, or named pair) based on the
+// oneof picker type. Enum options are embedded here (no separate value-list
+// API for TJS — MOSS has no facet counts).
+message TjsPromotedKey {
+  // Key identifier (e.g. "status", "name", "property").
+  string key = 1;
+
+  // User-facing display name (e.g. "Status", "Name", "Property").
+  string display_name = 2;
+
+  // Which picker UI to render when this key is clicked.
+  oneof picker {
+    TextInputPicker text_input = 3;
+    EnumPicker enum_picker = 4;
+    TimeRangePicker time_range = 5;
+    NamedPairPicker named_pair = 6;
+  }
+}
+
+// Picker for free-text input (exact or substring, backend decides by key).
+message TextInputPicker {}
+
+// Picker for fixed enum values (status, result).
+message EnumPicker {
+  // Available enum values.
+  repeated EnumOption options = 1;
+
+  // true = multi-select with checkboxes (status/result, cap 16).
+  // false = single-select.
+  bool multi_select = 2;
+}
+
+// Picker for create_time range (two datetime inputs: From + To).
+// Presets (e.g. "last 1 hour") are a frontend-only convenience — they compute
+// a timestamp and send it as an absolute value; no preset concept in the proto.
+message TimeRangePicker {}
+
+// Picker for property/dimension (two text inputs: name + value).
+message NamedPairPicker {
+  // Placeholder text for the name input (e.g. "Property name").
+  string name_placeholder = 1;
+
+  // Placeholder text for the value input (e.g. "Value").
+  string value_placeholder = 2;
+}
+
+// A single enum option in an EnumPicker.
+message EnumOption {
+  // Raw value sent in the filter (e.g. "DONE", "PASS").
+  string value = 1;
+
+  // User-facing label (e.g. "Done", "Pass"). May differ from value.
+  string label = 2;
+}
+
+// =============================================================================
+// Search request / response
+// =============================================================================
+
+// TJS search request. Always flat (no group-by), cursor-based, no sort
+// (MOSS hardcodes create_time DESC).
+message TjsSearchRequest {
+  TjsEntity entity = 1;
+
+  // AND-ed filter chips.
+  repeated TjsFilter filters = 2;
+
+  // Opaque cursor for pagination. Empty = first page.
+  string page_token = 3;
+
+  // No page_size (hardcoded 25 server-side).
+  // No columns (fixed per entity, returned in the response).
+  // No sort (always create_time DESC).
+}
+
+// TJS search response. Always flat, with cursor-based forward pagination.
+message TjsSearchResponse {
+  // Column headers (backend decides per entity). Defines the table header and
+  // the parallel alignment with Row.cells.
+  repeated Column columns = 1;
+
+  // Result rows, each with cells parallel to columns.
+  repeated Row rows = 2;
+
+  // Cursor for the next page. Empty = this is the last page.
+  // The frontend maintains a cursor stack for Prev (push on Next, pop on Prev).
+  // No prev_page_token — Prev is a frontend concern.
+  string next_page_token = 3;
+
+  // No total count — MOSS does not provide one, and we follow a no-count
+  // policy.
+}
+
+// =============================================================================
+// Suggestions
+// =============================================================================
+
+// Request for TJS search-bar suggestions.
+// Suggestions are rule-based (no data-driven ranking, no facet counts).
+message TjsSuggestionRequest {
+  TjsEntity entity = 1;
+
+  // What the user typed in the search bar.
+  string input = 2;
+
+  // Current filter state (for new-vs-modify detection).
+  repeated TjsFilter filters = 3;
+
+  // Maximum number of suggestions to return. 0/absent = backend default (10).
+  int32 limit = 4;
+}
+
+// Response containing ranked TJS suggestions.
+message TjsSuggestionResponse {
+  repeated TjsSuggestion items = 1;
+}
+
+// A single TJS search-bar suggestion.
+message TjsSuggestion {
+  // Gray prefix label (e.g. "Add filter", "Modify User").
+  string label = 1;
+
+  // Main text with emphasized segments.
+  repeated TextSegment main_text = 2;
+
+  // No count field — MOSS has no facet counts.
+
+  // What clicking this suggestion does.
+  oneof action {
+    ApplyTjsFilter apply_filter = 10;
+    OpenTjsPicker open_picker = 11;
+    // No AddGroupBy — TJS has no group-by.
+  }
+}
+
+// One-click apply: creates a new TJS chip and triggers search.
+// Used ONLY for keys that do NOT already have a chip.
+message ApplyTjsFilter {
+  TjsFilter filter = 1;
+  string pill_key = 2;
+  string pill_condition = 3;
+
+  // Full display name (e.g. "User"). Used as picker title if the chip is later
+  // edited.
+  string key_display_name = 4;
+}
+
+// Open the TJS chip picker for a key.
+message OpenTjsPicker {
+  string key = 1;
+  string key_display_name = 2;
+
+  oneof context {
+    // No existing chip for this key — picker opens empty.
+    TjsNewChip new_chip = 3;
+
+    // Existing chip — picker opens with current values.
+    TjsViewExisting view_existing = 4;
+
+    // No StagedModification — TJS has no multi-value merge suggestions.
+  }
+}
+
+message TjsNewChip {}
+message TjsViewExisting {}
+
+// =============================================================================
+// Chip resolver
+// =============================================================================
+
+// Stateless TJS chip resolver: given TjsFilter structures, returns pill text.
+// Used by URL cold-load (batch all chips) and post-Apply (single chip).
+// Pure function of the filter structure — no query context, no counts.
+message TjsResolveChipsRequest {
+  // Filter chips to resolve.
+  repeated TjsFilter filters = 1;
+
+  // No group_by_keys — TJS has no group-by.
+}
+
+// Resolved pill text for each chip. Parallel to request: chips[i] resolves
+// filters[i].
+message TjsResolveChipsResponse {
+  repeated ResolvedTjsChip chips = 1;
+}
+
+// Resolved display text for a single TJS chip.
+message ResolvedTjsChip {
+  // Text displayed on the chip pill (prefix-stripped key, e.g. "User",
+  // "Status").
+  string pill_key = 1;
+
+  // Condition text (e.g. "dafeng", "2", "≥Jul 30 10:00",
+  // "Jul 30 10:00 – Aug 3 10:45").
+  string pill_condition = 2;
+
+  // Full display name (e.g. "User", "Status", "Property").
+  string key_display_name = 3;
+
+  // No can_use_advanced — TJS has no advanced mode.
+}

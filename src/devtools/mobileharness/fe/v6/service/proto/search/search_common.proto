@@ -1,0 +1,233 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package devtools.mobileharness.fe.v6.service.proto.search;
+
+option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.search";
+option java_multiple_files = true;
+option java_outer_classname = "SearchCommonProto";
+
+// =============================================================================
+// Shared types for entity search.
+//
+// Used by both fleet (device/host) search and TJS (test/job/session) search.
+// These types define the universal result-table contract: how the backend
+// describes columns, rows, cells, and navigation targets so that the frontend
+// renders generically via switch(cell.kind) without entity-specific logic.
+// =============================================================================
+
+// A structured text segment for rendering rich suggestion text.
+//
+// The backend returns an ordered list of segments; the frontend concatenates
+// them and applies CSS per segment (e.g. bold + primary color for emphasized
+// parts). This is Angular-safe — no innerHTML / bypassSecurityTrustHtml.
+//
+// Example: for the suggestion "Status is DONE", the segments would be:
+//   [{text: "Status is ", emphasized: false}, {text: "DONE", emphasized: true}]
+message TextSegment {
+  // The text content of this segment.
+  string text = 1;
+
+  // Whether this segment should be visually emphasized (e.g. bold, primary
+  // color). Typically true for the value portion of a suggestion.
+  bool emphasized = 2;
+}
+
+// Semantic indicator for status/result cells.
+//
+// Conveys the semantic meaning of a status value so the frontend can map it to
+// a color/icon without hardcoding per-status logic. This is NOT a severity
+// ranking — the values are parallel categories, not ordered levels.
+//
+// The frontend maps each indicator to a visual treatment:
+//   OK      → green  (healthy/success: IDLE, PASS)
+//   ACTIVE  → blue   (in-progress: RUNNING, BUSY)
+//   ERROR   → red    (failure: FAILED, MISSING, ERROR)
+//   NEUTRAL → gray   (no judgment: NEW, PREPPING, SUSPENDED)
+enum Indicator {
+  INDICATOR_UNSPECIFIED = 0;
+  INDICATOR_OK = 1;
+  INDICATOR_ACTIVE = 2;
+  INDICATOR_ERROR = 3;
+  INDICATOR_NEUTRAL = 4;
+}
+
+// A column header in a search results table.
+//
+// Returned by the backend in the search response; the frontend uses these to
+// render the table header row. The order of columns in the response determines
+// the display order and the parallel alignment with Row.cells.
+message Column {
+  // Internal key identifier (e.g. "field::status", "test_id"). Not displayed.
+  string key = 1;
+
+  // User-facing column header label (e.g. "Status", "Test ID").
+  string display_name = 2;
+}
+
+// A single row in a search results table.
+message Row {
+  // Stable entity identifier used for selection, linking, and deduplication.
+  // For devices: UUID. For tests/jobs/sessions: their respective IDs.
+  string id = 1;
+
+  // Cell values, parallel to the columns array in the response (same order,
+  // same length). Each cell is typed — the frontend renders via switch(kind).
+  repeated Cell cells = 2;
+}
+
+// A typed, self-describing table cell.
+//
+// The backend decides which cell type to use for each column (e.g. the Status
+// column uses StatusCell, the Test ID column uses LinkCell). The frontend
+// renders generically: switch(cell.kind) → Text/Link/Status/Chips/MultiLink.
+// No column-specific rendering logic in the frontend.
+message Cell {
+  oneof kind {
+    TextCell text = 1;
+    LinkCell link = 2;
+    StatusCell status = 3;
+    ChipsCell chips = 4;
+    MultiLinkCell multi_link = 5;
+  }
+}
+
+// Plain text cell. Used for names, users, durations, timestamps, etc.
+//
+// Multi-value data that doesn't warrant chip-style rendering is comma-joined
+// by the backend before filling this field — the frontend never joins values.
+// When value is empty, the frontend displays "-" (a rendering convention, not
+// a backend concern).
+message TextCell {
+  string value = 1;
+}
+
+// Multi-value chip cell. Rendered as the first value shown in full, with a
+// "+N" badge for the remainder and a tooltip listing all values.
+//
+// Used for columns like Labels, where each value is a standalone tag.
+// Values are plain text with no link capability — for multi-value links
+// (e.g. a list of device IDs), use MultiLinkCell instead.
+message ChipsCell {
+  repeated string values = 1;
+}
+
+// A clickable text cell that navigates to another page.
+//
+// Used for ID columns (Test ID → test detail page) and reference columns
+// (Host Name → host detail page). The backend provides the semantic navigation
+// identity (NavTarget); the frontend maps it to a route URL.
+message LinkCell {
+  // Display text (e.g. the test ID string, the host name).
+  string text = 1;
+
+  // Semantic navigation target. The frontend maps this to a route URL
+  // (routing is a frontend concern).
+  NavTarget target = 2;
+}
+
+// A status/result cell with a semantic indicator.
+//
+// The backend determines both the display text (e.g. "RUNNING", "PASS") and
+// its semantic indicator (ACTIVE, OK). The frontend maps the indicator to a
+// color/icon — it never hardcodes "RUNNING = blue" or "PASS = green".
+message StatusCell {
+  // Display text (e.g. "Running", "Pass", "Failed").
+  string text = 1;
+
+  // Semantic indicator that the frontend maps to a visual treatment
+  // (color/icon).
+  Indicator indicator = 2;
+}
+
+// A multi-link cell: multiple clickable entries in one cell.
+//
+// Used for columns that contain a list of linked entities, e.g. the Devices
+// column in test search (each device ID is clickable, linking to device
+// detail). For single links, use LinkCell. For multi-value plain text, use
+// ChipsCell.
+message MultiLinkCell {
+  repeated LinkEntry entries = 1;
+}
+
+// A single entry in a MultiLinkCell.
+message LinkEntry {
+  // Display text (e.g. a device serial number).
+  string text = 1;
+
+  // Semantic navigation target.
+  NavTarget target = 2;
+}
+
+// Semantic navigation identity for a link.
+//
+// Carries the information needed to construct a route URL, without encoding the
+// URL format itself (routing is a frontend concern). The backend provides the
+// entity's identifying fields; the frontend maps them to a hash-based route
+// (e.g. DeviceRef → #device-detail/<id>).
+message NavTarget {
+  oneof to {
+    DeviceRef device = 1;
+    HostRef host = 2;
+    TestRef test = 3;
+    JobRef job = 4;
+    SessionRef session = 5;
+  }
+}
+
+// Navigation identity for a device.
+message DeviceRef {
+  string id = 1;         // device UUID
+  string host_name = 2;  // lab host running this device
+  string host_ip = 3;
+}
+
+// Navigation identity for a host.
+message HostRef {
+  string host_name = 1;
+  string host_ip = 2;
+}
+
+// Navigation identity for a test.
+message TestRef {
+  string test_id = 1;
+  string job_id = 2;  // parent job (needed for some detail page queries)
+}
+
+// Navigation identity for a job.
+message JobRef {
+  string job_id = 1;
+}
+
+// Navigation identity for a session.
+message SessionRef {
+  string session_id = 1;
+}
+
+// Key identity with a display name.
+//
+// Shared across search APIs: used in column descriptors, zero-click/promoted
+// key lists, and group-by key identifiers. Carries only identity — no runtime
+// counts or chip metadata (those come from context-specific APIs).
+message KeyDescriptor {
+  // Internal key identifier (e.g. "field::status", "dim::model").
+  string key = 1;
+
+  // User-facing display name (e.g. "Status", "Model").
+  string display_name = 2;
+}

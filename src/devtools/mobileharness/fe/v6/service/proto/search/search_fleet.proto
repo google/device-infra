@@ -1,0 +1,735 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package devtools.mobileharness.fe.v6.service.proto.search;
+
+import "src/devtools/mobileharness/fe/v6/service/proto/search/search_common.proto";
+
+option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.search";
+option java_multiple_files = true;
+option java_outer_classname = "SearchFleetProto";
+
+// =============================================================================
+// Fleet (device/host) search types.
+//
+// "Fleet" refers to the searchable device/host inventory. Two fleets exist in
+// the internal build: "internal" (Google 1P labs) and "ats" (all ATS
+// controllers aggregated). The OSS build has no fleet choice — it searches its
+// own single ATS controller.
+//
+// The filter model here is richer than TJS: it supports multi-value OR,
+// negation (is/is not), and five complex match modes (starts_with, contains,
+// regex, exactly, at_least). See search_tjs.proto for the simpler TJS model.
+// =============================================================================
+
+// --- Enums ---
+
+// Which entity type to search.
+enum SearchEntity {
+  SEARCH_ENTITY_UNSPECIFIED = 0;
+  SEARCH_ENTITY_DEVICE = 1;
+  SEARCH_ENTITY_HOST = 2;
+}
+
+// Which fleet to search.
+// The OSS build omits this (UNSPECIFIED); the server treats it as ATS.
+// The internal build sends FLEET_INTERNAL or FLEET_ATS from its fleet switcher.
+enum Fleet {
+  FLEET_UNSPECIFIED = 0;
+  FLEET_INTERNAL = 1;
+  FLEET_ATS = 2;
+}
+
+// =============================================================================
+// Filter model
+//
+// The query contract between frontend and backend for device/host search.
+// Expresses ONLY how to filter — no display text, no chip concept.
+// Illegal states are unrepresentable: arity and negation are baked into the
+// type, not left to runtime validation.
+// =============================================================================
+
+// A single filter chip's query contract.
+message Filter {
+  // Key identifier (e.g. "field::status", "dim::model", "host::host_name").
+  string key = 1;
+
+  oneof mode {
+    SimpleMatch simple = 2;
+    ComplexMatch complex = 3;
+  }
+}
+
+// Simple match: the device's value for the key is ANY OF the given values (OR).
+// Values are picked from the enumerated value list, which may include the
+// special no-value entry.
+message SimpleMatch {
+  repeated FilterValue values = 1;
+
+  // true = "is not" (negated); false = "is".
+  bool negated = 2;
+}
+
+// A single value in a SimpleMatch. Either a concrete string value or the
+// special "(no value)" entry (devices that lack this key entirely).
+message FilterValue {
+  oneof kind {
+    string value = 1;
+    NoValue no_value = 2;
+  }
+}
+
+// Represents the "(no value)" picker entry — devices that lack the key.
+// This is a value, not a mode: it participates in the OR with other values.
+message NoValue {}
+
+// Complex match: exactly one advanced mode. Each kind is a concrete type
+// carrying only its valid fields (e.g. "contains with 3 values" or "negated
+// starts_with" cannot be expressed — illegal states are unrepresentable).
+message ComplexMatch {
+  oneof kind {
+    StartsWith starts_with = 1;
+    ContainsSubstring contains_substring = 2;
+    MatchesRegex matches_regex = 3;
+    MatchesExactly matches_exactly = 4;
+    MatchesAtLeast matches_at_least = 5;
+  }
+}
+
+// Prefix match. Efficient (O(log n) via sorted-value bisect).
+// NOT negatable.
+message StartsWith {
+  string value = 1;
+}
+
+// Substring match. Negatable ("does not contain").
+message ContainsSubstring {
+  string value = 1;
+  bool negated = 2;
+}
+
+// Regular expression match. Negatable ("does not match").
+message MatchesRegex {
+  string value = 1;
+  bool negated = 2;
+}
+
+// Exact set match: device's value set == this set. NOT negatable.
+message MatchesExactly {
+  repeated string values = 1;
+}
+
+// Superset match: device's value set ⊇ this set. NOT negatable.
+message MatchesAtLeast {
+  repeated string values = 1;
+}
+
+// =============================================================================
+// Search config (page-load)
+// =============================================================================
+
+// Request for fleet search page-load configuration.
+// Called once when the search page loads.
+message FleetSearchConfigRequest {
+  SearchEntity entity = 1;
+  Fleet fleet = 2;
+}
+
+// Page-load configuration returned by GetFleetSearchConfig.
+// Contains everything the frontend needs to render the search page before the
+// first query: column setup and landing page content.
+message FleetSearchConfig {
+  FleetColumnConfig columns = 1;
+  FleetLandingConfig landing = 2;
+}
+
+// Column configuration for the results table and column selector.
+//
+// `recommended` is for the column selector's "Recommended" section (static).
+// `defaults` is for the initial table columns on first visit (before the user
+// customizes via the column selector and saves to localStorage).
+// On subsequent visits, the frontend uses localStorage (per entity × fleet)
+// and ignores defaults. The column selector's "Reset" restores defaults.
+message FleetColumnConfig {
+  // "Recommended" section in the column selector. These keys are always
+  // visible at the top of the selector, regardless of search state.
+  repeated KeyDescriptor recommended = 1;
+
+  // Initial table columns (before the user customizes). Each column may be
+  // marked as locked (always shown, not removable by the user).
+  repeated FleetColumnDescriptor defaults = 2;
+}
+
+// A column in the results table, with column-specific properties.
+message FleetColumnDescriptor {
+  string key = 1;
+  string display_name = 2;
+
+  // true = always shown, not removable by the user (e.g. device UUID).
+  bool locked = 3;
+}
+
+// Landing page configuration. Shown before the first search when the user has
+// no filters. Skipped when enabled=false (e.g. ATS single-controller build
+// where the fleet is small enough to browse directly).
+message FleetLandingConfig {
+  bool enabled = 1;
+
+  // Total entity count for the "Browse all N devices" button.
+  // The frontend does locale-aware formatting and appends the entity name.
+  int32 browse_all_count = 2;
+
+  // "Try:" example categories shown on the landing page.
+  repeated FleetTryCategory try_categories = 3;
+}
+
+// A category of try-it examples on the landing page (e.g. "a value", "a key").
+message FleetTryCategory {
+  string label = 1;
+  repeated FleetTryExample examples = 2;
+}
+
+// A single try-it example. Clicking fills the search bar with this text and
+// opens the suggestion dropdown. It does NOT directly apply a chip.
+message FleetTryExample {
+  string text = 1;
+}
+
+// =============================================================================
+// Search request / response
+// =============================================================================
+
+// Fleet search request. Supports three views via oneof, because each view has
+// different relevant fields (columns, sort, paging). Fields that don't belong
+// to a view are structurally absent, not silently ignored.
+message FleetSearchRequest {
+  SearchEntity entity = 1;
+  repeated Filter filters = 2;
+  Fleet fleet = 3;
+
+  oneof view {
+    // Normal search: paginated device/host rows with columns + sort.
+    FleetFlatView flat = 4;
+
+    // Group-by headers: collapsed group cards (no columns needed).
+    FleetGroupHeaderView group_header = 5;
+
+    // Expand one group: rows inside a single group card.
+    FleetGroupExpandView group_expand = 6;
+  }
+}
+
+// Flat view: paginated rows with columns and sort.
+message FleetFlatView {
+  // Which columns to include in each row. Required — bounds the response size.
+  repeated string columns = 1;
+
+  // Sort order. Optional; backend picks a default (e.g. uuid asc) if absent.
+  FleetColumnSort sort = 2;
+
+  FleetPageRequest page = 3;
+}
+
+// Group-by header view: returns collapsed group cards.
+// No columns needed — groups have a fixed shape (values + count + utilization).
+message FleetGroupHeaderView {
+  // 1..3 group-by keys.
+  repeated string group_by = 1;
+
+  // Sort order for groups. Optional; default: item_count desc.
+  FleetGroupSort sort = 2;
+
+  FleetPageRequest page = 3;
+}
+
+// Expand one group: returns rows inside a specific group card.
+// Page size is fixed server-side at 100 (not overridable by the client) —
+// group cards show a bounded peek, not an arbitrarily long list.
+message FleetGroupExpandView {
+  // Opaque group identifier from the GroupHeaderView response.
+  string group_id = 1;
+
+  // Same column spec as FlatView.
+  repeated string columns = 2;
+
+  // Same sort spec as FlatView.
+  FleetColumnSort sort = 3;
+
+  // Cursor for pagination within this group. Empty = first page.
+  string page_token = 4;
+}
+
+// Sort by a column value. The key must be one of the requested columns.
+message FleetColumnSort {
+  string key = 1;
+  bool ascending = 2;
+}
+
+// Sort for group headers: by item count or by a group-by key's value.
+message FleetGroupSort {
+  FleetGroupSortField field = 1;
+  bool ascending = 2;
+}
+
+message FleetGroupSortField {
+  oneof kind {
+    FleetItemCountSort item_count = 1;
+    // Sort by a group-by key's value (must be one of the group_by keys).
+    string group_key = 2;
+  }
+}
+
+// Marker: sort groups by their item count (devices or hosts).
+message FleetItemCountSort {}
+
+// Cursor-based pagination for flat and group-header views.
+message FleetPageRequest {
+  // Page size. 0 or absent = backend default (e.g. 25).
+  int32 page_size = 1;
+
+  // Opaque cursor. Empty = first page.
+  string page_token = 2;
+}
+
+// Fleet search response. The oneof mirrors the request view — a flat request
+// produces FlatResults, a group-header request produces GroupedResults.
+message FleetSearchResults {
+  oneof mode {
+    FleetFlatResults flat = 1;
+    FleetGroupedResults grouped = 2;
+  }
+}
+
+// Flat results: paginated rows with columns.
+message FleetFlatResults {
+  repeated Column columns = 1;
+  repeated Row rows = 2;
+  int32 total = 3;
+  int32 range_start = 4;
+  int32 range_end = 5;
+  string next_page_token = 6;
+  string prev_page_token = 7;
+}
+
+// Grouped results: group-by headers with counts.
+message FleetGroupedResults {
+  repeated Column group_by_keys = 1;
+  repeated FleetGroup groups = 2;
+  int32 total_groups = 3;
+  int32 total_items = 4;
+  int32 range_start = 5;
+  int32 range_end = 6;
+  string next_page_token = 7;
+  string prev_page_token = 8;
+}
+
+// A single group in grouped results.
+message FleetGroup {
+  // Opaque identifier; passed back to FleetGroupExpandView to expand this
+  // group.
+  string group_id = 1;
+
+  // One display string per group-by key (parallel to group_by_keys).
+  repeated string values = 2;
+
+  // Number of items (devices or hosts) in this group.
+  int32 item_count = 3;
+
+  // Device status breakdown (idle/busy/other) for utilization bar rendering.
+  // Present only for device search; absent for host search.
+  // Low priority in UI — the frontend may defer rendering this.
+  FleetUtilization utilization = 4;
+}
+
+// Device status breakdown within a group, for utilization bar rendering.
+message FleetUtilization {
+  int32 idle = 1;
+  int32 busy = 2;
+  int32 other = 3;
+  int32 total = 4;
+}
+
+// =============================================================================
+// Suggestions
+// =============================================================================
+
+// Request for fleet search-bar suggestions.
+message FleetSuggestionRequest {
+  SearchEntity entity = 1;
+
+  // What the user typed in the search bar.
+  string input = 2;
+
+  // Current filter state (used for modify-vs-new detection and facet counts).
+  repeated Filter filters = 3;
+
+  // Current group-by keys (used for deduplication).
+  repeated string group_by = 4;
+
+  Fleet fleet = 5;
+
+  // Maximum number of suggestions to return. 0/absent = backend default (12).
+  int32 limit = 6;
+}
+
+// Response containing ranked suggestions.
+message FleetSuggestionResponse {
+  repeated FleetSuggestion items = 1;
+}
+
+// A single search-bar suggestion.
+//
+// Carries what to display (structured text, no inline HTML) and what clicking
+// does (typed action — the frontend never infers behavior from text patterns).
+message FleetSuggestion {
+  // Gray prefix label (e.g. "Add filter", "Modify Model", "Group by").
+  string label = 1;
+
+  // Main text with emphasized segments (e.g. the value portion is bold).
+  repeated TextSegment main_text = 2;
+
+  // Right-aligned count. Absent = don't show a count.
+  optional int32 count = 3;
+
+  // Optional display unit appended after count, e.g. "groups" → "5 groups".
+  // Used by group-by suggestions; filter suggestions show count alone.
+  string count_unit = 4;
+
+  // true = this count exceeds the usable group-count threshold (e.g. >10,000
+  // groups). Frontend renders the count in a warning style (amber + tooltip).
+  // Backend decides the threshold; frontend just renders.
+  bool over_max = 5;
+
+  // Optional prefix displayed before the count (e.g. "+" → "+3").
+  // Used by modify-existing-chip suggestions to indicate the count is a delta
+  // (values being added). Empty = no prefix (absolute count).
+  string count_prefix = 6;
+
+  // What clicking this suggestion does.
+  oneof action {
+    FleetApplyFilter apply_filter = 10;
+    FleetOpenPicker open_picker = 11;
+    FleetAddGroupBy add_group_by = 12;
+  }
+}
+
+// Reusable chip metadata for fleet filter chips.
+// Carried in suggestions, promoted keys, and resolver responses.
+message FleetFilterChipMetadata {
+  // Full display name of the key (e.g. "Dimension model", "ATS Lab").
+  // Used as the value picker title.
+  string key_display_name = 1;
+
+  // Whether this chip can switch to advanced/complex mode.
+  // false for keys where raw value ≠ display label (e.g. ATS Controller).
+  bool can_use_advanced = 2;
+
+  // Verb agreement (backend-owned): true → "are/are not" (plural, e.g.
+  // Owner/Driver — a device can carry several), false → "is/is not" (singular).
+  // The frontend renders whatever the backend says; it no longer hardcodes a
+  // plural-key list.
+  bool is_plural = 3;
+}
+
+// One-click apply: creates a new chip and immediately triggers search.
+// Used ONLY for keys that do NOT already have a chip. If the key already has a
+// chip, the backend returns FleetOpenPicker instead.
+message FleetApplyFilter {
+  // The complete filter to apply.
+  Filter resulting_filter = 1;
+
+  // Text displayed on the chip pill (prefix-stripped key, e.g. "Model").
+  string pill_key = 2;
+
+  // Pill condition text (e.g. "IDLE", "2", "≠ Pixel 8").
+  string pill_condition = 3;
+
+  FleetFilterChipMetadata metadata = 4;
+}
+
+// Open the chip detail picker (value list). Used for:
+// - New chips: empty picker
+// - Viewing existing chips: picker shows current selection
+// - Staged modifications: picker pre-checks suggested values
+message FleetOpenPicker {
+  string key = 1;
+  FleetFilterChipMetadata metadata = 2;
+
+  oneof context {
+    FleetNewChip new_chip = 3;
+    FleetViewExisting view_existing = 4;
+    FleetStagedModification staged_modify = 5;
+  }
+}
+
+// Picker opens with empty selection (no existing chip for this key).
+message FleetNewChip {}
+
+// Picker opens showing the existing chip's current values.
+message FleetViewExisting {}
+
+// Picker opens with current values plus staged values pre-checked and
+// highlighted. Supports comma-separated input staging multiple values at once.
+message FleetStagedModification {
+  // Values to pre-check and highlight in the picker.
+  repeated string values = 1;
+}
+
+// Add a group-by key. No filter chip metadata — group-by chips don't have
+// advanced mode or value pickers.
+message FleetAddGroupBy {
+  string key = 1;
+
+  // Text displayed on the group-by chip pill (prefix-stripped key, e.g.
+  // "Host Name"). The frontend renders "group by {pill_key}".
+  string pill_key = 2;
+}
+
+// =============================================================================
+// Chip resolver
+// =============================================================================
+
+// Request to resolve filter and group-by chips to their display text.
+// Stateless: the resolver needs only the chip structure, no query context.
+// Used by URL cold-load (batch) and post-Apply (single chip).
+message FleetChipResolverRequest {
+  // Filter chips to resolve.
+  repeated Filter filters = 1;
+
+  // Group-by key IDs to resolve.
+  repeated string group_by_keys = 2;
+}
+
+// Response with resolved pill text for each chip.
+// Arrays are parallel to the request: filter_chips[i] resolves filters[i].
+message FleetChipResolverResponse {
+  repeated FleetResolvedFilterChip filter_chips = 1;
+  repeated FleetResolvedGroupByChip group_by_chips = 2;
+}
+
+// Resolved display text for a filter chip.
+message FleetResolvedFilterChip {
+  // Text displayed on the chip pill (prefix-stripped key, e.g. "Model").
+  string pill_key = 1;
+
+  // Condition text (e.g. "Pixel 8", "2", "≠ Pixel 8", "contains pixel").
+  string pill_condition = 2;
+
+  FleetFilterChipMetadata metadata = 3;
+}
+
+// Resolved display text for a group-by chip.
+message FleetResolvedGroupByChip {
+  // Text displayed on the chip pill. The frontend renders "group by
+  // {pill_key}". Prefix-stripped (e.g. "Host Name" not "host::host_name").
+  string pill_key = 1;
+
+  // Full display name of the key. Used for tooltip, accessibility label, and
+  // any context outside the chip pill where the key needs to be named (e.g.
+  // grouped results header "by Host Name"). Currently equals pill_key, but
+  // kept separate so the two can diverge if needed.
+  string display_name = 2;
+}
+
+// =============================================================================
+// Value list (chip detail / value picker)
+// =============================================================================
+
+// Request for enumerated values of a key, used by the simple chip's value
+// picker. The backend excludes the requesting key's own filter when computing
+// facet counts — the frontend does not need to know this rule.
+message FleetValueListRequest {
+  SearchEntity entity = 1;
+
+  // Which key's values to enumerate.
+  string key = 2;
+
+  // ALL current filters (the backend internally excludes this key's filter).
+  repeated Filter filters = 3;
+
+  Fleet fleet = 4;
+}
+
+// Value list response. The oneof tells the frontend whether to show count
+// columns (counted) or a plain list (identifier-like keys).
+message FleetValueListResponse {
+  oneof kind {
+    FleetCountedValueList counted = 1;
+    FleetPlainValueList plain = 2;
+  }
+}
+
+// Values with filtered/total counts. Default sort: filtered desc.
+message FleetCountedValueList {
+  repeated FleetCountedValue values = 1;
+
+  // Optional "(no value)" entry, rendered at the bottom below a divider.
+  // Absent = no devices lack this key.
+  FleetCountedNoValueEntry no_value_entry = 2;
+}
+
+message FleetCountedValue {
+  // Raw value (stable, goes into Filter + URL).
+  string value = 1;
+
+  // Human-readable label (may differ from value, e.g. ATS Controller ID vs
+  // name).
+  string display_label = 2;
+
+  // Count of devices matching the current query that have this value.
+  int32 filtered = 3;
+
+  // Count of all devices (regardless of query) that have this value.
+  int32 total = 4;
+}
+
+// "(no value)" entry with counts.
+message FleetCountedNoValueEntry {
+  int32 filtered = 1;
+  int32 total = 2;
+}
+
+// Values without counts (identifier-like keys). Default sort: value asc.
+message FleetPlainValueList {
+  repeated FleetPlainValue values = 1;
+
+  // Optional "(no value)" entry. Absent = no devices lack this key.
+  FleetPlainNoValueEntry no_value_entry = 2;
+}
+
+message FleetPlainValue {
+  string value = 1;
+  string display_label = 2;
+}
+
+// "(no value)" entry without counts. Empty tag: signals that some devices lack
+// this key, but provides no count information.
+message FleetPlainNoValueEntry {}
+
+// =============================================================================
+// Promoted keys ("Filter by:" / "Group by:" rows)
+// =============================================================================
+
+// Request for dynamically promoted key rows. Called after every chip change
+// (not just page load), because the content excludes already-applied filters
+// and group-by keys.
+message FleetPromotedKeysRequest {
+  SearchEntity entity = 1;
+  repeated Filter filters = 2;
+  repeated string group_by = 3;
+  Fleet fleet = 4;
+}
+
+// Response with promoted filter and group-by keys.
+message FleetPromotedKeysResponse {
+  // "Filter by:" row entries, minus already-applied filter keys.
+  // Backend omits dead-end keys (keys with ≤1 distinct value under the current
+  // filters) — frontend renders whatever the backend returns.
+  repeated FleetPromotedFilterKey filter_keys = 1;
+
+  // "Group by:" row entries, minus already-applied group-by keys.
+  // Each carries the number of groups it would produce (decision aid).
+  // Empty = hide the row entirely (e.g. ats-one host search).
+  repeated FleetPromotedGroupByKey group_by_keys = 2;
+}
+
+// A promoted filter key in the "Filter by:" row.
+// Composition of key identity + chip metadata, so the frontend can render
+// the picker title and Advanced button instantly when the user clicks.
+message FleetPromotedFilterKey {
+  string key = 1;
+  FleetFilterChipMetadata metadata = 2;
+}
+
+// A promoted group-by key in the "Group by:" row.
+// Carries group_count so the user can see how many groups a key would produce
+// before committing (e.g. "Host Name (847)" vs "Pool (5)").
+message FleetPromotedGroupByKey {
+  string key = 1;
+  string display_name = 2;
+
+  // Number of groups this key would produce under the current filters.
+  // Counts distinct value COMBINATIONS (multi-valued key's whole value-set =
+  // one group). Includes +1 for "(no value)" bucket if some devices lack the
+  // key. Keys with < 2 groups (a no-op grouping) are omitted by the backend.
+  int32 group_count = 3;
+}
+
+// =============================================================================
+// Column catalog (column selector dialog)
+// =============================================================================
+
+// Request for the browsable column catalog. Called when the column selector
+// dialog opens, and again on each search keystroke within the dialog.
+message FleetColumnCatalogRequest {
+  SearchEntity entity = 1;
+  Fleet fleet = 2;
+
+  // Search query for long-tail column retrieval. Empty = browse mode.
+  string query = 3;
+
+  // Current filters — used for the "Suggested for you" section (keys in
+  // active filters are worth showing as columns).
+  repeated Filter filters = 4;
+
+  // Recently used column keys (from localStorage) — used for the "Suggested
+  // for you" section, with reason "recently used".
+  repeated string recent_keys = 5;
+}
+
+// Column catalog response. Contains ordered sections that the frontend renders
+// generically — the backend controls what sections exist, their order, their
+// headings, and their content. The frontend never hardcodes section names or
+// decides which keys belong in which section.
+message FleetColumnCatalogResponse {
+  repeated FleetColumnCatalogSection sections = 1;
+}
+
+// A section in the column catalog (e.g. "Suggested for you", "Built-in fields",
+// "Dimensions", "Host properties", "Search results").
+message FleetColumnCatalogSection {
+  // Section heading displayed to the user.
+  string heading = 1;
+
+  // Column entries in this section. May be truncated to top-N for large
+  // sections (e.g. top 10 of 1,583 dimensions); see total_available.
+  repeated FleetColumnCatalogEntry entries = 2;
+
+  // Total keys available in this category. If entries is truncated (e.g.
+  // showing top-10 of 1,583), the frontend can display "(showing 10 of 1,583)".
+  // 0 = don't show a total (e.g. for the "Suggested" section).
+  int32 total_available = 3;
+}
+
+// A single column entry in the catalog.
+message FleetColumnCatalogEntry {
+  // Key identifier (e.g. "dim::model", "field::status").
+  string key = 1;
+
+  // User-facing column name.
+  string display_name = 2;
+
+  // How many devices/hosts carry this key. Helps the user judge whether a
+  // column is worth adding (a dimension present on 12 of 153,000 devices is
+  // noise, and the number says so). 0 = don't show a count.
+  int32 device_count = 3;
+
+  // Optional context for why this column is suggested (e.g. "in your active
+  // filters", "recently used"). Empty for non-suggested sections.
+  string reason = 4;
+}
