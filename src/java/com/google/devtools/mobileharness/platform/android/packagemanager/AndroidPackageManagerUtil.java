@@ -700,9 +700,9 @@ public class AndroidPackageManagerUtil {
     // b/377681285#comment16, version:0 means a bad result, so we need to exclude it.
     Matcher matcher =
         Pattern.compile(
-                "signatures=PackageSignatures\\{[a-z0-9]+ version:[1-9]\\d*,"
-                    + " signatures:\\[(?<signature>[a-z0-9]+)\\], past signatures:\\[[a-z0-9:,"
-                    + " ]+\\]\\}")
+                "signatures=PackageSignatures\\{[a-zA-Z0-9]+ version:[1-9]\\d*,"
+                    + " signatures:\\[(?<signature>[a-zA-Z0-9]+)\\], past"
+                    + " signatures:\\[[a-zA-Z0-9:, ]+\\]\\}")
             .matcher(output);
     boolean foundSignature = matcher.find();
     if (foundSignature) {
