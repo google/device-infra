@@ -99,6 +99,22 @@ message SubTestsInfo {
   TestSummaries sub_tests = 2;
 }
 
+// Information about a file associated with the test.
+message TestFile {
+  string path = 1;
+  int64 size = 2;
+  // Whether the file can be previewed inline by the console (small enough and
+  // not a known binary type). The frontend only needs this hint, not the raw
+  // MIME type.
+  bool viewable = 3;
+}
+
+// File explorer resources.
+message FileExplorer {
+  string cns_path = 1;
+  repeated TestFile files = 2;
+}
+
 // ---------- Top-level ----------
 
 message TestDetail {
@@ -140,4 +156,7 @@ message TestDetail {
   // Detailed execution phase timelines for Gantt rendering.
   .devtools.mobileharness.fe.v6.service.proto.common.TimeBreakdown
       timing_breakdown = 13;
+
+  // Files explorer resources.
+  FileExplorer file_explorer = 15;
 }
