@@ -191,5 +191,21 @@ export function useDeviceActions() {
     ) => {
       actionService.configureDevice(deviceId, hostName, hostIp, universe);
     },
+
+    /**
+     * Prepares the device.
+     *
+     * @param deviceId The ID of the device to prepare.
+     */
+    prepareDevice: (deviceId: string) => {
+      runAction(
+        'prepare',
+        actionService
+          .prepareDevice(deviceId)
+          .pipe(takeUntilDestroyed(destroyRef)),
+      ).subscribe({
+        error: () => {},
+      });
+    },
   };
 }

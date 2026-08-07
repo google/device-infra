@@ -422,6 +422,12 @@ export function createDeviceActions(
       tooltip: permissionState,
       isReady: true,
     },
+    prepare: {
+      enabled,
+      visible: true,
+      tooltip: permissionState,
+      isReady: true,
+    },
   };
 }
 

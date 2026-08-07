@@ -26,6 +26,7 @@ export enum ActionBarAction {
   DEVICE_LOGCAT = 'DEVICE_LOGCAT',
   DEVICE_QUARANTINE = 'DEVICE_QUARANTINE',
   DEVICE_DECOMMISSION = 'DEVICE_DECOMMISSION',
+  DEVICE_PREPARE = 'DEVICE_PREPARE',
 
   // Job Actions
   JOB_KILL = 'JOB_KILL',
@@ -101,6 +102,9 @@ export const ACTION_BAR_CONFIG: Record<ActionBarAction, ActionMetadata> = {
   },
   [ActionBarAction.DEVICE_QUARANTINE]: {
     displayName: 'Quarantine',
+  },
+  [ActionBarAction.DEVICE_PREPARE]: {
+    displayName: 'Prepare',
   },
   [ActionBarAction.JOB_KILL]: {
     displayName: 'Kill Job',
@@ -189,6 +193,13 @@ export const DEVICE_ACTION_UI_CONFIG: Record<
     icon: 'delete_sweep',
     testIdPrefix: 'decommission',
     feature: ActionBarAction.DEVICE_DECOMMISSION,
+  },
+  'prepare': {
+    label: 'Prepare',
+    icon: 'published_with_changes',
+    testIdPrefix: 'prepare',
+    loadingLabel: 'Preparing...',
+    feature: ActionBarAction.DEVICE_PREPARE,
   },
 };
 

@@ -128,13 +128,36 @@ const LAB_RELEASE_STATUS_SEMANTIC_MAP: Record<
   string,
   {icon: string; colorClass: string; isSpinning?: boolean}
 > = {
-  'LAB_SERVER_RELEASE_STATE_RUNNING': {icon: 'check_circle', colorClass: 'text-green-600'},
-  'LAB_SERVER_RELEASE_STATE_STARTING': {icon: 'sync', colorClass: 'text-blue-600', isSpinning: true},
-  'LAB_SERVER_RELEASE_STATE_ERROR': {icon: 'error_outline', colorClass: 'text-red-600'},
-  'LAB_SERVER_RELEASE_STATE_DRAINING': {icon: 'timelapse', colorClass: 'text-amber-600'},
-  'LAB_SERVER_RELEASE_STATE_DRAINED': {icon: 'hourglass_empty', colorClass: 'text-gray-600'},
-  'LAB_SERVER_RELEASE_STATE_STOPPING': {icon: 'sync', colorClass: 'text-blue-600', isSpinning: true},
-  'LAB_SERVER_RELEASE_STATE_STOPPED': {icon: 'stop_circle', colorClass: 'text-gray-700'},
+  'LAB_SERVER_RELEASE_STATE_RUNNING': {
+    icon: 'check_circle',
+    colorClass: 'text-green-600',
+  },
+  'LAB_SERVER_RELEASE_STATE_STARTING': {
+    icon: 'sync',
+    colorClass: 'text-blue-600',
+    isSpinning: true,
+  },
+  'LAB_SERVER_RELEASE_STATE_ERROR': {
+    icon: 'error_outline',
+    colorClass: 'text-red-600',
+  },
+  'LAB_SERVER_RELEASE_STATE_DRAINING': {
+    icon: 'timelapse',
+    colorClass: 'text-amber-600',
+  },
+  'LAB_SERVER_RELEASE_STATE_DRAINED': {
+    icon: 'hourglass_empty',
+    colorClass: 'text-gray-600',
+  },
+  'LAB_SERVER_RELEASE_STATE_STOPPING': {
+    icon: 'sync',
+    colorClass: 'text-blue-600',
+    isSpinning: true,
+  },
+  'LAB_SERVER_RELEASE_STATE_STOPPED': {
+    icon: 'stop_circle',
+    colorClass: 'text-gray-700',
+  },
 };
 
 const STATUS_SEMANTIC_MAP: Record<string, {icon: string; colorClass: string}> =
@@ -217,6 +240,7 @@ export class HostOverviewPage {
     'screenshot',
     'logcat',
     'remoteControl',
+    'prepare',
     'flash',
     'quarantine',
     'decommission',
@@ -975,6 +999,9 @@ export class HostOverviewPage {
       case 'remoteControl':
         this.startRemoteControl([element]);
         break;
+      case 'prepare':
+        this.prepareDevice(element);
+        break;
       case 'flash':
         this.flashDevice(element);
         break;
@@ -1019,5 +1046,15 @@ export class HostOverviewPage {
       this.localHost().hostName,
       this.localHost().ip,
     );
+  }
+
+  /**
+   * Prepares the specified device.
+   * Invokes the prepare device flow via device actions.
+   *
+   * @param element The summary of the device to prepare.
+   */
+  prepareDevice(element: DeviceSummary): void {
+    this.deviceActions.prepareDevice(element.id);
   }
 }
