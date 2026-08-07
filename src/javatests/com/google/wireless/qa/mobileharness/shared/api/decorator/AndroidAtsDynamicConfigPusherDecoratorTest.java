@@ -34,7 +34,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.util.StepSkippableLifecycleDecoratorUtil;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.util.PhaseSkippableDecoratorUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -46,6 +46,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidAtsDynamicConfigPusherDecoratorSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidAtsDynamicConfigPusherDecoratorSpec.TestTarget;
+import com.google.wireless.qa.mobileharness.shared.proto.state.decorator.AndroidAtsDynamicConfigPusherDecoratorState;
 import java.io.File;
 import java.io.Writer;
 import java.nio.file.Files;
@@ -77,7 +78,8 @@ public final class AndroidAtsDynamicConfigPusherDecoratorTest {
   @Mock private ResUtil resUtil;
 
   private Properties properties;
-  private AndroidAtsDynamicConfigPusherDecorator decorator;
+  private AndroidAtsDynamicConfigPusherSetupOnlyDecorator setupDecorator;
+  private AndroidAtsDynamicConfigPusherTeardownOnlyDecorator teardownDecorator;
   private AndroidAtsDynamicConfigPusherDecoratorSpec spec;
 
   @Before
@@ -105,8 +107,9 @@ public final class AndroidAtsDynamicConfigPusherDecoratorTest {
             ArgumentMatchers.<SpecConfigable<AndroidAtsDynamicConfigPusherDecoratorSpec>>any(),
             eq("device_id")))
         .thenReturn(spec);
-    decorator =
-        new AndroidAtsDynamicConfigPusherDecorator(
+
+    setupDecorator =
+        new AndroidAtsDynamicConfigPusherSetupOnlyDecorator(
             decorated,
             testInfo,
             localFileUtil,
@@ -114,6 +117,10 @@ public final class AndroidAtsDynamicConfigPusherDecoratorTest {
             androidSystemSettingUtil,
             apkInstaller,
             resUtil);
+
+    teardownDecorator =
+        new AndroidAtsDynamicConfigPusherTeardownOnlyDecorator(
+            decorated, testInfo, androidFileUtil, apkInstaller);
   }
 
   @Test
@@ -133,43 +140,30 @@ public final class AndroidAtsDynamicConfigPusherDecoratorTest {
     files.add(configFile);
     when(localFileUtil.listFiles(any(), eq(true))).thenReturn(files);
 
-    decorator.skippableSetUp(SetupContext.create(testInfo));
+    setupDecorator.setUp(SetupContext.create(testInfo));
 
     verify(androidFileUtil).push(eq("device_id"), anyInt(), any(), any());
     verify(apkInstaller).installApkIfNotExist(eq(device), any(), any());
 
-    assertThat(
-            StepSkippableLifecycleDecoratorUtil.getState(
-                testInfo,
-                "device_id",
-                "com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidAtsDynamicConfigPusherDecorator",
-                "device_file_pushed_path"))
-        .isPresent();
-    assertThat(
-            StepSkippableLifecycleDecoratorUtil.getState(
-                testInfo,
-                "device_id",
-                "com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidAtsDynamicConfigPusherDecorator",
-                "content_provider"))
-        .hasValue("content_provider_pkg");
+    AndroidAtsDynamicConfigPusherDecoratorState state =
+        PhaseSkippableDecoratorUtil.getState(
+                testInfo, "device_id", AndroidAtsDynamicConfigPusherDecoratorState.class)
+            .orElse(AndroidAtsDynamicConfigPusherDecoratorState.getDefaultInstance());
+    assertThat(state.hasDeviceFilePushedPath()).isTrue();
+    assertThat(state.getContentProvider()).isEqualTo("content_provider_pkg");
   }
 
   @Test
   public void skippableTearDown_success() throws Exception {
-    StepSkippableLifecycleDecoratorUtil.setState(
+    PhaseSkippableDecoratorUtil.setState(
         testInfo,
         "device_id",
-        "com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidAtsDynamicConfigPusherDecorator",
-        "device_file_pushed_path",
-        "device_path");
-    StepSkippableLifecycleDecoratorUtil.setState(
-        testInfo,
-        "device_id",
-        "com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidAtsDynamicConfigPusherDecorator",
-        "content_provider",
-        "content_provider_pkg");
+        AndroidAtsDynamicConfigPusherDecoratorState.newBuilder()
+            .setDeviceFilePushedPath("device_path")
+            .setContentProvider("content_provider_pkg")
+            .build());
 
-    decorator.skippableTearDown(TeardownContext.create(testInfo, null, null));
+    teardownDecorator.tearDown(TeardownContext.create(testInfo, null, null));
 
     verify(androidFileUtil).removeFiles("device_id", "device_path");
     verify(apkInstaller).uninstallApk(eq(device), eq("content_provider_pkg"), eq(true), any());
@@ -193,7 +187,7 @@ public final class AndroidAtsDynamicConfigPusherDecoratorTest {
     MobileHarnessException exception =
         assertThrows(
             MobileHarnessException.class,
-            () -> decorator.skippableSetUp(SetupContext.create(testInfo)));
+            () -> setupDecorator.setUp(SetupContext.create(testInfo)));
     assertThat(exception).hasMessageThat().contains("Fail to find 'cts.dynamic' in tradefed jar");
   }
 
@@ -226,7 +220,7 @@ public final class AndroidAtsDynamicConfigPusherDecoratorTest {
     files.add(configFile);
     when(localFileUtil.listFiles(any(), eq(true))).thenReturn(files);
 
-    decorator.skippableSetUp(SetupContext.create(testInfo));
+    setupDecorator.setUp(SetupContext.create(testInfo));
 
     verify(androidFileUtil).push(eq("device_id"), anyInt(), any(), any());
   }

@@ -118,6 +118,23 @@ java_library(
 java_library(
     name = "android_ats_dynamic_config_pusher_decorator",
     srcs = ["AndroidAtsDynamicConfigPusherDecorator.java"],
+    deps = [
+        ":android_ats_dynamic_config_pusher_setup_only_decorator",
+        ":android_ats_dynamic_config_pusher_teardown_only_decorator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:phase_skippable_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_ats_dynamic_config_pusher_decorator_spec_java_proto",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "android_ats_dynamic_config_pusher_setup_only_decorator",
+    srcs = ["AndroidAtsDynamicConfigPusherSetupOnlyDecorator.java"],
     resources = [
         "//src/java/com/google/devtools/mobileharness/platform/android/app/binary/contentprovider:ManagedFileContentProvider.apk",
     ],
@@ -134,16 +151,39 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:lifecycle_decorator",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:step_skippable_lifecycle_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:setup_only_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/util:phase_skippable_decorator_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_ats_dynamic_config_pusher_decorator_spec_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/state:android_ats_dynamic_config_pusher_decorator_state_java_proto",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
         "@maven//:xmlpull_xmlpull",
+    ],
+)
+
+java_library(
+    name = "android_ats_dynamic_config_pusher_teardown_only_decorator",
+    srcs = ["AndroidAtsDynamicConfigPusherTeardownOnlyDecorator.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:lifecycle_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:teardown_only_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/util:phase_skippable_decorator_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_ats_dynamic_config_pusher_decorator_spec_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/state:android_ats_dynamic_config_pusher_decorator_state_java_proto",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 
@@ -804,6 +844,23 @@ java_library(
     name = "device_info_collector_decorator",
     srcs = ["DeviceInfoCollectorDecorator.java"],
     deps = [
+        ":device_info_collector_setup_only_decorator",
+        ":device_info_collector_teardown_only_decorator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:phase_skippable_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:device_info_collector_decorator_spec_java_proto",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "device_info_collector_setup_only_decorator",
+    srcs = ["DeviceInfoCollectorSetupOnlyDecorator.java"],
+    deps = [
         "//src/devtools/mobileharness/platform/android/instrumentation/result/proto:test_suite_result_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",
@@ -819,12 +876,34 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:lifecycle_decorator",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:step_skippable_lifecycle_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:setup_only_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/util:phase_skippable_decorator_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:device_info_collector_decorator_spec_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/state:device_info_collector_decorator_state_java_proto",
         "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "device_info_collector_teardown_only_decorator",
+    srcs = ["DeviceInfoCollectorTeardownOnlyDecorator.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:lifecycle_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:teardown_only_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/util:phase_skippable_decorator_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:device_info_collector_decorator_spec_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/state:device_info_collector_decorator_state_java_proto",
         "@maven//:javax_inject_jsr330_api",
     ],
 )

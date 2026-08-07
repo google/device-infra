@@ -45,7 +45,6 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:capture_logs",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
-        "@protobuf//:protobuf_java",
     ],
 )
 

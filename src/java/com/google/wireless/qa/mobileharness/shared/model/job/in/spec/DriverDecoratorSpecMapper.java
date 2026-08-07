@@ -76,6 +76,12 @@ public final class DriverDecoratorSpecMapper {
     builder.put(
         "AndroidAtsDynamicConfigPusherDecorator", "AndroidAtsDynamicConfigPusherDecoratorSpec");
     builder.put(
+        "AndroidAtsDynamicConfigPusherSetupOnlyDecorator",
+        "AndroidAtsDynamicConfigPusherDecoratorSpec");
+    builder.put(
+        "AndroidAtsDynamicConfigPusherTeardownOnlyDecorator",
+        "AndroidAtsDynamicConfigPusherDecoratorSpec");
+    builder.put(
         "AndroidBusinessLogicSkipModuleDecorator", "AndroidBusinessLogicSkipModuleDecoratorSpec");
     builder.put("AndroidDeviceFeaturesCheckDecorator", "AndroidDeviceFeaturesCheckDecoratorSpec");
     builder.put("AndroidDeviceSettingsDecorator", "AndroidDeviceSettingsDecoratorSpec");
@@ -98,6 +104,8 @@ public final class DriverDecoratorSpecMapper {
     builder.put("AndroidSwitchUserDecorator", "AndroidSwitchUserDecoratorSpec");
     builder.put("ApkPreconditionCheckDecorator", "ApkPreconditionCheckDecoratorSpec");
     builder.put("DeviceInfoCollectorDecorator", "DeviceInfoCollectorDecoratorSpec");
+    builder.put("DeviceInfoCollectorSetupOnlyDecorator", "DeviceInfoCollectorDecoratorSpec");
+    builder.put("DeviceInfoCollectorTeardownOnlyDecorator", "DeviceInfoCollectorDecoratorSpec");
     builder.put("MoblyDecoratorAdapter", "MoblyDecoratorAdapterSpec");
     builder.put("NoOpDecorator", "NoOpDecoratorSpec");
     builder.put("PythonVersionCheckDecorator", "PythonVersionCheckDecoratorSpec");

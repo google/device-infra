@@ -39,15 +39,17 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.time.CountDownTimer;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.util.StepSkippableLifecycleDecoratorUtil;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.util.PhaseSkippableDecoratorUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.DeviceInfoCollectorDecoratorSpec;
+import com.google.wireless.qa.mobileharness.shared.proto.state.decorator.DeviceInfoCollectorDecoratorState;
 import java.io.File;
 import java.time.Duration;
 import java.util.function.Supplier;
@@ -81,7 +83,8 @@ public final class DeviceInfoCollectorDecoratorTest {
   @Mock private CountDownTimer countDownTimer;
   @Captor private ArgumentCaptor<Supplier<LineCallback>> callbackCaptor;
 
-  private DeviceInfoCollectorDecorator decorator;
+  private DeviceInfoCollectorSetupOnlyDecorator setupDecorator;
+  private DeviceInfoCollectorTeardownOnlyDecorator teardownDecorator;
   private DeviceInfoCollectorDecoratorSpec.Builder specBuilder;
   private Properties testProperties;
 
@@ -116,11 +119,13 @@ public final class DeviceInfoCollectorDecoratorTest {
             .setSrcDir(SRC_DIR)
             .setDestDir(DEST_DIR);
 
-    when(jobInfo.combinedSpec(any(DeviceInfoCollectorDecorator.class), eq(DEVICE_ID)))
+    when(jobInfo.combinedSpec(
+            ArgumentMatchers.<SpecConfigable<DeviceInfoCollectorDecoratorSpec>>any(),
+            eq(DEVICE_ID)))
         .thenAnswer(invocation -> specBuilder.build());
 
-    decorator =
-        new DeviceInfoCollectorDecorator(
+    setupDecorator =
+        new DeviceInfoCollectorSetupOnlyDecorator(
             decorated,
             testInfo,
             androidFileUtil,
@@ -129,6 +134,9 @@ public final class DeviceInfoCollectorDecoratorTest {
             apkInstaller,
             androidSystemSettingUtil,
             androidInstrumentationUtil);
+
+    teardownDecorator =
+        new DeviceInfoCollectorTeardownOnlyDecorator(decorated, testInfo, apkInstaller);
   }
 
   @Test
@@ -159,7 +167,7 @@ public final class DeviceInfoCollectorDecoratorTest {
               return "instrumentation output";
             });
 
-    decorator.skippableSetUp(SetupContext.create(testInfo));
+    setupDecorator.setUp(SetupContext.create(testInfo));
 
     // Verify properties collected
     assertThat(testProperties.get("cts:build_abi")).isEqualTo("prop_value");
@@ -204,7 +212,7 @@ public final class DeviceInfoCollectorDecoratorTest {
     MobileHarnessException exception =
         assertThrows(
             MobileHarnessException.class,
-            () -> decorator.skippableSetUp(SetupContext.create(testInfo)));
+            () -> setupDecorator.setUp(SetupContext.create(testInfo)));
     assertThat(exception.getErrorId())
         .isEqualTo(AndroidErrorId.ANDROID_DEVICE_INFO_COLLECTOR_DECORATOR_INVALID_PARAMETER);
   }
@@ -212,17 +220,19 @@ public final class DeviceInfoCollectorDecoratorTest {
   @Test
   public void skippableTearDown_success() throws Exception {
     // Set state to simulate installed
-    StepSkippableLifecycleDecoratorUtil.setState(
-        testInfo, DEVICE_ID, DeviceInfoCollectorDecorator.class.getName(), "installed", "true");
+    PhaseSkippableDecoratorUtil.setState(
+        testInfo,
+        DEVICE_ID,
+        DeviceInfoCollectorDecoratorState.newBuilder().setInstalled(true).build());
 
-    decorator.skippableTearDown(TeardownContext.create(testInfo, null, null));
+    teardownDecorator.tearDown(TeardownContext.create(testInfo, null, null));
 
     verify(apkInstaller).uninstallApk(eq(device), eq(PACKAGE_NAME), eq(false), any());
 
-    String state =
-        StepSkippableLifecycleDecoratorUtil.getState(
-                testInfo, DEVICE_ID, DeviceInfoCollectorDecorator.class.getName(), "installed")
-            .orElse("");
-    assertThat(state).isEqualTo("false");
+    DeviceInfoCollectorDecoratorState state =
+        PhaseSkippableDecoratorUtil.getState(
+                testInfo, DEVICE_ID, DeviceInfoCollectorDecoratorState.class)
+            .orElse(DeviceInfoCollectorDecoratorState.getDefaultInstance());
+    assertThat(state.getInstalled()).isFalse();
   }
 }
