@@ -177,6 +177,8 @@ message BasicDeviceInfo {
   string hardware = 7;
   // Build ID or version, common for Android devices.
   string build = 8;
+  // URL to the monitoring dashboard, populated by the backend if applicable.
+  string metrics_url = 9;
 }
 
 // Lists of supported test drivers and decorators.

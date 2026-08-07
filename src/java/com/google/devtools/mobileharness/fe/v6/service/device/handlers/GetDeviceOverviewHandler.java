@@ -36,6 +36,7 @@ import com.google.common.util.concurrent.JdkFutureAdapters;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.PermissionInfo;
@@ -185,6 +186,14 @@ public final class GetDeviceOverviewHandler {
         .build();
   }
 
+  /**
+   * Builds the {@link DeviceOverview} from the device ID, device data, and header info.
+   *
+   * @param deviceId the ID of the device
+   * @param deviceData the loaded device data containing device info and configuration
+   * @param headerInfo the device header info containing host and other overview details
+   * @return the built DeviceOverview containing basic info, permissions, capabilities, etc.
+   */
   private DeviceOverview buildDeviceOverview(
       String deviceId, DeviceData deviceData, DeviceHeaderInfo headerInfo) {
     DeviceInfo deviceInfo = deviceData.deviceInfo();
@@ -196,7 +205,7 @@ public final class GetDeviceOverviewHandler {
 
     // BasicDeviceInfo and SubDevices
     ImmutableMap<String, String> dimensions = DeviceInfoUtil.getDimensions(deviceInfo);
-    builder.setBasicInfo(buildBasicDeviceInfo(dimensions));
+    builder.setBasicInfo(buildBasicDeviceInfo(deviceId, dimensions, deviceData.rawLabConfig()));
 
     // Permissions
     builder.setPermissions(
@@ -233,7 +242,19 @@ public final class GetDeviceOverviewHandler {
     return builder.setIsAndroid(isAndroid).build();
   }
 
-  private BasicDeviceInfo buildBasicDeviceInfo(ImmutableMap<String, String> allDimensions) {
+  /**
+   * Builds the {@link BasicDeviceInfo} from the device ID, dimensions, and lab config.
+   *
+   * @param deviceId the ID of the device, used to generate the metrics URL
+   * @param allDimensions a map of all device dimensions, used to extract basic info like model, os,
+   *     etc.
+   * @param labConfigOpt optional lab configuration, used to check if the lab is a fusion lab
+   * @return the built BasicDeviceInfo containing hardware, software, and network information
+   */
+  private BasicDeviceInfo buildBasicDeviceInfo(
+      String deviceId,
+      ImmutableMap<String, String> allDimensions,
+      Optional<LabConfig> labConfigOpt) {
     BasicDeviceInfo.Builder basicInfo =
         BasicDeviceInfo.newBuilder().setModel(allDimensions.getOrDefault("model", ""));
 
@@ -262,6 +283,9 @@ public final class GetDeviceOverviewHandler {
       network.setWifiRssi(0);
     }
     network.setHasInternet(Boolean.parseBoolean(allDimensions.getOrDefault("internet", "false")));
+
+    // Reference from V5: java/com/google/devtools/mobileharness/fe/v5/ui/table/basic_info_table.soy
+
     return basicInfo.setNetwork(network).build();
   }
 

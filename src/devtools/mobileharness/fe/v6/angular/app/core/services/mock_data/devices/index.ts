@@ -31,6 +31,7 @@ import {
   scenarioErrorRpc,
 } from './27_error_scenarios';
 import {deviceRefreshFactory} from './27_refresh_scenario';
+import {scenarioFusionDevice} from './28_fusion_device';
 
 function wrapDevice(
   factory: (callCount?: number) => MockDeviceScenario,
@@ -72,6 +73,7 @@ export const MOCK_DEVICE_SCENARIOS: MockDeviceScenarioWrapper[] = [
   wrapDevice(SCENARIO_TESTBED_SINGLE_ELIGIBLE),
   wrapDevice(SCENARIO_TESTBED_MIXED_ELIGIBILITY),
   wrapDevice(SCENARIO_COMING_SOON),
+  wrapDevice(scenarioFusionDevice),
   wrapDevice(scenarioErrorPermissionDenied),
   wrapDevice(scenarioErrorLogical),
   wrapDevice(scenarioErrorRpc),

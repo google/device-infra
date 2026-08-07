@@ -213,6 +213,8 @@ export declare interface BasicDeviceInfo {
   hardware?: string;
   /** Build ID or version, common for Android devices. Optional. */
   build?: string;
+  /** URL to the monitoring dashboard, populated by the backend if applicable. */
+  metricsUrl?: string;
 }
 
 /**
