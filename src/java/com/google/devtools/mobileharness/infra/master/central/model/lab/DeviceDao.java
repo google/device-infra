@@ -112,6 +112,15 @@ public abstract class DeviceDao {
                         .setValue(dimension.getDimension().getValue())
                         .build())
             .collect(toImmutableList()));
+    if (deviceCondition.hasAllocatedTestLocator()) {
+      com.google.devtools.mobileharness.api.model.proto.Test.TestLocator allocatedTest =
+          deviceCondition.getAllocatedTestLocator();
+      deviceInfoBuilder
+          .setJobId(allocatedTest.getJobLocator().getId())
+          .setJobName(allocatedTest.getJobLocator().getName())
+          .setTestId(allocatedTest.getId())
+          .setTestName(allocatedTest.getName());
+    }
     return deviceInfoBuilder.build();
   }
 }
