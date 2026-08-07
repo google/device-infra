@@ -2507,4 +2507,70 @@ public final class NewMultiCommandRequestHandlerTest {
     JobInfo slateJob = createJobsResult.jobInfos().get(0);
     assertThat(slateJob.params().get("target")).isEqualTo("targetEqualsShort1");
   }
+
+  @Test
+  public void createSlateJobs_multipleDevices() throws Exception {
+    when(sessionRequestHandlerUtil.createJobGenDir(anyString())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(anyString())).thenReturn(Path.of("/tmp/tmp"));
+
+    CommandInfo slateCommandInfo =
+        CommandInfo.newBuilder()
+            .setName("command")
+            .setCommandLine("slate --target team.module.task_id1")
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue(DEVICE_ID_1)
+                    .build())
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue(DEVICE_ID_2)
+                    .build())
+            .build();
+
+    NewMultiCommandRequest slateRequest =
+        NewMultiCommandRequest.newBuilder()
+            .setUserId("user_id")
+            .addCommands(slateCommandInfo)
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///path/to/slate_binary")
+                    .setName("slate_binary")
+                    .build())
+            .build();
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createSlateJobs(slateRequest, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).hasSize(1);
+    JobInfo slateJob = createJobsResult.jobInfos().get(0);
+    assertThat(slateJob.subDeviceSpecs().getAllSubDevices()).hasSize(2);
+  }
+
+  @Test
+  public void createSlateJobs_noDevices_errorResult() throws Exception {
+    CommandInfo slateCommandInfo =
+        CommandInfo.newBuilder()
+            .setName("command")
+            .setCommandLine("slate --target team.module.task_id1")
+            .build();
+
+    NewMultiCommandRequest slateRequest =
+        NewMultiCommandRequest.newBuilder()
+            .setUserId("user_id")
+            .addCommands(slateCommandInfo)
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///path/to/slate_binary")
+                    .setName("slate_binary")
+                    .build())
+            .build();
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createSlateJobs(slateRequest, sessionInfo);
+
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.ERROR);
+    assertThat(createJobsResult.errorReason()).hasValue(ErrorReason.INVALID_REQUEST);
+  }
 }

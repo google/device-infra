@@ -24,12 +24,14 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -60,6 +62,9 @@ public final class SlateDriverTest {
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
 
   @Mock private Device device;
+  @Mock private CompositeDevice compositeDevice;
+  @Mock private Device subDevice1;
+  @Mock private Device subDevice2;
   @Mock private CommandExecutor cmdExecutor;
   @Mock private LocalFileUtil localFileUtil;
   @Mock private CommandResult cmdResult;
@@ -172,5 +177,23 @@ public final class SlateDriverTest {
 
     // Act & Assert
     assertThrows(MobileHarnessException.class, () -> slateDriver.run(testInfo));
+  }
+
+  @Test
+  public void run_executesCorrectCommand_multipleDevices() throws Exception {
+    // Arrange
+    when(subDevice1.getDeviceId()).thenReturn("sub_device_1");
+    when(subDevice2.getDeviceId()).thenReturn("sub_device_2");
+    when(compositeDevice.getManagedDevices()).thenReturn(ImmutableSet.of(subDevice1, subDevice2));
+    slateDriver = new SlateDriver(compositeDevice, testInfo, cmdExecutor, localFileUtil);
+
+    // Act
+    slateDriver.run(testInfo);
+
+    // Assert
+    ArgumentCaptor<Command> commandCaptor = ArgumentCaptor.forClass(Command.class);
+    verify(cmdExecutor).exec(commandCaptor.capture());
+    Command command = commandCaptor.getValue();
+    assertThat(command.toString()).contains("--device sub_device_1 sub_device_2");
   }
 }

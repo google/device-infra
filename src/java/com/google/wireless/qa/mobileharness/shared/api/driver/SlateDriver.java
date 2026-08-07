@@ -16,16 +16,20 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -89,7 +93,7 @@ public class SlateDriver extends BaseDriver implements SpecConfigable<SlateDrive
       configPath = destConfigPath.toString();
     }
 
-    String deviceSerial = getDevice().getDeviceId();
+    ImmutableList<String> deviceSerials = getDeviceSerials();
     List<String> targets = spec.getTargetList();
     if (targets.isEmpty()) {
       throw new MobileHarnessException(
@@ -103,7 +107,7 @@ public class SlateDriver extends BaseDriver implements SpecConfigable<SlateDrive
         .alsoTo(logger)
         .log(
             "Preparing to run SLATE binary: %s on device %s with targets %s",
-            binaryPath, deviceSerial, targets);
+            binaryPath, deviceSerials, targets);
 
     // 4. Prepare Output Directory
     String genFileDir = testInfo.getGenFileDir();
@@ -125,7 +129,7 @@ public class SlateDriver extends BaseDriver implements SpecConfigable<SlateDrive
       testInfo.log().atInfo().alsoTo(logger).log("SlateDriver: Writing logs to %s", logFile);
 
       ImmutableList.Builder<String> args = ImmutableList.builder();
-      args.add("--target").addAll(targets).add("--device", deviceSerial);
+      args.add("--target").addAll(targets).add("--device").addAll(deviceSerials);
       if (configPath != null) {
         args.add("--config", configPath);
       }
@@ -193,5 +197,26 @@ public class SlateDriver extends BaseDriver implements SpecConfigable<SlateDrive
       throw new MobileHarnessException(
           BasicErrorId.COMMAND_EXEC_FAIL, "Failed to execute SLATE binary due to IO error", e);
     }
+  }
+
+  private ImmutableList<String> getDeviceSerials() {
+    Device device = getDevice();
+    if (device instanceof CompositeDevice compositeDevice) {
+      return compositeDevice.getManagedDevices().stream()
+          .map(this::getDeviceSerial)
+          .collect(toImmutableList());
+    }
+    return ImmutableList.of(getDeviceSerial(device));
+  }
+
+  private String getDeviceSerial(Device device) {
+    String id = device.getDeviceId();
+    if (id.startsWith(AndroidAdbInternalUtil.OUTPUT_USB_ID_TOKEN)) {
+      List<String> serials = device.getDimension("serial");
+      if (!serials.isEmpty()) {
+        id = serials.get(0);
+      }
+    }
+    return id;
   }
 }

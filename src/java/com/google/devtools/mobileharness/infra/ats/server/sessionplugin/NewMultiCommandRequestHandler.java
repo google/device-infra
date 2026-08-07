@@ -494,10 +494,10 @@ final class NewMultiCommandRequestHandler {
             .filter(d -> d.getName().equals("device_serial"))
             .map(DeviceDimension::getValue)
             .collect(toImmutableList());
-    if (deviceSerials.size() != 1) {
+    if (deviceSerials.isEmpty()) {
       throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.ATS_SERVER_INVALID_REQUEST_ERROR,
-          "Slate only supports single device mode.",
+          "Slate requires at least one device.",
           null);
     }
 
