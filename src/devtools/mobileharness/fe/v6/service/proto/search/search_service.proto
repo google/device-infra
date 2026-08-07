@@ -92,7 +92,8 @@ service SearchService {
   rpc GetFleetValueList(FleetValueListRequest)
       returns (FleetValueListResponse) {
     option (google.api.http) = {
-      get: "/v6/fleet-search/value-list"
+      post: "/v6/fleet-search/value-list"
+      body: "*"
     };
   }
 
