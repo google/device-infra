@@ -34,6 +34,8 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:constraints_for_testing",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:phase_skippable_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:setup_only_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:teardown_only_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:driver_factory",

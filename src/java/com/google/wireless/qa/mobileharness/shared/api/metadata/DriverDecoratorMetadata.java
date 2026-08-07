@@ -25,6 +25,9 @@ public final class DriverDecoratorMetadata {
   /** Internal map containing driver/decorator names (keys) and spec names (values). */
   private static final ImmutableMap<String, String> DRIVER_DECORATOR_SPEC_MAP;
 
+  /** Internal map containing decorator names (keys) and non-FULL decorator types (values). */
+  private static final ImmutableMap<String, DecoratorType> DECORATOR_TYPE_MAP;
+
   /**
    * Retrieves the spec name associated with the given driver or decorator name. Returns null if no
    * mapping exists.
@@ -44,6 +47,42 @@ public final class DriverDecoratorMetadata {
    */
   public static ImmutableMap<String, String> getDriverDecoratorSpecMap() {
     return DRIVER_DECORATOR_SPEC_MAP;
+  }
+
+  /**
+   * Retrieves the {@link DecoratorType} associated with the given decorator simple name.
+   *
+   * @param decoratorName The decorator simple name to query.
+   * @return The corresponding {@link DecoratorType}, or {@link DecoratorType#FULL} if not
+   *     specifically registered.
+   */
+  public static DecoratorType getDecoratorType(String decoratorName) {
+    return DECORATOR_TYPE_MAP.getOrDefault(decoratorName, DecoratorType.FULL);
+  }
+
+  /** Returns whether the decorator is a {@link DecoratorType#SETUP_ONLY} decorator. */
+  public static boolean isSetupOnlyDecorator(String decoratorName) {
+    return getDecoratorType(decoratorName) == DecoratorType.SETUP_ONLY;
+  }
+
+  /** Returns whether the decorator is a {@link DecoratorType#TEARDOWN_ONLY} decorator. */
+  public static boolean isTeardownOnlyDecorator(String decoratorName) {
+    return getDecoratorType(decoratorName) == DecoratorType.TEARDOWN_ONLY;
+  }
+
+  /** Returns whether the decorator is a {@link DecoratorType#PHASE_SKIPPABLE} decorator. */
+  public static boolean isPhaseSkippableDecorator(String decoratorName) {
+    return getDecoratorType(decoratorName) == DecoratorType.PHASE_SKIPPABLE;
+  }
+
+  /**
+   * Returns a copy of the internal map containing all decorator name-to-type mappings for
+   * non-{@link DecoratorType#FULL} decorators.
+   *
+   * @return An unmodifiable copy of the decorator type map.
+   */
+  public static ImmutableMap<String, DecoratorType> getDecoratorTypeMap() {
+    return DECORATOR_TYPE_MAP;
   }
 
   static {
@@ -110,6 +149,43 @@ public final class DriverDecoratorMetadata {
     // keep-sorted end
 
     DRIVER_DECORATOR_SPEC_MAP = builder.buildOrThrow();
+
+    ImmutableMap.Builder<String, DecoratorType> typeBuilder = ImmutableMap.builder();
+    /*
+     * =============================================================================================
+     * Initialize the map with decorator-type pairs.
+     * =============================================================================================
+     */
+    // keep-sorted start
+    typeBuilder.put("AndroidAtsDynamicConfigPusherDecorator", DecoratorType.PHASE_SKIPPABLE);
+    typeBuilder.put("AndroidAtsDynamicConfigPusherSetupOnlyDecorator", DecoratorType.SETUP_ONLY);
+    typeBuilder.put(
+        "AndroidAtsDynamicConfigPusherTeardownOnlyDecorator", DecoratorType.TEARDOWN_ONLY);
+    typeBuilder.put("AndroidBusinessLogicSkipModuleDecorator", DecoratorType.SETUP_ONLY);
+    typeBuilder.put("AndroidCleanAppsDecorator", DecoratorType.SETUP_ONLY);
+    typeBuilder.put("AndroidDeviceFeaturesCheckDecorator", DecoratorType.SETUP_ONLY);
+    typeBuilder.put("AndroidDumpSysDecorator", DecoratorType.TEARDOWN_ONLY);
+    typeBuilder.put("AndroidFilePusherDecorator", DecoratorType.SETUP_ONLY);
+    typeBuilder.put("AndroidInstallMainlineModulesDecorator", DecoratorType.SETUP_ONLY);
+    typeBuilder.put("AndroidLabTestSupportSettingsDecorator", DecoratorType.SETUP_ONLY);
+    typeBuilder.put("AndroidMainlineModulesCheckDecorator", DecoratorType.SETUP_ONLY);
+    typeBuilder.put("AndroidMinSdkVersionCheckDecorator", DecoratorType.SETUP_ONLY);
+    typeBuilder.put("AndroidOrientationDecorator", DecoratorType.SETUP_ONLY);
+    typeBuilder.put("AndroidRuntimeStatsDecorator", DecoratorType.SETUP_ONLY);
+    typeBuilder.put("AndroidScreenshotDecorator", DecoratorType.TEARDOWN_ONLY);
+    typeBuilder.put("AndroidSetWifiDecorator", DecoratorType.SETUP_ONLY);
+    typeBuilder.put("AndroidShippingApiLevelCheckDecorator", DecoratorType.SETUP_ONLY);
+    typeBuilder.put("AndroidShowInstructionDecorator", DecoratorType.SETUP_ONLY);
+    typeBuilder.put("AndroidStartAppsDecorator", DecoratorType.SETUP_ONLY);
+    typeBuilder.put("DeviceInfoCollectorDecorator", DecoratorType.PHASE_SKIPPABLE);
+    typeBuilder.put("DeviceInfoCollectorSetupOnlyDecorator", DecoratorType.SETUP_ONLY);
+    typeBuilder.put("DeviceInfoCollectorTeardownOnlyDecorator", DecoratorType.TEARDOWN_ONLY);
+    typeBuilder.put("NoOpDecorator", DecoratorType.TEARDOWN_ONLY);
+    typeBuilder.put("PythonVersionCheckDecorator", DecoratorType.SETUP_ONLY);
+    typeBuilder.put("ReportIntegrityCollectorDecorator", DecoratorType.SETUP_ONLY);
+    // keep-sorted end
+
+    DECORATOR_TYPE_MAP = typeBuilder.buildOrThrow();
   }
 
   private DriverDecoratorMetadata() {}

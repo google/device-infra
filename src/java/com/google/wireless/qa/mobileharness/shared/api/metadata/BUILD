@@ -24,7 +24,7 @@ package(
 
 java_library(
     name = "metadata",
-    srcs = ["DriverDecoratorMetadata.java"],
+    srcs = glob(["*.java"]),
     deps = [
         "@maven//:com_google_guava_guava",
     ],

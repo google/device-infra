@@ -37,9 +37,12 @@ import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ConstraintsForTesting;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.PhaseSkippableDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.SetupOnlyDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.TeardownOnlyDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.driver.DriverFactory;
+import com.google.wireless.qa.mobileharness.shared.api.metadata.DecoratorType;
 import com.google.wireless.qa.mobileharness.shared.api.metadata.DriverDecoratorMetadata;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfoMocker;
@@ -158,6 +161,36 @@ public class InstantiationTest {
           .isEqualTo(DriverDecoratorMetadata.getDriverDecoratorSpecMap());
     } catch (Throwable e) {
       throw addSpecMismatchHelp(e);
+    }
+  }
+
+  @Test
+  public void checkDecoratorType() throws Exception {
+    Map<String, DecoratorType> decoratorTypeMapFromReflection = new HashMap<>();
+    for (Class<? extends Decorator> decoratorClass : decoratorClasses) {
+      DecoratorType type;
+      if (SetupOnlyDecorator.class.isAssignableFrom(decoratorClass)
+          && !decoratorClass.equals(SetupOnlyDecorator.class)) {
+        type = DecoratorType.SETUP_ONLY;
+      } else if (TeardownOnlyDecorator.class.isAssignableFrom(decoratorClass)
+          && !decoratorClass.equals(TeardownOnlyDecorator.class)) {
+        type = DecoratorType.TEARDOWN_ONLY;
+      } else if (PhaseSkippableDecorator.class.isAssignableFrom(decoratorClass)
+          && !decoratorClass.equals(PhaseSkippableDecorator.class)) {
+        type = DecoratorType.PHASE_SKIPPABLE;
+      } else {
+        type = DecoratorType.FULL;
+      }
+      if (type != DecoratorType.FULL) {
+        decoratorTypeMapFromReflection.put(decoratorClass.getSimpleName(), type);
+      }
+    }
+
+    try {
+      assertThat(decoratorTypeMapFromReflection)
+          .isEqualTo(DriverDecoratorMetadata.getDecoratorTypeMap());
+    } catch (Throwable e) {
+      throw addDecoratorTypeMismatchHelp(e);
     }
   }
 
@@ -302,6 +335,19 @@ public class InstantiationTest {
                 "If you add/edit/remove a Driver/Decorator which implements the SpecConfigable"
                     + " interface, please make corresponding modifications in the static config"
                     + " file, file address %s",
+                DRIVER_DECORATOR_METADATA_PATH),
+            e);
+    result.setStackTrace(new StackTraceElement[0]);
+    return result;
+  }
+
+  private static IllegalStateException addDecoratorTypeMismatchHelp(Throwable e) {
+    IllegalStateException result =
+        new IllegalStateException(
+            String.format(
+                "If you add/edit/remove a Decorator which is a SetupOnlyDecorator,"
+                    + " TeardownOnlyDecorator, or PhaseSkippableDecorator, please make"
+                    + " corresponding modifications in the static metadata file, file address %s",
                 DRIVER_DECORATOR_METADATA_PATH),
             e);
     result.setStackTrace(new StackTraceElement[0]);
