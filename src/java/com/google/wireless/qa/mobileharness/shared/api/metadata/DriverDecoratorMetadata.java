@@ -177,6 +177,7 @@ public final class DriverDecoratorMetadata {
     typeBuilder.put("AndroidShippingApiLevelCheckDecorator", DecoratorType.SETUP_ONLY);
     typeBuilder.put("AndroidShowInstructionDecorator", DecoratorType.SETUP_ONLY);
     typeBuilder.put("AndroidStartAppsDecorator", DecoratorType.SETUP_ONLY);
+    typeBuilder.put("ApkPreconditionCheckDecorator", DecoratorType.SETUP_ONLY);
     typeBuilder.put("DeviceInfoCollectorDecorator", DecoratorType.PHASE_SKIPPABLE);
     typeBuilder.put("DeviceInfoCollectorSetupOnlyDecorator", DecoratorType.SETUP_ONLY);
     typeBuilder.put("DeviceInfoCollectorTeardownOnlyDecorator", DecoratorType.TEARDOWN_ONLY);

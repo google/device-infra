@@ -38,9 +38,8 @@ import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidS
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.StepSkippableLifecycleDecorator;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.SetupOnlyDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -65,7 +64,7 @@ import javax.inject.Inject;
  * instead.
  */
 @DecoratorAnnotation(help = "Decorator to run apk precondition checks for xTS suites before test.")
-public class ApkPreconditionCheckDecorator extends StepSkippableLifecycleDecorator
+public class ApkPreconditionCheckDecorator extends SetupOnlyDecorator
     implements SpecConfigable<ApkPreconditionCheckDecoratorSpec> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -82,8 +81,7 @@ public class ApkPreconditionCheckDecorator extends StepSkippableLifecycleDecorat
       LocalFileUtil localFileUtil,
       ApkInstaller apkInstaller,
       AndroidSystemSettingUtil androidSystemSettingUtil,
-      AndroidInstrumentationUtil androidInstrumentationUtil)
-      throws MobileHarnessException {
+      AndroidInstrumentationUtil androidInstrumentationUtil) {
     super(decorated, testInfo);
     this.localFileUtil = localFileUtil;
     this.apkInstaller = apkInstaller;
@@ -92,7 +90,7 @@ public class ApkPreconditionCheckDecorator extends StepSkippableLifecycleDecorat
   }
 
   @Override
-  protected SetupResult skippableSetUp(SetupContext context)
+  protected SetupResult setUp(SetupContext context)
       throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
     String deviceId = getDevice().getDeviceId();

@@ -830,7 +830,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:lifecycle_decorator",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:step_skippable_lifecycle_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:setup_only_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
