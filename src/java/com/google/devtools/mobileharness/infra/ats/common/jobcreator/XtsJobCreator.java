@@ -56,6 +56,7 @@ import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.PhaseSkippableDecoratorConstants;
+import com.google.wireless.qa.mobileharness.shared.api.metadata.DriverDecoratorMetadata;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
@@ -557,7 +558,9 @@ public abstract class XtsJobCreator {
       return Optional.empty();
     }
     ImmutableList<PreconditionDecorator> preconditionDecorators =
-        parsePreconditionDecorators(sessionRequestInfo);
+        parsePreconditionDecorators(sessionRequestInfo).stream()
+            .filter(d -> !DriverDecoratorMetadata.isTeardownOnlyDecorator(d.getDecoratorName()))
+            .collect(toImmutableList());
     if (preconditionDecorators.isEmpty()) {
       return Optional.empty();
     }
@@ -574,7 +577,9 @@ public abstract class XtsJobCreator {
       return Optional.empty();
     }
     ImmutableList<PreconditionDecorator> preconditionDecorators =
-        parsePreconditionDecorators(sessionRequestInfo);
+        parsePreconditionDecorators(sessionRequestInfo).stream()
+            .filter(d -> !DriverDecoratorMetadata.isSetupOnlyDecorator(d.getDecoratorName()))
+            .collect(toImmutableList());
     if (preconditionDecorators.isEmpty()) {
       return Optional.empty();
     }

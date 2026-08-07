@@ -671,6 +671,8 @@ public final class ConsoleJobCreatorTest {
           "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
               + "<configuration description=\"CTS precondition v2 configs\">\n"
               + "    <target_preparer"
+              + " class=\"com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidCleanAppsDecorator\"/>\n"
+              + "    <target_preparer"
               + " class=\"com.google.wireless.qa.mobileharness.shared.api.decorator.DeviceInfoCollectorDecorator\">\n"
               + "        <option name=\"apk\" value=\"CtsDeviceInfo.apk\"/>\n"
               + "        <option name=\"package_name\""
@@ -683,6 +685,8 @@ public final class ConsoleJobCreatorTest {
               + "        <option name=\"file_path_on_device\" value=\"/sys/fs/selinux/policy\"/>\n"
               + "        <option name=\"pulled_file_dir\" value=\"vintf-files/sepolicy\"/>\n"
               + "    </target_preparer>\n"
+              + "    <target_preparer"
+              + " class=\"com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidDumpSysDecorator\"/>\n"
               + "</configuration>";
       zos.write(xml.getBytes(UTF_8));
       zos.closeEntry();
@@ -710,7 +714,10 @@ public final class ConsoleJobCreatorTest {
         .isEqualTo(PhaseSkippableDecoratorConstants.ExecutionMode.SETUP_ONLY.name());
     assertThat(setupJob.type().getDriver()).isEqualTo("NoOpDriver");
     assertThat(setupJob.subDeviceSpecs().getAllSubDevices().get(0).decorators().getAll())
-        .containsExactly("DeviceInfoCollectorDecorator", "AndroidFilePullerDecorator")
+        .containsExactly(
+            "AndroidCleanAppsDecorator",
+            "DeviceInfoCollectorDecorator",
+            "AndroidFilePullerDecorator")
         .inOrder();
     DeviceInfoCollectorDecoratorSpec spec =
         setupJob
@@ -742,7 +749,103 @@ public final class ConsoleJobCreatorTest {
         .isEqualTo(PhaseSkippableDecoratorConstants.ExecutionMode.TEARDOWN_ONLY.name());
     assertThat(teardownJob.type().getDriver()).isEqualTo("NoOpDriver");
     assertThat(teardownJob.subDeviceSpecs().getAllSubDevices().get(0).decorators().getAll())
-        .containsExactly("DeviceInfoCollectorDecorator", "AndroidFilePullerDecorator")
+        .containsExactly(
+            "DeviceInfoCollectorDecorator", "AndroidFilePullerDecorator", "AndroidDumpSysDecorator")
         .inOrder();
+  }
+
+  @Test
+  public void createXtsSetupAndTearDownJob_setupOnlyDecorators_createsOnlySetupJob()
+      throws Exception {
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .addAllModuleNames(ImmutableList.of("mock_mobly_module"));
+    when(localFileUtil.isDirExist(any(Path.class))).thenReturn(true);
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(true);
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(any()))
+        .thenReturn(ImmutableList.of());
+    when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any(), anyBoolean()))
+        .thenReturn(MOCK_SUB_DEVICE_SPEC_LIST);
+    when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(any())).thenReturn(Path.of("/tmp/tmp"));
+
+    File xtsRootDir = folder.newFolder("xts_root_setup_only");
+    File toolsDir = folder.newFolder("xts_root_setup_only", "android-cts", "tools");
+    File jarFile = new File(toolsDir, "cts-tradefed.jar");
+    try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(jarFile))) {
+      zos.putNextEntry(new ZipEntry("cts-preconditions.configv2"));
+      String xml =
+          "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+              + "<configuration description=\"CTS precondition v2 configs\">\n"
+              + "    <target_preparer"
+              + " class=\"com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidCleanAppsDecorator\"/>\n"
+              + "</configuration>";
+      zos.write(xml.getBytes(UTF_8));
+      zos.closeEntry();
+    }
+    when(localFileUtil.isFileExist(eq(jarFile.toPath()))).thenReturn(true);
+    SessionRequestInfo.Builder newBuilder =
+        builder.setXtsRootDir(xtsRootDir.getAbsolutePath()).setXtsType("cts");
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(newBuilder);
+
+    Optional<JobInfo> setupJobOpt = jobCreator.createXtsSetupJob(sessionRequestInfo);
+    assertThat(setupJobOpt).isPresent();
+    assertThat(setupJobOpt.get().subDeviceSpecs().getAllSubDevices().get(0).decorators().getAll())
+        .containsExactly("AndroidCleanAppsDecorator");
+
+    Optional<JobInfo> teardownJobOpt = jobCreator.createXtsTearDownJob(sessionRequestInfo);
+    assertThat(teardownJobOpt).isEmpty();
+  }
+
+  @Test
+  public void createXtsSetupAndTearDownJob_teardownOnlyDecorators_createsOnlyTeardownJob()
+      throws Exception {
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .addAllModuleNames(ImmutableList.of("mock_mobly_module"));
+    when(localFileUtil.isDirExist(any(Path.class))).thenReturn(true);
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(true);
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(any()))
+        .thenReturn(ImmutableList.of());
+    when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any(), anyBoolean()))
+        .thenReturn(MOCK_SUB_DEVICE_SPEC_LIST);
+    when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(any())).thenReturn(Path.of("/tmp/tmp"));
+
+    File xtsRootDir = folder.newFolder("xts_root_teardown_only");
+    File toolsDir = folder.newFolder("xts_root_teardown_only", "android-cts", "tools");
+    File jarFile = new File(toolsDir, "cts-tradefed.jar");
+    try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(jarFile))) {
+      zos.putNextEntry(new ZipEntry("cts-preconditions.configv2"));
+      String xml =
+          "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+              + "<configuration description=\"CTS precondition v2 configs\">\n"
+              + "    <target_preparer"
+              + " class=\"com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidDumpSysDecorator\"/>\n"
+              + "</configuration>";
+      zos.write(xml.getBytes(UTF_8));
+      zos.closeEntry();
+    }
+    when(localFileUtil.isFileExist(eq(jarFile.toPath()))).thenReturn(true);
+    SessionRequestInfo.Builder newBuilder =
+        builder.setXtsRootDir(xtsRootDir.getAbsolutePath()).setXtsType("cts");
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(newBuilder);
+
+    Optional<JobInfo> setupJobOpt = jobCreator.createXtsSetupJob(sessionRequestInfo);
+    assertThat(setupJobOpt).isEmpty();
+
+    Optional<JobInfo> teardownJobOpt = jobCreator.createXtsTearDownJob(sessionRequestInfo);
+    assertThat(teardownJobOpt).isPresent();
+    assertThat(
+            teardownJobOpt.get().subDeviceSpecs().getAllSubDevices().get(0).decorators().getAll())
+        .containsExactly("AndroidDumpSysDecorator");
   }
 }
