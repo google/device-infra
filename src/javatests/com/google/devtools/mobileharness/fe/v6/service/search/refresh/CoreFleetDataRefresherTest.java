@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
+import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -93,6 +94,27 @@ public final class CoreFleetDataRefresherTest {
     // SELF refreshed to the new fleet; ATS kept its previous snapshot despite the failure.
     assertThat(store.get(Fleet.FLEET_SELF).deviceCount()).isEqualTo(3);
     assertThat(store.get(Fleet.FLEET_ATS).deviceCount()).isEqualTo(1);
+  }
+
+  @Test
+  public void buildInitialIndexWithRetry_succeedsFirstAttempt() {
+    FakeFleetDataSource selfSource = new FakeFleetDataSource(Fleet.FLEET_SELF);
+    selfSource.setResult(deviceResult(2));
+
+    refresher(selfSource).buildInitialIndexWithRetry();
+
+    assertThat(store.hasSnapshot(Fleet.FLEET_SELF)).isTrue();
+    assertThat(store.get(Fleet.FLEET_SELF).deviceCount()).isEqualTo(2);
+  }
+
+  @Test
+  public void buildInitialIndexWithRetry_failsAllAttempts_throwsIllegalStateException() {
+    FakeFleetDataSource selfSource = new FakeFleetDataSource(Fleet.FLEET_SELF);
+    selfSource.setFailure(new RuntimeException("master unreachable"));
+    CoreFleetDataRefresher refresher = refresher(selfSource);
+
+    assertThrows(IllegalStateException.class, refresher::buildInitialIndexWithRetry);
+    assertThat(store.hasSnapshot(Fleet.FLEET_SELF)).isFalse();
   }
 
   private CoreFleetDataRefresher refresher(FleetDataSource... sources) {
