@@ -14,50 +14,68 @@
 #
 
 load("@rules_java//java:java_library.bzl", "java_library")
-load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
 package(
     default_applicable_licenses = ["//:license"],
+    default_visibility = ["//src/devtools/mobileharness/fe/v6:visibility"],
 )
 
 java_library(
-    name = "tests",
-    testonly = 1,
-    srcs = glob(["*.java"]),
+    name = "search_service_logic",
+    srcs = ["SearchServiceLogic.java"],
     deps = [
-        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
-        "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
-        "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
-        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_common_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:device_enrichment",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index_builder",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_raw_data",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "search_service_logic_impl",
+    srcs = ["SearchServiceLogicImpl.java"],
+    deps = [
+        ":search_service_logic",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:ats_one_curation",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_chip_resolver",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_column_cataloger",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_filter_engine",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_flat_searcher",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_group_searcher",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_key_priority",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_promoted_keys_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_search_config_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_suggester",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_value_lister",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:scenario_curation",
-        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:fleet_snapshot_store",
         "@maven//:com_google_guava_guava",
-        "@maven//:com_google_inject_guice",
-        "@maven//:com_google_testparameterinjector_test_parameter_injector",
-        "@maven//:junit_junit",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 
-junit_test_suites(
-    name = "gen_tests",
-    sizes = [
-        "small",
+java_library(
+    name = "search_service_grpc_impl",
+    srcs = ["SearchServiceGrpcImpl.java"],
+    deps = [
+        ":search_service_logic",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_service_java_grpc",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_tjs_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/grpc:fe_grpc_invoker",
+        "@grpc-java//core",
+        "@grpc-java//stub",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
     ],
-    deps = [":tests"],
+)
+
+java_library(
+    name = "search_service_module",
+    srcs = ["SearchServiceModule.java"],
+    deps = [
+        ":search_service_logic",
+        ":search_service_logic_impl",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:lab_info_fleet_puller",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:scenario_curation_module",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:fleet_search_data_module",
+        "@maven//:com_google_inject_guice",
+    ],
 )
