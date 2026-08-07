@@ -183,6 +183,7 @@ public final class DriverDecoratorMetadata {
     typeBuilder.put("NoOpDecorator", DecoratorType.TEARDOWN_ONLY);
     typeBuilder.put("PythonVersionCheckDecorator", DecoratorType.SETUP_ONLY);
     typeBuilder.put("ReportIntegrityCollectorDecorator", DecoratorType.SETUP_ONLY);
+    typeBuilder.put("ReportLogCollectorDecorator", DecoratorType.TEARDOWN_ONLY);
     // keep-sorted end
 
     DECORATOR_TYPE_MAP = typeBuilder.buildOrThrow();
