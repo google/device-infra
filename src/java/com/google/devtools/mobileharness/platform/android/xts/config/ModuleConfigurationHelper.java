@@ -38,12 +38,12 @@ import com.google.gson.JsonObject;
 import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.Message;
+import com.google.wireless.qa.mobileharness.shared.api.metadata.DriverDecoratorMetadata;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.ScopedSpecs;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpecs;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.DriverDecoratorSpecMapper;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecWalker;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecWalker.Visitor;
@@ -204,7 +204,7 @@ public class ModuleConfigurationHelper {
   public static Optional<Entry<String, JsonObject>> convertOptionsToScopedSpec(
       String driverOrDecoratorName, List<Option> options) throws MobileHarnessException {
     Optional<String> specName =
-        DriverDecoratorSpecMapper.getSpecNameByDriverOrDecorator(driverOrDecoratorName);
+        DriverDecoratorMetadata.getSpecNameByDriverOrDecorator(driverOrDecoratorName);
     if (specName.isEmpty()) {
       return Optional.empty();
     }

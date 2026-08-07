@@ -14,16 +14,13 @@
  * limitations under the License.
  */
 
-package com.google.wireless.qa.mobileharness.shared.model.job.in.spec;
+package com.google.wireless.qa.mobileharness.shared.api.metadata;
 
 import com.google.common.collect.ImmutableMap;
 import java.util.Optional;
 
-/**
- * This class maps driver or decorator names to their corresponding spec names. It provides methods
- * to query the spec name for a given driver or decorator name, and to access the entire map.
- */
-public final class DriverDecoratorSpecMapper {
+/** Metadata of Mobile Harness drivers and decorators. */
+public final class DriverDecoratorMetadata {
 
   /** Internal map containing driver/decorator names (keys) and spec names (values). */
   private static final ImmutableMap<String, String> DRIVER_DECORATOR_SPEC_MAP;
@@ -115,5 +112,5 @@ public final class DriverDecoratorSpecMapper {
     DRIVER_DECORATOR_SPEC_MAP = builder.buildOrThrow();
   }
 
-  private DriverDecoratorSpecMapper() {}
+  private DriverDecoratorMetadata() {}
 }

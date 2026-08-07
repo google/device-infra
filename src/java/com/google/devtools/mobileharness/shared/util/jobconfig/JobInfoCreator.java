@@ -48,6 +48,7 @@ import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.ParseException;
 import com.google.protobuf.Timestamp;
 import com.google.wireless.qa.mobileharness.shared.api.job.JobTypeUtil;
+import com.google.wireless.qa.mobileharness.shared.api.metadata.DriverDecoratorMetadata;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -55,7 +56,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.ScopedSpecs;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpecs;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.DriverDecoratorSpecMapper;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecWalker;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
@@ -735,7 +735,7 @@ public final class JobInfoCreator {
     // For a {@link SpecConfigable} class, we use its spec class name as the namespace.
     String driverName = driver.getName();
     String namespace =
-        DriverDecoratorSpecMapper.getSpecNameByDriverOrDecorator(driverName).orElse(driverName);
+        DriverDecoratorMetadata.getSpecNameByDriverOrDecorator(driverName).orElse(driverName);
     return Map.entry(namespace, jsonParams.getAsJsonObject());
   }
 

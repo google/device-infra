@@ -37,6 +37,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:driver_factory",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/metadata",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",

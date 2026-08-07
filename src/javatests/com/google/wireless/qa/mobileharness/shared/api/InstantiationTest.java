@@ -40,10 +40,10 @@ import com.google.wireless.qa.mobileharness.shared.api.decorator.base.PhaseSkipp
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.driver.DriverFactory;
+import com.google.wireless.qa.mobileharness.shared.api.metadata.DriverDecoratorMetadata;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfoMocker;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.DriverDecoratorSpecMapper;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
 import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
@@ -69,9 +69,9 @@ import org.mockito.junit.MockitoRule;
 public class InstantiationTest {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-  private static final String DRIVER_DECORATOR_SPEC_MAPPER_PATH =
+  private static final String DRIVER_DECORATOR_METADATA_PATH =
       "google3/third_party/deviceinfra/src/java/com/google/wireless/qa/mobileharness"
-          + "/shared/model/job/in/spec/DriverDecoratorSpecMapper.java";
+          + "/shared/api/metadata/DriverDecoratorMetadata.java";
   private static final List<Class<? extends Driver>> driverClasses = new ArrayList<>();
   private static final List<Class<? extends Decorator>> decoratorClasses = new ArrayList<>();
 
@@ -155,7 +155,7 @@ public class InstantiationTest {
 
     try {
       assertThat(driverDecoratorSpecMapFromReflection)
-          .isEqualTo(DriverDecoratorSpecMapper.getDriverDecoratorSpecMap());
+          .isEqualTo(DriverDecoratorMetadata.getDriverDecoratorSpecMap());
     } catch (Throwable e) {
       throw addSpecMismatchHelp(e);
     }
@@ -302,7 +302,7 @@ public class InstantiationTest {
                 "If you add/edit/remove a Driver/Decorator which implements the SpecConfigable"
                     + " interface, please make corresponding modifications in the static config"
                     + " file, file address %s",
-                DRIVER_DECORATOR_SPEC_MAPPER_PATH),
+                DRIVER_DECORATOR_METADATA_PATH),
             e);
     result.setStackTrace(new StackTraceElement[0]);
     return result;
