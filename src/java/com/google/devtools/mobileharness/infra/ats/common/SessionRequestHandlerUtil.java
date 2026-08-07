@@ -46,6 +46,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.realdevice.AndroidRealDeviceConstants;
 import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
@@ -566,16 +567,28 @@ public class SessionRequestHandlerUtil {
     ImmutableSet<String> givenMatchedTfModules =
         modules.isEmpty() ? allTfModules : matchModules(modules, allTfModules);
 
+    String testPlan = sessionRequestInfo.getTestPlan();
+    TestPlanFilter testPlanFilter =
+        testPlan.isEmpty()
+            ? TestPlanFilter.create(
+                ImmutableSet.of(),
+                ImmutableSet.of(),
+                ImmutableMultimap.of(),
+                ImmutableMultimap.of(),
+                ImmutableSet.of())
+            : testPlanParser.parseFilters(xtsRootDir, sessionRequestInfo.getXtsType(), testPlan);
+
     // Filter modules by include/exclude filters.
     // For "run with strict include filters" (--strict-include-filter set), the include filters
     // and exclude filters will be ignored.
     ImmutableList<SuiteTestFilter> includeFilters =
         sessionRequestInfo.getStrictIncludeFiltersList().isEmpty()
-            ? Stream.concat(
+            ? Streams.concat(
                     sessionRequestInfo.getIncludeFiltersList().stream(),
                     isTfRetryWithModules
                         ? sessionRequestInfo.getModuleNamesList().stream()
-                        : Stream.empty())
+                        : Stream.empty(),
+                    testPlanFilter.includeFilters().stream())
                 .map(SuiteTestFilter::create)
                 .collect(toImmutableList())
             : sessionRequestInfo.getStrictIncludeFiltersList().stream()
@@ -583,7 +596,9 @@ public class SessionRequestHandlerUtil {
                 .collect(toImmutableList());
     ImmutableList<SuiteTestFilter> excludeFilters =
         sessionRequestInfo.getStrictIncludeFiltersList().isEmpty()
-            ? sessionRequestInfo.getExcludeFiltersList().stream()
+            ? Stream.concat(
+                    sessionRequestInfo.getExcludeFiltersList().stream(),
+                    testPlanFilter.excludeFilters().stream())
                 .map(SuiteTestFilter::create)
                 .collect(toImmutableList())
             : ImmutableList.of();

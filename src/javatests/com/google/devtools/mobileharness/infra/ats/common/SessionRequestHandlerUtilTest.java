@@ -850,6 +850,68 @@ public final class SessionRequestHandlerUtilTest {
                         .addAllModuleNames(ImmutableList.of("module")))));
   }
 
+  @Test
+  public void getFilteredTradefedModules_testPlanFilters() throws Exception {
+    Configuration config1 =
+        defaultConfigurationBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(false))
+            .build();
+    Configuration config2 =
+        defaultConfigurationBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(false))
+            .build();
+    when(configurationUtil.getConfigsFromDirs(any()))
+        .thenReturn(ImmutableMap.of("/path/to/config1", config1, "/path/to/config2", config2));
+    when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
+
+    when(testPlanParser.parseFilters(any(), anyString(), eq("plan_with_include")))
+        .thenReturn(
+            TestPlanFilter.create(
+                ImmutableSet.of("module1"),
+                ImmutableSet.of(),
+                ImmutableMultimap.of(),
+                ImmutableMultimap.of(),
+                ImmutableSet.of()));
+    when(testPlanParser.parseFilters(any(), anyString(), eq("plan_with_exclude")))
+        .thenReturn(
+            TestPlanFilter.create(
+                ImmutableSet.of(),
+                ImmutableSet.of("module1"),
+                ImmutableMultimap.of(),
+                ImmutableMultimap.of(),
+                ImmutableSet.of()));
+    when(testPlanParser.parseFilters(any(), anyString(), eq("plan_with_non_matched_include")))
+        .thenReturn(
+            TestPlanFilter.create(
+                ImmutableSet.of("module3"),
+                ImmutableSet.of(),
+                ImmutableMultimap.of(),
+                ImmutableMultimap.of(),
+                ImmutableSet.of()));
+
+    assertThat(
+            sessionRequestHandlerUtil.getFilteredTradefedModules(
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder().setTestPlan("plan_with_include"))))
+        .containsExactly("module1");
+
+    assertThat(
+            sessionRequestHandlerUtil.getFilteredTradefedModules(
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder().setTestPlan("plan_with_exclude"))))
+        .containsExactly("module2");
+
+    assertThrows(
+        MobileHarnessException.class,
+        () ->
+            sessionRequestHandlerUtil.getFilteredTradefedModules(
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder()
+                        .setTestPlan("plan_with_non_matched_include"))));
+  }
+
   /** Common setUp for createXtsNonTradefedJobs... tests */
   private void setUpForCreateXtsNonTradefedJobs() throws Exception {
     Configuration config1 =
