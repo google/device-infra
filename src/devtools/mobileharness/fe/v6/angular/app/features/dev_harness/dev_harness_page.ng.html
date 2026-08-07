@@ -59,6 +59,21 @@
         }
       </nav>
     }
+
+    <!-- Session Scenarios -->
+    <h3 class="sidebar-title mt-6" (click)="toggleSessionScenarios()">
+      <span>Session Scenarios</span>
+      <mat-icon [style.transform]="sessionCollapsed() ? 'rotate(-90deg)' : 'rotate(0deg)'" class="transition-transform">expand_more</mat-icon>
+    </h3>
+    @if (!sessionCollapsed()) {
+      <nav class="sidebar-nav">
+        @for (scenario of sessionScenarios; track scenario.id) {
+          <a [routerLink]="['/sessions', scenario.id]" queryParamsHandling="preserve" class="nav-link">
+            {{ scenario.scenarioName }}
+          </a>
+        }
+      </nav>
+    }
   </aside>
   <div class="harness-main">
     <p class="placeholder-text">Select a scenario from the left sidebar to view the details.</p>

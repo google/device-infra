@@ -1,0 +1,8 @@
+<app-streaming-log-viewer
+  [id]="sessionId()"
+  logTitle="Session Log"
+  [fetchStrategy]="logStrategy"
+  initialScrollPosition="top"
+  emptyMessage="No logs available for this session."
+  (streamCompleted)="streamCompleted.emit()"
+></app-streaming-log-viewer>

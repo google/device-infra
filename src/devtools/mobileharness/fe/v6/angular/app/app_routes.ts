@@ -4,6 +4,7 @@ import {DevHarnessPage} from './features/dev_harness/dev_harness_page';
 import {DeviceDetailPage} from './features/device_detail/device_detail_page';
 import {HostDetail} from './features/host_detail/host_detail';
 import {JobDetail} from './features/job_detail/job_detail';
+import {SessionDetailPage} from './features/session_detail/session_detail';
 import {TestDetail} from './features/test_detail/test_detail';
 
 /**
@@ -49,6 +50,10 @@ export const routes: Routes = [
     path: 'jobs/:id',
     component: JobDetail,
     canActivate: [stripUniverseGuard],
+  },
+  {
+    path: 'sessions/:id',
+    component: SessionDetailPage,
   },
   {
     path: '',

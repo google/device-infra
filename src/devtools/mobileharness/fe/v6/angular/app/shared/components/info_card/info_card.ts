@@ -1,5 +1,5 @@
 import {CommonModule} from '@angular/common';
-import {ChangeDetectionStrategy, Component, Input, OnInit} from '@angular/core';
+import {ChangeDetectionStrategy, Component, input, model} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 
 /**
@@ -15,16 +15,14 @@ import {MatIconModule} from '@angular/material/icon';
   imports: [CommonModule, MatIconModule],
   host: {'class': 'info-card'},
 })
-export class InfoCard implements OnInit {
-  @Input() expanded = true;
-  @Input() cardTitle = '';
-  @Input() icon = '';
-  @Input() collapsible = true;
-
-  ngOnInit() {}
+export class InfoCard {
+  readonly expanded = model(true);
+  readonly cardTitle = input('');
+  readonly icon = input('');
+  readonly collapsible = input(true);
 
   toggle(): void {
-    if (!this.collapsible) return;
-    this.expanded = !this.expanded;
+    if (!this.collapsible()) return;
+    this.expanded.update((exp) => !exp);
   }
 }

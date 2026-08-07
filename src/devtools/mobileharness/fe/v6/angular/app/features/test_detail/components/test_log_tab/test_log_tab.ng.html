@@ -1,15 +1,9 @@
-<div class="log-tab-card">
-  <div class="log-card-header">
-    <h3 class="log-card-title">Test Log</h3>
-    <a [href]="cloudLogLink()" target="_blank" rel="noopener noreferrer" class="cloud-log-link" matTooltip="Open Cloud Logs Explorer">
-      <span>Lab Server Logs on Cloud Logs Explorer</span>
-      <mat-icon>open_in_new</mat-icon>
-    </a>
-  </div>
-  <div class="log-divider"></div>
-  <div class="log-viewer-container">
-    <cdk-virtual-scroll-viewport itemSize="20" [minBufferPx]="400" [maxBufferPx]="800" class="log-viewer-viewport" [style.height.px]="viewportHeight()" #logViewport>
-      <div *cdkVirtualFor="let line of logLines(); trackBy: trackByIndex" class="log-line">{{ line }}</div>
-    </cdk-virtual-scroll-viewport>
-  </div>
-</div>
+<app-streaming-log-viewer
+  [id]="testId()"
+  logTitle="Test Log"
+  [cloudLogLink]="cloudLogLink()"
+  [fetchStrategy]="logStrategy"
+  [initialScrollPosition]="isTestRunning() ? 'bottom' : 'top'"
+  emptyMessage="No logs available for this test."
+  (streamCompleted)="streamCompleted.emit()"
+></app-streaming-log-viewer>

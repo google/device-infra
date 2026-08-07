@@ -20,7 +20,10 @@ import {
   NavItem,
 } from '../../../../shared/components/master_detail_layout/master_detail_layout';
 import {createSearchFilter} from '../../../../shared/composables/search_filter';
-import {dateUtils} from '../../../../shared/utils/date_utils';
+import {
+  createTimestampInfoMap,
+  STANDARD_TIMESTAMP_KEYS,
+} from '../../../../shared/composables/timestamp_info';
 
 const NAV_ITEM_ERROR: NavItem = {id: 'overview-error', label: 'Error Details'};
 const NAV_ITEM_WARNING: NavItem = {
@@ -67,18 +70,6 @@ export class TestOverviewTab {
   readonly hasProperties = this.propertiesFilter.hasData;
   readonly filteredProperties = this.propertiesFilter.filteredData;
 
-  /** Immutable list of timestamp metadata keys and their corresponding display labels. */
-  readonly timestampKeys = [
-    {key: 'createTime', label: 'Create Time'},
-    {key: 'startTime', label: 'Start Time'},
-    {key: 'endTime', label: 'End Time'},
-    {key: 'updateTime', label: 'Last Update Time'},
-  ] as const;
-
-  /**
-   * Computed navigation item list for the side navigation menu.
-   * Dynamically includes error details, warning details, execution details, and test properties.
-   */
   readonly overviewNavList = computed((): NavItem[] => {
     const troubleshooting = this.test().troubleshooting;
     const hasErrors = (troubleshooting?.resultCause?.error?.length ?? 0) > 0;
@@ -92,89 +83,13 @@ export class TestOverviewTab {
     ];
   });
 
-  /**
-   * Computed map of parsed timestamp details for each lifecycle event (create, start, end).
-   * Provides comprehensive timing breakdown, formatted display strings, and timezone information.
-   */
-  readonly timestampInfoMap = computed(() => {
-    const test = this.test();
-    const createVal = test.executionDetails?.createTime;
-    const baseCreateDate = createVal
-      ? dateUtils.parseUtcTimestamp(createVal)
-      : null;
-    const result: Record<string, ReturnType<typeof this.getTimestampInfo>> = {};
-    for (const item of this.timestampKeys) {
-      result[item.key] = this.getTimestampInfo(item.key, test, baseCreateDate);
-    }
-    return result;
-  });
-
-  /**
-   * Parses and formats detailed timestamp information for a given lifecycle key.
-   * Calculates elapsed time relative to the creation time and provides local/UTC representation strings.
-   *
-   * @param key The specific lifecycle timestamp key to interrogate.
-   * @param test The test overview data object containing raw timestamps.
-   * @param baseCreateDate Optional pre-parsed creation date for performance optimization.
-   * @return An object containing raw, display, duration, local, UTC, and elapsed HTML strings.
-   */
-  getTimestampInfo(
-    key: 'createTime' | 'startTime' | 'endTime' | 'updateTime',
-    test: TestOverviewData,
-    baseCreateDate: Date | null = null,
-  ) {
-    const details = test.executionDetails;
-    let rawValue: string | undefined;
-    if (details) {
-      switch (key) {
-        case 'createTime':
-          rawValue = details.createTime;
-          break;
-        case 'startTime':
-          rawValue = details.startTime;
-          break;
-        case 'endTime':
-          rawValue = details.endTime;
-          break;
-        case 'updateTime':
-          rawValue = details.updateTime;
-          break;
-        default:
-          rawValue = undefined;
-      }
-    }
-    const date = rawValue ? dateUtils.parseUtcTimestamp(rawValue) : null;
-    const isValid = date && !isNaN(date.getTime());
-
-    if (!rawValue || !isValid) {
-      return {
-        rawValue: rawValue ?? '',
-        displayValue: rawValue ?? 'N/A',
-        durationText: '',
-        localStr: '',
-        utcStr: '',
-        elapsedHtml: '',
-      };
-    }
-
-    const createDate =
-      baseCreateDate ??
-      (test.executionDetails?.createTime
-        ? dateUtils.parseUtcTimestamp(test.executionDetails.createTime)
-        : null);
-
-    const elapsed =
-      key === 'createTime'
-        ? {durationText: '(base)', elapsedHtml: ''}
-        : dateUtils.getElapsedTimeText(date, createDate, 'Create Time');
-
-    return {
-      rawValue,
-      displayValue: dateUtils.formatPdt(date),
-      durationText: elapsed.durationText,
-      localStr: dateUtils.formatDetailedLocal(date),
-      utcStr: dateUtils.formatDetailedUtc(date),
-      elapsedHtml: elapsed.elapsedHtml,
-    };
-  }
+  /** Immutable list of timestamp metadata keys and their corresponding display labels. */
+  readonly timestampKeys = STANDARD_TIMESTAMP_KEYS;
+  private readonly executionDetails = computed(
+    () => this.test().executionDetails,
+  );
+  readonly timestampInfoMap = createTimestampInfoMap(
+    this.executionDetails,
+    this.timestampKeys,
+  );
 }

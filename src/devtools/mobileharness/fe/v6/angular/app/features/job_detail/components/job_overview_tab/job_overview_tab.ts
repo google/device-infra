@@ -18,7 +18,6 @@ import {RouterModule} from '@angular/router';
 
 import {
   JobOverviewData,
-  TestResult,
   TestStatus,
 } from '../../../../core/models/job_overview';
 import {TestSummary} from '../../../../core/models/test_overview';
@@ -34,6 +33,14 @@ import {
   createSearchFilter,
   FilterEntry,
 } from '../../../../shared/composables/search_filter';
+import {
+  getTestResultBadge,
+  getTestStatusBadge,
+} from '../../../../shared/composables/status_badge';
+import {
+  createTimestampInfoMap,
+  STANDARD_TIMESTAMP_KEYS,
+} from '../../../../shared/composables/timestamp_info';
 import {dateUtils} from '../../../../shared/utils/date_utils';
 
 /** Component for rendering the job overview tab content. */
@@ -83,13 +90,10 @@ export class JobOverviewTab {
   readonly hasProperties = this.propertiesFilter.hasData;
   readonly filteredProperties: Signal<Array<FilterEntry<string>>> =
     this.propertiesFilter.filteredData;
-  readonly timestampKeys = [
-    {key: 'createTime', label: 'Create Time'},
-    {key: 'startTime', label: 'Start Time'},
-    {key: 'endTime', label: 'End Time'},
-    {key: 'updateTime', label: 'Last Update Time'},
-  ] as const;
-
+  readonly timestampKeys = STANDARD_TIMESTAMP_KEYS;
+  private readonly executionDetails = computed(
+    () => this.job().executionDetails,
+  );
   readonly overviewNavList = computed(() => {
     const job = this.job();
     const list: NavItem[] = [];
@@ -111,20 +115,10 @@ export class JobOverviewTab {
     return list;
   });
 
-  // properties-filtering logic handled by usePropertiesFilter composable
-
-  readonly timestampInfoMap = computed(() => {
-    const job = this.job();
-    const createVal = job.executionDetails?.createTime;
-    const baseCreateDate = createVal
-      ? dateUtils.parseUtcTimestamp(createVal)
-      : null;
-    const result: Record<string, ReturnType<typeof this.getTimestampInfo>> = {};
-    for (const item of this.timestampKeys) {
-      result[item.key] = this.getTimestampInfo(item.key, job, baseCreateDate);
-    }
-    return result;
-  });
+  readonly timestampInfoMap = createTimestampInfoMap(
+    this.executionDetails,
+    this.timestampKeys,
+  );
 
   readonly isMultiDevice = computed(() => {
     const devices = this.job().config.devices?.device || [];
@@ -245,114 +239,14 @@ export class JobOverviewTab {
   }
 
   getTestStatusBadge(test: TestSummary) {
-    const status = test.status;
-
-    if (status === TestStatus.TEST_STATUS_RUNNING) {
-      return {
-        icon: 'sync',
-        bgClass: 'bg-blue-50',
-        colorClass: 'text-blue-600',
-        text: 'Running',
-        spin: true,
-      };
-    }
-    if (status === TestStatus.TEST_STATUS_SUSPENDED) {
-      return {
-        icon: 'pause_circle_filled',
-        bgClass: 'bg-yellow-55',
-        colorClass: 'text-yellow-700',
-        text: 'Suspended',
-        spin: false,
-      };
-    }
-    if (
-      status === TestStatus.TEST_STATUS_NEW ||
-      status === TestStatus.TEST_STATUS_ASSIGNED
-    ) {
-      return {
-        icon: 'schedule',
-        bgClass: 'bg-gray-50',
-        colorClass: 'text-gray-500',
-        text:
-          status === TestStatus.TEST_STATUS_ASSIGNED ? 'Assigned' : 'Queued',
-        spin: false,
-      };
-    }
-    if (status === TestStatus.TEST_STATUS_DONE) {
-      return {
-        icon: 'check_circle_outline',
-        bgClass: 'bg-gray-50',
-        colorClass: 'text-gray-600',
-        text: 'Done',
-        spin: false,
-      };
-    }
-    return {
-      icon: 'help_outline',
-      bgClass: 'bg-gray-50',
-      colorClass: 'text-gray-500',
-      text: 'Unknown',
-      spin: false,
-    };
+    return getTestStatusBadge(test.status);
   }
 
   getTestResultBadge(test: TestSummary) {
     if (test.status !== TestStatus.TEST_STATUS_DONE || !test.result) {
       return null;
     }
-    const result = test.result;
-    switch (result) {
-      case TestResult.TEST_RESULT_PASS:
-        return {
-          icon: 'check_circle',
-          bgClass: 'bg-green-50',
-          colorClass: 'text-green-600',
-          text: 'Pass',
-          spin: false,
-        };
-      case TestResult.TEST_RESULT_FAIL:
-        return {
-          icon: 'error',
-          bgClass: 'bg-red-50',
-          colorClass: 'text-red-600',
-          text: 'Fail',
-          spin: false,
-        };
-      case TestResult.TEST_RESULT_ERROR:
-        return {
-          icon: 'error',
-          bgClass: 'bg-red-50',
-          colorClass: 'text-red-600',
-          text: 'Error',
-          spin: false,
-        };
-      case TestResult.TEST_RESULT_TIMEOUT:
-        return {
-          icon: 'access_time',
-          bgClass: 'bg-red-50',
-          colorClass: 'text-red-600',
-          text: 'Timeout',
-          spin: false,
-        };
-      case TestResult.TEST_RESULT_ABORT:
-        return {
-          icon: 'do_not_disturb_on',
-          bgClass: 'bg-gray-50',
-          colorClass: 'text-gray-600',
-          text: 'Aborted',
-          spin: false,
-        };
-      case TestResult.TEST_RESULT_SKIP:
-        return {
-          icon: 'block',
-          bgClass: 'bg-gray-50',
-          colorClass: 'text-gray-500',
-          text: 'Skipped',
-          spin: false,
-        };
-      default:
-        return null;
-    }
+    return getTestResultBadge(test.result);
   }
 
   getTestStartTime(test: TestSummary): string {
@@ -360,65 +254,5 @@ export class JobOverviewTab {
     const date = dateUtils.parseUtcTimestamp(test.startTime);
     if (!date || isNaN(date.getTime())) return test.startTime || 'N/A';
     return dateUtils.formatDetailedLocal(date);
-  }
-
-  getTimestampInfo(
-    key: 'createTime' | 'startTime' | 'endTime' | 'updateTime',
-    job: JobOverviewData,
-    baseCreateDate: Date | null = null,
-  ) {
-    const details = job.executionDetails;
-    let rawValue: string | undefined;
-    if (details) {
-      switch (key) {
-        case 'createTime':
-          rawValue = details.createTime;
-          break;
-        case 'startTime':
-          rawValue = details.startTime;
-          break;
-        case 'endTime':
-          rawValue = details.endTime;
-          break;
-        case 'updateTime':
-          rawValue = details.updateTime;
-          break;
-        default:
-          rawValue = undefined;
-      }
-    }
-    const date = rawValue ? dateUtils.parseUtcTimestamp(rawValue) : null;
-    const isValid = date && !isNaN(date.getTime());
-
-    if (!rawValue || !isValid) {
-      return {
-        rawValue: rawValue ?? '',
-        displayValue: rawValue ?? 'N/A',
-        durationText: '',
-        localStr: '',
-        utcStr: '',
-        elapsedHtml: '',
-      };
-    }
-
-    const createDate =
-      baseCreateDate ??
-      (job.executionDetails?.createTime
-        ? dateUtils.parseUtcTimestamp(job.executionDetails.createTime)
-        : null);
-
-    const elapsed =
-      key === 'createTime'
-        ? {durationText: '(base)', elapsedHtml: ''}
-        : dateUtils.getElapsedTimeText(date, createDate, 'Create Time');
-
-    return {
-      rawValue,
-      displayValue: dateUtils.formatPdt(date),
-      durationText: elapsed.durationText,
-      localStr: dateUtils.formatDetailedLocal(date),
-      utcStr: dateUtils.formatDetailedUtc(date),
-      elapsedHtml: elapsed.elapsedHtml,
-    };
   }
 }

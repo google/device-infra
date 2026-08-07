@@ -1,0 +1,346 @@
+@use '../../../../shared/styles/overview';
+@use '../../../../shared/styles/common';
+@use '@angular/material' as mat;
+
+:host {
+  display: block;
+  font-family: overview.$labconsole-font;
+
+  .error-info-card .info-card-content,
+  .warning-info-card .info-card-content {
+    padding: 0;
+  }
+}
+
+.table-container {
+  width: 100%;
+  max-height: 380px;
+  overflow: auto;
+  @include common.shared-scrollbar-style();
+}
+
+.data-table {
+  width: 100%;
+  min-width: 650px;
+  border-collapse: collapse;
+  background-color: transparent;
+  letter-spacing: normal;
+
+  tr.mat-mdc-header-row {
+    height: 45px;
+  }
+
+  th.mat-mdc-header-cell,
+  td.mat-mdc-cell {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+    vertical-align: middle;
+    font-size: 0.875rem;
+    background-color: transparent;
+    letter-spacing: normal;
+    white-space: nowrap;
+  }
+
+  th.mat-mdc-header-cell {
+    font-weight: 500;
+    color: #5f6368;
+    height: 45px;
+    padding-top: 0;
+    padding-bottom: 0;
+    background-color: #f9fafb;
+  }
+
+  td.mat-mdc-cell {
+    color: #3c4043;
+  }
+
+  tr.table-body-row {
+    position: relative;
+    &:hover {
+      z-index: 200;
+    }
+  }
+}
+
+.job-id-container {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+.job-id-link {
+  display: inline-block;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #2563eb;
+  font-weight: 500;
+  vertical-align: middle;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  @media (min-width: 1024px) {
+    max-width: 180px;
+  }
+
+  @media (min-width: 1280px) {
+    max-width: none;
+  }
+}
+
+.job-id-cell {
+  font-family: overview.$labconsole-font;
+  font-size: 0.75rem;
+}
+
+.job-name-wrapper {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 300px;
+  font-weight: 500;
+  color: #202124;
+}
+
+.job-time-cell {
+  color: #5f6368;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+
+.copy-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #5f6368;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background-color: #f1f3f4;
+    color: #202124;
+  }
+
+  &.success {
+    color: #1e8e3e;
+  }
+}
+
+.copy-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.status-badge-compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.status-green {
+  background-color: #e6f4ea;
+  color: #1e8e3e;
+}
+
+.status-red {
+  background-color: #fce8e6;
+  color: #d93025;
+}
+
+.status-blue {
+  background-color: #e8f0fe;
+  color: #1a73e8;
+}
+
+.status-yellow {
+  background-color: #fef7e0;
+  color: #b78103;
+}
+
+.status-gray {
+  background-color: #f1f3f4;
+  color: #5f6368;
+}
+
+.spin-animation {
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.trace-pre {
+  margin: 0;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.error-info-card {
+  color: #721c24;
+
+  .accordion-item {
+    &:not(:last-child) {
+      border-bottom: 1px solid #f8d7da;
+    }
+    &.expanded {
+      background-color: rgba(114, 28, 36, 0.02);
+    }
+  }
+
+  .trace-pre {
+    background-color: #fbeae5;
+    color: #541d22;
+  }
+
+  ::ng-deep {
+    .accordion-trigger {
+      color: #721c24;
+      &:hover {
+        background-color: rgba(114, 28, 36, 0.04);
+      }
+      .arrow-icon {
+        color: #721c24;
+      }
+    }
+    .panel-header {
+      background-color: #fef5f5;
+      color: #721c24;
+      border: 1px solid #f8d7da;
+      border-radius: 0.5rem;
+      &.collapsed {
+        border-radius: 0.5rem;
+      }
+      &:not(.collapsed) {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+      .header-icon {
+        color: #721c24;
+      }
+    }
+    .panel-content {
+      border-left: 1px solid #f8d7da;
+      border-right: 1px solid #f8d7da;
+      border-bottom: 1px solid #f8d7da;
+      border-bottom-left-radius: 0.5rem;
+      border-bottom-right-radius: 0.5rem;
+      background-color: #fef5f5;
+    }
+  }
+}
+
+.warning-info-card {
+  color: #b78103;
+
+  .accordion-item {
+    &:not(:last-child) {
+      border-bottom: 1px solid #ffe082;
+    }
+    &.expanded {
+      background-color: rgba(183, 129, 3, 0.02);
+    }
+  }
+
+  .trace-pre {
+    background-color: #fff3cd;
+    color: #664d03;
+  }
+
+  ::ng-deep {
+    .accordion-trigger {
+      color: #b78103;
+      &:hover {
+        background-color: rgba(183, 129, 3, 0.04);
+      }
+      .arrow-icon {
+        color: #b78103;
+      }
+    }
+    .panel-header {
+      background-color: #fff8e1;
+      color: #b78103;
+      border: 1px solid #ffe082;
+      border-radius: 0.5rem;
+      &.collapsed {
+        border-radius: 0.5rem;
+      }
+      &:not(.collapsed) {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+      .header-icon {
+        color: #f59e0b;
+      }
+    }
+    .panel-content {
+      border-left: 1px solid #ffe082;
+      border-right: 1px solid #ffe082;
+      border-bottom: 1px solid #ffe082;
+      border-bottom-left-radius: 0.5rem;
+      border-bottom-right-radius: 0.5rem;
+      background-color: #fff8e1;
+    }
+  }
+}
+
+.timestamp-na {
+  color: #bdc1c6;
+  font-style: italic;
+}
+
+::ng-deep .mat-mdc-tooltip.time-tooltip {
+  white-space: pre;
+  max-width: none;
+  width: max-content;
+  z-index: 10000;
+
+  > div {
+    white-space: pre;
+    max-width: none;
+    width: max-content;
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  @include mat.tooltip-overrides((
+    container-color: #ffffff,
+    container-shape: 6px,
+    supporting-text-color: #3c4043,
+    supporting-text-font: overview.$labconsole-font,
+    supporting-text-size: 11px,
+    supporting-text-line-height: 1.6,
+  ));
+}
+

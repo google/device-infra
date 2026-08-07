@@ -1,5 +1,6 @@
 import {HttpClient} from '@angular/common/http';
-import {inject, Injectable} from '@angular/core';
+import {Injectable, inject} from '@angular/core';
+
 import {Observable} from 'rxjs';
 import {map} from 'rxjs/operators';
 
@@ -9,7 +10,6 @@ import {
   GetTestLogResponse,
   GetTestRequest,
   GetTestResponse,
-  TestOverviewData,
 } from '../../models/test_overview';
 import {TestService} from './test_service';
 
@@ -24,16 +24,16 @@ export class HttpTestService extends TestService {
     super();
   }
 
-  override getTest(request: GetTestRequest): Observable<TestOverviewData> {
+  override getTest(request: GetTestRequest): Observable<GetTestResponse> {
     const params: {[key: string]: string} = {
       'job_id': request.jobId,
     };
     if (request.subTestId) {
       params['sub_test_id'] = request.subTestId;
     }
-    return this.http
-      .get<GetTestResponse>(`${this.apiUrl}/${request.testId}`, {params})
-      .pipe(map((response) => response.test));
+    return this.http.get<GetTestResponse>(`${this.apiUrl}/${request.testId}`, {
+      params,
+    });
   }
 
   override getTestLog(

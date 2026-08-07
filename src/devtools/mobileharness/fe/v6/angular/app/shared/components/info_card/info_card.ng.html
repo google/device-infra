@@ -1,19 +1,19 @@
 
-<header (click)="toggle()" class="panel-header" [class.collapsed]="collapsible && !expanded" [class.collapsible]="collapsible">
+<header (click)="toggle()" class="panel-header" [class.collapsed]="collapsible() && !expanded()" [class.collapsible]="collapsible()">
   <span class="title-container">
-    @if (icon) {
-      <mat-icon class="header-icon">{{ icon }}</mat-icon>
+    @if (icon()) {
+      <mat-icon class="header-icon">{{ icon() }}</mat-icon>
     }
-    <span>{{ cardTitle }}</span>
+    <span>{{ cardTitle() }}</span>
   </span>
   <div class="header-right">
     <ng-content select="[operations]"></ng-content>
-    @if(collapsible) {
-      <mat-icon class="expand-icon" [class.rotated]="!expanded">expand_more</mat-icon>
+    @if(collapsible()) {
+      <mat-icon class="expand-icon" [class.rotated]="!expanded()">expand_more</mat-icon>
     }
   </div>
 </header>
-<div class="panel-content" [class.expanded]="!collapsible || expanded">
+<div class="panel-content" [class.expanded]="!collapsible() || expanded()">
   <div class="content">
     <ng-content></ng-content>
   </div>

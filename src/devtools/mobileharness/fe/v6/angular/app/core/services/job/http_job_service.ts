@@ -4,11 +4,14 @@ import {Observable} from 'rxjs';
 
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
+  GetJobFileRequest,
   GetJobFileResponse,
   GetJobLogRequest,
   GetJobLogResponse,
   GetJobRequest,
   GetJobResponse,
+  KillJobRequest,
+  KillJobResponse,
 } from '../../models/job_overview';
 import {JobService} from './job_service';
 
@@ -23,14 +26,12 @@ export class HttpJobService extends JobService {
     super();
   }
 
-  override getJob(request: string | GetJobRequest): Observable<GetJobResponse> {
-    const id = typeof request === 'string' ? request : request.jobId;
-    return this.http.get<GetJobResponse>(`${this.apiUrl}/${id}`);
+  override getJob(request: GetJobRequest): Observable<GetJobResponse> {
+    return this.http.get<GetJobResponse>(`${this.apiUrl}/${request.jobId}`);
   }
 
   override getJobLog(request: GetJobLogRequest): Observable<GetJobLogResponse> {
     const params: {[key: string]: string | number} = {
-      'job_id': request.jobId,
       'offset': request.offset,
     };
     if (request.contentHash) {
@@ -43,15 +44,23 @@ export class HttpJobService extends JobService {
   }
 
   override getJobFile(
-    id: string,
-    filePath: string,
+    request: GetJobFileRequest,
   ): Observable<GetJobFileResponse> {
-    return this.http.post<GetJobFileResponse>(
-      `${this.apiUrl}/${id}:getJobFile`,
-      {
-        'job_id': id,
-        'file_path': filePath,
-      },
+    const params: {[key: string]: string} = {
+      'file_path': request.filePath,
+    };
+    return this.http.get<GetJobFileResponse>(
+      `${this.apiUrl}/${request.jobId}/file`,
+      {params},
     );
+  }
+
+  override killJob(
+    request: string | KillJobRequest,
+  ): Observable<KillJobResponse> {
+    const id = typeof request === 'string' ? request : request.jobId;
+    return this.http.post<KillJobResponse>(`${this.apiUrl}/${id}:kill`, {
+      'job_id': id,
+    });
   }
 }

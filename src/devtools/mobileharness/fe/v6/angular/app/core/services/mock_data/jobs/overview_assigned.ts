@@ -1,8 +1,6 @@
 import {
   JobResult,
   JobStatus,
-  SessionResult,
-  SessionStatus,
 } from '@deviceinfra/app/core/models/common_models';
 import {MockJobScenario} from '../models';
 
@@ -29,9 +27,6 @@ export const SCENARIO_JOB_ASSIGNED: MockJobScenario = {
     },
     session: {
       id: 'b2c3d4e5-f6a7-8901-bcde-f0123456789a',
-      name: 'Smoke Test Suite (Pixel 9)',
-      status: SessionStatus.SESSION_STATUS_RUNNING,
-      result: SessionResult.SESSION_RESULT_UNSPECIFIED,
     },
     config: {
       devices: {

@@ -3,7 +3,7 @@ $labconsole-font: Roboto, sans-serif;
 .master-detail-layout-container {
   display: flex;
   flex-direction: column;
-  padding: 1rem 0;
+  padding: 0 0 1rem 0;
   gap: 1.5rem;
 
   @media (min-width: 992px) {

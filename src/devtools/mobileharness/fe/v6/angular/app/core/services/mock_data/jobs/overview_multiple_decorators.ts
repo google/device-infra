@@ -1,8 +1,6 @@
 import {
   JobResult,
   JobStatus,
-  SessionResult,
-  SessionStatus,
   TestResult,
   TestStatus,
 } from '@deviceinfra/app/core/models/common_models';
@@ -22,9 +20,6 @@ export const SCENARIO_JOB_MULTIPLE_DECORATORS: MockJobScenario = {
     },
     session: {
       id: '5f2d4e3a-75bd-49cf-beec-d12b6fdf9b69',
-      name: 'Gateway Run: Multiple Decorators Test',
-      status: SessionStatus.SESSION_STATUS_DONE,
-      result: SessionResult.SESSION_RESULT_PASS,
     },
     name: 'multiple_decorators_test_on_mh',
     config: {

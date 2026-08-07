@@ -10,11 +10,7 @@ import {By} from '@angular/platform-browser';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {of} from 'rxjs';
 
-import {
-  GetJobLogResponse,
-  GetJobResponse,
-  JobStatus,
-} from '../../../../core/models/job_overview';
+import {JobStatus} from '../../../../core/models/job_overview';
 import {
   JOB_SERVICE,
   JobService,
@@ -25,10 +21,12 @@ import {JobLogTab} from './job_log_tab';
   standalone: true,
   imports: [JobLogTab],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<app-job-log-tab [jobId]="jobId"></app-job-log-tab>`,
+  template: `<app-job-log-tab [jobId]="jobId" [cloudLogLink]="cloudLogLink" [initialStatus]="initialStatus"></app-job-log-tab>`,
 })
 class TestHostComponent {
   jobId = 'job_123';
+  cloudLogLink = 'http://cloud-log-link';
+  initialStatus = JobStatus.JOB_STATUS_DONE;
 }
 
 describe('JobLogTab Component', () => {
@@ -38,26 +36,15 @@ describe('JobLogTab Component', () => {
     let mockJobService: jasmine.SpyObj<JobService>;
 
     beforeEach(async () => {
-      mockJobService = jasmine.createSpyObj('JobService', [
-        'getJob',
-        'getJobLog',
-      ]);
-      mockJobService.getJob.and.returnValue(
-        of({
-          job: {
-            status: JobStatus.JOB_STATUS_DONE,
-            executionDetails: {
-              cloudLogLink: 'http://cloud-log-link',
-            },
-          },
-        } as unknown as GetJobResponse),
-      );
+      mockJobService = jasmine.createSpyObj('JobService', ['getJobLog']);
       mockJobService.getJobLog.and.returnValue(
         of({
           logContent: 'Log Content 1\nLog Content 2',
           nextOffset: 27,
           jobStatus: JobStatus.JOB_STATUS_DONE,
-        } as unknown as GetJobLogResponse),
+          logReset: false,
+          contentHash: 'hash-done',
+        }),
       );
 
       await TestBed.configureTestingModule({
@@ -78,7 +65,6 @@ describe('JobLogTab Component', () => {
     });
 
     it('should fetch logs and bind outputs correctly', () => {
-      expect(mockJobService.getJob).toHaveBeenCalledWith('job_123');
       expect(mockJobService.getJobLog).toHaveBeenCalledWith({
         jobId: 'job_123',
         offset: 0,
@@ -96,21 +82,7 @@ describe('JobLogTab Component', () => {
     let runningMockJobService: jasmine.SpyObj<JobService>;
 
     beforeEach(async () => {
-      runningMockJobService = jasmine.createSpyObj('JobService', [
-        'getJob',
-        'getJobLog',
-      ]);
-
-      runningMockJobService.getJob.and.returnValue(
-        of({
-          job: {
-            status: JobStatus.JOB_STATUS_RUNNING,
-            executionDetails: {
-              cloudLogLink: 'http://cloud-log-link',
-            },
-          },
-        } as unknown as GetJobResponse),
-      );
+      runningMockJobService = jasmine.createSpyObj('JobService', ['getJobLog']);
 
       let calls = 0;
       runningMockJobService.getJobLog.and.callFake(() => {
@@ -120,13 +92,17 @@ describe('JobLogTab Component', () => {
             logContent: 'Line 1\nLine 2\n',
             nextOffset: 13,
             jobStatus: JobStatus.JOB_STATUS_RUNNING,
-          } as unknown as GetJobLogResponse);
+            logReset: false,
+            contentHash: 'hash-running-1',
+          });
         }
         return of({
           logContent: 'Line 3\nLine 4\n',
           nextOffset: 27,
           jobStatus: JobStatus.JOB_STATUS_RUNNING,
-        } as unknown as GetJobLogResponse);
+          logReset: false,
+          contentHash: 'hash-running-2',
+        });
       });
 
       await TestBed.configureTestingModule({
@@ -135,7 +111,9 @@ describe('JobLogTab Component', () => {
       }).compileComponents();
 
       runningFixture = TestBed.createComponent(TestHostComponent);
-      runningFixture.componentInstance.jobId = 'job_123';
+      runningFixture.componentInstance.jobId = 'job_running';
+      runningFixture.componentInstance.initialStatus =
+        JobStatus.JOB_STATUS_RUNNING;
       runningComponent = runningFixture.debugElement.query(
         By.directive(JobLogTab),
       ).componentInstance;
@@ -146,7 +124,7 @@ describe('JobLogTab Component', () => {
 
       expect(runningComponent.logLines()).toEqual(['Line 1', 'Line 2']);
 
-      tick(2000);
+      tick(5000);
 
       expect(runningComponent.logLines()).toEqual([
         'Line 1',

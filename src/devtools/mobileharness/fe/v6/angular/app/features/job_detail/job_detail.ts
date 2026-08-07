@@ -2,10 +2,8 @@ import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
   ElementRef,
   computed,
-  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -13,22 +11,12 @@ import {toSignal} from '@angular/core/rxjs-interop';
 import {MatDialog} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
-import {Title} from '@angular/platform-browser';
 import {ActivatedRoute, RouterModule} from '@angular/router';
-import {BehaviorSubject, combineLatest, merge, of} from 'rxjs';
-import {
-  catchError,
-  distinctUntilChanged,
-  finalize,
-  map,
-  switchMap,
-  take,
-  tap,
-} from 'rxjs/operators';
+import {of} from 'rxjs';
+import {catchError, map, take} from 'rxjs/operators';
 import {JOB_ACTION_UI_CONFIG} from '../../core/constants/action_bar_config';
 import {
   GetJobRequest,
-  JobActions,
   JobOverviewData,
   JobResult,
   JobStatus,
@@ -37,18 +25,16 @@ import {JOB_SERVICE} from '../../core/services/job/job_service';
 import {ActionButton} from '../../shared/components/action_button/action_button';
 import {ConfirmDialog} from '../../shared/components/confirm_dialog/confirm_dialog';
 import {useCopyToClipboard} from '../../shared/composables/copy';
-import {LoadingService} from '../../shared/services/loading_service';
+import {usePageTitle} from '../../shared/composables/page_title';
+import {useSilentResource} from '../../shared/composables/silent_resource';
+import {TooltipIfTruncatedDirective} from '../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
 import {SnackBarService} from '../../shared/services/snackbar_service';
 import {JobFilesTab} from './components/job_files_tab/job_files_tab';
 import {JobLogTab} from './components/job_log_tab/job_log_tab';
 import {JobOverviewTab} from './components/job_overview_tab/job_overview_tab';
 import {JobTimelineTab} from './components/job_timeline_tab/job_timeline_tab';
 
-interface JobPageData {
-  jobOverviewData: JobOverviewData | null;
-  actions?: JobActions;
-  error?: string;
-}
+import {JobPageData} from './models/job_page_ui';
 
 /**
  * Component for displaying the detailed information of a single job.
@@ -71,14 +57,13 @@ interface JobPageData {
     JobLogTab,
     JobFilesTab,
     ActionButton,
+    TooltipIfTruncatedDirective,
   ],
 })
 export class JobDetail {
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly jobService = inject(JOB_SERVICE);
   private readonly snackBar = inject(SnackBarService);
-  private readonly loadingService = inject(LoadingService);
-  private readonly titleService = inject(Title);
   private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly dialog = inject(MatDialog);
   readonly copyToClipboard = useCopyToClipboard();
@@ -93,82 +78,63 @@ export class JobDetail {
   readonly activeTab = signal<'overview' | 'timeline' | 'log' | 'files'>(
     'overview',
   );
-  private readonly reloadSubject$ = new BehaviorSubject<void>(undefined);
   readonly copiedJobId = signal<boolean>(false);
   readonly copiedSessionId = signal<boolean>(false);
-  private readonly destroyRef = inject(DestroyRef);
 
-  constructor() {
-    effect(() => {
-      const data = this.jobPageData();
-      if (!data?.jobOverviewData) {
-        this.titleService.setTitle('OmniLab Console');
-        return;
+  private readonly silentResourceResult = useSilentResource<
+    JobPageData,
+    string | null
+  >({
+    params: () => this.jobId(),
+    stream: (jobId) => {
+      if (!jobId) {
+        return of<JobPageData>({
+          jobOverviewData: null,
+          error: 'No job ID provided in the route.',
+        });
       }
-      const id = data.jobOverviewData.id;
-      const shortId = id.substring(0, 8);
-      this.titleService.setTitle(`OmniLab Console - Job ${shortId}...`);
-    });
 
-    this.destroyRef.onDestroy(() => {
-      this.titleService.setTitle('OmniLab Console');
-    });
-  }
+      const request: GetJobRequest = {jobId};
 
-  readonly jobPageData = toSignal(
-    combineLatest([
-      this.activatedRoute.paramMap,
-      this.activatedRoute.queryParamMap,
-    ]).pipe(
-      map(([params]) => params.get('id')),
-      switchMap((id) => merge(of(id), this.reloadSubject$.pipe(map(() => id)))),
-      distinctUntilChanged(),
-      tap(() => {
-        this.loadingService.show();
-      }),
-      switchMap((id) => {
-        if (!id) {
-          this.loadingService.hide();
+      return this.jobService.getJob(request).pipe(
+        map(
+          (response) =>
+            ({
+              jobOverviewData: response.job,
+              actions: response.actions,
+            }) as JobPageData,
+        ),
+        catchError((err) => {
+          console.error(`Error fetching job ${jobId}:`, err);
           return of<JobPageData>({
             jobOverviewData: null,
-            error: 'No job ID provided in the route.',
+            error: `Failed to load job data for ID: ${jobId}. ${err.message || ''}`,
           });
-        }
-
-        const request: GetJobRequest = {jobId: id};
-
-        return this.jobService.getJob(request).pipe(
-          map(
-            (response) =>
-              ({
-                jobOverviewData: response.job,
-                actions: response.actions,
-              }) as JobPageData,
-          ),
-          tap((data) => {
-            if (data?.jobOverviewData) {
-              const job = data.jobOverviewData;
-              this.activeTab.set(
-                job.status === JobStatus.JOB_STATUS_RUNNING
-                  ? 'log'
-                  : 'overview',
-              );
-            }
-          }),
-          catchError((err) => {
-            console.error(`Error fetching job ${id}:`, err);
-            return of<JobPageData>({
-              jobOverviewData: null,
-              error: `Failed to load job data for ID: ${id}. ${err.message || ''}`,
-            });
-          }),
-          finalize(() => {
-            this.loadingService.hide();
-          }),
+        }),
+      );
+    },
+    onInitialLoad: (data) => {
+      if (data?.jobOverviewData) {
+        const job = data.jobOverviewData;
+        this.activeTab.set(
+          job.status === JobStatus.JOB_STATUS_RUNNING ? 'log' : 'overview',
         );
-      }),
-    ),
-  );
+      }
+    },
+  });
+
+  readonly jobResource = this.silentResourceResult.resource;
+
+  readonly jobPageData = computed(() => this.jobResource.value() || null);
+
+  readonly pageTitle = computed(() => {
+    const id = this.jobPageData()?.jobOverviewData?.id;
+    return id ? `OmniLab Console - Job ${id.substring(0, 8)}...` : null;
+  });
+
+  constructor() {
+    usePageTitle(this.pageTitle);
+  }
 
   readonly job = computed(() => this.jobPageData()?.jobOverviewData || null);
   readonly actions = computed(() => this.jobPageData()?.actions || null);
@@ -209,6 +175,13 @@ export class JobDetail {
     this.activeTab.set(tab);
   }
 
+  onLogStreamCompleted() {
+    const job = this.job();
+    if (job && job.status === JobStatus.JOB_STATUS_RUNNING) {
+      this.silentResourceResult.reloadSilent();
+    }
+  }
+
   scrollToJobConfig(event: Event) {
     event.preventDefault();
     this.activeTab.set('overview');
@@ -226,7 +199,7 @@ export class JobDetail {
       panelClass: 'confirm-dialog-panel',
       data: {
         title: 'Kill Job?',
-        content: `Are you sure you want to terminate job ${job.id} This action will abort all running child tests immediately and cannot be undone.`,
+        content: `Are you sure you want to terminate job ${job.id}? This action will abort all running child tests immediately and cannot be undone.`,
         type: 'error',
         primaryButtonLabel: 'Kill Job',
         secondaryButtonLabel: 'Cancel',
@@ -245,10 +218,17 @@ export class JobDetail {
   };
 
   private executeKillJob(job: JobOverviewData) {
-    // TODO: Use real job service to kill the job.
-    this.snackBar.showSuccess('Job aborted successfully.');
-    // Re-trigger signals subscription to reload mock data
-    this.reloadSubject$.next();
+    this.jobService.killJob(job.id).subscribe({
+      next: () => {
+        this.snackBar.showSuccess('Job aborted successfully.');
+        this.silentResourceResult.reloadSilent();
+      },
+      error: (err: unknown) => {
+        console.error('Failed to kill job:', err);
+        const e = err as {message?: string};
+        this.snackBar.showError(e?.message || 'Failed to terminate job.');
+      },
+    });
   }
 
   copyJobId(id: string) {

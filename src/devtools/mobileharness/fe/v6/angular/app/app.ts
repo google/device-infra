@@ -141,6 +141,8 @@ export class App implements OnDestroy {
       this.showContent = true;
     } else if (path === 'jobs/:id' && params['id']) {
       this.showContent = true;
+    } else if (path === 'sessions/:id' && params['id']) {
+      this.showContent = true;
     } else {
       this.showContent = false;
     }

@@ -1,10 +1,12 @@
 import {InjectionToken} from '@angular/core';
+
 import {Observable} from 'rxjs';
+
 import {
   GetTestLogRequest,
   GetTestLogResponse,
   GetTestRequest,
-  TestOverviewData,
+  GetTestResponse,
 } from '../../models/test_overview';
 
 /**
@@ -19,7 +21,7 @@ export abstract class TestService {
   /**
    * Retrieves the detailed overview data for a specific test.
    */
-  abstract getTest(request: GetTestRequest): Observable<TestOverviewData>;
+  abstract getTest(request: GetTestRequest): Observable<GetTestResponse>;
 
   /**
    * Retrieves a chunk of logs for a specific test.

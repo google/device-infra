@@ -5,6 +5,7 @@ import {
   GetTestLogRequest,
   GetTestLogResponse,
   GetTestRequest,
+  GetTestResponse,
   TestOverviewData,
   TestStatus,
 } from '../../models/test_overview';
@@ -32,9 +33,9 @@ export class FakeTestService extends TestService {
    * Retrieves the detailed overview data for a specific test by its ID from the mock dataset.
    *
    * @param request The request containing the test ID or sub-test ID.
-   * @return An Observable emitting the TestOverviewData.
+   * @return An Observable emitting the GetTestResponse.
    */
-  override getTest(request: GetTestRequest): Observable<TestOverviewData> {
+  override getTest(request: GetTestRequest): Observable<GetTestResponse> {
     const id = request.subTestId || request.testId;
     const scenario = MOCK_TEST_SCENARIOS.find(
       (s) => s.id === id || s.overview.id === id,
@@ -69,7 +70,7 @@ export class FakeTestService extends TestService {
           }
         : undefined,
     };
-    return of(overview).pipe(delay(1000));
+    return of({test: overview}).pipe(delay(1000));
   }
 
   /**

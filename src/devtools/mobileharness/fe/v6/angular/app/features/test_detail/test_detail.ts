@@ -2,37 +2,29 @@ import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
   computed,
-  effect,
   inject,
   signal,
 } from '@angular/core';
 import {toSignal} from '@angular/core/rxjs-interop';
 import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
-import {Title} from '@angular/platform-browser';
 import {ActivatedRoute, RouterModule} from '@angular/router';
 import {combineLatest, of} from 'rxjs';
-import {
-  catchError,
-  distinctUntilChanged,
-  finalize,
-  map,
-  switchMap,
-  tap,
-} from 'rxjs/operators';
+import {catchError, map} from 'rxjs/operators';
 
 import {NavLink} from '@deviceinfra/app/shared/components/nav_link/nav_link';
 import {useCopyToClipboard} from '@deviceinfra/app/shared/composables/copy';
-import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
+import {usePageTitle} from '@deviceinfra/app/shared/composables/page_title';
+import {useSilentResource} from '@deviceinfra/app/shared/composables/silent_resource';
 import {
   GetTestRequest,
   TestResult,
   TestStatus,
 } from '../../core/models/test_overview';
 import {TEST_SERVICE} from '../../core/services/test/test_service';
-import {FilesTab} from '../../shared/components/files_tab/files_tab';
+import {TooltipIfTruncatedDirective} from '../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
+import {TestFilesTab} from './components/test_files_tab/test_files_tab';
 import {TestLogTab} from './components/test_log_tab/test_log_tab';
 import {TestOverviewTab} from './components/test_overview_tab/test_overview_tab';
 import {TestTimelineTab} from './components/test_timeline_tab/test_timeline_tab';
@@ -61,17 +53,15 @@ import {
     TestOverviewTab,
     TestTimelineTab,
     TestLogTab,
-    FilesTab,
+    TestFilesTab,
     NavLink,
+    TooltipIfTruncatedDirective,
   ],
 })
 export class TestDetail {
   private readonly route = inject(ActivatedRoute);
   private readonly testService = inject(TEST_SERVICE);
-  private readonly titleService = inject(Title);
-  private readonly loadingService = inject(LoadingService);
   readonly copyToClipboard = useCopyToClipboard();
-  private readonly destroyRef = inject(DestroyRef);
 
   readonly testId = toSignal(
     this.route.paramMap.pipe(map((params) => params.get('id'))),
@@ -82,7 +72,7 @@ export class TestDetail {
     'overview',
   );
 
-  readonly testPageData = toSignal(
+  private readonly routeParams = toSignal(
     combineLatest([this.route.paramMap, this.route.queryParamMap]).pipe(
       map(([params, queryParams]) => ({
         testId: params.get('id'),
@@ -92,96 +82,112 @@ export class TestDetail {
           undefined,
         jobId: params.get('jobId') || '',
       })),
-      distinctUntilChanged(
-        (a, b) =>
-          a.testId === b.testId &&
-          a.subTestId === b.subTestId &&
-          a.jobId === b.jobId,
-      ),
-      tap(() => {
-        this.loadingService.show();
-      }),
-      switchMap(({testId, subTestId, jobId}) => {
-        if (!testId) {
-          this.loadingService.hide();
-          return of<TestPageData>({
-            testOverviewData: null,
-            error: 'No test ID provided in the route.',
-            jobId,
-          });
-        }
-
-        const request: GetTestRequest = {testId, jobId};
-        if (subTestId) {
-          request.subTestId = subTestId;
-        }
-
-        const idForErrorLogging = subTestId || testId;
-
-        return this.testService.getTest(request).pipe(
-          map(
-            (testOverviewData) => ({testOverviewData, jobId}) as TestPageData,
-          ),
-          tap((data) => {
-            if (data?.testOverviewData) {
-              const test = data.testOverviewData;
-              this.activeTab.set(
-                test.status === TestStatus.TEST_STATUS_RUNNING
-                  ? 'log'
-                  : 'overview',
-              );
-            }
-          }),
-          catchError((err) => {
-            console.error(`Error fetching test ${idForErrorLogging}:`, err);
-            return of<TestPageData>({
-              testOverviewData: null,
-              error: `Failed to load test data for ID: ${idForErrorLogging}. ${err.message || ''}`,
-              jobId,
-            });
-          }),
-          finalize(() => {
-            this.loadingService.hide();
-          }),
-        );
-      }),
     ),
   );
+
+  private readonly silentResourceResult = useSilentResource<
+    TestPageData,
+    {testId?: string | null; subTestId?: string; jobId: string} | null
+  >({
+    params: () => {
+      const rp = this.routeParams();
+      return rp
+        ? {
+            testId: rp.testId || null,
+            subTestId: rp.subTestId,
+            jobId: rp.jobId || '',
+          }
+        : null;
+    },
+    stream: (params) => {
+      if (!params || !params.testId) {
+        return of<TestPageData>({
+          testOverviewData: null,
+          error: 'No test ID provided in the route.',
+          jobId: params?.jobId || '',
+        });
+      }
+
+      const {testId, subTestId, jobId} = params;
+
+      const request: GetTestRequest = {testId, jobId};
+      if (subTestId) {
+        request.subTestId = subTestId;
+      }
+
+      const idForErrorLogging = subTestId || testId;
+
+      return this.testService.getTest(request).pipe(
+        map(
+          (response) =>
+            ({
+              testOverviewData: response.test,
+              jobId,
+            }) as TestPageData,
+        ),
+        catchError((err) => {
+          console.error(`Error fetching test ${idForErrorLogging}:`, err);
+          return of<TestPageData>({
+            testOverviewData: null,
+            error: `Failed to load test data for ID: ${idForErrorLogging}. ${err.message || ''}`,
+            jobId,
+          });
+        }),
+      );
+    },
+    onInitialLoad: (data) => {
+      if (data?.testOverviewData) {
+        const test = data.testOverviewData;
+        this.activeTab.set(
+          test.status === TestStatus.TEST_STATUS_RUNNING ? 'log' : 'overview',
+        );
+      }
+    },
+  });
+
+  readonly testResource = this.silentResourceResult.resource;
+
+  readonly testPageData = computed(() => this.testResource.value() || null);
 
   readonly testOverview = computed(
     () => this.testPageData()?.testOverviewData ?? null,
   );
+  readonly test = this.testOverview;
+  readonly errorMessage = computed(() => this.testPageData()?.error || null);
+
+  readonly jobId = computed(
+    () => this.testOverview()?.job?.id || this.testPageData()?.jobId || '',
+  );
+
+  readonly pageTitle = computed(() => {
+    const test = this.testOverview();
+    const id = this.testId();
+    if (test?.name) {
+      return `OmniLab Console - ${test.name}`;
+    }
+    if (id) {
+      return `OmniLab Console - Test ${id.substring(0, 8)}...`;
+    }
+    return null;
+  });
 
   constructor() {
-    this.destroyRef.onDestroy(() => {
-      this.titleService.setTitle('OmniLab Console');
-    });
-    effect(() => {
-      const test = this.testOverview();
-      const id = this.testId();
-      if (test?.name) {
-        this.titleService.setTitle(`OmniLab Console - ${test.name}`);
-      } else if (id) {
-        const shortId = id.substring(0, 8);
-        this.titleService.setTitle(`OmniLab Console - Test ${shortId}...`);
-      } else {
-        this.titleService.setTitle('OmniLab Console');
-      }
-    });
+    usePageTitle(this.pageTitle);
   }
 
-  readonly statusDisplay = computed(
-    () =>
-      TEST_STATUS_DISPLAY_MAP[
-        this.testOverview()?.status ?? TestStatus.TEST_STATUS_UNSPECIFIED
-      ],
-  );
+  readonly statusDisplay = computed(() => {
+    const status =
+      this.testOverview()?.status ?? TestStatus.TEST_STATUS_UNSPECIFIED;
+    return TEST_STATUS_DISPLAY_MAP[
+      status as keyof typeof TEST_STATUS_DISPLAY_MAP
+    ];
+  });
 
   readonly resultDisplay = computed(() => {
     const result = this.testOverview()?.result;
     return !result || result === TestResult.TEST_RESULT_UNSPECIFIED
       ? null
-      : TEST_RESULT_DISPLAY_MAP[result];
+      : TEST_RESULT_DISPLAY_MAP[result as keyof typeof TEST_RESULT_DISPLAY_MAP];
   });
 
   readonly getTestFileContent = (path: string) => {
@@ -193,5 +199,12 @@ export class TestDetail {
 
   setActiveTab(tab: 'overview' | 'timeline' | 'log' | 'files') {
     this.activeTab.set(tab);
+  }
+
+  onLogStreamCompleted() {
+    const test = this.testOverview();
+    if (test && test.status === TestStatus.TEST_STATUS_RUNNING) {
+      this.silentResourceResult.reloadSilent();
+    }
   }
 }

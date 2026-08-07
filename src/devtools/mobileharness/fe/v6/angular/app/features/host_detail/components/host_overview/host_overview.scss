@@ -181,8 +181,8 @@
           width: 14px;
           vertical-align: middle;
           margin-left: 2px;
-          color: inherit !important;
-          fill: currentColor !important;
+          color: inherit;
+          fill: currentColor;
         }
       }
     }
@@ -737,7 +737,7 @@
 }
 
 .hidden-button {
-  display: none !important;
+  display: none;
 }
 
 .tooltip-wrapper {

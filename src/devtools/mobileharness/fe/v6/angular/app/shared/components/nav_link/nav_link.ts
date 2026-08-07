@@ -1,5 +1,5 @@
 import {DOCUMENT} from '@angular/common';
-import {Component, inject, Input, OnDestroy, OnInit} from '@angular/core';
+import {Component, inject, input, OnDestroy, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
 import {ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
@@ -37,19 +37,19 @@ export type NavLinkConfig =
 })
 export class NavLink implements OnInit, OnDestroy {
   /** Configuration for the target link (host or device). */
-  @Input({required: true}) config!: NavLinkConfig;
+  readonly config = input.required<NavLinkConfig>();
 
   /** Standard target attribute for the 'a' element (e.g., '_blank'). */
-  @Input() target?: string;
+  readonly target = input<string>();
 
   /** Custom query parameters to append to the navigation. */
-  @Input() customQueryParams: Record<string, string> = {};
+  readonly customQueryParams = input<Record<string, string>>({});
 
   /**
    * Standard Angular router option for handling query parameters during
    * client-side navigation.
    */
-  @Input() queryParamsHandling: 'merge' | 'preserve' | '' = '';
+  readonly queryParamsHandling = input<'merge' | 'preserve' | ''>('');
 
   private readonly router = inject(Router);
   private readonly urlService = inject(UrlService);
@@ -72,14 +72,12 @@ export class NavLink implements OnInit, OnDestroy {
 
     // Merge custom query parameters
     const urlParams = new URLSearchParams(search);
-    for (const [key, value] of Object.entries(this.customQueryParams)) {
+    for (const [key, value] of Object.entries(this.customQueryParams())) {
       urlParams.set(key, value);
     }
-    if (
-      (this.config.type === 'host' || this.config.type === 'device') &&
-      this.config.universe
-    ) {
-      urlParams.set('universe', this.config.universe);
+    const cfg = this.config();
+    if ((cfg.type === 'host' || cfg.type === 'device') && cfg.universe) {
+      urlParams.set('universe', cfg.universe);
     }
     const newSearch = urlParams.toString();
 
@@ -95,14 +93,15 @@ export class NavLink implements OnInit, OnDestroy {
   }
 
   private getRouterLink(): string {
-    if (this.config.type === 'host') {
-      return `/hosts/${this.config.hostName}`;
-    } else if (this.config.type === 'device') {
-      return `/devices/${this.config.deviceId}`;
-    } else if (this.config.type === 'job') {
-      return `/jobs/${this.config.jobId}`;
+    const cfg = this.config();
+    if (cfg.type === 'host') {
+      return `/hosts/${cfg.hostName}`;
+    } else if (cfg.type === 'device') {
+      return `/devices/${cfg.deviceId}`;
+    } else if (cfg.type === 'job') {
+      return `/jobs/${cfg.jobId}`;
     } else {
-      return `/jobs/${this.config.jobId}/tests/${this.config.testId}`;
+      return `/jobs/${cfg.jobId}/tests/${cfg.testId}`;
     }
   }
 
@@ -112,9 +111,10 @@ export class NavLink implements OnInit, OnDestroy {
     }
 
     const {page, params} = this.getNavParams();
+    const cfg = this.config();
     // Use device_uuid for external URL calculation to maintain compatibility.
-    if (this.config.type === 'device') {
-      params['device_uuid'] = this.config.deviceId;
+    if (cfg.type === 'device') {
+      params['device_uuid'] = cfg.deviceId;
     }
 
     this.urlService
@@ -147,7 +147,7 @@ export class NavLink implements OnInit, OnDestroy {
       event.ctrlKey ||
       event.metaKey ||
       event.button === 1 ||
-      this.target === '_blank'
+      this.target() === '_blank'
     ) {
       console.log(
         'handleClick executed, returning early to keep the default behavior',
@@ -169,26 +169,24 @@ export class NavLink implements OnInit, OnDestroy {
     );
 
     const {page, params} = this.getNavParams();
+    const cfg = this.config();
     // Use uuid for navigation notification to match Arsenal's expectation.
-    if (this.config.type === 'device') {
-      params['uuid'] = this.config.deviceId;
+    if (cfg.type === 'device') {
+      params['uuid'] = cfg.deviceId;
     }
     // We notify immediately to speed up the synchronization with parent window.
     this.urlService.notifyNavigated(page, params);
 
     const queryParams: Record<string, string> = {
-      ...this.customQueryParams,
+      ...this.customQueryParams(),
     };
-    if (
-      (this.config.type === 'host' || this.config.type === 'device') &&
-      this.config.universe
-    ) {
-      queryParams['universe'] = this.config.universe;
+    if ((cfg.type === 'host' || cfg.type === 'device') && cfg.universe) {
+      queryParams['universe'] = cfg.universe;
     }
 
     this.router.navigate([this.routerLink], {
       ...(Object.keys(queryParams).length > 0 ? {queryParams} : {}),
-      queryParamsHandling: this.queryParamsHandling,
+      queryParamsHandling: this.queryParamsHandling(),
     });
   }
 
@@ -196,34 +194,34 @@ export class NavLink implements OnInit, OnDestroy {
     page: 'host_details' | 'device_details' | 'job_details' | 'test_details';
     params: Record<string, string>;
   } {
-    if (this.config.type === 'job') {
+    const cfg = this.config();
+    if (cfg.type === 'job') {
       return {
         page: 'job_details',
         params: {
-          'job_id': this.config.jobId,
-          ...this.customQueryParams,
+          'job_id': cfg.jobId,
+          ...this.customQueryParams(),
         },
       };
-    } else if (this.config.type === 'test') {
+    } else if (cfg.type === 'test') {
       return {
         page: 'test_details',
         params: {
-          'job_id': this.config.jobId,
-          'test_id': this.config.testId,
-          ...this.customQueryParams,
+          'job_id': cfg.jobId,
+          'test_id': cfg.testId,
+          ...this.customQueryParams(),
         },
       };
     }
 
-    const page =
-      this.config.type === 'host' ? 'host_details' : 'device_details';
+    const page = cfg.type === 'host' ? 'host_details' : 'device_details';
     const params: Record<string, string> = {
-      'host_name': this.config.hostName,
-      'host_ip': this.config.hostIp,
-      ...this.customQueryParams,
+      'host_name': cfg.hostName,
+      'host_ip': cfg.hostIp,
+      ...this.customQueryParams(),
     };
-    if (this.config.universe) {
-      params['universe'] = this.config.universe;
+    if (cfg.universe) {
+      params['universe'] = cfg.universe;
     }
     return {page, params};
   }

@@ -1,4 +1,9 @@
-import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {
+  ComponentFixture,
+  TestBed,
+  fakeAsync,
+  tick,
+} from '@angular/core/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {
   ActivatedRoute,
@@ -70,7 +75,7 @@ describe('TestDetail Component', () => {
       'getTestLog',
       'getTestFile',
     ]);
-    mockTestService.getTest.and.returnValue(of(mockOverviewData));
+    mockTestService.getTest.and.returnValue(of({test: mockOverviewData}));
     mockTestService.getTestLog.and.returnValue(
       of({
         logContent: '',
@@ -120,7 +125,10 @@ describe('TestDetail Component', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should fetch test details on init', () => {
+  it('should fetch test details on init', fakeAsync(() => {
+    fixture.detectChanges();
+    tick();
+    fixture.detectChanges();
     expect(mockTestService.getTest).toHaveBeenCalledWith({
       testId: 'test_123',
       jobId: '',
@@ -128,7 +136,7 @@ describe('TestDetail Component', () => {
     const pageData = component.testPageData();
     expect(pageData).toBeTruthy();
     expect(pageData!.testOverviewData!.id).toBe('test_123');
-  });
+  }));
 
   it('should copy test id to clipboard when copy button is clicked', () => {
     component.copyToClipboard('test_123');
@@ -140,7 +148,7 @@ describe('TestDetail Component', () => {
     );
   });
 
-  it('should render "Devices" label when there are multiple devices', () => {
+  it('should render "Devices" label when there are multiple devices', fakeAsync(() => {
     const multiDeviceData = {
       ...mockOverviewData,
       devices: {
@@ -150,43 +158,52 @@ describe('TestDetail Component', () => {
         ],
       },
     };
-    mockTestService.getTest.and.returnValue(of(multiDeviceData));
+    mockTestService.getTest.and.returnValue(of({test: multiDeviceData}));
 
     const multiFixture = TestBed.createComponent(TestDetail);
+    multiFixture.detectChanges();
+    tick();
     multiFixture.detectChanges();
     const compiled = multiFixture.nativeElement as HTMLElement;
     const labels = compiled.querySelectorAll('.executed-on-grid .grid-label');
     expect(labels[0]?.textContent?.trim()).toBe('Devices');
-  });
+  }));
 
-  it('should render "Device" label when there is only one device', () => {
+  it('should render "Device" label when there is only one device', fakeAsync(() => {
+    fixture.detectChanges();
+    tick();
+    fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
     const labels = compiled.querySelectorAll('.executed-on-grid .grid-label');
     expect(labels[0]?.textContent?.trim()).toBe('Device');
-  });
+  }));
 
-  it('should hide executed on card when both devices and host are missing or empty', () => {
+  it('should hide executed on card when both devices and host are missing or empty', fakeAsync(() => {
     const emptyData: TestOverviewData = {
       ...mockOverviewData,
       devices: {},
       host: undefined,
     };
-    mockTestService.getTest.and.returnValue(of(emptyData));
+    mockTestService.getTest.and.returnValue(of({test: emptyData}));
 
     const emptyFixture = TestBed.createComponent(TestDetail);
     emptyFixture.detectChanges();
+    tick();
+    emptyFixture.detectChanges();
     const compiled = emptyFixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.executed-on-card')).toBeNull();
-  });
+  }));
 
-  it('should render N/A for host when devices are present but host is undefined', () => {
+  it('should render N/A for host when devices are present but host is undefined', fakeAsync(() => {
     const noHostData: TestOverviewData = {
       ...mockOverviewData,
       host: undefined,
     };
-    mockTestService.getTest.and.returnValue(of(noHostData));
+    mockTestService.getTest.and.returnValue(of({test: noHostData}));
 
     const noHostFixture = TestBed.createComponent(TestDetail);
+    noHostFixture.detectChanges();
+    tick();
     noHostFixture.detectChanges();
     const compiled = noHostFixture.nativeElement as HTMLElement;
     const card = compiled.querySelector('.executed-on-card');
@@ -195,5 +212,5 @@ describe('TestDetail Component', () => {
     expect(values.length).toBe(2);
     expect(values[0]?.textContent?.trim()).toContain('device_01');
     expect(values[1]?.textContent?.trim()).toBe('N/A');
-  });
+  }));
 });

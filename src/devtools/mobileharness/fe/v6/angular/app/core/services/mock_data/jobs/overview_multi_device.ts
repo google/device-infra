@@ -1,8 +1,6 @@
 import {
   JobResult,
   JobStatus,
-  SessionResult,
-  SessionStatus,
   TestResult,
   TestStatus,
 } from '@deviceinfra/app/core/models/common_models';
@@ -22,9 +20,6 @@ export const SCENARIO_JOB_MULTI_DEVICE: MockJobScenario = {
     },
     session: {
       id: '9f8e7d6c-5b4a-3210-9876-543210fedcba',
-      name: 'Mobly Cross-Device Test Suite',
-      status: SessionStatus.SESSION_STATUS_DONE,
-      result: SessionResult.SESSION_RESULT_PASS,
     },
     name: 'cross_device_connectivity_test',
     config: {

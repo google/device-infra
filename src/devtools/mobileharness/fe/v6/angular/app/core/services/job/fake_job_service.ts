@@ -2,12 +2,16 @@ import {Injectable} from '@angular/core';
 import {Observable, of, throwError} from 'rxjs';
 import {delay} from 'rxjs/operators';
 import {
+  GetJobFileRequest,
   GetJobFileResponse,
   GetJobLogRequest,
   GetJobLogResponse,
   GetJobRequest,
   GetJobResponse,
+  JobResult,
   JobStatus,
+  KillJobRequest,
+  KillJobResponse,
 } from '../../models/job_overview';
 import {MOCK_JOB_SCENARIOS} from '../mock_data';
 import {JobService} from './job_service';
@@ -75,7 +79,7 @@ export class FakeJobService extends JobService {
       nextOffset,
       jobStatus: scenario.overview.status || JobStatus.JOB_STATUS_DONE,
       logReset: false,
-      contentHash: 'mock-hash',
+      contentHash: `hash-${id}`,
     }).pipe(delay(500));
   }
 
@@ -83,9 +87,10 @@ export class FakeJobService extends JobService {
    * Retrieves the content of a specific file associated with a Job.
    */
   override getJobFile(
-    id: string,
-    filePath: string,
+    request: GetJobFileRequest,
   ): Observable<GetJobFileResponse> {
+    const id = request.jobId;
+    const path = request.filePath;
     const scenario = MOCK_JOB_SCENARIOS.find(
       (s) =>
         s.id === id ||
@@ -99,15 +104,13 @@ export class FakeJobService extends JobService {
       );
     }
     const jobOverview = scenario.overview;
-    const file = jobOverview.fileExplorer?.files?.find(
-      (f) => f.path === filePath,
-    );
+    const file = jobOverview.fileExplorer?.files?.find((f) => f.path === path);
     if (!file) {
       return throwError(
-        () => new Error(`File '${filePath}' not found in job mockup.`),
+        () => new Error(`File '${path}' not found in job mockup.`),
       );
     }
-    if (filePath.includes('undetermined_size_heavy_manifest')) {
+    if (path.includes('undetermined_size_heavy_manifest')) {
       const error = new Error(
         'File undetermined_size_heavy_manifest.txt is too large',
       );
@@ -117,5 +120,37 @@ export class FakeJobService extends JobService {
     return of({
       content: (file as {content?: string}).content || '',
     }).pipe(delay(500));
+  }
+
+  /**
+   * Terminates a running job immediately in mock dataset.
+   */
+  override killJob(
+    request: string | KillJobRequest,
+  ): Observable<KillJobResponse> {
+    const id = typeof request === 'string' ? request : request.jobId;
+    const scenario = MOCK_JOB_SCENARIOS.find(
+      (s) =>
+        s.id === id ||
+        s.overview.id === id ||
+        (id === '1845eb94-459b-4028-a9b4-0f13558fdc61' &&
+          s.overview.id === 'b65cadd7-6ad6-440e-a3b7-bfe1948557e6'),
+    );
+    if (!scenario) {
+      return throwError(
+        () => new Error(`Job with ID '${id}' not found in mock data.`),
+      );
+    }
+    scenario.overview.status = JobStatus.JOB_STATUS_DONE;
+    scenario.overview.result = JobResult.JOB_RESULT_ABORT;
+    if (scenario.actions?.kill) {
+      Object.assign(scenario.actions.kill, {
+        visible: false,
+        enabled: false,
+        isReady: false,
+        tooltip: '',
+      });
+    }
+    return of({}).pipe(delay(500));
   }
 }

@@ -1,8 +1,6 @@
 import {
   JobResult,
   JobStatus,
-  SessionResult,
-  SessionStatus,
   TestResult,
   TestStatus,
 } from '@deviceinfra/app/core/models/common_models';
@@ -23,9 +21,6 @@ export const SCENARIO_JOB_PASSED: MockJobScenario = {
     },
     session: {
       id: '4f1e3f2e-64ac-48be-adfb-c01a5ece8a58',
-      name: 'Gateway Run: MobileHarness',
-      status: SessionStatus.SESSION_STATUS_DONE,
-      result: SessionResult.SESSION_RESULT_FAIL,
     },
     name: 'hello_mobile_harness_test_on_mh',
     config: {
@@ -150,9 +145,9 @@ export const SCENARIO_JOB_PASSED: MockJobScenario = {
           content: '',
         },
         {
-          path: 'undeclared_outputs_annotations.pb',
+          path: 'example_image.png',
           size: 184320,
-          viewable: true,
+          viewable: false,
           content: '',
         },
       ] as unknown as JobFile[],

@@ -1,8 +1,6 @@
 import {
   JobResult,
   JobStatus,
-  SessionResult,
-  SessionStatus,
   TestResult,
   TestStatus,
 } from '@deviceinfra/app/core/models/common_models';
@@ -22,9 +20,6 @@ export const SCENARIO_JOB_MANY_TESTS: MockJobScenario = {
     },
     session: {
       id: 'a1b2c3d4-e5f6-7890-abcd-ef0123456789',
-      name: 'Nightly Pixel 8 Pro Tests',
-      status: SessionStatus.SESSION_STATUS_DONE,
-      result: SessionResult.SESSION_RESULT_PASS,
     },
     name: 'Full Regression Suite',
     config: {

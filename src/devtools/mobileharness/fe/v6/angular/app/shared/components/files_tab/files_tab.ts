@@ -2,17 +2,17 @@ import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
-  EventEmitter,
-  Output,
   computed,
   inject,
   input,
+  linkedSignal,
+  output,
   signal,
 } from '@angular/core';
 import {rxResource} from '@angular/core/rxjs-interop';
 import {FormsModule} from '@angular/forms';
 import {MatIconModule} from '@angular/material/icon';
-import {MatTooltip, MatTooltipModule} from '@angular/material/tooltip';
+import {MatTooltipModule} from '@angular/material/tooltip';
 
 import {Observable, of, throwError} from 'rxjs';
 import {catchError} from 'rxjs/operators';
@@ -20,6 +20,9 @@ import {catchError} from 'rxjs/operators';
 import {FileExplorer, FileInfo} from '../../../core/models/common_models';
 import {useCopyToClipboard} from '../../../shared/composables/copy';
 import {SnackBarService} from '../../../shared/services/snackbar_service';
+import {openInNewTab} from '../../utils/safe_dom';
+
+import {TooltipIfTruncatedDirective} from '../../directives/tooltip_if_truncated/tooltip_if_truncated';
 
 /** A structure representing a hierarchical directory or checkable file inside the file explorer. */
 export interface FileNode {
@@ -27,8 +30,25 @@ export interface FileNode {
   type: 'dir' | 'file';
   path: string; // unique hierarchical path, e.g. "google3/java/com"
   size?: number;
+  viewable?: boolean;
   depth: number;
   children: FileNode[];
+}
+
+/** Error detail class for file content loading failures. */
+export class FileContentError extends Error {
+  type: 'TOO_LARGE' | 'NOT_FOUND' | 'NETWORK_ERROR' | 'UNKNOWN';
+  status?: number;
+
+  constructor(
+    type: 'TOO_LARGE' | 'NOT_FOUND' | 'NETWORK_ERROR' | 'UNKNOWN',
+    message: string,
+    status?: number,
+  ) {
+    super(message);
+    this.type = type;
+    this.status = status;
+  }
 }
 
 /**
@@ -38,7 +58,13 @@ export interface FileNode {
 @Component({
   selector: 'app-files-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule, MatTooltipModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatIconModule,
+    MatTooltipModule,
+    TooltipIfTruncatedDirective,
+  ],
   templateUrl: './files_tab.ng.html',
   styleUrl: './files_tab.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -50,19 +76,30 @@ export class FilesTab {
     input.required<(path: string) => Observable<string>>();
   readonly emptyMessage = input<string>('No files associated.');
 
-  @Output() readonly download = new EventEmitter<{
+  readonly download = output<{
     path: string;
     event: Event;
   }>();
-  @Output() readonly downloadAll = new EventEmitter<void>();
 
   readonly copyToClipboard = useCopyToClipboard();
   private readonly snackBar = inject(SnackBarService);
 
-  readonly viewMode = signal<'tree' | 'flat'>('flat');
   readonly searchTerm = signal<string>('');
 
-  readonly activeFile = signal<FileInfo | null>(null);
+  readonly viewMode = linkedSignal<string, 'tree' | 'flat'>({
+    source: () => this.searchTerm(),
+    computation: (term, previous) => {
+      if (term.trim()) {
+        return 'flat';
+      }
+      return previous?.value ?? 'flat';
+    },
+  });
+
+  readonly activeFile = linkedSignal<FileInfo | null>(() => {
+    this.fileExplorer();
+    return null;
+  });
 
   private readonly MAX_PREVIEW_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
   private readonly collator = new Intl.Collator(undefined, {
@@ -76,40 +113,62 @@ export class FilesTab {
     return !!file.size && file.size > this.MAX_PREVIEW_SIZE_BYTES;
   });
 
-  private shouldPreviewFileContent(file: FileInfo): boolean {
-    if (file.size && file.size > this.MAX_PREVIEW_SIZE_BYTES) {
-      return false;
-    }
-    if (this.isImageFile(file)) {
-      return false;
-    }
-    return this.isPreviewable(file);
-  }
-
   /**
    * RxResource managing the lifecycle and auto-unsubscribing when parameters change.
    */
   readonly fileContentResource = rxResource({
     params: () => {
       const file = this.activeFile();
-      if (!file || !this.shouldPreviewFileContent(file)) {
+      if (!file || !this.isViewable(file)) {
         return null;
       }
       return {path: file.path};
     },
     stream: ({params}) => {
       if (!params) return of('');
-      return this.getFileContent()(params.path).pipe(
+      const getContentFn = this.getFileContent();
+      if (!getContentFn) return of('');
+      return getContentFn(params.path).pipe(
         catchError((err: unknown) => {
-          console.error(err);
+          console.error('Failed to fetch file content:', err);
           const e = err as {status?: number; message?: string};
+
+          let errorObj: FileContentError;
           if (
             e?.status === 413 ||
-            (e?.message && e.message.toLowerCase().includes('too large'))
+            (e?.message &&
+              (e.message.toLowerCase().includes('too large') ||
+                e.message.toLowerCase().includes('larger than')))
           ) {
-            return throwError(() => new Error('TOO_LARGE'));
+            errorObj = new FileContentError(
+              'TOO_LARGE',
+              'File exceeds maximum preview limit (10MB)',
+              413,
+            );
+          } else if (e?.status === 404) {
+            errorObj = new FileContentError(
+              'NOT_FOUND',
+              'File not found on server',
+              404,
+            );
+          } else if (e?.status === 0 || !navigator.onLine) {
+            errorObj = new FileContentError(
+              'NETWORK_ERROR',
+              'Network disconnected or request timed out',
+              0,
+            );
+          } else {
+            errorObj = new FileContentError(
+              'UNKNOWN',
+              e?.message ||
+                (typeof err === 'string'
+                  ? err
+                  : 'An error occurred while loading file content.'),
+              e?.status,
+            );
           }
-          return of(`Error loading file: ${e?.message || err}`);
+
+          return throwError(() => errorObj);
         }),
       );
     },
@@ -119,19 +178,34 @@ export class FilesTab {
     this.fileContentResource.isLoading(),
   );
 
+  readonly contentError = computed(() => {
+    return this.fileContentResource.error() as FileContentError | undefined;
+  });
+
+  readonly sizeLoadError = computed(
+    () => this.contentError()?.type === 'TOO_LARGE',
+  );
+
+  readonly isContentLoadError = computed(() => {
+    const err = this.contentError();
+    return !!err && err.type !== 'TOO_LARGE';
+  });
+
+  readonly errorMessage = computed(() => {
+    return this.contentError()?.message || 'Failed to load file content.';
+  });
+
   readonly activeFileContent = computed(() => {
-    const file = this.activeFile();
-    if (!file || this.isFileTooLarge() || this.isImageFile(file)) return '';
-    const error = this.fileContentResource.error() as Error | undefined;
-    if (error?.message === 'TOO_LARGE') return '';
+    if (!this.activeFile() || this.cannotPreviewInline()) {
+      return '';
+    }
     const value = this.fileContentResource.value();
     return typeof value === 'string' ? value : '';
   });
 
-  readonly sizeLoadError = computed(() => {
-    const error = this.fileContentResource.error() as Error | undefined;
-    return error?.message === 'TOO_LARGE';
-  });
+  retryLoadContent() {
+    this.fileContentResource.reload();
+  }
 
   readonly expandedFolders = signal<Record<string, boolean>>({});
   readonly copiedCnsPath = signal<boolean>(false);
@@ -157,10 +231,35 @@ export class FilesTab {
 
   readonly isSplitView = computed(() => !!this.activeFile());
 
+  /**
+   * Whether a file is a text/log file that can be previewed inline in FE v6.
+   * Computed by backend (GenFileViewability: size <= 10MB and non-binary type).
+   */
+  isViewable(file: {viewable?: boolean} | null | undefined): boolean {
+    return !!file?.viewable;
+  }
+
+  /**
+   * Whether a file is an image file based on extension.
+   */
+  isImageFile(file: {path: string}): boolean {
+    return /\.(png|jpe?g|gif|webp)$/i.test(file.path);
+  }
+
+  /**
+   * Whether the active file is unsupported for inline preview in FE v6 console.
+   */
   readonly isUnsupported = computed(() => {
     const file = this.activeFile();
     if (!file) return false;
-    return !this.isPreviewable(file) && !this.isImageFile(file);
+    return !this.isViewable(file);
+  });
+
+  /**
+   * Whether the active file cannot be previewed inline in the viewport.
+   */
+  readonly cannotPreviewInline = computed(() => {
+    return this.isUnsupported() || !!this.contentError();
   });
 
   // Visible nodes in the tree view (filtered by expansion)
@@ -189,10 +288,6 @@ export class FilesTab {
 
   onSearchTermChange(term: string) {
     this.searchTerm.set(term);
-    if (term.trim()) {
-      // Search forces flat view for best user experience
-      this.viewMode.set('flat');
-    }
   }
 
   toggleFolder(node: FileNode, event: Event) {
@@ -229,58 +324,27 @@ export class FilesTab {
     }, 2000);
   }
 
-  downloadFile(file: FileInfo, event: Event) {
-    event.stopPropagation();
-    event.preventDefault();
-    if (this.download.observed) {
-      this.download.emit({path: file.path, event});
-    } else {
-      this.snackBar.showSuccess(`Downloading ${file.path}...`);
+  getFileMetaString(size?: number): string | null {
+    if (size !== undefined && size !== null) {
+      return this.formatBytes(size);
     }
+    return null;
   }
 
-  downloadAllZip() {
-    if (this.downloadAll.observed) {
-      this.downloadAll.emit();
-    } else {
-      this.snackBar.showSuccess('Downloading all files as ZIP...');
-    }
-  }
-
-  getFileIcon(fileName?: string): string {
-    const name = (fileName || '').toLowerCase();
-    if (/\.(png|jpe?g|gif|webp|bmp|svg)$/.test(name)) {
+  getFileIcon(path: string): string {
+    if (this.isImageFile({path})) {
       return 'image';
     }
-    if (/\.(ya?ml|json|txt|config|conf|ini|textproto|pbtxt)$/.test(name)) {
+    if (/\.(ya?ml|json|txt|config|conf|ini|textproto|pbtxt)$/i.test(path)) {
       return 'description';
     }
-    if (/\.log$/.test(name)) {
+    if (/\.log$/i.test(path)) {
       return 'article';
     }
-    if (/\.(zip|tar|gz|jar)$/.test(name)) {
+    if (/\.(zip|tar|gz|jar)$/i.test(path)) {
       return 'archive';
     }
     return 'insert_drive_file';
-  }
-
-  isPreviewable(file: FileInfo): boolean {
-    return !!file.viewable;
-  }
-
-  getFileMetaString(size?: number): string | null {
-    if (size === undefined || size === null) {
-      return null;
-    }
-    return this.formatBytes(size);
-  }
-
-  checkOverflowTooltip(element: HTMLElement, tooltip: MatTooltip) {
-    tooltip.disabled = element.scrollWidth <= element.clientWidth;
-  }
-
-  isImageFile(file: FileInfo): boolean {
-    return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(file.path);
   }
 
   private buildTree(files: FileInfo[]): FileNode[] {
@@ -335,6 +399,7 @@ export class FilesTab {
         type: 'file',
         path: file.path,
         size: file.size,
+        viewable: file.viewable,
         depth,
         children: [],
       };

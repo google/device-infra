@@ -1,0 +1,234 @@
+<app-master-detail-layout [navList]="overviewNavList()">
+  <!-- Conditional Error Card -->
+  @let errors = session().troubleshooting?.resultCause?.error;
+  @if (errors && errors.length > 0) {
+    <app-info-card id="overview-error" cardTitle="Error Details" icon="error_outline" [collapsible]="false" class="error-info-card">
+      @if (errors.length > 1) {
+        <span operations class="count-badge error-count-badge">{{ errors.length }} errors</span>
+      }
+      <div class="info-card-content zero-padding accordion-list">
+        @for (err of errors; track err.message + $index) {
+          <app-accordion-item
+            [title]="err.message"
+            [defaultExpanded]="$index === 0"
+            [customId]="'error-panel-session-' + $index"
+          >
+            @if (err.trace) {
+              <pre class="trace-pre"><code>{{ err.trace }}</code></pre>
+            }
+          </app-accordion-item>
+        }
+      </div>
+    </app-info-card>
+  }
+
+  <!-- Conditional Warning Card -->
+  @let warningsList = session().troubleshooting?.warnings?.warning;
+  @if (warningsList && warningsList.length > 0) {
+    <app-info-card id="overview-warning" cardTitle="Warning Details" icon="warning" [collapsible]="false" class="warning-info-card">
+      @if (warningsList.length > 1) {
+        <span operations class="count-badge warning-count-badge">{{ warningsList.length }} warnings</span>
+      }
+      <div class="info-card-content zero-padding accordion-list">
+        @for (warn of warningsList; track warn.message + $index) {
+          <app-accordion-item
+            [title]="warn.message"
+            [defaultExpanded]="$index === 0"
+            [customId]="'warning-panel-session-' + $index"
+          >
+            @if (warn.trace) {
+              <pre class="trace-pre"><code>{{ warn.trace }}</code></pre>
+            }
+          </app-accordion-item>
+        }
+      </div>
+    </app-info-card>
+  }
+
+  <!-- Child Jobs List Card -->
+  @if (session().jobs; as jobsList) {
+    @if (jobsList.length > 0) {
+      <app-info-card id="session-jobs" [cardTitle]="'Child Jobs (' + jobsList.length + ')'" [collapsible]="true" [expanded]="true" class="list-card">
+      <div class="info-card-content zero-padding">
+        <div class="table-container">
+          <table mat-table [dataSource]="jobsList" class="data-table">
+
+            <!-- Job ID Column -->
+            <ng-container matColumnDef="id">
+              <th mat-header-cell *matHeaderCellDef>Job ID</th>
+              <td mat-cell *matCellDef="let job" class="job-id-cell">
+                <div class="job-id-container">
+                  <a [routerLink]="['/jobs', job.id]" queryParamsHandling="merge" class="job-id-link" [matTooltip]="'View Job Details: ' + job.id">
+                    {{ job.id }}
+                  </a>
+                  @let isCopied = copiedJobIds()[job.id];
+                  <button [disabled]="isCopied" (click)="copyJobId(job.id)" class="copy-button" [class.success]="isCopied" [matTooltip]="isCopied ? 'Copied!' : 'Copy Full Job ID'">
+                    <mat-icon class="copy-icon">{{ isCopied ? 'check' : 'content_copy' }}</mat-icon>
+                  </button>
+                </div>
+              </td>
+            </ng-container>
+
+            <!-- Job Name Column -->
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef>Job Name</th>
+              <td mat-cell *matCellDef="let job">
+                <div class="job-name-wrapper" [title]="job.name">
+                  {{ job.name }}
+                </div>
+              </td>
+            </ng-container>
+
+            <!-- Status Column -->
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef>Status</th>
+              <td mat-cell *matCellDef="let job">
+                @let badge = getJobStatusBadge(job);
+                <span class="status-badge-compact" [class]="badge.bgClass + ' ' + badge.colorClass">
+                  <mat-icon [class.spin-animation]="badge.spin">{{ badge.icon }}</mat-icon>
+                  <span>{{ badge.text }}</span>
+                </span>
+              </td>
+            </ng-container>
+
+            <!-- Result Column -->
+            <ng-container matColumnDef="result">
+              <th mat-header-cell *matHeaderCellDef>Result</th>
+              <td mat-cell *matCellDef="let job">
+                @let badge = getJobResultBadge(job);
+                @if (badge) {
+                  <span class="status-badge-compact" [class]="badge.bgClass + ' ' + badge.colorClass">
+                    <mat-icon>{{ badge.icon }}</mat-icon>
+                    <span>{{ badge.text }}</span>
+                  </span>
+                } @else {
+                  <span class="empty-fallback-text">N/A</span>
+                }
+              </td>
+            </ng-container>
+
+            <!-- Start Time Column -->
+            <ng-container matColumnDef="startTime">
+              <th mat-header-cell *matHeaderCellDef>Start Time</th>
+              <td mat-cell *matCellDef="let job" class="job-time-cell">
+                {{ getJobStartTime(job) }}
+              </td>
+            </ng-container>
+
+            <!-- End Time Column -->
+            <ng-container matColumnDef="endTime">
+              <th mat-header-cell *matHeaderCellDef>End Time</th>
+              <td mat-cell *matCellDef="let job" class="job-time-cell">
+                {{ getJobEndTime(job) }}
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true" class="table-header-row"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="table-body-row"></tr>
+          </table>
+        </div>
+      </div>
+    </app-info-card>
+    }
+  }
+
+  <!-- Execution Details Card -->
+  <app-info-card id="overview-execution" class="execution-card" cardTitle="Execution Details" [collapsible]="false">
+    <div class="info-card-content">
+      <dl class="detail-list-grid">
+        @if (session().executionDetails?.user) {
+          <dt class="label-with-help">
+            <span>User</span>
+            <mat-icon matTooltip="The user under which the session executed." class="help-icon">info_outline</mat-icon>
+          </dt>
+          <dd>{{ session().executionDetails?.user }}</dd>
+        }
+        @if (session().executionDetails?.actualUser) {
+          <dt class="label-with-help">
+            <span>Actual User</span>
+            <mat-icon matTooltip="The credentialed person or system who actually submitted the session." class="help-icon">info_outline</mat-icon>
+          </dt>
+          <dd>{{ session().executionDetails?.actualUser }}</dd>
+        }
+        @for (item of timestampKeys; track item.key) {
+          @let info = timestampInfoMap()[item.key];
+          @if (info && info.displayValue !== 'N/A') {
+            <dt>{{ item.label }}</dt>
+            <dd class="timestamp-value-row">
+              <div class="timestamp-interactive-container">
+                <span class="timestamp-display-val">
+                  {{ info.displayValue }}
+                </span>
+                <div class="timezone-details-panel">
+                  <div class="panel-header-title">Time Zone Details</div>
+                  <div class="panel-grid">
+                    <span class="grid-label">Local</span>
+                    <span class="grid-value">{{ info.localStr }}</span>
+
+                    <span class="grid-label">UTC</span>
+                    <span class="grid-value">{{ info.utcStr }}</span>
+
+                    @if (info.elapsedHtml) {
+                      <span class="grid-label">Elapsed</span>
+                      <span class="grid-value">{{ info.elapsedHtml }}</span>
+                    }
+                  </div>
+                  <div class="panel-arrow"></div>
+                </div>
+              </div>
+              @if (info.durationText) {
+                <span class="timestamp-duration-text">{{ info.durationText }}</span>
+              }
+            </dd>
+          }
+        }
+      </dl>
+    </div>
+  </app-info-card>
+
+  <!-- Session Properties Card -->
+  <app-info-card id="overview-properties" cardTitle="Session Properties" [collapsible]="true" [expanded]="true" class="properties-card">
+    <div class="info-card-content">
+      @if (hasProperties()) {
+        <mat-form-field
+          appearance="outline"
+          class="overview-search-field"
+          subscriptSizing="dynamic"
+        >
+          <input
+            matInput
+            id="properties-search"
+            class="filter-input"
+            placeholder="Filter properties by key or value..."
+            [ngModel]="propertiesSearchTerm()"
+            (ngModelChange)="propertiesSearchTerm.set($event)"
+            aria-label="Search session properties"
+          />
+          @if (propertiesSearchTerm()) {
+            <button matSuffix mat-icon-button aria-label="Clear" (click)="propertiesSearchTerm.set('')">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+
+        @let filteredProps = filteredProperties();
+        @if (filteredProps.length === 0) {
+          <div id="properties-no-results" class="no-search-results">No properties match your filter.</div>
+        } @else {
+          <div class="data-block">
+            <dl class="data-block-grid">
+              @for (prop of filteredProps; track prop.key) {
+                <div class="data-block-row contents">
+                  <dt>{{ prop.key }}</dt>
+                  <dd>{{ prop.value }}</dd>
+                </div>
+              }
+            </dl>
+          </div>
+        }
+      } @else {
+        <p class="no-data">None</p>
+      }
+    </div>
+  </app-info-card>
+</app-master-detail-layout>

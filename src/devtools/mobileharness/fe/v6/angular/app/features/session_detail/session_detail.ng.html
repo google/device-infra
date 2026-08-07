@@ -1,0 +1,182 @@
+<div class="session-detail-container">
+  <!-- Error State -->
+  @if (errorMessage(); as error) {
+    <div class="error-message">
+      <mat-icon class="error-icon">error_outline</mat-icon>
+      <p>{{ error }}</p>
+      <a routerLink="/dev/device-harness" class="m3-button">Back to Harness</a>
+    </div>
+  } @else if (session(); as session) {
+    <div class="main-card">
+      <!-- Breadcrumb Navigation & Top Action Bar -->
+      <header class="card-header">
+        <div class="header-breadcrumbs">
+          <div class="breadcrumbs-list">
+            <a [routerLink]="['/dev/device-harness']" queryParamsHandling="merge" class="breadcrumb-item-link" title="Back to Sessions Dashboard">
+              Sessions
+            </a>
+            <mat-icon class="chevron-icon">chevron_right</mat-icon>
+            <span class="breadcrumb-item-text monospaced-text" title="Session ID: {{ session.id }}">{{ session.id }}</span>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <!-- Sponge Button -->
+          @if (session.spongeLink) {
+            <a [href]="session.spongeLink" target="_blank" rel="noopener noreferrer" class="sponge-link-btn" title="Open Sponge Results">
+              <span>View in Sponge</span>
+              <mat-icon>open_in_new</mat-icon>
+            </a>
+          }
+        </div>
+      </header>
+
+      <div class="card-body">
+        <!-- Session Title Bar / Identity Area -->
+        <div class="session-title-bar">
+          <div class="title-bar-content-wrapper">
+            <div class="title-left-section">
+              <div class="title-text-wrapper">
+                <div class="metadata-grid">
+                  <!-- Row 1: Session ID -->
+                  <span class="metadata-label">Session ID:</span>
+                  <div class="metadata-value">
+                    <span class="value-text" [matTooltip]="session.id">{{ session.id }}</span>
+                    <button [disabled]="copiedSessionId()" (click)="copySessionId(session.id)" class="inline-copy-button" [class.success]="copiedSessionId()" [matTooltip]="copiedSessionId() ? 'Copied!' : 'Copy Session ID'">
+                      <mat-icon>{{ copiedSessionId() ? 'check' : 'content_copy' }}</mat-icon>
+                    </button>
+                  </div>
+
+                  <div class="vertical-separator"></div>
+
+                  <!-- Status Indicator -->
+                  <div class="status-indicator">
+                    @let status = statusPillLabel();
+                    @let result = resultPillLabel();
+                    <mat-icon
+                      [class.status-green-icon]="result === 'PASS'"
+                      [class.status-red-icon]="result === 'FAIL' || result === 'ERROR' || result === 'TIMEOUT'"
+                      [class.status-blue-icon]="status === 'RUNNING'"
+                      [class.status-gray-icon]="result === 'ABORT' || result === 'SKIP' || status === 'NEW'"
+                      [class.spin-animation]="status === 'RUNNING'"
+                    >
+                      {{
+                        result === 'PASS' ? 'check_circle' :
+                        result === 'FAIL' || result === 'ERROR' ? 'error' :
+                        result === 'TIMEOUT' ? 'access_time' :
+                        result === 'SKIP' ? 'block' :
+                        result === 'ABORT' ? 'do_not_disturb_on' :
+                        status === 'RUNNING' ? 'sync' :
+                        status === 'NEW' ? 'schedule' :
+                        'watch_later'
+                      }}
+                    </mat-icon>
+
+                    <span class="status-pill"
+                      [class.status-blue-pill]="status === 'RUNNING'"
+                      [class.status-gray-pill]="status === 'DONE'"
+                      [class.status-new-pill]="status === 'NEW'"
+                    >Status: {{ status }}</span>
+
+                    @if (result; as res) {
+                      @if (res !== 'UNKNOWN') {
+                        <span class="status-pill"
+                          [class.result-green-pill]="res === 'PASS'"
+                          [class.result-red-pill]="res === 'FAIL' || res === 'ERROR' || res === 'TIMEOUT'"
+                          [class.result-gray-pill]="res === 'ABORT' || res === 'SKIP'"
+                        >Result: {{ res }}</span>
+                      }
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Session Details Card (Right Column) -->
+            <div class="session-details-card">
+              <div class="session-details-title">Session Details</div>
+              <div class="session-details-grid">
+                <span class="grid-label">Client</span>
+                <span class="grid-value" [matTooltip]="session.client || 'N/A'" tooltipIfTruncated>{{ session.client || 'N/A' }}</span>
+
+                <div class="grid-divider"></div>
+
+                <span class="grid-label">Version</span>
+                <span class="grid-value" [matTooltip]="session.version || 'N/A'" tooltipIfTruncated>{{ session.version || 'N/A' }}</span>
+
+                <div class="grid-divider"></div>
+
+                <span class="grid-label">Executor</span>
+                <span class="grid-value" [matTooltip]="session.executor || 'N/A'" tooltipIfTruncated>{{ session.executor || 'N/A' }}</span>
+
+                @if (session.labels && session.labels.length > 0) {
+                  <div class="grid-divider"></div>
+
+                  <span class="grid-label">Labels</span>
+                  <span class="grid-value" [matTooltip]="session.labels.join(', ')" tooltipIfTruncated>{{ session.labels.join(', ') }}</span>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="tabs-container">
+          <nav class="tabs-nav">
+            <button (click)="setActiveTab('overview')" [class.active]="activeTab() === 'overview'" class="tab-link">Overview</button>
+            <button (click)="setActiveTab('log')" [class.active]="activeTab() === 'log'" class="tab-link">
+              <span class="tab-link-content">
+                <span>Session Log</span>
+                @if (session.status === 'SESSION_STATUS_RUNNING') {
+                  <span class="live-badge">
+                    <span class="live-dot"></span>
+                    <span>LIVE</span>
+                  </span>
+                }
+              </span>
+            </button>
+            @if (session.fileExplorer) {
+              <button (click)="setActiveTab('files')" [class.active]="activeTab() === 'files'" class="tab-link">Files</button>
+            }
+          </nav>
+        </div>
+
+        <!-- Tab Contents -->
+        <div class="tab-content-container">
+          @if (activeTab() === 'overview') {
+            <div class="tab-content">
+              <app-session-overview-tab [session]="session"></app-session-overview-tab>
+            </div>
+          }
+
+          @if (activeTab() === 'log') {
+            <div class="tab-content">
+              @defer {
+                <app-session-log-tab [sessionId]="session.id" (streamCompleted)="onLogStreamCompleted()"></app-session-log-tab>
+              } @placeholder {
+                <div class="tab-loading-placeholder">Loading logs...</div>
+              }
+            </div>
+          }
+
+          @if (session.fileExplorer && activeTab() === 'files') {
+            <div class="tab-content">
+              @defer {
+                <app-session-files-tab
+                  [sessionId]="session.id"
+                  [fileExplorer]="session.fileExplorer"
+                ></app-session-files-tab>
+              } @placeholder {
+                <div class="tab-loading-placeholder">Loading files...</div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  } @else {
+    <div class="loading-message">
+      <p>Loading session details...</p>
+    </div>
+  }
+</div>

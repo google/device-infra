@@ -45,11 +45,13 @@ describe('TestLogTab Component', () => {
       ]);
       mockTestService.getTest.and.returnValue(
         of({
-          status: TestStatus.TEST_STATUS_DONE,
-          executionDetails: {
-            cloudLogLink: 'http://cloud-log-link',
-          },
-        } as TestOverviewData),
+          test: {
+            status: TestStatus.TEST_STATUS_DONE,
+            executionDetails: {
+              cloudLogLink: 'http://cloud-log-link',
+            },
+          } as TestOverviewData,
+        }),
       );
       mockTestService.getTestLog.and.returnValue(
         of({
@@ -105,11 +107,13 @@ describe('TestLogTab Component', () => {
 
       runningMockTestService.getTest.and.returnValue(
         of({
-          status: TestStatus.TEST_STATUS_RUNNING,
-          executionDetails: {
-            cloudLogLink: 'http://cloud-log-link',
-          },
-        } as TestOverviewData),
+          test: {
+            status: TestStatus.TEST_STATUS_RUNNING,
+            executionDetails: {
+              cloudLogLink: 'http://cloud-log-link',
+            },
+          } as TestOverviewData,
+        }),
       );
 
       let calls = 0;
@@ -151,7 +155,7 @@ describe('TestLogTab Component', () => {
 
       expect(runningComponent.logLines()).toEqual(['Line 1', 'Line 2']);
 
-      tick(2000);
+      tick(5000);
 
       expect(runningComponent.logLines()).toEqual([
         'Line 1',

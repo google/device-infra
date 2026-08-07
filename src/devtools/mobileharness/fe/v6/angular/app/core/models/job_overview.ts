@@ -39,9 +39,6 @@ export type JobWarning = WarningInfo;
 /** Information identifying the parent session that scheduled the job. */
 export declare interface ParentSessionInfo {
   id: string;
-  name: string;
-  status: SessionStatus;
-  result?: SessionResult;
 }
 
 /** Requirements for a device needed by the job. */
@@ -121,8 +118,8 @@ export declare interface GetJobLogResponse {
   logContent: string;
   nextOffset: number;
   jobStatus: JobStatus;
-  logReset?: boolean;
-  contentHash?: string;
+  logReset: boolean;
+  contentHash: string;
 }
 
 /** Request structure for the getJobFile API. */
@@ -135,3 +132,11 @@ export declare interface GetJobFileRequest {
 export declare interface GetJobFileResponse {
   content: string;
 }
+
+/** Request structure for the killJob API. */
+export declare interface KillJobRequest {
+  jobId: string;
+}
+
+/** Response structure for the killJob API. */
+export declare interface KillJobResponse {}

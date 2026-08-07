@@ -22,6 +22,6 @@ export class JobFilesTab {
 
   readonly getFileContent = (path: string) =>
     this.jobService
-      .getJobFile(this.jobId(), path)
+      .getJobFile({jobId: this.jobId(), filePath: path})
       .pipe(map((resp) => resp.content || ''));
 }

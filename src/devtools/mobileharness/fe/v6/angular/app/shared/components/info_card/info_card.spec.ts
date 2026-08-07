@@ -41,18 +41,18 @@ describe('InfoCard Component', () => {
   });
 
   it('should expand the panel by default', () => {
-    expect(component.expanded).toBeTrue();
+    expect(component.expanded()).toBeTrue();
   });
 
   it('should collapse the panel when collapsible and clicked', () => {
-    component.collapsible = true;
+    fixture.componentRef.setInput('collapsible', true);
     fixture.debugElement.nativeElement.querySelector('.panel-header').click();
-    expect(component.expanded).toBeFalse();
+    expect(component.expanded()).toBeFalse();
   });
 
   it('should not collapse the panel when not collapsible and clicked', () => {
-    component.collapsible = false;
+    fixture.componentRef.setInput('collapsible', false);
     fixture.debugElement.nativeElement.querySelector('.panel-header').click();
-    expect(component.expanded).toBeTrue();
+    expect(component.expanded()).toBeTrue();
   });
 });

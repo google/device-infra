@@ -1,0 +1,23 @@
+<div class="log-tab-card">
+  <div class="log-card-header">
+    <h3 class="log-card-title">{{ logTitle() }}</h3>
+    @if (cloudLogLink(); as link) {
+      <a [href]="link" target="_blank" rel="noopener noreferrer" class="cloud-log-link" matTooltip="Open Cloud Logs Explorer">
+        <span>{{ cloudLogLinkText() }}</span>
+        <mat-icon>open_in_new</mat-icon>
+      </a>
+    }
+  </div>
+  <div class="log-divider"></div>
+  <div class="log-viewer-container">
+    <cdk-virtual-scroll-viewport itemSize="20" [minBufferPx]="400" [maxBufferPx]="800" class="log-viewer-viewport" [style.height.px]="viewportHeight()" #logViewport>
+      <div *cdkVirtualFor="let line of logLines(); trackBy: trackByIndex" class="log-line">{{ line }}</div>
+    </cdk-virtual-scroll-viewport>
+    @if (isFetching() && hasLoadedLogs()) {
+      <div class="log-streaming-loading">
+        <mat-icon class="spin-animation loading-icon">sync</mat-icon>
+        <span>Fetching logs...</span>
+      </div>
+    }
+  </div>
+</div>

@@ -206,118 +206,120 @@
     color: #202124;
     word-break: break-all;
   }
+}
 
-  .timestamp-value-row {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
+.timestamp-value-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.timestamp-display-val {
+  border-bottom: 1px dotted #bdc1c6;
+  cursor: help;
+  display: inline-block;
+  padding-bottom: 1px;
+  color: #202124;
+  font-weight: 500;
+
+  &.timestamp-na {
+    color: #9ca3af;
+    font-style: italic;
+    border-bottom: none;
+    cursor: default;
   }
+}
 
-  .timestamp-display-val {
-    border-bottom: 1px dotted #bdc1c6;
-    cursor: help;
-    display: inline-block;
-    padding-bottom: 1px;
-    color: #202124;
-    font-weight: 500;
+.timestamp-duration-text {
+  font-size: 10px;
+  color: #9ca3af;
+  font-weight: normal;
+  font-family: Roboto, sans-serif;
+}
 
-    &.text-gray-400 {
-      color: #9ca3af;
-      border-bottom: none;
-      cursor: default;
+.timestamp-interactive-container {
+  position: relative;
+  display: inline-block;
+
+  &:hover {
+    .timezone-details-panel {
+      display: block;
     }
   }
+}
 
-  .timestamp-duration-text {
-    font-size: 10px;
-    color: #9ca3af;
-    font-weight: normal;
+.timezone-details-panel {
+  display: none;
+  position: absolute;
+  top: 50%;
+  bottom: auto;
+  left: 100%;
+  transform: translateY(-50%);
+  margin-bottom: 0;
+  margin-left: 8px;
+  width: 280px;
+  background-color: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  text-align: left;
+  line-height: 1.4;
+
+  &::after {
+    content: '';
+    position: absolute;
+    right: 100%;
+    top: 0;
+    width: 8px;
+    height: 100%;
+    background: transparent;
+  }
+
+  .panel-header-title {
+    font-size: 9px;
+    font-weight: 600;
+    color: #5f6368;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
     font-family: Roboto, sans-serif;
   }
 
-  .timestamp-interactive-container {
-    position: relative;
-    display: inline-block;
+  .panel-grid {
+    display: grid;
+    grid-template-columns: 50px 1fr;
+    gap: 6px 12px;
+    align-items: start;
+    font-size: 10px;
 
-    &:hover {
-      .timezone-details-panel {
-        display: block;
-      }
-    }
-  }
-
-  .timezone-details-panel {
-    display: none;
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    margin-bottom: 8px;
-    width: 280px;
-    background-color: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 12px;
-    z-index: 100;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    text-align: left;
-    line-height: 1.4;
-
-    .panel-header-title {
-      font-size: 9px;
-      font-weight: 600;
-      color: #5f6368;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 8px;
+    .grid-label {
+      color: #9aa0a6;
+      font-weight: 500;
       font-family: Roboto, sans-serif;
     }
 
-    .panel-grid {
-      display: grid;
-      grid-template-columns: 50px 1fr;
-      gap: 6px 12px;
-      align-items: start;
-      font-size: 10px;
-
-      .grid-label {
-        color: #9aa0a6;
-        font-weight: 500;
-        font-family: Roboto, sans-serif;
-      }
-
-      .grid-value {
-        color: #3c4043;
-        font-family: 'Roboto Mono', monospace;
-        word-break: break-all;
-        font-weight: 500;
-      }
+    .grid-value {
+      color: #3c4043;
+      font-family: 'Roboto Mono', monospace;
+      word-break: break-all;
+      font-weight: 500;
     }
+  }
 
-    .panel-arrow {
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 0;
-      height: 0;
-      border-left: 5px solid transparent;
-      border-right: 5px solid transparent;
-      border-top: 5px solid #fff;
-
-      &::after {
-        content: '';
-        position: absolute;
-        top: -6px;
-        left: -5px;
-        width: 0;
-        height: 0;
-        border-left: 5px solid transparent;
-        border-right: 5px solid transparent;
-        border-top: 5px solid #e0e0e0;
-        z-index: -1;
-      }
-    }
+  .panel-arrow {
+    position: absolute;
+    top: 50%;
+    left: auto;
+    right: 100%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-right: 5px solid #fff;
   }
 }
 

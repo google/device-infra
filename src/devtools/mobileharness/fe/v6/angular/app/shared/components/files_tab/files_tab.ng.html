@@ -69,13 +69,6 @@
                 <span>Tree</span>
               </button>
             </div>
-            <button (click)="downloadAllZip()"
-                    class="download-all-btn"
-                    [class.flex-grow]="isSplitView()"
-            >
-              <mat-icon>archive</mat-icon>
-              <span>Download (ZIP)</span>
-            </button>
           </div>
         </div>
 
@@ -98,7 +91,10 @@
                                 [style.transform]="(expandedFolders()[node.path] !== false) ? 'rotate(0deg)' : 'rotate(-90deg)'"
                       >expand_more</mat-icon>
                       <mat-icon class="folder-icon">folder</mat-icon>
-                      <span>{{ node.name }}/</span>
+                      <span class="folder-name-text"
+                            [matTooltip]="node.name + '/'"
+                            tooltipIfTruncated
+                      >{{ node.name }}/</span>
                     </div>
                   </div>
                 } @else {
@@ -113,11 +109,9 @@
                          class="file-link"
                          [class.active-link]="activeFile()?.path === node.path"
                       >
-                        <span #nodeNameEl
-                              class="file-name-text"
+                        <span class="file-name-text"
                               [matTooltip]="node.name"
-                              #nodeTooltip="matTooltip"
-                              (mouseenter)="checkOverflowTooltip(nodeNameEl, nodeTooltip)"
+                              tooltipIfTruncated
                         >{{ node.name }}</span>
                       </a>
                       @if (getFileMetaString(node.size); as metaStr) {
@@ -127,12 +121,6 @@
                         </span>
                       }
                     </div>
-                    <button (click)="downloadFile(node, $event)"
-                            class="download-file-btn"
-                            title="Download File"
-                    >
-                      <mat-icon>download</mat-icon>
-                    </button>
                   </div>
                 }
               }
@@ -154,11 +142,9 @@
                        class="file-link"
                        [class.active-link]="activeFile()?.path === file.path"
                     >
-                      <span #fileNameEl
-                            class="file-name-text"
+                      <span class="file-name-text"
                             [matTooltip]="file.path"
-                            #fileTooltip="matTooltip"
-                            (mouseenter)="checkOverflowTooltip(fileNameEl, fileTooltip)"
+                            tooltipIfTruncated
                       >{{ file.path }}</span>
                     </a>
                     @if (getFileMetaString(file.size); as metaStr) {
@@ -168,12 +154,6 @@
                       </span>
                     }
                   </div>
-                  <button (click)="downloadFile(file, $event)"
-                          class="download-file-btn"
-                          title="Download File"
-                  >
-                    <mat-icon>download</mat-icon>
-                  </button>
                 </div>
               }
               @if (filteredFlatFiles().length === 0) {
@@ -190,67 +170,57 @@
       <!-- Right Panel: File Previewer -->
       @if (isSplitView()) {
         <div id="file-preview-panel" class="file-preview-panel">
-          @if (loadingContent()) {
-            <!-- Loading state -->
-            <div class="preview-loading-state animate-fade-in">
-              <mat-icon>sync</mat-icon>
-              <p class="loading-title">Fetching file content...</p>
-              <span class="loading-path">{{ activeFile()?.path }}</span>
-            </div>
-          } @else {
-            <!-- Loaded state -->
-            <div class="preview-container animate-fade-in">
-              <div class="preview-header">
-                <div class="preview-title-wrapper">
-                  <mat-icon>insert_drive_file</mat-icon>
-                  <h3 [title]="activeFile()?.path">{{ activeFile()?.path }}</h3>
-                </div>
-                <div class="preview-actions">
-                  <button (click)="downloadFile(activeFile()!, $event)" class="preview-download-btn">
-                    <mat-icon>download</mat-icon>
-                    <span>Download</span>
-                  </button>
-                  <button (click)="closeFileViewer()" class="preview-close-btn" title="Close Preview">
-                    <mat-icon>close</mat-icon>
-                  </button>
-                </div>
+          <div class="preview-container animate-fade-in">
+            <div class="preview-header">
+              <div class="preview-title-wrapper">
+                <mat-icon>insert_drive_file</mat-icon>
+                <h3 [matTooltip]="activeFile()?.path || ''"
+                    tooltipIfTruncated
+                >{{ activeFile()?.path }}</h3>
               </div>
+            </div>
 
-              <!-- Main Preview Content Area -->
-              <div class="preview-content-viewport" [class.no-scroll]="isUnsupported() || sizeLoadError() || isFileTooLarge()">
+            <!-- Main Preview Content Area -->
+            @if (loadingContent()) {
+              <!-- Loading state -->
+              <div class="preview-loading-state animate-fade-in">
+                <mat-icon>sync</mat-icon>
+                <p class="loading-title">Fetching file content...</p>
+                <span class="loading-path"
+                      [matTooltip]="activeFile()?.path || ''"
+                      tooltipIfTruncated
+                >{{ activeFile()?.path }}</span>
+              </div>
+            } @else {
+              <div class="preview-content-viewport" [class.no-scroll]="cannotPreviewInline()">
                 @if (sizeLoadError() || isFileTooLarge()) {
                   <div class="preview-unsupported-panel">
                     <mat-icon>cloud_off</mat-icon>
                     <p>File is too large to preview (>10MB)</p>
-                    <button (click)="downloadFile(activeFile()!, $event)" class="unsupported-download-btn">
-                      <mat-icon>download</mat-icon>
-                      <span>Download File</span>
-                    </button>
+                  </div>
+                } @else if (isContentLoadError()) {
+                  <div class="preview-unsupported-panel">
+                    <mat-icon style="color: #d93025;">error_outline</mat-icon>
+                    <p>Failed to load file content</p>
+                    <span class="preview-error-detail-text">{{ errorMessage() }}</span>
+                    <div class="preview-actions-row">
+                      <button (click)="retryLoadContent()" class="retry-btn">
+                        <mat-icon>refresh</mat-icon>
+                        <span>Retry</span>
+                      </button>
+                    </div>
                   </div>
                 } @else if (isUnsupported()) {
                   <div class="preview-unsupported-panel">
                     <mat-icon>insert_drive_file</mat-icon>
                     <p>Preview is not supported for this file type</p>
-                    <button (click)="downloadFile(activeFile()!, $event)" class="unsupported-download-btn">
-                      <mat-icon>download</mat-icon>
-                      <span>Download File</span>
-                    </button>
-                  </div>
-                } @else if (isImageFile(activeFile()!)) {
-                  <div class="image-preview-wrapper">
-                    <div class="image-box-border">
-                      <div class="image-placeholder">
-                        <mat-icon>image</mat-icon>
-                      </div>
-                    </div>
-                    <span class="image-label">{{ activeFile()?.path }}</span>
                   </div>
                 } @else {
                   <pre class="preview-text-pre"><code>{{ activeFileContent() }}</code></pre>
                 }
               </div>
-            </div>
-          }
+            }
+          </div>
         </div>
       }
     </div>
