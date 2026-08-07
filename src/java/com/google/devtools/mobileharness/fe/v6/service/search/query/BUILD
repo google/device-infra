@@ -89,3 +89,44 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
     ],
 )
+
+java_library(
+    name = "scenario_curation",
+    srcs = ["ScenarioCuration.java"],
+    deps = [
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "fleet_key_priority",
+    srcs = ["FleetKeyPriority.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_search_keys",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "ats_one_curation",
+    srcs = ["AtsOneCuration.java"],
+    deps = [
+        ":fleet_key_priority",
+        ":scenario_curation",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_search_keys",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "scenario_curation_module",
+    srcs = ["ScenarioCurationModule.java"],
+    deps = [
+        ":ats_one_curation",
+        ":scenario_curation",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "@maven//:com_google_inject_guice",
+    ],
+)
