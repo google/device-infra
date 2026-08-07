@@ -49,6 +49,21 @@ java_library(
 )
 
 java_library(
+    name = "dimension_overlay_store",
+    srcs = ["DimensionOverlayStore.java"],
+    deps = [
+        ":fleet_snapshot_store",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:dimension_overlay",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:dimension_overlay_raw",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:fleet_data_source",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "fleet_search_data_module",
     srcs = ["FleetSearchDataModule.java"],
     deps = [

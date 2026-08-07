@@ -43,13 +43,21 @@ public abstract class HostEnrichment {
   /** Lab server version string. */
   public abstract Optional<String> labServerVersion();
 
+  /**
+   * The ATS controller this host belongs to. Present only in the ats-all deployment, where the
+   * fan-out records which controller each host came from. Absent in ats-one and 1p, where the fleet
+   * is a single controller or the 1P master.
+   */
+  public abstract Optional<String> atsController();
+
   /** Creates a new builder. */
   public static Builder builder() {
     return new AutoValue_HostEnrichment.Builder()
         .setReleaseStatus(Optional.empty())
         .setReleaseType(Optional.empty())
         .setDaemonStatus(Optional.empty())
-        .setLabServerVersion(Optional.empty());
+        .setLabServerVersion(Optional.empty())
+        .setAtsController(Optional.empty());
   }
 
   /** Builder for {@link HostEnrichment}. */
@@ -62,6 +70,8 @@ public abstract class HostEnrichment {
     public abstract Builder setDaemonStatus(Optional<String> daemonStatus);
 
     public abstract Builder setLabServerVersion(Optional<String> labServerVersion);
+
+    public abstract Builder setAtsController(Optional<String> atsController);
 
     public abstract HostEnrichment build();
   }

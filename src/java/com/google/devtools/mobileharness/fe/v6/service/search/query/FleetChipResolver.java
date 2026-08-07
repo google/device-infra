@@ -22,7 +22,6 @@ import static com.google.devtools.mobileharness.fe.v6.service.search.index.Fleet
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.VALUE_DISPLAY_KEYS;
 
 import com.google.common.base.Ascii;
-import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.ComplexMatch;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.ContainsSubstring;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
@@ -45,8 +44,8 @@ import javax.inject.Inject;
  * {@code _pill_key}, {@code _pill_condition}, and {@code _bff_metadata} helpers.
  *
  * <p>Resolution is stateless beyond the snapshot: it needs only the chip structure to produce
- * display strings. It reads {@link FleetIndex#displayNames} for the human key name and {@link
- * FleetIndex#valueDisplays} for original value casing, mirroring the conventions in {@link
+ * display strings. It reads {@link FleetIndex#displayName} for the human key name and {@link
+ * FleetIndex#valueDisplays(String)} for original value casing, mirroring the conventions in {@link
  * FleetCellMapper} and {@link FleetValueLister}. The response arrays are parallel to the request:
  * {@code filter_chips[i]} resolves {@code filters[i]} and {@code group_by_chips[j]} resolves {@code
  * group_by_keys[j]}.
@@ -128,7 +127,7 @@ public final class FleetChipResolver {
    * The full key display name, falling back to a namespace-derived name when absent from the fleet.
    */
   private static String displayName(FleetIndex index, String keyId) {
-    return index.displayNames().getOrDefault(keyId, deriveDisplayName(keyId));
+    return index.displayName(keyId);
   }
 
   private static String conditionText(FleetIndex index, Filter filter) {
@@ -228,29 +227,6 @@ public final class FleetChipResolver {
    * FleetValueLister}'s display resolution.
    */
   private static String displayValue(FleetIndex index, String keyId, String value) {
-    ImmutableMap<String, String> displays = index.valueDisplays().get(keyId);
-    if (displays != null) {
-      String display = displays.get(Ascii.toLowerCase(value));
-      if (display != null) {
-        return display;
-      }
-    }
-    return value;
-  }
-
-  /**
-   * Derives a display name from a key id for keys absent from the fleet index. Mirrors the
-   * namespace derivation {@link FleetCellMapper} and the index builder apply to discovered
-   * dimensions and host properties.
-   */
-  private static String deriveDisplayName(String keyId) {
-    int separator = keyId.indexOf("::");
-    String namespace = separator >= 0 ? keyId.substring(0, separator) : "";
-    String name = separator >= 0 ? keyId.substring(separator + 2) : keyId;
-    return switch (namespace) {
-      case "dim" -> "Dimension " + name;
-      case "prop" -> "Host Property " + name;
-      default -> name;
-    };
+    return index.valueDisplays(keyId).getOrDefault(Ascii.toLowerCase(value), value);
   }
 }

@@ -23,7 +23,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.Column;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetUtilization;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -53,7 +53,7 @@ public interface SearchCorpus {
   FleetIndex index();
 
   /** The lazily built posting lists over the corpus records. */
-  LazyPostings postings();
+  Postings postings();
 
   /** Number of records in the corpus. */
   int recordCount();
