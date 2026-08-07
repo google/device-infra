@@ -86,7 +86,7 @@ import com.google.protobuf.TextFormat;
 import com.google.protobuf.Timestamp;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.util.StepSkippableLifecycleDecoratorUtil;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.util.PhaseSkippableDecoratorUtil;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
@@ -944,8 +944,7 @@ public class AtsSessionPlugin {
                         .values()
                         .forEach(
                             teardownTest ->
-                                StepSkippableLifecycleDecoratorUtil.relayStates(
-                                    setupTest, teardownTest)));
+                                PhaseSkippableDecoratorUtil.relayStates(setupTest, teardownTest)));
       }
       logger.atInfo().log("Adding teardown job [%s].", teardownJob.locator().getId());
       ImmutableList<String> jobIds = addJobsToSession(ImmutableList.of(teardownJob));

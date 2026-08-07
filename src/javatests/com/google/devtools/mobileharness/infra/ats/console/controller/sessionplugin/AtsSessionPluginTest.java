@@ -568,8 +568,7 @@ public final class AtsSessionPluginTest {
     atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
 
     Properties setupTestProperties = new Properties(new Timing());
-    setupTestProperties.add(
-        "step_skippable_lifecycle_decorator_state::device1::decorator1::key1", "val1");
+    setupTestProperties.add("phase_skippable_decorator_state::device1::decorator1::key1", "val1");
     TestInfo setupTest = mock(TestInfo.class);
     when(setupTest.properties()).thenReturn(setupTestProperties);
     TestInfos setupTests = mock(TestInfos.class);
@@ -628,7 +627,7 @@ public final class AtsSessionPluginTest {
     verify(sessionInfo).addJob(teardownJob);
     assertThat(
             teardownTestProperties.get(
-                "step_skippable_lifecycle_decorator_state::device1::decorator1::key1"))
+                "phase_skippable_decorator_state::device1::decorator1::key1"))
         .isEqualTo("val1");
   }
 
