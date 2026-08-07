@@ -161,6 +161,20 @@ public class ApkInstaller {
     this.sleeper = sleeper;
   }
 
+  /** Returns a new ApkInstaller instance which uses the given temporary directory for the JVM. */
+  public ApkInstaller withJavaTmpDir(Path javaTmpDir) {
+    return new ApkInstaller(
+        md5Util,
+        aapt,
+        bundletool.withJavaTmpDir(javaTmpDir),
+        systemSpecUtil,
+        systemSettingUtil,
+        androidPackageManagerUtil,
+        androidFileUtil,
+        androidUserUtil,
+        sleeper);
+  }
+
   /**
    * DO NOT use this method in any Lab Plugins.
    *

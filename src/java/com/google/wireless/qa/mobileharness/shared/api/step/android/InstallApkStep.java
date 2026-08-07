@@ -152,7 +152,7 @@ public class InstallApkStep implements InstallApkStepConstants {
 
     String deviceId = device.getDeviceId();
     JobInfo jobInfo = testInfo.jobInfo();
-    InstallCoordinator coordinator = new InstallCoordinator(testInfo, apkInstaller);
+    InstallCoordinator coordinator = new InstallCoordinator(testInfo, getApkInstaller(testInfo));
 
     // Makes sure the first apk in 'build_apk' will still be the first element inserted.
     coordinator.addApks(jobBuildApks);
@@ -237,7 +237,7 @@ public class InstallApkStep implements InstallApkStepConstants {
       throws MobileHarnessException, InterruptedException {
     String deviceId = device.getDeviceId();
     if (spec.getForceInstallApks()) {
-      apkInstaller.clearInstalledApkProperty(device, pkg.packageName);
+      getApkInstaller(testInfo).clearInstalledApkProperty(device, pkg.packageName);
     }
     try {
       if (spec.getBroadcastInstallMessage()) {
@@ -274,7 +274,7 @@ public class InstallApkStep implements InstallApkStepConstants {
             deviceId, pkg.packageName, APP_OP_MANAGE_EXTERNAL_STORAGE, AppOperationMode.ALLOW);
       }
 
-      apkInstaller.checkInstalledAppVersion(testInfo, deviceId, pkg.packageName);
+      getApkInstaller(testInfo).checkInstalledAppVersion(testInfo, deviceId, pkg.packageName);
       checkSizeInfo(testInfo, pkg.packageName, pkg.apkPaths);
     } finally {
       if (spec.getBroadcastInstallMessage()) {
@@ -320,12 +320,13 @@ public class InstallApkStep implements InstallApkStepConstants {
     }
     installTimeout.ifPresent(installArgsBuilder::setInstallTimeout);
     sleepAfterInstall.ifPresent(installArgsBuilder::setSleepAfterInstall);
-    apkInstaller.installApkIfNotExist(device, installArgsBuilder.build(), testInfo.log());
+    getApkInstaller(testInfo)
+        .installApkIfNotExist(device, installArgsBuilder.build(), testInfo.log());
     // If currently not on system user 0, ensure apks are installed on system user too.
     // b/142827104
     if (androidUserUtil.getCurrentUser(device.getDeviceId(), deviceSdkVersion) != 0) {
-      apkInstaller.installApkIfNotExist(
-          device, installArgsBuilder.setUserId("0").build(), testInfo.log());
+      getApkInstaller(testInfo)
+          .installApkIfNotExist(device, installArgsBuilder.setUserId("0").build(), testInfo.log());
     }
   }
 
@@ -351,7 +352,7 @@ public class InstallApkStep implements InstallApkStepConstants {
             .setAllowUninstallAndRetry(true);
     installTimeout.ifPresent(apkSetBuilder::setCommandTimeout);
     sleepAfterInstall.ifPresent(apkSetBuilder::setSleepAfterInstall);
-    apkInstaller.install(device, apkSetBuilder.build(), testInfo.log());
+    getApkInstaller(testInfo).install(device, apkSetBuilder.build(), testInfo.log());
   }
 
   /**
@@ -522,6 +523,20 @@ public class InstallApkStep implements InstallApkStepConstants {
     for (String packageName : packages) {
       apkInstaller.uninstallApk(device, packageName, /* logFailures= */ true, testInfo.log());
     }
+  }
+
+  private ApkInstaller getApkInstaller(TestInfo testInfo) {
+    String tmpDir;
+    try {
+      tmpDir = testInfo.getTmpFileDir();
+    } catch (MobileHarnessException e) {
+      testInfo.log().atWarning().alsoTo(logger).withCause(e).log("Failed to get tmp file dir.");
+      return apkInstaller;
+    }
+    if (tmpDir != null && !tmpDir.isEmpty()) {
+      return apkInstaller.withJavaTmpDir(Path.of(tmpDir));
+    }
+    return apkInstaller;
   }
 
   private static class PackageToInstall {

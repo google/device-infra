@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.platform.android.lightning.bundletool;
 
+import static com.google.common.base.StandardSystemProperty.JAVA_IO_TMPDIR;
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugCurrentStackTrace;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -32,6 +33,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
 import com.google.devtools.mobileharness.shared.util.command.CommandTimeoutException;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.CodedInputStream;
@@ -82,10 +84,17 @@ public class Bundletool {
   private final Aapt aapt;
   private final CommandExecutor commandExecutor;
   private final Supplier<Path> bundletoolPathSupplier;
+  private final Optional<Path> javaTmpDir;
 
   @Inject
   Bundletool(SystemUtil systemUtil, Adb adb, Aapt aapt, CommandExecutor commandExecutor) {
-    this(systemUtil, adb, aapt, commandExecutor, UNPACKED_BUNDLETOOL_PATH_SUPPLIER);
+    this(
+        systemUtil,
+        adb,
+        aapt,
+        commandExecutor,
+        UNPACKED_BUNDLETOOL_PATH_SUPPLIER,
+        Optional.empty());
   }
 
   /**
@@ -100,7 +109,13 @@ public class Bundletool {
   @VisibleForTesting
   public Bundletool(
       SystemUtil systemUtil, Adb adb, Aapt aapt, CommandExecutor commandExecutor, Path bundletool) {
-    this(systemUtil, adb, aapt, commandExecutor, Suppliers.memoize(() -> bundletool));
+    this(
+        systemUtil,
+        adb,
+        aapt,
+        commandExecutor,
+        Suppliers.memoize(() -> bundletool),
+        Optional.empty());
   }
 
   private Bundletool(
@@ -108,12 +123,14 @@ public class Bundletool {
       Adb adb,
       Aapt aapt,
       CommandExecutor commandExecutor,
-      Supplier<Path> bundletoolPathSupplier) {
+      Supplier<Path> bundletoolPathSupplier,
+      Optional<Path> javaTmpDir) {
     this.systemUtil = systemUtil;
     this.adb = adb;
     this.aapt = aapt;
     this.commandExecutor = commandExecutor;
     this.bundletoolPathSupplier = bundletoolPathSupplier;
+    this.javaTmpDir = javaTmpDir;
   }
 
   /**
@@ -122,7 +139,13 @@ public class Bundletool {
    */
   public Bundletool withCustomBundletoolJar(Path bundletoolJar) {
     return new Bundletool(
-        systemUtil, adb, aapt, commandExecutor, Suppliers.memoize(() -> bundletoolJar));
+        systemUtil, adb, aapt, commandExecutor, Suppliers.memoize(() -> bundletoolJar), javaTmpDir);
+  }
+
+  /** Returns a new Bundletool instance which uses the given temporary directory for the JVM. */
+  public Bundletool withJavaTmpDir(Path javaTmpDir) {
+    return new Bundletool(
+        systemUtil, adb, aapt, commandExecutor, bundletoolPathSupplier, Optional.of(javaTmpDir));
   }
 
   public void buildApks(BuildApksArgs args) throws MobileHarnessException, InterruptedException {
@@ -206,9 +229,31 @@ public class Bundletool {
   @CanIgnoreReturnValue
   private String run(ImmutableList<String> args, Duration timeout)
       throws MobileHarnessException, InterruptedException {
+    // Tier 1: Use the test-specific temp dir if explicitly provided with withJavaTmpDir()
+    String tmpDir =
+        javaTmpDir
+            .map(Path::toString)
+            .orElseGet(
+                () -> {
+                  // Tier 2: fall back to the lab server's persistent NVMe temp dir (preventing the
+                  // 14GB RAM disk explosion callers like ApkInstaller)
+                  String labTmpDir = Flags.tmpDirRoot.get();
+                  if (labTmpDir != null && !labTmpDir.isEmpty()) {
+                    logger.atInfo().log("Bundletool falls back to lab temp dir %s", labTmpDir);
+                    return labTmpDir;
+                  }
+                  // Tier 3: last resort fallback (e.g., for local workstation execution)
+                  logger.atInfo().log(
+                      "Bundletool falls back to system temp dir %s", JAVA_IO_TMPDIR.value());
+                  return JAVA_IO_TMPDIR.value();
+                });
+    logger.atInfo().log("Bundletool is going to use temp dir %s", tmpDir);
     ImmutableList<String> argsBuilder =
         ImmutableList.<String>builder()
             .add(systemUtil.getJavaBin())
+            // -D flag must be place before -jar to make sure the arguments is passed to the JVM
+            // instead of the main method of the program.
+            .add(String.format("-Djava.io.tmpdir=%s", tmpDir))
             .add("-jar")
             .add(bundletoolPathSupplier.get().toString())
             .addAll(args)
