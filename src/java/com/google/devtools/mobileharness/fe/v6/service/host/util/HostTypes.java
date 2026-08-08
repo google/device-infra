@@ -105,6 +105,11 @@ public final class HostTypes {
     return builder.build().stream().distinct().collect(toImmutableList());
   }
 
+  /** Returns the user-facing display name for a {@link UiLabType} (for example "Core Lab"). */
+  public static String labTypeDisplayName(UiLabType labType) {
+    return UI_LAB_TYPE_TO_DISPLAY_NAME.getOrDefault(labType, LAB_TYPE_UNKNOWN);
+  }
+
   /**
    * @deprecated Use {@link #determineUiLabTypes(Optional, Optional)} instead. This is retained for
    *     backward compatibility with older frontends that expect pre-formatted strings.
