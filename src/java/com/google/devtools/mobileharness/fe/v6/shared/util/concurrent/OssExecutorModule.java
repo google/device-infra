@@ -17,14 +17,22 @@
 package com.google.devtools.mobileharness.fe.v6.shared.util.concurrent;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import com.google.inject.Singleton;
 
 /** Module for providing executors in the OSS environment. */
 public final class OssExecutorModule extends AbstractModule {
   @Provides
   ListeningExecutorService provideListeningExecutorService() {
     return ThreadPools.createStandardThreadPoolWithMaxSize("fe-service-thread-pool", 10);
+  }
+
+  @Provides
+  @Singleton
+  ListeningScheduledExecutorService provideListeningScheduledExecutorService() {
+    return ThreadPools.createStandardScheduledThreadPool("fe-service-scheduled-thread-pool", 2);
   }
 }
