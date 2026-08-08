@@ -214,6 +214,7 @@ public enum ExtErrorId implements ErrorId {
 
   // AiEdgeMacModelEval: 92_151 ~ 92_200
 
+  // AiEdgeWindowsModelEval: 92_251 ~ 92_300
   EXT_PLACE_HOLDER_TO_BE_RENAMED(100_000, ErrorType.UNDETERMINED);
 
   public static final int MIN_CODE = InfraErrorId.MAX_CODE + 1;
