@@ -83,10 +83,42 @@ java_library(
 )
 
 java_library(
+    name = "value_key_pair",
+    srcs = ["ValueKeyPair.java"],
+)
+
+java_library(
+    name = "key_count",
+    srcs = ["KeyCount.java"],
+)
+
+java_library(
     name = "fleet_index",
     srcs = ["FleetIndex.java"],
     deps = [
+        ":key_count",
+        ":value_key_pair",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "device_value_extractor",
+    srcs = ["DeviceValueExtractor.java"],
+    deps = [
+        ":device_record",
+        ":fleet_search_keys",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "lazy_postings",
+    srcs = ["LazyPostings.java"],
+    deps = [
+        ":device_record",
+        ":device_value_extractor",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -115,9 +147,14 @@ java_library(
         ":fleet_snapshot",
         ":host_enrichment",
         ":host_record",
+        ":key_count",
+        ":value_key_pair",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:host_connectivity_statuses",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:host_types",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:javax_inject_jsr330_api",

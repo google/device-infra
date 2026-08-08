@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFlatRes
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPageRequest;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceRecord;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
@@ -78,7 +79,27 @@ public final class FleetFlatSearcher {
       List<String> columnKeys,
       FleetColumnSort sort,
       FleetPageRequest page) {
-    List<Integer> ordered = new ArrayList<>(filterEngine.match(snapshot, filters));
+    return searchFlat(
+        snapshot, filters, columnKeys, sort, page, new LazyPostings(snapshot.devices()));
+  }
+
+  /**
+   * Runs a flat search over the snapshot and returns one page of results.
+   *
+   * @param snapshot the fleet snapshot to search
+   * @param filters the filter chips, AND'd together; empty matches every device
+   * @param columnKeys the column keys to include in each row, in display order
+   * @param sort the sort order; when null or with an empty key, sorts by device UUID ascending
+   * @param page the page request; when null or with a non-positive size, uses the default size
+   */
+  public FleetFlatResults searchFlat(
+      FleetSnapshot snapshot,
+      List<Filter> filters,
+      List<String> columnKeys,
+      FleetColumnSort sort,
+      FleetPageRequest page,
+      LazyPostings postings) {
+    List<Integer> ordered = new ArrayList<>(filterEngine.match(snapshot, filters, postings));
     sortInPlace(ordered, snapshot, sort);
 
     int total = ordered.size();

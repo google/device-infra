@@ -42,6 +42,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromote
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import com.google.inject.Guice;
 import java.time.Instant;
 import org.junit.Test;
@@ -67,6 +68,7 @@ public final class FleetPromotedKeysProviderTest {
   // known candidate order without depending on a real deployment curation.
   private final FleetSnapshot snapshot =
       Guice.createInjector().getInstance(FleetIndexBuilder.class).build(fleet(), BUILD_TIME);
+  private final LazyPostings postings = new LazyPostings(snapshot.devices());
   private final FleetPromotedKeysProvider provider =
       new FleetPromotedKeysProvider(
           Guice.createInjector().getInstance(FleetFilterEngine.class),
@@ -74,7 +76,7 @@ public final class FleetPromotedKeysProviderTest {
 
   @Test
   public void filterKeys_noFilters_followsCuratedOrder() {
-    FleetPromotedKeysResponse response = provider.getPromotedKeys(snapshot, request());
+    FleetPromotedKeysResponse response = provider.getPromotedKeys(snapshot, request(), postings);
 
     // Every curated 1p filter key is present in this fleet, so the whole anchor row shows in order.
     assertThat(filterKeys(response))
@@ -98,7 +100,7 @@ public final class FleetPromotedKeysProviderTest {
     //   owner:  {alice,bob}, {alice}      -> kept.
     //   host_name: lab-a, lab-b           -> kept.
     FleetPromotedKeysResponse response =
-        provider.getPromotedKeys(snapshot, request(simple("field::status", "IDLE")));
+        provider.getPromotedKeys(snapshot, request(simple("field::status", "IDLE")), postings);
 
     assertThat(filterKeys(response))
         .containsExactly("dim::model", "field::owner", "host::host_name")
@@ -107,7 +109,7 @@ public final class FleetPromotedKeysProviderTest {
 
   @Test
   public void filterKeys_metadataFields() {
-    FleetPromotedKeysResponse response = provider.getPromotedKeys(snapshot, request());
+    FleetPromotedKeysResponse response = provider.getPromotedKeys(snapshot, request(), postings);
 
     // Owner is multi-valued: verb agreement is plural. Its display name is the built-in "Owners".
     FleetPromotedFilterKey owner = filterKey(response, "field::owner");
@@ -124,7 +126,7 @@ public final class FleetPromotedKeysProviderTest {
 
   @Test
   public void groupByKeys_curatedOrderCountsAndDisplayNames() {
-    FleetPromotedKeysResponse response = provider.getPromotedKeys(snapshot, request());
+    FleetPromotedKeysResponse response = provider.getPromotedKeys(snapshot, request(), postings);
 
     // host::lab_type is absent from this fleet and is skipped; the rest keep the curated order.
     // An identifier key such as field::uuid is never in the group-by row.
@@ -154,7 +156,8 @@ public final class FleetPromotedKeysProviderTest {
             FleetPromotedKeysRequest.newBuilder()
                 .setFleet(Fleet.FLEET_SELF)
                 .addGroupBy("field::status")
-                .build());
+                .build(),
+            postings);
 
     assertThat(groupByKeys(response))
         .containsExactly("dim::lab_location", "field::type", "host::host_name")
@@ -171,7 +174,8 @@ public final class FleetPromotedKeysProviderTest {
                 .addGroupBy("field::type")
                 .addGroupBy("field::status")
                 .addGroupBy("host::host_name")
-                .build());
+                .build(),
+            postings);
 
     assertThat(response.getGroupByKeysList()).isEmpty();
   }
@@ -184,7 +188,7 @@ public final class FleetPromotedKeysProviderTest {
     //   lab_location: mtv plus device-3's "(no value)" bucket -> two buckets, kept.
     //   host_name: lab-a, lab-b       -> two buckets, kept.
     FleetPromotedKeysResponse response =
-        provider.getPromotedKeys(snapshot, request(simple("field::owner", "alice")));
+        provider.getPromotedKeys(snapshot, request(simple("field::owner", "alice")), postings);
 
     assertThat(groupByKeys(response))
         .containsExactly("dim::lab_location", "host::host_name")

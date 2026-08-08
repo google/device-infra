@@ -41,6 +41,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -162,9 +163,15 @@ public final class FleetDataRefresher {
     periodicExecutor =
         Executors.newSingleThreadScheduledExecutor(
             new ThreadFactoryBuilder().setNameFormat(REFRESH_THREAD_NAME).setDaemon(true).build());
+    // Stagger the first refresh by a random delay within [0, interval) so that replicas behind
+    // the same GSLB VIP spread their pulls across the refresh window instead of all firing at
+    // startup. This reduces the peak concurrent load on the upstream master.
+    long jitterMs = ThreadLocalRandom.current().nextLong(interval.toMillis());
+    logger.atInfo().log(
+        "Fleet search refresh starting with %d ms jitter (interval %s).", jitterMs, interval);
     scheduledTask =
         periodicExecutor.scheduleWithFixedDelay(
-            this::refreshOnce, 0, interval.toMillis(), MILLISECONDS);
+            this::refreshOnce, jitterMs, interval.toMillis(), MILLISECONDS);
   }
 
   /**

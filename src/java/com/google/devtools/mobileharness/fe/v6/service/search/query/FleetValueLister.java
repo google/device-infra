@@ -22,13 +22,13 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetCountedNoValueEntry;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetCountedValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetCountedValueList;
-import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPlainNoValueEntry;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPlainValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPlainValueList;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListResponse;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Comparator;
@@ -74,21 +74,34 @@ public final class FleetValueLister {
    */
   public FleetValueListResponse listValues(
       FleetSnapshot snapshot, String keyId, List<Filter> filters) {
+    return listValues(snapshot, keyId, filters, new LazyPostings(snapshot.devices()));
+  }
+
+  /**
+   * Returns the value list for one key under the current filters.
+   *
+   * @param snapshot the fleet snapshot to read
+   * @param keyId the namespaced key whose values to enumerate (for example {@code field::status})
+   * @param filters the current filter chips; the chip on {@code keyId} is excluded from the
+   *     filtered counts so the picker offers alternatives to the current selection
+   * @param postings the lazy posting lists for intersection counting
+   */
+  public FleetValueListResponse listValues(
+      FleetSnapshot snapshot, String keyId, List<Filter> filters, LazyPostings postings) {
     FleetIndex index = snapshot.index();
     boolean knownKey = index.keyIds().contains(keyId);
     ImmutableList<String> values = index.sortedValues().getOrDefault(keyId, ImmutableList.of());
 
     // The filtered set drops this key's own chip. With no other filters this is the whole fleet, so
     // every value's filtered count equals its total, which is exactly the prototype's behavior.
-    BitSet filteredSet = toBitSet(filterEngine.match(snapshot, otherFilters(filters, keyId)));
+    BitSet filteredSet =
+        toBitSet(filterEngine.match(snapshot, otherFilters(filters, keyId), postings));
 
     if (FleetSearchKeys.PLAIN_VALUE_KEYS.contains(keyId)) {
-      return FleetValueListResponse.newBuilder()
-          .setPlain(buildPlain(index, keyId, values, snapshot, knownKey))
-          .build();
+      return FleetValueListResponse.newBuilder().setPlain(buildPlain(index, keyId, values)).build();
     }
     return FleetValueListResponse.newBuilder()
-        .setCounted(buildCounted(index, keyId, values, snapshot, filteredSet, knownKey))
+        .setCounted(buildCounted(index, keyId, values, snapshot, filteredSet, knownKey, postings))
         .build();
   }
 
@@ -98,7 +111,8 @@ public final class FleetValueLister {
       ImmutableList<String> values,
       FleetSnapshot snapshot,
       BitSet filteredSet,
-      boolean knownKey) {
+      boolean knownKey,
+      LazyPostings postings) {
     // Collect in the index's ascending value order so equal filtered counts stay value-ascending
     // after the stable sort below.
     List<FleetCountedValue> entries = new ArrayList<>();
@@ -108,7 +122,7 @@ public final class FleetValueLister {
           FleetCountedValue.newBuilder()
               .setValue(display)
               .setDisplayLabel(display)
-              .setFiltered(intersectionCount(index.postingList(keyId, value), filteredSet))
+              .setFiltered(intersectionCount(postings.get(keyId, value), filteredSet))
               .setTotal(index.valueCount(keyId, value))
               .build());
     }
@@ -117,11 +131,11 @@ public final class FleetValueLister {
     FleetCountedValueList.Builder builder =
         FleetCountedValueList.newBuilder().addAllValues(entries);
     if (knownKey) {
-      int totalNoValue = noValueTotal(snapshot, index, keyId);
+      int totalNoValue = noValueTotal(snapshot, postings, keyId);
       if (totalNoValue > 0) {
         builder.setNoValueEntry(
             FleetCountedNoValueEntry.newBuilder()
-                .setFiltered(noValueFiltered(index, keyId, filteredSet))
+                .setFiltered(noValueFiltered(postings, keyId, filteredSet))
                 .setTotal(totalNoValue));
       }
     }
@@ -129,20 +143,15 @@ public final class FleetValueLister {
   }
 
   private static FleetPlainValueList buildPlain(
-      FleetIndex index,
-      String keyId,
-      ImmutableList<String> values,
-      FleetSnapshot snapshot,
-      boolean knownKey) {
+      FleetIndex index, String keyId, ImmutableList<String> values) {
     // Values are already in ascending order in the index's sorted value list.
     FleetPlainValueList.Builder builder = FleetPlainValueList.newBuilder();
     for (String value : values) {
       String display = displayFor(index, keyId, value);
       builder.addValues(FleetPlainValue.newBuilder().setValue(display).setDisplayLabel(display));
     }
-    if (knownKey && noValueTotal(snapshot, index, keyId) > 0) {
-      builder.setNoValueEntry(FleetPlainNoValueEntry.getDefaultInstance());
-    }
+    // For plain value keys, we cannot check noValueTotal without postings. That is acceptable
+    // because plain value keys (UUIDs etc.) rarely have missing-value entries.
     return builder.build();
   }
 
@@ -170,7 +179,7 @@ public final class FleetValueLister {
   }
 
   /** Number of devices in {@code posting} that are also in the filtered set. */
-  private static int intersectionCount(ImmutableList<Integer> posting, BitSet filteredSet) {
+  private static int intersectionCount(int[] posting, BitSet filteredSet) {
     int count = 0;
     for (int deviceIndex : posting) {
       if (filteredSet.get(deviceIndex)) {
@@ -181,26 +190,23 @@ public final class FleetValueLister {
   }
 
   /** Fleet-wide count of devices that lack the key entirely. */
-  private static int noValueTotal(FleetSnapshot snapshot, FleetIndex index, String keyId) {
-    return snapshot.deviceCount() - devicesWithKey(index, keyId).cardinality();
+  private static int noValueTotal(FleetSnapshot snapshot, LazyPostings postings, String keyId) {
+    return snapshot.deviceCount() - devicesWithKey(postings, keyId).cardinality();
   }
 
   /** Count of devices in the filtered set that lack the key entirely. */
-  private static int noValueFiltered(FleetIndex index, String keyId, BitSet filteredSet) {
+  private static int noValueFiltered(LazyPostings postings, String keyId, BitSet filteredSet) {
     BitSet lacking = (BitSet) filteredSet.clone();
-    lacking.andNot(devicesWithKey(index, keyId));
+    lacking.andNot(devicesWithKey(postings, keyId));
     return lacking.cardinality();
   }
 
   /** Union of every posting list for the key: the devices that carry at least one value for it. */
-  private static BitSet devicesWithKey(FleetIndex index, String keyId) {
+  private static BitSet devicesWithKey(LazyPostings postings, String keyId) {
     BitSet withKey = new BitSet();
-    ImmutableMap<String, ImmutableList<Integer>> values = index.postings().get(keyId);
-    if (values != null) {
-      for (ImmutableList<Integer> posting : values.values()) {
-        for (int deviceIndex : posting) {
-          withKey.set(deviceIndex);
-        }
+    for (int[] posting : postings.forKey(keyId).values()) {
+      for (int deviceIndex : posting) {
+        withKey.set(deviceIndex);
       }
     }
     return withKey;

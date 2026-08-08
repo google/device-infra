@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromote
 import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceRecord;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -104,7 +105,7 @@ public final class FleetPromotedKeysProvider {
    * @param request the current filters and applied group-by keys
    */
   public FleetPromotedKeysResponse getPromotedKeys(
-      FleetSnapshot snapshot, FleetPromotedKeysRequest request) {
+      FleetSnapshot snapshot, FleetPromotedKeysRequest request, LazyPostings postings) {
     // FLEET_UNSPECIFIED defaults to FLEET_SELF (see the Fleet proto). Resolve the curation for the
     // request's fleet. If none is installed (the MapBinder is wired at activation), promote no
     // keys rather than failing, keeping behavior safe until the curation module is installed.
@@ -121,7 +122,7 @@ public final class FleetPromotedKeysProvider {
 
     // The current result set. With no filters this is the whole fleet, so distinct-value counts
     // taken over it equal the fleet-wide counts, matching the prototype's global-count path.
-    ImmutableList<Integer> current = filterEngine.match(snapshot, filters);
+    ImmutableList<Integer> current = filterEngine.match(snapshot, filters, postings);
 
     Set<String> appliedFilterKeys = new HashSet<>();
     for (Filter filter : filters) {

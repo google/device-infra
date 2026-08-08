@@ -22,12 +22,15 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 /**
- * Inverted index and value index over one fleet's devices.
+ * Value index over one fleet's devices.
  *
  * <p>Built by {@link FleetIndexBuilder} from a {@code FleetRawData} and held by {@link
- * FleetSnapshot}. Serves value resolution, facet counts, and posting-list set operations from
- * memory. All structures key values by a normalized (lowercased) form so lookups are
- * case-insensitive; {@link #valueDisplays()} keeps the original casing for presentation.
+ * FleetSnapshot}. Serves value resolution and facet counts from memory. Posting lists (device index
+ * arrays per key-value pair) are built lazily by {@link LazyPostings} on first access rather than
+ * at index build time, which keeps the build under 2 seconds for 152K devices.
+ *
+ * <p>All structures key values by a normalized (lowercased) form so lookups are case-insensitive;
+ * {@link #valueDisplays()} keeps the original casing for presentation.
  *
  * <p>Keys are identified by a namespaced key id, matching the search prototype: {@code
  * field::<name>} for built-in device fields (uuid, status, owner, type, driver, decorator,
@@ -44,12 +47,6 @@ public abstract class FleetIndex {
    */
   public abstract ImmutableMap<String, ImmutableMap<String, Integer>> valueCounts();
 
-  /**
-   * Key id to (normalized value to posting list). Each posting list is the device indices (into
-   * {@code FleetSnapshot.devices()}) that carry the value, in ascending order of insertion.
-   */
-  public abstract ImmutableMap<String, ImmutableMap<String, ImmutableList<Integer>>> postings();
-
   /** Key id to its sorted distinct normalized values. Used for prefix matching. */
   public abstract ImmutableMap<String, ImmutableList<String>> sortedValues();
 
@@ -62,16 +59,23 @@ public abstract class FleetIndex {
   /** Key id to human-readable display name. */
   public abstract ImmutableMap<String, String> displayNames();
 
+  /**
+   * All (value, key) pairs from non-{@link FleetSearchKeys#PLAIN_VALUE_KEYS} keys, sorted by value
+   * then key. The suggestion engine bisects into this list for O(log D_s) prefix matching across
+   * all semantic keys simultaneously.
+   */
+  public abstract ImmutableList<ValueKeyPair> semanticGlobalSorted();
+
+  /**
+   * Normalized value to the list of (key, count) pairs that carry that value. Covers all keys (not
+   * just semantic), enabling O(1) exact-match lookup for the suggestion engine.
+   */
+  public abstract ImmutableMap<String, ImmutableList<KeyCount>> globalExact();
+
   /** Returns the device count for a value, or 0 if the key or value is absent. */
   public int valueCount(String keyId, String value) {
     ImmutableMap<String, Integer> values = valueCounts().get(keyId);
     return values == null ? 0 : values.getOrDefault(value, 0);
-  }
-
-  /** Returns the posting list for a value, or an empty list if the key or value is absent. */
-  public ImmutableList<Integer> postingList(String keyId, String value) {
-    ImmutableMap<String, ImmutableList<Integer>> values = postings().get(keyId);
-    return values == null ? ImmutableList.of() : values.getOrDefault(value, ImmutableList.of());
   }
 
   /** Creates a new builder. */
@@ -83,11 +87,12 @@ public abstract class FleetIndex {
   public static FleetIndex empty() {
     return builder()
         .setValueCounts(ImmutableMap.of())
-        .setPostings(ImmutableMap.of())
         .setSortedValues(ImmutableMap.of())
         .setValueDisplays(ImmutableMap.of())
         .setKeyIds(ImmutableSet.of())
         .setDisplayNames(ImmutableMap.of())
+        .setSemanticGlobalSorted(ImmutableList.of())
+        .setGlobalExact(ImmutableMap.of())
         .build();
   }
 
@@ -96,9 +101,6 @@ public abstract class FleetIndex {
   public abstract static class Builder {
     public abstract Builder setValueCounts(
         ImmutableMap<String, ImmutableMap<String, Integer>> valueCounts);
-
-    public abstract Builder setPostings(
-        ImmutableMap<String, ImmutableMap<String, ImmutableList<Integer>>> postings);
 
     public abstract Builder setSortedValues(
         ImmutableMap<String, ImmutableList<String>> sortedValues);
@@ -109,6 +111,12 @@ public abstract class FleetIndex {
     public abstract Builder setKeyIds(ImmutableSet<String> keyIds);
 
     public abstract Builder setDisplayNames(ImmutableMap<String, String> displayNames);
+
+    public abstract Builder setSemanticGlobalSorted(
+        ImmutableList<ValueKeyPair> semanticGlobalSorted);
+
+    public abstract Builder setGlobalExact(
+        ImmutableMap<String, ImmutableList<KeyCount>> globalExact);
 
     public abstract FleetIndex build();
   }

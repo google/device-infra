@@ -69,6 +69,12 @@ public final class FleetSearchKeys {
   public static final String HOST_NAME = "host::host_name";
   public static final String HOST_IP = "host::host_ip";
   public static final String HOST_LAB_TYPE = "host::lab_type";
+  public static final String HOST_OS = "host::host_os";
+  public static final String HOST_CONNECTIVITY = "host::connectivity";
+  public static final String HOST_DAEMON_STATUS = "host::daemon_status";
+  public static final String HOST_RELEASE_STATUS = "host::release_status";
+  public static final String HOST_RELEASE_TYPE = "host::release_type";
+  public static final String HOST_LAB_SERVER_VERSION = "host::lab_server_version";
   public static final String HOST_ATS_CONTROLLER = "host::ats_controller";
 
   // ---- Built-in config keys ----
@@ -112,7 +118,11 @@ public final class FleetSearchKeys {
   /**
    * Identifier keys whose values are free-form and effectively unique per device (UUIDs, serials,
    * MAC and network addresses), so a value picker with facet counts is pointless. The value list
-   * omits these.
+   * omits these. The suggestion engine collapses these into one suggestion per key ("UUID starts
+   * with 'pixel' (10,234)") instead of generating individual per-value suggestions.
+   *
+   * <p>Verified from prod data 2026-08-08 (152K devices): each of these dimensions has a distinct
+   * value / device ratio above 0.8, meaning values are effectively per-device identifiers.
    */
   public static final ImmutableSet<String> PLAIN_VALUE_KEYS =
       ImmutableSet.of(
@@ -125,7 +135,13 @@ public final class FleetSearchKeys {
           "dim::bluetooth_mac_address",
           "dim::soc_id",
           "dim::network_address",
-          "dim::gservices_android_id");
+          "dim::gservices_android_id",
+          "dim::iccid",
+          "dim::iccids",
+          "dim::imei",
+          "dim::ecid",
+          "dim::wifi_address",
+          "dim::testbed_name");
 
   /**
    * Keys treated as device identifiers when routing a typed query to a key (UUID like or host
@@ -134,4 +150,15 @@ public final class FleetSearchKeys {
    */
   public static final ImmutableSet<String> IDENTIFIER_KEYS =
       ImmutableSet.<String>builder().addAll(PLAIN_VALUE_KEYS).add(HOST_NAME).add(HOST_IP).build();
+
+  /**
+   * Dimension names excluded from indexing entirely. These dimensions carry non-textual data
+   * (serialized protos, binary blobs) that have no search, filter, column, or group-by value. The
+   * index builder skips them: no counts, no sorted values, no posting lists.
+   *
+   * <p>Verified from prod data 2026-08-08: {@code subdevice_dimensions} carries base64-encoded
+   * serialized proto data (~4.5K devices), completely unsearchable.
+   */
+  public static final ImmutableSet<String> EXCLUDED_DIMENSIONS =
+      ImmutableSet.of("subdevice_dimensions");
 }

@@ -42,6 +42,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetUtiliza
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Row;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import com.google.inject.Guice;
 import java.time.Instant;
 import org.junit.Test;
@@ -65,6 +66,7 @@ public final class FleetGroupSearcherTest {
   //   device-4: IDLE, FailedDevice,      owner alice,        os=android -> "other" utilization.
   private final FleetSnapshot snapshot =
       Guice.createInjector().getInstance(FleetIndexBuilder.class).build(fleet(), BUILD_TIME);
+  private final LazyPostings postings = new LazyPostings(snapshot.devices());
   private final FleetGroupSearcher searcher =
       Guice.createInjector().getInstance(FleetGroupSearcher.class);
 
@@ -76,7 +78,8 @@ public final class FleetGroupSearcherTest {
             ImmutableList.of(),
             ImmutableList.of("dim::os"),
             FleetGroupSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance());
+            FleetPageRequest.getDefaultInstance(),
+            postings);
 
     // Default sort is item count descending, so android (3) leads. The two size-1 groups tie on
     // count and break by name descending, putting "ios" before "(no value)".
@@ -96,7 +99,8 @@ public final class FleetGroupSearcherTest {
             ImmutableList.of(),
             ImmutableList.of("dim::os"),
             FleetGroupSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance());
+            FleetPageRequest.getDefaultInstance(),
+            postings);
 
     // android holds device-0 (idle), device-1 (busy), device-4 (idle but abnormal type -> other).
     FleetUtilization android = groupByFirstValue(results, "android").getUtilization();
@@ -121,7 +125,8 @@ public final class FleetGroupSearcherTest {
             ImmutableList.of(),
             ImmutableList.of("dim::os"),
             FleetGroupSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance());
+            FleetPageRequest.getDefaultInstance(),
+            postings);
     String androidGroupId = groupByFirstValue(results, "android").getGroupId();
 
     // The opaque id decodes back to its single group-by entry.
@@ -134,7 +139,8 @@ public final class FleetGroupSearcherTest {
 
     // Expanding it returns exactly the android devices, sorted by uuid.
     FleetFlatResults expanded =
-        searcher.expandGroup(snapshot, ImmutableList.of(), androidGroupId, EXPAND_COLUMNS, "");
+        searcher.expandGroup(
+            snapshot, ImmutableList.of(), androidGroupId, EXPAND_COLUMNS, "", postings);
     assertThat(rowIds(expanded)).containsExactly("device-0", "device-1", "device-4").inOrder();
     assertThat(expanded.getTotal()).isEqualTo(3);
   }
@@ -147,7 +153,8 @@ public final class FleetGroupSearcherTest {
             ImmutableList.of(),
             ImmutableList.of("dim::os"),
             FleetGroupSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance());
+            FleetPageRequest.getDefaultInstance(),
+            postings);
     String noValueId = groupByFirstValue(results, "(no value)").getGroupId();
 
     ImmutableList<FleetGroupSearcher.GroupEntry> entries =
@@ -156,7 +163,7 @@ public final class FleetGroupSearcherTest {
     assertThat(entries.get(0).noValue()).isTrue();
 
     FleetFlatResults expanded =
-        searcher.expandGroup(snapshot, ImmutableList.of(), noValueId, EXPAND_COLUMNS, "");
+        searcher.expandGroup(snapshot, ImmutableList.of(), noValueId, EXPAND_COLUMNS, "", postings);
     assertThat(rowIds(expanded)).containsExactly("device-3");
   }
 
@@ -168,7 +175,8 @@ public final class FleetGroupSearcherTest {
             ImmutableList.of(),
             ImmutableList.of("field::owner"),
             FleetGroupSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance());
+            FleetPageRequest.getDefaultInstance(),
+            postings);
 
     // alice+carol is a single group, distinct from the alice-only group. alice holds device-0 and
     // device-4; bob holds device-1; alice+carol holds device-2; device-3 has no owner.
@@ -178,7 +186,7 @@ public final class FleetGroupSearcherTest {
 
     FleetFlatResults expanded =
         searcher.expandGroup(
-            snapshot, ImmutableList.of(), aliceCarol.getGroupId(), EXPAND_COLUMNS, "");
+            snapshot, ImmutableList.of(), aliceCarol.getGroupId(), EXPAND_COLUMNS, "", postings);
     // Exact-set membership: device-2 (alice+carol) only, not the alice-only devices.
     assertThat(rowIds(expanded)).containsExactly("device-2");
   }
@@ -196,7 +204,8 @@ public final class FleetGroupSearcherTest {
                         .setItemCount(FleetItemCountSort.getDefaultInstance()))
                 .setAscending(true)
                 .build(),
-            FleetPageRequest.getDefaultInstance());
+            FleetPageRequest.getDefaultInstance(),
+            postings);
 
     // Ascending count: the two size-1 groups first, tie-broken by name ascending, then android (3).
     assertThat(groupValues(results)).containsExactly("(no value)", "ios", "android").inOrder();
@@ -210,7 +219,8 @@ public final class FleetGroupSearcherTest {
             ImmutableList.of(),
             ImmutableList.of("dim::os", "field::status", "field::type", "field::owner"),
             FleetGroupSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance());
+            FleetPageRequest.getDefaultInstance(),
+            postings);
 
     assertThat(results.getGroupByKeysCount()).isEqualTo(3);
     assertThat(results.getGroupByKeys(0).getKey()).isEqualTo("dim::os");
@@ -227,7 +237,8 @@ public final class FleetGroupSearcherTest {
             ImmutableList.of(),
             ImmutableList.of("field::owner"),
             FleetGroupSort.getDefaultInstance(),
-            firstPage);
+            firstPage,
+            postings);
 
     assertThat(page1.getGroupsCount()).isEqualTo(2);
     assertThat(page1.getTotalGroups()).isEqualTo(4);
@@ -244,7 +255,8 @@ public final class FleetGroupSearcherTest {
             ImmutableList.of(),
             ImmutableList.of("field::owner"),
             FleetGroupSort.getDefaultInstance(),
-            secondPage);
+            secondPage,
+            postings);
 
     assertThat(page2.getGroupsCount()).isEqualTo(2);
     assertThat(page2.getRangeStart()).isEqualTo(3);
@@ -266,18 +278,30 @@ public final class FleetGroupSearcherTest {
             ImmutableList.of(),
             ImmutableList.of("dim::os"),
             FleetGroupSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance());
+            FleetPageRequest.getDefaultInstance(),
+            postings);
     String groupId = headers.getGroups(0).getGroupId();
 
     FleetFlatResults page1 =
-        searcher.expandGroup(large, ImmutableList.of(), groupId, EXPAND_COLUMNS, "");
+        searcher.expandGroup(
+            large,
+            ImmutableList.of(),
+            groupId,
+            EXPAND_COLUMNS,
+            "",
+            new LazyPostings(large.devices()));
     assertThat(page1.getTotal()).isEqualTo(150);
     assertThat(page1.getRowsCount()).isEqualTo(100);
     assertThat(page1.getNextPageToken()).isNotEmpty();
 
     FleetFlatResults page2 =
         searcher.expandGroup(
-            large, ImmutableList.of(), groupId, EXPAND_COLUMNS, page1.getNextPageToken());
+            large,
+            ImmutableList.of(),
+            groupId,
+            EXPAND_COLUMNS,
+            page1.getNextPageToken(),
+            new LazyPostings(large.devices()));
     assertThat(page2.getRowsCount()).isEqualTo(50);
     assertThat(page2.getNextPageToken()).isEmpty();
   }
@@ -286,7 +310,7 @@ public final class FleetGroupSearcherTest {
   public void expand_unknownGroupIdReturnsNoRows() {
     FleetFlatResults expanded =
         searcher.expandGroup(
-            snapshot, ImmutableList.of(), "not-a-real-group-id", EXPAND_COLUMNS, "");
+            snapshot, ImmutableList.of(), "not-a-real-group-id", EXPAND_COLUMNS, "", postings);
     assertThat(expanded.getRowsCount()).isEqualTo(0);
     assertThat(expanded.getColumnsCount()).isEqualTo(EXPAND_COLUMNS.size());
   }

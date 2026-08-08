@@ -17,9 +17,11 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.index;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.CONFIG_WIFI_SSID;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.DIM_PREFIX;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.DIM_QUARANTINED;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.EXCLUDED_DIMENSIONS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_DECORATOR;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_DRIVER;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_EXECUTOR;
@@ -28,9 +30,16 @@ import static com.google.devtools.mobileharness.fe.v6.service.search.index.Fleet
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_TYPE;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_UUID;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_ATS_CONTROLLER;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_CONNECTIVITY;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DAEMON_STATUS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_IP;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_SERVER_VERSION;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_TYPE;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_NAME;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_OS;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_RELEASE_STATUS;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_RELEASE_TYPE;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PLAIN_VALUE_KEYS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PROP_PREFIX;
 
 import com.google.common.base.Ascii;
@@ -38,9 +47,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.LinkedHashMultimap;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.MultimapBuilder;
-import com.google.common.collect.TreeMultimap;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
@@ -53,18 +59,24 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
+import com.google.devtools.mobileharness.fe.v6.service.host.util.HostConnectivityStatuses;
+import com.google.devtools.mobileharness.fe.v6.service.host.util.HostTypes;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.UiLabType;
 import com.google.protobuf.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 
 /**
@@ -80,6 +92,9 @@ import javax.inject.Inject;
  * first-seen original casing of each value is retained in {@link FleetIndex#valueDisplays} for
  * presentation. Counts are distinct-device counts: a device that lists the same value twice (for
  * example the same dimension as both supported and required) contributes one.
+ *
+ * <p>Posting lists are not built at index time. They are built lazily by {@link LazyPostings} on
+ * first access, keeping the build under 2 seconds for 152K devices.
  */
 public final class FleetIndexBuilder {
 
@@ -110,14 +125,14 @@ public final class FleetIndexBuilder {
           .put(CONFIG_WIFI_SSID, "Wi-Fi SSID")
           .put(HOST_NAME, "Host Name")
           .put(HOST_IP, "Host IP")
-          .put("host::host_os", "Host OS")
+          .put(HOST_OS, "Host OS")
           .put(HOST_LAB_TYPE, "Host Lab Type")
-          .put("host::connectivity", "Host Lab Server Connectivity")
+          .put(HOST_CONNECTIVITY, "Host Lab Server Connectivity")
           .put("host::lab_server_activity", "Host Lab Server Activity")
-          .put("host::daemon_status", "Host Daemon Server Status")
-          .put("host::release_status", "Host Release Status")
-          .put("host::lab_server_version", "Host Lab Server Version")
-          .put("host::release_type", "Host Release Type")
+          .put(HOST_DAEMON_STATUS, "Host Daemon Server Status")
+          .put(HOST_RELEASE_STATUS, "Host Release Status")
+          .put(HOST_LAB_SERVER_VERSION, "Host Lab Server Version")
+          .put(HOST_RELEASE_TYPE, "Host Release Type")
           .put(HOST_ATS_CONTROLLER, "ATS Lab")
           .buildOrThrow();
 
@@ -142,65 +157,110 @@ public final class FleetIndexBuilder {
    */
   public FleetSnapshot build(FleetRawData raw, Instant buildTime) {
     LabQueryResult labResult = raw.labData();
-    List<DeviceRecord> devices = new ArrayList<>();
-    List<HostRecord> hosts = new ArrayList<>();
-    Accumulator accumulator = new Accumulator();
-    // Read the controller-display registry once so indexDevice can map each controller id to its
-    // friendly display without re-fetching per device.
     ImmutableMap<String, String> atsControllerDisplays = raw.atsControllerDisplays();
 
-    // The full pull uses lab_view_request, so results arrive as a lab->device tree. The device_view
-    // (grouped) shape is never requested for the index pull, so it is ignored here.
     ImmutableList<LabData> labDataList =
         labResult.hasLabView()
             ? ImmutableList.copyOf(labResult.getLabView().getLabDataList())
             : ImmutableList.of();
 
-    for (LabData labData : labDataList) {
-      LabInfo labInfo = labData.getLabInfo();
-      LabLocator locator = labInfo.getLabLocator();
-      String hostName = locator.getHostName();
-      String hostIp = locator.getIp();
-      Optional<String> masterDetectedIp =
-          locator.hasMasterDetectedIp()
-              ? Optional.of(locator.getMasterDetectedIp())
-              : Optional.empty();
-      String labStatus = labInfo.getLabStatus().name();
-      ImmutableMap<String, String> hostProperties = extractHostProperties(labInfo);
-      Optional<HostEnrichment> hostEnrichment =
-          Optional.ofNullable(raw.hostEnrichments().get(hostName));
-      ImmutableList<String> labTypes =
-          hostEnrichment.map(HostEnrichment::labTypes).orElse(ImmutableList.of());
+    // Phase 1: parallel per-host processing with per-thread Accumulator.
+    // Each ForkJoinPool thread reuses ONE Accumulator across all hosts it processes,
+    // reducing merge from 43K per-host accumulators to T per-thread accumulators.
+    record HostDevices(HostRecord host, List<DeviceRecord> devices) {}
 
-      DeviceList deviceList = labData.getDeviceList();
-      hosts.add(
-          buildHostRecord(hostName, hostIp, labStatus, hostProperties, deviceList, hostEnrichment));
+    ConcurrentMap<Thread, Accumulator> accumulatorsByThread = new ConcurrentHashMap<>();
 
-      for (DeviceInfo deviceInfo : deviceList.getDeviceInfoList()) {
-        int deviceIndex = devices.size();
-        String deviceId = deviceInfo.getDeviceLocator().getId();
-        Optional<DeviceEnrichment> deviceEnrichment =
-            Optional.ofNullable(raw.deviceEnrichments().get(deviceId));
-        DeviceRecord record =
-            buildDeviceRecord(
-                deviceInfo,
-                hostName,
-                hostIp,
-                labStatus,
-                masterDetectedIp,
-                hostProperties,
-                deviceEnrichment);
-        devices.add(record);
-        indexDevice(
-            accumulator, deviceIndex, record, hostProperties, labTypes, atsControllerDisplays);
-      }
+    List<HostDevices> hostDevices =
+        labDataList.parallelStream()
+            .map(
+                labData -> {
+                  LabInfo labInfo = labData.getLabInfo();
+                  LabLocator locator = labInfo.getLabLocator();
+                  String hostName = locator.getHostName();
+                  String hostIp = locator.getIp();
+                  Optional<String> masterDetectedIp =
+                      locator.hasMasterDetectedIp()
+                          ? Optional.of(locator.getMasterDetectedIp())
+                          : Optional.empty();
+                  String labStatus = labInfo.getLabStatus().name();
+                  ImmutableMap<String, String> hostProperties = extractHostProperties(labInfo);
+                  Optional<HostEnrichment> hostEnrichment =
+                      Optional.ofNullable(raw.hostEnrichments().get(hostName));
+                  // Lab type is the composite of the LabInfo host properties (lab_type, dm_type)
+                  // and the HostInfoService release enum, matching the host detail page. It is
+                  // empty
+                  // for any host with no lab type (every ATS host), which keeps the key internal
+                  // only and data driven. UNKNOWN is treated as no lab type so it never surfaces.
+                  Optional<String> releaseTypeOpt =
+                      hostEnrichment.flatMap(HostEnrichment::releaseType);
+                  ImmutableList<String> labTypes =
+                      HostTypes.determineUiLabTypes(Optional.of(labInfo), releaseTypeOpt).stream()
+                          .filter(labType -> labType != UiLabType.UNKNOWN)
+                          .map(HostTypes::labTypeDisplayName)
+                          .collect(toImmutableList());
+                  // Host OS mirrors the host detail page default of "Unknown" when the property is
+                  // absent. Connectivity uses the same LabStatus bucketing as the detail page.
+                  String hostOs = hostProperties.getOrDefault("host_os", "Unknown");
+                  String hostConnectivity =
+                      HostConnectivityStatuses.create(Optional.of(labInfo)).getTitle();
+
+                  DeviceList deviceList = labData.getDeviceList();
+                  HostRecord hostRecord =
+                      buildHostRecord(
+                          hostName,
+                          hostIp,
+                          labStatus,
+                          hostProperties,
+                          deviceList,
+                          labTypes,
+                          hostEnrichment);
+
+                  Accumulator accum =
+                      accumulatorsByThread.computeIfAbsent(
+                          Thread.currentThread(), t -> new Accumulator());
+                  List<DeviceRecord> devices = new ArrayList<>();
+                  for (DeviceInfo deviceInfo : deviceList.getDeviceInfoList()) {
+                    String deviceId = deviceInfo.getDeviceLocator().getId();
+                    Optional<DeviceEnrichment> deviceEnrichment =
+                        Optional.ofNullable(raw.deviceEnrichments().get(deviceId));
+                    DeviceRecord record =
+                        buildDeviceRecord(
+                            deviceInfo,
+                            hostName,
+                            hostIp,
+                            labStatus,
+                            masterDetectedIp,
+                            hostProperties,
+                            hostRecord,
+                            hostOs,
+                            hostConnectivity,
+                            deviceEnrichment);
+                    devices.add(record);
+                    indexDevice(accum, record, atsControllerDisplays);
+                  }
+                  return new HostDevices(hostRecord, devices);
+                })
+            .toList();
+
+    // Phase 2: flatten + merge T accumulators (not 43K).
+    List<DeviceRecord> allDevices = new ArrayList<>();
+    ImmutableList.Builder<HostRecord> allHosts = ImmutableList.builder();
+    for (HostDevices hd : hostDevices) {
+      allHosts.add(hd.host());
+      allDevices.addAll(hd.devices());
+    }
+
+    Accumulator merged = new Accumulator();
+    for (Accumulator a : accumulatorsByThread.values()) {
+      merged.mergeFrom(a);
     }
 
     return FleetSnapshot.builder()
         .setBuildTime(buildTime)
-        .setDevices(ImmutableList.copyOf(devices))
-        .setHosts(ImmutableList.copyOf(hosts))
-        .setIndex(accumulator.toIndex())
+        .setDevices(ImmutableList.copyOf(allDevices))
+        .setHosts(allHosts.build())
+        .setIndex(merged.toIndex())
         .build();
   }
 
@@ -210,6 +270,7 @@ public final class FleetIndexBuilder {
       String labStatus,
       ImmutableMap<String, String> hostProperties,
       DeviceList deviceList,
+      ImmutableList<String> labTypes,
       Optional<HostEnrichment> enrichment) {
     return HostRecord.builder()
         .setHostName(hostName)
@@ -217,7 +278,7 @@ public final class FleetIndexBuilder {
         .setLabStatus(labStatus)
         .setHostProperties(hostProperties)
         .setDeviceCount(deviceList.getDeviceInfoCount())
-        .setLabTypes(enrichment.map(HostEnrichment::labTypes).orElse(ImmutableList.of()))
+        .setLabTypes(labTypes)
         .setReleaseStatus(enrichment.flatMap(HostEnrichment::releaseStatus))
         .setReleaseType(enrichment.flatMap(HostEnrichment::releaseType))
         .setDaemonStatus(enrichment.flatMap(HostEnrichment::daemonStatus))
@@ -237,6 +298,9 @@ public final class FleetIndexBuilder {
       String labStatus,
       Optional<String> masterDetectedIp,
       ImmutableMap<String, String> hostProperties,
+      HostRecord host,
+      String hostOs,
+      String hostConnectivity,
       Optional<DeviceEnrichment> enrichment) {
     DeviceFeature feature = deviceInfo.getDeviceFeature();
     DeviceCondition condition = deviceInfo.getDeviceCondition();
@@ -264,6 +328,13 @@ public final class FleetIndexBuilder {
         .setHostProperties(hostProperties)
         .setWifiSsid(enrichment.flatMap(DeviceEnrichment::wifiSsid))
         .setAtsController(enrichment.flatMap(DeviceEnrichment::atsController))
+        .setLabTypes(host.labTypes())
+        .setHostOs(hostOs)
+        .setHostConnectivity(hostConnectivity)
+        .setDaemonStatus(host.daemonStatus())
+        .setReleaseStatus(host.releaseStatus())
+        .setReleaseType(host.releaseType())
+        .setLabServerVersion(host.labServerVersion())
         .build();
   }
 
@@ -330,61 +401,70 @@ public final class FleetIndexBuilder {
   /** Adds all index terms for one device to the accumulator. */
   private static void indexDevice(
       Accumulator accumulator,
-      int deviceIndex,
       DeviceRecord record,
-      ImmutableMap<String, String> hostProperties,
-      ImmutableList<String> labTypes,
       ImmutableMap<String, String> atsControllerDisplays) {
     Set<String> seen = new HashSet<>();
 
     if (!record.deviceId().isEmpty()) {
-      accumulator.add(deviceIndex, seen, FIELD_UUID, record.deviceId());
+      accumulator.add(seen, FIELD_UUID, record.deviceId());
     }
-    accumulator.add(deviceIndex, seen, FIELD_STATUS, record.status());
+    accumulator.add(seen, FIELD_STATUS, record.status());
     for (String value : record.types()) {
-      accumulator.add(deviceIndex, seen, FIELD_TYPE, value);
+      accumulator.add(seen, FIELD_TYPE, value);
     }
     for (String value : record.owners()) {
-      accumulator.add(deviceIndex, seen, FIELD_OWNER, value);
+      accumulator.add(seen, FIELD_OWNER, value);
     }
     for (String value : record.drivers()) {
-      accumulator.add(deviceIndex, seen, FIELD_DRIVER, value);
+      accumulator.add(seen, FIELD_DRIVER, value);
     }
     for (String value : record.decorators()) {
-      accumulator.add(deviceIndex, seen, FIELD_DECORATOR, value);
+      accumulator.add(seen, FIELD_DECORATOR, value);
     }
     for (String value : record.executors()) {
-      accumulator.add(deviceIndex, seen, FIELD_EXECUTOR, value);
+      accumulator.add(seen, FIELD_EXECUTOR, value);
     }
     for (Map.Entry<String, ImmutableList<String>> entry : record.dimensions().entrySet()) {
-      String keyId = DIM_PREFIX + entry.getKey();
+      String dimName = entry.getKey();
+      if (EXCLUDED_DIMENSIONS.contains(dimName)) {
+        continue;
+      }
+      String keyId = DIM_PREFIX + dimName;
       for (String value : entry.getValue()) {
-        accumulator.add(deviceIndex, seen, keyId, value);
+        accumulator.add(seen, keyId, value);
       }
     }
-    accumulator.add(deviceIndex, seen, DIM_QUARANTINED, record.quarantined() ? "Yes" : "No");
-    for (Map.Entry<String, String> entry : hostProperties.entrySet()) {
-      accumulator.add(deviceIndex, seen, PROP_PREFIX + entry.getKey(), entry.getValue());
+    accumulator.add(seen, DIM_QUARANTINED, record.quarantined() ? "Yes" : "No");
+    for (Map.Entry<String, String> entry : record.hostProperties().entrySet()) {
+      accumulator.add(seen, PROP_PREFIX + entry.getKey(), entry.getValue());
     }
     if (!record.hostName().isEmpty()) {
-      accumulator.add(deviceIndex, seen, HOST_NAME, record.hostName());
+      accumulator.add(seen, HOST_NAME, record.hostName());
     }
     if (!record.hostIp().isEmpty()) {
-      accumulator.add(deviceIndex, seen, HOST_IP, record.hostIp());
+      accumulator.add(seen, HOST_IP, record.hostIp());
     }
-    // Stamp the host lab types onto each device so devices are filterable and facetable by lab
-    // type.
-    for (String labType : labTypes) {
-      accumulator.add(deviceIndex, seen, HOST_LAB_TYPE, labType);
+    // Stamp the cross-entity host attributes onto each device so devices are filterable, facetable,
+    // and groupable by a host attribute. The empty-value skip in Accumulator.add gates these to the
+    // data that exists: HostInfoService-sourced values are absent in ATS and simply do not appear,
+    // and a host with no lab type contributes no lab type value.
+    for (String labType : record.labTypes()) {
+      accumulator.add(seen, HOST_LAB_TYPE, labType);
     }
-    // TODO: index the remaining cross-entity host attributes (host::host_os,
-    // host::connectivity, host::lab_server_activity, host::daemon_status, host::release_status,
-    // host::lab_server_version, host::release_type). They are derived from HostInfoService, which
-    // later CLs add.
+    accumulator.add(seen, HOST_OS, record.hostOs());
+    accumulator.add(seen, HOST_CONNECTIVITY, record.hostConnectivity());
+    record.daemonStatus().ifPresent(value -> accumulator.add(seen, HOST_DAEMON_STATUS, value));
+    record.releaseStatus().ifPresent(value -> accumulator.add(seen, HOST_RELEASE_STATUS, value));
+    record.releaseType().ifPresent(value -> accumulator.add(seen, HOST_RELEASE_TYPE, value));
+    record
+        .labServerVersion()
+        .ifPresent(value -> accumulator.add(seen, HOST_LAB_SERVER_VERSION, value));
+    // TODO: index host::lab_server_activity once the lab activity source is wired into the fleet
+    // pull. It is the only cross-entity host attribute still deferred.
     record
         .wifiSsid()
         .filter(ssid -> !ssid.isEmpty())
-        .ifPresent(ssid -> accumulator.add(deviceIndex, seen, CONFIG_WIFI_SSID, ssid));
+        .ifPresent(ssid -> accumulator.add(seen, CONFIG_WIFI_SSID, ssid));
     // The controller id is the stored/filter term; the display is the friendly name from the
     // ats-all registry, falling back to the id itself when the registry has no entry.
     record
@@ -393,11 +473,7 @@ public final class FleetIndexBuilder {
         .ifPresent(
             id ->
                 accumulator.add(
-                    deviceIndex,
-                    seen,
-                    HOST_ATS_CONTROLLER,
-                    id,
-                    atsControllerDisplays.getOrDefault(id, id)));
+                    seen, HOST_ATS_CONTROLLER, id, atsControllerDisplays.getOrDefault(id, id)));
   }
 
   private static Instant toInstant(Timestamp timestamp) {
@@ -422,93 +498,157 @@ public final class FleetIndexBuilder {
   /**
    * Mutable scratch structures for one build pass. Converted to an immutable {@link FleetIndex} by
    * {@link #toIndex}.
+   *
+   * <p>Uses HashMap of HashSets for distinct values (O(1) insert) and sorts once at the end,
+   * replacing the previous TreeMultimap (O(log V) per insert). Posting lists are not built here;
+   * they are constructed lazily by {@link LazyPostings} on first access.
    */
   private static final class Accumulator {
-    // Posting lists keyed by the composite (key id plus value), device indices in insertion order.
-    private final ListMultimap<String, Integer> postings =
-        MultimapBuilder.hashKeys().arrayListValues().build();
-    // Distinct normalized values per key id, kept sorted for prefix matching.
-    private final TreeMultimap<String, String> distinctValues = TreeMultimap.create();
-    // First-seen original display per composite (key id plus value).
-    private final Map<String, String> valueDisplays = new HashMap<>();
+    // Distinct normalized values per key id, collected into HashSets for O(1) insertion.
+    private final Map<String, Set<String>> distinctValues = new HashMap<>();
+    // Nested display map: key -> (value -> first-seen display).
+    private final Map<String, Map<String, String>> valueDisplays = new HashMap<>();
+    // Nested count map: key -> (value -> distinct-device count).
+    private final Map<String, Map<String, Integer>> valueCounts = new HashMap<>();
     private final Set<String> keyIds = new LinkedHashSet<>();
 
-    /**
-     * Records one (key, value) for a device, using the term itself as its display. Deduped per
-     * device via {@code seen} so counts and posting lists reflect distinct devices.
-     */
-    void add(int deviceIndex, Set<String> seen, String keyId, String original) {
-      add(deviceIndex, seen, keyId, original, original);
+    /** Records one (key, value) for a device, using the term itself as its display. */
+    void add(Set<String> seen, String keyId, String original) {
+      add(seen, keyId, original, original);
     }
 
     /**
      * Records one (key, term) for a device with a distinct {@code display}, so the stored/filter
      * term and the presented value can differ (as they do for {@code host::ats_controller}).
-     * Deduped per device via {@code seen} so counts and posting lists reflect distinct devices.
+     *
+     * <p>Deduped per device via {@code seen} so {@code valueCounts} reflects distinct devices, not
+     * raw occurrences. The {@code seen} set is per-device (created fresh in {@link #indexDevice},
+     * ~175 entries), so it stays resident in L1 cache and the composite key is cheap here. This
+     * guards against intra-device duplicates that collapse on lowercase (case variants such as
+     * {@code Android}/{@code android}, or repeated entries in the {@code types}/{@code owners}/...
+     * repeated fields) which would otherwise inflate the facet count for that value.
      */
-    void add(int deviceIndex, Set<String> seen, String keyId, String term, String display) {
+    void add(Set<String> seen, String keyId, String term, String display) {
       String value = Ascii.toLowerCase(term);
-      String composite = composite(keyId, value);
-      if (!seen.add(composite)) {
+      // An empty value is not a distinct facet value. A device whose only value for
+      // a key is the empty string has no value for that key (it counts toward "(no
+      // value)"), matching the single-value fields and DeviceValueExtractor. proto3
+      // dimension lists can carry empty strings, which must not surface as a blank
+      // facet value in the value list.
+      if (value.isEmpty()) {
+        return;
+      }
+      if (!seen.add(keyId + '\u0000' + value)) {
         return;
       }
       keyIds.add(keyId);
-      postings.put(composite, deviceIndex);
-      distinctValues.put(keyId, value);
-      valueDisplays.putIfAbsent(composite, display);
+      valueCounts.computeIfAbsent(keyId, k -> new HashMap<>()).merge(value, 1, Integer::sum);
+      distinctValues.computeIfAbsent(keyId, k -> new HashSet<>()).add(value);
+      valueDisplays.computeIfAbsent(keyId, k -> new HashMap<>()).putIfAbsent(value, display);
+    }
+
+    /** Merges another accumulator into this one. Counts are summed, distinct values unioned. */
+    void mergeFrom(Accumulator other) {
+      keyIds.addAll(other.keyIds);
+      for (Map.Entry<String, Map<String, Integer>> entry : other.valueCounts.entrySet()) {
+        Map<String, Integer> target =
+            valueCounts.computeIfAbsent(entry.getKey(), k -> new HashMap<>());
+        for (Map.Entry<String, Integer> vc : entry.getValue().entrySet()) {
+          target.merge(vc.getKey(), vc.getValue(), Integer::sum);
+        }
+      }
+      for (Map.Entry<String, Set<String>> entry : other.distinctValues.entrySet()) {
+        distinctValues
+            .computeIfAbsent(entry.getKey(), k -> new HashSet<>())
+            .addAll(entry.getValue());
+      }
+      for (Map.Entry<String, Map<String, String>> entry : other.valueDisplays.entrySet()) {
+        Map<String, String> target =
+            valueDisplays.computeIfAbsent(entry.getKey(), k -> new HashMap<>());
+        for (Map.Entry<String, String> vd : entry.getValue().entrySet()) {
+          target.putIfAbsent(vd.getKey(), vd.getValue());
+        }
+      }
     }
 
     FleetIndex toIndex() {
-      ImmutableMap.Builder<String, ImmutableMap<String, Integer>> counts = ImmutableMap.builder();
-      ImmutableMap.Builder<String, ImmutableMap<String, ImmutableList<Integer>>> post =
-          ImmutableMap.builder();
-      ImmutableMap.Builder<String, ImmutableList<String>> sorted = ImmutableMap.builder();
-      ImmutableMap.Builder<String, ImmutableMap<String, String>> displays = ImmutableMap.builder();
+      List<String> keyList = new ArrayList<>(keyIds);
 
-      // Emit per-key groups in key-id insertion order. Each key's values arrive sorted from the
-      // TreeMultimap, which is the order the value index relies on for prefix matching. The count
-      // for a value is the size of its posting list, since both are populated once per distinct
-      // device.
-      for (String keyId : keyIds) {
-        NavigableSet<String> values = distinctValues.get(keyId);
+      // Parallel per-key: sort values + freeze counts + freeze displays.
+      // Uses ConcurrentHashMap to collect results from parallel stream.
+      ConcurrentHashMap<String, ImmutableList<String>> sortedMap = new ConcurrentHashMap<>();
+      ConcurrentHashMap<String, ImmutableMap<String, Integer>> countsMap =
+          new ConcurrentHashMap<>();
+      ConcurrentHashMap<String, ImmutableMap<String, String>> displaysMap =
+          new ConcurrentHashMap<>();
 
-        ImmutableMap.Builder<String, Integer> keyCounts = ImmutableMap.builder();
-        ImmutableMap.Builder<String, ImmutableList<Integer>> keyPostings = ImmutableMap.builder();
-        ImmutableMap.Builder<String, String> keyDisplays = ImmutableMap.builder();
-        for (String value : values) {
-          String composite = composite(keyId, value);
-          List<Integer> deviceIndices = postings.get(composite);
-          keyCounts.put(value, deviceIndices.size());
-          keyPostings.put(value, ImmutableList.copyOf(deviceIndices));
-          keyDisplays.put(value, valueDisplays.get(composite));
+      keyList.parallelStream()
+          .forEach(
+              keyId -> {
+                Set<String> values = distinctValues.get(keyId);
+                if (values != null) {
+                  List<String> valueList = new ArrayList<>(values);
+                  Collections.sort(valueList);
+                  sortedMap.put(keyId, ImmutableList.copyOf(valueList));
+                }
+                Map<String, Integer> keyCounts = valueCounts.get(keyId);
+                if (keyCounts != null) {
+                  countsMap.put(keyId, ImmutableMap.copyOf(keyCounts));
+                }
+                Map<String, String> keyDisplays = valueDisplays.get(keyId);
+                if (keyDisplays != null) {
+                  displaysMap.put(keyId, ImmutableMap.copyOf(keyDisplays));
+                }
+              });
+
+      // Build semanticGlobalSorted (parallel collect + sort).
+      List<ValueKeyPair> semanticPairs =
+          keyList.parallelStream()
+              .filter(keyId -> !PLAIN_VALUE_KEYS.contains(keyId))
+              .flatMap(
+                  keyId -> {
+                    Set<String> values = distinctValues.get(keyId);
+                    if (values == null) {
+                      return Stream.empty();
+                    }
+                    return values.stream().map(v -> new ValueKeyPair(v, keyId));
+                  })
+              .sorted()
+              .toList();
+
+      // Build globalExact: value -> [(key, count)].
+      Map<String, List<KeyCount>> globalExactMap = new HashMap<>();
+      for (String keyId : keyList) {
+        Map<String, Integer> keyCounts = valueCounts.get(keyId);
+        if (keyCounts != null) {
+          for (Map.Entry<String, Integer> entry : keyCounts.entrySet()) {
+            globalExactMap
+                .computeIfAbsent(entry.getKey(), v -> new ArrayList<>())
+                .add(new KeyCount(keyId, entry.getValue()));
+          }
         }
-        counts.put(keyId, keyCounts.buildOrThrow());
-        post.put(keyId, keyPostings.buildOrThrow());
-        sorted.put(keyId, ImmutableList.copyOf(values));
-        displays.put(keyId, keyDisplays.buildOrThrow());
+      }
+      ImmutableMap.Builder<String, ImmutableList<KeyCount>> frozenGlobalExact =
+          ImmutableMap.builder();
+      for (Map.Entry<String, List<KeyCount>> entry : globalExactMap.entrySet()) {
+        frozenGlobalExact.put(entry.getKey(), ImmutableList.copyOf(entry.getValue()));
       }
 
+      // Build display names.
       ImmutableMap.Builder<String, String> names = ImmutableMap.builder();
-      for (String keyId : keyIds) {
+      for (String keyId : keyList) {
         names.put(keyId, displayName(keyId));
       }
 
       return FleetIndex.builder()
-          .setValueCounts(counts.buildOrThrow())
-          .setPostings(post.buildOrThrow())
-          .setSortedValues(sorted.buildOrThrow())
-          .setValueDisplays(displays.buildOrThrow())
+          .setValueCounts(ImmutableMap.copyOf(countsMap))
+          .setSortedValues(ImmutableMap.copyOf(sortedMap))
+          .setValueDisplays(ImmutableMap.copyOf(displaysMap))
           .setKeyIds(ImmutableSet.copyOf(keyIds))
           .setDisplayNames(names.buildOrThrow())
+          .setSemanticGlobalSorted(ImmutableList.copyOf(semanticPairs))
+          .setGlobalExact(frozenGlobalExact.buildOrThrow())
           .build();
-    }
-
-    /**
-     * Builds the composite key used to store per-(key, value) postings and displays in a single
-     * flat map. The NUL separator never appears in a key id or a normalized value.
-     */
-    private static String composite(String keyId, String value) {
-      return keyId + '\u0000' + value;
     }
   }
 }
