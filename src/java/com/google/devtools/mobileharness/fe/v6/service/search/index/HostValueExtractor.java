@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.index;
 
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_ATS_CONTROLLER;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_CONNECTIVITY;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DAEMON_STATUS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DEVICE_COUNT;
@@ -57,6 +58,7 @@ public final class HostValueExtractor {
       case HOST_RELEASE_STATUS -> optionalLower(host.releaseStatus());
       case HOST_RELEASE_TYPE -> optionalLower(host.releaseType());
       case HOST_LAB_SERVER_VERSION -> optionalLower(host.labServerVersion());
+      case HOST_ATS_CONTROLLER -> optionalLower(host.atsController());
       case HOST_DEVICE_COUNT -> singletonLower(String.valueOf(host.deviceCount()));
       default -> valuesForPrefixedKey(host, keyId);
     };

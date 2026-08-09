@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromote
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedGroupByKey;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import java.util.HashSet;
 import java.util.List;
@@ -109,10 +110,16 @@ public final class FleetPromotedKeysProvider {
     }
     Set<String> appliedGroupByKeys = new HashSet<>(request.getGroupByList());
 
+    // The candidate rows are entity aware: host search reads the host curation rows, every other
+    // entity reads the device rows. For the device corpus this is the device filter and group-by
+    // rows exactly, so device promoted keys are unchanged.
+    boolean host = corpus.entity() == SearchEntity.SEARCH_ENTITY_HOST;
+    ImmutableList<String> filterByRow = host ? curation.hostFilterByRow() : curation.filterByRow();
+    ImmutableList<String> groupByRow = host ? curation.hostGroupByRow() : curation.groupByRow();
+
     FleetPromotedKeysResponse.Builder response = FleetPromotedKeysResponse.newBuilder();
-    addFilterKeys(
-        response, corpus, index, current, hasFilters, appliedFilterKeys, curation.filterByRow());
-    addGroupByKeys(response, corpus, index, current, appliedGroupByKeys, curation.groupByRow());
+    addFilterKeys(response, corpus, index, current, hasFilters, appliedFilterKeys, filterByRow);
+    addGroupByKeys(response, corpus, index, current, appliedGroupByKeys, groupByRow);
     return response.build();
   }
 

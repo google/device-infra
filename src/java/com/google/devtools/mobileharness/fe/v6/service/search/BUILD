@@ -45,6 +45,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_search_config_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_suggester",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_value_lister",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:host_corpus",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:scenario_curation",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:search_corpus",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:fleet_snapshot_store",

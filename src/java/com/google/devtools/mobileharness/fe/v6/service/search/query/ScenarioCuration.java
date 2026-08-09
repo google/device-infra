@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 
 /**
  * The per-deployment curation of fleet search keys: which keys to promote in the query bar, which
@@ -47,11 +48,47 @@ public interface ScenarioCuration {
   /** The recommended columns offered in the column catalog, in display order. */
   ImmutableList<String> recommendedColumns();
 
+  // ---- Host-entity curation ----
+  //
+  // The host entity has its own curated lists, analogous to the device ones above. They default to
+  // the device lists so a curation that has not been taught the host entity yet still compiles and
+  // serves a reasonable host page; a deployment overrides them with its host-specific lists.
+
+  /** The keys promoted into the host "Filter by:" row of the query bar, in display order. */
+  default ImmutableList<String> hostFilterByRow() {
+    return filterByRow();
+  }
+
+  /** The keys promoted into the host "Group by:" row of the query bar, in display order. */
+  default ImmutableList<String> hostGroupByRow() {
+    return groupByRow();
+  }
+
+  /** The default column set for the host flat search results table, in display order. */
+  default ImmutableList<String> hostDefaultColumns() {
+    return defaultColumns();
+  }
+
+  /** The recommended host columns offered in the column catalog, in display order. */
+  default ImmutableList<String> hostRecommendedColumns() {
+    return recommendedColumns();
+  }
+
   /**
    * The suggester ranking for {@code keyId}: a higher value means the key is offered earlier. The
    * mapping is scenario aware, so the same key can rank differently in different deployments.
    */
   int keyPriority(String keyId);
+
+  /**
+   * The suggester ranking for {@code keyId} in the given {@code entity}: a higher value means the
+   * key is offered earlier. Defaults to the device ranking ({@link #keyPriority(String)}) so an
+   * impl that has not been taught the host entity still compiles and ranks host keys reasonably; a
+   * deployment overrides this to route through the host tier table.
+   */
+  default int keyPriority(String keyId, SearchEntity entity) {
+    return keyPriority(keyId);
+  }
 
   /**
    * Whether the search page shows a landing page before the first query. A deployment whose fleet
