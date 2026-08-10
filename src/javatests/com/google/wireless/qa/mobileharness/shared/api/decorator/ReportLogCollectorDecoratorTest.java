@@ -23,7 +23,6 @@ import static org.mockito.Mockito.when;
 
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -65,17 +64,6 @@ public class ReportLogCollectorDecoratorTest {
 
     decorator =
         new ReportLogCollectorDecorator(decoratedDriver, testInfo, androidFileUtil, localFileUtil);
-  }
-
-  @Test
-  public void setUp_createsDestDir() throws Exception {
-    ReportLogCollectorDecoratorSpec spec =
-        ReportLogCollectorDecoratorSpec.newBuilder().setDestDir("dest_dir").build();
-    when(jobInfo.combinedSpec(decorator, "device_id")).thenReturn(spec);
-
-    decorator.setUp(SetupContext.create(testInfo));
-
-    verify(localFileUtil).prepareDir(eq(new File("/gen_file_dir/dest_dir").getAbsolutePath()));
   }
 
   @Test

@@ -22,10 +22,8 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.base.TeardownOnlyDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.util.ReportLogCollectorUtil;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -37,7 +35,7 @@ import javax.inject.Inject;
 
 /** A decorator that prepares and pulls report logs. */
 @DecoratorAnnotation(help = "Prepares and pulls report logs.")
-public class ReportLogCollectorDecorator extends LifecycleDecorator
+public class ReportLogCollectorDecorator extends TeardownOnlyDecorator
     implements SpecConfigable<ReportLogCollectorDecoratorSpec> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -60,29 +58,6 @@ public class ReportLogCollectorDecorator extends LifecycleDecorator
     super(decoratedDriver, testInfo);
     this.androidFileUtil = androidFileUtil;
     this.localFileUtil = localFileUtil;
-  }
-
-  @Override
-  protected SetupResult setUp(SetupContext context) throws InterruptedException {
-    TestInfo testInfo = context.testInfo();
-    try {
-      ReportLogCollectorDecoratorSpec spec =
-          testInfo.jobInfo().combinedSpec(this, getDevice().getDeviceId());
-      String destDir = spec.getDestDir();
-      File resultDir = new File(testInfo.getGenFileDir());
-      if (!destDir.isEmpty()) {
-        resultDir = new File(resultDir, destDir);
-      }
-      localFileUtil.prepareDir(resultDir.getAbsolutePath());
-    } catch (MobileHarnessException e) {
-      testInfo
-          .log()
-          .at(Level.SEVERE)
-          .alsoTo(logger)
-          .withCause(e)
-          .log("Failed to prepare result directory.");
-    }
-    return SetupResult.continueDecorated();
   }
 
   @Override

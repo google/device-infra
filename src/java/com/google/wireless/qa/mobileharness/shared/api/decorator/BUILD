@@ -960,6 +960,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:lifecycle_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:teardown_only_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/util:report_log_collector_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
