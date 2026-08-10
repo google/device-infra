@@ -51,6 +51,16 @@ message FileExplorer {
   repeated SessionFile files = 2;
 }
 
+// Execution details for a session. Unlike jobs and tests, a session has no
+// Cloud Logging deep link, so it carries only the fields a session actually
+// has rather than reusing the shared common.ExecutionDetails.
+message SessionExecutionDetails {
+  string user = 1;
+  google.protobuf.Timestamp create_time = 2;
+  google.protobuf.Timestamp start_time = 3;
+  google.protobuf.Timestamp end_time = 4;
+}
+
 // Top-level message representing detailed information of a session.
 message SessionDetail {
   string id = 1;
@@ -72,8 +82,7 @@ message SessionDetail {
   repeated SessionJob jobs = 11;
 
   // Timestamps / execution details.
-  .devtools.mobileharness.fe.v6.service.proto.common.ExecutionDetails
-      execution_details = 12;
+  SessionExecutionDetails execution_details = 12;
 
   // Custom key-value properties.
   map<string, string> properties = 13;
