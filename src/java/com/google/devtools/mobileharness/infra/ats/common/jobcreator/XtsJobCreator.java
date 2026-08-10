@@ -693,9 +693,12 @@ public abstract class XtsJobCreator {
             sessionRequestHandlerUtil.createJobGenDir(name).toString(),
             sessionRequestHandlerUtil.createJobTmpDir(name).toString());
 
-    jobInfo
-        .properties()
-        .add(PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE, executionMode.name());
+    if (decorators.stream()
+        .anyMatch(d -> DriverDecoratorMetadata.isPhaseSkippableDecorator(d.getDecoratorName()))) {
+      jobInfo
+          .properties()
+          .add(PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE, executionMode.name());
+    }
 
     jobInfo
         .subDeviceSpecs()

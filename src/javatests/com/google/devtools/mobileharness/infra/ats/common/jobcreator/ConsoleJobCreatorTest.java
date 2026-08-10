@@ -796,6 +796,12 @@ public final class ConsoleJobCreatorTest {
     assertThat(setupJobOpt).isPresent();
     assertThat(setupJobOpt.get().subDeviceSpecs().getAllSubDevices().get(0).decorators().getAll())
         .containsExactly("AndroidCleanAppsDecorator");
+    assertThat(
+            setupJobOpt
+                .get()
+                .properties()
+                .getOptional(PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE))
+        .isEmpty();
 
     Optional<JobInfo> teardownJobOpt = jobCreator.createXtsTearDownJob(sessionRequestInfo);
     assertThat(teardownJobOpt).isEmpty();
@@ -847,5 +853,11 @@ public final class ConsoleJobCreatorTest {
     assertThat(
             teardownJobOpt.get().subDeviceSpecs().getAllSubDevices().get(0).decorators().getAll())
         .containsExactly("AndroidDumpSysDecorator");
+    assertThat(
+            teardownJobOpt
+                .get()
+                .properties()
+                .getOptional(PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE))
+        .isEmpty();
   }
 }
