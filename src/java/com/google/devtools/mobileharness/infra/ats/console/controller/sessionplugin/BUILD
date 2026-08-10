@@ -77,7 +77,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/java/com/google/wireless/qa/mobileharness/client/api/event:job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/util:step_skippable_lifecycle_decorator_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/util:phase_skippable_decorator_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",

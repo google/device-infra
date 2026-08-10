@@ -23,12 +23,6 @@ package(
 )
 
 java_library(
-    name = "step_skippable_lifecycle_decorator_util",
-    srcs = ["StepSkippableLifecycleDecoratorUtil.java"],
-    deps = ["//src/java/com/google/wireless/qa/mobileharness/shared/model/job"],
-)
-
-java_library(
     name = "phase_skippable_decorator_util",
     srcs = ["PhaseSkippableDecoratorUtil.java"],
     deps = [
