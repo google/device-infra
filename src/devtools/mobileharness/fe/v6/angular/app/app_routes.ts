@@ -54,6 +54,7 @@ export const routes: Routes = [
   {
     path: 'sessions/:id',
     component: SessionDetailPage,
+    canActivate: [stripUniverseGuard],
   },
   {
     path: '',

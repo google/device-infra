@@ -30,22 +30,22 @@ class TestHostComponent {
     cnsPath: '/cns-fake/test-cns-path',
     files: [
       {
-        path: '/cns-fake/test-cns-path/folder/file1.txt',
+        path: 'folder/file1.txt',
         size: 100,
         viewable: true,
       },
       {
-        path: '/cns-fake/test-cns-path/folder/subfolder/file2.txt',
+        path: 'folder/subfolder/file2.txt',
         size: 400,
         viewable: true,
       },
       {
-        path: '/cns-fake/test-cns-path/image.png',
+        path: 'image.png',
         size: 1024,
         viewable: false,
       },
       {
-        path: '/cns-fake/test-cns-path/data.bin',
+        path: 'data.bin',
         size: 2048,
         viewable: false,
       },
@@ -130,7 +130,7 @@ describe('FilesTab Component', () => {
     const files = fixture.debugElement.queryAll(By.css('.file-node'));
 
     // Directory nodes built for hierarchical paths
-    expect(directories.length).toBe(5);
+    expect(directories.length).toBe(2);
     // Tree shows files under expanded folders
     expect(files.length).toBe(4);
   });
@@ -149,7 +149,7 @@ describe('FilesTab Component', () => {
     const previewPre = fixture.debugElement.query(By.css('.preview-text-pre'));
     expect(previewPre).not.toBeNull();
     expect(previewPre.nativeElement.textContent.trim()).toBe(
-      'mocked file content for /cns-fake/test-cns-path/folder/file1.txt',
+      'mocked file content for folder/file1.txt',
     );
   });
 

@@ -614,6 +614,7 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1rem;
   flex-shrink: 0;
   box-sizing: border-box;
   background-color: #fff;
@@ -625,12 +626,14 @@ textarea {
   align-items: center;
   gap: 0.75rem;
   min-width: 0;
+  flex: 1;
 
   mat-icon {
     color: #9aa0a6;
     font-size: 1.25rem;
     width: 1.25rem;
     height: 1.25rem;
+    flex-shrink: 0;
   }
 
   h3 {
@@ -643,7 +646,7 @@ textarea {
     white-space: nowrap;
     display: block;
     min-width: 0;
-    width: 100%;
+    flex: 1;
   }
 }
 

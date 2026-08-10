@@ -173,7 +173,7 @@
           <div class="preview-container animate-fade-in">
             <div class="preview-header">
               <div class="preview-title-wrapper">
-                <mat-icon>insert_drive_file</mat-icon>
+                <mat-icon>{{ getFileIcon(activeFile()?.path || '') }}</mat-icon>
                 <h3 [matTooltip]="activeFile()?.path || ''"
                     tooltipIfTruncated
                 >{{ activeFile()?.path }}</h3>
@@ -212,7 +212,7 @@
                   </div>
                 } @else if (isUnsupported()) {
                   <div class="preview-unsupported-panel">
-                    <mat-icon>insert_drive_file</mat-icon>
+                    <mat-icon>{{ getFileIcon(activeFile()?.path || '') }}</mat-icon>
                     <p>Preview is not supported for this file type</p>
                   </div>
                 } @else {
