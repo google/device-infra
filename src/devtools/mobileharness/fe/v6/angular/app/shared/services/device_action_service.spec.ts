@@ -33,6 +33,7 @@ describe('DeviceActionService', () => {
       'getLogcat',
       'unquarantineDevice',
       'getDeviceHeaderInfo',
+      'prepareDevice',
     ]);
     dialogSpy = jasmine.createSpyObj('MatDialog', ['open']);
     snackBarSpy = jasmine.createSpyObj('SnackBarService', [
@@ -199,6 +200,27 @@ describe('DeviceActionService', () => {
         }),
       }),
     );
+  });
+
+  it('should prepare device on confirm', () => {
+    const mockDialogRef = jasmine.createSpyObj('MatDialogRef', ['afterClosed']);
+    mockDialogRef.afterClosed.and.returnValue(of('primary'));
+    dialogSpy.open.and.returnValue(mockDialogRef);
+
+    deviceServiceSpy.prepareDevice.and.returnValue(of(undefined));
+
+    service.prepareDevice('device-1').subscribe();
+
+    expect(dialogSpy.open).toHaveBeenCalledWith(
+      ConfirmDialog,
+      jasmine.objectContaining({
+        data: jasmine.objectContaining({
+          title: 'Prepare Device device-1?',
+        }),
+      }),
+    );
+    expect(deviceServiceSpy.prepareDevice).toHaveBeenCalledWith('device-1');
+    expect(snackBarSpy.showSuccess).toHaveBeenCalled();
   });
 
   it('should unquarantine device on confirm when already quarantined', () => {

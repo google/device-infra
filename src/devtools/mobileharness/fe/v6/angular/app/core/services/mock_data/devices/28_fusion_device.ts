@@ -80,6 +80,7 @@ const SCENARIO_FUSION_DEVICE_DATA: MockDeviceScenario = {
     flash: true,
     remoteControl: true,
     quarantine: true,
+    prepare: true,
   },
 };
 

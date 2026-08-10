@@ -145,6 +145,16 @@ export class HttpDeviceService extends DeviceService {
     return this.http.post<void>(`${this.apiUrl}/${id}:unquarantine`, {});
   }
 
+  /**
+   * Prepares the device via HTTP POST.
+   *
+   * @param id The ID of the device to prepare.
+   * @return An Observable that completes when the prepare operation finishes.
+   */
+  override prepareDevice(id: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${id}:prepare`, {});
+  }
+
   // override remoteControl(
   //   id: string,
   //   req: RemoteControlRequest,

@@ -343,6 +343,60 @@ export class DeviceActionService {
       });
   }
 
+  /**
+   * Prepares the device.
+   * Opens a confirmation dialog first. If confirmed, shows an in-progress snackbar,
+   * calls the backend API, and updates the snackbar with success/error results.
+   *
+   * @param deviceId The ID of the device to prepare.
+   * @return An Observable that completes when the prepare operation finishes.
+   */
+  prepareDevice(deviceId: string): Observable<unknown> {
+    const dialogRef = this.dialog.open(ConfirmDialog, {
+      data: {
+        title: `Prepare Device ${deviceId}?`,
+        content: 'This action will prepare the device. It may take some time.',
+        type: 'info',
+        primaryButtonLabel: 'Prepare',
+        secondaryButtonLabel: 'Cancel',
+      },
+    });
+
+    let snackBarRef: ReturnType<SnackBarService['showInProgress']> | undefined;
+
+    return dialogRef.afterClosed().pipe(
+      filter((result) => result === 'primary'),
+      tap(() => {
+        // show snackbar "preparing the device: xxxx" with in progress icon keep spinning
+        snackBarRef = this.snackBar.showInProgress(
+          `Preparing the device ${deviceId}...`,
+        );
+      }),
+      switchMap(() => {
+        return this.deviceService.prepareDevice(deviceId);
+      }),
+      tap(() => {
+        // TODO: check if we need to refresh the device status, or give a hint that it may take some minutes for it to take effect at the UI side.
+        this.snackBar.showSuccess(
+          `Device ${deviceId} prepared successfully. It may take a few minutes to take effect on the UI side.`,
+        );
+      }),
+      catchError((err) =>
+        this.handleActionError(
+          err,
+          deviceId,
+          'prepare',
+          'Failed to prepare device',
+        ),
+      ),
+      finalize(() => {
+        if (snackBarRef) {
+          snackBarRef.dismiss();
+        }
+      }),
+    );
+  }
+
   private handleActionError(
     err: unknown,
     deviceId: string,

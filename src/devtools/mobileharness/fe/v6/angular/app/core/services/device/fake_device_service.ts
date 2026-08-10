@@ -279,6 +279,17 @@ export class FakeDeviceService extends DeviceService {
     return of(undefined).pipe(delay(1000));
   }
 
+  /**
+   * Prepares the device (Fake implementation).
+   *
+   * @param id The ID of the device to prepare.
+   * @return An Observable that completes after a delay.
+   */
+  override prepareDevice(id: string): Observable<void> {
+    console.log(`FakeService: Preparing device ${id}`);
+    return of(undefined).pipe(delay(1000));
+  }
+
   // override remoteControl(
   //   id: string,
   //   req: RemoteControlRequest,
@@ -339,6 +350,17 @@ export class FakeDeviceService extends DeviceService {
       scenario.actionVisibility?.remoteControl ?? true;
     const quarantineVisible = scenario.actionVisibility?.quarantine ?? true;
     const decommissionVisible = isMissing;
+    const isFusion = Object.values(
+      overview.dimensions?.supported ?? {},
+    ).some((group) =>
+      group.dimensions?.some(
+        (dim) =>
+          dim.name === 'dm_type' &&
+          dim.value?.toLowerCase() === 'fusion',
+      ),
+    );
+    const prepareVisible =
+      scenario.actionVisibility?.prepare ?? (!isMissing && isFusion);
 
     return {
       id: overview.id,
@@ -409,6 +431,12 @@ export class FakeDeviceService extends DeviceService {
           enabled: true,
           visible: decommissionVisible,
           tooltip: 'Decommission device',
+          isReady: !scenario.allActionsNotReady,
+        },
+        prepare: {
+          enabled: true,
+          visible: prepareVisible,
+          tooltip: 'Prepare the device (reset to a known good state)',
           isReady: !scenario.allActionsNotReady,
         },
       },

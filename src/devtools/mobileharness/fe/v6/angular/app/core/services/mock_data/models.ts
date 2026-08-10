@@ -47,6 +47,7 @@ export interface MockDeviceScenario extends BaseMockScenario {
     readonly flash?: boolean;
     readonly remoteControl?: boolean;
     readonly quarantine?: boolean;
+    readonly prepare?: boolean;
   };
   readonly allActionsNotReady?: boolean;
   readonly testbedConfig?: TestbedConfig;

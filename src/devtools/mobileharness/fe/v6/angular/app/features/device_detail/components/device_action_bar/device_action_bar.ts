@@ -73,6 +73,7 @@ export class DeviceActionBar {
     'configuration',
     'screenshot',
     'remoteControl',
+    'prepare',
     'flash',
     'logcat',
     'quarantine',
@@ -83,6 +84,7 @@ export class DeviceActionBar {
     'configuration',
     'screenshot',
     'remoteControl',
+    'prepare',
   ];
 
   protected readonly layoutXlMenu: Array<keyof DeviceActions> = [
@@ -99,6 +101,7 @@ export class DeviceActionBar {
   protected readonly layoutSmMenu: Array<keyof DeviceActions> = [
     'screenshot',
     'remoteControl',
+    'prepare',
     'flash',
     'logcat',
     'quarantine',
@@ -115,6 +118,9 @@ export class DeviceActionBar {
         break;
       case 'remoteControl':
         this.onRemoteControl();
+        break;
+      case 'prepare':
+        this.onPrepare();
         break;
       case 'flash':
         this.onFlash();
@@ -230,6 +236,14 @@ export class DeviceActionBar {
       this.hostName(),
       this.pageData().overview,
     );
+  };
+
+  /**
+   * Handles the prepare action for the device.
+   * Invokes the prepare device flow via device actions.
+   */
+  readonly onPrepare = () => {
+    this.deviceActions.prepareDevice(this.deviceId());
   };
 
   readonly onFlash = () => {
