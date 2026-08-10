@@ -337,6 +337,9 @@ message DeviceInfo {
   // Optional.
   mobileharness.api.model.DeviceCondition device_condition = 5;
 
+  // Optional. The health category of the device.
+  optional mobileharness.api.model.HealthCategory health_category = 6;
+
   // TODO: Adds more fields.
 }
 

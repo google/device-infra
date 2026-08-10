@@ -23,6 +23,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceProperties;
+import com.google.devtools.mobileharness.api.model.proto.Device.HealthCategory;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
@@ -152,6 +153,12 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
                 property ->
                     addAttribute(
                         deviceEntry, property.getName(), Optional.of(property.getValue())));
+
+        if (deviceInfo.hasHealthCategory()
+            && deviceInfo.getHealthCategory() != HealthCategory.HEALTH_CATEGORY_UNSPECIFIED) {
+          addAttribute(
+              deviceEntry, "health_category", Optional.of(deviceInfo.getHealthCategory().name()));
+        }
 
         record.addDeviceEntry(deviceEntry.build());
       }

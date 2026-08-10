@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceProperties;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceProperty;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
+import com.google.devtools.mobileharness.api.model.proto.Device.HealthCategory;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
@@ -376,6 +377,61 @@ public final class LabInfoPullerImplTest {
                 .addAttribute(Attribute.newBuilder().setName("version").setValue("15.0"))
                 .addAttribute(Attribute.newBuilder().setName("model").setValue("iPhone 11 Pro"))
                 .addAttribute(Attribute.newBuilder().setName("software_version").setValue("15.0"))
+                .build());
+  }
+
+  @Test
+  public void pull_success_withHealthCategory() throws Exception {
+    DeviceInfo deviceWithHealthCategory =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(
+                DeviceLocator.newBuilder().setId("android_uuid").setLabLocator(LAB_LOCATOR))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .addType("AndroidRealDevice")
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder().setName("model").setValue("Pixel 6"))
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder()
+                                    .setName("software_version")
+                                    .setValue("31"))))
+            .setHealthCategory(HealthCategory.HEALTH_CATEGORY_IN_SERVICE)
+            .build();
+
+    when(labInfoProvider.getLabInfos(any(Filter.class)))
+        .thenReturn(
+            LabView.newBuilder()
+                .setLabTotalCount(1)
+                .addLabData(
+                    LabData.newBuilder()
+                        .setLabInfo(LAB_INFO)
+                        .setDeviceList(
+                            DeviceList.newBuilder()
+                                .setDeviceTotalCount(1)
+                                .addDeviceInfo(deviceWithHealthCategory)))
+                .build());
+
+    ImmutableList<MonitoredRecord> monitoredRecords = labInfoPuller.pull();
+
+    assertThat(monitoredRecords).hasSize(1);
+    MonitoredRecord monitoredRecord = monitoredRecords.get(0);
+    assertThat(monitoredRecord.getDeviceEntryList())
+        .containsExactly(
+            MonitoredEntry.newBuilder()
+                .putIdentifier("device_id", "android_uuid")
+                .addAttribute(
+                    Attribute.newBuilder().setName("device_type").setValue("AndroidRealDevice"))
+                .addAttribute(Attribute.newBuilder().setName("status").setValue("IDLE"))
+                .addAttribute(Attribute.newBuilder().setName("version").setValue("31"))
+                .addAttribute(Attribute.newBuilder().setName("model").setValue("Pixel 6"))
+                .addAttribute(Attribute.newBuilder().setName("software_version").setValue("31"))
+                .addAttribute(
+                    Attribute.newBuilder()
+                        .setName("health_category")
+                        .setValue("HEALTH_CATEGORY_IN_SERVICE"))
                 .build());
   }
 }
