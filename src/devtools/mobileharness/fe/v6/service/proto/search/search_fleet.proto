@@ -260,8 +260,9 @@ message FleetGroupHeaderView {
 }
 
 // Expand one group: returns rows inside a specific group card.
-// Page size is fixed server-side at 100 (not overridable by the client) —
-// group cards show a bounded peek, not an arbitrarily long list.
+// Page size is fixed server-side at 100 (not overridable by the client) and the
+// rows are ordered by device UUID, so a group card shows a bounded, stable peek
+// rather than an arbitrarily long or client-sortable list.
 message FleetGroupExpandView {
   // Opaque group identifier from the GroupHeaderView response.
   string group_id = 1;
@@ -269,8 +270,10 @@ message FleetGroupExpandView {
   // Same column spec as FlatView.
   repeated string columns = 2;
 
-  // Same sort spec as FlatView.
-  FleetColumnSort sort = 3;
+  // The group expansion is a fixed device-UUID-ascending peek, so it carries no
+  // client sort; field number 3 and the field name "sort" are reserved.
+  reserved 3;
+  reserved "sort";
 
   // Cursor for pagination within this group. Empty = first page.
   string page_token = 4;
