@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.singledevice;
 
+
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ArrayListMultimap;
