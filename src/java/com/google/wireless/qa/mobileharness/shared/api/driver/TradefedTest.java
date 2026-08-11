@@ -398,6 +398,17 @@ public class TradefedTest extends BaseDriver
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Error when copying Tradefed gen files: %s", MoreThrowables.shortDebugString(e));
+      if (testInfo.resultWithCause().get().type() == TestResult.PASS
+          || testInfo.resultWithCause().get().type() == TestResult.UNKNOWN) {
+        testInfo
+            .resultWithCause()
+            .setNonPassing(
+                TestResult.ERROR,
+                MobileHarnessExceptionFactory.createUserFacingException(
+                    AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR,
+                    "Failed to copy Tradefed gen files: " + e.getMessage(),
+                    e));
+      }
     } catch (InterruptedException e) {
       logger.atWarning().log(
           "Interrupted when copying Tradefed gen files: %s", MoreThrowables.shortDebugString(e));

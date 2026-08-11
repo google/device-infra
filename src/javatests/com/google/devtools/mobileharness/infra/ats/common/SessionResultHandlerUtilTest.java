@@ -22,7 +22,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Metric;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
@@ -47,9 +51,12 @@ import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Status;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import java.nio.file.Path;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -485,5 +492,142 @@ public final class SessionResultHandlerUtilTest {
                 .exists())
         .isTrue();
     assertThat(invocationDir.resolve("tradefed.log").toFile().exists()).isTrue();
+  }
+
+  @Test
+  public void isSessionCompleted_emptyJobs_returnsFalse() {
+    assertThat(sessionResultHandlerUtil.isSessionCompleted(ImmutableList.of())).isFalse();
+  }
+
+  @Test
+  public void isSessionCompleted_allTestsPassed_returnsTrue() {
+    JobInfo job1 = createMockJobWithTestResult(TestResult.PASS);
+    JobInfo job2 = createMockJobWithTestResult(TestResult.PASS);
+    assertThat(sessionResultHandlerUtil.isSessionCompleted(ImmutableList.of(job1, job2))).isTrue();
+  }
+
+  @Test
+  public void isSessionCompleted_oneTestFailed_returnsTrue() {
+    JobInfo job1 = createMockJobWithTestResult(TestResult.PASS);
+    JobInfo job2 = createMockJobWithTestResult(TestResult.FAIL);
+    assertThat(sessionResultHandlerUtil.isSessionCompleted(ImmutableList.of(job1, job2))).isTrue();
+  }
+
+  @Test
+  public void isSessionCompleted_oneTestSkipped_returnsTrue() {
+    JobInfo job1 = createMockJobWithTestResult(TestResult.PASS);
+    JobInfo job2 = createMockJobWithTestResult(TestResult.SKIP);
+    assertThat(sessionResultHandlerUtil.isSessionCompleted(ImmutableList.of(job1, job2))).isTrue();
+  }
+
+  @Test
+  public void isSessionCompleted_oneTestErrored_returnsFalse() {
+    JobInfo job1 = createMockJobWithTestResult(TestResult.PASS);
+    JobInfo job2 = createMockJobWithTestResult(TestResult.ERROR);
+    assertThat(sessionResultHandlerUtil.isSessionCompleted(ImmutableList.of(job1, job2))).isFalse();
+  }
+
+  @Test
+  public void isSessionCompleted_oneTestUnknown_returnsFalse() {
+    JobInfo job1 = createMockJobWithTestResult(TestResult.PASS);
+    JobInfo job2 = createMockJobWithTestResult(TestResult.UNKNOWN);
+    assertThat(sessionResultHandlerUtil.isSessionCompleted(ImmutableList.of(job1, job2))).isFalse();
+  }
+
+  @Test
+  public void isSessionCompleted_jobWithNoTests_returnsFalse() {
+    JobInfo job = Mockito.mock(JobInfo.class);
+    TestInfos mockTestInfos = Mockito.mock(TestInfos.class);
+    Status mockStatus = Mockito.mock(Status.class);
+    com.google.devtools.mobileharness.api.model.job.out.Result mockJobResult =
+        Mockito.mock(com.google.devtools.mobileharness.api.model.job.out.Result.class);
+    ResultTypeWithCause mockJobResultTypeWithCause = Mockito.mock(ResultTypeWithCause.class);
+
+    when(job.tests()).thenReturn(mockTestInfos);
+    when(mockTestInfos.getAll()).thenReturn(ImmutableListMultimap.of());
+    when(job.status()).thenReturn(mockStatus);
+    when(mockStatus.get()).thenReturn(TestStatus.DONE);
+    when(job.resultWithCause()).thenReturn(mockJobResult);
+    when(mockJobResult.get()).thenReturn(mockJobResultTypeWithCause);
+    when(mockJobResultTypeWithCause.type()).thenReturn(TestResult.PASS);
+
+    assertThat(sessionResultHandlerUtil.isSessionCompleted(ImmutableList.of(job))).isFalse();
+  }
+
+  @Test
+  public void isSessionCompleted_oneJobWithTestsOneJobWithout_returnsFalse() {
+    JobInfo job1 = createMockJobWithTestResult(TestResult.PASS);
+    JobInfo job2 = Mockito.mock(JobInfo.class);
+    TestInfos mockTestInfos = Mockito.mock(TestInfos.class);
+    Status mockStatus = Mockito.mock(Status.class);
+    com.google.devtools.mobileharness.api.model.job.out.Result mockJobResult =
+        Mockito.mock(com.google.devtools.mobileharness.api.model.job.out.Result.class);
+    ResultTypeWithCause mockJobResultTypeWithCause = Mockito.mock(ResultTypeWithCause.class);
+
+    when(job2.tests()).thenReturn(mockTestInfos);
+    when(mockTestInfos.getAll()).thenReturn(ImmutableListMultimap.of());
+    when(job2.status()).thenReturn(mockStatus);
+    when(mockStatus.get()).thenReturn(TestStatus.DONE);
+    when(job2.resultWithCause()).thenReturn(mockJobResult);
+    when(mockJobResult.get()).thenReturn(mockJobResultTypeWithCause);
+    when(mockJobResultTypeWithCause.type()).thenReturn(TestResult.PASS);
+
+    assertThat(sessionResultHandlerUtil.isSessionCompleted(ImmutableList.of(job1, job2))).isFalse();
+  }
+
+  @Test
+  public void isSessionCompleted_jobRunning_returnsFalse() {
+    JobInfo job = Mockito.mock(JobInfo.class);
+    Status mockStatus = Mockito.mock(Status.class);
+    when(job.status()).thenReturn(mockStatus);
+    when(mockStatus.get()).thenReturn(TestStatus.RUNNING);
+
+    assertThat(sessionResultHandlerUtil.isSessionCompleted(ImmutableList.of(job))).isFalse();
+  }
+
+  @Test
+  public void isSessionCompleted_jobSkippedWithNoTests_returnsTrue() {
+    JobInfo job = Mockito.mock(JobInfo.class);
+    Status mockStatus = Mockito.mock(Status.class);
+    com.google.devtools.mobileharness.api.model.job.out.Result mockJobResult =
+        Mockito.mock(com.google.devtools.mobileharness.api.model.job.out.Result.class);
+    ResultTypeWithCause mockJobResultTypeWithCause = Mockito.mock(ResultTypeWithCause.class);
+    TestInfos mockTestInfos = Mockito.mock(TestInfos.class);
+
+    when(job.status()).thenReturn(mockStatus);
+    when(mockStatus.get()).thenReturn(TestStatus.DONE);
+    when(job.resultWithCause()).thenReturn(mockJobResult);
+    when(mockJobResult.get()).thenReturn(mockJobResultTypeWithCause);
+    when(mockJobResultTypeWithCause.type()).thenReturn(TestResult.SKIP);
+    when(job.tests()).thenReturn(mockTestInfos);
+    when(mockTestInfos.getAll()).thenReturn(ImmutableListMultimap.of());
+
+    assertThat(sessionResultHandlerUtil.isSessionCompleted(ImmutableList.of(job))).isTrue();
+  }
+
+  private JobInfo createMockJobWithTestResult(TestResult testResult) {
+    JobInfo mockJobInfo = Mockito.mock(JobInfo.class);
+    TestInfos mockTestInfos = Mockito.mock(TestInfos.class);
+    TestInfo mockTestInfo = Mockito.mock(TestInfo.class);
+    com.google.devtools.mobileharness.api.model.job.out.Result mockResult =
+        Mockito.mock(com.google.devtools.mobileharness.api.model.job.out.Result.class);
+    ResultTypeWithCause mockResultTypeWithCause = Mockito.mock(ResultTypeWithCause.class);
+    Status mockStatus = Mockito.mock(Status.class);
+    com.google.devtools.mobileharness.api.model.job.out.Result mockJobResult =
+        Mockito.mock(com.google.devtools.mobileharness.api.model.job.out.Result.class);
+    ResultTypeWithCause mockJobResultTypeWithCause = Mockito.mock(ResultTypeWithCause.class);
+
+    when(mockJobInfo.tests()).thenReturn(mockTestInfos);
+    when(mockTestInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", mockTestInfo));
+    when(mockTestInfo.resultWithCause()).thenReturn(mockResult);
+    when(mockResult.get()).thenReturn(mockResultTypeWithCause);
+    when(mockResultTypeWithCause.type()).thenReturn(testResult);
+
+    when(mockJobInfo.status()).thenReturn(mockStatus);
+    when(mockStatus.get()).thenReturn(TestStatus.DONE);
+    when(mockJobInfo.resultWithCause()).thenReturn(mockJobResult);
+    when(mockJobResult.get()).thenReturn(mockJobResultTypeWithCause);
+    when(mockJobResultTypeWithCause.type()).thenReturn(TestResult.PASS);
+    return mockJobInfo;
   }
 }

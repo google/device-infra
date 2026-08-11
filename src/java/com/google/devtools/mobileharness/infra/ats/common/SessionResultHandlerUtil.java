@@ -65,6 +65,7 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -1196,19 +1197,31 @@ public class SessionResultHandlerUtil {
     }
   }
 
-  /** Returns true if any of the {@code jobInfos} has a test with a completed result. */
+  /**
+   * Returns true if all of the {@code jobInfos} have tests and all tests have completed results.
+   */
   public boolean isSessionCompleted(List<JobInfo> jobInfos) {
     if (jobInfos.isEmpty()) {
       return false;
     }
     for (JobInfo jobInfo : jobInfos) {
-      for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
-        if (COMPLETED_RESULTS.contains(testInfo.resultWithCause().get().type())) {
-          return true;
+      if (jobInfo.status().get() != TestStatus.DONE) {
+        return false;
+      }
+      if (jobInfo.resultWithCause().get().type() == TestResult.SKIP) {
+        continue;
+      }
+      java.util.Collection<TestInfo> tests = jobInfo.tests().getAll().values();
+      if (tests.isEmpty()) {
+        return false;
+      }
+      for (TestInfo testInfo : tests) {
+        if (!COMPLETED_RESULTS.contains(testInfo.resultWithCause().get().type())) {
+          return false;
         }
       }
     }
-    return false;
+    return true;
   }
 
   /** Copy the previous attempts' result files to current session's result directory */
