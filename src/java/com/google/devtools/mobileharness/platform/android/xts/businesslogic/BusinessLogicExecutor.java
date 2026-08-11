@@ -59,8 +59,12 @@ public final class BusinessLogicExecutor {
     Method matchedMethod =
         stream(target.getClass().getMethods())
             .filter(m -> m.getName().equals(methodName))
-            .filter(m -> m.getParameterCount() == args.length)
-            .filter(m -> stream(m.getParameterTypes()).allMatch(p -> p.equals(String.class)))
+            .filter(
+                m ->
+                    (m.getParameterCount() == args.length
+                            && stream(m.getParameterTypes()).allMatch(p -> p.equals(String.class)))
+                        || (m.getParameterCount() == 1
+                            && m.getParameterTypes()[0].equals(String[].class)))
             .findFirst()
             .orElseThrow(
                 () ->
@@ -68,6 +72,10 @@ public final class BusinessLogicExecutor {
                         "Method "
                             + method
                             + " not found or parameters do not match Strings array"));
+    if (matchedMethod.getParameterCount() == 1
+        && matchedMethod.getParameterTypes()[0].equals(String[].class)) {
+      return matchedMethod.invoke(target, (Object) args);
+    }
     return matchedMethod.invoke(target, (Object[]) args);
   }
 

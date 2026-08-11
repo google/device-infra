@@ -19,6 +19,7 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -443,5 +444,90 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
             any(),
             eq(Duration.ofMillis(100)),
             any());
+  }
+
+  @Test
+  public void run_continueTestWithFeatures_deviceLacksMatchingFeature_skipsTest() throws Exception {
+    AndroidBusinessLogicSkipModuleDecoratorSpec spec =
+        AndroidBusinessLogicSkipModuleDecoratorSpec.newBuilder()
+            .setBusinessLogicUrl("http://fake-url/logic")
+            .build();
+    when(jobInfo.combinedSpec(decorator, "fake_device_id")).thenReturn(spec);
+    when(jobProperties.getOptional(SessionHandlerHelper.XTS_MODULE_NAME_PROP))
+        .thenReturn(Optional.of("AndroidBusinessLogicSkipModuleDecorator"));
+
+    // Mock device lacking any matching feature
+    when(mockAndroidSystemSpecUtil.getSystemFeatures("fake_device_id"))
+        .thenReturn(ImmutableSet.of("feature:android.hardware.type.television"));
+
+    String jsonLogic =
+        """
+        {
+          "businessLogicRulesLists": [
+            {
+              "testName":
+                  "com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidBusinessLogicSkipModuleDecorator#AndroidBusinessLogicSkipModuleDecorator",
+              "businessLogicRules": [
+                {
+                  "ruleConditions": [],
+                  "ruleActions": [
+                    {
+                      "methodName": "continueTestWithFeatures",
+                      "methodArgs": ["com.google.android.feature.AICORE_QC_SM8850"]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """;
+    when(mockFetcher.fetchBusinessLogic(
+            anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
+        .thenReturn(jsonLogic);
+
+    // Call run(testInfo)
+    decorator.run(testInfo);
+
+    // Verify that setNonPassing was called on resultWithCause at least once!
+    verify(testResultWithCause, atLeastOnce())
+        .setNonPassing(eq(TestResult.SKIP), any(MobileHarnessException.class));
+  }
+
+  @Test
+  public void run_withDeviceData_gathersSocModelProperty() throws Exception {
+    AndroidBusinessLogicSkipModuleDecoratorSpec spec =
+        AndroidBusinessLogicSkipModuleDecoratorSpec.newBuilder()
+            .setBusinessLogicUrl("http://fake-url/logic")
+            .build();
+    when(jobInfo.combinedSpec(decorator, "fake_device_id")).thenReturn(spec);
+
+    when(mockAndroidSystemSpecUtil.getSystemFeatures("fake_device_id"))
+        .thenReturn(ImmutableSet.of("feature:android.hardware.type.television"));
+    when(mockAndroidAdbUtil.getProperty("fake_device_id", ImmutableList.of("ro.soc.model")))
+        .thenReturn("SM8850");
+    when(mockAndroidPackageManagerUtil.listPackages("fake_device_id", PackageType.ALL))
+        .thenReturn(ImmutableSet.of("com.google.android.gms"));
+    when(mockFetcher.fetchBusinessLogic(
+            anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
+        .thenReturn("{}");
+
+    // Run decorator normally without assertThrows
+    decorator.run(testInfo);
+
+    // Verify that ro.soc.model is gathered and included in properties
+    verify(mockFetcher)
+        .fetchBusinessLogic(
+            eq("http://fake-url/logic"),
+            eq(""),
+            eq(""),
+            eq(System.getenv("APE_API_KEY")),
+            eq(Duration.ofSeconds(60)),
+            eq(
+                ImmutableSetMultimap.<String, String>builder()
+                    .put("features", "android.hardware.type.television")
+                    .put("properties", "ro.soc.model:SM8850")
+                    .put("packages", "com.google.android.gms")
+                    .build()));
   }
 }

@@ -16,6 +16,7 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.stream.Collectors.toCollection;
 
 import com.google.common.base.Splitter;
@@ -47,6 +48,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidBusinessLogicSkipModuleDecoratorSpec;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -93,7 +95,8 @@ public class AndroidBusinessLogicSkipModuleDecorator extends SetupOnlyDecorator
           "ro.product.first_api_level",
           "ro.product.manufacturer",
           "ro.product.model",
-          "ro.product.name");
+          "ro.product.name",
+          "ro.soc.model");
 
   private static final ImmutableSet<String> BUSINESS_LOGIC_DEVICE_PACKAGES =
       ImmutableSet.of("com.google.android.gms", "com.android.vending");
@@ -208,6 +211,27 @@ public class AndroidBusinessLogicSkipModuleDecorator extends SetupOnlyDecorator
   }
 
   /** Called via reflection by {@link BusinessLogicExecutor}. */
+  public void continueTestWithFeatures(String... allowedFeatures)
+      throws MobileHarnessException, InterruptedException {
+    String deviceId = getDevice().getDeviceId();
+    Set<String> deviceFeatures = androidSystemSpecUtil.getSystemFeatures(deviceId);
+    ImmutableSet<String> strippedFeatures =
+        deviceFeatures.stream()
+            .map(f -> f.startsWith(FEATURE_PREFIX) ? f.substring(FEATURE_PREFIX.length()) : f)
+            .collect(toImmutableSet());
+    ImmutableSet<String> allowedSet = ImmutableSet.copyOf(allowedFeatures);
+    boolean hasMatchingFeature = !Collections.disjoint(strippedFeatures, allowedSet);
+    if (hasMatchingFeature) {
+      this.evaluationResultException = null;
+    } else {
+      skipTest(
+          String.format(
+              "Module skipped because device lacks required features. Allowed: %s, Device: %s",
+              allowedSet, strippedFeatures));
+    }
+  }
+
+  /** Called via reflection by {@link BusinessLogicExecutor}. */
   public void skipTest(String errorMessage) {
     MobileHarnessException exception =
         MobileHarnessExceptionFactory.createExceptionWithoutStackTrace(
@@ -258,8 +282,8 @@ public class AndroidBusinessLogicSkipModuleDecorator extends SetupOnlyDecorator
       Set<String> strippedFeatures =
           deviceFeatures.stream()
               .map(f -> f.substring(FEATURE_PREFIX.length()))
+              .filter(f -> BUSINESS_LOGIC_DEVICE_FEATURES.contains(f))
               .collect(toCollection(HashSet::new));
-      strippedFeatures.retainAll(BUSINESS_LOGIC_DEVICE_FEATURES);
       paramsBuilder.putAll("features", strippedFeatures);
     } catch (MobileHarnessException e) {
       testInfo.log().atWarning().alsoTo(logger).withCause(e).log("Failed to get device features");
