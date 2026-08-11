@@ -208,6 +208,16 @@ func runMain() int {
 	flag.Set("logtostderr", "true")
 	flag.Set("stderrthreshold", "INFO")
 	flag.Set("logtostderr", "true")
+	// Disable envelope by default when not running on Borg to avoid crashes
+	// in environments without envelope support (e.g. Kokoro, GCE).
+	if os.Getenv("BORG_TASK_ID") == "" {
+		if f := flag.Lookup("envelope_enabled"); f != nil {
+			f.Value.Set("false")
+		}
+		if f := flag.Lookup("disable_svelte"); f != nil {
+			f.Value.Set("true")
+		}
+	}
 	flag.Parse()
 
 	if *printVersion == true {
