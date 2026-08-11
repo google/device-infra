@@ -151,7 +151,7 @@ public final class BuiltinFlags {
                   .put("add_supported_dimension_for_omni_mode_usage", "public_testing")
                   .put("android_factory_reset_wait_time", "3m")
                   .put("check_android_device_sim_card_type", "false")
-                  .put("clear_android_device_multi_users", "false")
+                  .put("clear_android_device_multi_users", "true")
                   .put("disable_device_reboot", "false")
                   .put("disable_wifi_util_func", "false")
                   .put("enable_android_device_ready_check", "true")
