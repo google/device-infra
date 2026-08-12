@@ -148,7 +148,7 @@ public final class BuiltinFlags {
                   .putAll(ATS_LAB_SERVER_COMMON_FLAG_MAP)
                   // keep-sorted start
                   .put("add_required_dimension_for_partner_shared_pool", "true")
-                  .put("add_supported_dimension_for_omni_mode_usage", "public_testing")
+                  .put("add_supported_dimension_for_omni_mode_usage", "public_testing,dda")
                   .put("android_factory_reset_wait_time", "3m")
                   .put("check_android_device_sim_card_type", "false")
                   .put("clear_android_device_multi_users", "true")
