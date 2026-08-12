@@ -34,3 +34,31 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
     ],
 )
+
+java_library(
+    name = "fleet_cell_mapper",
+    srcs = ["FleetCellMapper.java"],
+    deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_common_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:device_record",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_search_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "fleet_flat_searcher",
+    srcs = ["FleetFlatSearcher.java"],
+    deps = [
+        ":fleet_cell_mapper",
+        ":fleet_filter_engine",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:device_record",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_search_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
