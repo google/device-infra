@@ -215,7 +215,7 @@ public class TradefedTest extends BaseDriver
     String xtsType = Strings.emptyToNull(spec.getXtsType());
     tradefedRunStrategy =
         spec.getXtsType().isEmpty()
-            ? new NonXtsRunStrategy(localFileUtil)
+            ? new NonXtsRunStrategy(localFileUtil, systemUtil)
             : new XtsRunStrategy(
                 localFileUtil, resUtil, systemUtil, clock, xtsType, xtsCommandUtil);
 
@@ -927,7 +927,7 @@ public class TradefedTest extends BaseDriver
       getDeviceIds().forEach(serial -> tradefedRunCommand.add("-s", serial));
     }
     appendInvocationDataFromHelper(tradefedRunCommand);
-    return tradefedRunCommand.build();
+    return tradefedRunCommand.addAll(tradefedRunStrategy.getExtraRunCommandArgs(testInfo)).build();
   }
 
   private void appendInvocationDataFromHelper(ImmutableList.Builder<String> tradefedRunCommand)

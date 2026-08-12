@@ -118,4 +118,13 @@ public interface TradefedRunStrategy {
   default ImmutableList<String> getExtraJvmFlags(Path workDir) {
     return ImmutableList.of();
   }
+
+  /**
+   * Returns a list of extra command-line arguments for the Tradefed run command.
+   *
+   * @param testInfo the test info
+   */
+  default ImmutableList<String> getExtraRunCommandArgs(TestInfo testInfo) {
+    return ImmutableList.of();
+  }
 }

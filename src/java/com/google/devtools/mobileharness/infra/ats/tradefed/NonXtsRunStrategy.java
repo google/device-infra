@@ -29,6 +29,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.TradefedTestDriverSpec;
 import java.nio.file.Path;
@@ -44,11 +45,21 @@ public final class NonXtsRunStrategy implements TradefedRunStrategy {
   private static final String TF_PATH_KEY = "TF_PATH";
   private static final String CONSOLE_CLASS = "com.android.tradefed.command.Console";
   private static final String TF_TMP_DIR = "tf_tmp";
-  private static final SystemUtil SYSTEM_UTIL = new SystemUtil();
+  private static final String INVOCATION_ID_PROPERTY = "ab_invocation_id";
+  private static final String WORKUNIT_ID_PROPERTY = "ab_workunit_id";
+  private static final String APPEND_ANTS_INVOCATION_DATA_KEY = "APPEND_ANTS_INVOCATION_DATA";
+  private static final String APPEND_RDB_INVOCATION_DATA_KEY = "APPEND_RDB_INVOCATION_DATA";
+
   private final LocalFileUtil localFileUtil;
+  private final SystemUtil systemUtil;
 
   public NonXtsRunStrategy(LocalFileUtil localFileUtil) {
+    this(localFileUtil, new SystemUtil());
+  }
+
+  public NonXtsRunStrategy(LocalFileUtil localFileUtil, SystemUtil systemUtil) {
     this.localFileUtil = localFileUtil;
+    this.systemUtil = systemUtil;
   }
 
   @Override
@@ -122,7 +133,7 @@ public final class NonXtsRunStrategy implements TradefedRunStrategy {
 
   @Override
   public String getJavaPath(Path workDir) {
-    return SYSTEM_UTIL.getJavaBin();
+    return systemUtil.getJavaBin();
   }
 
   @Override
@@ -173,5 +184,53 @@ public final class NonXtsRunStrategy implements TradefedRunStrategy {
   @Override
   public ImmutableList<String> getExtraJvmFlags(Path workDir) {
     return ImmutableList.of(String.format("-Djava.io.tmpdir=%s", workDir.resolve(TF_TMP_DIR)));
+  }
+
+  @Override
+  public ImmutableList<String> getExtraRunCommandArgs(TestInfo testInfo) {
+    ImmutableList.Builder<String> extraArgs = ImmutableList.builder();
+    boolean appendAnts = Boolean.parseBoolean(systemUtil.getEnv(APPEND_ANTS_INVOCATION_DATA_KEY));
+    boolean appendRdb = Boolean.parseBoolean(systemUtil.getEnv(APPEND_RDB_INVOCATION_DATA_KEY));
+
+    String workUnitId = testInfo.properties().get(WORKUNIT_ID_PROPERTY);
+    String invocationId = testInfo.jobInfo().properties().get(INVOCATION_ID_PROPERTY);
+    if (appendAnts && workUnitId != null && invocationId != null) {
+      addInvocationData(extraArgs, "invocation_id", invocationId);
+      addInvocationData(extraArgs, "work_unit_id", workUnitId);
+    }
+
+    String resultDbInvocationId =
+        testInfo.properties().getOptional(PropertyName.Test.RESULTDB_INVOCATION_ID).orElse("");
+    String resultDbUpdateToken =
+        testInfo.properties().getOptional(PropertyName.Test.RESULTDB_UPDATE_TOKEN).orElse("");
+    if (appendRdb && !resultDbInvocationId.isEmpty() && !resultDbUpdateToken.isEmpty()) {
+      addInvocationData(extraArgs, "resultdb_invocation_id", resultDbInvocationId);
+      addInvocationData(extraArgs, "resultdb_invocation_update_token", resultDbUpdateToken);
+    }
+
+    String resultDbRootInvocationId =
+        testInfo.properties().getOptional(PropertyName.Test.RESULTDB_ROOT_INVOCATION_ID).orElse("");
+    String resultDbWorkUnitId =
+        testInfo.properties().getOptional(PropertyName.Test.RESULTDB_WORK_UNIT_ID).orElse("");
+    String resultDbWorkUnitUpdateToken =
+        testInfo
+            .properties()
+            .getOptional(PropertyName.Test.RESULTDB_WORK_UNIT_UPDATE_TOKEN)
+            .orElse("");
+    if (appendRdb
+        && !resultDbRootInvocationId.isEmpty()
+        && !resultDbWorkUnitId.isEmpty()
+        && !resultDbWorkUnitUpdateToken.isEmpty()) {
+      addInvocationData(extraArgs, "resultdb_root_invocation_id", resultDbRootInvocationId);
+      addInvocationData(extraArgs, "resultdb_work_unit_id", resultDbWorkUnitId);
+      addInvocationData(extraArgs, "resultdb_work_unit_update_token", resultDbWorkUnitUpdateToken);
+    }
+
+    return extraArgs.build();
+  }
+
+  private static void addInvocationData(
+      ImmutableList.Builder<String> command, String key, String value) {
+    command.add("--invocation-data").add(String.format("%s=%s", key, value));
   }
 }
