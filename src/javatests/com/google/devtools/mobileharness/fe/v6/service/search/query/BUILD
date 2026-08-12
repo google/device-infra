@@ -36,6 +36,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:ats_one_curation",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_chip_resolver",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_column_cataloger",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_filter_engine",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_flat_searcher",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_key_priority",
