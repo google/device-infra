@@ -146,3 +146,21 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
     ],
 )
+
+java_library(
+    name = "fleet_suggester",
+    srcs = ["FleetSuggester.java"],
+    deps = [
+        ":fleet_filter_engine",
+        ":scenario_curation",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_common_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:device_record",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_search_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
