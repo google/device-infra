@@ -1,0 +1,164 @@
+:host {
+  display: block;
+}
+
+.test-history {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #fce8e6;
+  color: #c5221f;
+  font-size: 14px;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.table-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 16px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.test-history-table {
+  width: 100%;
+  background: transparent;
+
+  th.mat-mdc-header-cell {
+    background: #f8f9fa;
+    color: #5f6368;
+    font-weight: 500;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  td.mat-mdc-cell {
+    color: #3c4043;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  tr.mat-mdc-row:hover {
+    background: #f8f9fa;
+  }
+}
+
+.test-link {
+  color: #1a73e8;
+  text-decoration: none;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 12px;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.text-cell {
+  color: #3c4043;
+}
+
+.devices-cell {
+  color: #3c4043;
+}
+
+.device-sep {
+  color: #9aa0a6;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+
+.status-ok {
+  background: #e6f4ea;
+  color: #137333;
+  border-color: #ceead6;
+}
+
+.status-active {
+  background: #e8f0fe;
+  color: #1967d2;
+  border-color: #d2e3fc;
+}
+
+.status-error {
+  background: #fce8e6;
+  color: #c5221f;
+  border-color: #f6cbc7;
+}
+
+.status-neutral {
+  background: #f1f3f4;
+  color: #5f6368;
+  border-color: #e0e0e0;
+}
+
+.state-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  color: #5f6368;
+  font-size: 14px;
+}
+
+.empty-state {
+  color: #80868b;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 8px 12px;
+  border-top: 1px solid #eee;
+}
+
+.page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #5f6368;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: #f1f3f4;
+    color: #3c4043;
+  }
+
+  &:disabled {
+    color: #dadce0;
+    cursor: not-allowed;
+  }
+}

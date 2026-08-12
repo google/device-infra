@@ -23,6 +23,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceServic
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHealthinessStatsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceRecoveryTaskStatsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceTestHistoryRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceTestHistoryResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceTestResultStatsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatResponse;
@@ -89,6 +91,19 @@ public final class DeviceServiceGrpcImpl extends DeviceServiceGrpc.DeviceService
         executor,
         DeviceServiceGrpc.getServiceDescriptor(),
         DeviceServiceGrpc.getGetDeviceTestResultStatsMethod());
+  }
+
+  @Override
+  public void getDeviceTestHistory(
+      GetDeviceTestHistoryRequest request,
+      StreamObserver<GetDeviceTestHistoryResponse> responseObserver) {
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        logic::getDeviceTestHistory,
+        executor,
+        DeviceServiceGrpc.getServiceDescriptor(),
+        DeviceServiceGrpc.getGetDeviceTestHistoryMethod());
   }
 
   @Override

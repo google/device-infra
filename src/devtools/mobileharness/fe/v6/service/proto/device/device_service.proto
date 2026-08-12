@@ -23,6 +23,7 @@ import "google/protobuf/timestamp.proto";
 import "google/type/date.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/device/device_resources.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/device/device_stats.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/search/search_common.proto";
 
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.device";
 option java_multiple_files = true;
@@ -119,6 +120,21 @@ service DeviceService {
     option (google.api.http) = {
       post: "/v6/devices/{id}:prepare",
       body: "*"
+    };
+  }
+
+  // Returns the historical tests that ran on this device, newest first.
+  //
+  // This backs the Device Detail "Test history" tab. It is the test search
+  // (SearchService.SearchTjs) result table pinned to a single device, exposed
+  // as a purpose-built device endpoint so the frontend needs no filter model:
+  // it sends the device id and a page cursor and renders the returned columns
+  // and rows. Sorting is fixed to create time descending (a MOSS constraint)
+  // and pagination is cursor based with no total count.
+  rpc GetDeviceTestHistory(GetDeviceTestHistoryRequest)
+      returns (GetDeviceTestHistoryResponse) {
+    option (google.api.http) = {
+      get: "/v6/devices/{id}/test-history"
     };
   }
 }
@@ -278,3 +294,36 @@ message PrepareDeviceRequest {
 
 // Response for PrepareDevice.
 message PrepareDeviceResponse {}
+
+// Request for GetDeviceTestHistory.
+message GetDeviceTestHistoryRequest {
+  // The device ID whose tests are listed.
+  string id = 1;
+
+  // Opaque cursor for pagination. Empty on the first page. The next cursor is
+  // returned in GetDeviceTestHistoryResponse.next_page_token. Page size is
+  // fixed server side.
+  string page_token = 2;
+
+  // The universe the device belongs to.
+  string universe = 3;
+}
+
+// Response for GetDeviceTestHistory.
+//
+// A generic result table: the backend decides the columns and fills each row
+// with typed cells parallel to those columns, so the frontend renders via
+// switch(cell.kind) with no per-column logic. The Test ID cell is a link whose
+// navigation target the frontend maps to the test detail URL
+// (http://mhfe/<test_id>).
+message GetDeviceTestHistoryResponse {
+  // Column headers, defining the table header and the alignment with Row.cells.
+  repeated search.Column columns = 1;
+
+  // Result rows, each with cells parallel to columns, newest first.
+  repeated search.Row rows = 2;
+
+  // Cursor for the next page. Empty when this is the last page. There is no
+  // total count (MOSS does not provide one).
+  string next_page_token = 3;
+}

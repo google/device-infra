@@ -23,6 +23,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHea
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHealthinessStatsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceRecoveryTaskStatsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceTestHistoryRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceTestHistoryResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceTestResultStatsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatResponse;
@@ -52,6 +54,9 @@ public interface DeviceServiceLogic {
 
   ListenableFuture<TestResultStats> getDeviceTestResultStats(
       GetDeviceTestResultStatsRequest request);
+
+  ListenableFuture<GetDeviceTestHistoryResponse> getDeviceTestHistory(
+      GetDeviceTestHistoryRequest request);
 
   ListenableFuture<RecoveryTaskStats> getDeviceRecoveryTaskStats(
       GetDeviceRecoveryTaskStatsRequest request);

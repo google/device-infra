@@ -22,6 +22,7 @@ import {
   RecoveryTaskStats,
   TestResultStats,
 } from '../../models/device_stats';
+import {DeviceTestHistoryResponse} from '../../models/device_test_history';
 import {MOCK_DEVICE_SCENARIOS} from '../mock_data';
 import {MockDeviceScenario} from '../mock_data/models';
 import {DeviceService} from './device_service';
@@ -350,14 +351,12 @@ export class FakeDeviceService extends DeviceService {
       scenario.actionVisibility?.remoteControl ?? true;
     const quarantineVisible = scenario.actionVisibility?.quarantine ?? true;
     const decommissionVisible = isMissing;
-    const isFusion = Object.values(
-      overview.dimensions?.supported ?? {},
-    ).some((group) =>
-      group.dimensions?.some(
-        (dim) =>
-          dim.name === 'dm_type' &&
-          dim.value?.toLowerCase() === 'fusion',
-      ),
+    const isFusion = Object.values(overview.dimensions?.supported ?? {}).some(
+      (group) =>
+        group.dimensions?.some(
+          (dim) =>
+            dim.name === 'dm_type' && dim.value?.toLowerCase() === 'fusion',
+        ),
     );
     const prepareVisible =
       scenario.actionVisibility?.prepare ?? (!isMissing && isFusion);
@@ -441,6 +440,68 @@ export class FakeDeviceService extends DeviceService {
         },
       },
     };
+  }
+
+  override getDeviceTestHistory(
+    id: string,
+    pageToken = '',
+  ): Observable<DeviceTestHistoryResponse> {
+    const columns = [
+      {key: 'test_id', displayName: 'Test ID'},
+      {key: 'name', displayName: 'Test name'},
+      {key: 'user', displayName: 'User'},
+      {key: 'actual_user', displayName: 'Actual user'},
+      {key: 'status', displayName: 'Status'},
+      {key: 'result', displayName: 'Result'},
+      {key: 'start_time', displayName: 'Start time'},
+      {key: 'duration', displayName: 'Duration'},
+      {key: 'host_name', displayName: 'Lab (host)'},
+      {key: 'devices', displayName: 'Devices'},
+    ];
+    const now = Date.now();
+    const rows = [
+      {
+        id: 'fake-test-0001',
+        cells: [
+          {
+            link: {
+              text: 'fake-test-0001',
+              target: {test: {testId: 'fake-test-0001'}},
+            },
+          },
+          {text: {value: 'com.google.example.SampleTest#testMethod0'}},
+          {text: {value: 'dafeng'}},
+          {text: {value: 'dafeng'}},
+          {status: {text: 'Done', indicator: 'INDICATOR_NEUTRAL' as const}},
+          {status: {text: 'Pass', indicator: 'INDICATOR_OK' as const}},
+          {text: {value: String(now - 3600_000)}},
+          {text: {value: '125000'}},
+          {text: {value: 'lab-host-01'}},
+          {multiLink: {entries: [{text: id, target: {device: {id}}}]}},
+        ],
+      },
+      {
+        id: 'fake-test-0002',
+        cells: [
+          {
+            link: {
+              text: 'fake-test-0002',
+              target: {test: {testId: 'fake-test-0002'}},
+            },
+          },
+          {text: {value: 'com.google.example.SampleTest#testMethod1'}},
+          {text: {value: 'mhar-robot'}},
+          {text: {value: 'system'}},
+          {status: {text: 'Running', indicator: 'INDICATOR_ACTIVE' as const}},
+          {status: {text: 'Unknown', indicator: 'INDICATOR_NEUTRAL' as const}},
+          {text: {value: String(now - 7200_000)}},
+          {text: {value: ''}},
+          {text: {value: 'lab-host-01'}},
+          {multiLink: {entries: [{text: id, target: {device: {id}}}]}},
+        ],
+      },
+    ];
+    return of({columns, rows, nextPageToken: ''}).pipe(delay(300));
   }
 
   // Future methods like listDevices, updateDeviceConfig, etc., would be added here.

@@ -134,9 +134,10 @@
                 <app-device-overview-tab [device]="device" [isGoogle1p]="isGoogle1p" [configurationAction]="pageData.headerInfo.actions?.configuration"></app-device-overview-tab>
               </div>
             }
-            @if (activeTab() === 'test-history') {
-              <div class="tab-content">
-                <p class="placeholder-text">The test history tab is still under development.</p>
+            <!-- Kept mounted (hidden) after first open so switching tabs does not refetch. -->
+            @if (testHistoryVisited()) {
+              <div class="tab-content" [hidden]="activeTab() !== 'test-history'">
+                <app-test-history-tab [deviceId]="device.id"></app-test-history-tab>
               </div>
             }
             @if (activeTab() === 'record') {

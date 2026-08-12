@@ -27,7 +27,9 @@ java_library(
     srcs = [
         "CloudFileTransferStubProvider.java",
         "DeviceOpsStubProvider.java",
+        "DeviceTestHistoryProvider.java",
         "NoOpDeviceOpsStubProvider.java",
+        "NoOpDeviceTestHistoryProvider.java",
         "NoOpRunningTestInfoProvider.java",
         "RunningTestInfoProvider.java",
     ],
@@ -38,9 +40,11 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/fe/v6/service:__subpackages__",
     ],
     deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/device:device_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:device_ops",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/cloud/rpc/stub:cloud_file_transfer_stub",
         "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )

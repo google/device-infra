@@ -1,0 +1,84 @@
+<div class="test-history">
+  @if (error()) {
+    <div class="error-banner">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ error() }}</span>
+    </div>
+  }
+
+  <div class="table-card">
+    <div class="table-scroll">
+      <table mat-table [dataSource]="rows()" class="test-history-table">
+        @for (col of columns(); track col.key; let i = $index) {
+          <ng-container [matColumnDef]="col.key ?? ''">
+            <th mat-header-cell *matHeaderCellDef>{{ col.displayName }}</th>
+            <td mat-cell *matCellDef="let row">
+              @let cell = cellAt(row, i);
+              @if (cell?.link) {
+                <a
+                  class="test-link"
+                  [href]="linkHref(cell!.link!)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >{{ cell!.link!.text }}</a
+                >
+              } @else if (cell?.status) {
+                <span [class]="indicatorClass(cell!.status!.indicator)">{{
+                  cell!.status!.text
+                }}</span>
+              } @else if (cell?.multiLink) {
+                <span class="devices-cell">
+                  @for (
+                    entry of cell!.multiLink!.entries ?? [];
+                    track entry.text;
+                    let last = $last
+                  ) {
+                    <span class="device-entry">{{ entry.text }}</span
+                    >@if (!last) {<span class="device-sep">, </span>}
+                  }
+                </span>
+              } @else {
+                <span class="text-cell">{{
+                  formatText(col.key, cell?.text?.value)
+                }}</span>
+              }
+            </td>
+          </ng-container>
+        }
+        <tr mat-header-row *matHeaderRowDef="displayedColumns()"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns()"></tr>
+      </table>
+    </div>
+
+    @if (loading()) {
+      <div class="state-row">
+        <span>Loading tests…</span>
+      </div>
+    } @else if (rows().length === 0) {
+      <div class="state-row empty-state">No tests found for this device.</div>
+    }
+
+    <div class="pagination">
+      <button
+        type="button"
+        class="page-btn"
+        (click)="prevPage()"
+        [disabled]="!canPrev() || loading()"
+        aria-label="Previous page"
+        title="Previous page"
+      >
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <button
+        type="button"
+        class="page-btn"
+        (click)="nextPage()"
+        [disabled]="!hasNextPage() || loading()"
+        aria-label="Next page"
+        title="Next page"
+      >
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+    </div>
+  </div>
+</div>

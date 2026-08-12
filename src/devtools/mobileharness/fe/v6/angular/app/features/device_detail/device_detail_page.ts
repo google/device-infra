@@ -47,6 +47,7 @@ import {getErrorMessage} from '../../shared/utils/error_utils';
 import {DeviceActionBar} from './components/device_action_bar/device_action_bar';
 import {DeviceOverviewTab} from './components/device_overview_tab/device_overview_tab';
 import {HealthStatisticTab} from './components/health_statistic_tab/health_statistic_tab';
+import {TestHistoryTab} from './components/test_history_tab/test_history_tab';
 
 declare interface DevicePageData {
   pageData: DeviceOverviewPageData | null;
@@ -70,6 +71,7 @@ declare interface DevicePageData {
     DeviceOverviewTab,
     DeviceActionBar,
     HealthStatisticTab,
+    TestHistoryTab,
     MatTooltipModule,
     NavLink,
   ],
@@ -113,6 +115,10 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
   activeTab = signal<'overview' | 'test-history' | 'health' | 'record'>(
     'overview',
   );
+  // Latches true the first time the Test History tab is opened. The tab is then
+  // kept mounted (hidden when inactive) so switching away and back does not
+  // recreate the component and refetch its data.
+  readonly testHistoryVisited = signal(false);
   readonly isGoogle1p = this.envUniverseService.isGoogle1P();
 
   ngOnInit() {
@@ -233,6 +239,9 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
     );
 
   setActiveTab(tab: 'overview' | 'test-history' | 'health' | 'record'): void {
+    if (tab === 'test-history') {
+      this.testHistoryVisited.set(true);
+    }
     this.activeTab.set(tab);
   }
 

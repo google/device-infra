@@ -21,6 +21,7 @@ import {
   RecoveryTaskStats,
   TestResultStats,
 } from '../../models/device_stats';
+import {DeviceTestHistoryResponse} from '../../models/device_test_history';
 
 import {DeviceService} from './device_service';
 
@@ -167,5 +168,16 @@ export class HttpDeviceService extends DeviceService {
 
   override getTestbedConfig(id: string): Observable<TestbedConfig> {
     return this.http.get<TestbedConfig>(`${this.apiUrl}/${id}/testbed-config`);
+  }
+
+  override getDeviceTestHistory(
+    id: string,
+    pageToken = '',
+  ): Observable<DeviceTestHistoryResponse> {
+    const options = pageToken ? {params: {'page_token': pageToken}} : {};
+    return this.http.get<DeviceTestHistoryResponse>(
+      `${this.apiUrl}/${id}/test-history`,
+      options,
+    );
   }
 }

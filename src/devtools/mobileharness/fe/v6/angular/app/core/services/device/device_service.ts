@@ -18,6 +18,7 @@ import {
   RecoveryTaskStats,
   TestResultStats,
 } from '../../models/device_stats';
+import {DeviceTestHistoryResponse} from '../../models/device_test_history';
 
 /**
  * Injection token for the DeviceService.
@@ -121,4 +122,15 @@ export abstract class DeviceService {
    * Gets testbed config for the device.
    */
   abstract getTestbedConfig(id: string): Observable<TestbedConfig>;
+
+  /**
+   * Retrieves one page of the device's historical tests, newest first.
+   *
+   * @param id The device ID.
+   * @param pageToken Cursor from a previous response; empty for the first page.
+   */
+  abstract getDeviceTestHistory(
+    id: string,
+    pageToken?: string,
+  ): Observable<DeviceTestHistoryResponse>;
 }
