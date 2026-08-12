@@ -57,6 +57,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -246,13 +247,10 @@ public class RetryReportMerger {
             .filter(attribute -> attribute.getKey().equals(XmlConstants.COMMAND_LINE_ARGS))
             .findFirst();
     commandLineArgs.ifPresent(attributes::add);
-    BuildInfo.Builder buildInfoBuilder =
-        (retryResult != null
-                && retryResult.hasBuild()
-                && retryResult.getBuild().getAttributeCount() > 0)
-            ? retryResult.toBuilder().getBuildBuilder()
-            : previousResult.toBuilder().getBuildBuilder();
-    mergedResult.setIsRetryResult(true).setBuild(buildInfoBuilder).addAllAttribute(attributes);
+    // Merges build info to retain all previous build metadata (e.g. build_id, build_fingerprint)
+    // when retry results only contain partial or no build info.
+    BuildInfo mergedBuildInfo = mergeBuildInfo(previousResult, retryResult);
+    mergedResult.setIsRetryResult(true).setBuild(mergedBuildInfo).addAllAttribute(attributes);
     addRunHistoryForRetry(mergedResult, previousResult);
 
     // Map of module id to module
@@ -608,6 +606,53 @@ public class RetryReportMerger {
     }
 
     return testsFromRetry.get(testName);
+  }
+
+  /**
+   * Merges {@link BuildInfo} from the previous result and retry result.
+   *
+   * <p>When retrying Non-Tradefed tests, device info collection may be skipped, resulting in a
+   * partial {@link BuildInfo} in the retry result (e.g. only containing extra attributes like
+   * {@code system_img_info}). This method preserves all build metadata (e.g. {@code
+   * build_fingerprint}, {@code build_id}, {@code build_product}) from the previous session while
+   * updating or appending any attributes provided by the retry session.
+   */
+  private static BuildInfo mergeBuildInfo(Result previousResult, @Nullable Result retryResult) {
+    BuildInfo prevBuild =
+        previousResult.hasBuild() ? previousResult.getBuild() : BuildInfo.getDefaultInstance();
+    if (retryResult == null || !retryResult.hasBuild()) {
+      return prevBuild;
+    }
+    BuildInfo retryBuild = retryResult.getBuild();
+    BuildInfo.Builder mergedBuild = prevBuild.toBuilder();
+
+    // Preserve previous fingerprints unless the retry result provides non-empty ones.
+    if (!retryBuild.getBuildFingerprint().isEmpty()) {
+      mergedBuild.setBuildFingerprint(retryBuild.getBuildFingerprint());
+    }
+    if (!retryBuild.getBuildFingerprintUnaltered().isEmpty()) {
+      mergedBuild.setBuildFingerprintUnaltered(retryBuild.getBuildFingerprintUnaltered());
+    }
+    if (!retryBuild.getBuildVendorFingerprint().isEmpty()) {
+      mergedBuild.setBuildVendorFingerprint(retryBuild.getBuildVendorFingerprint());
+    }
+
+    // Merge attributes: keep all previous build attributes, allowing retry attributes to override
+    // or add new ones.
+    Map<String, String> mergedAttributes = new LinkedHashMap<>();
+    prevBuild
+        .getAttributeList()
+        .forEach(attr -> mergedAttributes.put(attr.getKey(), attr.getValue()));
+    retryBuild
+        .getAttributeList()
+        .forEach(attr -> mergedAttributes.put(attr.getKey(), attr.getValue()));
+
+    mergedBuild.clearAttribute();
+    mergedAttributes.forEach(
+        (key, value) ->
+            mergedBuild.addAttribute(Attribute.newBuilder().setKey(key).setValue(value).build()));
+
+    return mergedBuild.build();
   }
 
   private Run createOneRunHistory(Result result) {

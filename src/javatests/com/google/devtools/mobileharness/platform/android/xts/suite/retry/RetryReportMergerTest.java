@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.BuildInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
@@ -449,5 +450,77 @@ public final class RetryReportMergerTest {
             /* passedInModules= */ ImmutableList.of());
 
     assertThat(mergedResult.mergedResult().getBuild()).isEqualTo(prevReport.getBuild());
+  }
+
+  @Test
+  public void mergeReports_partialRetryResultBuildInfo_mergesWithPreviousBuildInfo()
+      throws Exception {
+    Result prevReport =
+        TextFormat.parse(localFileUtil.readFile(PREV_REPORT_SOME_FAILED_TEXTPROTO), Result.class);
+    BuildInfo partialRetryBuild =
+        BuildInfo.newBuilder()
+            .addAttribute(
+                Attribute.newBuilder().setKey("system_img_info").setValue("new_system_img").build())
+            .addAttribute(
+                Attribute.newBuilder().setKey("custom_extra_info").setValue("extra_value").build())
+            .build();
+    Result retryReport =
+        TextFormat.parse(
+                localFileUtil.readFile(RETRY_REPORT_FOR_SOME_FAILED_TEXTPROTO), Result.class)
+            .toBuilder()
+            .setBuild(partialRetryBuild)
+            .build();
+    when(previousResultLoader.loadPreviousResult(
+            RESULTS_DIR_PATH, 0, /* previousSessionResultDirName= */ null))
+        .thenReturn(prevReport);
+
+    SubPlan subPlan = new SubPlan();
+    subPlan.addIncludeFilter(
+        "arm64-v8a CtsAccelerationTestCases"
+            + " android.acceleration.cts.HardwareAccelerationTest#testIsHardwareAccelerated");
+    when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
+
+    MergedResult mergedResult =
+        retryReportMerger.mergeReports(
+            RESULTS_DIR_PATH,
+            0,
+            /* previousSessionResultDirName= */ null,
+            /* retryType= */ null,
+            retryReport,
+            /* passedInModules= */ ImmutableList.of());
+
+    BuildInfo mergedBuild = mergedResult.mergedResult().getBuild();
+    // Inherited build_fingerprint from previous report
+    assertThat(mergedBuild.getBuildFingerprint())
+        .isEqualTo(prevReport.getBuild().getBuildFingerprint());
+    // Updated system_img_info from retry report
+    assertThat(
+            mergedBuild.getAttributeList().stream()
+                .filter(attr -> attr.getKey().equals("system_img_info"))
+                .map(Attribute::getValue)
+                .findFirst()
+                .orElse(""))
+        .isEqualTo("new_system_img");
+    // Preserved adb_version from previous report
+    assertThat(
+            mergedBuild.getAttributeList().stream()
+                .filter(attr -> attr.getKey().equals("adb_version"))
+                .map(Attribute::getValue)
+                .findFirst()
+                .orElse(""))
+        .isEqualTo(
+            prevReport.getBuild().getAttributeList().stream()
+                .filter(attr -> attr.getKey().equals("adb_version"))
+                .map(Attribute::getValue)
+                .findFirst()
+                .orElse(""));
+    // New custom_extra_info from retry report
+    assertThat(
+            mergedBuild.getAttributeList().stream()
+                .filter(attr -> attr.getKey().equals("custom_extra_info"))
+                .map(Attribute::getValue)
+                .findFirst()
+                .orElse(""))
+        .isEqualTo("extra_value");
   }
 }

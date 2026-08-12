@@ -443,11 +443,14 @@ public class CompatibilityReportMerger {
   }
 
   private static BuildInfo getNewBuildInfo(List<Result> reports) {
+    // Extracts BuildInfo from report with build fingerprint, or falls back to any report that
+    // has BuildInfo populated (e.g. containing extra build attributes during retries).
     BuildInfo buildInfo =
         reports.stream()
             .filter(CompatibilityReportMerger::reportHasBuildInfo)
             .findFirst()
             .map(Result::getBuild)
+            .or(() -> reports.stream().filter(Result::hasBuild).findFirst().map(Result::getBuild))
             .orElse(BuildInfo.getDefaultInstance());
     ImmutableList<Attribute> attrs =
         buildInfo.getAttributeList().stream()
