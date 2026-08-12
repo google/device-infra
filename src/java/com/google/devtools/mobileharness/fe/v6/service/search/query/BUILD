@@ -130,3 +130,19 @@ java_library(
         "@maven//:com_google_inject_guice",
     ],
 )
+
+java_library(
+    name = "fleet_promoted_keys_provider",
+    srcs = ["FleetPromotedKeysProvider.java"],
+    deps = [
+        ":fleet_filter_engine",
+        ":scenario_curation",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:device_record",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_search_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
