@@ -33,6 +33,8 @@ import com.google.devtools.mobileharness.platform.android.event.util.AppInstallE
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkSet;
+import com.google.devtools.mobileharness.platform.android.lightning.bundletool.BundletoolUtil;
+import com.google.devtools.mobileharness.platform.android.lightning.bundletool.JavaSystemProperties;
 import com.google.devtools.mobileharness.platform.android.lightning.systemsetting.SystemSettingManager;
 import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
@@ -351,7 +353,9 @@ public class InstallApkStep implements InstallApkStepConstants {
             .setAllowUninstallAndRetry(true);
     installTimeout.ifPresent(apkSetBuilder::setCommandTimeout);
     sleepAfterInstall.ifPresent(apkSetBuilder::setSleepAfterInstall);
-    apkInstaller.install(device, apkSetBuilder.build(), testInfo.log());
+    // Make sure Bundletool use the same temp directory as the test.
+    JavaSystemProperties javaProps = BundletoolUtil.createJavaSystemProperties(testInfo);
+    apkInstaller.install(device, apkSetBuilder.build(), testInfo.log(), javaProps);
   }
 
   /**

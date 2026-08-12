@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.app.AndroidAppVersion;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.bundletool.Bundletool;
+import com.google.devtools.mobileharness.platform.android.lightning.bundletool.JavaSystemProperties;
 import com.google.devtools.mobileharness.platform.android.lightning.shared.SharedLogUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.shared.SharedPropertyUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
@@ -302,14 +303,18 @@ public class ApkInstaller {
    * @param device the device to install the packages to
    * @param installables the packages to install
    * @param log the optional log collector for observability
+   * @param javaProps the Java system properties for bundletool
    * @throws MobileHarnessException if any package fails to install
    * @throws InterruptedException if current thread gets interrupted
    */
   public void install(
-      Device device, ImmutableList<Installable> installables, @Nullable LogCollector<?> log)
+      Device device,
+      ImmutableList<Installable> installables,
+      @Nullable LogCollector<?> log,
+      JavaSystemProperties javaProps)
       throws MobileHarnessException, InterruptedException {
     for (Installable installable : installables) {
-      install(device, installable, log);
+      install(device, installable, log, javaProps);
     }
   }
 
@@ -322,7 +327,11 @@ public class ApkInstaller {
    * @throws MobileHarnessException if an issue occurs during installation
    * @throws InterruptedException if current thread gets interrupted
    */
-  public void install(Device device, Installable installable, @Nullable LogCollector<?> log)
+  public void install(
+      Device device,
+      Installable installable,
+      @Nullable LogCollector<?> log,
+      JavaSystemProperties javaProps)
       throws MobileHarnessException, InterruptedException {
     String packageName = getPackageName(installable);
     int deviceSdkVersion = systemSettingUtil.getDeviceSdkVersion(device.getDeviceId());
@@ -333,7 +342,7 @@ public class ApkInstaller {
         utilArgs.serial(), utilArgs.sdkVersion().orElse(0)); // b/27476500
 
     try {
-      doInstall(device, utilArgs, installable, packageName, log);
+      doInstall(device, utilArgs, installable, packageName, log, javaProps);
       return;
     } catch (MobileHarnessException e) {
       PackageManagerErrors.throwIfUnrecoverableUserError(e.getMessage(), packageName, e);
@@ -361,7 +370,7 @@ public class ApkInstaller {
     }
 
     try {
-      doInstall(device, utilArgs, installable, packageName, log);
+      doInstall(device, utilArgs, installable, packageName, log, javaProps);
     } catch (MobileHarnessException e) {
       PackageManagerErrors.throwIfUnrecoverableUserError(e.getMessage(), packageName, e);
       PackageManagerErrors.throwIfPostRetryUserError(e.getMessage(), packageName, e);
@@ -870,10 +879,11 @@ public class ApkInstaller {
       UtilArgs utilArgs,
       Installable installable,
       String packageName,
-      @Nullable LogCollector<?> log)
+      @Nullable LogCollector<?> log,
+      JavaSystemProperties javaProps)
       throws MobileHarnessException, InterruptedException {
     if (installable instanceof ApkSet apkSet) {
-      bundletool.installApks(apkSet.toInstallApksArgs(device.getDeviceId()));
+      bundletool.installApks(apkSet.toInstallApksArgs(device.getDeviceId()), javaProps);
     } else if (installable instanceof Apk apk) {
       androidPackageManagerUtil.installPackageNoRetry(
           utilArgs,

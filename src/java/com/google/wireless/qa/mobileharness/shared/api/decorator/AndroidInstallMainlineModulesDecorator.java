@@ -24,8 +24,10 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.lightning.bundletool.Bundletool;
+import com.google.devtools.mobileharness.platform.android.lightning.bundletool.BundletoolUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.bundletool.ExtractApksArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.bundletool.GetDeviceSpecArgs;
+import com.google.devtools.mobileharness.platform.android.lightning.bundletool.JavaSystemProperties;
 import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.PackageInfo;
@@ -102,12 +104,15 @@ public class AndroidInstallMainlineModulesDecorator extends SetupOnlyDecorator
     ImmutableSet<String> modules = testInfo.jobInfo().files().get(TAG_MODULE_FILES);
     testInfo.log().atInfo().alsoTo(logger).log("Going to install mainline modules %s", modules);
 
+    JavaSystemProperties javaProps = BundletoolUtil.createJavaSystemProperties(testInfo);
+
     // Gets device spec.
     Path deviceSpecOutput = Path.of(genFileDirRoot, "device-spec.json");
     if (needExtractApks(modules)) {
       logger.atInfo().log("Getting device spec to %s", deviceSpecOutput);
       bundletool.getDeviceSpec(
-          GetDeviceSpecArgs.builder().setOutput(deviceSpecOutput).setDeviceId(deviceId).build());
+          GetDeviceSpecArgs.builder().setOutput(deviceSpecOutput).setDeviceId(deviceId).build(),
+          javaProps);
     }
 
     List<String> allApks = new ArrayList<>();
@@ -133,7 +138,8 @@ public class AndroidInstallMainlineModulesDecorator extends SetupOnlyDecorator
               .setApks(Path.of(module))
               .setOutputDir(Path.of(extractOutputDir))
               .setDeviceSpec(deviceSpecOutput)
-              .build());
+              .build(),
+          javaProps);
 
       List<String> apks = localFileUtil.listFilePaths(extractOutputDir, /* recursively= */ true);
       testInfo.log().atInfo().alsoTo(logger).log("Extracted %s from module %s", apks, module);

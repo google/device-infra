@@ -19,7 +19,10 @@ package(default_applicable_licenses = ["//:license"])
 
 java_library(
     name = "bundletool",
-    srcs = glob(["*.java"]),
+    srcs = glob(
+        ["*.java"],
+        exclude = ["BundletoolUtil.java"],
+    ),
     resources = [
     ],
     visibility = ["//:deviceinfra_all_pkg"],
@@ -30,6 +33,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:aapt",
@@ -37,5 +41,17 @@ java_library(
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
         "@protobuf//:protobuf_java",
+    ],
+)
+
+java_library(
+    name = "bundletool_util",
+    srcs = ["BundletoolUtil.java"],
+    visibility = ["//:deviceinfra_all_pkg"],
+    deps = [
+        ":bundletool",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
     ],
 )

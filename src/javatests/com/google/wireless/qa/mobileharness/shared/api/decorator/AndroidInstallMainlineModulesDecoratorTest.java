@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.lightning.bundletool.Bundletool;
 import com.google.devtools.mobileharness.platform.android.lightning.bundletool.ExtractApksArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.bundletool.GetDeviceSpecArgs;
+import com.google.devtools.mobileharness.platform.android.lightning.bundletool.JavaSystemProperties;
 import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.PackageInfo;
@@ -64,6 +65,7 @@ public final class AndroidInstallMainlineModulesDecoratorTest {
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
   private static final String TEST_GEN_DIR = "/usr/local/test/gen/";
+  private static final String TEST_TMP_DIR = "/usr/local/test/tmp/";
   private static final String PROVIDED_BUNDLETOOL_PATH = "/usr/local/bundletool.jar";
   private static final String DEVICE_ID = "device_id";
   private static final String MODULE_1 = "/usr/local/module1.apks";
@@ -102,6 +104,7 @@ public final class AndroidInstallMainlineModulesDecoratorTest {
 
     when(testInfo.jobInfo()).thenReturn(jobInfo);
     when(testInfo.getGenFileDir()).thenReturn(TEST_GEN_DIR);
+    when(testInfo.getTmpFileDir()).thenReturn(TEST_TMP_DIR);
     when(testInfo.log()).thenReturn(log);
     when(jobInfo.files()).thenReturn(files);
     when(jobInfo.params()).thenReturn(params);
@@ -136,21 +139,24 @@ public final class AndroidInstallMainlineModulesDecoratorTest {
             GetDeviceSpecArgs.builder()
                 .setDeviceId(DEVICE_ID)
                 .setOutput(Path.of(TEST_GEN_DIR, "device-spec.json"))
-                .build());
+                .build(),
+            JavaSystemProperties.builder().setJavaTmpDir(Path.of(TEST_TMP_DIR)).build());
     verify(bundletool)
         .extractApks(
             ExtractApksArgs.builder()
                 .setApks(Path.of(MODULE_1))
                 .setOutputDir(Path.of(TEST_GEN_DIR, "module1.apks"))
                 .setDeviceSpec(Path.of(TEST_GEN_DIR, "device-spec.json"))
-                .build());
+                .build(),
+            JavaSystemProperties.builder().setJavaTmpDir(Path.of(TEST_TMP_DIR)).build());
     verify(bundletool)
         .extractApks(
             ExtractApksArgs.builder()
                 .setApks(Path.of(MODULE_2))
                 .setOutputDir(Path.of(TEST_GEN_DIR, "module2.apks"))
                 .setDeviceSpec(Path.of(TEST_GEN_DIR, "device-spec.json"))
-                .build());
+                .build(),
+            JavaSystemProperties.builder().setJavaTmpDir(Path.of(TEST_TMP_DIR)).build());
     verify(androidPackageManagerUtil)
         .installMultiPackage(DEVICE_ID, ALL_APKS, Duration.ofSeconds(2), Duration.ofMinutes(6));
     verify(systemStateManager).reboot(device, log, null);
@@ -197,7 +203,8 @@ public final class AndroidInstallMainlineModulesDecoratorTest {
             GetDeviceSpecArgs.builder()
                 .setOutput(Path.of(TEST_GEN_DIR, "device-spec.json"))
                 .setDeviceId(DEVICE_ID)
-                .build());
+                .build(),
+            JavaSystemProperties.builder().setJavaTmpDir(Path.of(TEST_TMP_DIR)).build());
   }
 
   @Test

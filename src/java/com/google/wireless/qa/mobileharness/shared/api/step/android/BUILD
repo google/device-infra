@@ -37,6 +37,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/event/util",
         "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller",
+        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/bundletool",
+        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/bundletool:bundletool_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemsetting",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemstate",
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:android_package_manager_util",

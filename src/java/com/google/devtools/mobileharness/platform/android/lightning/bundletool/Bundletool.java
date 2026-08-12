@@ -125,23 +125,27 @@ public class Bundletool {
         systemUtil, adb, aapt, commandExecutor, Suppliers.memoize(() -> bundletoolJar));
   }
 
-  public void buildApks(BuildApksArgs args) throws MobileHarnessException, InterruptedException {
-    run(args.toBundletoolCommand(adb.getAdbPath(), aapt.getAaptPath()), args.commandTimeout());
+  public void buildApks(BuildApksArgs args, JavaSystemProperties javaSystemProperties)
+      throws MobileHarnessException, InterruptedException {
+    run(
+        args.toBundletoolCommand(adb.getAdbPath(), aapt.getAaptPath()),
+        args.commandTimeout(),
+        javaSystemProperties);
   }
 
-  public void getDeviceSpec(GetDeviceSpecArgs args)
+  public void getDeviceSpec(GetDeviceSpecArgs args, JavaSystemProperties javaSystemProperties)
       throws MobileHarnessException, InterruptedException {
-    run(args.toBundletoolCommand(adb.getAdbPath()), args.commandTimeout());
+    run(args.toBundletoolCommand(adb.getAdbPath()), args.commandTimeout(), javaSystemProperties);
   }
 
-  public void extractApks(ExtractApksArgs args)
+  public void extractApks(ExtractApksArgs args, JavaSystemProperties javaSystemProperties)
       throws MobileHarnessException, InterruptedException {
-    run(args.toBundletoolCommand(), args.commandTimeout());
+    run(args.toBundletoolCommand(), args.commandTimeout(), javaSystemProperties);
   }
 
-  public void installApks(InstallApksArgs args)
+  public void installApks(InstallApksArgs args, JavaSystemProperties javaSystemProperties)
       throws MobileHarnessException, InterruptedException {
-    run(args.toBundletoolCommand(adb.getAdbPath()), args.commandTimeout());
+    run(args.toBundletoolCommand(adb.getAdbPath()), args.commandTimeout(), javaSystemProperties);
   }
 
   /**
@@ -204,11 +208,15 @@ public class Bundletool {
    * @throws InterruptedException if the thread executing the command is interrupted
    */
   @CanIgnoreReturnValue
-  private String run(ImmutableList<String> args, Duration timeout)
+  private String run(
+      ImmutableList<String> args, Duration timeout, JavaSystemProperties javaSystemProperties)
       throws MobileHarnessException, InterruptedException {
     ImmutableList<String> argsBuilder =
         ImmutableList.<String>builder()
             .add(systemUtil.getJavaBin())
+            // -D flag must be place before -jar to make sure the arguments is passed to the JVM
+            // instead of the main method of the program.
+            .addAll(javaSystemProperties.jvmFlags())
             .add("-jar")
             .add(bundletoolPathSupplier.get().toString())
             .addAll(args)
