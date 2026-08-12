@@ -134,7 +134,6 @@ java_library(
     deps = [
         ":device_cache_manager",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util:session_device_cache",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",

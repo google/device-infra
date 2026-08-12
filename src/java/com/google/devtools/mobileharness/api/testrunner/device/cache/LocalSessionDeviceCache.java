@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.api.testrunner.device.cache;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ascii;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCacheManager.CacheType;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache;
@@ -27,13 +29,18 @@ public class LocalSessionDeviceCache implements SessionDeviceCache {
   private final DeviceCacheManager deviceCacheManager;
 
   @Inject
+  LocalSessionDeviceCache() {
+    this(DeviceCacheManager.getInstance());
+  }
+
+  @VisibleForTesting
   LocalSessionDeviceCache(DeviceCacheManager deviceCacheManager) {
     this.deviceCacheManager = deviceCacheManager;
   }
 
   @Override
   public void cache(CacheRequest request) throws MobileHarnessException {
-    CacheType type = CacheType.valueOf(request.cacheType());
+    CacheType type = CacheType.valueOf(Ascii.toUpperCase(request.cacheType()));
     for (String deviceControlId : request.deviceControlIds()) {
       deviceCacheManager.cache(
           type,
@@ -46,7 +53,7 @@ public class LocalSessionDeviceCache implements SessionDeviceCache {
 
   @Override
   public void invalidateCache(InvalidateCacheRequest request) throws MobileHarnessException {
-    CacheType type = CacheType.valueOf(request.cacheType());
+    CacheType type = CacheType.valueOf(Ascii.toUpperCase(request.cacheType()));
     for (String deviceControlId : request.deviceControlIds()) {
       deviceCacheManager.invalidate(type, deviceControlId, /* leaseId= */ request.sessionId());
     }
