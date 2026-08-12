@@ -161,6 +161,9 @@ java_library(
     srcs = ["LabDimensionManager.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/lab/in:local_dimension",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "@maven//:com_google_guava_guava",
     ],
 )
 

@@ -16,10 +16,18 @@
 
 package com.google.devtools.mobileharness.infra.lab.controller;
 
+import com.google.common.base.Ascii;
+import com.google.common.base.Splitter;
 import com.google.devtools.mobileharness.api.model.lab.in.LocalDimensions;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
 
 /** For managing the lab local dimension. */
 public class LabDimensionManager {
+
+  private static final Splitter COMMA_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
+
   public static LabDimensionManager getInstance() {
     return INSTANCE;
   }
@@ -41,5 +49,16 @@ public class LabDimensionManager {
 
   public LocalDimensions getRequiredLocalDimensions() {
     return requiredLocalDimensions;
+  }
+
+  public void initLocalDimensionsFromFlags() {
+    if (Flags.addRequiredDimensionForPartnerSharedPool.getNonNull()) {
+      requiredLocalDimensions.add(Name.POOL, Value.POOL_PARTNER_SHARED);
+    }
+    if (Flags.addSupportedDimensionForOmniModeUsage.get() != null) {
+      for (String usage : COMMA_SPLITTER.split(Flags.addSupportedDimensionForOmniModeUsage.get())) {
+        supportedLocalDimensions.add(Name.OMNI_MODE_USAGE, Ascii.toLowerCase(usage));
+      }
+    }
   }
 }

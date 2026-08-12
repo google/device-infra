@@ -113,7 +113,6 @@ import com.google.inject.util.Providers;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
-import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
@@ -524,19 +523,7 @@ public class LabServer {
 
     HostProperties.Builder hostProperties = HostProperties.newBuilder();
 
-    if (Flags.addRequiredDimensionForPartnerSharedPool.getNonNull()) {
-      LabDimensionManager.getInstance()
-          .getRequiredLocalDimensions()
-          .add(Name.POOL, Value.POOL_PARTNER_SHARED);
-    }
-
-    if (Flags.addSupportedDimensionForOmniModeUsage.get() != null) {
-      LabDimensionManager.getInstance()
-          .getSupportedLocalDimensions()
-          .add(
-              Name.OMNI_MODE_USAGE,
-              Ascii.toLowerCase(Flags.addSupportedDimensionForOmniModeUsage.get()));
-    }
+    LabDimensionManager.getInstance().initLocalDimensionsFromFlags();
 
     // Supported dimensions
 
