@@ -1,0 +1,517 @@
+<div
+  class="value-picker"
+  [class.id-key]="isPlain()"
+  [style.top.px]="pos().top"
+  [style.left.px]="pos().left"
+>
+  <!-- Header -->
+  <div class="vp-header">
+    <span class="vp-title">{{ title() || key() }}</span>
+    @if (!isTjs() && !pickerIsAdvanced() && tjsType() === 'simple') {
+      <div class="vp-polarity-wrap">
+        <button
+          class="vp-polarity-btn"
+          [class.negate]="pickerNegate()"
+          (click)="showPolarityMenu.set(!showPolarityMenu())"
+        >
+          <span>{{ pickerNegate() ? negVerb() : posVerb() }}</span>
+          <mat-icon class="material-symbols-outlined">arrow_drop_down</mat-icon>
+        </button>
+        @if (showPolarityMenu()) {
+          <div class="vp-polarity-menu open">
+            <div
+              class="vp-pm-item"
+              (click)="pickerNegate.set(false); showPolarityMenu.set(false)"
+            >
+              <mat-icon
+                class="material-symbols-outlined vp-pm-check"
+                [class.visible]="!pickerNegate()"
+              >
+                check
+              </mat-icon>
+              <span>{{ posVerb() }}</span>
+            </div>
+            <div
+              class="vp-pm-item"
+              (click)="pickerNegate.set(true); showPolarityMenu.set(false)"
+            >
+              <mat-icon
+                class="material-symbols-outlined vp-pm-check"
+                [class.visible]="pickerNegate()"
+              >
+                check
+              </mat-icon>
+              <span>{{ negVerb() }}</span>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    @if (!isTjs() && canUseAdvanced() && !pickerIsAdvanced()) {
+      <div class="vp-overflow-wrap">
+        <button
+          class="vp-overflow-btn"
+          title="More"
+          (click)="showOverflowMenu.set(!showOverflowMenu())"
+        >
+          <mat-icon class="material-symbols-outlined">more_vert</mat-icon>
+        </button>
+        @if (showOverflowMenu()) {
+          <div class="vp-overflow-menu open">
+            <div class="vp-om-item" (click)="showAdvancedMatching()">
+              <mat-icon class="material-symbols-outlined">tune</mat-icon>
+              <span>Advanced matching</span>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  @if (isTjs()) {
+    @if (tjsType() === 'range') {
+      <!-- Date Range Picker -->
+      <div class="vp-daterange">
+        <div class="vp-dt-row">
+          <span class="vp-dt-op">From:</span>
+          <input
+            type="datetime-local"
+            class="vp-from"
+            [ngModel]="rangeFrom()"
+            (ngModelChange)="rangeFrom.set($event)"
+          />
+        </div>
+        <div class="vp-dt-row">
+          <span class="vp-dt-op">To:</span>
+          <input
+            type="datetime-local"
+            class="vp-to"
+            [ngModel]="rangeTo()"
+            (ngModelChange)="rangeTo.set($event)"
+          />
+        </div>
+      </div>
+    } @else if (tjsType() === 'enum') {
+      <!-- Enum Value Picker (Status/Result checklist) -->
+      <div class="vp-list">
+        @for (item of filteredValues(); track item.value) {
+          <div
+            class="vp-item"
+            [class.disabled]="item.disabled"
+            (click)="toggleValue(item)"
+          >
+            <span class="material-symbols-outlined vp-check">
+              {{ selectedSet().has(item.value) ? 'check' : '' }}
+            </span>
+            <span
+              class="vp-val"
+              [class.disabled-text]="item.disabled"
+              [title]="item.displayLabel"
+            >
+              {{ item.displayLabel }}
+            </span>
+          </div>
+        }
+      </div>
+    } @else if (tjsType() === 'namedPair') {
+      <!-- Property/Dimension Key-Value Picker -->
+      @if (needsName()) {
+        <div class="vp-search">
+          <input
+            type="text"
+            class="vp-name"
+            [placeholder]="namePlaceholder()"
+            [ngModel]="propName()"
+            (ngModelChange)="propName.set($event)"
+          />
+        </div>
+      }
+      <div class="vp-search">
+        <input
+          type="text"
+          class="vp-text"
+          [placeholder]="valPlaceholder()"
+          [ngModel]="propVal()"
+          (ngModelChange)="propVal.set($event)"
+          (keydown.enter)="onApply()"
+          (keydown.escape)="onCancel()"
+        />
+      </div>
+    } @else {
+      <!-- Plain Text Search Picker -->
+      <div class="vp-search">
+        <input
+          type="text"
+          class="vp-text"
+          [placeholder]="valPlaceholder()"
+          [ngModel]="textValue()"
+          (ngModelChange)="textValue.set($event)"
+          (keydown.enter)="onApply()"
+          (keydown.escape)="onCancel()"
+        />
+      </div>
+    }
+  } @else {
+    @if (tjsType() === 'range') {
+      <!-- Date Range Picker -->
+      <div class="vp-daterange">
+        <div class="vp-dt-row">
+          <span class="vp-dt-op">From:</span>
+          <input
+            type="datetime-local"
+            class="vp-from"
+            [ngModel]="rangeFrom()"
+            (ngModelChange)="rangeFrom.set($event)"
+          />
+        </div>
+        <div class="vp-dt-row">
+          <span class="vp-dt-op">To:</span>
+          <input
+            type="datetime-local"
+            class="vp-to"
+            [ngModel]="rangeTo()"
+            (ngModelChange)="rangeTo.set($event)"
+          />
+        </div>
+      </div>
+    } @else if (tjsType() === 'enum') {
+      <!-- Enum Value Picker (Status/Result checklist) -->
+      <div class="vp-list">
+        @for (item of filteredValues(); track item.value) {
+          <div
+            class="vp-item"
+            [class.disabled]="item.disabled"
+            (click)="toggleValue(item)"
+          >
+            <span class="material-symbols-outlined vp-check">
+              {{ selectedSet().has(item.value) ? 'check' : '' }}
+            </span>
+            <span
+              class="vp-val"
+              [class.disabled-text]="item.disabled"
+              [title]="item.displayLabel"
+            >
+              {{ item.displayLabel }}
+            </span>
+          </div>
+        }
+      </div>
+    } @else if (tjsType() === 'namedPair') {
+      <!-- Property/Dimension Key-Value Picker -->
+      @if (needsName()) {
+        <div class="vp-search">
+          <input
+            type="text"
+            class="vp-name"
+            [placeholder]="namePlaceholder()"
+            [ngModel]="propName()"
+            (ngModelChange)="propName.set($event)"
+          />
+        </div>
+      }
+      <div class="vp-search">
+        <input
+          type="text"
+          class="vp-text"
+          [placeholder]="valPlaceholder()"
+          [ngModel]="propVal()"
+          (ngModelChange)="propVal.set($event)"
+          (keydown.enter)="onApply()"
+          (keydown.escape)="onCancel()"
+        />
+      </div>
+    } @else if (tjsType() === 'text') {
+      <!-- Plain Text Search Picker -->
+      <div class="vp-search">
+        <input
+          type="text"
+          class="vp-text"
+          [placeholder]="valPlaceholder()"
+          [ngModel]="textValue()"
+          (ngModelChange)="textValue.set($event)"
+          (keydown.enter)="onApply()"
+          (keydown.escape)="onCancel()"
+        />
+      </div>
+    } @else {
+      @if (pickerIsAdvanced()) {
+        <!-- Advanced Matching Complex Panel -->
+        <div class="vp-advanced">
+          <button class="vp-adv-back" (click)="showSimpleMatching()">
+            <mat-icon class="material-symbols-outlined">arrow_back</mat-icon>
+            <span>Simple matching</span>
+          </button>
+
+          <div class="vp-adv-modes">
+            @for (mode of advModesList; track mode.id) {
+              <label
+                class="vp-adv-mode"
+                [class.active]="advMode() === mode.id"
+                (click)="advMode.set(mode.id)"
+              >
+                <mat-icon class="material-symbols-outlined vp-adv-radio">
+                  {{ advMode() === mode.id ? 'radio_button_checked' : 'radio_button_unchecked' }}
+                </mat-icon>
+                <span>{{ mode.label }}</span>
+              </label>
+            }
+          </div>
+
+          <div class="vp-adv-input">
+            @if (!isMultiAdvMode()) {
+              <input
+                type="text"
+                class="vp-adv-field"
+                [placeholder]="advPlaceholder()"
+                [ngModel]="advText()"
+                (ngModelChange)="advText.set($event)"
+                (keydown.enter)="onApply()"
+              />
+            } @else {
+              <div class="vp-adv-input-row">
+                <input
+                  type="text"
+                  class="vp-adv-field"
+                  placeholder="Add a value…"
+                  [ngModel]="advInputVal()"
+                  (ngModelChange)="advInputVal.set($event)"
+                  (keydown.enter)="addAdvValue()"
+                />
+                <button class="vp-adv-add" (click)="addAdvValue()">Add</button>
+              </div>
+              <div class="vp-adv-chips">
+                @for (val of advValues(); track val; let i = $index) {
+                  <span class="vp-adv-chip">
+                    <span class="vp-adv-chip-label">{{ val }}</span>
+                    <mat-icon class="material-symbols-outlined vp-adv-chip-x" (click)="removeAdvValue(i)">close</mat-icon>
+                  </span>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      } @else {
+        <!-- Search box -->
+        <div class="vp-search">
+          <input
+            #searchInput
+            type="text"
+            placeholder="Filter or add value…"
+            [ngModel]="pickerSearchQuery()"
+            (ngModelChange)="pickerSearchQuery.set($event)"
+            (keydown.enter)="onSearchEnter()"
+          />
+        </div>
+
+        <!-- Column Header -->
+        <div class="vp-col-header">
+          <span class="vp-col-spacer"></span>
+          <span
+            class="vp-col"
+            [class.active]="pickerSortBy() === 'value'"
+            (click)="toggleSort('value')"
+          >
+            <span>Value</span>
+            @if (pickerSortBy() === 'value') {
+              <mat-icon class="material-symbols-outlined">
+                {{ pickerSortAsc() ? 'arrow_upward' : 'arrow_downward' }}
+              </mat-icon>
+            }
+          </span>
+          <span class="vp-col-grow"></span>
+          @if (!isPlain()) {
+            <span
+              class="vp-col vp-cnt-col"
+              [class.active]="pickerSortBy() === 'filtered'"
+              (click)="toggleSort('filtered')"
+            >
+              <span>Filtered</span>
+              @if (pickerSortBy() === 'filtered') {
+                <mat-icon class="material-symbols-outlined">
+                  {{ pickerSortAsc() ? 'arrow_upward' : 'arrow_downward' }}
+                </mat-icon>
+              }
+            </span>
+            <span
+              class="vp-col vp-cnt-col"
+              [class.active]="pickerSortBy() === 'total'"
+              (click)="toggleSort('total')"
+            >
+              <span>Total</span>
+              @if (pickerSortBy() === 'total') {
+                <mat-icon class="material-symbols-outlined">
+                  {{ pickerSortAsc() ? 'arrow_upward' : 'arrow_downward' }}
+                </mat-icon>
+              }
+            </span>
+          }
+        </div>
+
+        <!-- Scrollable Value List -->
+        <div class="vp-list">
+          @if (loading() && showAddRow()) {
+            <div
+              class="vp-item vp-add-row"
+              (click)="addCustomInput(pickerSearchQuery())"
+            >
+              <mat-icon class="material-symbols-outlined vp-check">
+                check_box_outline_blank
+              </mat-icon>
+              <span class="vp-val">
+                Add "<strong>{{ pickerSearchQuery().trim() }}</strong>"
+              </span>
+            </div>
+          }
+
+          @if (selectedSet().size > 0) {
+            <div class="vp-clear-all" (click)="clearAllValues()">Clear all</div>
+          }
+
+          @if (loading() && selectedSet().size > 0) {
+            @for (val of selectedSet(); track val) {
+              <div
+                class="vp-item"
+                (click)="toggleValue({value: val, displayLabel: val})"
+              >
+                <mat-icon class="material-symbols-outlined vp-check">
+                  check_box
+                </mat-icon>
+                <span class="vp-val" [title]="val">
+                  {{ val }}
+                </span>
+              </div>
+            }
+          }
+
+          @if (loading()) {
+            <div class="vp-loading-hint">Loading values…</div>
+          }
+
+          @if (showPinned()) {
+            @for (item of pinnedValues(); track item.value) {
+              <div
+                class="vp-item vp-pinned-item"
+                [class.is-no-value-row]="item.isNoValue"
+                [class.disabled]="item.disabled"
+                (click)="toggleValue(item)"
+              >
+                <mat-icon
+                  class="material-symbols-outlined vp-check"
+                  [class.disabled]="item.disabled"
+                >
+                  check_box
+                </mat-icon>
+                <span
+                  class="vp-val"
+                  [class.no-value-text]="item.isNoValue"
+                  [class.disabled-text]="item.disabled"
+                  [title]="item.disabled ? 'Value not found in options' : (item.isNoValue ? 'No value assigned for this key' : item.displayLabel)"
+                >
+                  @if (item.isNoValue) {
+                    <em>(no value)</em>
+                  } @else {
+                    {{ item.displayLabel }}
+                  }
+                </span>
+                @if (!item.disabled) {
+                  <span class="vp-actions">
+                    <button
+                      class="vp-act-btn vp-act-only"
+                      (click)="selectOnlyValue(item.value); $event.stopPropagation()"
+                    >
+                      only
+                    </button>
+                    <button
+                      class="vp-act-btn vp-act-copy"
+                      (click)="copyValue(item.isNoValue ? '' : item.value); $event.stopPropagation()"
+                      title="Copy value"
+                    >
+                      <mat-icon class="material-symbols-outlined">content_copy</mat-icon>
+                    </button>
+                  </span>
+                }
+                @if (!isPlain()) {
+                  <span class="vp-cnt filtered">
+                    {{ item.filtered !== undefined && item.filtered !== null ? (item.filtered | number) : '' }}
+                  </span>
+                  <span class="vp-cnt total">
+                    {{ item.total !== undefined && item.total !== null ? (item.total | number) : '' }}
+                  </span>
+                }
+              </div>
+            }
+            <div class="vp-pinned-divider"></div>
+          }
+
+          @if (!loading() && filteredValues().length === 0) {
+            <div class="vp-empty">No matching values</div>
+          } @else {
+            @for (item of filteredValues(); track item.value) {
+              <div
+                class="vp-item"
+                [class.is-no-value-row]="item.isNoValue"
+                [class.disabled]="item.disabled"
+                (click)="toggleValue(item)"
+              >
+                <mat-icon
+                  class="material-symbols-outlined vp-check"
+                  [class.disabled]="item.disabled"
+                >
+                  {{ selectedSet().has(item.value) ? 'check_box' : 'check_box_outline_blank' }}
+                </mat-icon>
+                <span
+                  class="vp-val"
+                  [class.no-value-text]="item.isNoValue"
+                  [class.disabled-text]="item.disabled"
+                  [title]="item.disabled ? 'Value not found in options' : (item.isNoValue ? 'No value assigned for this key' : item.displayLabel)"
+                >
+                  @if (item.isNoValue) {
+                    <em>(no value)</em>
+                  } @else {
+                    {{ item.displayLabel }}
+                  }
+                </span>
+                @if (!item.disabled) {
+                  <span class="vp-actions">
+                    <button
+                      class="vp-act-btn vp-act-only"
+                      (click)="selectOnlyValue(item.value); $event.stopPropagation()"
+                    >
+                      only
+                    </button>
+                    <button
+                      class="vp-act-btn vp-act-copy"
+                      (click)="copyValue(item.isNoValue ? '' : item.value); $event.stopPropagation()"
+                      title="Copy value"
+                    >
+                      <mat-icon class="material-symbols-outlined">content_copy</mat-icon>
+                    </button>
+                  </span>
+                }
+                @if (!isPlain()) {
+                  <span class="vp-cnt filtered">
+                    {{ item.filtered !== undefined && item.filtered !== null ? (item.filtered | number) : '' }}
+                  </span>
+                  <span class="vp-cnt total">
+                    {{ item.total !== undefined && item.total !== null ? (item.total | number) : '' }}
+                  </span>
+                }
+              </div>
+            }
+          }
+        </div>
+      }
+    }
+  }
+
+  <!-- Footer -->
+  <div class="vp-footer">
+    <span class="vp-selected">
+      {{ footerStatusText() }}
+    </span>
+    <span class="vp-grow"></span>
+    <button class="vp-btn vp-cancel" (click)="onCancel()">Cancel</button>
+    <button class="vp-btn vp-apply" (click)="onApply()">Apply</button>
+  </div>
+</div>

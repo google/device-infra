@@ -1,0 +1,587 @@
+<mat-card class="results-area" [class.grouped-mode]="groupByKeys().length > 0">
+  @if (groupByKeys().length > 0) {
+    <!-- Grouped Mode Toolbar -->
+    <div class="rt-toolbar" [class.rt-toolbar-active]="selected().size > 0">
+      @if (selected().size > 0) {
+        <span class="rt-count">
+          {{ selected().size | number }} selected
+          @if (showScopeSwitcher()) {
+            · {{ fleet() === 'internal' ? 'Google Internal' : 'ATS Labs' }}
+          }
+        </span>
+        <span class="rt-divider"></span>
+        <button class="rt-btn-text" (click)="quarantine.emit()">
+          <mat-icon class="material-symbols-outlined">gpp_bad</mat-icon>
+          Quarantine
+        </button>
+        @if (entity() === 'devices') {
+          <button class="rt-btn-text" (click)="configureWifi.emit()">
+            <mat-icon class="material-symbols-outlined">wifi</mat-icon>
+            Configure Wi-Fi
+          </button>
+        }
+        <button class="rt-btn-text" (click)="export.emit()">
+          <mat-icon class="material-symbols-outlined">download</mat-icon>
+          Export
+        </button>
+        <span class="rt-grow"></span>
+        <button class="rt-btn-text" (click)="clearSelection()">
+          <mat-icon class="material-symbols-outlined">close</mat-icon>
+          Clear
+        </button>
+      } @else {
+        <span class="rt-count">
+          {{ (groupedResults()?.totalItems || 0) | number }} {{ entity() }} in
+          {{ (groupedResults()?.totalGroups || 0) | number }} groups
+          @if (showScopeSwitcher()) {
+            · {{ fleet() === 'internal' ? 'Google Internal' : 'ATS Labs' }}
+          }
+        </span>
+        <span class="rt-divider"></span>
+        @if (groupKeysText()) {
+          <span class="rt-groupby-label">by {{ groupKeysText() }}</span>
+          <span class="rt-divider"></span>
+        }
+
+        <!-- Group Sort Menu -->
+        <button class="rt-btn-text" [matMenuTriggerFor]="groupSortMenuGrouped">
+          <mat-icon class="material-symbols-outlined">swap_vert</mat-icon>
+          {{ getGroupSortActiveLabel() }}
+          <mat-icon class="material-symbols-outlined rt-caret">arrow_drop_down</mat-icon>
+        </button>
+        <mat-menu #groupSortMenuGrouped="matMenu" class="sort-dropdown-menu">
+          @for (opt of groupSortOptions; track opt.value) {
+            <button
+              mat-menu-item
+              (click)="setGroupSort(opt.value)"
+              [class.active-density]="groupSort() === opt.value"
+            >
+              <mat-icon class="material-symbols-outlined">
+                {{ groupSort() === opt.value ? 'check' : '' }}
+              </mat-icon>
+              <span>{{ getGroupSortText(opt.labelTemplate) }}</span>
+            </button>
+          }
+        </mat-menu>
+
+        <!-- Columns Selector Menu -->
+        <button class="rt-btn-text" [matMenuTriggerFor]="columnMenuGrouped">
+          <mat-icon class="material-symbols-outlined">view_column</mat-icon>
+          Columns
+        </button>
+        <mat-menu #columnMenuGrouped="matMenu" class="columns-dropdown-menu">
+          @for (col of availableColumns(); track col.key) {
+            <button mat-menu-item (click)="toggleColumn(col.key); $event.stopPropagation()">
+              <mat-checkbox
+                [checked]="isColumnVisible(col.key)"
+                (click)="$event.stopPropagation()"
+                (change)="toggleColumn(col.key)"
+              >
+                {{ col.label }}
+              </mat-checkbox>
+            </button>
+          }
+        </mat-menu>
+
+        <span class="rt-grow"></span>
+
+        <!-- Utilization Legend -->
+        @if (entity() === 'devices') {
+          <div class="rt-util-key">
+            <span class="rt-util-key-item">
+              <span class="legend-dot color-busy"></span>In Service (BUSY)
+            </span>
+            <span class="rt-util-key-item">
+              <span class="legend-dot color-idle"></span>In Service (IDLE)
+            </span>
+            <span class="rt-util-key-item">
+              <span class="legend-dot color-others"></span>Others
+            </span>
+          </div>
+        }
+      }
+    </div>
+
+    @if (store.isLoading()) {
+      <mat-progress-bar mode="indeterminate" class="table-progress-bar"></mat-progress-bar>
+    }
+    <div class="rt-accordion">
+      @if (sortedGroups().length > 0) {
+        @for (g of sortedGroups(); track g.groupId) {
+          <section class="rt-group">
+            <!-- Group Header Row -->
+            <div class="rt-group-row" [class.open]="openGroupIds().has(g.groupId)">
+              <button
+                class="rt-group-head"
+                [attr.aria-expanded]="openGroupIds().has(g.groupId)"
+                (click)="toggleGroup(g.groupId)"
+              >
+                <mat-icon class="material-symbols-outlined rt-caret-icon">
+                  {{ openGroupIds().has(g.groupId) ? 'expand_more' : 'chevron_right' }}
+                </mat-icon>
+
+                <span class="rt-group-name">
+                  @for (val of g.values || []; track $index) {
+                    @if (val !== null && val !== undefined && val !== '') {
+                      <span>{{ val }}</span>
+                    } @else {
+                      <em class="rt-empty">(no value)</em>
+                    }
+                    @if (!$last) { <span class="rt-gv-sep">·</span> }
+                  }
+                </span>
+
+                <span class="rt-group-count">
+                  {{ (g.itemCount || 0) | number }} {{ entity() }}
+                </span>
+              </button>
+
+              <!-- Utilization Bar -->
+              @if (g.utilization && (g.utilization.total || 0) > 0) {
+                <div class="rt-util">
+                  <div style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
+                    <div class="progress-container">
+                      <div
+                        class="progress-segment color-busy"
+                        [style.width.%]="getUtilWidth(g.utilization.busy, g.utilization.total)"
+                        [title]="(g.utilization.busy || 0) + ' (' + getUtilPct(g.utilization.busy, g.utilization.total) + '%) in service (BUSY)'"
+                      ></div>
+                      <div
+                        class="progress-segment color-idle"
+                        [style.width.%]="getUtilWidth(g.utilization.idle, g.utilization.total)"
+                        [title]="(g.utilization.idle || 0) + ' (' + getUtilPct(g.utilization.idle, g.utilization.total) + '%) in service (IDLE)'"
+                      ></div>
+                      <div
+                        class="progress-segment color-others"
+                        [style.width.%]="getUtilWidth(g.utilization.other, g.utilization.total)"
+                        [title]="(g.utilization.other || 0) + ' (' + getUtilPct(g.utilization.other, g.utilization.total) + '%) out of service'"
+                      ></div>
+                    </div>
+                    <div style="font-size: 0.6875rem; color: #5f6368; display: flex; justify-content: space-between;">
+                      <span class="util-legend-item">
+                        <span class="legend-dot color-busy"></span>
+                        {{ (g.utilization.busy || 0) | number }} ({{ getUtilPct(g.utilization.busy, g.utilization.total) }}%)
+                      </span>
+                      <span class="util-legend-item">
+                        <span class="legend-dot color-idle"></span>
+                        {{ (g.utilization.idle || 0) | number }} ({{ getUtilPct(g.utilization.idle, g.utilization.total) }}%)
+                      </span>
+                      <span class="util-legend-item">
+                        <span class="legend-dot color-others"></span>
+                        {{ (g.utilization.other || 0) | number }} ({{ getUtilPct(g.utilization.other, g.utilization.total) }}%)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- Group Body (Expanded) -->
+            @if (openGroupIds().has(g.groupId)) {
+              <div class="rt-group-body">
+                @if (expandedGroupPages().get(g.groupId); as groupState) {
+                  @if (groupState.loading) {
+                    <div class="rt-group-loading">Loading {{ entity() }}...</div>
+                  } @else if (groupState.error) {
+                    <div class="rt-group-empty" style="color: #d93025;">
+                      {{ groupState.error }}
+                    </div>
+                  } @else if (groupState.data?.rows && groupState.data!.rows!.length > 0) {
+                    <div class="rt-group-scroll">
+                      <table class="rt-inner-table">
+                        <thead>
+                          <tr>
+                            <th class="rt-check-cell">
+                              <mat-checkbox
+                                [checked]="isGroupPageAllSelected(groupState.data!.rows!)"
+                                (change)="toggleSelectGroupPage(groupState.data!.rows!)"
+                              ></mat-checkbox>
+                            </th>
+                            @for (col of groupState.data!.columns || columns(); track col.key) {
+                              <th [class]="'col-' + col.key">{{ col.displayName }}</th>
+                            }
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (row of groupState.data!.rows!; track getRowId(row)) {
+                            <tr [class.selected-row]="selected().has(getRowId(row))">
+                              <td class="rt-check-cell">
+                                <mat-checkbox
+                                  [checked]="selected().has(getRowId(row))"
+                                  (change)="toggleSelectRow(getRowId(row))"
+                                ></mat-checkbox>
+                              </td>
+                              @for (col of groupState.data!.columns || columns(); track col.key) {
+                                <td [class]="'col-' + col.key">
+                                  @if (getCell(row, col.key, groupState.data!.columns); as cell) {
+                                    @switch (getCellType(cell)) {
+                                      @case ('text') {
+                                        @if (getTextValue(cell); as txtVal) {
+                                          <span [title]="txtVal">{{ txtVal }}</span>
+                                        } @else {
+                                          <em class="rt-empty">(no value)</em>
+                                        }
+                                      }
+                                      @case ('link') {
+                                        @if (getRouterLink(cell.link?.target); as linkArr) {
+                                          <a [routerLink]="linkArr" queryParamsHandling="preserve" class="device-link" [title]="cell.link?.text || ''">
+                                            {{ cell.link?.text }}
+                                          </a>
+                                        } @else {
+                                          <span [title]="cell.link?.text || '-'">{{ cell.link?.text || '-' }}</span>
+                                        }
+                                      }
+                                      @case ('status') {
+                                        <span class="status-cell">
+                                          <span class="rt-dot" [class]="'rt-dot ' + getStatusClass(cell.status?.text || '', cell.status?.indicator)"></span>
+                                          {{ cell.status?.text }}
+                                        </span>
+                                      }
+                                      @case ('chips') {
+                                        <app-overflow-chip-list
+                                          [items]="getChipsValues(cell)"
+                                          [title]="getColumnDisplayName(col.key, groupState.data!.columns || columns())"
+                                          [subtitle]="getRowId(row)"
+                                        ></app-overflow-chip-list>
+                                      }
+                                      @case ('multilink') {
+                                        @for (entry of cell.multiLink?.entries || []; track $index) {
+                                          @if (getRouterLink(entry.target); as linkArr) {
+                                            <a [routerLink]="linkArr" queryParamsHandling="preserve" class="device-link">
+                                              {{ entry.text }}
+                                            </a>
+                                          } @else {
+                                            {{ entry.text }}
+                                          }
+                                          @if (!$last) {, }
+                                        }
+                                      }
+                                      @default {
+                                        -
+                                      }
+                                    }
+                                  } @else if (getRowPropertyValue(row, col.key); as propVal) {
+                                    @if (isArray(propVal) && propVal.length > 0) {
+                                      <app-overflow-chip-list
+                                        [items]="propVal"
+                                        [title]="getColumnDisplayName(col.key, groupState.data!.columns || columns())"
+                                        [subtitle]="getRowId(row)"
+                                      ></app-overflow-chip-list>
+                                    } @else {
+                                      <span [title]="propVal">{{ propVal }}</span>
+                                    }
+                                  } @else {
+                                    -
+                                  }
+                                </td>
+                              }
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <!-- Inner Group Pagination -->
+                    <div class="rt-inner-pagination">
+                      <span class="rt-range">
+                        {{ groupState.data!.rangeStart || 0 }}–{{ groupState.data!.rangeEnd || 0 }} of
+                        {{ (groupState.data!.total || 0) | number }}
+                      </span>
+                      <span class="rt-grow"></span>
+                      <button
+                        class="rt-btn-text"
+                        [disabled]="!groupState.data!.prevPageToken"
+                        (click)="store.onLoadGroupRows(g.groupId, groupState.data!.prevPageToken)"
+                      >
+                        <mat-icon class="material-symbols-outlined">chevron_left</mat-icon>
+                        Previous
+                      </button>
+                      <button
+                        class="rt-btn-text"
+                        [disabled]="!groupState.data!.nextPageToken"
+                        (click)="store.onLoadGroupRows(g.groupId, groupState.data!.nextPageToken)"
+                      >
+                        Next
+                        <mat-icon class="material-symbols-outlined">chevron_right</mat-icon>
+                      </button>
+                    </div>
+                  } @else {
+                    <div class="rt-group-empty">No {{ entity() }} in this group.</div>
+                  }
+                } @else {
+                  <div class="rt-group-loading">Loading {{ entity() }}...</div>
+                }
+              </div>
+            }
+          </section>
+        }
+      } @else {
+        @if (!store.isLoading()) {
+          <div class="rt-group-empty">No groups found.</div>
+        }
+      }
+    </div>
+
+    <!-- Group Pagination Footer -->
+    <div class="rt-pagination">
+      <span class="rt-range">
+        {{ groupedResults()?.rangeStart || 0 }}–{{ groupedResults()?.rangeEnd || 0 }} of
+        {{ (groupedResults()?.totalGroups || 0) | number }} groups
+      </span>
+      <span class="rt-grow"></span>
+      <button class="rt-btn-text" [disabled]="!groupedResults()?.prevPageToken" (click)="prevPage()">
+        <mat-icon class="material-symbols-outlined">chevron_left</mat-icon>
+        Previous
+      </button>
+      <button class="rt-btn-text" [disabled]="!groupedResults()?.nextPageToken" (click)="nextPage()">
+        Next
+        <mat-icon class="material-symbols-outlined">chevron_right</mat-icon>
+      </button>
+    </div>
+  } @else {
+    <!-- Toolbar -->
+    <div class="rt-toolbar" [class.rt-toolbar-active]="selected().size > 0">
+      @if (selected().size > 0) {
+        <span class="rt-count">
+          {{ selected().size | number }} selected
+          @if (showScopeSwitcher()) {
+            · {{ fleet() === 'internal' ? 'Google Internal' : 'ATS Labs' }}
+          }
+        </span>
+        <span class="rt-divider"></span>
+        <button class="rt-btn-text" (click)="quarantine.emit()">
+          <mat-icon class="material-symbols-outlined">gpp_bad</mat-icon>
+          Quarantine
+        </button>
+        @if (entity() === 'devices') {
+          <button class="rt-btn-text" (click)="configureWifi.emit()">
+            <mat-icon class="material-symbols-outlined">wifi</mat-icon>
+            Configure Wi-Fi
+          </button>
+        }
+        <button class="rt-btn-text" (click)="export.emit()">
+          <mat-icon class="material-symbols-outlined">download</mat-icon>
+          Export
+        </button>
+        <span class="rt-grow"></span>
+        <button class="rt-btn-text" (click)="clearSelection()">
+          <mat-icon class="material-symbols-outlined">close</mat-icon>
+          Clear
+        </button>
+      } @else {
+        <span class="rt-count">
+          {{ totalCount() | number }} {{ entity() }}
+          @if (showScopeSwitcher()) {
+            · {{ fleet() === 'internal' ? 'Google Internal' : 'ATS Labs' }}
+          }
+        </span>
+        <span class="rt-divider"></span>
+
+        <!-- Columns Selector Menu -->
+        <button class="rt-btn-text" [matMenuTriggerFor]="columnMenu">
+          <mat-icon class="material-symbols-outlined">view_column</mat-icon>
+          Columns
+        </button>
+        <mat-menu #columnMenu="matMenu" class="columns-dropdown-menu">
+          @for (col of availableColumns(); track col.key) {
+            <button mat-menu-item (click)="toggleColumn(col.key); $event.stopPropagation()">
+              <mat-checkbox
+                [checked]="isColumnVisible(col.key)"
+                (click)="$event.stopPropagation()"
+                (change)="toggleColumn(col.key)"
+              >
+                {{ col.label }}
+              </mat-checkbox>
+            </button>
+          }
+        </mat-menu>
+
+        <!-- Density Selector Menu -->
+        <button class="rt-btn-text" [matMenuTriggerFor]="densityMenu">
+          <mat-icon class="material-symbols-outlined">
+            {{ density() === 'compact' ? 'density_small' : (density() === 'comfortable' ? 'density_large' : 'density_medium') }}
+          </mat-icon>
+          Density
+          <mat-icon class="material-symbols-outlined rt-caret">arrow_drop_down</mat-icon>
+        </button>
+        <mat-menu #densityMenu="matMenu" class="density-dropdown-menu">
+          <button mat-menu-item (click)="density.set('compact')" [class.active-density]="density() === 'compact'">
+            <mat-icon class="material-symbols-outlined">
+              {{ density() === 'compact' ? 'check' : '' }}
+            </mat-icon>
+            <span>Compact</span>
+          </button>
+          <button mat-menu-item (click)="density.set('default')" [class.active-density]="density() === 'default'">
+            <mat-icon class="material-symbols-outlined">
+              {{ density() === 'default' ? 'check' : '' }}
+            </mat-icon>
+            <span>Default</span>
+          </button>
+          <button mat-menu-item (click)="density.set('comfortable')" [class.active-density]="density() === 'comfortable'">
+            <mat-icon class="material-symbols-outlined">
+              {{ density() === 'comfortable' ? 'check' : '' }}
+            </mat-icon>
+            <span>Comfortable</span>
+          </button>
+        </mat-menu>
+
+        <span class="rt-grow"></span>
+
+        <!-- More Options Menu -->
+        <button class="rt-icon-btn" [matMenuTriggerFor]="moreMenu" title="More options">
+          <mat-icon class="material-symbols-outlined">more_vert</mat-icon>
+        </button>
+        <mat-menu #moreMenu="matMenu" class="more-dropdown-menu">
+          <button mat-menu-item (click)="refresh.emit()">
+            <mat-icon class="material-symbols-outlined">refresh</mat-icon>
+            <span>Refresh</span>
+          </button>
+          <button mat-menu-item (click)="export.emit()">
+            <mat-icon class="material-symbols-outlined">download</mat-icon>
+            <span>Export</span>
+          </button>
+        </mat-menu>
+      }
+    </div>
+
+    @if (store.isLoading()) {
+      <mat-progress-bar mode="indeterminate" class="table-progress-bar"></mat-progress-bar>
+    }
+
+    <mat-card-content class="results-card-content">
+      <!-- Data Table -->
+      <div class="table-container" [class]="'density-' + density()">
+        <table mat-table [dataSource]="rows()" class="results-table">
+          <!-- Checkbox Column -->
+          <ng-container matColumnDef="checkbox">
+            <th mat-header-cell *matHeaderCellDef class="checkbox-col">
+              <mat-checkbox
+                [checked]="isAllSelected()"
+                [indeterminate]="isSomeSelected()"
+                (change)="toggleSelectAll()"
+              ></mat-checkbox>
+            </th>
+            <td mat-cell *matCellDef="let row" class="checkbox-col">
+              <mat-checkbox
+                [checked]="selected().has(row.id)"
+                (change)="toggleSelectRow(row.id)"
+              ></mat-checkbox>
+            </td>
+          </ng-container>
+
+          <!-- Dynamic Columns -->
+          @for (col of columns(); track col.key) {
+            <ng-container [matColumnDef]="col.key">
+              <th mat-header-cell *matHeaderCellDef (click)="onHeaderClick(col.key)" class="sortable-header" [class]="'col-' + col.key">
+                <span class="header-content">
+                  {{ col.displayName }}
+                  @if (isSortColumn(col.key)) {
+                    <mat-icon class="material-symbols-outlined sort-icon">
+                      {{ sortAsc() ? 'arrow_upward' : 'arrow_downward' }}
+                    </mat-icon>
+                  }
+                </span>
+              </th>
+              <td mat-cell *matCellDef="let row" [class]="'col-' + col.key">
+                @if (getCell(row, col.key); as cell) {
+                  @switch (getCellType(cell)) {
+                    @case ('text') {
+                      @if (getTextValue(cell); as txtVal) {
+                        <span [title]="txtVal">{{ txtVal }}</span>
+                      } @else {
+                        <em class="rt-empty">(no value)</em>
+                      }
+                    }
+                    @case ('link') {
+                      @if (getRouterLink(cell.link?.target); as linkArr) {
+                        <a [routerLink]="linkArr" queryParamsHandling="preserve" class="device-link" [title]="cell.link?.text || ''">
+                          {{ cell.link?.text }}
+                        </a>
+                      } @else {
+                        <span [title]="cell.link?.text || ''">{{ cell.link?.text }}</span>
+                      }
+                    }
+                    @case ('status') {
+                      <span class="status-cell">
+                        <span class="rt-dot" [class]="'rt-dot ' + getStatusClass(cell.status?.text || '', cell.status?.indicator)"></span>
+                        {{ cell.status?.text }}
+                      </span>
+                    }
+                    @case ('chips') {
+                      <app-overflow-chip-list
+                        [items]="getChipsValues(cell)"
+                        [title]="getColumnDisplayName(col.key)"
+                        [subtitle]="row.id"
+                      ></app-overflow-chip-list>
+                    }
+                    @case ('multilink') {
+                      @for (entry of cell.multiLink?.entries || []; track $index) {
+                        @if (getRouterLink(entry.target); as linkArr) {
+                          <a [routerLink]="linkArr" queryParamsHandling="preserve" class="device-link">
+                            {{ entry.text }}
+                          </a>
+                        } @else {
+                          {{ entry.text }}
+                        }
+                        @if (!$last) {, }
+                      }
+                    }
+                    @default {
+                      <em class="rt-empty">(no value)</em>
+                    }
+                  }
+                } @else if (getRowPropertyValue(row, col.key); as propVal) {
+                  @if (isArray(propVal) && propVal.length > 0) {
+                    <app-overflow-chip-list
+                      [items]="propVal"
+                      [title]="getColumnDisplayName(col.key)"
+                      [subtitle]="row.id"
+                    ></app-overflow-chip-list>
+                  } @else {
+                    <span [title]="propVal">{{ propVal }}</span>
+                  }
+                } @else {
+                  <em class="rt-empty">(no value)</em>
+                }
+              </td>
+            </ng-container>
+          }
+
+          <tr mat-header-row *matHeaderRowDef="columnsToDisplay(); sticky: true"></tr>
+          <tr mat-row *matRowDef="let row; columns: columnsToDisplay()" [class.selected-row]="selected().has(row.id)"></tr>
+
+          <!-- Row shown when there is no matching data. -->
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell empty-table-cell" [attr.colspan]="columnsToDisplay().length">
+              No matching {{ entity() }} found.
+            </td>
+          </tr>
+        </table>
+      </div>
+    </mat-card-content>
+
+    <!-- Pagination Footer -->
+    <div class="rt-pagination">
+      <span class="rt-page-label">Rows per page:</span>
+      <mat-select [ngModel]="pageSize()" (ngModelChange)="pageSize.set($event)" class="rt-page-size" panelClass="rt-page-size-panel" hideSingleSelectionIndicator>
+        <mat-option [value]="10">10</mat-option>
+        <mat-option [value]="25">25</mat-option>
+        <mat-option [value]="50">50</mat-option>
+        <mat-option [value]="100">100</mat-option>
+      </mat-select>
+      <span class="rt-divider"></span>
+      <span class="rt-range">
+        {{ rangeStart() }}–{{ rangeEnd() }} of {{ totalCount() | number }}
+      </span>
+      <span class="rt-grow"></span>
+      <button class="rt-btn-text" [disabled]="pageIndex() === 0" (click)="prevPage()" title="Previous page">
+        <mat-icon class="material-symbols-outlined">chevron_left</mat-icon>
+        Previous
+      </button>
+      <button class="rt-btn-text" [disabled]="pageIndex() >= totalPages() - 1" (click)="nextPage()" title="Next page">
+        Next
+        <mat-icon class="material-symbols-outlined">chevron_right</mat-icon>
+      </button>
+    </div>
+  }
+</mat-card>

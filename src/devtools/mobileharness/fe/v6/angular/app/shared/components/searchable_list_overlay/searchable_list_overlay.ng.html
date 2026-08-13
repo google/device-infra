@@ -20,7 +20,7 @@
       @for (item of filteredItems(); track $index) {
         @if (data.type === 'chip') {
           @let chip = $any(item);
-          <div class="type-chip" [class]="chip.cssClass">
+          <div [class]="'chip-item ' + (chip.cssClass || '')">
             {{chip.label}}
           </div>
         } @else if (data.type === 'simple') {

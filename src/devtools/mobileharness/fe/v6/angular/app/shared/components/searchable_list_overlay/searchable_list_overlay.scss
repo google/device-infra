@@ -95,6 +95,30 @@
       flex-wrap: wrap;
       align-content: flex-start;
       gap: 8px;
+
+      .chip-item,
+      .chip {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 8px;
+        background-color: #e0e0e0;
+        color: #3c4043;
+        font-size: 0.8rem;
+        overflow: hidden;
+        vertical-align: middle;
+
+        &.chip-normal,
+        &.chip-default {
+          background-color: #e0e0e0;
+          color: #3c4043;
+        }
+
+        &.chip-abnormal,
+        &.chip-error {
+          background-color: #fce8e6;
+          color: #c5221f;
+        }
+      }
     }
   }
 

@@ -73,7 +73,7 @@ import {
   MasterDetailLayout,
   NavItem,
 } from '../../../../shared/components/master_detail_layout/master_detail_layout';
-import {OverflowList} from '../../../../shared/components/overflow_list/overflow_list';
+import {OverflowChipListComponent} from '../../../../shared/components/overflow_chip_list/overflow_chip_list';
 import {
   SearchableListOverlayComponent,
   SearchableListOverlayData,
@@ -196,7 +196,7 @@ const STATUS_SEMANTIC_MAP: Record<string, {icon: string; colorClass: string}> =
     InfoCard,
     NavLink,
     SearchableListOverlayComponent,
-    OverflowList,
+    OverflowChipListComponent,
     ActionButton,
     TooltipIfTruncatedDirective,
   ],

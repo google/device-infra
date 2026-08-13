@@ -1,0 +1,35 @@
+@if (normalizedItems().length > 0) {
+  <div class="chip-list-wrapper">
+    @for (item of displayedItems(); track $index) {
+      <span class="chip-item" [class]="item.cssClass" [title]="item.label">{{ item.label }}</span>
+    }
+    @if (remainingCount() > 0) {
+      <button
+        type="button"
+        class="chip-more"
+        cdkOverlayOrigin
+        #trigger="cdkOverlayOrigin"
+        (mouseenter)="onMoreHover(trigger)"
+        (mouseleave)="onMoreLeave($event)"
+        (click)="openOverlay(trigger); $event.stopPropagation()"
+      >
+        +{{ remainingCount() }} more
+      </button>
+    }
+  </div>
+} @else {
+  <span class="empty-chip">-</span>
+}
+
+@if (activeOverlay(); as overlay) {
+  <ng-template cdkConnectedOverlay
+               [cdkConnectedOverlayOrigin]="overlay.origin"
+               [cdkConnectedOverlayOpen]="true"
+               [cdkConnectedOverlayPositions]="overlayPositions"
+               (overlayOutsideClick)="closeOverlay()"
+               (detach)="closeOverlay()">
+    <div (mouseenter)="onOverlayEnter()" (mouseleave)="onOverlayLeave($event)">
+      <app-searchable-list-overlay [data]="overlay.data" (closeOverlay)="closeOverlay()"></app-searchable-list-overlay>
+    </div>
+  </ng-template>
+}
