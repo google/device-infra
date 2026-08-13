@@ -146,6 +146,11 @@ message GetTestbedConfigRequest {
 
   // The universe of the device.
   string universe = 2;
+
+  // Optional host name. When set, restricts the lookup to the device on this
+  // host, disambiguating a device id that appears on more than one host. Empty
+  // applies no host filter.
+  string host_name = 3;
 }
 
 // Request message for GetDeviceOverview.
@@ -158,6 +163,11 @@ message GetDeviceOverviewRequest {
 
   // If true, forces a refresh and bypasses the cache.
   bool force_refresh = 3;
+
+  // Optional host name. When set, restricts the lookup to the device on this
+  // host, disambiguating a device id that appears on more than one host. Empty
+  // applies no host filter.
+  string host_name = 4;
 }
 
 // Request message for GetDeviceHeaderInfo.
@@ -170,6 +180,11 @@ message GetDeviceHeaderInfoRequest {
 
   // If true, forces a refresh and bypasses the cache.
   bool force_refresh = 3;
+
+  // Optional host name. When set, restricts the lookup to the device on this
+  // host, disambiguating a device id that appears on more than one host. Empty
+  // applies no host filter.
+  string host_name = 4;
 }
 
 // Request message for GetDeviceHealthinessStats.
@@ -183,6 +198,11 @@ message GetDeviceHealthinessStatsRequest {
 
   // The universe the device belongs to.
   string universe = 4;
+
+  // Optional host name. When set, restricts the stats to tests on this host,
+  // disambiguating a device id that appears on more than one host. Empty
+  // applies no host filter.
+  string host_name = 5;
 }
 
 // Request message for GetDeviceTestResultStats.
@@ -196,6 +216,11 @@ message GetDeviceTestResultStatsRequest {
 
   // The universe the device belongs to.
   string universe = 4;
+
+  // Optional host name. When set, restricts the stats to tests on this host,
+  // disambiguating a device id that appears on more than one host. Empty
+  // applies no host filter.
+  string host_name = 5;
 }
 
 // Request message for GetDeviceRecoveryTaskStats.
@@ -209,6 +234,11 @@ message GetDeviceRecoveryTaskStatsRequest {
 
   // The universe the device belongs to.
   string universe = 4;
+
+  // Optional host name. When set, restricts the stats to tests on this host,
+  // disambiguating a device id that appears on more than one host. Empty
+  // applies no host filter.
+  string host_name = 5;
 }
 
 // Data for device overview page.
@@ -226,6 +256,11 @@ message TakeScreenshotRequest {
 
   // The universe the device belongs to.
   string universe = 2;
+
+  // Optional host name. When set, restricts the lookup to the device on this
+  // host, disambiguating a device id that appears on more than one host. Empty
+  // applies no host filter.
+  string host_name = 3;
 }
 
 // Response for TakeScreenshot.
@@ -243,6 +278,11 @@ message GetLogcatRequest {
 
   // The universe the device belongs to.
   string universe = 2;
+
+  // Optional host name. When set, restricts the lookup to the device on this
+  // host, disambiguating a device id that appears on more than one host. Empty
+  // applies no host filter.
+  string host_name = 3;
 }
 
 // Response for GetLogcat.
@@ -264,6 +304,11 @@ message QuarantineDeviceRequest {
   google.protobuf.Timestamp end_time = 2;
   // The universe the device belongs to.
   string universe = 3;
+
+  // Optional host name. When set, restricts the lookup to the device on this
+  // host, disambiguating a device id that appears on more than one host. Empty
+  // applies no host filter.
+  string host_name = 4;
 }
 
 // Response for QuarantineDevice.
@@ -278,6 +323,11 @@ message UnquarantineDeviceRequest {
   string id = 1;
   // The universe the device belongs to.
   string universe = 2;
+
+  // Optional host name. When set, restricts the lookup to the device on this
+  // host, disambiguating a device id that appears on more than one host. Empty
+  // applies no host filter.
+  string host_name = 3;
 }
 
 // Response for UnquarantineDevice.
@@ -290,6 +340,11 @@ message PrepareDeviceRequest {
 
   // The universe the device belongs to.
   string universe = 2;
+
+  // Optional host name. When set, restricts the lookup to the device on this
+  // host, disambiguating a device id that appears on more than one host. Empty
+  // applies no host filter.
+  string host_name = 3;
 }
 
 // Response for PrepareDevice.
@@ -307,6 +362,11 @@ message GetDeviceTestHistoryRequest {
 
   // The universe the device belongs to.
   string universe = 3;
+
+  // Optional host name. When set, restricts the tests to this host,
+  // disambiguating a device id that appears on more than one host. Empty
+  // applies no host filter.
+  string host_name = 4;
 }
 
 // Response for GetDeviceTestHistory.

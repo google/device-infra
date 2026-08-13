@@ -90,8 +90,10 @@ public final class GetDeviceOverviewHandler {
 
     abstract String deviceId();
 
-    static DeviceCacheKey create(UniverseScope universe, String deviceId) {
-      return new AutoValue_GetDeviceOverviewHandler_DeviceCacheKey(universe, deviceId);
+    abstract String hostName();
+
+    static DeviceCacheKey create(UniverseScope universe, String deviceId, String hostName) {
+      return new AutoValue_GetDeviceOverviewHandler_DeviceCacheKey(universe, deviceId, hostName);
     }
   }
 
@@ -117,7 +119,8 @@ public final class GetDeviceOverviewHandler {
 
   public ListenableFuture<DeviceOverviewPageData> getDeviceOverview(
       GetDeviceOverviewRequest request, UniverseScope universe) {
-    DeviceCacheKey cacheKey = DeviceCacheKey.create(universe, request.getId());
+    DeviceCacheKey cacheKey =
+        DeviceCacheKey.create(universe, request.getId(), request.getHostName());
     if (request.getForceRefresh()) {
       logger.atInfo().log("Force refreshing cache for %s", cacheKey);
       overviewCache.synchronous().invalidate(cacheKey);
@@ -160,7 +163,7 @@ public final class GetDeviceOverviewHandler {
     logger.atInfo().log("Loading device overview for %s", key);
 
     return Futures.transform(
-        deviceDataLoader.loadDeviceData(deviceId, universe),
+        deviceDataLoader.loadDeviceData(deviceId, key.hostName(), universe),
         deviceData -> {
           logger.atInfo().log("Building DeviceOverview for %s", key);
           return buildDeviceOverviewPageData(deviceId, deviceData, universe);

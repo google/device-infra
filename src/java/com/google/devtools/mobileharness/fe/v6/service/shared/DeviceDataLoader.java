@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.shared;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Strings;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -105,16 +106,30 @@ public class DeviceDataLoader {
   }
 
   /**
-   * Loads device data asynchronously.
+   * Loads device data asynchronously, applying no host filter.
    *
    * @param deviceId the unique ID of the device
    * @param universe the universe the device belongs to
    */
   public ListenableFuture<DeviceData> loadDeviceData(String deviceId, UniverseScope universe) {
+    return loadDeviceData(deviceId, "", universe);
+  }
+
+  /**
+   * Loads device data asynchronously.
+   *
+   * @param deviceId the unique ID of the device
+   * @param hostName optional host name; when non-empty, restricts the lookup to the device on this
+   *     host, disambiguating a device id that appears on more than one host
+   * @param universe the universe the device belongs to
+   */
+  public ListenableFuture<DeviceData> loadDeviceData(
+      String deviceId, String hostName, UniverseScope universe) {
     logger.atInfo().log("Loading device data for %s (universe: %s)", deviceId, universe);
 
     // Parallel fetch start: DeviceInfo (Required) and Individual Config (Speculative)
-    ListenableFuture<DeviceInfo> deviceInfoFuture = getDeviceInfoAsync(deviceId, universe);
+    ListenableFuture<DeviceInfo> deviceInfoFuture =
+        getDeviceInfoAsync(deviceId, hostName, universe);
     ListenableFuture<ConfigResult<DeviceConfig>> individualConfigFuture =
         getSafeDeviceConfigAsync(deviceId, universe);
 
@@ -122,9 +137,9 @@ public class DeviceDataLoader {
     return Futures.transformAsync(
         deviceInfoFuture,
         deviceInfo -> {
-          String hostName = deviceInfo.getDeviceLocator().getLabLocator().getHostName();
+          String deviceHostName = deviceInfo.getDeviceLocator().getLabLocator().getHostName();
           ListenableFuture<ConfigResult<LabConfig>> labConfigFuture =
-              getSafeLabConfigAsync(hostName, universe);
+              getSafeLabConfigAsync(deviceHostName, universe);
 
           return Futures.whenAllSucceed(labConfigFuture, individualConfigFuture)
               .call(
@@ -212,9 +227,10 @@ public class DeviceDataLoader {
         executor);
   }
 
-  private ListenableFuture<DeviceInfo> getDeviceInfoAsync(String deviceId, UniverseScope universe) {
+  private ListenableFuture<DeviceInfo> getDeviceInfoAsync(
+      String deviceId, String hostName, UniverseScope universe) {
     return Futures.transform(
-        labInfoProvider.getLabInfoAsync(createGetLabInfoRequest(deviceId), universe),
+        labInfoProvider.getLabInfoAsync(createGetLabInfoRequest(deviceId, hostName), universe),
         response ->
             response
                 .getLabQueryResult()
@@ -236,25 +252,40 @@ public class DeviceDataLoader {
         .anyMatch(p -> p.getKey().equals("device_config_mode") && p.getValue().equals("host"));
   }
 
-  private static GetLabInfoRequest createGetLabInfoRequest(String deviceId) {
+  private static GetLabInfoRequest createGetLabInfoRequest(String deviceId, String hostName) {
+    LabQuery.Filter.Builder filter =
+        LabQuery.Filter.newBuilder()
+            .setDeviceFilter(
+                FilterProto.DeviceFilter.newBuilder()
+                    .addDeviceMatchCondition(
+                        FilterProto.DeviceFilter.DeviceMatchCondition.newBuilder()
+                            .setDeviceUuidMatchCondition(
+                                FilterProto.DeviceFilter.DeviceMatchCondition
+                                    .DeviceUuidMatchCondition.newBuilder()
+                                    .setCondition(
+                                        FilterProto.StringMatchCondition.newBuilder()
+                                            .setInclude(
+                                                FilterProto.StringMatchCondition.Include
+                                                    .newBuilder()
+                                                    .addExpected(deviceId))))));
+    if (!Strings.isNullOrEmpty(hostName)) {
+      filter.setLabFilter(
+          FilterProto.LabFilter.newBuilder()
+              .addLabMatchCondition(
+                  FilterProto.LabFilter.LabMatchCondition.newBuilder()
+                      .setLabHostNameMatchCondition(
+                          FilterProto.LabFilter.LabMatchCondition.LabHostNameMatchCondition
+                              .newBuilder()
+                              .setCondition(
+                                  FilterProto.StringMatchCondition.newBuilder()
+                                      .setInclude(
+                                          FilterProto.StringMatchCondition.Include.newBuilder()
+                                              .addExpected(hostName))))));
+    }
     return GetLabInfoRequest.newBuilder()
         .setLabQuery(
             LabQuery.newBuilder()
-                .setFilter(
-                    LabQuery.Filter.newBuilder()
-                        .setDeviceFilter(
-                            FilterProto.DeviceFilter.newBuilder()
-                                .addDeviceMatchCondition(
-                                    FilterProto.DeviceFilter.DeviceMatchCondition.newBuilder()
-                                        .setDeviceUuidMatchCondition(
-                                            FilterProto.DeviceFilter.DeviceMatchCondition
-                                                .DeviceUuidMatchCondition.newBuilder()
-                                                .setCondition(
-                                                    FilterProto.StringMatchCondition.newBuilder()
-                                                        .setInclude(
-                                                            FilterProto.StringMatchCondition.Include
-                                                                .newBuilder()
-                                                                .addExpected(deviceId)))))))
+                .setFilter(filter)
                 .setDeviceViewRequest(LabQuery.DeviceViewRequest.getDefaultInstance()))
         .build();
   }

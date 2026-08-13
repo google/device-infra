@@ -117,7 +117,7 @@ public final class DeviceServiceLogicImplTest {
             Optional.empty(),
             Optional.empty());
 
-    when(deviceDataLoader.loadDeviceData(anyString(), any(UniverseScope.class)))
+    when(deviceDataLoader.loadDeviceData(anyString(), anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(deviceData));
     when(deviceHeaderInfoBuilder.buildDeviceHeaderInfo(
             any(), any(), any(), any(UniverseScope.class)))
@@ -171,7 +171,7 @@ public final class DeviceServiceLogicImplTest {
             Optional.empty(),
             Optional.empty());
 
-    when(deviceDataLoader.loadDeviceData(anyString(), any(UniverseScope.class)))
+    when(deviceDataLoader.loadDeviceData(anyString(), anyString(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(deviceData));
     when(testbedConfigBuilder.buildTestbedConfig(anyString(), any()))
         .thenReturn(TestbedConfig.getDefaultInstance());

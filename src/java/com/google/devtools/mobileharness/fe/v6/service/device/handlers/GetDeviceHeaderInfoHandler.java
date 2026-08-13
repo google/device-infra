@@ -71,7 +71,8 @@ public final class GetDeviceHeaderInfoHandler {
     // 1. Fetch DeviceInfo
     logger.atInfo().log("Fetching DeviceInfo for %s", key);
     ListenableFuture<DeviceInfo> deviceInfoFuture =
-        DeviceInfoLookupHelper.lookUpDeviceInfoAsync(labInfoProvider, deviceId, universe, executor);
+        DeviceInfoLookupHelper.lookUpDeviceInfoAsync(
+            labInfoProvider, deviceId, request.getHostName(), universe, executor);
 
     // 2. Start ConfigProvider fetches early
     logger.atInfo().log("Fetching DeviceConfig for %s", key);

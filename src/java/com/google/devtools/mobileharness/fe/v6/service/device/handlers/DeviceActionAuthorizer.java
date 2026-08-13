@@ -53,6 +53,8 @@ public final class DeviceActionAuthorizer {
    * Authorizes the user, checks permission, and runs the action if authorized.
    *
    * @param deviceId The ID of the target device.
+   * @param hostName Optional host name; when non-empty, narrows the device lookup to this host,
+   *     disambiguating a device id that appears on more than one host.
    * @param username The authenticated username, if present.
    * @param universe The scope of the request.
    * @param actionNameForErrorMessage The action name to use in error messages.
@@ -60,6 +62,7 @@ public final class DeviceActionAuthorizer {
    */
   public <T> ListenableFuture<T> authorizeAndRun(
       String deviceId,
+      String hostName,
       Optional<String> username,
       UniverseScope universe,
       String actionNameForErrorMessage,
@@ -69,7 +72,8 @@ public final class DeviceActionAuthorizer {
     }
 
     ListenableFuture<DeviceInfo> deviceInfoFuture =
-        DeviceInfoLookupHelper.lookUpDeviceInfoAsync(labInfoProvider, deviceId, universe, executor);
+        DeviceInfoLookupHelper.lookUpDeviceInfoAsync(
+            labInfoProvider, deviceId, hostName, universe, executor);
 
     return transformAsync(
         deviceInfoFuture,
