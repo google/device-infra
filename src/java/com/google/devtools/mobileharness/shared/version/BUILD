@@ -43,3 +43,8 @@ java_library(
         "@protobuf//:protobuf_java",
     ],
 )
+
+java_library(
+    name = "fusion_lab_version",
+    srcs = ["FusionLabVersion.java"],
+)
