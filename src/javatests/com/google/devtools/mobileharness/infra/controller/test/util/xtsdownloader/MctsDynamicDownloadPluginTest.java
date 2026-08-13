@@ -288,7 +288,7 @@ public final class MctsDynamicDownloadPluginTest {
 
   @Test
   public void onTestStarting_dynamicMctsJob_success() throws Exception {
-    when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+    when(jobProperties.getOptional(XtsConstants.XTS_JOB_NAME))
         .thenReturn(Optional.of(XtsConstants.DYNAMIC_MCTS_JOB_NAME));
     generateTestZipFilesForDynamicJob();
 
@@ -303,7 +303,7 @@ public final class MctsDynamicDownloadPluginTest {
 
   @Test
   public void onTestStarting_staticJob_success() throws Exception {
-    when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+    when(jobProperties.getOptional(XtsConstants.XTS_JOB_NAME))
         .thenReturn(Optional.of(XtsConstants.STATIC_XTS_JOB_NAME));
 
     spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent);
@@ -317,7 +317,7 @@ public final class MctsDynamicDownloadPluginTest {
   @Test
   public void onTestStarting_fetchDeviceAospVersionThrowsException_fallbackToProperties()
       throws Exception {
-    when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+    when(jobProperties.getOptional(XtsConstants.XTS_JOB_NAME))
         .thenReturn(Optional.of(XtsConstants.STATIC_XTS_JOB_NAME));
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.SDK_VERSION)))
         .thenThrow(
@@ -332,7 +332,7 @@ public final class MctsDynamicDownloadPluginTest {
   @Test
   public void onTestStarting_fetchDeviceTvpVersionThrowsException_fallbackToProperties()
       throws Exception {
-    when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+    when(jobProperties.getOptional(XtsConstants.XTS_JOB_NAME))
         .thenReturn(Optional.of(XtsConstants.STATIC_XTS_JOB_NAME));
     when(mockAndroidPackageManagerUtil.getAppVersionCode(
             any(), eq("com.google.android.modulemetadata")))
@@ -348,7 +348,7 @@ public final class MctsDynamicDownloadPluginTest {
   @Test
   public void onTestStarting_fetchDeviceAbiVersionThrowsException_fallbackToProperties()
       throws Exception {
-    when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+    when(jobProperties.getOptional(XtsConstants.XTS_JOB_NAME))
         .thenReturn(Optional.of(XtsConstants.STATIC_XTS_JOB_NAME));
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.ABI)))
         .thenThrow(
@@ -363,7 +363,7 @@ public final class MctsDynamicDownloadPluginTest {
   @Test
   public void onTestStarting_fetchDeviceMctsModulesInfoThrowsException_fallbackToProperties()
       throws Exception {
-    when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+    when(jobProperties.getOptional(XtsConstants.XTS_JOB_NAME))
         .thenReturn(Optional.of(XtsConstants.STATIC_XTS_JOB_NAME));
     when(mockAndroidPackageManagerUtil.getAppVersionCode(any(), any()))
         .thenThrow(
@@ -377,7 +377,7 @@ public final class MctsDynamicDownloadPluginTest {
 
   @Test
   public void onTestStarting_sdk36_usesSdkFullVersion() throws Exception {
-    when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+    when(jobProperties.getOptional(XtsConstants.XTS_JOB_NAME))
         .thenReturn(Optional.of(XtsConstants.STATIC_XTS_JOB_NAME));
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.SDK_VERSION))).thenReturn("36");
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.SDK_FULL_VERSION))).thenReturn("36-ext");

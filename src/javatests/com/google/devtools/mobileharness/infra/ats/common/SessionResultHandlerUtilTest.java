@@ -158,8 +158,7 @@ public final class SessionResultHandlerUtilTest {
   @Test
   public void getTradefedInvocationLogDir_withoutInvocationDirNameProperty() throws Exception {
     when(testProperties.has(XtsConstants.TRADEFED_INVOCATION_DIR_NAME)).thenReturn(false);
-    when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
-        .thenReturn(Optional.empty());
+    when(jobProperties.getOptional(XtsConstants.XTS_JOB_NAME)).thenReturn(Optional.empty());
     Path logRootDir = folder.getRoot().toPath();
 
     Path result = sessionResultHandlerUtil.getTradefedInvocationLogDir(testInfo, logRootDir);
@@ -169,10 +168,9 @@ public final class SessionResultHandlerUtilTest {
   }
 
   @Test
-  public void getTradefedInvocationLogDir_withDynamicDownloadJobNameProperty() throws Exception {
+  public void getTradefedInvocationLogDir_withXtsJobNameProperty() throws Exception {
     when(testProperties.has(XtsConstants.TRADEFED_INVOCATION_DIR_NAME)).thenReturn(false);
-    when(jobProperties.getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
-        .thenReturn(Optional.of("MCTS"));
+    when(jobProperties.getOptional(XtsConstants.XTS_JOB_NAME)).thenReturn(Optional.of("MCTS"));
     Path logRootDir = folder.getRoot().toPath();
 
     Path result = sessionResultHandlerUtil.getTradefedInvocationLogDir(testInfo, logRootDir);

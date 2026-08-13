@@ -714,6 +714,7 @@ public abstract class XtsJobCreator {
 
     jobInfo.properties().add(SessionHandlerHelper.XTS_MODULE_NAME_PROP, name);
     jobInfo.properties().add(Job.IS_XTS_NON_TF_JOB, "true");
+    jobInfo.properties().add(XtsConstants.XTS_JOB_NAME, name);
 
     return jobInfo;
   }
@@ -898,7 +899,7 @@ public abstract class XtsJobCreator {
             sessionRequestInfo, updatedTradefedJobInfo);
 
     dynamicDownloadJobInfo.properties().add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true");
-    dynamicDownloadJobInfo.properties().add(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME, jobName);
+    dynamicDownloadJobInfo.properties().add(XtsConstants.XTS_JOB_NAME, jobName);
     return dynamicDownloadJobInfo;
   }
 

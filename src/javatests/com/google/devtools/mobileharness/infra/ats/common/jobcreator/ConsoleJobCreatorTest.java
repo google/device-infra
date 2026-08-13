@@ -710,6 +710,8 @@ public final class ConsoleJobCreatorTest {
     assertThat(setupJobOpt).isPresent();
     JobInfo setupJob = setupJobOpt.get();
     assertThat(setupJob.locator().getName()).isEqualTo(XtsConstants.SETUP_JOB_NAME);
+    assertThat(setupJob.properties().get(XtsConstants.XTS_JOB_NAME))
+        .isEqualTo(XtsConstants.SETUP_JOB_NAME);
     assertThat(setupJob.properties().get(PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE))
         .isEqualTo(PhaseSkippableDecoratorConstants.ExecutionMode.SETUP_ONLY.name());
     assertThat(setupJob.type().getDriver()).isEqualTo("NoOpDriver");
@@ -745,6 +747,8 @@ public final class ConsoleJobCreatorTest {
     assertThat(teardownJobOpt).isPresent();
     JobInfo teardownJob = teardownJobOpt.get();
     assertThat(teardownJob.locator().getName()).isEqualTo(XtsConstants.TEARDOWN_JOB_NAME);
+    assertThat(teardownJob.properties().get(XtsConstants.XTS_JOB_NAME))
+        .isEqualTo(XtsConstants.TEARDOWN_JOB_NAME);
     assertThat(teardownJob.properties().get(PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE))
         .isEqualTo(PhaseSkippableDecoratorConstants.ExecutionMode.TEARDOWN_ONLY.name());
     assertThat(teardownJob.type().getDriver()).isEqualTo("NoOpDriver");

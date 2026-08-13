@@ -1051,7 +1051,7 @@ public class SessionResultHandlerUtil {
           tradefedTestInfo
               .jobInfo()
               .properties()
-              .getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME)
+              .getOptional(XtsConstants.XTS_JOB_NAME)
               .map(s -> Ascii.toLowerCase(s) + "_")
               .orElse("");
       invocationDir =

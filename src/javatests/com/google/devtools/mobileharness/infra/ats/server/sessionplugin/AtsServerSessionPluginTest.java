@@ -785,9 +785,7 @@ public final class AtsServerSessionPluginTest {
     verify(sessionInfo).addJob(jobInfo);
 
     properties.add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true");
-    properties.add(
-        XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME,
-        "command_name-" + XtsConstants.STATIC_XTS_JOB_NAME);
+    properties.add(XtsConstants.XTS_JOB_NAME, "command_name-" + XtsConstants.STATIC_XTS_JOB_NAME);
     Timing timing = new Timing();
     when(jobInfo.timing()).thenReturn(timing);
     timing.start();
@@ -825,9 +823,7 @@ public final class AtsServerSessionPluginTest {
     verify(sessionInfo).addJob(jobInfo);
 
     properties.add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true");
-    properties.add(
-        XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME,
-        "command_name-" + XtsConstants.STATIC_XTS_JOB_NAME);
+    properties.add(XtsConstants.XTS_JOB_NAME, "command_name-" + XtsConstants.STATIC_XTS_JOB_NAME);
     Timing timing = new Timing();
     when(jobInfo.timing()).thenReturn(timing);
     timing.start();
@@ -862,9 +858,7 @@ public final class AtsServerSessionPluginTest {
     verify(sessionInfo).addJob(jobInfo);
 
     properties.add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true");
-    properties.add(
-        XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME,
-        "command_name-" + XtsConstants.STATIC_XTS_JOB_NAME);
+    properties.add(XtsConstants.XTS_JOB_NAME, "command_name-" + XtsConstants.STATIC_XTS_JOB_NAME);
     Timing timing = new Timing();
     when(jobInfo.timing()).thenReturn(timing);
     timing.start();

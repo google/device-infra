@@ -364,7 +364,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     return testInfo
         .jobInfo()
         .properties()
-        .getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME)
+        .getOptional(XtsConstants.XTS_JOB_NAME)
         .orElse("")
         .equals(XtsConstants.STATIC_XTS_JOB_NAME);
   }

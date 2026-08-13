@@ -402,7 +402,7 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
       if (testInfo
           .jobInfo()
           .properties()
-          .getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME)
+          .getOptional(XtsConstants.XTS_JOB_NAME)
           .orElse("")
           .equals(XtsConstants.DYNAMIC_MCTS_JOB_NAME)) {
         if (testInfo.properties().has(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY)) {
@@ -432,7 +432,7 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
       if (testInfo
           .jobInfo()
           .properties()
-          .getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME)
+          .getOptional(XtsConstants.XTS_JOB_NAME)
           .orElse("")
           .equals(XtsConstants.STATIC_XTS_JOB_NAME)) {
         // Integrates the static test cases with the temp XTS workspace.

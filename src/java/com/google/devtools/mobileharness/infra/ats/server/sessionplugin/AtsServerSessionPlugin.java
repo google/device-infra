@@ -651,7 +651,7 @@ final class AtsServerSessionPlugin {
             .orElse(false)
         && jobInfo
             .properties()
-            .getOptional(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME)
+            .getOptional(XtsConstants.XTS_JOB_NAME)
             .orElse("")
             .contains(XtsConstants.STATIC_XTS_JOB_NAME)
         && jobInfo.tests().getAll().values().stream()

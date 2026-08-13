@@ -850,9 +850,9 @@ public final class ServerJobCreatorTest {
     ImmutableList<JobInfo> jobInfos = jobCreator.createXtsTradefedTestJob(sessionRequestInfo);
 
     assertThat(jobInfos).hasSize(2);
-    assertThat(jobInfos.get(0).properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+    assertThat(jobInfos.get(0).properties().get(XtsConstants.XTS_JOB_NAME))
         .isEqualTo(XtsConstants.STATIC_XTS_JOB_NAME);
-    assertThat(jobInfos.get(1).properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_JOB_NAME))
+    assertThat(jobInfos.get(1).properties().get(XtsConstants.XTS_JOB_NAME))
         .isEqualTo(XtsConstants.DYNAMIC_MCTS_JOB_NAME);
     List<SessionRequestInfo> capturedSrIs = sessionRequestInfoCaptor.getAllValues();
     assertThat(capturedSrIs.get(0).getAtsServerTestEnvironment().getDeviceActionConfigObjectsList())

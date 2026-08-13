@@ -70,8 +70,8 @@ public class XtsConstants {
   /** A MH job property key to indicate whether xTS dynamic download is enabled. */
   public static final String IS_XTS_DYNAMIC_DOWNLOAD_ENABLED = "is_xts_dynamic_download_enabled";
 
-  /** The job type of dynamic download xTS jobs. */
-  public static final String XTS_DYNAMIC_DOWNLOAD_JOB_NAME = "xts_dynamic_download_job_name";
+  /** The job type of xTS jobs. */
+  public static final String XTS_JOB_NAME = "xts_job_name";
 
   /** The job name of dynamic download xTS job. */
   public static final String DYNAMIC_MCTS_JOB_NAME = "MCTS";
