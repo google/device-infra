@@ -312,6 +312,12 @@ public interface PropertyName {
     OXYGEN_VIRTUALIZATION_TYPE,
 
     /**
+     * The name of the test property which indicates whether the Oxygen device was leased
+     * successfully.
+     */
+    OXYGEN_LEASE_SUCCESS,
+
+    /**
      * The name of the test property which indicates that the current test is pass after a
      * non-passing attempt. Values of this test property: true or null.
      */
