@@ -21,6 +21,7 @@ import static com.google.common.util.concurrent.Futures.addCallback;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import io.grpc.MethodDescriptor;
 import io.grpc.ServiceDescriptor;
 import io.grpc.stub.StreamObserver;
@@ -123,7 +124,7 @@ public class GrpcServiceUtil {
         "gRPC service %s exception, service=[%s], method=[%s]",
         type, serviceDescriptor.getName(), methodDescriptor.getFullMethodName());
     responseObserver.onError(GrpcExceptionUtil.toStatusRuntimeException(e));
-    if (e instanceof InterruptedException) {
+    if (MoreThrowables.isInterruption(e)) {
       Thread.currentThread().interrupt();
     }
   }

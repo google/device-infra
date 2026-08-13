@@ -57,6 +57,7 @@ import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDir
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.Timeout;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.io.File;
 import java.nio.file.Path;
@@ -473,7 +474,7 @@ public final class RunCommand implements Callable<Integer> {
               .with(IMPORTANCE, IMPORTANT)
               .withCause(e)
               .log("Failed to disable server log printer");
-          if (e instanceof InterruptedException) {
+          if (MoreThrowables.isInterruption(e)) {
             Thread.currentThread().interrupt();
           }
         }

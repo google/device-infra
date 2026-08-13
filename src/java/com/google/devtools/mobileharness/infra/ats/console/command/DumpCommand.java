@@ -301,7 +301,7 @@ class DumpCommand implements Callable<Integer> {
           .atWarning()
           .with(IMPORTANCE, IMPORTANT)
           .log("Failed to create server stack trace file, error=[%s]", shortDebugString(e));
-      if (e instanceof InterruptedException) {
+      if (MoreThrowables.isInterruption(e)) {
         Thread.currentThread().interrupt();
       }
     }
@@ -318,7 +318,7 @@ class DumpCommand implements Callable<Integer> {
           .log(
               "Failed to create Tradefed stack trace file for pid [%s]: %s.",
               tradefedPid, shortDebugString(e));
-      if (e instanceof InterruptedException) {
+      if (MoreThrowables.isInterruption(e)) {
         Thread.currentThread().interrupt();
       }
     }
@@ -358,7 +358,7 @@ class DumpCommand implements Callable<Integer> {
       return ExitCode.OK;
     } catch (CommandException | RuntimeException | InterruptedException | Error e) {
       consoleUtil.printlnStdout("Failed to dump Tradefed stack trace: " + e.getMessage());
-      if (e instanceof InterruptedException) {
+      if (MoreThrowables.isInterruption(e)) {
         Thread.currentThread().interrupt();
       }
       return ExitCode.SOFTWARE;

@@ -34,7 +34,10 @@ java_binary(
         "TestInvocation.java",
     ],
     main_class = "com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed",
-    deps = ["@maven//:com_google_guava_guava"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
+        "@maven//:com_google_guava_guava",
+    ],
 )
 
 java_library(
@@ -49,5 +52,8 @@ java_library(
         "ITestInvocationListener.java",
         "TestInvocation.java",
     ],
-    deps = ["@maven//:com_google_guava_guava"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
+        "@maven//:com_google_guava_guava",
+    ],
 )

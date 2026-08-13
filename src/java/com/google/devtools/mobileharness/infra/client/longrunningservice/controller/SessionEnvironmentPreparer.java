@@ -21,6 +21,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.command.linecallback.CommandOutputLogger;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
@@ -89,7 +90,7 @@ class SessionEnvironmentPreparer {
         localFileUtil.removeFileOrDir(dir);
       } catch (MobileHarnessException | InterruptedException e) {
         logger.atWarning().withCause(e).log("Failed to remove %s", dir);
-        if (e instanceof InterruptedException) {
+        if (MoreThrowables.isInterruption(e)) {
           Thread.currentThread().interrupt();
         }
       }

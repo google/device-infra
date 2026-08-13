@@ -60,6 +60,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.util.pe
 import com.google.devtools.mobileharness.shared.context.InvocationContext.ContextScope;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationInfo;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.message.FieldMaskUtils;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -687,7 +688,7 @@ public class SessionManager {
     try {
       localFileUtil.copyFileOrDir(sessionLogFileSourcePath, sessionLogFileDestinationPath);
     } catch (MobileHarnessException | InterruptedException e) {
-      if (e instanceof InterruptedException) {
+      if (MoreThrowables.isInterruption(e)) {
         logger.atWarning().withCause(e).log(
             "Failed to copy server session log file from %s to %s",
             sessionLogFileSourcePath, sessionLogFileDestinationPath);

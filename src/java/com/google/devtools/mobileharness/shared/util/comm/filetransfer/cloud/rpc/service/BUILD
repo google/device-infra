@@ -51,6 +51,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/filetransfer/common:file_handlers",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/remote:gcs_credential_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/remote:gcs_file_manager",

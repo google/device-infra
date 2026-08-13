@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.lab.controller;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.base.VerifyException;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
@@ -164,7 +165,7 @@ public class RecoverBotProxy implements Runnable {
       } catch (PortInUseException e) {
         logger.warning("Could not open port " + pid.getName() + " (in use / permission).");
       } catch (Exception e) {
-        if (e instanceof InterruptedException) {
+        if (MoreThrowables.isInterruption(e)) {
           Thread.currentThread().interrupt();
         }
         logger.log(Level.WARNING, "Probe error on " + pid.getName(), e);

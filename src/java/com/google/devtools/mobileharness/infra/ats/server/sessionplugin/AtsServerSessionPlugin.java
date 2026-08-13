@@ -75,6 +75,7 @@ import com.google.devtools.mobileharness.platform.android.xts.message.proto.Test
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedTestModuleResultsMessage;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedTestModuleResults;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.protobuf.Any;
@@ -969,7 +970,7 @@ final class AtsServerSessionPlugin {
           }
         }
       } catch (MobileHarnessException | InterruptedException e) {
-        if (e instanceof InterruptedException) {
+        if (MoreThrowables.isInterruption(e)) {
           Thread.currentThread().interrupt();
         }
         switch (action) {

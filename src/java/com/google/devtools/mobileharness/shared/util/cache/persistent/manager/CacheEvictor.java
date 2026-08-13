@@ -20,6 +20,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.IOException;
@@ -74,7 +75,7 @@ class CacheEvictor {
         } catch (MobileHarnessException | InterruptedException e) {
           logger.atWarning().withCause(e).log(
               "Failed to delete contents of cache entry: %s", cacheDirPath);
-          if (e instanceof InterruptedException) {
+          if (MoreThrowables.isInterruption(e)) {
             Thread.currentThread().interrupt();
           }
           return; // Do not proceed if content deletion fails.
@@ -107,7 +108,7 @@ class CacheEvictor {
     } catch (MobileHarnessException | InterruptedException e) {
       logger.atWarning().withCause(e).log(
           "Failed to remove cache entry directory: %s", cacheDirPath);
-      if (e instanceof InterruptedException) {
+      if (MoreThrowables.isInterruption(e)) {
         Thread.currentThread().interrupt();
       }
     }

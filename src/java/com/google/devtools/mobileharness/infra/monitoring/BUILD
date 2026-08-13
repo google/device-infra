@@ -43,6 +43,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/constant/hostmanagement:host_property_constants",
         "//src/java/com/google/devtools/mobileharness/shared/labinfo:lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",

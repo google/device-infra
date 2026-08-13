@@ -21,6 +21,7 @@ import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.JavaVersion;
@@ -101,7 +102,7 @@ public class XtsCommandUtil {
 
       return xtsJavaVersion.majorVersion() >= systemJavaVersion.majorVersion();
     } catch (MobileHarnessException | InterruptedException e) {
-      if (e instanceof InterruptedException) {
+      if (MoreThrowables.isInterruption(e)) {
         Thread.currentThread().interrupt();
       }
       // Fallback to true if version check fails, to keep previous behavior

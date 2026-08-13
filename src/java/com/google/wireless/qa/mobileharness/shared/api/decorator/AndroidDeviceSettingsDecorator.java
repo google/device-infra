@@ -46,6 +46,7 @@ import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryExcep
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryStrategy;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryingCallable;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryingCallable.ThrowStrategy;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
@@ -1211,7 +1212,7 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
               cause);
         }
         t = cause;
-      } else if (cause instanceof InterruptedException) {
+      } else if (MoreThrowables.isInterruption(cause)) {
         throw new InterruptedException(Throwables.getStackTraceAsString(cause));
       }
       throw new MobileHarnessException(

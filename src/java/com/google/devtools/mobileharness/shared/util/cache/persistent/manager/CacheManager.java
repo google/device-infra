@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.base.DataSize;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.nio.file.Path;
 import java.util.List;
@@ -64,7 +65,7 @@ public final class CacheManager implements Runnable {
       scanAndEvict();
     } catch (MobileHarnessException | InterruptedException e) {
       logger.atWarning().withCause(e).log("Error during cache scan and eviction cycle");
-      if (e instanceof InterruptedException) {
+      if (MoreThrowables.isInterruption(e)) {
         Thread.currentThread().interrupt();
       }
     }

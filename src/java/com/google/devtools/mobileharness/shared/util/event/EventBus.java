@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.shared.util.event;
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.Subscriber;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.SubscriberMethod;
 import com.google.devtools.mobileharness.shared.util.event.proto.EventBusProto;
@@ -211,7 +212,7 @@ public class EventBus {
               subscriberMethod.receiveEvent(event);
             } catch (Throwable e) {
               exception = e;
-              if (e instanceof InterruptedException) {
+              if (MoreThrowables.isInterruption(e)) {
                 interrupted = true;
               }
             }

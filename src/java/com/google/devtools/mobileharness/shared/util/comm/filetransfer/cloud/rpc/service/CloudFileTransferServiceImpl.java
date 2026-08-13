@@ -54,6 +54,7 @@ import com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.Fi
 import com.google.devtools.mobileharness.shared.util.comm.filetransfer.common.proto.FileInfoProto.FileInfo;
 import com.google.devtools.mobileharness.shared.util.command.Timeout;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsCredentialUtil;
 import com.google.devtools.mobileharness.shared.util.file.remote.GcsFileManager;
@@ -624,7 +625,7 @@ public class CloudFileTransferServiceImpl {
           try {
             localFileUtil.removeFileOrDir(tmpZipFile);
           } catch (Exception e) {
-            if (e instanceof InterruptedException) {
+            if (MoreThrowables.isInterruption(e)) {
               Thread.currentThread().interrupt();
             }
             logger.atInfo().withCause(e).log("Failed to remove the file or dir: %s", tmpZipFile);

@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -261,7 +262,7 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
             androidXtsZip.toString(), unzippedPath, ANDROID_XTS_ZIP_UNCOMPRESS_TIMEOUT, password);
         return Path.of(unzippedPath);
       } catch (MobileHarnessException | InterruptedException e) {
-        if (e instanceof InterruptedException) {
+        if (MoreThrowables.isInterruption(e)) {
           Thread.currentThread().interrupt();
         }
         throw new MobileHarnessException(

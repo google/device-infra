@@ -52,6 +52,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/comparator",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/event:event_bus",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",

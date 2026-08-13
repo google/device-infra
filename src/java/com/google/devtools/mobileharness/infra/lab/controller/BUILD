@@ -259,6 +259,7 @@ java_library(
     name = "recover_bot_proxy",
     srcs = ["RecoverBotProxy.java"],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "@maven//:com_github_purejavacomm_purejavacomm",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_code_gson_gson",

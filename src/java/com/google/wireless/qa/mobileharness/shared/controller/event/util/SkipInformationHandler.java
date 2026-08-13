@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.api.testrunner.plugin.SkipJobException;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException;
 import com.google.devtools.mobileharness.shared.util.comparator.ErrorTypeComparator;
 import com.google.devtools.mobileharness.shared.util.comparator.TestResultComparator;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.event.EventBus.SubscriberExceptionContext;
 import java.util.Comparator;
 import java.util.List;
@@ -57,7 +58,7 @@ public final class SkipInformationHandler {
       checkArgument(
           context.exception() instanceof SkipJobException
               || context.exception() instanceof SkipTestException
-              || context.exception() instanceof InterruptedException,
+              || MoreThrowables.isInterruption(context.exception()),
           "Exception for SkipInformation can only be instanceof SkipJobException, SkipTestException"
               + " or InterruptedException, but was %s.",
           context.exception().getClass());
@@ -84,7 +85,7 @@ public final class SkipInformationHandler {
     // the error id of the exception().
     @Memoized
     ErrorId criticalErrorId() {
-      if (context().exception() instanceof InterruptedException) {
+      if (MoreThrowables.isInterruption(context().exception())) {
         return isJob()
             ? BasicErrorId.USER_PLUGIN_SKIP_JOB_BY_INTERRUPTED_EXCEPTION
             : BasicErrorId.USER_PLUGIN_SKIP_TEST_BY_INTERRUPTED_EXCEPTION;
@@ -137,7 +138,7 @@ public final class SkipInformationHandler {
   }
 
   public static Optional<SkipInformation> convertIfSkipJobRunning(SubscriberExceptionContext se) {
-    if (se.exception() instanceof InterruptedException
+    if (MoreThrowables.isInterruption(se.exception())
         || se.exception() instanceof SkipJobException) {
       return Optional.of(SkipInformation.of(se, /* isJob= */ true));
     } else {
@@ -146,7 +147,7 @@ public final class SkipInformationHandler {
   }
 
   public static Optional<SkipInformation> convertIfSkipTestRunning(SubscriberExceptionContext se) {
-    if (se.exception() instanceof InterruptedException
+    if (MoreThrowables.isInterruption(se.exception())
         || se.exception() instanceof SkipTestException) {
       return Optional.of(SkipInformation.of(se, /* isJob= */ false));
     } else {

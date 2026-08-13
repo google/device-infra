@@ -388,7 +388,7 @@ public class AtsSessionPlugin {
                   "xts",
                   sessionInfo.getSessionId()));
         } catch (MobileHarnessException | InterruptedException e) {
-          if (e instanceof InterruptedException) {
+          if (MoreThrowables.isInterruption(e)) {
             Thread.currentThread().interrupt();
           }
           logger.atWarning().withCause(e).log(
@@ -565,7 +565,7 @@ public class AtsSessionPlugin {
                     sessionInfo.getSessionId()));
             cachedDeviceControlIds.addAll(deviceIds);
           } catch (MobileHarnessException | InterruptedException e) {
-            if (e instanceof InterruptedException) {
+            if (MoreThrowables.isInterruption(e)) {
               Thread.currentThread().interrupt();
             }
             logger.atWarning().withCause(e).log("Failed to cache devices %s", deviceIds);

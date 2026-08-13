@@ -20,6 +20,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -91,7 +92,7 @@ public class CrashDialogDetector {
       sleeper.sleep(Duration.ofSeconds(1));
       screenshotPath = Optional.of(generateScreenshot(device, packageName.get()));
     } catch (MobileHarnessException | InterruptedException e) {
-      if (e instanceof InterruptedException) {
+      if (MoreThrowables.isInterruption(e)) {
         Thread.currentThread().interrupt();
       }
       testInfo.log().atWarning().alsoTo(logger).log("Error scanning for crash dialog: %s", e);

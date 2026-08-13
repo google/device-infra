@@ -59,6 +59,7 @@ import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudO
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryException;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryStrategy;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryingCallable;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.gson.stream.MalformedJsonException;
@@ -659,7 +660,7 @@ public class CloudOrchestratorClient {
           .call();
     } catch (RetryException e) {
       Throwable cause = e.getCause();
-      if (cause instanceof InterruptedException) {
+      if (MoreThrowables.isInterruption(cause)) {
         Thread.currentThread().interrupt();
         throw new MobileHarnessException(
             BasicErrorId.LOCAL_NETWORK_ERROR,
@@ -711,7 +712,7 @@ public class CloudOrchestratorClient {
               .call();
     } catch (RetryException e) {
       Throwable cause = e.getCause();
-      if (cause instanceof InterruptedException) {
+      if (MoreThrowables.isInterruption(cause)) {
         Thread.currentThread().interrupt();
         throw new MobileHarnessException(
             BasicErrorId.LOCAL_NETWORK_ERROR,

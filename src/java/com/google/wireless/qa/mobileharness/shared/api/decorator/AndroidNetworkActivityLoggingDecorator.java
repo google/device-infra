@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidS
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryException;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryStrategy;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryingCallable;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.omnilab.deviceadmin.proto.NetworkEvent;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -290,7 +291,7 @@ public class AndroidNetworkActivityLoggingDecorator extends LifecycleDecorator
           .call();
     } catch (RetryException e) {
       Throwable cause = e.getCause();
-      if (cause instanceof InterruptedException) {
+      if (MoreThrowables.isInterruption(cause)) {
         Thread.currentThread().interrupt();
         throw new InterruptedException(Throwables.getStackTraceAsString(cause));
       }

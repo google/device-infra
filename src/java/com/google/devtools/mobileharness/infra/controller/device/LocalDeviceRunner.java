@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.infra.controller.device.util.DeviceIdUt
 import com.google.devtools.mobileharness.infra.controller.device.util.DeviceRebootUtil;
 import com.google.devtools.mobileharness.infra.controller.test.event.TestExecutionEndedEvent;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionResult;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
@@ -393,7 +394,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
         } catch (Exception e) {
           // Catches all exceptions to make sure we will decrease the runnerCount.
           logger.atWarning().withCause(e).log("Failed to reboot device");
-          if (e instanceof InterruptedException) {
+          if (MoreThrowables.isInterruption(e)) {
             Thread.currentThread().interrupt();
           }
         }
@@ -401,7 +402,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
         postDeviceErrorEvent(e);
         // Catches all exceptions to make sure we will decrease the runnerCount.
         logger.atWarning().withCause(e).log("Failed to stop device");
-        if (e instanceof InterruptedException) {
+        if (MoreThrowables.isInterruption(e)) {
           Thread.currentThread().interrupt();
         }
       }

@@ -22,6 +22,7 @@ import static java.util.Arrays.stream;
 import com.android.tradefed.cluster.FakeClusterCommandSchedulerUtil;
 import com.android.tradefed.invoker.TestInvocation;
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import java.util.stream.IntStream;
 
 public class FakeTradefed {
@@ -63,7 +64,7 @@ public class FakeTradefed {
                                     null,
                                     null);
                           } catch (Exception e) {
-                            if (e instanceof InterruptedException) {
+                            if (MoreThrowables.isInterruption(e)) {
                               Thread.currentThread().interrupt(); // Restore interrupt status
                             }
                             // Print stack trace or rethrow runtime

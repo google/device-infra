@@ -79,6 +79,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfoProvider;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
@@ -1278,7 +1279,7 @@ final class NewMultiCommandRequestHandler {
                   } catch (MobileHarnessException | InterruptedException e) {
                     logger.atWarning().withCause(e).log(
                         "Failed to remove existing output manifest file: %s", path);
-                    if (e instanceof InterruptedException) {
+                    if (MoreThrowables.isInterruption(e)) {
                       Thread.currentThread().interrupt();
                     }
                   }

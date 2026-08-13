@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.file.resolver.cache.LocalCache;
 import com.google.devtools.mobileharness.shared.file.resolver.cache.PersistentResolvedFileCache;
 import com.google.devtools.mobileharness.shared.file.resolver.cache.ResolvedFileCache.CachedResolveResult;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Checksum;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
@@ -154,7 +155,7 @@ public class CacheFileResolver extends AbstractFileResolver {
         if ((e.getCause() instanceof MobileHarnessException
                 && ((MobileHarnessException) e.getCause()).getErrorId()
                     == BasicErrorId.RESOLVE_FILE_TIMEOUT)
-            || e.getCause() instanceof InterruptedException) {
+            || MoreThrowables.isInterruption(e.getCause())) {
           logger.atInfo().log(
               "Previous resolve process for %s did not succeed because of timeout or interruption."
                   + " Need to re-resolve.",

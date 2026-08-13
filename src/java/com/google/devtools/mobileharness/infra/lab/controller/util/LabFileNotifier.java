@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.infra.lab.proto.File.JobFileUnit;
 import com.google.devtools.mobileharness.infra.lab.proto.File.JobOrTestFileUnit;
 import com.google.devtools.mobileharness.infra.lab.proto.File.JobOrTestFileUnit.JobOrTestCase;
 import com.google.devtools.mobileharness.infra.lab.proto.File.TestFileUnit;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
@@ -177,7 +178,7 @@ public class LabFileNotifier {
                   String.format("Failed to handle file [%s]", fileUnit),
                   e),
               logger);
-      if (e instanceof InterruptedException) {
+      if (MoreThrowables.isInterruption(e)) {
         Thread.currentThread().interrupt();
       }
     }

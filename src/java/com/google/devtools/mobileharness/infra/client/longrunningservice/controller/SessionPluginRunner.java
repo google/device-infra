@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginError;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.SubscriberMethod;
 import java.util.List;
 import java.util.function.Function;
@@ -129,7 +130,7 @@ public class SessionPluginRunner {
                     .setError(ErrorModelConverter.toExceptionDetail(e))
                     .build());
 
-            if (e instanceof InterruptedException) {
+            if (MoreThrowables.isInterruption(e)) {
               Thread.currentThread().interrupt();
             }
           }

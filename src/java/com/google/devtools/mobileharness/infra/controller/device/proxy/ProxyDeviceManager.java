@@ -42,6 +42,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.api.model.job.JobLocator;
 import com.google.devtools.mobileharness.api.model.job.TestLocator;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
@@ -446,7 +447,7 @@ public class ProxyDeviceManager {
         } catch (InterruptedException | TimeoutException e) {
           logger.atWarning().withCause(e).log(
               "Leasing %s does not complete in %s", formattedDeviceLocator, CANCEL_LEASING_TIMEOUT);
-          if (e instanceof InterruptedException) {
+          if (MoreThrowables.isInterruption(e)) {
             Thread.currentThread().interrupt();
           }
         } catch (ExecutionException | CancellationException e) {

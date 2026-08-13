@@ -27,6 +27,7 @@ java_library(
         ":event_bus_backend",
         "//src/devtools/mobileharness/shared/util/event/proto:event_bus_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "@maven//:com_google_code_findbugs_jsr305",

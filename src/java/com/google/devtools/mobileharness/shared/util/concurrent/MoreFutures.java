@@ -33,6 +33,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.FormatMethod;
 import java.util.Map.Entry;
@@ -65,7 +66,7 @@ public class MoreFutures {
               logger.at(Level.INFO).logVarargs(message + " (cancelled)", params);
               return;
             }
-            boolean interrupted = t instanceof InterruptedException;
+            boolean interrupted = MoreThrowables.isInterruption(t);
             logger.at(level).withCause(interrupted ? null : t).logVarargs(message, params);
             if (interrupted) {
               logger.at(level).log(

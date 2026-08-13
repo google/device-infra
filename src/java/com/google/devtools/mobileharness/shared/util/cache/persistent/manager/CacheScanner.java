@@ -23,6 +23,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.base.DataSize;
 import com.google.devtools.mobileharness.shared.util.cache.persistent.CachePaths;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -98,7 +99,7 @@ class CacheScanner {
       } catch (MobileHarnessException | InterruptedException e) {
         logger.atWarning().withCause(e).log(
             "Failed to delete incomplete cache entry: %s", entryPath);
-        if (e instanceof InterruptedException) {
+        if (MoreThrowables.isInterruption(e)) {
           Thread.currentThread().interrupt();
         }
       }
@@ -111,7 +112,7 @@ class CacheScanner {
       return Optional.of(CacheEntry.create(cachePaths, size, lastAccessTime));
     } catch (MobileHarnessException | InterruptedException e) {
       logger.atWarning().withCause(e).log("Failed to create cache entry for path %s", entryPath);
-      if (e instanceof InterruptedException) {
+      if (MoreThrowables.isInterruption(e)) {
         Thread.currentThread().interrupt();
       }
       return Optional.empty();

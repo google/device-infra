@@ -65,6 +65,7 @@ java_library(
     srcs = ["GrpcServiceUtil.java"],
     deps = [
         ":grpc",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@grpc-java//core",
         "@grpc-java//stub",
