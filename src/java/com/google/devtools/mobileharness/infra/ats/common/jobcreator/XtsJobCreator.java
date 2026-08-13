@@ -194,6 +194,9 @@ public abstract class XtsJobCreator {
             sessionRequestInfo.hasDeviceInfo()
                 ? sessionRequestInfo.getDeviceInfo().getSupportedAbiList()
                 : "");
+    if (sessionRequestInfo.hasSessionId()) {
+      extraJobProperties.put(Job.SESSION_ID, sessionRequestInfo.getSessionId());
+    }
     injectSuiteVersion(sessionRequestInfo, extraJobProperties);
     if (sessionRequestInfo.hasAndroidXtsZipPassword()
         && !sessionRequestInfo.getAndroidXtsZipPassword().isEmpty()) {
@@ -525,6 +528,9 @@ public abstract class XtsJobCreator {
     }
 
     ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties = ImmutableMap.builder();
+    if (sessionRequestInfo.hasSessionId()) {
+      extraJobProperties.put(Job.SESSION_ID, sessionRequestInfo.getSessionId());
+    }
     injectSuiteVersion(sessionRequestInfo, extraJobProperties);
     SubPlan subPlan = null;
     if (SessionRequestHandlerUtil.isRunRetry(testPlan)) {
@@ -715,6 +721,9 @@ public abstract class XtsJobCreator {
     jobInfo.properties().add(SessionHandlerHelper.XTS_MODULE_NAME_PROP, name);
     jobInfo.properties().add(Job.IS_XTS_NON_TF_JOB, "true");
     jobInfo.properties().add(XtsConstants.XTS_JOB_NAME, name);
+    if (sessionRequestInfo.hasSessionId()) {
+      jobInfo.properties().add(Job.SESSION_ID, sessionRequestInfo.getSessionId());
+    }
 
     return jobInfo;
   }

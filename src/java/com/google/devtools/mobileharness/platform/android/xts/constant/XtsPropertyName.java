@@ -61,5 +61,8 @@ public interface XtsPropertyName extends PropertyName {
 
     /** The version of the xTS suite. */
     XTS_SUITE_VERSION,
+
+    /** Session id. */
+    SESSION_ID,
   }
 }

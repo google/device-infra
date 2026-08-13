@@ -402,13 +402,14 @@ class RunCommandHandler {
     if (runCommand.getEnableMoblyResultstoreUpload()) {
       builder.setIsMoblyResultstoreUploadEnabled(true);
     }
-    builder
-        .setEnableDefaultLogs(runCommand.getEnableDefaultLogs())
-        .setEnableTokenSharding(runCommand.getEnableTokenSharding());
     if (runCommand.hasBusinessLogicUrl()) {
       builder.setBusinessLogicUrl(runCommand.getBusinessLogicUrl());
     }
-    builder.setIgnoreBusinessLogicFailure(runCommand.getIgnoreBusinessLogicFailure());
+    builder
+        .setEnableDefaultLogs(runCommand.getEnableDefaultLogs())
+        .setEnableTokenSharding(runCommand.getEnableTokenSharding())
+        .setIgnoreBusinessLogicFailure(runCommand.getIgnoreBusinessLogicFailure())
+        .setSessionId(sessionInfo.getSessionId());
 
     sessionInfo
         .getSessionProperty(SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID)

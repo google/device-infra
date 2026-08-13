@@ -117,4 +117,5 @@ message SessionRequestInfo {
   bool enable_token_sharding = 61;
   optional string business_logic_url = 62;
   bool ignore_business_logic_failure = 63;
+  optional string session_id = 64;
 }

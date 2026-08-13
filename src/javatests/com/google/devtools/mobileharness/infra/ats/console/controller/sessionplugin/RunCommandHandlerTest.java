@@ -151,6 +151,7 @@ public final class RunCommandHandlerTest {
     sessionResultHandlerUtil = spy(injector.getInstance(SessionResultHandlerUtil.class));
     doNothing().when(sessionResultHandlerUtil).cleanUpJobGenDirs(any());
 
+    when(sessionInfo.getSessionId()).thenReturn("session_id");
     when(sessionInfo.getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME))
         .thenReturn(Optional.of(TIMESTAMP_DIR_NAME));
 
@@ -200,6 +201,7 @@ public final class RunCommandHandlerTest {
 
     SessionRequestInfo sessionRequestInfo = runCommandHandler.generateSessionRequestInfo(command);
 
+    assertThat(sessionRequestInfo.getSessionId()).isEqualTo("session_id");
     assertThat(sessionRequestInfo.getTestPlan()).isEqualTo("test");
     assertThat(sessionRequestInfo.getXtsRootDir()).isEqualTo("xts_root_dir");
     assertThat(sessionRequestInfo.getXtsType()).isEqualTo("cts");

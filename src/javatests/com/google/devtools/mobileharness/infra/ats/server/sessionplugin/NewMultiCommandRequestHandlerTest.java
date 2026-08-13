@@ -336,6 +336,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
+    assertThat(sessionRequestInfo.getSessionId()).isEqualTo("session_id");
     assertThat(sessionRequestInfo.getTestPlan()).isEqualTo("cts-plan");
     assertThat(sessionRequestInfo.getModuleNamesList()).containsExactly("module1");
     assertThat(

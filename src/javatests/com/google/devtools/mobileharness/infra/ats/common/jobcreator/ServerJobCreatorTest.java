@@ -205,6 +205,7 @@ public final class ServerJobCreatorTest {
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
             .setRemoteRunnerFilePathPrefix("ats-file-server::")
             .addAllModuleNames(ImmutableList.of("mock_module"))
+            .setSessionId("session_id")
             .setDeviceInfo(
                 DeviceInfo.newBuilder()
                     .setDeviceId("mock_device_id")
@@ -246,7 +247,9 @@ public final class ServerJobCreatorTest {
             Job.FILTERED_TRADEFED_MODULES,
             "mock_module",
             Job.DEVICE_SUPPORTED_ABI_LIST,
-            "arm64-v8a,armeabi-v7a");
+            "arm64-v8a,armeabi-v7a",
+            Job.SESSION_ID,
+            "session_id");
     String commandXmlContent =
         realLocalFileUtil.readFile(Path.of(publicDir, "session_session_id/command.xml"));
     assertThat(commandXmlContent).contains("TF_DEVICE_0");

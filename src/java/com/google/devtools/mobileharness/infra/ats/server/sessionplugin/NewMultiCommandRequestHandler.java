@@ -763,7 +763,8 @@ final class NewMultiCommandRequestHandler {
             toProtoDuration(toJavaDuration(request.getTestEnvironment().getInvocationTimeout())))
         .setStartTimeout(toProtoDuration(toJavaDuration(request.getQueueTimeout())))
         .setIsAtsServerRequest(true)
-        .setAllowPartialDeviceMatch(commandInfo.getAllowPartialDeviceMatch());
+        .setAllowPartialDeviceMatch(commandInfo.getAllowPartialDeviceMatch())
+        .setSessionId(sessionInfo.getSessionId());
 
     if (commandInfo.getShardingMode() != ShardingMode.SHARDING_MODE_UNSPECIFIED) {
       sessionRequestInfoBuilder.setShardingMode(commandInfo.getShardingMode());

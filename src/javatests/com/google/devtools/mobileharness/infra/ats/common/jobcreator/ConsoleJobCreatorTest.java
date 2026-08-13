@@ -694,7 +694,7 @@ public final class ConsoleJobCreatorTest {
     when(localFileUtil.isFileExist(eq(jarFile.toPath()))).thenReturn(true);
     // Replace XTS_ROOT_DIR_PATH with the temp folder's root
     SessionRequestInfo.Builder newBuilder =
-        builder.setXtsRootDir(folder.getRoot().getAbsolutePath());
+        builder.setXtsRootDir(folder.getRoot().getAbsolutePath()).setSessionId("session_id");
     SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(newBuilder);
 
     JobInfo mockJobInfo = Mockito.mock(JobInfo.class);
@@ -712,6 +712,7 @@ public final class ConsoleJobCreatorTest {
     assertThat(setupJob.locator().getName()).isEqualTo(XtsConstants.SETUP_JOB_NAME);
     assertThat(setupJob.properties().get(XtsConstants.XTS_JOB_NAME))
         .isEqualTo(XtsConstants.SETUP_JOB_NAME);
+    assertThat(setupJob.properties().get("session_id")).isEqualTo("session_id");
     assertThat(setupJob.properties().get(PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE))
         .isEqualTo(PhaseSkippableDecoratorConstants.ExecutionMode.SETUP_ONLY.name());
     assertThat(setupJob.type().getDriver()).isEqualTo("NoOpDriver");
@@ -749,6 +750,7 @@ public final class ConsoleJobCreatorTest {
     assertThat(teardownJob.locator().getName()).isEqualTo(XtsConstants.TEARDOWN_JOB_NAME);
     assertThat(teardownJob.properties().get(XtsConstants.XTS_JOB_NAME))
         .isEqualTo(XtsConstants.TEARDOWN_JOB_NAME);
+    assertThat(teardownJob.properties().get("session_id")).isEqualTo("session_id");
     assertThat(teardownJob.properties().get(PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE))
         .isEqualTo(PhaseSkippableDecoratorConstants.ExecutionMode.TEARDOWN_ONLY.name());
     assertThat(teardownJob.type().getDriver()).isEqualTo("NoOpDriver");
