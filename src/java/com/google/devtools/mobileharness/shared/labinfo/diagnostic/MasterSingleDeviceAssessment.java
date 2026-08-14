@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.singledevice;
+package com.google.devtools.mobileharness.shared.labinfo.diagnostic;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.google.common.base.Ascii;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.LinkedListMultimap;
@@ -26,13 +27,17 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
-import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.Assessment;
+import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirement;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DiagnoseJobSpec;
+import com.google.devtools.mobileharness.shared.util.dimension.ValueComparator;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
-import com.google.wireless.qa.mobileharness.shared.model.job.JobScheduleUnit;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
-import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceInfo;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -42,17 +47,11 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
-import javax.annotation.Nullable;
 
 /** Assessment of a device or a group of device, about their support of a given job */
-public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
+public class MasterSingleDeviceAssessment {
   private static final String DEVICE_DEFAULT_OWNER = "mobileharness-device-default-owner";
 
-  // RULES for the weight values:
-  // 1) To promote the devices when they support a certain requirement, increase the weight.
-  //    But if it is not supported, the ranking will be extremely low.
-  // 2) To promote the devices when they don't support a certain requirement, decrease the weight.
-  //    But even when it is support, it won't significantly increase the ranking too.
   static final int WEIGHT_ACCESS = 3;
   static final int WEIGHT_DEVICE_TYPE = 2;
   static final int WEIGHT_DRIVER = 2;
@@ -71,19 +70,9 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
           + WEIGHT_STATUS;
   static final int MIN_SCORE = 0;
 
-  // Extra score added to those devices set to default owner.
   static final int SUPPLEMENT_HAS_POTENTIAL_ACCESS = WEIGHT_ACCESS - 1;
-
-  // The mismatch of a single dimension will drop 2 score. So that one dimension un-matched devices'
-  // scores are smaller than those busy or mobileharness-device-default-owner devices.
   static final int DEDUCTION_SINGLE_DIMENSION = 2;
-
-  // When user requires the "label", decrease the ranks of those that don't have "label" to
-  // promote the devices with "label".
   static final int DEDUCTION_LABEL_DIMENSION = 3;
-
-  // When user requires the "id" or "host_name" or "host_ip", decrease the ranks of those that don't
-  // support these fields.
   static final int DEDUCTION_STRONG_DIMENSION = 4;
 
   private final String user;
@@ -104,87 +93,65 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
   private final List<String> requestedSharedDimensionNames;
   private final ListMultimap<String, String> supportedSharedDimensions;
 
-  /** Assessment of a job. */
-  SingleDeviceAssessment(JobScheduleUnit job) {
-    this(
-        job,
-        null,
-        new HashSet<>(job.type().getDecoratorList()),
-        new HashMap<>(job.dimensions().getAll()));
-  }
-
-  SingleDeviceAssessment(JobScheduleUnit job, SubDeviceSpec spec) {
-    this(
-        job,
-        spec,
-        new HashSet<>(spec.decorators().getAll()),
-        new HashMap<>(spec.dimensions().getAll()));
-  }
-
-  private SingleDeviceAssessment(
-      JobScheduleUnit job,
-      @Nullable SubDeviceSpec spec,
-      Set<String> unsupportedDecorators,
-      Map<String, String> unsupportedDimensions) {
-    this.user = job.jobUser().getRunAs();
-    this.driver = job.type().getDriver();
-    this.requestedSharedDimensionNames = job.subDeviceSpecs().getSharedDimensionNames();
-    this.deviceType = spec == null ? job.type().getDevice() : spec.type();
-    this.requestedDimensions =
-        ImmutableMap.copyOf(spec == null ? job.dimensions().getAll() : spec.dimensions().getAll());
-    this.unsupportedDecorators = unsupportedDecorators;
-    this.unsupportedDimensions = unsupportedDimensions;
+  public MasterSingleDeviceAssessment(DiagnoseJobSpec spec, DeviceRequirement deviceRequirement) {
+    this.user = spec.getUser().getRunAs();
+    this.driver = spec.getDriver();
+    this.requestedSharedDimensionNames = spec.getDeviceRequirements().getSharedDimensionList();
+    this.deviceType = deviceRequirement.getDeviceType();
+    this.requestedDimensions = ImmutableMap.copyOf(deviceRequirement.getDimensionsMap());
+    this.unsupportedDecorators = new HashSet<>(deviceRequirement.getDecoratorList());
+    this.unsupportedDimensions = new HashMap<>(deviceRequirement.getDimensionsMap());
     this.unsatisfiedDimensions = null;
     this.supportedSharedDimensions = LinkedListMultimap.create();
   }
 
-  /** Adds a device into the assessment for a job. */
   @CanIgnoreReturnValue
-  @Override
-  public SingleDeviceAssessment addResource(DeviceInfo device) {
-    // A device can only be potentially accessible when it's not accessible.
-    if (device.owners().support(user) || device.executors().support(user)) {
+  public MasterSingleDeviceAssessment addResource(DeviceInfo device) {
+    DeviceFeature feature = device.getDeviceFeature();
+
+    // Access check
+    if (supportOwner(feature.getOwnerList(), user) || feature.getExecutorList().contains(user)) {
       accessible = true;
       potentialAccessible = false;
     } else if (!accessible) {
-      Set<String> owners = device.owners().getAll();
+      List<String> owners = feature.getOwnerList();
       if (owners.size() == 1 && owners.contains(DEVICE_DEFAULT_OWNER)) {
         potentialAccessible = true;
       }
     }
-    driverSupported |= device.drivers().support(driver);
-    deviceTypeSupported |= device.types().support(deviceType);
+
+    driverSupported |= feature.getDriverList().contains(driver);
+    deviceTypeSupported |= feature.getTypeList().contains(deviceType);
 
     if (!unsupportedDecorators.isEmpty()) {
-      unsupportedDecorators = device.decorators().getUnsupported(unsupportedDecorators);
+      unsupportedDecorators.removeAll(feature.getDecoratorList());
     }
+
+    // Dimensions check
     if (!unsupportedDimensions.isEmpty()) {
       unsupportedDimensions =
-          device
-              .dimensions()
-              .getUnsupportedJobDimensions(unsupportedDimensions, /* failFast= */ false);
+          getUnsupportedJobDimensions(feature.getCompositeDimension(), unsupportedDimensions);
     }
+
+    // Shared dimensions
     for (String sharedDimensionName : requestedSharedDimensionNames) {
-      Stream.concat(
-              device.dimensions().supported().get(sharedDimensionName).stream(),
-              device.dimensions().required().get(sharedDimensionName).stream())
-          .forEach(
-              dimensionValue -> supportedSharedDimensions.put(sharedDimensionName, dimensionValue));
+      getDimensionValues(feature.getCompositeDimension(), sharedDimensionName)
+          .forEach(value -> supportedSharedDimensions.put(sharedDimensionName, value));
     }
-    DeviceStatus deviceStatus = device.status().get();
+
+    DeviceStatus deviceStatus = device.getDeviceStatus();
     idle |= (deviceStatus == DeviceStatus.IDLE);
     missing &= (deviceStatus == DeviceStatus.MISSING);
 
-    // Check device required dimensions.
+    // Check device required dimensions
     Multimap<String, String> newUnsatisfiedDimensions =
-        device
-            .dimensions()
-            .getUnsatisfiedDeviceDimensions(requestedDimensions, /* failFast= */ false);
+        getUnsatisfiedDeviceDimensions(feature.getCompositeDimension(), requestedDimensions);
+
     if (unsatisfiedDimensions == null) {
       unsatisfiedDimensions = HashMultimap.create();
       unsatisfiedDimensions.putAll(newUnsatisfiedDimensions);
     } else if (!unsatisfiedDimensions.isEmpty()) {
-      // Get intersection.
+      // Get intersection
       if (newUnsatisfiedDimensions.isEmpty()) {
         unsatisfiedDimensions.clear();
       } else {
@@ -201,45 +168,130 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
     return this;
   }
 
-  /** Whether any devices are accessible for users of the job. */
+  private static boolean supportOwner(List<String> owners, String user) {
+    return owners.isEmpty() || owners.contains(user);
+  }
+
+  private static Map<String, String> getUnsupportedJobDimensions(
+      DeviceCompositeDimension deviceDimensions, Map<String, String> jobDimensions) {
+    Map<String, String> unsupportedJobDimensions = new HashMap<>();
+    if (jobDimensions.isEmpty()) {
+      return unsupportedJobDimensions;
+    }
+
+    ListMultimap<String, String> deviceDims = ArrayListMultimap.create();
+    for (DeviceDimension dim : deviceDimensions.getSupportedDimensionList()) {
+      deviceDims.put(dim.getName(), dim.getValue());
+    }
+    for (DeviceDimension dim : deviceDimensions.getRequiredDimensionList()) {
+      deviceDims.put(dim.getName(), dim.getValue());
+    }
+
+    for (Entry<String, String> jobDimension : jobDimensions.entrySet()) {
+      String jobDimensionName = jobDimension.getKey();
+      String jobDimensionValue = jobDimension.getValue();
+      if (jobDimensionValue.equals(Dimension.Value.EXCLUDE)) {
+        if (deviceDims.containsKey(jobDimensionName)) {
+          unsupportedJobDimensions.put(jobDimensionName, jobDimensionValue);
+        }
+        continue;
+      }
+
+      boolean match = false;
+      for (String deviceDimensionValue : deviceDims.get(jobDimensionName)) {
+        if (deviceDimensionValue.equals(Dimension.Value.ALL_VALUE_FOR_DEVICE)
+            || jobDimensionValue.equals(deviceDimensionValue)
+            || (jobDimensionValue.startsWith(Dimension.Value.PREFIX_REGEX)
+                && deviceDimensionValue.matches(
+                    jobDimensionValue.substring(Dimension.Value.PREFIX_REGEX.length())))
+            || ((jobDimensionValue.startsWith(ValueComparator.PREFIX_INT_COMPARISON)
+                    || jobDimensionValue.startsWith(ValueComparator.PREFIX_STR_COMPARISON))
+                && ValueComparator.match(jobDimensionValue, deviceDimensionValue))) {
+          match = true;
+          break;
+        }
+      }
+      if (!match) {
+        unsupportedJobDimensions.put(jobDimensionName, jobDimensionValue);
+      }
+    }
+    return unsupportedJobDimensions;
+  }
+
+  private static Multimap<String, String> getUnsatisfiedDeviceDimensions(
+      DeviceCompositeDimension deviceDimensions, Map<String, String> jobDimensions) {
+    SetMultimap<String, String> unsatisfiedDeviceDimensions = HashMultimap.create();
+    for (DeviceDimension deviceRequiredDimension : deviceDimensions.getRequiredDimensionList()) {
+      String deviceDimensionName = deviceRequiredDimension.getName();
+      String deviceDimensionValue = deviceRequiredDimension.getValue();
+      String jobDimensionValue = jobDimensions.get(deviceDimensionName);
+
+      boolean satisfied;
+      if (jobDimensionValue == null || jobDimensionValue.equals(Dimension.Value.EXCLUDE)) {
+        satisfied = false;
+      } else {
+        satisfied =
+            deviceDimensionValue.equals(Dimension.Value.ALL_VALUE_FOR_DEVICE)
+                || jobDimensionValue.equals(deviceDimensionValue)
+                || (jobDimensionValue.startsWith(Dimension.Value.PREFIX_REGEX)
+                    && deviceDimensionValue.matches(
+                        jobDimensionValue.substring(Dimension.Value.PREFIX_REGEX.length())))
+                || ((jobDimensionValue.startsWith(ValueComparator.PREFIX_INT_COMPARISON)
+                        || jobDimensionValue.startsWith(ValueComparator.PREFIX_STR_COMPARISON))
+                    && ValueComparator.match(jobDimensionValue, deviceDimensionValue));
+      }
+      if (!satisfied) {
+        unsatisfiedDeviceDimensions.put(deviceDimensionName, deviceDimensionValue);
+      }
+    }
+    return unsatisfiedDeviceDimensions;
+  }
+
+  private static List<String> getDimensionValues(
+      DeviceCompositeDimension deviceDimensions, String dimensionName) {
+    List<String> values = new ArrayList<>();
+    for (DeviceDimension dim : deviceDimensions.getSupportedDimensionList()) {
+      if (dim.getName().equals(dimensionName)) {
+        values.add(dim.getValue());
+      }
+    }
+    for (DeviceDimension dim : deviceDimensions.getRequiredDimensionList()) {
+      if (dim.getName().equals(dimensionName)) {
+        values.add(dim.getValue());
+      }
+    }
+    return values;
+  }
+
   public boolean isAccessible() {
     return accessible;
   }
 
-  /**
-   * Whether any devices can become accessible if changing its owner from default value to the user
-   */
   public boolean isPotentialAccessible() {
     return potentialAccessible;
   }
 
-  /** Whether any devices support the required driver of the job. */
   public boolean isDriverSupported() {
     return driverSupported;
   }
 
-  /** Whether any devices support the required device type of the job. */
   public boolean isDeviceTypeSupported() {
     return deviceTypeSupported;
   }
 
-  /** Whether any devices support the required decorators of the job. */
   public boolean isDecoratorsSupported() {
     return unsupportedDecorators.isEmpty();
   }
 
-  /** Gets the required decorators that are not supported by any devices. */
   public Set<String> getUnsupportedDecorators() {
     return Collections.unmodifiableSet(unsupportedDecorators);
   }
 
-  /** Whether any devices support the required dimensions of the job. */
   public boolean isDimensionsSupported() {
     return unsupportedDimensions.isEmpty()
         && supportedSharedDimensions.keySet().size() == requestedSharedDimensionNames.size();
   }
 
-  /** Gets the job required dimensions which are not supported by any devices. */
   public Map<String, String> getUnsupportedDimensions() {
     if (supportedSharedDimensions.keySet().size() != requestedSharedDimensionNames.size()) {
       ImmutableMap<String, String> unsupportedSharedDimensions =
@@ -264,41 +316,22 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
     return supportedSharedDimensions;
   }
 
-  /** Whether any device required dimensions are already satisfied by the job dimensions. */
   public boolean isDimensionsSatisfied() {
     return unsatisfiedDimensions.isEmpty();
   }
 
-  /** Gets the device required dimensions which are not requested by the job. */
   public Multimap<String, String> getUnsatisfiedDimensions() {
     return Multimaps.unmodifiableMultimap(unsatisfiedDimensions);
   }
 
-  /** Whether any devices are idle. */
   public boolean isIdle() {
     return idle;
   }
 
-  /** Whether all devices are missing. */
   public boolean isMissing() {
     return missing;
   }
 
-  /** Return true if all the requirements are matched but the device is busy. */
-  public boolean isRequirementMatchedButBusy() {
-    return getScore() == MAX_SCORE - (WEIGHT_STATUS - MIN_SCORE) && !isIdle();
-  }
-
-  /**
-   * Calculates a score of the overall support of the devices for the job. The devices with bigger
-   * score numbers will be promoted in the candidate device suggestion.
-   *
-   * <p>If the score is {@link #MAX_SCORE}, it means all job requirements are supported.
-   *
-   * <p>When no job requirement is supported, the score still could be larger than {@link
-   * #MIN_SCORE}.
-   */
-  @Override
   public int getScore() {
     return getAccessibleScore()
         + (driverSupported ? WEIGHT_DRIVER : MIN_SCORE)
