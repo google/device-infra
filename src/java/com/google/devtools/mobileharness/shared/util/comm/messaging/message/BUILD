@@ -24,6 +24,7 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote/util:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/plugin/subprocess:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging:__subpackages__",
