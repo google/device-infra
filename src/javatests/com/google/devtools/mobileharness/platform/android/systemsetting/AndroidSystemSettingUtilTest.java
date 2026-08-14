@@ -386,6 +386,47 @@ public class AndroidSystemSettingUtilTest {
   }
 
   @Test
+  public void getBatteryCycleCount_fromSysfsSingleValue() throws Exception {
+    when(adb.runShell(
+            eq(DEVICE_ID),
+            eq("cat /sys/class/power_supply/battery/cycle_count"),
+            any(Duration.class)))
+        .thenReturn("150\n");
+
+    assertThat(settingUtil.getBatteryCycleCount(DEVICE_ID)).hasValue(150);
+  }
+
+  @Test
+  public void getBatteryCycleCount_fromSysfsSpaceSeparated() throws Exception {
+    when(adb.runShell(
+            eq(DEVICE_ID),
+            eq("cat /sys/class/power_supply/battery/cycle_count"),
+            any(Duration.class)))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SHELL_RETRY_ERROR, "No such file"));
+    when(adb.runShell(
+            eq(DEVICE_ID),
+            eq("cat /sys/class/power_supply/battery/cycle_counts"),
+            any(Duration.class)))
+        .thenReturn("0 1 5 10 20");
+
+    assertThat(settingUtil.getBatteryCycleCount(DEVICE_ID)).hasValue(36);
+  }
+
+  @Test
+  public void getBatteryCycleCount_notAvailable() throws Exception {
+    for (String path : AndroidSystemSettingUtil.BATTERY_CYCLE_COUNT_SYSFS_PATHS) {
+      when(adb.runShell(eq(DEVICE_ID), eq("cat " + path), any(Duration.class)))
+          .thenThrow(
+              new MobileHarnessException(
+                  AndroidErrorId.ANDROID_ADB_SHELL_RETRY_ERROR, "No such file"));
+    }
+
+    assertThat(settingUtil.getBatteryCycleCount(DEVICE_ID)).isEmpty();
+  }
+
+  @Test
   public void getBatteryLevel() throws Exception {
     when(adbUtil.dumpSys(DEVICE_ID, DumpSysType.BATTERY))
         .thenReturn(

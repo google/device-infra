@@ -2138,6 +2138,22 @@ public abstract class AndroidRealDeviceDelegate {
             "Failed to get device %s battery temperature: %s",
             deviceId, MoreThrowables.shortDebugString(e));
       }
+      logger.atInfo().log("Checking device %s battery cycle count...", deviceId);
+      Optional<Integer> batteryCycleCount = Optional.empty();
+      try {
+        batteryCycleCount = systemSettingUtil.getBatteryCycleCount(deviceId);
+        if (batteryCycleCount.isPresent()) {
+          logger.atInfo().log(
+              "Device %s battery cycle count: %d", deviceId, batteryCycleCount.get());
+        } else {
+          logger.atInfo().log("Device %s battery cycle count is not available", deviceId);
+        }
+      } catch (MobileHarnessException e) {
+        logger.atWarning().log(
+            "Failed to get device %s battery cycle count: %s",
+            deviceId, MoreThrowables.shortDebugString(e));
+      }
+
       isDimensionChanged |= device.updateDimension(Dimension.Name.BATTERY_STATUS, batteryStatus);
       isDimensionChanged |=
           device.updateDimension(
@@ -2145,6 +2161,10 @@ public abstract class AndroidRealDeviceDelegate {
       isDimensionChanged |=
           device.updateDimension(
               Dimension.Name.BATTERY_TEMPERATURE, String.valueOf(batteryTemperature));
+      isDimensionChanged |=
+          device.updateDimension(
+              Dimension.Name.BATTERY_CYCLE_COUNT,
+              batteryCycleCount.map(String::valueOf).orElse("-1"));
     }
     return isDimensionChanged;
   }

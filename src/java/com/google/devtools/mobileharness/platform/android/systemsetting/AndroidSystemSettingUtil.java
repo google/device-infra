@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.platform.android.systemsetting;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
+import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -211,6 +212,16 @@ public class AndroidSystemSettingUtil {
   /** The pattern of time zone offset for the device. */
   private static final Pattern PATTERN_TIME_ZONE_OFFSET =
       Pattern.compile("^(\\+|-)((?:[0-1]\\d)|(?:2[0-3]))([0-5]\\d)$");
+
+  /** List of candidate sysfs paths for battery cycle count. */
+  @VisibleForTesting
+  static final ImmutableList<String> BATTERY_CYCLE_COUNT_SYSFS_PATHS =
+      ImmutableList.of(
+          "/sys/class/power_supply/battery/cycle_count",
+          "/sys/class/power_supply/battery/cycle_counts",
+          "/sys/class/power_supply/bms/cycle_count",
+          "/sys/class/power_supply/maxfg/cycle_count",
+          "/sys/class/power_supply/max77779fg/cycle_count");
 
   /** The pattern of battery level for the device. */
   private static final Pattern PATTERN_BATTERY_LEVEL = Pattern.compile(" level: (\\d+)");
@@ -855,6 +866,71 @@ public class AndroidSystemSettingUtil {
           "Failed to broadcast airplane change to device " + serial);
     }
     return airplaneMode;
+  }
+
+  /**
+   * Gets the battery cycle count of the device.
+   *
+   * <p>It queries sysfs power supply cycle count nodes.
+   *
+   * @param serial the serial number of the device
+   * @return battery cycle count, or {@link Optional#empty()} if it failed to get or parse the
+   *     battery cycle count
+   * @throws MobileHarnessException if some error occurs in executing system commands
+   * @throws InterruptedException if current thread is interrupted during this method
+   */
+  public Optional<Integer> getBatteryCycleCount(String serial)
+      throws MobileHarnessException, InterruptedException {
+    for (String path : BATTERY_CYCLE_COUNT_SYSFS_PATHS) {
+      try {
+        String output = adb.runShell(serial, "cat " + path, SHORT_COMMAND_TIMEOUT).trim();
+        if (output.isEmpty()) {
+          continue;
+        }
+        // Single integer value (e.g. "150").
+        if (!output.contains(" ")) {
+          try {
+            int count = Integer.parseInt(output);
+            if (count >= 0) {
+              return Optional.of(count);
+            }
+          } catch (NumberFormatException e) {
+            logger.atWarning().withCause(e).log(
+                "Failed to parse single battery cycle count '%s' from %s for device %s",
+                output, path, serial);
+          }
+          continue;
+        }
+
+        // Multiple space-separated bin counts (e.g. Pixel cycle_counts "0 0 1 2 5 12 18 20").
+        int total = 0;
+        boolean allValid = true;
+        for (String token :
+            Splitter.on(CharMatcher.whitespace()).omitEmptyStrings().split(output)) {
+          try {
+            int binCount = Integer.parseInt(token);
+            if (binCount < 0) {
+              allValid = false;
+              break;
+            }
+            total += binCount;
+          } catch (NumberFormatException e) {
+            allValid = false;
+            break;
+          }
+        }
+        if (allValid && total >= 0) {
+          return Optional.of(total);
+        }
+      } catch (MobileHarnessException e) {
+        logger.atInfo().log(
+            "Failed to read battery cycle count from %s for device %s: %s",
+            path, serial, e.getMessage());
+      }
+    }
+
+    logger.atInfo().log("Battery cycle count not available for device %s", serial);
+    return Optional.empty();
   }
 
   /**

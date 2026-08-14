@@ -35,6 +35,8 @@ public final class Dimension {
     BATTERY_STATUS,
     /** The battery temperature of the device. The value is in ℃. */
     BATTERY_TEMPERATURE,
+    /** The battery cycle count of the device. */
+    BATTERY_CYCLE_COUNT,
     /** The mac address of Bluetooth. */
     BLUETOOTH_MAC_ADDRESS,
     /** Whether a device is in checkin group. */
