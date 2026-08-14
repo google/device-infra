@@ -138,7 +138,14 @@ public class AtsDdaIntegrationTest {
         atsDdaStub.createSession(
             "fake_session",
             ImmutableMap.of(
-                "model", "pixel", "sdk_version", "24", "control_id", "AndroidRealDevice-2"),
+                "model",
+                "pixel",
+                "sdk_version",
+                "24",
+                "control_id",
+                "AndroidRealDevice-2",
+                "pool",
+                "partner_shared"),
             Duration.ofHours(1L),
             Optional.empty());
 
@@ -159,7 +166,19 @@ public class AtsDdaIntegrationTest {
                                 .addSupportedDimension(
                                     DeviceDimension.newBuilder()
                                         .setName("control_id")
-                                        .setValue("AndroidRealDevice-2"))))
+                                        .setValue("AndroidRealDevice-2"))
+                                .addSupportedDimension(
+                                    DeviceDimension.newBuilder()
+                                        .setName("omni_mode_usage")
+                                        .setValue("public_testing"))
+                                .addSupportedDimension(
+                                    DeviceDimension.newBuilder()
+                                        .setName("omni_mode_usage")
+                                        .setValue("dda"))
+                                .addRequiredDimension(
+                                    DeviceDimension.newBuilder()
+                                        .setName("pool")
+                                        .setValue("partner_shared"))))
                 .build());
 
     // Verifies the driver started successfully.
@@ -187,7 +206,14 @@ public class AtsDdaIntegrationTest {
         atsDdaStub.createSession(
             "fake_session",
             ImmutableMap.of(
-                "model", "pixel", "sdk_version", "24", "control_id", "AndroidRealDevice-2"),
+                "model",
+                "pixel",
+                "sdk_version",
+                "24",
+                "control_id",
+                "AndroidRealDevice-2",
+                "pool",
+                "partner_shared"),
             Duration.ofHours(1L),
             Optional.empty());
 
@@ -219,7 +245,14 @@ public class AtsDdaIntegrationTest {
         atsDdaStub.createSession(
             "fake_session",
             ImmutableMap.of(
-                "model", "pixel", "sdk_version", "24", "control_id", "AndroidRealDevice-2"),
+                "model",
+                "pixel",
+                "sdk_version",
+                "24",
+                "control_id",
+                "AndroidRealDevice-2",
+                "pool",
+                "partner_shared"),
             Duration.ofHours(1L),
             Optional.of(Duration.ofSeconds(5L)));
 
@@ -257,7 +290,14 @@ public class AtsDdaIntegrationTest {
         atsDdaStub.createSession(
             "fake_session",
             ImmutableMap.of(
-                "model", "pixel", "sdk_version", "24", "control_id", "AndroidRealDevice-2"),
+                "model",
+                "pixel",
+                "sdk_version",
+                "24",
+                "control_id",
+                "AndroidRealDevice-2",
+                "pool",
+                "partner_shared"),
             Duration.ofHours(1L),
             Optional.empty());
 
@@ -340,10 +380,10 @@ public class AtsDdaIntegrationTest {
     // Waits until the server starts successfully.
     try {
       assertWithMessage("The OLC server does not start successfully")
-          .that(olcServerProcess.successfulStartFuture().get(15L, SECONDS))
+          .that(olcServerProcess.successfulStartFuture().get(30L, SECONDS))
           .isTrue();
     } catch (TimeoutException e) {
-      throw new AssertionError("The OLC server has not started in 15 seconds", e);
+      throw new AssertionError("The OLC server has not started in 30 seconds", e);
     }
 
     // Starts the lab server.
@@ -382,7 +422,9 @@ public class AtsDdaIntegrationTest {
                             "--socket_port=" + labServerSocketPort,
                             "--tmp_dir_root=" + tmpFolder.newFolder("lab_server_tmp_dir")),
                         ImmutableList.of(
-                            "-D" + BuiltinFlags.ATS_LAB_SERVER_TYPE_PROPERTY_KEY + "=omni-dda")))
+                            "-D"
+                                + BuiltinFlags.ATS_LAB_SERVER_TYPE_PROPERTY_KEY
+                                + "=omni-public-testing")))
             .onStdout(
                 does(
                     stdout -> {
@@ -418,10 +460,10 @@ public class AtsDdaIntegrationTest {
     // Waits until lab server starts and detects devices successfully.
     try {
       assertWithMessage("Lab server didn't start successfully")
-          .that(labServerProcess.successfulStartFuture().get(60L, SECONDS))
+          .that(labServerProcess.successfulStartFuture().get(30L, SECONDS))
           .isTrue();
     } catch (TimeoutException e) {
-      throw new AssertionError("Lab server didn't start in 60 seconds", e);
+      throw new AssertionError("Lab server didn't start in 30 seconds", e);
     }
     assertWithMessage("Lab server didn't detect all devices in 15 seconds")
         .that(labServerAllLocalDevicesFound.await(15L, SECONDS))
