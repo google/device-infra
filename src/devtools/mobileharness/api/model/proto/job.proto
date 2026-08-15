@@ -52,10 +52,35 @@ message Retry {
   }
 
   // The maximum number of times a test could retry. Default attempt is 2.
-  int32 test_attempts = 1;
+  // Deprecated. Use the retry_strategy.default_retry_strategy.test_attempts
+  // instead.
+  int32 test_attempts = 1 [deprecated = true];
   // The retry level of Mobile harness job. Tests retry condition depends on the
   // level. Default level is ERROR.
-  Level retry_level = 2;
+  // Deprecated. Use the retry_strategy.default_retry_strategy.retry_level
+  // instead.
+  Level retry_level = 2 [deprecated = true];
+
+  oneof retry_strategy {
+    DefaultRetryStrategy default_retry_strategy = 3;
+    FlakyTestRetryStrategy flaky_test_retry_strategy = 4;
+  }
+
+  message DefaultRetryStrategy {
+    enum RetryLevel {
+      ERROR = 0;
+      FAIL = 1;
+    }
+    RetryLevel retry_level = 1 [default = ERROR];
+
+    int32 test_attempts = 2 [default = 2];
+    bool retry_on_timeout = 2 [default = true];
+  }
+
+  message FlakyTestRetryStrategy {
+    int32 flaky_test_attempts = 1 [default = 1];
+    int32 error_test_attempts = 2 [default = 2];
+  }
 }
 
 // Job repeat_runs setting.
