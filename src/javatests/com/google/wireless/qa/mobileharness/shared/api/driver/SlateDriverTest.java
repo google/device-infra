@@ -25,12 +25,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -57,6 +59,9 @@ public final class SlateDriverTest {
   private static final String DEVICE_ID = "device_id";
   private static final String SAMPLE_TARGET = "sample_target";
   private static final String SLATE_BINARY_PATH = "slate_binary_path";
+  private static final String MH_ADB_PATH = "/path/to/mh/adb";
+  private static final String MH_ADB_DIR = "/path/to/mh";
+  private static final String SYSTEM_PATH = "/usr/bin:/bin";
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
@@ -67,6 +72,8 @@ public final class SlateDriverTest {
   @Mock private Device subDevice2;
   @Mock private CommandExecutor cmdExecutor;
   @Mock private LocalFileUtil localFileUtil;
+  @Mock private SystemUtil systemUtil;
+  @Mock private Adb adb;
   @Mock private CommandResult cmdResult;
   @Mock private JobInfo jobInfo;
 
@@ -88,6 +95,9 @@ public final class SlateDriverTest {
     when(cmdResult.exitCode()).thenReturn(0);
     when(cmdExecutor.exec(any(Command.class))).thenReturn(cmdResult);
 
+    when(systemUtil.getEnv("PATH")).thenReturn(SYSTEM_PATH);
+    when(adb.getAdbPath()).thenReturn(MH_ADB_PATH);
+
     spec =
         SlateDriverSpec.newBuilder()
             .addTarget(SAMPLE_TARGET)
@@ -95,7 +105,7 @@ public final class SlateDriverTest {
             .build();
     when(jobInfo.combinedSpec(any())).thenReturn(spec);
 
-    slateDriver = new SlateDriver(device, testInfo, cmdExecutor, localFileUtil);
+    slateDriver = new SlateDriver(device, testInfo, cmdExecutor, localFileUtil, systemUtil, adb);
   }
 
   @Test
@@ -120,6 +130,51 @@ public final class SlateDriverTest {
     assertThat(command.toString()).contains("--device " + DEVICE_ID);
     assertThat(command.toString())
         .contains("--output_base_dir " + Path.of(testInfo.getGenFileDir(), "slate_history"));
+    assertThat(command.getExtraEnvironment()).containsEntry("PATH", MH_ADB_DIR + ":" + SYSTEM_PATH);
+    assertThat(command.getExtraEnvironment())
+        .containsEntry("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python");
+  }
+
+  @Test
+  public void run_prependsMhAdbPathToSystemPath() throws Exception {
+    // Act
+    slateDriver.run(testInfo);
+
+    // Assert
+    ArgumentCaptor<Command> commandCaptor = ArgumentCaptor.forClass(Command.class);
+    verify(cmdExecutor).exec(commandCaptor.capture());
+    Command command = commandCaptor.getValue();
+    assertThat(command.getExtraEnvironment()).containsEntry("PATH", MH_ADB_DIR + ":" + SYSTEM_PATH);
+  }
+
+  @Test
+  public void run_whenAdbPathWithoutParentDir_keepsSystemPath() throws Exception {
+    // Arrange
+    when(adb.getAdbPath()).thenReturn("adb");
+
+    // Act
+    slateDriver.run(testInfo);
+
+    // Assert
+    ArgumentCaptor<Command> commandCaptor = ArgumentCaptor.forClass(Command.class);
+    verify(cmdExecutor).exec(commandCaptor.capture());
+    Command command = commandCaptor.getValue();
+    assertThat(command.getExtraEnvironment()).containsEntry("PATH", SYSTEM_PATH);
+  }
+
+  @Test
+  public void run_whenAdbPathEmpty_keepsSystemPath() throws Exception {
+    // Arrange
+    when(adb.getAdbPath()).thenReturn("");
+
+    // Act
+    slateDriver.run(testInfo);
+
+    // Assert
+    ArgumentCaptor<Command> commandCaptor = ArgumentCaptor.forClass(Command.class);
+    verify(cmdExecutor).exec(commandCaptor.capture());
+    Command command = commandCaptor.getValue();
+    assertThat(command.getExtraEnvironment()).containsEntry("PATH", SYSTEM_PATH);
   }
 
   @Test
@@ -185,7 +240,8 @@ public final class SlateDriverTest {
     when(subDevice1.getDeviceId()).thenReturn("sub_device_1");
     when(subDevice2.getDeviceId()).thenReturn("sub_device_2");
     when(compositeDevice.getManagedDevices()).thenReturn(ImmutableSet.of(subDevice1, subDevice2));
-    slateDriver = new SlateDriver(compositeDevice, testInfo, cmdExecutor, localFileUtil);
+    slateDriver =
+        new SlateDriver(compositeDevice, testInfo, cmdExecutor, localFileUtil, systemUtil, adb);
 
     // Act
     slateDriver.run(testInfo);

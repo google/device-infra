@@ -18,8 +18,13 @@ package com.google.wireless.qa.mobileharness.shared.api.driver;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.google.common.base.Joiner;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
@@ -28,6 +33,7 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
@@ -35,12 +41,14 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.SlateDriverSpec;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Level;
 import javax.inject.Inject;
 
@@ -51,13 +59,22 @@ public class SlateDriver extends BaseDriver implements SpecConfigable<SlateDrive
 
   private final CommandExecutor cmdExecutor;
   private final LocalFileUtil localFileUtil;
+  private final SystemUtil systemUtil;
+  private final Adb adb;
 
   @Inject
   SlateDriver(
-      Device device, TestInfo testInfo, CommandExecutor cmdExecutor, LocalFileUtil localFileUtil) {
+      Device device,
+      TestInfo testInfo,
+      CommandExecutor cmdExecutor,
+      LocalFileUtil localFileUtil,
+      SystemUtil systemUtil,
+      Adb adb) {
     super(device, testInfo);
     this.cmdExecutor = cmdExecutor;
     this.localFileUtil = localFileUtil;
+    this.systemUtil = systemUtil;
+    this.adb = adb;
   }
 
   @Override
@@ -139,13 +156,20 @@ public class SlateDriver extends BaseDriver implements SpecConfigable<SlateDrive
       int timeoutMins = spec.getTimeoutMins() > 0 ? spec.getTimeoutMins() : 60;
       Duration timeout = Duration.ofMinutes(timeoutMins);
 
+      ImmutableMap.Builder<String, String> envVars = ImmutableMap.<String, String>builder();
+      String envPath = getEnvPath();
+      if (!envPath.isEmpty()) {
+        envVars.put("PATH", envPath);
+      }
+      envVars.put("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python");
+
       Command command =
           Command.of(binaryPath.toString())
               .args(argsList)
               .timeout(timeout)
               .redirectStderr(true)
               .workDir(workDir)
-              .extraEnv("PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION", "python")
+              .extraEnv(envVars.buildOrThrow())
               .onStdout(
                   LineCallback.does(
                       line -> {
@@ -197,6 +221,20 @@ public class SlateDriver extends BaseDriver implements SpecConfigable<SlateDrive
       throw new MobileHarnessException(
           BasicErrorId.COMMAND_EXEC_FAIL, "Failed to execute SLATE binary due to IO error", e);
     }
+  }
+
+  private String getEnvPath() {
+    ImmutableSet.Builder<String> paths = new ImmutableSet.Builder<>();
+    getSdkToolDir(adb.getAdbPath()).ifPresent(paths::add);
+    Optional.ofNullable(systemUtil.getEnv("PATH")).ifPresent(paths::add);
+    return Joiner.on(':').join(paths.build());
+  }
+
+  private static Optional<String> getSdkToolDir(String sdkToolPath) {
+    if (Strings.isNullOrEmpty(sdkToolPath)) {
+      return Optional.empty();
+    }
+    return Optional.ofNullable(new File(sdkToolPath).getParent());
   }
 
   private ImmutableList<String> getDeviceSerials() {
