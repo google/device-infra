@@ -57,7 +57,11 @@ public enum ModuleParameters {
 
   // SDK sandbox mode
   RUN_ON_SDK_SANDBOX("run_on_sdk_sandbox", ModuleParameters.RUN_ON_SDK_SANDBOX_FAMILY),
-  NOT_RUN_ON_SDK_SANDBOX("not_run_on_sdk_sandbox", ModuleParameters.RUN_ON_SDK_SANDBOX_FAMILY);
+  NOT_RUN_ON_SDK_SANDBOX("not_run_on_sdk_sandbox", ModuleParameters.RUN_ON_SDK_SANDBOX_FAMILY),
+
+  // PCC sandbox mode
+  RUN_ON_PCC_SANDBOX("run_on_pcc_sandbox", ModuleParameters.RUN_ON_PCC_SANDBOX_FAMILY),
+  NOT_RUN_ON_PCC_SANDBOX("not_run_on_pcc_sandbox", ModuleParameters.RUN_ON_PCC_SANDBOX_FAMILY);
 
   public static final String INSTANT_APP_FAMILY = "instant_app_family";
   public static final String MULTI_ABI_FAMILY = "multi_abi_family";
@@ -73,6 +77,7 @@ public enum ModuleParameters {
   public static final String RUN_ON_SECONDARY_USER_FAMILY = "run_on_secondary_user_family";
   public static final String RUN_ON_CLONE_PROFILE_FAMILY = "run_on_clone_profile_family";
   public static final String RUN_ON_PRIVATE_PROFILE_FAMILY = "run_on_private_profile_family";
+  public static final String RUN_ON_PCC_SANDBOX_FAMILY = "run_on_pcc_sandbox_family";
 
   private final String name;
 

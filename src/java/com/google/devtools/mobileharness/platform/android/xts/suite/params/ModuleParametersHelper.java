@@ -22,12 +22,14 @@ import static com.google.devtools.mobileharness.platform.android.xts.suite.param
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.MULTI_ABI;
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.NOT_INSTANT_APP;
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.NOT_MULTI_ABI;
+import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.NOT_RUN_ON_PCC_SANDBOX;
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.NOT_RUN_ON_SDK_SANDBOX;
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.NOT_SECONDARY_USER;
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.NOT_SECONDARY_USER_ON_DEFAULT_DISPLAY;
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.NOT_SECONDARY_USER_ON_SECONDARY_DISPLAY;
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.NO_FOLDABLE_STATES;
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.RUN_ON_CLONE_PROFILE;
+import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.RUN_ON_PCC_SANDBOX;
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.RUN_ON_PRIVATE_PROFILE;
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.RUN_ON_SDK_SANDBOX;
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.RUN_ON_SECONDARY_USER;
@@ -108,6 +110,10 @@ public final class ModuleParametersHelper {
               RUN_ON_SDK_SANDBOX,
               new RunOnSdkSandboxHandler(),
               NOT_RUN_ON_SDK_SANDBOX,
+              new NegativeHandler(),
+              RUN_ON_PCC_SANDBOX,
+              new RunOnPccSandboxHandler(),
+              NOT_RUN_ON_PCC_SANDBOX,
               new NegativeHandler());
 
   // NOTE: OPTIONAL_GROUP_MAP is currently empty, but used on resolveParam(), so don't remove it

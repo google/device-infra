@@ -67,4 +67,24 @@ public final class ListModulesCommandHandlerTest {
             "CtsMultiUserTestCases[run-on-work-profile]",
             "CtsMultiUserTestCases[run-on-private-profile]");
   }
+
+  @Test
+  public void handle_moduleParamHasPccSandbox_success() throws Exception {
+    AtsSessionPluginOutput atsSessionPluginOutput =
+        listModulesCommandHandler.handle(
+            ListModulesCommand.newBuilder()
+                .setXtsRootDir(TEST_CTS_ROOT_DIR)
+                .setXtsType("cts")
+                .setModuleParameter("run_on_pcc_sandbox")
+                .build());
+
+    assertThat(atsSessionPluginOutput.hasSuccess()).isTrue();
+    assertThat(
+            Splitter.on("\n")
+                .trimResults()
+                .omitEmptyStrings()
+                .splitToStream(atsSessionPluginOutput.getSuccess().getOutputMessage())
+                .map(entry -> Splitter.on(" ").splitToList(entry).get(1)))
+        .containsExactly("CtsPccSandboxTestCases[run-on-pcc-sandbox]");
+  }
 }

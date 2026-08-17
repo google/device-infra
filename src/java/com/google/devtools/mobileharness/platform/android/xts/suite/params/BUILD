@@ -43,6 +43,7 @@ java_library(
         ":module_parameters",
         ":negative_handler",
         ":not_multi_abi_handler",
+        ":run_on_pcc_sandbox_handler",
         ":run_on_sdk_sandbox_handler",
         ":secondary_user_handler",
         ":secondary_user_on_default_display_handler",
@@ -89,6 +90,12 @@ java_library(
     deps = [
         ":negative_handler",
     ],
+)
+
+java_library(
+    name = "run_on_pcc_sandbox_handler",
+    srcs = ["RunOnPccSandboxHandler.java"],
+    deps = [":module_parameter_handler_interface"],
 )
 
 java_library(
