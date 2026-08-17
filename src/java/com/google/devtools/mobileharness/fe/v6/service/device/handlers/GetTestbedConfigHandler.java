@@ -50,7 +50,7 @@ public final class GetTestbedConfigHandler {
     Preconditions.checkArgument(!deviceId.isEmpty(), "Device ID cannot be empty");
 
     return Futures.transform(
-        deviceDataLoader.loadDeviceData(deviceId, universe),
+        deviceDataLoader.loadDeviceData(deviceId, request.getHostName(), universe),
         deviceData -> {
           logger.atFine().log("Building testbed config for %s", deviceId);
           return testbedConfigBuilder.buildTestbedConfig(deviceId, deviceData);

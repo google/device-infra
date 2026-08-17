@@ -42,6 +42,7 @@ public final class PrepareDeviceHandler {
       PrepareDeviceRequest request, UniverseScope universe, Optional<String> username) {
     return authorizer.authorizeAndRun(
         request.getId(),
+        request.getHostName(),
         username,
         universe,
         "prepare device",

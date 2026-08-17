@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.LabFilter;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.GroupedDevices;
@@ -52,6 +53,7 @@ import org.mockito.junit.MockitoRule;
 public final class DeviceInfoLookupHelperTest {
 
   private static final String DEVICE_ID = "test_device_id";
+  private static final String HOST_NAME = "test_host_name";
   private static final UniverseScope SELF_UNIVERSE = new UniverseScope.SelfUniverse();
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
@@ -82,7 +84,7 @@ public final class DeviceInfoLookupHelperTest {
 
     ListenableFuture<DeviceInfo> deviceInfoFuture =
         DeviceInfoLookupHelper.lookUpDeviceInfoAsync(
-            labInfoProvider, DEVICE_ID, SELF_UNIVERSE, directExecutor());
+            labInfoProvider, DEVICE_ID, /* hostName= */ "", SELF_UNIVERSE, directExecutor());
 
     assertThat(deviceInfoFuture.get()).isEqualTo(expectedDeviceInfo);
     verify(labInfoProvider).getLabInfoAsync(labInfoRequestCaptor.capture(), eq(SELF_UNIVERSE));
@@ -90,6 +92,8 @@ public final class DeviceInfoLookupHelperTest {
 
     assertThat(capturedRequest.getLabQuery().hasDeviceViewRequest()).isTrue();
     assertThat(capturedRequest.getLabQuery().getDeviceViewRequest()).isEqualToDefaultInstance();
+    // An empty host name applies no lab filter.
+    assertThat(capturedRequest.getLabQuery().getFilter().hasLabFilter()).isFalse();
   }
 
   @Test
@@ -104,10 +108,49 @@ public final class DeviceInfoLookupHelperTest {
 
     ListenableFuture<DeviceInfo> deviceInfoFuture =
         DeviceInfoLookupHelper.lookUpDeviceInfoAsync(
-            labInfoProvider, DEVICE_ID, SELF_UNIVERSE, directExecutor());
+            labInfoProvider, DEVICE_ID, /* hostName= */ "", SELF_UNIVERSE, directExecutor());
 
     ExecutionException exception = assertThrows(ExecutionException.class, deviceInfoFuture::get);
     assertThat(exception).hasCauseThat().isInstanceOf(RuntimeException.class);
     assertThat(exception).hasCauseThat().hasMessageThat().contains("Device not found");
+  }
+
+  @Test
+  public void lookUpDeviceInfoAsync_withHostName_addsLabHostNameFilter() throws Exception {
+    DeviceInfo expectedDeviceInfo =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId(DEVICE_ID))
+            .build();
+    GetLabInfoResponse labInfoResponse =
+        GetLabInfoResponse.newBuilder()
+            .setLabQueryResult(
+                LabQueryResult.newBuilder()
+                    .setDeviceView(
+                        DeviceView.newBuilder()
+                            .setGroupedDevices(
+                                GroupedDevices.newBuilder()
+                                    .setDeviceList(
+                                        DeviceList.newBuilder()
+                                            .addDeviceInfo(expectedDeviceInfo)))))
+            .build();
+    when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), eq(SELF_UNIVERSE)))
+        .thenReturn(immediateFuture(labInfoResponse));
+
+    assertThat(
+            DeviceInfoLookupHelper.lookUpDeviceInfoAsync(
+                    labInfoProvider, DEVICE_ID, HOST_NAME, SELF_UNIVERSE, directExecutor())
+                .get())
+        .isEqualTo(expectedDeviceInfo);
+
+    verify(labInfoProvider).getLabInfoAsync(labInfoRequestCaptor.capture(), eq(SELF_UNIVERSE));
+    LabFilter labFilter = labInfoRequestCaptor.getValue().getLabQuery().getFilter().getLabFilter();
+    assertThat(
+            labFilter
+                .getLabMatchCondition(0)
+                .getLabHostNameMatchCondition()
+                .getCondition()
+                .getInclude()
+                .getExpectedList())
+        .containsExactly(HOST_NAME);
   }
 }

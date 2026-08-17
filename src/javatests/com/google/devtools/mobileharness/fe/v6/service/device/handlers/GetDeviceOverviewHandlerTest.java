@@ -256,6 +256,20 @@ public final class GetDeviceOverviewHandlerTest {
   }
 
   @Test
+  public void getDeviceOverview_differentHostName_notCached() throws Exception {
+    getDeviceOverviewHandler
+        .getDeviceOverview(DEFAULT_REQUEST.toBuilder().setHostName("host_a").build(), SELF_UNIVERSE)
+        .get();
+    getDeviceOverviewHandler
+        .getDeviceOverview(DEFAULT_REQUEST.toBuilder().setHostName("host_b").build(), SELF_UNIVERSE)
+        .get();
+
+    // The same device id on different hosts must not share a cache entry.
+    verify(labInfoProvider, times(2))
+        .getLabInfoAsync(any(GetLabInfoRequest.class), eq(SELF_UNIVERSE));
+  }
+
+  @Test
   public void getDeviceOverview_labInfoProviderFails() throws Exception {
     when(labInfoProvider.getLabInfoAsync(any(GetLabInfoRequest.class), any(UniverseScope.class)))
         .thenReturn(immediateFailedFuture(new StatusRuntimeException(Status.DEADLINE_EXCEEDED)));

@@ -73,7 +73,8 @@ public final class UnquarantineDeviceHandler {
     }
 
     ListenableFuture<DeviceInfo> deviceInfoFuture =
-        DeviceInfoLookupHelper.lookUpDeviceInfoAsync(labInfoProvider, deviceId, universe, executor);
+        DeviceInfoLookupHelper.lookUpDeviceInfoAsync(
+            labInfoProvider, deviceId, request.getHostName(), universe, executor);
 
     return transformAsync(
         deviceInfoFuture,

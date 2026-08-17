@@ -23,6 +23,7 @@ import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorS
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListenableFuture;
@@ -62,6 +63,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -143,6 +145,35 @@ public final class DeviceDataLoaderTest {
     assertThat(deviceData.managementMode()).isEqualTo(ManagementMode.PER_DEVICE);
     assertThat(deviceData.effectiveDeviceConfig()).isEqualTo(individualConfig);
     assertThat(deviceData.isConfigSupported()).isTrue();
+  }
+
+  @Test
+  public void loadDeviceData_withHostName_addsLabHostNameFilter() throws Exception {
+    assertThat(deviceDataLoader.loadDeviceData(DEVICE_ID, HOST_NAME, UNIVERSE).get()).isNotNull();
+
+    ArgumentCaptor<GetLabInfoRequest> captor = ArgumentCaptor.forClass(GetLabInfoRequest.class);
+    verify(labInfoProvider).getLabInfoAsync(captor.capture(), eq(UNIVERSE));
+    assertThat(
+            captor
+                .getValue()
+                .getLabQuery()
+                .getFilter()
+                .getLabFilter()
+                .getLabMatchCondition(0)
+                .getLabHostNameMatchCondition()
+                .getCondition()
+                .getInclude()
+                .getExpectedList())
+        .containsExactly(HOST_NAME);
+  }
+
+  @Test
+  public void loadDeviceData_noHostName_omitsLabFilter() throws Exception {
+    assertThat(deviceDataLoader.loadDeviceData(DEVICE_ID, UNIVERSE).get()).isNotNull();
+
+    ArgumentCaptor<GetLabInfoRequest> captor = ArgumentCaptor.forClass(GetLabInfoRequest.class);
+    verify(labInfoProvider).getLabInfoAsync(captor.capture(), eq(UNIVERSE));
+    assertThat(captor.getValue().getLabQuery().getFilter().hasLabFilter()).isFalse();
   }
 
   @Test

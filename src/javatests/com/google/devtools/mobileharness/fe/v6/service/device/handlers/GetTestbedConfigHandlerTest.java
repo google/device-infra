@@ -74,7 +74,7 @@ public final class GetTestbedConfigHandlerTest {
     GetTestbedConfigRequest request = GetTestbedConfigRequest.newBuilder().setId(deviceId).build();
     TestbedConfig response = TestbedConfig.newBuilder().setYamlContent("test_yaml").build();
 
-    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
+    when(deviceDataLoader.loadDeviceData(deviceId, /* hostName= */ "", SELF_UNIVERSE))
         .thenReturn(immediateFuture(deviceData));
     when(testbedConfigBuilder.buildTestbedConfig(deviceId, deviceData)).thenReturn(response);
 

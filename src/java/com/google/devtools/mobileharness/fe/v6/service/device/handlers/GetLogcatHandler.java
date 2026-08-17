@@ -41,6 +41,7 @@ public class GetLogcatHandler {
       GetLogcatRequest request, UniverseScope universe, Optional<String> username) {
     return authorizer.authorizeAndRun(
         request.getId(),
+        request.getHostName(),
         username,
         universe,
         "get logcat",
