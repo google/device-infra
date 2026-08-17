@@ -21,7 +21,7 @@ package mobileharness.shared.android_device_spec;
 option java_package = "com.google.wireless.qa.mobileharness.shared.proto";
 
 // ABI supported by Android till Q4 2015.
-// Ref: http://developer.android.com/ndk/guides/abis.html
+// Ref: https://developer.android.com/ndk/guides/abis.html
 enum Abi {
   ARMEABI = 1;
   ARMEABI_V7A = 2;
@@ -42,7 +42,7 @@ enum DeviceType {
 }
 
 // Screen density for devices.
-// Ref: http://developer.android.com/guide/practices/screens_support.html
+// Ref: https://developer.android.com/guide/practices/screens_support.html
 enum ScreenDensity {
   LDPI = 1;
   MDPI = 2;
