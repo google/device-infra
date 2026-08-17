@@ -230,6 +230,9 @@ public class AndroidSystemSettingUtil {
   private static final Pattern PATTERN_BATTERY_TEMPERATURE =
       Pattern.compile(" temperature: (\\d+)");
 
+  /** The pattern of battery health for the device. */
+  private static final Pattern PATTERN_BATTERY_HEALTH = Pattern.compile(" health: (\\d+)");
+
   /** Property name for setting dex pre-verification.. */
   @VisibleForTesting static final String PROPERTY_DEX_PRE_VERIFICATION = "dalvik.vm.dexopt-flags";
 
@@ -933,18 +936,7 @@ public class AndroidSystemSettingUtil {
     return Optional.empty();
   }
 
-  /**
-   * Gets the battery level of the device.
-   *
-   * <p>It executes "dumpsys battery" and parses the output to get the battery level.
-   *
-   * @param serial the serial number of the device
-   * @return battery level in percentage (0-100), or {@link Optional#empty()} if it failed to parse
-   *     the battery level from command output.
-   * @throws MobileHarnessException if some error occurs in executing system commands
-   * @throws InterruptedException if current thread is interrupted during this method
-   */
-  public Optional<Integer> getBatteryLevel(String serial)
+  private String getBatteryDumpSysOutput(String serial, AndroidErrorId errorId)
       throws MobileHarnessException, InterruptedException {
     // Run dumpSys adb command to get battery state. A sample output:
     // Current Battery Service state:
@@ -958,13 +950,29 @@ public class AndroidSystemSettingUtil {
     //   voltage:4083
     //   temperature: 360
     //   technology: Li-ion
-    String output;
     try {
-      output = adbUtil.dumpSys(serial, DumpSysType.BATTERY);
+      return adbUtil.dumpSys(serial, DumpSysType.BATTERY);
     } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_BATTERY_LEVEL_ERROR, e.getMessage(), e);
+      throw new MobileHarnessException(errorId, e.getMessage(), e);
     }
+  }
+
+  /**
+   * Gets the battery level of the device.
+   *
+   * <p>It executes "dumpsys battery" and parses the output to get the battery level.
+   *
+   * @param serial the serial number of the device
+   * @return battery level in percentage (0-100), or {@link Optional#empty()} if it failed to parse
+   *     the battery level from command output.
+   * @throws MobileHarnessException if some error occurs in executing system commands
+   * @throws InterruptedException if current thread is interrupted during this method
+   */
+  public Optional<Integer> getBatteryLevel(String serial)
+      throws MobileHarnessException, InterruptedException {
+    String output =
+        getBatteryDumpSysOutput(
+            serial, AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_BATTERY_LEVEL_ERROR);
 
     Matcher matcher = PATTERN_BATTERY_LEVEL.matcher(output);
     if (!matcher.find()) {
@@ -994,25 +1002,9 @@ public class AndroidSystemSettingUtil {
    */
   public Optional<Integer> getBatteryTemperature(String serial)
       throws MobileHarnessException, InterruptedException {
-    // Run dumpSys adb command to get battery state. A sample output:
-    // Current Battery Service state:
-    //   AC powered: false
-    //   USB powered: true
-    //   status: 2
-    //   health: 2
-    //   present: true
-    //   level: 98
-    //   scale: 100
-    //   voltage:4083
-    //   temperature: 360
-    //   technology: Li-ion
-    String output;
-    try {
-      output = adbUtil.dumpSys(serial, DumpSysType.BATTERY);
-    } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_BATTERY_TEMP_ERROR, e.getMessage(), e);
-    }
+    String output =
+        getBatteryDumpSysOutput(
+            serial, AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_BATTERY_TEMP_ERROR);
 
     Matcher matcher = PATTERN_BATTERY_TEMPERATURE.matcher(output);
     if (!matcher.find()) {
@@ -1028,6 +1020,38 @@ public class AndroidSystemSettingUtil {
       logger.atWarning().withCause(e).log(
           "Failed to parse battery temperature for device %s, invalid temperature value: %s",
           serial, temperature);
+      return Optional.empty();
+    }
+  }
+
+  /**
+   * Gets the battery health of the device.
+   *
+   * <p>It executes "dumpsys battery" and parses the output to get the battery health.
+   *
+   * @param serial the serial number of the device
+   * @return battery health code (e.g., 2 for BATTERY_HEALTH_GOOD), or {@link Optional#empty()} if
+   *     it failed to parse the battery health from command output.
+   * @throws MobileHarnessException if some error occurs in executing system commands
+   * @throws InterruptedException if current thread is interrupted during this method
+   */
+  public Optional<Integer> getBatteryHealth(String serial)
+      throws MobileHarnessException, InterruptedException {
+    String output =
+        getBatteryDumpSysOutput(
+            serial, AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_BATTERY_HEALTH_ERROR);
+
+    Matcher matcher = PATTERN_BATTERY_HEALTH.matcher(output);
+    if (!matcher.find()) {
+      logger.atWarning().log("Failed to parse battery health for device %s:\n%s", serial, output);
+      return Optional.empty();
+    }
+    String health = matcher.group(1);
+    try {
+      return Optional.of(Integer.parseInt(health));
+    } catch (NumberFormatException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to parse battery health for device %s, invalid health value: %s", serial, health);
       return Optional.empty();
     }
   }

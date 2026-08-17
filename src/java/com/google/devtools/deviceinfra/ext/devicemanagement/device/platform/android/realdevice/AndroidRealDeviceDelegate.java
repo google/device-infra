@@ -2154,6 +2154,18 @@ public abstract class AndroidRealDeviceDelegate {
             deviceId, MoreThrowables.shortDebugString(e));
       }
 
+      logger.atInfo().log("Checking device %s battery health...", deviceId);
+      Optional<Integer> batteryHealth = Optional.empty();
+      try {
+        batteryHealth = systemSettingUtil.getBatteryHealth(deviceId);
+        if (batteryHealth.isPresent()) {
+          logger.atInfo().log("Device %s battery health: %d", deviceId, batteryHealth.get());
+        }
+      } catch (MobileHarnessException e) {
+        logger.atWarning().log(
+            "Failed to get device %s battery health: %s",
+            deviceId, MoreThrowables.shortDebugString(e));
+      }
       isDimensionChanged |= device.updateDimension(Dimension.Name.BATTERY_STATUS, batteryStatus);
       isDimensionChanged |=
           device.updateDimension(
@@ -2165,6 +2177,9 @@ public abstract class AndroidRealDeviceDelegate {
           device.updateDimension(
               Dimension.Name.BATTERY_CYCLE_COUNT,
               batteryCycleCount.map(String::valueOf).orElse("-1"));
+      isDimensionChanged |=
+          device.updateDimension(
+              Dimension.Name.BATTERY_HEALTH, batteryHealth.map(String::valueOf).orElse("unknown"));
     }
     return isDimensionChanged;
   }

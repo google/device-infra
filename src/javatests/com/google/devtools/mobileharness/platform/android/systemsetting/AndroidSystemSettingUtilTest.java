@@ -472,6 +472,29 @@ public class AndroidSystemSettingUtilTest {
   }
 
   @Test
+  public void getBatteryHealth() throws Exception {
+    when(adbUtil.dumpSys(DEVICE_ID, DumpSysType.BATTERY))
+        .thenReturn(
+            """
+            * daemon not running. starting it now on port 5037 *
+            * daemon started successfully *
+            Current Battery Service state:
+              AC powered: false
+              USB powered: true
+              status: 2
+              health: 2
+              present: true
+              level: 98
+              scale: 100
+              voltage:4083
+              temperature: 360
+              technology: Li-ion\
+            """);
+
+    assertThat(settingUtil.getBatteryHealth(DEVICE_ID)).hasValue(2);
+  }
+
+  @Test
   public void setBatteryLogicalDischarge() throws Exception {
     when(adbUtil.dumpSys(DEVICE_ID, DumpSysType.BATTERY, "set ac 0")).thenReturn("");
     when(adbUtil.dumpSys(DEVICE_ID, DumpSysType.BATTERY, "set usb 0")).thenReturn("");
