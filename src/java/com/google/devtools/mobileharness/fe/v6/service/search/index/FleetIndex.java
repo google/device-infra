@@ -16,108 +16,70 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.index;
 
-import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
 /**
- * Value index over one fleet's devices.
+ * Value index interface over a fleet's devices or hosts.
  *
- * <p>Built by {@link FleetIndexBuilder} from a {@code FleetRawData} and held by {@link
- * FleetSnapshot}. Serves value resolution and facet counts from memory. Posting lists (device index
- * arrays per key-value pair) are built lazily by {@link LazyPostings} on first access rather than
- * at index build time, which keeps the build under 2 seconds for 152K devices.
+ * <p>Serves value resolution, counts, sorted values, display names, and facet counts from memory.
+ * Keys are identified by a namespaced key id (e.g. {@code field::status}, {@code dim::model},
+ * {@code prop::rack_id}, {@code host::host_name}, {@code config::wifi_ssid}).
  *
- * <p>All structures key values by a normalized (lowercased) form so lookups are case-insensitive;
- * {@link #valueDisplays()} keeps the original casing for presentation.
- *
- * <p>Keys are identified by a namespaced key id, matching the search prototype: {@code
- * field::<name>} for built-in device fields (uuid, status, owner, type, driver, decorator,
- * executor), {@code dim::<name>} for composite dimensions, {@code prop::<name>} for host
- * properties, {@code host::<name>} for cross-entity host attributes joined onto each device, and
- * {@code config::<name>} for config-service fields such as wifi_ssid.
+ * <p>Values are lowercased for case-insensitive lookup.
  */
-@AutoValue
-public abstract class FleetIndex {
+public interface FleetIndex {
+
+  /** Returns the sorted distinct normalized values for a key, or an empty list if absent. */
+  ImmutableList<String> sortedValues(String keyId);
 
   /**
-   * Key id to (normalized value to device count). The count is a distinct-device count: a device
-   * that lists the same value twice contributes one.
+   * Returns the (normalized value -> distinct-device count) map for a key, or an empty map if
+   * absent.
    */
-  public abstract ImmutableMap<String, ImmutableMap<String, Integer>> valueCounts();
-
-  /** Key id to its sorted distinct normalized values. Used for prefix matching. */
-  public abstract ImmutableMap<String, ImmutableList<String>> sortedValues();
-
-  /** Key id to (normalized value to first-seen original display value). */
-  public abstract ImmutableMap<String, ImmutableMap<String, String>> valueDisplays();
-
-  /** All key ids present in this fleet. */
-  public abstract ImmutableSet<String> keyIds();
-
-  /** Key id to human-readable display name. */
-  public abstract ImmutableMap<String, String> displayNames();
+  ImmutableMap<String, Integer> valueCounts(String keyId);
 
   /**
-   * All (value, key) pairs from non-{@link FleetSearchKeys#PLAIN_VALUE_KEYS} keys, sorted by value
-   * then key. The suggestion engine bisects into this list for O(log D_s) prefix matching across
-   * all semantic keys simultaneously.
+   * Returns the (normalized value -> original display value) map for a key, or an empty map if
+   * absent.
    */
-  public abstract ImmutableList<ValueKeyPair> semanticGlobalSorted();
+  ImmutableMap<String, String> valueDisplays(String keyId);
+
+  /** Returns the human-readable display name for a key, deriving it from namespace if absent. */
+  String displayName(String keyId);
+
+  /** Returns the device/record count for a value, or 0 if the key or value is absent. */
+  int valueCount(String keyId, String value);
+
+  /** Returns all key ids available in this index. */
+  ImmutableSet<String> keyIds();
 
   /**
-   * Normalized value to the list of (key, count) pairs that carry that value. Covers all keys (not
-   * just semantic), enabling O(1) exact-match lookup for the suggestion engine.
+   * All (value, key) pairs from non-{@link FleetSearchKeys#PLAIN_VALUE_KEYS} semantic keys, sorted
+   * by value then key. Used for O(log D_s) global value prefix matching in Pattern 4.
    */
-  public abstract ImmutableMap<String, ImmutableList<KeyCount>> globalExact();
+  ImmutableList<ValueKeyPair> semanticGlobalSorted();
 
-  /** Returns the device count for a value, or 0 if the key or value is absent. */
-  public int valueCount(String keyId, String value) {
-    ImmutableMap<String, Integer> values = valueCounts().get(keyId);
-    return values == null ? 0 : values.getOrDefault(value, 0);
-  }
+  /**
+   * Normalized value to the list of (key, count) pairs that carry that value. Used for O(1) exact
+   * global value lookup in Pattern 4.
+   */
+  ImmutableMap<String, ImmutableList<KeyCount>> globalExact();
 
-  /** Creates a new builder. */
-  public static Builder builder() {
-    return new AutoValue_FleetIndex.Builder();
-  }
-
-  /** An empty index, used by an empty {@link FleetSnapshot}. */
-  public static FleetIndex empty() {
-    return builder()
-        .setValueCounts(ImmutableMap.of())
-        .setSortedValues(ImmutableMap.of())
-        .setValueDisplays(ImmutableMap.of())
-        .setKeyIds(ImmutableSet.of())
-        .setDisplayNames(ImmutableMap.of())
-        .setSemanticGlobalSorted(ImmutableList.of())
-        .setGlobalExact(ImmutableMap.of())
-        .build();
-  }
-
-  /** Builder for {@link FleetIndex}. */
-  @AutoValue.Builder
-  public abstract static class Builder {
-    public abstract Builder setValueCounts(
-        ImmutableMap<String, ImmutableMap<String, Integer>> valueCounts);
-
-    public abstract Builder setSortedValues(
-        ImmutableMap<String, ImmutableList<String>> sortedValues);
-
-    public abstract Builder setValueDisplays(
-        ImmutableMap<String, ImmutableMap<String, String>> valueDisplays);
-
-    public abstract Builder setKeyIds(ImmutableSet<String> keyIds);
-
-    public abstract Builder setDisplayNames(ImmutableMap<String, String> displayNames);
-
-    public abstract Builder setSemanticGlobalSorted(
-        ImmutableList<ValueKeyPair> semanticGlobalSorted);
-
-    public abstract Builder setGlobalExact(
-        ImmutableMap<String, ImmutableList<KeyCount>> globalExact);
-
-    public abstract FleetIndex build();
+  /**
+   * Derives a display name from a key id for keys absent from the built-in display name registry.
+   * Mirrors the namespace derivation the index builder applies to discovered dimensions and host
+   * properties.
+   */
+  static String deriveDisplayName(String keyId) {
+    int separator = keyId.indexOf("::");
+    String namespace = separator >= 0 ? keyId.substring(0, separator) : "";
+    String name = separator >= 0 ? keyId.substring(separator + 2) : keyId;
+    return switch (namespace) {
+      case "dim" -> "Dimension " + name;
+      case "prop" -> "Host Property " + name;
+      default -> name;
+    };
   }
 }

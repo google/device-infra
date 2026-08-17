@@ -67,11 +67,12 @@ public final class FleetSearchConfigProvider {
     String identifierKey = identifierKey(request.getEntity());
 
     FleetColumnConfig.Builder columns = FleetColumnConfig.newBuilder();
-    for (String keyId : host ? curation.hostRecommendedColumns() : curation.recommendedColumns()) {
+    for (String keyId :
+        host ? curation.hostRecommendedColumns() : curation.deviceRecommendedColumns()) {
       columns.addRecommended(
           KeyDescriptor.newBuilder().setKey(keyId).setDisplayName(displayName(index, keyId)));
     }
-    for (String keyId : host ? curation.hostDefaultColumns() : curation.defaultColumns()) {
+    for (String keyId : host ? curation.hostDefaultColumns() : curation.deviceDefaultColumns()) {
       columns.addDefaults(
           FleetColumnDescriptor.newBuilder()
               .setKey(keyId)
@@ -115,22 +116,6 @@ public final class FleetSearchConfigProvider {
    * absent.
    */
   private static String displayName(FleetIndex index, String keyId) {
-    return index.displayNames().getOrDefault(keyId, deriveDisplayName(keyId));
-  }
-
-  /**
-   * Derives a display name from a key id for keys absent from the fleet index. Mirrors the
-   * namespace derivation in {@code FleetCellMapper} and {@code FleetColumnCataloger}: {@code dim::}
-   * and {@code prop::} keys are prefixed, and every other namespace shows its bare name.
-   */
-  private static String deriveDisplayName(String keyId) {
-    int separator = keyId.indexOf("::");
-    String namespace = separator >= 0 ? keyId.substring(0, separator) : "";
-    String name = separator >= 0 ? keyId.substring(separator + 2) : keyId;
-    return switch (namespace) {
-      case "dim" -> "Dimension " + name;
-      case "prop" -> "Host Property " + name;
-      default -> name;
-    };
+    return index.displayName(keyId);
   }
 }
