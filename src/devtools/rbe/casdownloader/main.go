@@ -196,6 +196,28 @@ func ContextWithMetadata(ctx context.Context) (context.Context, error) {
 	return metadata.NewOutgoingContext(ctx, mdPair), nil
 }
 
+var envelopeCandidatePaths = []string{
+	"/usr/envelope/start_envelope",
+	"/google/data/ro/teams/envelope/start_envelope",
+}
+
+// envelopeExists checks if the envelope executable physically exists and is executable.
+// This is used to determine if envelope should be enabled by default.
+func envelopeExists() bool {
+	return envelopeExistsAt(envelopeCandidatePaths)
+}
+
+func envelopeExistsAt(paths []string) bool {
+	for _, path := range paths {
+		if info, err := os.Stat(path); err == nil {
+			if info.Mode().IsRegular() && (info.Mode().Perm()&0111 != 0) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func main() {
 	os.Exit(runMain())
 }
@@ -208,9 +230,9 @@ func runMain() int {
 	flag.Set("logtostderr", "true")
 	flag.Set("stderrthreshold", "INFO")
 	flag.Set("logtostderr", "true")
-	// Disable envelope by default when not running on Borg to avoid crashes
-	// in environments without envelope support (e.g. Kokoro, GCE).
-	if os.Getenv("BORG_TASK_ID") == "" {
+	// Disable envelope and svelte by default when the envelope binary is not available
+	// on the host to avoid startup crashes during `flag.Parse()`.
+	if !envelopeExists() {
 		if f := flag.Lookup("envelope_enabled"); f != nil {
 			f.Value.Set("false")
 		}

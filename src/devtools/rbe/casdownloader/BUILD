@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@rules_go//go:def.bzl", "go_binary")
+load("@rules_go//go:def.bzl", "go_binary", "go_test")
 load(":version.bzl", "VERSION")
 
 package(
@@ -44,4 +44,9 @@ go_binary(
         "@org_golang_google_grpc//metadata",
         "@org_golang_google_protobuf//proto",
     ],
+)
+
+go_test(
+    name = "main_test",
+    srcs = ["main_test.go"],
 )
