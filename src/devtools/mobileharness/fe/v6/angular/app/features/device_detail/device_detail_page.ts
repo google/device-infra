@@ -152,30 +152,46 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
     this.titleService.setTitle(`OmniLab Console`);
   }
 
-  readonly devicePageData$: Observable<DevicePageData> = this.route.paramMap
-    .pipe(
-      map((params) => params.get('id')),
-      switchMap((id) =>
+  readonly devicePageData$: Observable<DevicePageData> = combineLatest([
+    this.route.paramMap.pipe(map((params) => params.get('id'))),
+    this.route.queryParamMap.pipe(map((params) => params.get('host_name'))),
+  ]).pipe(
+    switchMap(
+      /**
+       * Maps the route parameters to a stream of objects containing the device ID,
+       * host name, and a flag indicating if it's a refresh operation.
+       *
+       * @param param0 A tuple containing the device ID and the optional host name from the URL.
+       * @return An Observable emitting an object with id, hostName, and isRefresh.
+       */
+      ([id, hostName]) =>
         merge(
-          of({id, isRefresh: false}),
-          this.refreshSubject$.pipe(map(() => ({id, isRefresh: true}))),
+          of({id, hostName, isRefresh: false}),
+          this.refreshSubject$.pipe(
+            map(() => ({id, hostName, isRefresh: true})),
+          ),
         ),
-      ),
-    )
-    .pipe(
-      throttleTime(1000, undefined, {leading: true, trailing: true}),
-      tap(({isRefresh}) => {
-        if (isRefresh) {
-          this.refreshSnackBarRef?.dismiss();
-          this.refreshSnackBarRef = this.snackBar.showInProgress(
-            'Refreshing device data...',
-          );
-        }
-      }),
-      tap(() => {
-        this.loadingService.show();
-      }),
-      switchMap(({id, isRefresh}) => {
+    ),
+    throttleTime(1000, undefined, {leading: true, trailing: true}),
+    tap(({isRefresh}) => {
+      if (isRefresh) {
+        this.refreshSnackBarRef?.dismiss();
+        this.refreshSnackBarRef = this.snackBar.showInProgress(
+          'Refreshing device data...',
+        );
+      }
+    }),
+    tap(() => {
+      this.loadingService.show();
+    }),
+    switchMap(
+      /**
+       * Fetches the device overview data based on the route parameters and refresh state.
+       *
+       * @param param0 An object containing the device ID, optional host name, and a flag indicating if this is a refresh operation.
+       * @return An Observable emitting the DevicePageData.
+       */
+      ({id, hostName, isRefresh}) => {
         if (!id) {
           this.loadingService.hide();
           return of<DevicePageData>({
@@ -186,7 +202,11 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
         }
 
         return this.deviceService
-          .getDeviceOverview({id, forceRefresh: true})
+          .getDeviceOverview({
+            id,
+            forceRefresh: true,
+            hostName: hostName || undefined,
+          })
           .pipe(
             map((pageData) => {
               this.loadingService.hide();
@@ -218,25 +238,26 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
               });
             }),
           );
-      }),
-      scan<DevicePageData, DevicePageData>(
-        (acc, curr) => {
-          if (curr.pageData) {
-            return curr;
-          }
-          // If failure, check if ID matches previous success
-          if (acc.pageData && acc.id === curr.id) {
-            return {
-              ...acc,
-              error: undefined, // Clear error for silent failure
-            };
-          }
+      },
+    ),
+    scan<DevicePageData, DevicePageData>(
+      (acc, curr) => {
+        if (curr.pageData) {
           return curr;
-        },
-        {pageData: null, id: null},
-      ),
-      shareReplay(1),
-    );
+        }
+        // If failure, check if ID matches previous success
+        if (acc.pageData && acc.id === curr.id) {
+          return {
+            ...acc,
+            error: undefined, // Clear error for silent failure
+          };
+        }
+        return curr;
+      },
+      {pageData: null, id: null},
+    ),
+    shareReplay(1),
+  );
 
   setActiveTab(tab: 'overview' | 'test-history' | 'health' | 'record'): void {
     if (tab === 'test-history') {

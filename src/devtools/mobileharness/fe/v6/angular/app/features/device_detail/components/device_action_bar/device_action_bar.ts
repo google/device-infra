@@ -227,8 +227,13 @@ export class DeviceActionBar {
     );
   };
 
+  /**
+   * Handles the screenshot action for the device.
+   * Invokes the take screenshot flow via device actions.
+   * @return {void}
+   */
   readonly onScreenshot = () => {
-    this.deviceActions.takeScreenshot(this.deviceId());
+    this.deviceActions.takeScreenshot(this.deviceId(), this.hostName());
   };
 
   readonly onRemoteControl = () => {
@@ -241,9 +246,10 @@ export class DeviceActionBar {
   /**
    * Handles the prepare action for the device.
    * Invokes the prepare device flow via device actions.
+   * @return {void}
    */
   readonly onPrepare = () => {
-    this.deviceActions.prepareDevice(this.deviceId());
+    this.deviceActions.prepareDevice(this.deviceId(), this.hostName());
   };
 
   readonly onFlash = () => {
@@ -254,10 +260,20 @@ export class DeviceActionBar {
     );
   };
 
+  /**
+   * Handles the logcat action for the device.
+   * Invokes the get logcat flow via device actions.
+   * @return {void}
+   */
   readonly onLogcat = () => {
-    this.deviceActions.getLogcat(this.deviceId());
+    this.deviceActions.getLogcat(this.deviceId(), this.hostName());
   };
 
+  /**
+   * Handles the quarantine action for the device.
+   * Invokes the quarantine device flow via device actions.
+   * @return {void}
+   */
   readonly onQuarantine = () => {
     const quarantine = this.quarantineInfo()
       ? {
@@ -267,12 +283,19 @@ export class DeviceActionBar {
       : undefined;
     this.deviceActions.quarantineDevice(this.deviceId(), {
       quarantineInfo: quarantine,
+      hostName: this.hostName(),
     });
   };
 
+  /**
+   * Handles the change quarantine action for the device.
+   * Invokes the change quarantine flow via device actions.
+   * @return {void}
+   */
   readonly onChangeQuarantine = () => {
     this.deviceActions.changeQuarantine(
       this.deviceId(),
+      this.hostName(),
       this.quarantineInfo()?.expiry,
     );
   };

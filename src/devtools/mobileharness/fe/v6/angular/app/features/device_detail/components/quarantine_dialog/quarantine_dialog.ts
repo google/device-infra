@@ -170,6 +170,11 @@ export class QuarantineDialog implements OnInit {
     this.onDurationChange();
   }
 
+  /**
+   * Applies the quarantine by sending a request to the device service.
+   * Validates the inputs (duration or end time) based on the selected tab, prepares the request,
+   * calls the device service, and handles the response.
+   */
   applyQuarantine() {
     let endTime: string;
     if (this.selectedTabIndex === 0) {
@@ -191,7 +196,10 @@ export class QuarantineDialog implements OnInit {
       endTime = localDate.toISOString();
     }
 
-    const request: QuarantineDeviceRequest = {endTime};
+    const request: QuarantineDeviceRequest = {
+      endTime,
+      hostName: this.dialogData.hostName,
+    };
 
     this.quarantining.set(true);
 

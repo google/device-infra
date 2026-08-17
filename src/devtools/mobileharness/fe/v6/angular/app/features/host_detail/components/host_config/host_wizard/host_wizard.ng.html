@@ -51,6 +51,7 @@
           <app-wifi
             type="host"
             workflow="wizard"
+            [hostName]="data.hostName"
             [wifi]="
               hostConfig().deviceConfig?.wifi || {type: 'NONE', ssid: '', psk: '', scanSsid: false}
             "

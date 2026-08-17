@@ -68,13 +68,16 @@ describe('DeviceActionService', () => {
     };
     deviceServiceSpy.takeScreenshot.and.returnValue(of(mockResponse));
 
-    service.takeScreenshot('device-1').subscribe();
+    service.takeScreenshot('device-1', 'test-host').subscribe();
 
     expect(snackBarSpy.showInProgress).toHaveBeenCalledWith(
       'Taking screenshot...',
     );
     expect(mockSnackBarRef.dismiss).toHaveBeenCalled();
-    expect(deviceServiceSpy.takeScreenshot).toHaveBeenCalledWith('device-1');
+    expect(deviceServiceSpy.takeScreenshot).toHaveBeenCalledWith(
+      'device-1',
+      'test-host',
+    );
     expect(snackBarSpy.showSuccess).toHaveBeenCalledWith(
       'Screenshot taken successfully.',
     );
@@ -95,7 +98,7 @@ describe('DeviceActionService', () => {
       throwError(() => new Error('Screenshot error')),
     );
 
-    service.takeScreenshot('device-1').subscribe({
+    service.takeScreenshot('device-1', 'test-host').subscribe({
       error: (err) => {
         expect(err.message).toBe('Screenshot error');
       },
@@ -118,13 +121,16 @@ describe('DeviceActionService', () => {
     deviceServiceSpy.getLogcat.and.returnValue(of(mockResponse));
     spyOn(window, 'open');
 
-    service.getLogcat('device-1').subscribe();
+    service.getLogcat('device-1', 'test-host').subscribe();
 
     expect(snackBarSpy.showInProgress).toHaveBeenCalledWith(
       'Getting logcat...',
     );
     expect(mockSnackBarRef.dismiss).toHaveBeenCalled();
-    expect(deviceServiceSpy.getLogcat).toHaveBeenCalledWith('device-1');
+    expect(deviceServiceSpy.getLogcat).toHaveBeenCalledWith(
+      'device-1',
+      'test-host',
+    );
     expect(snackBarSpy.showSuccess).toHaveBeenCalledWith(
       'Logcat retrieved successfully. And opened in a new browser tab.',
     );
@@ -148,7 +154,7 @@ describe('DeviceActionService', () => {
       throwError(() => new Error('Logcat error')),
     );
 
-    service.getLogcat('device-1').subscribe({
+    service.getLogcat('device-1', 'test-host').subscribe({
       error: (err) => {
         expect(err.message).toBe('Logcat error');
       },
@@ -188,6 +194,7 @@ describe('DeviceActionService', () => {
     service
       .quarantineDevice('device-1', {
         quarantineInfo: {isQuarantined: false},
+        hostName: 'test-host',
       })
       .subscribe();
 
@@ -209,7 +216,7 @@ describe('DeviceActionService', () => {
 
     deviceServiceSpy.prepareDevice.and.returnValue(of(undefined));
 
-    service.prepareDevice('device-1').subscribe();
+    service.prepareDevice('device-1', 'test-host').subscribe();
 
     expect(dialogSpy.open).toHaveBeenCalledWith(
       ConfirmDialog,
@@ -219,7 +226,10 @@ describe('DeviceActionService', () => {
         }),
       }),
     );
-    expect(deviceServiceSpy.prepareDevice).toHaveBeenCalledWith('device-1');
+    expect(deviceServiceSpy.prepareDevice).toHaveBeenCalledWith(
+      'device-1',
+      'test-host',
+    );
     expect(snackBarSpy.showSuccess).toHaveBeenCalled();
   });
 
@@ -233,6 +243,7 @@ describe('DeviceActionService', () => {
     service
       .quarantineDevice('device-1', {
         quarantineInfo: {isQuarantined: true},
+        hostName: 'test-host',
       })
       .subscribe();
 
@@ -246,6 +257,7 @@ describe('DeviceActionService', () => {
     );
     expect(deviceServiceSpy.unquarantineDevice).toHaveBeenCalledWith(
       'device-1',
+      'test-host',
     );
     expect(snackBarSpy.showSuccess).toHaveBeenCalled();
   });
@@ -262,6 +274,7 @@ describe('DeviceActionService', () => {
     service
       .quarantineDevice('device-1', {
         quarantineInfo: {isQuarantined: true},
+        hostName: 'test-host',
       })
       .subscribe({
         error: (err) => {
@@ -286,13 +299,15 @@ describe('DeviceActionService', () => {
 
     deviceServiceSpy.unquarantineDevice.and.returnValue(of(undefined));
 
-    service.quarantineDevice('device-1').subscribe();
+    service.quarantineDevice('device-1', {hostName: 'test-host'}).subscribe();
 
     expect(deviceServiceSpy.getDeviceHeaderInfo).toHaveBeenCalledWith(
       'device-1',
+      'test-host',
     );
     expect(deviceServiceSpy.unquarantineDevice).toHaveBeenCalledWith(
       'device-1',
+      'test-host',
     );
   });
 
@@ -301,7 +316,7 @@ describe('DeviceActionService', () => {
       throwError(() => new Error('Status fetch failed')),
     );
 
-    service.quarantineDevice('device-1').subscribe({
+    service.quarantineDevice('device-1', {hostName: 'test-host'}).subscribe({
       error: (err) => {
         expect(err.message).toBe('Status fetch failed');
       },
@@ -316,7 +331,7 @@ describe('DeviceActionService', () => {
     const mockDialogRef = jasmine.createSpyObj('MatDialogRef', ['afterClosed']);
     dialogSpy.open.and.returnValue(mockDialogRef);
 
-    service.changeQuarantine('device-1', 'expiry-time');
+    service.changeQuarantine('device-1', 'test-host', 'expiry-time');
 
     expect(dialogSpy.open).toHaveBeenCalledWith(
       QuarantineDialog,
@@ -325,6 +340,7 @@ describe('DeviceActionService', () => {
           deviceId: 'device-1',
           isUpdate: true,
           currentExpiry: 'expiry-time',
+          hostName: 'test-host',
         }),
       }),
     );
@@ -356,10 +372,11 @@ describe('DeviceActionService', () => {
     mockDialogRef.afterClosed.and.returnValue(of(true));
     dialogSpy.open.and.returnValue(mockDialogRef);
 
-    service.quarantineDevice('device-1').subscribe();
+    service.quarantineDevice('device-1', {hostName: 'test-host'}).subscribe();
 
     expect(deviceServiceSpy.getDeviceHeaderInfo).toHaveBeenCalledWith(
       'device-1',
+      'test-host',
     );
     expect(dialogSpy.open).toHaveBeenCalledWith(
       QuarantineDialog,
@@ -376,7 +393,7 @@ describe('DeviceActionService', () => {
     const mockDialogRef = jasmine.createSpyObj('MatDialogRef', ['afterClosed']);
     dialogSpy.open.and.returnValue(mockDialogRef);
 
-    service.changeQuarantine('device-1');
+    service.changeQuarantine('device-1', 'test-host');
 
     expect(dialogSpy.open).toHaveBeenCalledWith(
       QuarantineDialog,
@@ -401,7 +418,7 @@ describe('DeviceActionService', () => {
         throwError(() => errorResponse),
       );
 
-      service.takeScreenshot('device-1').subscribe({
+      service.takeScreenshot('device-1', 'test-host').subscribe({
         error: () => {},
       });
 
@@ -434,7 +451,7 @@ describe('DeviceActionService', () => {
         throwError(() => errorResponse),
       );
 
-      service.takeScreenshot('device-1').subscribe({
+      service.takeScreenshot('device-1', 'test-host').subscribe({
         error: () => {},
       });
 
@@ -457,7 +474,7 @@ describe('DeviceActionService', () => {
       error.stack = 'mock stack trace';
       deviceServiceSpy.takeScreenshot.and.returnValue(throwError(() => error));
 
-      service.takeScreenshot('device-1').subscribe({
+      service.takeScreenshot('device-1', 'test-host').subscribe({
         error: () => {},
       });
 
@@ -489,7 +506,7 @@ describe('DeviceActionService', () => {
         throwError(() => errorResponse),
       );
 
-      service.getLogcat('device-1').subscribe({
+      service.getLogcat('device-1', 'test-host').subscribe({
         error: () => {},
       });
 
@@ -522,7 +539,7 @@ describe('DeviceActionService', () => {
         throwError(() => errorResponse),
       );
 
-      service.getLogcat('device-1').subscribe({
+      service.getLogcat('device-1', 'test-host').subscribe({
         error: () => {},
       });
 
@@ -545,7 +562,7 @@ describe('DeviceActionService', () => {
       error.stack = 'mock stack trace';
       deviceServiceSpy.getLogcat.and.returnValue(throwError(() => error));
 
-      service.getLogcat('device-1').subscribe({
+      service.getLogcat('device-1', 'test-host').subscribe({
         error: () => {},
       });
 

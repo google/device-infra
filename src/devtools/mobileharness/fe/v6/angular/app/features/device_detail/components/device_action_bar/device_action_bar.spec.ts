@@ -259,6 +259,7 @@ describe('DeviceActionBar', () => {
 
     expect(deviceActionService.takeScreenshot).toHaveBeenCalledWith(
       'test-device',
+      'test-host',
     );
   });
 
@@ -333,6 +334,7 @@ describe('DeviceActionBar', () => {
           isQuarantined: false,
           expiry: '',
         },
+        hostName: 'test-host',
       },
     );
   });
@@ -361,6 +363,7 @@ describe('DeviceActionBar', () => {
           isQuarantined: true,
           expiry: '2025-12-31T23:59:59Z',
         },
+        hostName: 'test-host',
       },
     );
   });
@@ -370,6 +373,7 @@ describe('DeviceActionBar', () => {
 
     expect(deviceActionService.changeQuarantine).toHaveBeenCalledWith(
       'test-device',
+      'test-host',
       '',
     );
   });

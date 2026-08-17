@@ -8,8 +8,8 @@ import {
 import {MAT_DIALOG_DATA} from '@angular/material/dialog';
 import {tap} from 'rxjs/operators';
 
-import {DeviceConfigStateService} from '../../../../core/services/config/device_config_state_service';
 import {CONFIG_SERVICE} from '../../../../core/services/config/config_service';
+import {DeviceConfigStateService} from '../../../../core/services/config/device_config_state_service';
 
 import {DeviceEmpty} from './device_empty/device_empty';
 import {DeviceSettings} from './device_settings/device_settings';
@@ -38,18 +38,18 @@ export class DeviceConfig implements OnInit {
   private readonly configService = inject(CONFIG_SERVICE);
   private readonly deviceConfigStateService = inject(DeviceConfigStateService);
 
-  readonly configResult$ = this.configService.getDeviceConfig(
-    this.data.deviceId,
-  ).pipe(
-    tap((result) => {
-      if (result && result.uiStatus) {
-        this.deviceConfigStateService.setUiStatus(
-          this.data.deviceId,
-          result.uiStatus,
-        );
-      }
-    }),
-  );
+  readonly configResult$ = this.configService
+    .getDeviceConfig(this.data.deviceId, this.data.hostName)
+    .pipe(
+      tap((result) => {
+        if (result && result.uiStatus) {
+          this.deviceConfigStateService.setUiStatus(
+            this.data.deviceId,
+            result.uiStatus,
+          );
+        }
+      }),
+    );
 
   ngOnInit() {}
 }

@@ -91,7 +91,7 @@ describe('HttpDeviceService', () => {
     const mockStats: HealthinessStats = {} as HealthinessStats;
 
     service
-      .getDeviceHealthinessStats('test-device', startDate, endDate)
+      .getDeviceHealthinessStats('test-device', startDate, endDate, 'test-host')
       .subscribe((stats) => {
         expect(stats).toEqual(mockStats);
       });
@@ -117,7 +117,7 @@ describe('HttpDeviceService', () => {
     const mockStats: TestResultStats = {} as TestResultStats;
 
     service
-      .getDeviceTestResultStats('test-device', startDate, endDate)
+      .getDeviceTestResultStats('test-device', startDate, endDate, 'test-host')
       .subscribe((stats) => {
         expect(stats).toEqual(mockStats);
       });
@@ -143,7 +143,12 @@ describe('HttpDeviceService', () => {
     const mockStats: RecoveryTaskStats = {} as RecoveryTaskStats;
 
     service
-      .getDeviceRecoveryTaskStats('test-device', startDate, endDate)
+      .getDeviceRecoveryTaskStats(
+        'test-device',
+        startDate,
+        endDate,
+        'test-host',
+      )
       .subscribe((stats) => {
         expect(stats).toEqual(mockStats);
       });
@@ -164,7 +169,7 @@ describe('HttpDeviceService', () => {
   });
 
   it('should take screenshot via POST to :takeScreenshot', () => {
-    service.takeScreenshot('test-device').subscribe();
+    service.takeScreenshot('test-device', 'test-host').subscribe();
 
     const req = httpMock.expectOne(
       'http://testdomain.com/v6/devices/test-device:takeScreenshot',
@@ -174,23 +179,23 @@ describe('HttpDeviceService', () => {
   });
 
   it('should get testbed config via GET to :testbed-config', () => {
-    service.getTestbedConfig('test-device').subscribe();
+    service.getTestbedConfig('test-device', 'test-host').subscribe();
 
     const req = httpMock.expectOne(
-      'http://testdomain.com/v6/devices/test-device/testbed-config',
+      'http://testdomain.com/v6/devices/test-device/testbed-config?host_name=test-host',
     );
     expect(req.request.method).toBe('GET');
     req.flush({id: 'test-device'});
   });
 
   it('should prepare device via POST to :prepare', () => {
-    service.prepareDevice('test-device').subscribe();
+    service.prepareDevice('test-device', 'test-host').subscribe();
 
     const req = httpMock.expectOne(
       'http://testdomain.com/v6/devices/test-device:prepare',
     );
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({});
+    expect(req.request.body).toEqual({'host_name': 'test-host'});
     req.flush(null);
   });
 });
