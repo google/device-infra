@@ -69,8 +69,6 @@ message Test {
   repeated stability.model.ExceptionDetail warning = 13;
   // Test output logs.
   optional string log = 5;
-  // Test errors.
-  repeated mobileharness.shared.ErrorInfo error = 9 [deprecated = true];
   // Test properties.
   repeated mobileharness.shared.StrPair property = 10;
   // Time in milliseconds when this test is created in lab server.
@@ -78,7 +76,7 @@ message Test {
   // Time in milliseconds when the test is last modified.
   optional int64 modify_time = 7;  // required.
 
-  reserved 11;
+  reserved 9, 11;
 }
 
 // Statistic of a device.
