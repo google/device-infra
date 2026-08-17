@@ -227,7 +227,7 @@ public final class FleetIndexBuilder {
                   Accumulator hostAccum =
                       hostAccumulatorsByThread.computeIfAbsent(
                           Thread.currentThread(), t -> new Accumulator());
-                  indexHost(hostAccum, hostRecord);
+                  indexHost(hostAccum, hostRecord, atsControllerDisplays);
 
                   // TODO: Consider refactoring thread-identity partitioned
                   // accumulators to a standard Stream collect/reduce or manual list chunking
@@ -262,9 +262,17 @@ public final class FleetIndexBuilder {
     // Phase 2: flatten + merge T accumulators (not 43K).
     List<DeviceRecord> allDevices = new ArrayList<>();
     ImmutableList.Builder<HostRecord> allHosts = ImmutableList.builder();
+    ImmutableMap.Builder<String, Integer> uuidToIndex = ImmutableMap.builder();
+    int devIdx = 0;
     for (HostDevices hd : hostDevices) {
       allHosts.add(hd.host());
-      allDevices.addAll(hd.devices());
+      for (DeviceRecord device : hd.devices()) {
+        allDevices.add(device);
+        if (!device.deviceId().isEmpty()) {
+          uuidToIndex.put(device.deviceId(), devIdx);
+        }
+        devIdx++;
+      }
     }
 
     Accumulator merged = new Accumulator();
@@ -283,6 +291,7 @@ public final class FleetIndexBuilder {
         .setHosts(allHosts.build())
         .setIndex(merged.toIndex())
         .setHostIndex(hostMerged.toIndex())
+        .setUuidToIndex(uuidToIndex.buildKeepingLast())
         .build();
   }
 
@@ -314,6 +323,7 @@ public final class FleetIndexBuilder {
             enrichment
                 .flatMap(HostEnrichment::labServerVersion)
                 .or(() -> hostVersion(hostProperties)))
+        .setAtsController(enrichment.flatMap(HostEnrichment::atsController))
         .build();
   }
 
@@ -512,7 +522,10 @@ public final class FleetIndexBuilder {
    * and connectivity are always present because {@code buildHostRecord} defaults them. The device
    * count is stamped as its decimal string so it is filterable and groupable like any other value.
    */
-  private static void indexHost(Accumulator accumulator, HostRecord host) {
+  private static void indexHost(
+      Accumulator accumulator,
+      HostRecord host,
+      ImmutableMap<String, String> atsControllerDisplays) {
     Set<String> seen = new HashSet<>();
 
     if (!host.hostName().isEmpty()) {
@@ -534,8 +547,15 @@ public final class FleetIndexBuilder {
     for (Map.Entry<String, String> entry : host.hostProperties().entrySet()) {
       accumulator.add(seen, PROP_PREFIX + entry.getKey(), entry.getValue());
     }
-    // ats_controller and lab_server_activity are deferred: HostRecord carries no controller id (it
-    // is a device enrichment), and no lab activity source is wired into the fleet pull yet.
+    // The controller id is the stored/filter term; the display is the friendly name from the
+    // ats-all registry, falling back to the id itself when the registry has no entry.
+    host.atsController()
+        .filter(id -> !id.isEmpty())
+        .ifPresent(
+            id ->
+                accumulator.add(
+                    seen, HOST_ATS_CONTROLLER, id, atsControllerDisplays.getOrDefault(id, id)));
+    // lab_server_activity is deferred: no lab activity source is wired into the fleet pull yet.
     accumulator.add(seen, HOST_DEVICE_COUNT, String.valueOf(host.deviceCount()));
   }
 
@@ -707,12 +727,12 @@ public final class FleetIndexBuilder {
         names.put(keyId, displayName(keyId));
       }
 
-      return FleetIndex.builder()
-          .setValueCounts(ImmutableMap.copyOf(countsMap))
-          .setSortedValues(ImmutableMap.copyOf(sortedMap))
-          .setValueDisplays(ImmutableMap.copyOf(displaysMap))
+      return CoreFleetIndex.builder()
+          .setValueCountsMap(ImmutableMap.copyOf(countsMap))
+          .setSortedValuesMap(ImmutableMap.copyOf(sortedMap))
+          .setValueDisplaysMap(ImmutableMap.copyOf(displaysMap))
           .setKeyIds(ImmutableSet.copyOf(keyIds))
-          .setDisplayNames(names.buildOrThrow())
+          .setDisplayNamesMap(names.buildOrThrow())
           .setSemanticGlobalSorted(ImmutableList.copyOf(semanticPairs))
           .setGlobalExact(frozenGlobalExact.buildOrThrow())
           .build();

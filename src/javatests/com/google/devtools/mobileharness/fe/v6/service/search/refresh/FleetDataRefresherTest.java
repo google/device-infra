@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetRawData;
+import com.google.devtools.mobileharness.fe.v6.service.search.pull.DimensionOverlayRaw;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.FleetDataSource;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.inject.Guice;
@@ -149,6 +150,11 @@ public final class FleetDataRefresherTest {
     @Override
     public ListenableFuture<FleetRawData> pull() {
       return result;
+    }
+
+    @Override
+    public ListenableFuture<DimensionOverlayRaw> pullDimension(String keyId) {
+      return immediateFuture(DimensionOverlayRaw.create(keyId, ImmutableMap.of()));
     }
   }
 }

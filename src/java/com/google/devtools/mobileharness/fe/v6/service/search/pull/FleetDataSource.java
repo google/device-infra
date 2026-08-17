@@ -46,4 +46,10 @@ public interface FleetDataSource {
    * keeps the previously published snapshot for this fleet.
    */
   ListenableFuture<FleetRawData> pull();
+
+  /**
+   * Starts an on-demand pull of a single dimension's values for this fleet and returns a future for
+   * the raw overlay data.
+   */
+  ListenableFuture<DimensionOverlayRaw> pullDimension(String keyId);
 }

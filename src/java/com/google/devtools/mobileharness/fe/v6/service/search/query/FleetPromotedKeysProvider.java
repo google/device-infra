@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromote
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedGroupByKey;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import java.util.HashSet;
 import java.util.List;
@@ -48,8 +49,9 @@ import javax.inject.Inject;
  * not hardcoded here: the provider injects the per-fleet {@link Map} of {@link ScenarioCuration}
  * and reads the entry for the request's {@link
  * com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet}, using {@link
- * ScenarioCuration#filterByRow()} and {@link ScenarioCuration#groupByRow()} as the candidate key
- * lists. The dead-end, applied, and limit trimming below is scenario independent and stays here.
+ * ScenarioCuration#deviceFilterByRow()} and {@link ScenarioCuration#deviceGroupByRow()} as the
+ * candidate key lists. The dead-end, applied, and limit trimming below is scenario independent and
+ * stays here.
  */
 public final class FleetPromotedKeysProvider {
 
@@ -109,10 +111,18 @@ public final class FleetPromotedKeysProvider {
     }
     Set<String> appliedGroupByKeys = new HashSet<>(request.getGroupByList());
 
+    // The candidate rows are entity aware: host search reads the host curation rows, every other
+    // entity reads the device rows. For the device corpus this is the device filter and group-by
+    // rows exactly, so device promoted keys are unchanged.
+    boolean host = corpus.entity() == SearchEntity.SEARCH_ENTITY_HOST;
+    ImmutableList<String> filterByRow =
+        host ? curation.hostFilterByRow() : curation.deviceFilterByRow();
+    ImmutableList<String> groupByRow =
+        host ? curation.hostGroupByRow() : curation.deviceGroupByRow();
+
     FleetPromotedKeysResponse.Builder response = FleetPromotedKeysResponse.newBuilder();
-    addFilterKeys(
-        response, corpus, index, current, hasFilters, appliedFilterKeys, curation.filterByRow());
-    addGroupByKeys(response, corpus, index, current, appliedGroupByKeys, curation.groupByRow());
+    addFilterKeys(response, corpus, index, current, hasFilters, appliedFilterKeys, filterByRow);
+    addGroupByKeys(response, corpus, index, current, appliedGroupByKeys, groupByRow);
     return response.build();
   }
 
@@ -232,18 +242,7 @@ public final class FleetPromotedKeysProvider {
    * Mirrors the derivation in {@link FleetChipResolver} and {@link FleetIndexBuilder}.
    */
   private static String displayName(FleetIndex index, String keyId) {
-    return index.displayNames().getOrDefault(keyId, deriveDisplayName(keyId));
-  }
-
-  private static String deriveDisplayName(String keyId) {
-    int separator = keyId.indexOf("::");
-    String namespace = separator >= 0 ? keyId.substring(0, separator) : "";
-    String name = separator >= 0 ? keyId.substring(separator + 2) : keyId;
-    return switch (namespace) {
-      case "dim" -> "Dimension " + name;
-      case "prop" -> "Host Property " + name;
-      default -> name;
-    };
+    return index.displayName(keyId);
   }
 
   /** Distinct value-combination count for a key plus whether some device in the set lacks it. */
