@@ -1051,7 +1051,7 @@ public class AndroidSystemSettingUtil {
       return adbUtil.dumpSys(serial, DumpSysType.BATTERYSTATS, "--checkin");
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_BATTERY_TEMP_ERROR, e.getMessage(), e);
+          AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_BATTERY_STATS_ERROR, e.getMessage(), e);
     }
   }
 
