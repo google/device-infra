@@ -21,39 +21,39 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostConfigPermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.IamPermissionChecker;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-/** Handler for the CheckDeviceWritePermission RPC. */
+/** Handler for the CheckHostConfigPermission RPC. */
 @Singleton
-public final class CheckDeviceWritePermissionHandler {
+public final class CheckHostConfigPermissionHandler {
 
   private final IamPermissionChecker iamPermissionChecker;
   private final ListeningExecutorService executor;
 
   @Inject
-  CheckDeviceWritePermissionHandler(
+  CheckHostConfigPermissionHandler(
       IamPermissionChecker iamPermissionChecker, ListeningExecutorService executor) {
     this.iamPermissionChecker = iamPermissionChecker;
     this.executor = executor;
   }
 
-  public ListenableFuture<CheckDeviceWritePermissionResponse> checkDeviceWritePermission(
-      String deviceId, UniverseScope universe, Optional<String> username) {
+  public ListenableFuture<CheckHostConfigPermissionResponse> checkHostConfigPermission(
+      String hostName, UniverseScope universe, Optional<String> username) {
     if (username.isEmpty()) {
       return immediateFuture(
-          CheckDeviceWritePermissionResponse.newBuilder().setHasPermission(false).build());
+          CheckHostConfigPermissionResponse.newBuilder().setHasPermission(false).build());
     }
     String user = username.get();
 
     return Futures.transform(
-        iamPermissionChecker.canConfigDevice(deviceId, universe),
+        iamPermissionChecker.canConfigHost(hostName, universe),
         hasPermission ->
-            CheckDeviceWritePermissionResponse.newBuilder()
+            CheckHostConfigPermissionResponse.newBuilder()
                 .setHasPermission(hasPermission)
                 .setUserName(user)
                 .build(),

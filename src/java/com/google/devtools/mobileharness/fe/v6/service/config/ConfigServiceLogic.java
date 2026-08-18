@@ -17,8 +17,12 @@
 package com.google.devtools.mobileharness.fe.v6.service.config;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostConfigPermissionRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostConfigPermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigRequest;
@@ -44,6 +48,9 @@ public interface ConfigServiceLogic {
   ListenableFuture<CheckDeviceWritePermissionResponse> checkDeviceWritePermission(
       CheckDeviceWritePermissionRequest request, Optional<String> username);
 
+  ListenableFuture<CheckDeviceConfigPermissionResponse> checkDeviceConfigPermission(
+      CheckDeviceConfigPermissionRequest request, Optional<String> username);
+
   ListenableFuture<UpdateDeviceConfigResponse> updateDeviceConfig(
       UpdateDeviceConfigRequest request, Optional<String> username);
 
@@ -57,6 +64,9 @@ public interface ConfigServiceLogic {
 
   ListenableFuture<CheckHostWritePermissionResponse> checkHostWritePermission(
       CheckHostWritePermissionRequest request, Optional<String> username);
+
+  ListenableFuture<CheckHostConfigPermissionResponse> checkHostConfigPermission(
+      CheckHostConfigPermissionRequest request, Optional<String> username);
 
   ListenableFuture<UpdateHostConfigResponse> updateHostConfig(
       UpdateHostConfigRequest request, Optional<String> username);
