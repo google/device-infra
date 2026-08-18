@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 
 /**
  * The per-deployment curation of fleet search keys: which keys to promote in the query bar, which
@@ -36,16 +37,16 @@ import com.google.common.collect.ImmutableList;
 public interface ScenarioCuration {
 
   /** The keys promoted into the "Filter by:" row of the query bar, in display order. */
-  ImmutableList<String> filterByRow();
+  ImmutableList<String> deviceFilterByRow();
 
   /** The keys promoted into the "Group by:" row of the query bar, in display order. */
-  ImmutableList<String> groupByRow();
+  ImmutableList<String> deviceGroupByRow();
 
   /** The default column set for the flat search results table, in display order. */
-  ImmutableList<String> defaultColumns();
+  ImmutableList<String> deviceDefaultColumns();
 
   /** The recommended columns offered in the column catalog, in display order. */
-  ImmutableList<String> recommendedColumns();
+  ImmutableList<String> deviceRecommendedColumns();
 
   // ---- Host-entity curation ----
   //
@@ -55,22 +56,22 @@ public interface ScenarioCuration {
 
   /** The keys promoted into the host "Filter by:" row of the query bar, in display order. */
   default ImmutableList<String> hostFilterByRow() {
-    return filterByRow();
+    return deviceFilterByRow();
   }
 
   /** The keys promoted into the host "Group by:" row of the query bar, in display order. */
   default ImmutableList<String> hostGroupByRow() {
-    return groupByRow();
+    return deviceGroupByRow();
   }
 
   /** The default column set for the host flat search results table, in display order. */
   default ImmutableList<String> hostDefaultColumns() {
-    return defaultColumns();
+    return deviceDefaultColumns();
   }
 
   /** The recommended host columns offered in the column catalog, in display order. */
   default ImmutableList<String> hostRecommendedColumns() {
-    return recommendedColumns();
+    return deviceRecommendedColumns();
   }
 
   /**
@@ -78,6 +79,16 @@ public interface ScenarioCuration {
    * mapping is scenario aware, so the same key can rank differently in different deployments.
    */
   int keyPriority(String keyId);
+
+  /**
+   * The suggester ranking for {@code keyId} in the given {@code entity}: a higher value means the
+   * key is offered earlier. Defaults to the device ranking ({@link #keyPriority(String)}) so an
+   * impl that has not been taught the host entity still compiles and ranks host keys reasonably; a
+   * deployment overrides this to route through the host tier table.
+   */
+  default int keyPriority(String keyId, SearchEntity entity) {
+    return keyPriority(keyId);
+  }
 
   /**
    * Whether the search page shows a landing page before the first query. A deployment whose fleet

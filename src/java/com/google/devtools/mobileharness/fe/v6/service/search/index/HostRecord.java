@@ -78,9 +78,15 @@ public abstract class HostRecord {
   /** Lab server version string. From host_properties "host_version" or HostInfoService. */
   public abstract Optional<String> labServerVersion();
 
+  /**
+   * The ATS controller this host belongs to. Present only in the ats-all deployment. Absent in
+   * ats-one and 1p.
+   */
+  public abstract Optional<String> atsController();
+
   /** Creates a new builder. */
   public static Builder builder() {
-    return new AutoValue_HostRecord.Builder();
+    return new AutoValue_HostRecord.Builder().setAtsController(Optional.empty());
   }
 
   /** Builder for {@link HostRecord}. */
@@ -109,6 +115,8 @@ public abstract class HostRecord {
     public abstract Builder setDaemonStatus(Optional<String> daemonStatus);
 
     public abstract Builder setLabServerVersion(Optional<String> labServerVersion);
+
+    public abstract Builder setAtsController(Optional<String> atsController);
 
     public abstract HostRecord build();
   }

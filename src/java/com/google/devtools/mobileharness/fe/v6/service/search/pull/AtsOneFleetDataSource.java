@@ -84,6 +84,11 @@ public final class AtsOneFleetDataSource implements FleetDataSource {
         executor);
   }
 
+  @Override
+  public ListenableFuture<DimensionOverlayRaw> pullDimension(String keyId) {
+    return labInfoFleetPuller.pullDimension(keyId);
+  }
+
   /** Enumerates the device ids in the lab query result, in lab then device order. */
   private static ImmutableList<String> deviceIds(LabQueryResult labData) {
     if (!labData.hasLabView()) {

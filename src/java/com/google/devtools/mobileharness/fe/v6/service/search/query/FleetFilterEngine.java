@@ -28,7 +28,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.MatchesRegex
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.StartsWith;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
 import java.util.BitSet;
 import java.util.HashSet;
 import java.util.List;
@@ -92,7 +92,7 @@ public final class FleetFilterEngine {
    * records that lack the key entirely. When {@code negated} is set the whole result is inverted.
    */
   private static BitSet matchSimple(SearchCorpus corpus, String keyId, SimpleMatch simple) {
-    LazyPostings postings = corpus.postings();
+    Postings postings = corpus.postings();
     BitSet include = new BitSet();
     for (FilterValue value : simple.getValuesList()) {
       switch (value.getKindCase()) {
@@ -122,8 +122,8 @@ public final class FleetFilterEngine {
    */
   private static BitSet matchStartsWith(SearchCorpus corpus, String keyId, StartsWith startsWith) {
     FleetIndex index = corpus.index();
-    LazyPostings postings = corpus.postings();
-    ImmutableList<String> sorted = index.sortedValues().getOrDefault(keyId, ImmutableList.of());
+    Postings postings = corpus.postings();
+    ImmutableList<String> sorted = index.sortedValues(keyId);
     String prefix = Ascii.toLowerCase(startsWith.getValue());
     int lo = lowerBound(sorted, prefix);
     // '\uffff' is the largest basic-plane code unit, so prefix + '\uffff' bounds the prefix run.
@@ -139,10 +139,10 @@ public final class FleetFilterEngine {
   private static BitSet matchContains(
       SearchCorpus corpus, String keyId, ContainsSubstring contains) {
     FleetIndex index = corpus.index();
-    LazyPostings postings = corpus.postings();
+    Postings postings = corpus.postings();
     String needle = Ascii.toLowerCase(contains.getValue());
     BitSet matched = new BitSet();
-    for (String value : index.sortedValues().getOrDefault(keyId, ImmutableList.of())) {
+    for (String value : index.sortedValues(keyId)) {
       if (value.contains(needle)) {
         orInto(matched, postings.get(keyId, value));
       }
@@ -157,7 +157,7 @@ public final class FleetFilterEngine {
    */
   private static BitSet matchRegex(SearchCorpus corpus, String keyId, MatchesRegex regex) {
     FleetIndex index = corpus.index();
-    LazyPostings postings = corpus.postings();
+    Postings postings = corpus.postings();
     Pattern pattern;
     try {
       pattern = Pattern.compile(regex.getValue(), Pattern.CASE_INSENSITIVE);
@@ -165,7 +165,7 @@ public final class FleetFilterEngine {
       return negateIfNeeded(new BitSet(), regex.getNegated(), corpus.recordCount());
     }
     BitSet matched = new BitSet();
-    for (String value : index.sortedValues().getOrDefault(keyId, ImmutableList.of())) {
+    for (String value : index.sortedValues(keyId)) {
       if (pattern.matcher(value).find()) {
         orInto(matched, postings.get(keyId, value));
       }
@@ -210,7 +210,7 @@ public final class FleetFilterEngine {
   }
 
   /** Union of every posting list for the key: the records that carry at least one value for it. */
-  private static BitSet recordsWithKey(LazyPostings postings, String keyId) {
+  private static BitSet recordsWithKey(Postings postings, String keyId) {
     BitSet withKey = new BitSet();
     for (int[] posting : postings.forKey(keyId).values()) {
       orInto(withKey, posting);
@@ -221,8 +221,7 @@ public final class FleetFilterEngine {
   /**
    * Intersection (AND) of the posting lists of the given values. Empty values yield an empty set.
    */
-  private static BitSet intersectPostings(
-      LazyPostings postings, String keyId, List<String> values) {
+  private static BitSet intersectPostings(Postings postings, String keyId, List<String> values) {
     BitSet clause = null;
     for (String value : values) {
       BitSet posting = new BitSet();
@@ -276,7 +275,7 @@ public final class FleetFilterEngine {
 
   /**
    * Locates the first index in the sorted list whose value is greater than or equal to the key. The
-   * list must be sorted ascending, matching {@link FleetIndex#sortedValues()}.
+   * list must be sorted ascending, matching {@link FleetIndex#sortedValues(String)}.
    */
   static int lowerBound(List<String> sorted, String key) {
     int lo = 0;

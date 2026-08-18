@@ -66,22 +66,22 @@ public final class FleetSearchConfigProviderTest {
   private static final ScenarioCuration CURATION =
       new ScenarioCuration() {
         @Override
-        public ImmutableList<String> filterByRow() {
+        public ImmutableList<String> deviceFilterByRow() {
           return ImmutableList.of();
         }
 
         @Override
-        public ImmutableList<String> groupByRow() {
+        public ImmutableList<String> deviceGroupByRow() {
           return ImmutableList.of();
         }
 
         @Override
-        public ImmutableList<String> defaultColumns() {
+        public ImmutableList<String> deviceDefaultColumns() {
           return ImmutableList.of("field::uuid", "host::host_name", "field::status", "dim::model");
         }
 
         @Override
-        public ImmutableList<String> recommendedColumns() {
+        public ImmutableList<String> deviceRecommendedColumns() {
           return ImmutableList.of("field::status", "field::type", "dim::model");
         }
 

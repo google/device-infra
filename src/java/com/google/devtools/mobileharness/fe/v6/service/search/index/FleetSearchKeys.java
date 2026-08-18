@@ -34,10 +34,6 @@ import com.google.common.collect.ImmutableSet;
  * curation (which keys to promote, the suggestion priority tiers, the empty-state seed) is
  * deployment dependent and lives behind the scenario curation abstraction instead.
  */
-// TODO: Revisit this file before finalizing the search stack. Also
-// audit the rest of the stack for plain key-string literals (e.g. "dim::os",
-// "dim::model", "dim::uuid") that should reference the constants defined here
-// instead of duplicating the raw strings, to prevent silent drift.
 public final class FleetSearchKeys {
 
   private FleetSearchKeys() {}
@@ -63,6 +59,21 @@ public final class FleetSearchKeys {
   // ---- Built-in dimension keys referenced by logic (others are discovered from data) ----
 
   public static final String DIM_QUARANTINED = "dim::quarantined";
+
+  /**
+   * The 8 built-in core dimensions pulled eagerly during the full fleet refresh. All other
+   * dimensions are long-tail and pulled on-demand via {@code DimensionOverlayStore}.
+   */
+  public static final ImmutableSet<String> CORE_DIMENSION_NAMES =
+      ImmutableSet.of(
+          "model",
+          "version",
+          "sdk_version",
+          "device_type",
+          "pool",
+          "host_group",
+          "sub_device_type",
+          "run_target");
 
   // ---- Built-in host keys ----
 
