@@ -413,7 +413,6 @@ public class CloudOrchestratorClient {
     envConfig.put("common", common);
 
     Map<String, Object> instance = new HashMap<>();
-    instance.put("@import", "phone");
     Map<String, Object> vm = new HashMap<>();
 
     // TODO: Consider making these VM parameters configurable.
