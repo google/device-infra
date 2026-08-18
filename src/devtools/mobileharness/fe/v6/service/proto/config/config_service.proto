@@ -44,6 +44,15 @@ service ConfigService {
     };
   }
 
+  // Checks if the current user has permission to modify device configuration.
+  rpc CheckDeviceConfigPermission(CheckDeviceConfigPermissionRequest)
+      returns (CheckDeviceConfigPermissionResponse) {
+    option (google.api.http) = {
+      post: "/v6/devices/{id}/config:checkConfigPermission",
+      body: "*"
+    };
+  }
+
   // Updates the configuration for a specific device.
   rpc UpdateDeviceConfig(UpdateDeviceConfigRequest)
       returns (UpdateDeviceConfigResponse) {
@@ -82,6 +91,15 @@ service ConfigService {
       returns (CheckHostWritePermissionResponse) {
     option (google.api.http) = {
       post: "/v6/hosts/{host_name}/config:checkWritePermission",
+      body: "*"
+    };
+  }
+
+  // Checks if the current user has permission to modify host configuration.
+  rpc CheckHostConfigPermission(CheckHostConfigPermissionRequest)
+      returns (CheckHostConfigPermissionResponse) {
+    option (google.api.http) = {
+      post: "/v6/hosts/{host_name}/config:checkConfigPermission",
       body: "*"
     };
   }
@@ -131,6 +149,20 @@ message CheckDeviceWritePermissionRequest {
 
 // Response for CheckDeviceWritePermission.
 message CheckDeviceWritePermissionResponse {
+  bool has_permission = 1;
+  string user_name = 2;
+}
+
+// Request for CheckDeviceConfigPermission.
+message CheckDeviceConfigPermissionRequest {
+  string id = 1;
+
+  // The universe the device belongs to.
+  string universe = 2;
+}
+
+// Response for CheckDeviceConfigPermission.
+message CheckDeviceConfigPermissionResponse {
   bool has_permission = 1;
   string user_name = 2;
 }
@@ -213,6 +245,20 @@ message CheckHostWritePermissionRequest {
 
 // Response for CheckHostWritePermission.
 message CheckHostWritePermissionResponse {
+  bool has_permission = 1;
+  string user_name = 2;
+}
+
+// Request for CheckHostConfigPermission.
+message CheckHostConfigPermissionRequest {
+  string host_name = 1;
+
+  // The universe the device belongs to.
+  string universe = 2;
+}
+
+// Response for CheckHostConfigPermission.
+message CheckHostConfigPermissionResponse {
   bool has_permission = 1;
   string user_name = 2;
 }

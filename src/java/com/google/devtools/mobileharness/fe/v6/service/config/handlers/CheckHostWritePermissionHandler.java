@@ -21,14 +21,9 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
-import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigConverter;
-import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigUtil;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionResponse;
-import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
-import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
+import com.google.devtools.mobileharness.fe.v6.service.shared.auth.IamPermissionChecker;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
-import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -37,17 +32,13 @@ import javax.inject.Singleton;
 @Singleton
 public final class CheckHostWritePermissionHandler {
 
-  private final ConfigurationProvider configurationProvider;
-  private final GroupMembershipProvider groupMembershipProvider;
+  private final IamPermissionChecker iamPermissionChecker;
   private final ListeningExecutorService executor;
 
   @Inject
   CheckHostWritePermissionHandler(
-      ConfigurationProvider configurationProvider,
-      GroupMembershipProvider groupMembershipProvider,
-      ListeningExecutorService executor) {
-    this.configurationProvider = configurationProvider;
-    this.groupMembershipProvider = groupMembershipProvider;
+      IamPermissionChecker iamPermissionChecker, ListeningExecutorService executor) {
+    this.iamPermissionChecker = iamPermissionChecker;
     this.executor = executor;
   }
 
@@ -59,35 +50,13 @@ public final class CheckHostWritePermissionHandler {
     }
     String user = username.get();
 
-    return Futures.transformAsync(
-        configurationProvider.getLabConfig(hostName, universe),
-        labConfigResult -> {
-          Optional<LabConfig> labConfig = labConfigResult.config();
-          if (labConfig.isEmpty()) {
-            return immediateFuture(
-                CheckHostWritePermissionResponse.newBuilder().setHasPermission(false).build());
-          }
-
-          List<String> hostAdmins =
-              ConfigConverter.toFeHostConfig(labConfig.get()).getPermissions().getHostAdminsList();
-          if (hostAdmins.contains(user)) {
-            return immediateFuture(
-                CheckHostWritePermissionResponse.newBuilder().setHasPermission(true).build());
-          }
-
-          // hostAdmins is stored as the owner in the default device config in labConfig, so we can
-          // use the owner check.
-          if (ConfigUtil.isOwnerEmptyOrDefault(hostAdmins)) {
-            return immediateFuture(
-                CheckHostWritePermissionResponse.newBuilder().setHasPermission(true).build());
-          }
-
-          return Futures.transform(
-              groupMembershipProvider.isMemberOfAny(user, hostAdmins),
-              (Boolean isMember) ->
-                  CheckHostWritePermissionResponse.newBuilder().setHasPermission(isMember).build(),
-              executor);
-        },
+    return Futures.transform(
+        iamPermissionChecker.canConfigHost(hostName, universe),
+        hasPermission ->
+            CheckHostWritePermissionResponse.newBuilder()
+                .setHasPermission(hasPermission)
+                .setUserName(user)
+                .build(),
         executor);
   }
 }

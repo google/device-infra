@@ -19,17 +19,11 @@ package com.google.devtools.mobileharness.fe.v6.service.config.handlers;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDeviceConfig;
-import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionResponse;
-import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
-import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
-import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
+import com.google.devtools.mobileharness.fe.v6.service.shared.auth.IamPermissionChecker;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -52,8 +46,7 @@ public final class CheckHostWritePermissionHandlerTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
-  @Bind @Mock private ConfigurationProvider configurationProvider;
-  @Bind @Mock private GroupMembershipProvider groupMembershipProvider;
+  @Bind @Mock private IamPermissionChecker iamPermissionChecker;
   @Bind private ListeningExecutorService executorService = newDirectExecutorService();
 
   @Inject private CheckHostWritePermissionHandler handler;
@@ -72,97 +65,26 @@ public final class CheckHostWritePermissionHandlerTest {
   }
 
   @Test
-  public void checkHostWritePermission_noLabConfig_returnsFalse() throws Exception {
-    when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
-        .thenReturn(immediateFuture(ConfigResult.available(Optional.empty())));
-
-    CheckHostWritePermissionResponse response =
-        handler.checkHostWritePermission("host", SELF_UNIVERSE, Optional.of("user")).get();
-
-    assertThat(response.getHasPermission()).isFalse();
-  }
-
-  @Test
-  public void checkHostWritePermission_userInAdmins_returnsTrue() throws Exception {
-    LabConfig labConfig =
-        LabConfig.newBuilder()
-            .setDefaultDeviceConfig(
-                BasicDeviceConfig.newBuilder().addOwner("admin1").addOwner("admin2").build())
-            .build();
-    when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
-        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(labConfig))));
+  public void checkHostWritePermission_hasPermission_returnsTrue() throws Exception {
+    when(iamPermissionChecker.canConfigHost("host", SELF_UNIVERSE))
+        .thenReturn(immediateFuture(true));
 
     CheckHostWritePermissionResponse response =
         handler.checkHostWritePermission("host", SELF_UNIVERSE, Optional.of("admin1")).get();
 
     assertThat(response.getHasPermission()).isTrue();
+    assertThat(response.getUserName()).isEqualTo("admin1");
   }
 
   @Test
-  public void checkHostWritePermission_noAdmins_returnsTrue() throws Exception {
-    LabConfig labConfig = LabConfig.getDefaultInstance();
-    when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
-        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(labConfig))));
-
-    CheckHostWritePermissionResponse response =
-        handler.checkHostWritePermission("host", SELF_UNIVERSE, Optional.of("user")).get();
-
-    assertThat(response.getHasPermission()).isTrue();
-  }
-
-  @Test
-  public void checkHostWritePermission_onlyDefaultAdmin_returnsTrue() throws Exception {
-    LabConfig labConfig =
-        LabConfig.newBuilder()
-            .setDefaultDeviceConfig(
-                BasicDeviceConfig.newBuilder()
-                    .addOwner("mobileharness-device-default-owner")
-                    .build())
-            .build();
-    when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
-        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(labConfig))));
-
-    CheckHostWritePermissionResponse response =
-        handler.checkHostWritePermission("host", SELF_UNIVERSE, Optional.of("user")).get();
-
-    assertThat(response.getHasPermission()).isTrue();
-  }
-
-  @Test
-  public void checkHostWritePermission_defaultAndOtherAdmins_returnsFalse() throws Exception {
-    LabConfig labConfig =
-        LabConfig.newBuilder()
-            .setDefaultDeviceConfig(
-                BasicDeviceConfig.newBuilder()
-                    .addOwner("mobileharness-device-default-owner")
-                    .addOwner("other-admin")
-                    .build())
-            .build();
-    when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
-        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(labConfig))));
-    when(groupMembershipProvider.isMemberOfAny(eq("user"), any()))
+  public void checkHostWritePermission_noPermission_returnsFalse() throws Exception {
+    when(iamPermissionChecker.canConfigHost("host", SELF_UNIVERSE))
         .thenReturn(immediateFuture(false));
 
     CheckHostWritePermissionResponse response =
         handler.checkHostWritePermission("host", SELF_UNIVERSE, Optional.of("user")).get();
 
     assertThat(response.getHasPermission()).isFalse();
-  }
-
-  @Test
-  public void checkHostWritePermission_userInGroup_returnsTrue() throws Exception {
-    LabConfig labConfig =
-        LabConfig.newBuilder()
-            .setDefaultDeviceConfig(BasicDeviceConfig.newBuilder().addOwner("group1").build())
-            .build();
-    when(configurationProvider.getLabConfig("host", SELF_UNIVERSE))
-        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(labConfig))));
-    when(groupMembershipProvider.isMemberOfAny(eq("user"), any()))
-        .thenReturn(immediateFuture(true));
-
-    CheckHostWritePermissionResponse response =
-        handler.checkHostWritePermission("host", SELF_UNIVERSE, Optional.of("user")).get();
-
-    assertThat(response.getHasPermission()).isTrue();
+    assertThat(response.getUserName()).isEqualTo("user");
   }
 }

@@ -31,11 +31,16 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigPusherHelper;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostConfigPermissionRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostConfigPermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
+import com.google.devtools.mobileharness.fe.v6.service.shared.auth.IamPermissionChecker;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
@@ -66,6 +71,7 @@ public final class ConfigServiceLogicImplTest {
   @Bind private final ListeningExecutorService executor = newDirectExecutorService();
   @Bind @Mock private UniverseFactory universeFactory;
   @Bind @Mock private GroupMembershipProvider groupMembershipProvider;
+  @Bind @Mock private IamPermissionChecker iamPermissionChecker;
   @Bind @Mock private ConfigurationProvider configurationProvider;
   @Bind @Mock private LabInfoProvider labInfoProvider;
   @Bind @Mock private WifiCredentialsStore wifiCredentialsStore;
@@ -118,6 +124,37 @@ public final class ConfigServiceLogicImplTest {
     assertThat(response.getSuccess()).isTrue();
     verify(configurationProvider)
         .updateLabConfig(eq("host"), any(LabConfig.class), any(UniverseScope.class));
+  }
+
+  @Test
+  public void checkDeviceConfigPermission_delegatesToHandler() throws Exception {
+    CheckDeviceConfigPermissionRequest request =
+        CheckDeviceConfigPermissionRequest.newBuilder().setId("device").setUniverse("self").build();
+    when(iamPermissionChecker.canConfigDevice(eq("device"), any(UniverseScope.class)))
+        .thenReturn(immediateFuture(true));
+
+    CheckDeviceConfigPermissionResponse response =
+        configServiceLogicImpl.checkDeviceConfigPermission(request, Optional.of("user")).get();
+
+    assertThat(response.getHasPermission()).isTrue();
+    assertThat(response.getUserName()).isEqualTo("user");
+  }
+
+  @Test
+  public void checkHostConfigPermission_delegatesToHandler() throws Exception {
+    CheckHostConfigPermissionRequest request =
+        CheckHostConfigPermissionRequest.newBuilder()
+            .setHostName("host")
+            .setUniverse("self")
+            .build();
+    when(iamPermissionChecker.canConfigHost(eq("host"), any(UniverseScope.class)))
+        .thenReturn(immediateFuture(true));
+
+    CheckHostConfigPermissionResponse response =
+        configServiceLogicImpl.checkHostConfigPermission(request, Optional.of("user")).get();
+
+    assertThat(response.getHasPermission()).isTrue();
+    assertThat(response.getUserName()).isEqualTo("user");
   }
 
   @Test

@@ -22,7 +22,7 @@ import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorS
 import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostConfigPermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.IamPermissionChecker;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.inject.Guice;
@@ -40,7 +40,7 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
-public final class CheckDeviceWritePermissionHandlerTest {
+public final class CheckHostConfigPermissionHandlerTest {
 
   private static final UniverseScope SELF_UNIVERSE = new UniverseScope.SelfUniverse();
 
@@ -49,7 +49,7 @@ public final class CheckDeviceWritePermissionHandlerTest {
   @Bind @Mock private IamPermissionChecker iamPermissionChecker;
   @Bind private ListeningExecutorService executorService = newDirectExecutorService();
 
-  @Inject private CheckDeviceWritePermissionHandler handler;
+  @Inject private CheckHostConfigPermissionHandler handler;
 
   @Before
   public void setUp() {
@@ -57,32 +57,32 @@ public final class CheckDeviceWritePermissionHandlerTest {
   }
 
   @Test
-  public void checkDeviceWritePermission_noUser_returnsFalse() throws Exception {
-    CheckDeviceWritePermissionResponse response =
-        handler.checkDeviceWritePermission("device", SELF_UNIVERSE, Optional.empty()).get();
+  public void checkHostConfigPermission_noUser_returnsFalse() throws Exception {
+    CheckHostConfigPermissionResponse response =
+        handler.checkHostConfigPermission("host", SELF_UNIVERSE, Optional.empty()).get();
 
     assertThat(response.getHasPermission()).isFalse();
   }
 
   @Test
-  public void checkDeviceWritePermission_hasPermission_returnsTrue() throws Exception {
-    when(iamPermissionChecker.canConfigDevice("device", SELF_UNIVERSE))
+  public void checkHostConfigPermission_hasPermission_returnsTrue() throws Exception {
+    when(iamPermissionChecker.canConfigHost("host", SELF_UNIVERSE))
         .thenReturn(immediateFuture(true));
 
-    CheckDeviceWritePermissionResponse response =
-        handler.checkDeviceWritePermission("device", SELF_UNIVERSE, Optional.of("owner1")).get();
+    CheckHostConfigPermissionResponse response =
+        handler.checkHostConfigPermission("host", SELF_UNIVERSE, Optional.of("admin1")).get();
 
     assertThat(response.getHasPermission()).isTrue();
-    assertThat(response.getUserName()).isEqualTo("owner1");
+    assertThat(response.getUserName()).isEqualTo("admin1");
   }
 
   @Test
-  public void checkDeviceWritePermission_noPermission_returnsFalse() throws Exception {
-    when(iamPermissionChecker.canConfigDevice("device", SELF_UNIVERSE))
+  public void checkHostConfigPermission_noPermission_returnsFalse() throws Exception {
+    when(iamPermissionChecker.canConfigHost("host", SELF_UNIVERSE))
         .thenReturn(immediateFuture(false));
 
-    CheckDeviceWritePermissionResponse response =
-        handler.checkDeviceWritePermission("device", SELF_UNIVERSE, Optional.of("user")).get();
+    CheckHostConfigPermissionResponse response =
+        handler.checkHostConfigPermission("host", SELF_UNIVERSE, Optional.of("user")).get();
 
     assertThat(response.getHasPermission()).isFalse();
     assertThat(response.getUserName()).isEqualTo("user");

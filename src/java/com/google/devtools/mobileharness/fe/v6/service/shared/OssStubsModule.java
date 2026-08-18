@@ -58,6 +58,7 @@ import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostLatestV
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.NoOpHostLatestVersionProviderImpl;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.OssHostAuxiliaryInfoProviderImpl;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.GroupMembershipProvider;
+import com.google.devtools.mobileharness.fe.v6.service.shared.auth.IamPermissionChecker;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProviderImpl;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
@@ -68,6 +69,7 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.providers.NoOpWifi
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.RoutedUniverseLabInfoStubFactory;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.WifiCredentialsStore;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
+import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabSyncStub;
@@ -162,6 +164,7 @@ public final class OssStubsModule extends AbstractModule {
         .in(Singleton.class);
     bind(WifiCredentialsStore.class).to(NoOpWifiCredentialsStore.class).in(Singleton.class);
     bind(GroupMembershipProvider.class).to(NoOpGroupMembershipProvider.class).in(Singleton.class);
+    bind(IamPermissionChecker.class).to(NoOpIamPermissionChecker.class).in(Singleton.class);
     bind(TestbedConfigBuilder.class).to(OssTestbedConfigBuilderImpl.class).in(Singleton.class);
     bind(ConfigPusherHelper.class).to(NoOpConfigPusherHelper.class).in(Singleton.class);
   }
@@ -170,6 +173,23 @@ public final class OssStubsModule extends AbstractModule {
     @Override
     public ListenableFuture<Boolean> isMemberOfAny(String username, List<String> groupNames) {
       return immediateFuture(false);
+    }
+  }
+
+  private static final class NoOpIamPermissionChecker implements IamPermissionChecker {
+    @Override
+    public ListenableFuture<Boolean> canConfigDevice(String deviceId, UniverseScope universe) {
+      return immediateFuture(true);
+    }
+
+    @Override
+    public ListenableFuture<Boolean> canConfigHost(String hostName, UniverseScope universe) {
+      return immediateFuture(true);
+    }
+
+    @Override
+    public ListenableFuture<Boolean> canExecHost(String hostName, UniverseScope universe) {
+      return immediateFuture(true);
     }
   }
 }
