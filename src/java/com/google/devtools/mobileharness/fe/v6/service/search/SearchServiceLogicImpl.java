@@ -42,6 +42,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggest
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListResponse;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetChipResolver;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetColumnCataloger;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetFlatSearcher;
@@ -134,7 +135,9 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
   }
 
   private FleetSearchResults searchFleetSync(FleetSearchRequest request) {
-    FleetSnapshot snapshot = store.get(normalize(request.getFleet()));
+    Fleet fleet = normalize(request.getFleet());
+    FleetSnapshot snapshot = store.get(fleet);
+    LazyPostings postings = store.postings(fleet);
     return switch (request.getViewCase()) {
       case FLAT -> {
         FleetFlatView flat = request.getFlat();
@@ -144,7 +147,8 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
                 request.getFiltersList(),
                 flat.getColumnsList(),
                 flat.getSort(),
-                flat.getPage());
+                flat.getPage(),
+                postings);
         yield FleetSearchResults.newBuilder().setFlat(results).build();
       }
       case GROUP_HEADER -> {
@@ -155,7 +159,8 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
                 request.getFiltersList(),
                 header.getGroupByList(),
                 header.getSort(),
-                header.getPage());
+                header.getPage(),
+                postings);
         yield FleetSearchResults.newBuilder().setGrouped(results).build();
       }
       case GROUP_EXPAND -> {
@@ -166,7 +171,8 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
                 request.getFiltersList(),
                 expand.getGroupId(),
                 expand.getColumnsList(),
-                expand.getPageToken());
+                expand.getPageToken(),
+                postings);
         yield FleetSearchResults.newBuilder().setFlat(results).build();
       }
       // A request with no view selects no results shape, so return an empty result rather than
@@ -180,8 +186,9 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
       FleetSuggestionRequest request) {
     return Futures.submit(
         () -> {
-          FleetSnapshot snapshot = store.get(normalize(request.getFleet()));
-          return suggester.suggest(snapshot, request);
+          Fleet fleet = normalize(request.getFleet());
+          FleetSnapshot snapshot = store.get(fleet);
+          return suggester.suggest(snapshot, request, store.postings(fleet));
         },
         executor);
   }
@@ -204,8 +211,10 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
   public ListenableFuture<FleetValueListResponse> getFleetValueList(FleetValueListRequest request) {
     return Futures.submit(
         () -> {
-          FleetSnapshot snapshot = store.get(normalize(request.getFleet()));
-          return valueLister.listValues(snapshot, request.getKey(), request.getFiltersList());
+          Fleet fleet = normalize(request.getFleet());
+          FleetSnapshot snapshot = store.get(fleet);
+          return valueLister.listValues(
+              snapshot, request.getKey(), request.getFiltersList(), store.postings(fleet));
         },
         executor);
   }
@@ -215,8 +224,9 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
       FleetPromotedKeysRequest request) {
     return Futures.submit(
         () -> {
-          FleetSnapshot snapshot = store.get(normalize(request.getFleet()));
-          return promotedKeysProvider.getPromotedKeys(snapshot, request);
+          Fleet fleet = normalize(request.getFleet());
+          FleetSnapshot snapshot = store.get(fleet);
+          return promotedKeysProvider.getPromotedKeys(snapshot, request, store.postings(fleet));
         },
         executor);
   }
@@ -226,8 +236,9 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
       FleetColumnCatalogRequest request) {
     return Futures.submit(
         () -> {
-          FleetSnapshot snapshot = store.get(normalize(request.getFleet()));
-          return columnCataloger.getColumnCatalog(snapshot, request);
+          Fleet fleet = normalize(request.getFleet());
+          FleetSnapshot snapshot = store.get(fleet);
+          return columnCataloger.getColumnCatalog(snapshot, request, store.postings(fleet));
         },
         executor);
   }

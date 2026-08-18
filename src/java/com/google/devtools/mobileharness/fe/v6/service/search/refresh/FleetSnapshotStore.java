@@ -18,25 +18,27 @@ package com.google.devtools.mobileharness.fe.v6.service.search.refresh;
 
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
 /**
- * Lock-free store of the current serving {@link FleetSnapshot} per fleet.
+ * Lock-free store of the current serving {@link FleetSnapshot} and {@link LazyPostings} per fleet.
  *
  * <p>The refresh cycle builds a fresh immutable snapshot for each fleet it manages and publishes it
- * with {@link #publish}. Query code reads the current snapshot for a fleet with {@link #get}.
- * Because each snapshot is immutable and each fleet's entry is replaced atomically by the
- * concurrent map, readers never see a partially built snapshot and never need a lock. A fleet with
- * no published snapshot yet reads back as {@link FleetSnapshot#empty()} so queries before the first
- * refresh return empty results rather than null.
+ * with {@link #publish}. Query code reads the current snapshot for a fleet with {@link #get} and
+ * the lazily built posting lists with {@link #postings}. Because each snapshot is immutable and
+ * each fleet's entry is replaced atomically by the concurrent map, readers never see a partially
+ * built snapshot and never need a lock. A fleet with no published snapshot yet reads back as {@link
+ * FleetSnapshot#empty()} so queries before the first refresh return empty results rather than null.
  */
 @Singleton
 public final class FleetSnapshotStore {
 
   private final ConcurrentMap<Fleet, FleetSnapshot> snapshots = new ConcurrentHashMap<>();
+  private final ConcurrentMap<Fleet, LazyPostings> postingsCache = new ConcurrentHashMap<>();
 
   @Inject
   FleetSnapshotStore() {}
@@ -46,8 +48,16 @@ public final class FleetSnapshotStore {
     return snapshots.getOrDefault(fleet, FleetSnapshot.empty());
   }
 
+  /** Returns the lazy posting lists for the fleet, building a new one if none exists yet. */
+  public LazyPostings postings(Fleet fleet) {
+    return postingsCache.computeIfAbsent(fleet, f -> new LazyPostings(get(f).devices()));
+  }
+
   /** Publishes a new snapshot as the serving snapshot for the fleet. */
   public void publish(Fleet fleet, FleetSnapshot snapshot) {
+    // TODO: Consider bundling FleetSnapshot and LazyPostings into a single atomic
+    // container (e.g. SnapshotEntry) if atomic pairing across get() and postings() is desired.
     snapshots.put(fleet, snapshot);
+    postingsCache.put(fleet, new LazyPostings(snapshot.devices()));
   }
 }

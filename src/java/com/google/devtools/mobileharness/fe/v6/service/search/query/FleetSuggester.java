@@ -24,6 +24,7 @@ import static com.google.devtools.mobileharness.fe.v6.service.search.index.Fleet
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_UUID;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.IDENTIFIER_KEYS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.MULTI_VALUE_KEYS;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PLAIN_VALUE_KEYS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PLURAL_DISPLAY_KEYS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PROP_PREFIX;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.VALUE_DISPLAY_KEYS;
@@ -53,6 +54,9 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.TextSegment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceRecord;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.KeyCount;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.ValueKeyPair;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collection;
@@ -100,10 +104,10 @@ import javax.inject.Inject;
  * matches {@code field::uuid} and a user name matches {@code field::owner} via the value index, so
  * those intents fall out of ordinary value matching rather than a dedicated regex detector.
  *
- * <p>Ranking is by scenario key priority, then match quality (full over prefix over contains), then
- * a device-count proxy, then a stable text tie-break. Personalization (recent and frequent
- * suggestions) is a ranking input in the spec but is deferred, so this port emits no personalized
- * items and treats every candidate as non-personalized. See the TODO on {@link #PERSONALIZED_KEYS}.
+ * <p>Ranking is by match quality, then personalization, then device count, then scenario key
+ * priority, then a stable text tie-break. Personalization (recent and frequent suggestions) is a
+ * ranking input in the spec but is deferred, so this port emits no personalized items and treats
+ * every candidate as non-personalized. See the TODO on {@link #PERSONALIZED_KEYS}.
  */
 public final class FleetSuggester {
 
@@ -159,14 +163,14 @@ public final class FleetSuggester {
 
   private static final int DEFAULT_LIMIT = 12;
 
-  /** Cap on raw value-search candidates before ranking, matching the prototype's cap of 30. */
-  private static final int RAW_VALUE_CAP = 30;
-
   /** Number of strongest matched keys for which key-name matches offer ready-to-apply values. */
   private static final int TOP_VALUE_KEYS = 5;
 
   private static final int TOP_VALUES_PER_KEY = 3;
   private static final int KEY_VALUES_PER_KEY = 8;
+
+  /** Cap on semantic prefix scan entries to keep PrefixAll bounded. */
+  private static final int MAX_SEMANTIC_SCAN = 500;
 
   /**
    * Personalized (recent / frequent) key set. Personalization is deferred (backend plan and
@@ -233,7 +237,8 @@ public final class FleetSuggester {
   }
 
   /** Returns ranked suggestions for the request against the given snapshot. */
-  public FleetSuggestionResponse suggest(FleetSnapshot snapshot, FleetSuggestionRequest request) {
+  public FleetSuggestionResponse suggest(
+      FleetSnapshot snapshot, FleetSuggestionRequest request, LazyPostings postings) {
     int limit = request.getLimit() > 0 ? request.getLimit() : DEFAULT_LIMIT;
     String query = WHITESPACE.matcher(request.getInput()).replaceAll(" ").trim();
 
@@ -244,7 +249,7 @@ public final class FleetSuggester {
     for (Filter filter : filters) {
       activeKeys.add(filter.getKey());
     }
-    ImmutableList<Integer> current = filterEngine.match(snapshot, filters);
+    ImmutableList<Integer> current = filterEngine.match(snapshot, filters, postings);
     BitSet currentBits = toBitSet(current);
 
     // FLEET_UNSPECIFIED defaults to FLEET_SELF (see the Fleet proto). Resolve the curation for the
@@ -259,7 +264,15 @@ public final class FleetSuggester {
 
     Context context =
         new Context(
-            snapshot, index, filters, hasFilters, activeKeys, current, currentBits, keyPriority);
+            snapshot,
+            index,
+            filters,
+            hasFilters,
+            activeKeys,
+            current,
+            currentBits,
+            keyPriority,
+            postings);
 
     if (query.isEmpty()) {
       return emptyState(context, limit);
@@ -284,8 +297,12 @@ public final class FleetSuggester {
           case COMMA ->
               suggestValue(context, intent.value(), /* exclude= */ false, intent.values());
           case TOKEN -> {
+            // Key-name suggestions fire at any length (1-2 chars included). Value suggestions
+            // only start at length >= 3 to avoid flooding very short inputs with value matches.
             List<Cand> both = new ArrayList<>(suggestKey(context, query));
-            both.addAll(suggestValue(context, query, /* exclude= */ false, /* multi= */ null));
+            if (query.length() >= 3) {
+              both.addAll(suggestValue(context, query, /* exclude= */ false, /* multi= */ null));
+            }
             yield both;
           }
         };
@@ -461,10 +478,10 @@ public final class FleetSuggester {
 
   private List<Cand> suggestValue(
       Context context, String token, boolean exclude, ImmutableList<String> multi) {
-    List<Cand> out = new ArrayList<>();
     FleetIndex index = context.index();
 
     if (multi != null) {
+      List<Cand> out = new ArrayList<>();
       ImmutableList.Builder<String> lowered = ImmutableList.builder();
       for (String value : multi) {
         lowered.add(Ascii.toLowerCase(stripQuotes(value)));
@@ -479,23 +496,67 @@ public final class FleetSuggester {
     }
 
     String value = Ascii.toLowerCase(stripQuotes(token));
+    List<Cand> out = new ArrayList<>();
     Set<String> seen = new HashSet<>();
-    // Value search over every key uses full and prefix tiers only (no contains), so it stays cheap
-    // and relevant even over the whole value space.
-    for (String keyId : index.keyIds()) {
-      for (Match match : matchValues(index, keyId, value, /* allowContains= */ false)) {
-        if (!seen.add(keyId + '\u0000' + match.value())) {
-          continue;
-        }
-        Cand cand = condition(context, keyId, match.value(), match.tier(), exclude);
+
+    // 1. Exact matches (all keys, via globalExact) for O(1) lookup.
+    // TODO: Consider extracting a composite(keyId, value) helper for
+    // null-separated composite key lookups.
+    for (KeyCount kc : index.globalExact().getOrDefault(value, ImmutableList.of())) {
+      if (seen.add(kc.key() + '\u0000' + value)) {
+        Cand cand = condition(context, kc.key(), value, 3, exclude);
         if (cand != null) {
           out.add(cand);
-          if (out.size() >= RAW_VALUE_CAP) {
-            return out;
-          }
         }
       }
     }
+
+    // 2. Prefix matches (semantic keys only, via semanticGlobalSorted bisect) for O(log D_s).
+    ImmutableList<ValueKeyPair> sorted = index.semanticGlobalSorted();
+    int lo = lowerBoundVkp(sorted, value);
+    int hi = lowerBoundVkp(sorted, value + '\uffff');
+    int scanned = 0;
+    for (int i = lo; i < hi && scanned < MAX_SEMANTIC_SCAN; i++) {
+      ValueKeyPair pair = sorted.get(i);
+      if (!pair.value().equals(value) && seen.add(pair.key() + '\u0000' + pair.value())) {
+        Cand cand = condition(context, pair.key(), pair.value(), 2, exclude);
+        if (cand != null) {
+          out.add(cand);
+          scanned++;
+        }
+      }
+    }
+
+    // 3. Identifier collapse (PLAIN_VALUE_KEYS, one collapsed suggestion per key).
+    for (String identKey : PLAIN_VALUE_KEYS) {
+      ImmutableList<String> keyValues =
+          index.sortedValues().getOrDefault(identKey, ImmutableList.of());
+      if (keyValues.isEmpty()) {
+        continue;
+      }
+      int ilo = FleetFilterEngine.lowerBound(keyValues, value);
+      int ihi = FleetFilterEngine.lowerBound(keyValues, value + '\uffff');
+      int matchCount = ihi - ilo;
+      if (matchCount > 0) {
+        String identDisplay = displayName(index, identKey);
+        ImmutableList<TextSegment> mainText =
+            ImmutableList.of(
+                text(identDisplay + " starts with ", false),
+                text(token, true),
+                text(" (" + matchCount + ")", false));
+        FleetSuggestion.Builder builder =
+            FleetSuggestion.newBuilder()
+                .setLabel("Add filter")
+                .addAllMainText(mainText)
+                .setCount(matchCount)
+                .setOpenPicker(openPickerNewChip(index, identKey));
+        Cand cand = new Cand(Kind.KEY, identKey, 1, builder, mainTextString(mainText));
+        cand.needsCount = false;
+        cand.noCount = true;
+        out.add(cand);
+      }
+    }
+
     return out;
   }
 
@@ -657,10 +718,8 @@ public final class FleetSuggester {
     boolean inChip = context.activeKeys().contains(keyId);
 
     // Polarity-conflict and complex-chip rules (spec section 7): when the key already carries a
-    // chip
-    // whose polarity conflicts, or a complex chip, suppress the value suggestion. Only the
-    // key-level
-    // "Modify <Key>" affordance remains (emitted separately by the key path).
+    // chip whose polarity conflicts, or a complex chip, suppress the value suggestion. Only the
+    // key-level "Modify <Key>" affordance remains (emitted separately by the key path).
     if (inChip) {
       Filter chip = chipFor(context.filters(), keyId);
       if (chip != null) {
@@ -739,19 +798,19 @@ public final class FleetSuggester {
     if (exclude) {
       verb += " not";
     }
-    List<TextSegment> segments = new ArrayList<>();
+    List<TextSegment> segmentList = new ArrayList<>();
     if (inChip) {
-      segments.add(text("add ", false));
+      segmentList.add(text("add ", false));
     } else {
-      segments.add(text(display + " " + verb + " ", false));
+      segmentList.add(text(display + " " + verb + " ", false));
     }
     for (int i = 0; i < shown.size(); i++) {
       if (i > 0) {
-        segments.add(text(" or ", false));
+        segmentList.add(text(" or ", false));
       }
-      segments.add(text(shown.get(i), true));
+      segmentList.add(text(shown.get(i), true));
     }
-    ImmutableList<TextSegment> mainText = ImmutableList.copyOf(segments);
+    ImmutableList<TextSegment> mainText = ImmutableList.copyOf(segmentList);
     FleetSuggestion.Builder builder =
         FleetSuggestion.newBuilder().setLabel(label(index, keyId, inChip)).addAllMainText(mainText);
     if (inChip) {
@@ -782,6 +841,9 @@ public final class FleetSuggester {
       }
     }
 
+    // Ranking order (matches prototype suggest_engine.py _rank sort_key): key priority is the
+    // PRIMARY sort so core keys (e.g. dim::model) outrank raw dims (e.g. dim::supported_model)
+    // regardless of match count, then match quality (tier), personalization, count, text.
     uniq.sort(
         Comparator.<Cand>comparingInt(c -> -context.keyPriority().applyAsInt(c.keyId))
             .thenComparingInt(c -> -(int) Math.round(c.tier))
@@ -797,12 +859,19 @@ public final class FleetSuggester {
       }
       return response.build();
     }
-    // Under active filters a globally existing value may match zero devices in the current result
-    // set. Compute counts over a larger pool, drop such zero-count conditions, then trim.
-    int poolSize = Math.min(uniq.size(), limit * 3);
-    int kept = 0;
-    for (Cand cand : uniq.subList(0, poolSize)) {
+    // Under active filters, compute filtered count for all candidates, then re-sort by filtered
+    // count and drop zero-count conditions.
+    for (Cand cand : uniq) {
       applyCount(context, cand);
+    }
+    uniq.sort(
+        Comparator.<Cand>comparingInt(c -> -context.keyPriority().applyAsInt(c.keyId))
+            .thenComparingInt(c -> -(int) Math.round(c.tier))
+            .thenComparingInt(c -> -(PERSONALIZED_KEYS.contains(c.keyId) ? 1 : 0))
+            .thenComparingInt(c -> -(c.count != null ? c.count : 0))
+            .thenComparing(c -> c.mainString));
+    int kept = 0;
+    for (Cand cand : uniq) {
       if (cand.kind == Kind.CONDITION && !cand.noCount && cand.count == null) {
         continue;
       }
@@ -823,7 +892,6 @@ public final class FleetSuggester {
     if (!cand.needsCount) {
       return;
     }
-    FleetIndex index = context.index();
     int base = context.hasFilters() ? context.current().size() : context.snapshot().deviceCount();
 
     if (cand.inChip && !cand.exclude) {
@@ -831,9 +899,12 @@ public final class FleetSuggester {
       // are not already in the result.
       BitSet baseK =
           toBitSet(
-              filterEngine.match(context.snapshot(), otherFilters(context.filters(), cand.keyId)));
+              filterEngine.match(
+                  context.snapshot(),
+                  otherFilters(context.filters(), cand.keyId),
+                  context.postings()));
       int added = 0;
-      for (int deviceIndex : index.postingList(cand.keyId, cand.value)) {
+      for (int deviceIndex : context.postings().get(cand.keyId, cand.value)) {
         if (baseK.get(deviceIndex) && !context.currentBits().get(deviceIndex)) {
           added++;
         }
@@ -852,17 +923,17 @@ public final class FleetSuggester {
     }
   }
 
-  private int resultingCount(Context context, String keyId, String valueLower) {
+  private static int resultingCount(Context context, String keyId, String valueLower) {
     if (!context.hasFilters()) {
       return context.index().valueCount(keyId, valueLower);
     }
-    return intersectionCount(context.index().postingList(keyId, valueLower), context.currentBits());
+    return intersectionCount(context.postings().get(keyId, valueLower), context.currentBits());
   }
 
   private static int unionCount(Context context, String keyId, ImmutableList<String> valuesLower) {
     BitSet union = new BitSet();
     for (String value : valuesLower) {
-      for (int deviceIndex : context.index().postingList(keyId, value)) {
+      for (int deviceIndex : context.postings().get(keyId, value)) {
         union.set(deviceIndex);
       }
     }
@@ -873,7 +944,7 @@ public final class FleetSuggester {
   }
 
   private static int presenceCount(Context context, String keyId) {
-    BitSet withKey = devicesWithKey(context.index(), keyId);
+    BitSet withKey = devicesWithKey(context.postings(), keyId);
     if (context.hasFilters()) {
       withKey.and(context.currentBits());
     }
@@ -898,8 +969,8 @@ public final class FleetSuggester {
         out.add(new Match(variant, 3));
       }
     }
-    int lo = lowerBound(sorted, query);
-    int hi = lowerBound(sorted, query + '\uffff');
+    int lo = FleetFilterEngine.lowerBound(sorted, query);
+    int hi = FleetFilterEngine.lowerBound(sorted, query + '\uffff');
     for (int i = lo; i < hi; i++) {
       String value = sorted.get(i);
       if (!exactHits.contains(value)) {
@@ -1273,20 +1344,17 @@ public final class FleetSuggester {
     return others.build();
   }
 
-  private static BitSet devicesWithKey(FleetIndex index, String keyId) {
+  private static BitSet devicesWithKey(LazyPostings postings, String keyId) {
     BitSet withKey = new BitSet();
-    ImmutableMap<String, ImmutableList<Integer>> values = index.postings().get(keyId);
-    if (values != null) {
-      for (ImmutableList<Integer> posting : values.values()) {
-        for (int deviceIndex : posting) {
-          withKey.set(deviceIndex);
-        }
+    for (int[] posting : postings.forKey(keyId).values()) {
+      for (int deviceIndex : posting) {
+        withKey.set(deviceIndex);
       }
     }
     return withKey;
   }
 
-  private static int intersectionCount(ImmutableList<Integer> posting, BitSet filteredSet) {
+  private static int intersectionCount(int[] posting, BitSet filteredSet) {
     int count = 0;
     for (int deviceIndex : posting) {
       if (filteredSet.get(deviceIndex)) {
@@ -1304,12 +1372,13 @@ public final class FleetSuggester {
     return set;
   }
 
-  private static int lowerBound(List<String> sorted, String key) {
+  /** Lower bound binary search over the semantic global value index. */
+  private static int lowerBoundVkp(List<ValueKeyPair> sorted, String valuePrefix) {
     int lo = 0;
     int hi = sorted.size();
     while (lo < hi) {
       int mid = (lo + hi) >>> 1;
-      if (sorted.get(mid).compareTo(key) < 0) {
+      if (sorted.get(mid).value().compareTo(valuePrefix) < 0) {
         lo = mid + 1;
       } else {
         hi = mid;
@@ -1448,7 +1517,8 @@ public final class FleetSuggester {
       Set<String> activeKeys,
       ImmutableList<Integer> current,
       BitSet currentBits,
-      ToIntFunction<String> keyPriority) {}
+      ToIntFunction<String> keyPriority,
+      LazyPostings postings) {}
 
   /**
    * A candidate suggestion before ranking. Holds the partially built proto (label, main text, and

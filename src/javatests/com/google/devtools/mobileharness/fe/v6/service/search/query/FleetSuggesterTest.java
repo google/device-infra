@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggest
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import com.google.inject.Guice;
 import java.time.Instant;
 import org.junit.Test;
@@ -62,6 +63,7 @@ public final class FleetSuggesterTest {
   // through Guice rather than constructing directly.
   private final FleetSnapshot snapshot =
       Guice.createInjector().getInstance(FleetIndexBuilder.class).build(fleet(), BUILD_TIME);
+  private final LazyPostings postings = new LazyPostings(snapshot.devices());
 
   // FleetSuggester needs the per-fleet ScenarioCuration map, which the production MapBinder wires
   // at activation. Construct it directly through the package-private @Inject constructor, binding
@@ -76,7 +78,7 @@ public final class FleetSuggesterTest {
   @Test
   public void valuePrefix_suggestsApplyFilterUnderMatchingKey() {
     // "pix" prefix-matches the model value "pixel"; nothing else in the fleet starts with it.
-    FleetSuggestionResponse response = suggester.suggest(snapshot, request("pix"));
+    FleetSuggestionResponse response = suggester.suggest(snapshot, request("pix"), postings);
 
     FleetSuggestion pixel = firstApplyFilter(response, "dim::model");
     assertThat(pixel.getApplyFilter().getResultingFilter().getSimple().getValues(0).getValue())
@@ -96,7 +98,7 @@ public final class FleetSuggesterTest {
   public void uuidValue_suggestsDeviceIdFilter() {
     // Typing a device UUID resolves through ordinary value search onto the UUID key, no dedicated
     // identifier detector.
-    FleetSuggestionResponse response = suggester.suggest(snapshot, request("device-2"));
+    FleetSuggestionResponse response = suggester.suggest(snapshot, request("device-2"), postings);
 
     FleetSuggestion uuid = firstApplyFilter(response, "field::uuid");
     assertThat(uuid.getApplyFilter().getResultingFilter().getSimple().getValues(0).getValue())
@@ -107,7 +109,7 @@ public final class FleetSuggesterTest {
   @Test
   public void ownerValue_suggestsOwnerFilterWithPluralVerb() {
     // Typing a user name resolves onto the Owners key, again through value search.
-    FleetSuggestionResponse response = suggester.suggest(snapshot, request("alice"));
+    FleetSuggestionResponse response = suggester.suggest(snapshot, request("alice"), postings);
 
     FleetSuggestion owner = firstApplyFilter(response, "field::owner");
     assertThat(owner.getApplyFilter().getResultingFilter().getSimple().getValues(0).getValue())
@@ -125,7 +127,7 @@ public final class FleetSuggesterTest {
   public void keyName_suggestsOpenPickerForThatKey() {
     // "status" is a key name; it should offer the key itself (opens the picker) as well as its
     // ready-to-apply values.
-    FleetSuggestionResponse response = suggester.suggest(snapshot, request("status"));
+    FleetSuggestionResponse response = suggester.suggest(snapshot, request("status"), postings);
 
     FleetSuggestion keyOnly = firstOpenPicker(response, "field::status");
     assertThat(keyOnly.getOpenPicker().hasNewChip()).isTrue();
@@ -139,7 +141,7 @@ public final class FleetSuggesterTest {
     // A chip already filters model=pixel. Typing another model value offers a modify: stage the
     // value in the picker, with the count shown as a "+" delta.
     FleetSuggestionResponse response =
-        suggester.suggest(snapshot, request("nexus", simple("dim::model", "pixel")));
+        suggester.suggest(snapshot, request("nexus", simple("dim::model", "pixel")), postings);
 
     FleetSuggestion modify = firstOpenPicker(response, "dim::model");
     assertThat(modify.getLabel()).isEqualTo("Modify Model");
@@ -161,7 +163,9 @@ public final class FleetSuggesterTest {
             .getInstance(FleetIndexBuilder.class)
             .build(manyPoolFleet(60), BUILD_TIME);
 
-    FleetSuggestionResponse response = suggester.suggest(manyPools, request("group by pool"));
+    LazyPostings manyPoolsPostings = new LazyPostings(manyPools.devices());
+    FleetSuggestionResponse response =
+        suggester.suggest(manyPools, request("group by pool"), manyPoolsPostings);
 
     FleetSuggestion group = firstAddGroupBy(response, "dim::pool");
     assertThat(group.getLabel()).isEqualTo("Group by");
@@ -179,7 +183,8 @@ public final class FleetSuggesterTest {
             .getInstance(FleetIndexBuilder.class)
             .build(dualKeyValueFleet(), BUILD_TIME);
 
-    FleetSuggestionResponse response = suggester.suggest(fleet, request("zephyr"));
+    LazyPostings fleetPostings = new LazyPostings(fleet.devices());
+    FleetSuggestionResponse response = suggester.suggest(fleet, request("zephyr"), fleetPostings);
 
     assertThat(response.getItemsCount()).isAtLeast(2);
     assertThat(response.getItems(0).getApplyFilter().getResultingFilter().getKey())
@@ -188,7 +193,7 @@ public final class FleetSuggesterTest {
 
   @Test
   public void emptyQuery_returnsCuratedStarterKeysAsOpenPickers() {
-    FleetSuggestionResponse response = suggester.suggest(snapshot, request(""));
+    FleetSuggestionResponse response = suggester.suggest(snapshot, request(""), postings);
 
     // The curated starter keys present in this fleet, in their fixed order. dim::os is absent from
     // the fleet, so it is skipped; every entry opens the value picker.

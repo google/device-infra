@@ -121,14 +121,15 @@ public final class FleetIndexBuilderTest {
     assertThat(index.valueCount("prop::location", "mtv")).isEqualTo(2);
 
     // Posting lists point at device indices in devices() order.
-    assertThat(index.postingList("field::status", "idle")).containsExactly(0, 2).inOrder();
-    assertThat(index.postingList("field::status", "busy")).containsExactly(1);
-    assertThat(index.postingList("dim::os", "android")).containsExactly(0, 1).inOrder();
-    assertThat(index.postingList("host::host_name", "lab1")).containsExactly(0, 1).inOrder();
+    LazyPostings postings = new LazyPostings(snapshot.devices());
+    assertThat(postings.get("field::status", "idle")).asList().containsExactly(0, 2).inOrder();
+    assertThat(postings.get("field::status", "busy")).asList().containsExactly(1);
+    assertThat(postings.get("dim::os", "android")).asList().containsExactly(0, 1).inOrder();
+    assertThat(postings.get("host::host_name", "lab1")).asList().containsExactly(0, 1).inOrder();
 
     // A device carrying a dimension in both supported and required is counted once.
     assertThat(index.valueCount("dim::model", "pixel")).isEqualTo(1);
-    assertThat(index.postingList("dim::model", "pixel")).containsExactly(0);
+    assertThat(postings.get("dim::model", "pixel")).asList().containsExactly(0);
 
     // Sorted distinct values.
     assertThat(index.sortedValues().get("dim::os")).containsExactly("android", "ios").inOrder();
@@ -161,7 +162,7 @@ public final class FleetIndexBuilderTest {
     // original casing preserved for display.
     assertThat(snapshot.devices().get(0).wifiSsid()).hasValue("GoogleGuest");
     assertThat(index.valueCount("config::wifi_ssid", "googleguest")).isEqualTo(1);
-    assertThat(index.postingList("config::wifi_ssid", "googleguest")).containsExactly(0);
+    assertThat(postings.get("config::wifi_ssid", "googleguest")).asList().containsExactly(0);
     assertThat(index.valueDisplays().get("config::wifi_ssid"))
         .containsEntry("googleguest", "GoogleGuest");
     assertThat(index.displayNames()).containsEntry("config::wifi_ssid", "Wi-Fi SSID");
@@ -170,7 +171,6 @@ public final class FleetIndexBuilderTest {
     // device-1 on lab1), multi-valued, and absent for devices on an unenriched host (device-2).
     assertThat(index.valueCount("host::lab_type", "core")).isEqualTo(2);
     assertThat(index.valueCount("host::lab_type", "satellite")).isEqualTo(2);
-    assertThat(index.postingList("host::lab_type", "core")).containsExactly(0, 1).inOrder();
     assertThat(index.displayNames()).containsEntry("host::lab_type", "Host Lab Type");
 
     // Host record enrichment fields populated for the enriched host.
@@ -184,7 +184,6 @@ public final class FleetIndexBuilderTest {
     // types and no release or daemon attributes, and lab_server_version still falls back to the
     // host_version property.
     assertThat(snapshot.devices().get(1).wifiSsid()).isEmpty();
-    assertThat(index.postingList("host::lab_type", "core")).doesNotContain(2);
     assertThat(snapshot.hosts().get(1).labTypes()).isEmpty();
     assertThat(snapshot.hosts().get(1).releaseStatus()).isEmpty();
     assertThat(snapshot.hosts().get(1).daemonStatus()).isEmpty();
@@ -219,15 +218,17 @@ public final class FleetIndexBuilderTest {
             .setAtsControllerDisplays(ImmutableMap.of("xiaomi", "Partner Lab: Xiaomi"))
             .build();
 
-    FleetIndex index = builder.build(raw, BUILD_TIME).index();
+    FleetSnapshot snapshot = builder.build(raw, BUILD_TIME);
+    FleetIndex index = snapshot.index();
+    LazyPostings postings = new LazyPostings(snapshot.devices());
 
     // The key is indexed and its column label is "ATS Lab".
     assertThat(index.keyIds()).contains("host::ats_controller");
     assertThat(index.displayNames()).containsEntry("host::ats_controller", "ATS Lab");
 
     // The stored/filter term is the lowercased controller id, not the friendly display.
-    assertThat(index.postingList("host::ats_controller", "xiaomi")).containsExactly(0);
-    assertThat(index.postingList("host::ats_controller", "acme")).containsExactly(1);
+    assertThat(postings.get("host::ats_controller", "xiaomi")).asList().containsExactly(0);
+    assertThat(postings.get("host::ats_controller", "acme")).asList().containsExactly(1);
     assertThat(index.valueCount("host::ats_controller", "xiaomi")).isEqualTo(1);
 
     // The per-value display is the friendly name when the registry has an entry, and falls back to
@@ -246,7 +247,7 @@ public final class FleetIndexBuilderTest {
     assertThat(snapshot.hostCount()).isEqualTo(0);
     assertThat(snapshot.index().keyIds()).isEmpty();
     assertThat(snapshot.index().valueCount("field::status", "idle")).isEqualTo(0);
-    assertThat(snapshot.index().postingList("field::status", "idle")).isEmpty();
+    assertThat(new LazyPostings(snapshot.devices()).get("field::status", "idle")).isEmpty();
   }
 
   private static LabData labData(

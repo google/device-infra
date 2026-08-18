@@ -26,6 +26,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:lazy_postings",
         "@maven//:javax_inject_jsr330_api",
     ],
 )

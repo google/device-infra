@@ -34,6 +34,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_raw_data",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:host_enrichment",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:lazy_postings",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",

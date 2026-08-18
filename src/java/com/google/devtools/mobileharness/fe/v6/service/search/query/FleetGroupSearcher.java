@@ -43,6 +43,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceRecord;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
@@ -154,7 +155,8 @@ public final class FleetGroupSearcher {
       List<Filter> baseFilters,
       List<String> groupByKeys,
       FleetGroupSort sort,
-      FleetPageRequest page) {
+      FleetPageRequest page,
+      LazyPostings postings) {
     FleetIndex index = snapshot.index();
     ImmutableList<String> keys = cappedGroupByKeys(index, groupByKeys);
 
@@ -167,7 +169,7 @@ public final class FleetGroupSearcher {
     }
 
     Map<ImmutableList<ImmutableList<String>>, List<Integer>> buckets =
-        partition(snapshot, baseFilters, keys);
+        partition(snapshot, baseFilters, keys, postings);
     if (buckets.isEmpty()) {
       // Either nothing matched or the grouping exceeded MAX_GROUPS. The proto has no error field on
       // grouped results, so both cases are represented as an empty group list with zero totals.
@@ -239,7 +241,8 @@ public final class FleetGroupSearcher {
       List<Filter> baseFilters,
       String groupId,
       List<String> columnKeys,
-      String pageToken) {
+      String pageToken,
+      LazyPostings postings) {
     ImmutableList<GroupEntry> entries = decodeGroupId(groupId);
     if (entries.isEmpty()) {
       // A missing, malformed, or foreign group id names no group, so it expands to no rows rather
@@ -255,7 +258,7 @@ public final class FleetGroupSearcher {
     FleetPageRequest page =
         FleetPageRequest.newBuilder().setPageSize(EXPAND_PAGE_SIZE).setPageToken(pageToken).build();
     return flatSearcher.searchFlat(
-        snapshot, filters, columnKeys, FleetColumnSort.getDefaultInstance(), page);
+        snapshot, filters, columnKeys, FleetColumnSort.getDefaultInstance(), page, postings);
   }
 
   /**
@@ -267,11 +270,14 @@ public final class FleetGroupSearcher {
    * the "(no value)" bucket for that key. This mirrors the prototype's {@code _partition}.
    */
   private Map<ImmutableList<ImmutableList<String>>, List<Integer>> partition(
-      FleetSnapshot snapshot, List<Filter> baseFilters, ImmutableList<String> keys) {
+      FleetSnapshot snapshot,
+      List<Filter> baseFilters,
+      ImmutableList<String> keys,
+      LazyPostings postings) {
     ImmutableList<DeviceRecord> devices = snapshot.devices();
     ListMultimap<ImmutableList<ImmutableList<String>>, Integer> buckets =
         MultimapBuilder.linkedHashKeys().arrayListValues().build();
-    for (int deviceIndex : filterEngine.match(snapshot, baseFilters)) {
+    for (int deviceIndex : filterEngine.match(snapshot, baseFilters, postings)) {
       DeviceRecord device = devices.get(deviceIndex);
       ImmutableList.Builder<ImmutableList<String>> combo = ImmutableList.builder();
       for (String keyId : keys) {

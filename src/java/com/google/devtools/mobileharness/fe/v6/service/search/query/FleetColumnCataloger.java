@@ -20,7 +20,6 @@ import static com.google.devtools.mobileharness.fe.v6.service.search.index.Fleet
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PROP_PREFIX;
 
 import com.google.common.base.Ascii;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
@@ -31,6 +30,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnC
 import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceRecord;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Comparator;
@@ -116,9 +116,9 @@ public final class FleetColumnCataloger {
    * @param request the dialog state: an optional query, the current filters, and recently used keys
    */
   public FleetColumnCatalogResponse getColumnCatalog(
-      FleetSnapshot snapshot, FleetColumnCatalogRequest request) {
+      FleetSnapshot snapshot, FleetColumnCatalogRequest request, LazyPostings postings) {
     FleetIndex index = snapshot.index();
-    ImmutableMap<String, Integer> deviceCounts = keyDeviceCounts(index);
+    ImmutableMap<String, Integer> deviceCounts = keyDeviceCounts(index, postings);
     ImmutableSet<String> redundant = redundantDims(snapshot, index);
 
     Comparator<String> byCoverage =
@@ -332,16 +332,14 @@ public final class FleetColumnCataloger {
    * value for the key, computed as the union of the key's posting lists. This is the prod analog of
    * the prototype's precomputed {@code key_device_count}.
    */
-  private static ImmutableMap<String, Integer> keyDeviceCounts(FleetIndex index) {
+  private static ImmutableMap<String, Integer> keyDeviceCounts(
+      FleetIndex index, LazyPostings postings) {
     ImmutableMap.Builder<String, Integer> counts = ImmutableMap.builder();
     for (String keyId : index.keyIds()) {
       BitSet devices = new BitSet();
-      ImmutableMap<String, ImmutableList<Integer>> values = index.postings().get(keyId);
-      if (values != null) {
-        for (ImmutableList<Integer> posting : values.values()) {
-          for (int deviceIndex : posting) {
-            devices.set(deviceIndex);
-          }
+      for (int[] posting : postings.forKey(keyId).values()) {
+        for (int deviceIndex : posting) {
+          devices.set(deviceIndex);
         }
       }
       counts.put(keyId, devices.cardinality());
