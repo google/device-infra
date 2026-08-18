@@ -34,9 +34,11 @@ public interface DeviceTestHistoryProvider {
    * Returns one page of the device's tests, newest first.
    *
    * @param deviceId the device whose tests are listed
+   * @param hostName optional host name; when non-empty, restricts the tests to this host,
+   *     disambiguating a device id that appears on more than one host
    * @param pageToken opaque cursor from a previous response; empty for the first page
    * @param universe the universe the device belongs to
    */
   ListenableFuture<GetDeviceTestHistoryResponse> getDeviceTestHistory(
-      String deviceId, String pageToken, UniverseScope universe);
+      String deviceId, String hostName, String pageToken, UniverseScope universe);
 }
