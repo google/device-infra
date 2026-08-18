@@ -29,8 +29,8 @@ public final class AtsOneCurationTest {
   private final AtsOneCuration curation = new AtsOneCuration();
 
   @Test
-  public void filterByRow_isAtsOneList() {
-    assertThat(curation.filterByRow())
+  public void deviceFilterByRow_isAtsOneList() {
+    assertThat(curation.deviceFilterByRow())
         .containsExactly(
             "field::uuid",
             "host::host_name",
@@ -42,15 +42,15 @@ public final class AtsOneCurationTest {
   }
 
   @Test
-  public void groupByRow_isAtsOneList() {
-    assertThat(curation.groupByRow())
+  public void deviceGroupByRow_isAtsOneList() {
+    assertThat(curation.deviceGroupByRow())
         .containsExactly("host::host_name", "config::wifi_ssid")
         .inOrder();
   }
 
   @Test
-  public void defaultColumns_isAtsOneList() {
-    assertThat(curation.defaultColumns())
+  public void deviceDefaultColumns_isAtsOneList() {
+    assertThat(curation.deviceDefaultColumns())
         .containsExactly(
             "field::uuid",
             "host::host_name",
@@ -62,8 +62,8 @@ public final class AtsOneCurationTest {
   }
 
   @Test
-  public void recommendedColumns_isAtsOneList() {
-    assertThat(curation.recommendedColumns())
+  public void deviceRecommendedColumns_isAtsOneList() {
+    assertThat(curation.deviceRecommendedColumns())
         .containsExactly(
             "host::host_name",
             "field::status",

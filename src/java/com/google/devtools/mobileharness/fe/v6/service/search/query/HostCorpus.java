@@ -26,7 +26,7 @@ import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.HostValueExtractor;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -42,12 +42,12 @@ import javax.annotation.Nullable;
 public final class HostCorpus implements SearchCorpus {
 
   private final FleetSnapshot snapshot;
-  private final LazyPostings postings;
+  private final Postings postings;
   @Nullable private final ScenarioCuration curation;
   private final HostCellMapper cellMapper = new HostCellMapper();
 
   public HostCorpus(
-      FleetSnapshot snapshot, LazyPostings postings, @Nullable ScenarioCuration curation) {
+      FleetSnapshot snapshot, Postings postings, @Nullable ScenarioCuration curation) {
     this.snapshot = snapshot;
     this.postings = postings;
     this.curation = curation;
@@ -59,7 +59,7 @@ public final class HostCorpus implements SearchCorpus {
   }
 
   @Override
-  public LazyPostings postings() {
+  public Postings postings() {
     return postings;
   }
 

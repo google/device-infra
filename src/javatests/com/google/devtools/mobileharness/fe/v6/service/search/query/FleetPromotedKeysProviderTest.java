@@ -247,7 +247,7 @@ public final class FleetPromotedKeysProviderTest {
    */
   private static final class FakeCuration implements ScenarioCuration {
     @Override
-    public ImmutableList<String> filterByRow() {
+    public ImmutableList<String> deviceFilterByRow() {
       return ImmutableList.of(
           "field::status",
           "dim::model",
@@ -258,18 +258,18 @@ public final class FleetPromotedKeysProviderTest {
     }
 
     @Override
-    public ImmutableList<String> groupByRow() {
+    public ImmutableList<String> deviceGroupByRow() {
       return ImmutableList.of(
           "host::lab_type", "dim::lab_location", "field::type", "field::status", "host::host_name");
     }
 
     @Override
-    public ImmutableList<String> defaultColumns() {
+    public ImmutableList<String> deviceDefaultColumns() {
       return ImmutableList.of();
     }
 
     @Override
-    public ImmutableList<String> recommendedColumns() {
+    public ImmutableList<String> deviceRecommendedColumns() {
       return ImmutableList.of();
     }
 

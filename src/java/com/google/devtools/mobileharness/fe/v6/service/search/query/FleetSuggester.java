@@ -22,6 +22,11 @@ import static com.google.devtools.mobileharness.fe.v6.service.search.index.Fleet
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_STATUS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_TYPE;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_UUID;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_CONNECTIVITY;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DEVICE_COUNT;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_TYPE;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_NAME;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_RELEASE_STATUS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.IDENTIFIER_KEYS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.MULTI_VALUE_KEYS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PLAIN_VALUE_KEYS;
@@ -49,11 +54,12 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggest
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetViewExisting;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.NoValue;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TextSegment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.KeyCount;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.ValueKeyPair;
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -131,6 +137,15 @@ public final class FleetSuggester {
           "dim::pool",
           FIELD_TYPE);
 
+  /**
+   * Group-by candidates for a bare {@code group by} prefix in the host entity. Ported from the
+   * prototype's {@code HOST_GROUP_BY_ROW} (the 1p host branch), the richest host group-by candidate
+   * pool; scenario awareness comes from the entity-aware key priority that reorders these and from
+   * dropping any candidate absent from the fleet, exactly as the device pool does.
+   */
+  private static final ImmutableList<String> HOST_GROUP_BY_CANDIDATES =
+      ImmutableList.of(HOST_LAB_TYPE, HOST_RELEASE_STATUS);
+
   /** A grouping needs at least two buckets to be worth offering ({@code GROUP_SUGGEST_MIN}). */
   private static final int GROUP_SUGGEST_MIN = 2;
 
@@ -158,6 +173,15 @@ public final class FleetSuggester {
           "dim::pool",
           "dim::os",
           "dim::quarantined");
+
+  /**
+   * Curated starter keys offered for an empty query in the host entity. Ported from the prototype's
+   * host empty state, which offers the host {@code HOST_FILTER_BY_ROW} keys (the 1p host branch);
+   * keys absent from the fleet are skipped, exactly as the device empty state skips absent keys.
+   */
+  private static final ImmutableList<String> HOST_EMPTY_STATE_KEYS =
+      ImmutableList.of(
+          HOST_NAME, HOST_LAB_TYPE, HOST_RELEASE_STATUS, HOST_CONNECTIVITY, HOST_DEVICE_COUNT);
 
   private static final int DEFAULT_LIMIT = 12;
 
@@ -256,8 +280,13 @@ public final class FleetSuggester {
     Fleet fleet = request.getFleet();
     ScenarioCuration curation =
         curations.get(fleet == Fleet.FLEET_UNSPECIFIED ? Fleet.FLEET_SELF : fleet);
+    // The key ranking is entity aware: host keys rank by the host tier table, devices by the device
+    // one. For the device entity the entity-aware curation call resolves to the same device
+    // ranking,
+    // so device suggestions are unchanged.
+    SearchEntity entity = corpus.entity();
     ToIntFunction<String> keyPriority =
-        keyId -> (curation == null || keyId == null) ? 0 : curation.keyPriority(keyId);
+        keyId -> (curation == null || keyId == null) ? 0 : curation.keyPriority(keyId, entity);
 
     Context context =
         new Context(
@@ -526,8 +555,7 @@ public final class FleetSuggester {
 
     // 3. Identifier collapse (PLAIN_VALUE_KEYS, one collapsed suggestion per key).
     for (String identKey : PLAIN_VALUE_KEYS) {
-      ImmutableList<String> keyValues =
-          index.sortedValues().getOrDefault(identKey, ImmutableList.of());
+      ImmutableList<String> keyValues = index.sortedValues(identKey);
       if (keyValues.isEmpty()) {
         continue;
       }
@@ -610,7 +638,7 @@ public final class FleetSuggester {
     List<String> candidates = new ArrayList<>();
     Map<String, Integer> matchRank = new HashMap<>();
     if (term.isEmpty()) {
-      candidates.addAll(GROUP_BY_CANDIDATES);
+      candidates.addAll(groupByCandidates(context.corpus()));
     } else {
       String normTerm = normalize(term);
       for (String keyId : resolveKey(index, term)) {
@@ -678,7 +706,7 @@ public final class FleetSuggester {
     FleetSuggestionResponse.Builder response = FleetSuggestionResponse.newBuilder();
     int emitted = 0;
     // Personalization is deferred, so no recent conditions are offered; only curated starter keys.
-    for (String keyId : EMPTY_STATE_KEYS) {
+    for (String keyId : emptyStateKeys(context.corpus())) {
       if (emitted >= limit) {
         break;
       }
@@ -949,12 +977,11 @@ public final class FleetSuggester {
 
   private static ImmutableList<Match> matchValues(
       FleetIndex index, String keyId, String query, boolean allowContains) {
-    ImmutableList<String> sorted = index.sortedValues().getOrDefault(keyId, ImmutableList.of());
+    ImmutableList<String> sorted = index.sortedValues(keyId);
     if (sorted.isEmpty() || query.isEmpty()) {
       return ImmutableList.of();
     }
-    ImmutableMap<String, Integer> counts =
-        index.valueCounts().getOrDefault(keyId, ImmutableMap.of());
+    ImmutableMap<String, Integer> counts = index.valueCounts(keyId);
     List<Match> out = new ArrayList<>();
     Set<String> exactHits = new HashSet<>();
     // Full match, normalizing space and underscore both ways (spec section 2.3).
@@ -986,8 +1013,7 @@ public final class FleetSuggester {
 
   /** Top values of a key by global count, used to offer ready-to-apply conditions. */
   private static List<Match> topValues(Context context, String keyId, int n) {
-    ImmutableMap<String, Integer> counts =
-        context.index().valueCounts().getOrDefault(keyId, ImmutableMap.of());
+    ImmutableMap<String, Integer> counts = context.index().valueCounts(keyId);
     List<Match> all = new ArrayList<>();
     for (Map.Entry<String, Integer> entry : counts.entrySet()) {
       if (entry.getValue() > 0) {
@@ -1163,18 +1189,7 @@ public final class FleetSuggester {
   }
 
   private static String displayName(FleetIndex index, String keyId) {
-    return index.displayNames().getOrDefault(keyId, deriveDisplayName(keyId));
-  }
-
-  private static String deriveDisplayName(String keyId) {
-    int separator = keyId.indexOf("::");
-    String namespace = separator >= 0 ? keyId.substring(0, separator) : "";
-    String name = separator >= 0 ? keyId.substring(separator + 2) : keyId;
-    return switch (namespace) {
-      case "dim" -> "Dimension " + name;
-      case "prop" -> "Host Property " + name;
-      default -> name;
-    };
+    return index.displayName(keyId);
   }
 
   private static String pillKey(FleetIndex index, String keyId) {
@@ -1194,14 +1209,7 @@ public final class FleetSuggester {
   }
 
   private static String displayValue(FleetIndex index, String keyId, String valueLower) {
-    ImmutableMap<String, String> displays = index.valueDisplays().get(keyId);
-    if (displays != null) {
-      String display = displays.get(valueLower);
-      if (display != null) {
-        return display;
-      }
-    }
-    return valueLower;
+    return index.valueDisplays(keyId).getOrDefault(valueLower, valueLower);
   }
 
   /**
@@ -1268,6 +1276,28 @@ public final class FleetSuggester {
   }
 
   // ---- Small utilities ----
+
+  /**
+   * The bare {@code group by} candidate pool for the corpus's entity: the host pool for host
+   * search, the device pool otherwise. The device branch returns the same {@link
+   * #GROUP_BY_CANDIDATES} constant, so device group-by suggestions are unchanged.
+   */
+  private static ImmutableList<String> groupByCandidates(SearchCorpus corpus) {
+    return corpus.entity() == SearchEntity.SEARCH_ENTITY_HOST
+        ? HOST_GROUP_BY_CANDIDATES
+        : GROUP_BY_CANDIDATES;
+  }
+
+  /**
+   * The empty-query starter keys for the corpus's entity: the host keys for host search, the device
+   * keys otherwise. The device branch returns the same {@link #EMPTY_STATE_KEYS} constant, so the
+   * device empty state is unchanged.
+   */
+  private static ImmutableList<String> emptyStateKeys(SearchCorpus corpus) {
+    return corpus.entity() == SearchEntity.SEARCH_ENTITY_HOST
+        ? HOST_EMPTY_STATE_KEYS
+        : EMPTY_STATE_KEYS;
+  }
 
   private static Optional<String> groupByPrefix(String query) {
     String low = Ascii.toLowerCase(query);
@@ -1337,7 +1367,7 @@ public final class FleetSuggester {
     return others.build();
   }
 
-  private static BitSet devicesWithKey(LazyPostings postings, String keyId) {
+  private static BitSet devicesWithKey(Postings postings, String keyId) {
     BitSet withKey = new BitSet();
     for (int[] posting : postings.forKey(keyId).values()) {
       for (int deviceIndex : posting) {
@@ -1417,6 +1447,9 @@ public final class FleetSuggester {
     addAliases(map, "host::lab_server_version", "lab server version");
     addAliases(map, "host::release_type", "release type", "host release type");
     addAliases(map, "host::ats_controller", "controller", "ats controller", "ats lab");
+    // Host device-count aliases. host::device_count is a host-only key, absent from the device
+    // index, so these resolve to nothing under device search and only take effect for host search.
+    addAliases(map, HOST_DEVICE_COUNT, "device count", "device_count", "devices");
 
     ImmutableMap.Builder<String, ImmutableList<String>> built = ImmutableMap.builder();
     for (Map.Entry<String, Collection<String>> entry : map.asMap().entrySet()) {
@@ -1511,7 +1544,7 @@ public final class FleetSuggester {
       ImmutableList<Integer> current,
       BitSet currentBits,
       ToIntFunction<String> keyPriority,
-      LazyPostings postings) {}
+      Postings postings) {}
 
   /**
    * A candidate suggestion before ranking. Holds the partially built proto (label, main text, and

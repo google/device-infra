@@ -315,8 +315,7 @@ public final class FleetGroupSearcher {
         shown.add(NO_VALUE_DISPLAY);
         continue;
       }
-      ImmutableMap<String, String> displays =
-          index.valueDisplays().getOrDefault(keys.get(i), ImmutableMap.of());
+      ImmutableMap<String, String> displays = index.valueDisplays(keys.get(i));
       List<String> parts = new ArrayList<>();
       for (String value : values) {
         parts.add(displays.getOrDefault(value, value));

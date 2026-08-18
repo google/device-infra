@@ -186,9 +186,7 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
     return Futures.submit(
         () -> {
           Fleet fleet = normalize(request.getFleet());
-          // TODO: route suggestions by request.getEntity(). Host suggestions need host key
-          // priority tiers and host empty-state seeds, so they stay on the device path until then.
-          return suggester.suggest(corpus(fleet, SearchEntity.SEARCH_ENTITY_DEVICE), request);
+          return suggester.suggest(corpus(fleet, request.getEntity()), request);
         },
         executor);
   }
@@ -224,11 +222,7 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
     return Futures.submit(
         () -> {
           Fleet fleet = normalize(request.getFleet());
-          // TODO: route promoted keys by request.getEntity(). They rely on host key priority
-          // and
-          // host candidate rows, so they stay on the device path until then.
-          return promotedKeysProvider.getPromotedKeys(
-              corpus(fleet, SearchEntity.SEARCH_ENTITY_DEVICE), request);
+          return promotedKeysProvider.getPromotedKeys(corpus(fleet, request.getEntity()), request);
         },
         executor);
   }

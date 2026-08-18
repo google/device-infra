@@ -71,8 +71,8 @@ public abstract class FleetSnapshot {
         .setBuildTime(Instant.EPOCH)
         .setDevices(ImmutableList.of())
         .setHosts(ImmutableList.of())
-        .setIndex(FleetIndex.empty())
-        .setHostIndex(FleetIndex.empty())
+        .setIndex(CoreFleetIndex.empty())
+        .setHostIndex(CoreFleetIndex.empty())
         .build();
   }
 
