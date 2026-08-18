@@ -29,7 +29,7 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.ClientApiModule;
-import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalMode;
+import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalModeRule;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.junit.rule.CaptureLogs;
@@ -57,6 +57,7 @@ public class ClientApiLatencyTest {
   @Rule public final SetFlags flags = new SetFlags();
   @Rule public final CaptureLogs captureLogs = new CaptureLogs();
   @Rule public final PrintTestName printTestName = new PrintTestName();
+  @Rule public final LocalModeRule localModeRule = new LocalModeRule();
 
   @Bind @GlobalInternalEventBus private final EventBus globalEventBus = new EventBus();
 
@@ -100,7 +101,7 @@ public class ClientApiLatencyTest {
 
     logger.atInfo().log("Starting job");
     Stopwatch stopwatch = Stopwatch.createStarted();
-    clientApi.startJob(jobInfo, new LocalMode());
+    clientApi.startJob(jobInfo, localModeRule.getLocalMode());
     clientApi.waitForJob(jobInfo.locator().getId());
     Duration executionTime = stopwatch.elapsed();
     logger.atInfo().log("Job ended, execution_time=%s", executionTime);

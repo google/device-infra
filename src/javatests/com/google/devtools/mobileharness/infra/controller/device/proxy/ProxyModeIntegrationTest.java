@@ -28,7 +28,7 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.ClientApiModule;
-import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalMode;
+import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalModeRule;
 import com.google.devtools.mobileharness.shared.util.base.StackTraceExtractor;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
@@ -58,6 +58,7 @@ public class ProxyModeIntegrationTest {
   @Rule public final SetFlags flags = new SetFlags();
   @Rule public final CaptureLogs captureLogs = new CaptureLogs();
   @Rule public final PrintTestName printTestName = new PrintTestName();
+  @Rule public final LocalModeRule localModeRule = new LocalModeRule();
 
   @Bind @GlobalInternalEventBus private final EventBus globalInternalEventBus = new EventBus();
 
@@ -85,7 +86,7 @@ public class ProxyModeIntegrationTest {
   public void startJob() throws Exception {
     JobInfo jobInfo = createJobInfo();
 
-    clientApi.startJob(jobInfo, new LocalMode(), ImmutableList.of());
+    clientApi.startJob(jobInfo, localModeRule.getLocalMode(), ImmutableList.of());
     clientApi.waitForJob(jobInfo.locator().getId());
 
     TestInfo testInfo = jobInfo.tests().getOnly();

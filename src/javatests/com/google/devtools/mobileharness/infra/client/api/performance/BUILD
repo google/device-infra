@@ -33,7 +33,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api",
         "//src/java/com/google/devtools/mobileharness/infra/client/api:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/client/api:module",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:rule",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

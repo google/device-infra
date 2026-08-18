@@ -60,10 +60,7 @@ java_library(
     testonly = 1,
     srcs = ["LocalModeRule.java"],
     visibility = [
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/local:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/controller/device/proxy:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness:__subpackages__",
     ],
     deps = [
         ":local",

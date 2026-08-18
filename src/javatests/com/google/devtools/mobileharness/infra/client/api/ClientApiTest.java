@@ -50,7 +50,7 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDriverStartingEvent;
 import com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
-import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalMode;
+import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalModeRule;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessageSenderFinder;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessagingManager;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessagingServiceModule;
@@ -97,6 +97,7 @@ public class ClientApiTest {
   @Rule public final SetFlags flags = new SetFlags();
   @Rule public final CaptureLogs captureLogs = new CaptureLogs();
   @Rule public final PrintTestName printTestName = new PrintTestName();
+  @Rule public final LocalModeRule localModeRule = new LocalModeRule();
 
   @Bind @GlobalInternalEventBus private final EventBus globalInternalEventBus = new EventBus();
 
@@ -149,7 +150,7 @@ public class ClientApiTest {
                 InvocationType.OLC_CLIENT, InvocationInfo.sameDisplayId("fake_client_id")))) {
       clientApi.startJob(
           jobInfo,
-          new LocalMode(),
+          localModeRule.getLocalMode(),
           ImmutableList.of(
               new Object() {
 
@@ -211,7 +212,7 @@ public class ClientApiTest {
   public void killJob() throws Exception {
     JobInfo jobInfo = createJobInfo(/* sleepTimeSec= */ 60);
 
-    clientApi.startJob(jobInfo, new LocalMode(), ImmutableList.of(this));
+    clientApi.startJob(jobInfo, localModeRule.getLocalMode(), ImmutableList.of(this));
 
     clientApi.waitForJob(jobInfo.locator().getId());
     Sleeper.defaultSleeper().sleep(Duration.ofSeconds(2L));
@@ -224,7 +225,7 @@ public class ClientApiTest {
   public void sendMessage() throws Exception {
     JobInfo jobInfo = createJobInfo(/* sleepTimeSec= */ 60);
 
-    clientApi.startJob(jobInfo, new LocalMode(), ImmutableList.of(this));
+    clientApi.startJob(jobInfo, localModeRule.getLocalMode(), ImmutableList.of(this));
     clientApi.waitForJob(jobInfo.locator().getId());
 
     Timestamp expectedResult = toProtoTimestamp(Instant.ofEpochSecond(246L));
