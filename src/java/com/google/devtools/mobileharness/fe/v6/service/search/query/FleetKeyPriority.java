@@ -26,11 +26,19 @@ import static com.google.devtools.mobileharness.fe.v6.service.search.index.Fleet
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_TYPE;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_UUID;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_ATS_CONTROLLER;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_CONNECTIVITY;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DAEMON_STATUS;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DEVICE_COUNT;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_IP;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_SERVER_VERSION;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_TYPE;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_NAME;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_OS;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_RELEASE_STATUS;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_RELEASE_TYPE;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 
 /**
  * The shared, deployment-independent core of the suggester key ranking: the global tier sets plus
@@ -101,6 +109,28 @@ public final class FleetKeyPriority {
           "host::release_type");
 
   /**
+   * The most important host keys: always ranked highest for the host entity. Ported from the
+   * prototype's {@code HOST_KEY_TIER1}.
+   */
+  public static final ImmutableSet<String> HOST_KEY_TIER1 =
+      ImmutableSet.of(
+          HOST_NAME,
+          HOST_CONNECTIVITY,
+          HOST_DEVICE_COUNT,
+          HOST_OS,
+          HOST_LAB_SERVER_VERSION,
+          HOST_LAB_TYPE,
+          HOST_RELEASE_STATUS,
+          "host::lab_server_activity");
+
+  /**
+   * The secondary host keys: useful but ranked below host tier 1. Ported from the prototype's
+   * {@code HOST_KEY_TIER2}.
+   */
+  public static final ImmutableSet<String> HOST_KEY_TIER2 =
+      ImmutableSet.of(HOST_IP, HOST_RELEASE_TYPE, HOST_DAEMON_STATUS);
+
+  /**
    * The suggester priority for {@code keyId} in {@code scenario}: higher means offered earlier.
    *
    * <p>The rules mirror the prototype {@code _key_priority} for the device entity:
@@ -125,6 +155,37 @@ public final class FleetKeyPriority {
       return 3;
     }
     if (KEY_TIER2.contains(keyId)) {
+      return scenario == Scenario.ATS_ONE ? 1 : 2;
+    }
+    return scenario == Scenario.ONE_P ? 1 : 0;
+  }
+
+  /**
+   * The suggester priority for {@code keyId} in {@code scenario} for the given {@code entity}:
+   * higher means offered earlier.
+   *
+   * <p>For the device entity this is exactly {@link #priority(String, Scenario)}, so device ranking
+   * is unchanged. For the host entity a separate host tier table applies, mirroring the prototype
+   * {@code _key_priority} host branch:
+   *
+   * <ul>
+   *   <li>{@code host::ats_controller}: 3 in ats-all (its defining axis) else 1.
+   *   <li>a host tier 1 key: 3.
+   *   <li>a host tier 2 key: 1 in ats-one (which keeps its list short) else 2.
+   *   <li>any other key: 1 in 1p else 0 (kept out of the way in both ATS scenarios).
+   * </ul>
+   */
+  public static int priority(String keyId, Scenario scenario, SearchEntity entity) {
+    if (entity != SearchEntity.SEARCH_ENTITY_HOST) {
+      return priority(keyId, scenario);
+    }
+    if (keyId.equals(HOST_ATS_CONTROLLER)) {
+      return scenario == Scenario.ATS_ALL ? 3 : 1;
+    }
+    if (HOST_KEY_TIER1.contains(keyId)) {
+      return 3;
+    }
+    if (HOST_KEY_TIER2.contains(keyId)) {
       return scenario == Scenario.ATS_ONE ? 1 : 2;
     }
     return scenario == Scenario.ONE_P ? 1 : 0;

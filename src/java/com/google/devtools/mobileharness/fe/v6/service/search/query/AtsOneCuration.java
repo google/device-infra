@@ -29,6 +29,7 @@ import static com.google.devtools.mobileharness.fe.v6.service.search.index.Fleet
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetKeyPriority.Scenario;
 import javax.inject.Inject;
 
@@ -47,24 +48,24 @@ public final class AtsOneCuration implements ScenarioCuration {
   AtsOneCuration() {}
 
   @Override
-  public ImmutableList<String> filterByRow() {
+  public ImmutableList<String> deviceFilterByRow() {
     return ImmutableList.of(
         FIELD_UUID, HOST_NAME, FIELD_STATUS, "dim::model", "dim::sdk_version", CONFIG_WIFI_SSID);
   }
 
   @Override
-  public ImmutableList<String> groupByRow() {
+  public ImmutableList<String> deviceGroupByRow() {
     return ImmutableList.of(HOST_NAME, CONFIG_WIFI_SSID);
   }
 
   @Override
-  public ImmutableList<String> defaultColumns() {
+  public ImmutableList<String> deviceDefaultColumns() {
     return ImmutableList.of(
         FIELD_UUID, HOST_NAME, FIELD_STATUS, "dim::model", "dim::os", CONFIG_WIFI_SSID);
   }
 
   @Override
-  public ImmutableList<String> recommendedColumns() {
+  public ImmutableList<String> deviceRecommendedColumns() {
     return ImmutableList.of(
         HOST_NAME,
         FIELD_STATUS,
@@ -106,6 +107,11 @@ public final class AtsOneCuration implements ScenarioCuration {
   @Override
   public int keyPriority(String keyId) {
     return FleetKeyPriority.priority(keyId, Scenario.ATS_ONE);
+  }
+
+  @Override
+  public int keyPriority(String keyId, SearchEntity entity) {
+    return FleetKeyPriority.priority(keyId, Scenario.ATS_ONE, entity);
   }
 
   @Override

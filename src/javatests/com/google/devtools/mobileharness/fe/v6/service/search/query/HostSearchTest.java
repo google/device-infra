@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
@@ -50,10 +51,13 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.Indicator;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Row;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.HostEnrichment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import com.google.inject.Guice;
 import java.time.Instant;
+import java.util.Optional;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -202,6 +206,56 @@ public final class HostSearchTest {
     assertThat(rowIds(results)).containsExactly("lab-a", "lab-c").inOrder();
   }
 
+  @Test
+  public void flat_atsControllerColumn_showsFriendlyDisplayWithIdFallbackAndFilters() {
+    // Enrich each host with the ATS controller it came from and a controller-display registry that
+    // only covers ctrl-1, so the cell shows the friendly display for ctrl-1 and falls back to the
+    // raw id for the unregistered ctrl-2. lab-c has no controller, so its cell is blank.
+    FleetRawData raw =
+        FleetRawData.builder()
+            .setLabData(fleet())
+            .setHostEnrichments(
+                ImmutableMap.of(
+                    "lab-a", atsControllerEnrichment("ctrl-1"),
+                    "lab-b", atsControllerEnrichment("ctrl-2")))
+            .setAtsControllerDisplays(ImmutableMap.of("ctrl-1", "ATS Lab One"))
+            .build();
+    FleetSnapshot enriched =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(raw, BUILD_TIME);
+    HostCorpus enrichedCorpus =
+        new HostCorpus(enriched, LazyPostings.forHosts(enriched.hosts()), null);
+
+    ImmutableList<String> columns = ImmutableList.of("host::host_name", "host::ats_controller");
+
+    // Column projection: HostCellMapper resolves the friendly display, with id fallback and a blank
+    // cell for a host with no controller.
+    FleetFlatResults results =
+        flatSearcher.searchFlat(
+            enrichedCorpus,
+            ImmutableList.of(),
+            columns,
+            FleetColumnSort.getDefaultInstance(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(rowIds(results)).containsExactly("lab-a", "lab-b", "lab-c").inOrder();
+    assertThat(results.getColumns(1).getDisplayName()).isEqualTo("ATS Lab");
+    Cell registered = results.getRows(0).getCells(1);
+    assertThat(registered.getKindCase()).isEqualTo(Cell.KindCase.TEXT);
+    assertThat(registered.getText().getValue()).isEqualTo("ATS Lab One");
+    assertThat(results.getRows(1).getCells(1).getText().getValue()).isEqualTo("ctrl-2");
+    assertThat(results.getRows(2).getCells(1).getText().getValue()).isEmpty();
+
+    // Filtering by the controller id goes through HostValueExtractor, selecting only the matching
+    // host.
+    FleetFlatResults filtered =
+        flatSearcher.searchFlat(
+            enrichedCorpus,
+            ImmutableList.of(simple("host::ats_controller", "ctrl-1")),
+            columns,
+            FleetColumnSort.getDefaultInstance(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(rowIds(filtered)).containsExactly("lab-a");
+  }
+
   // --- Group by ---
 
   @Test
@@ -335,6 +389,10 @@ public final class HostSearchTest {
       }
     }
     throw new AssertionError("No entry with key: " + key);
+  }
+
+  private static HostEnrichment atsControllerEnrichment(String controllerId) {
+    return HostEnrichment.builder().setAtsController(Optional.of(controllerId)).build();
   }
 
   private static Filter simple(String key, String value) {

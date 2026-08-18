@@ -35,7 +35,9 @@ java_library(
     deps = [
         ":search_service_logic",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:dimension_overlay",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:overlay_view",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:device_corpus",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_chip_resolver",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_column_cataloger",
@@ -48,6 +50,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:host_corpus",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:scenario_curation",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:search_corpus",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:dimension_overlay_store",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:fleet_snapshot_store",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",

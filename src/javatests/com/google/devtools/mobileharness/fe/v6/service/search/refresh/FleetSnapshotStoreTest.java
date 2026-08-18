@@ -21,7 +21,7 @@ import static com.google.common.truth.Truth.assertThat;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.HostRecord;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
@@ -81,8 +81,8 @@ public final class FleetSnapshotStoreTest {
             .setBuildTime(Instant.ofEpochSecond(1_700_000_000L))
             .setDevices(ImmutableList.of())
             .setHosts(ImmutableList.of(host("lab1", 2), host("lab2", 1)))
-            .setIndex(FleetIndex.empty())
-            .setHostIndex(FleetIndex.empty())
+            .setIndex(CoreFleetIndex.empty())
+            .setHostIndex(CoreFleetIndex.empty())
             .build();
 
     store.publish(Fleet.FLEET_SELF, snapshot);
@@ -100,8 +100,8 @@ public final class FleetSnapshotStoreTest {
         .setBuildTime(Instant.ofEpochSecond(epochSecond))
         .setDevices(ImmutableList.of())
         .setHosts(ImmutableList.of())
-        .setIndex(FleetIndex.empty())
-        .setHostIndex(FleetIndex.empty())
+        .setIndex(CoreFleetIndex.empty())
+        .setHostIndex(CoreFleetIndex.empty())
         .build();
   }
 
