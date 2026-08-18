@@ -128,7 +128,7 @@ public final class HostSearchConfigProviderTest {
       keys.add(descriptor.getKey());
     }
     // The device default columns are the device curation list, not the host list.
-    assertThat(keys).containsExactlyElementsIn(curation.defaultColumns()).inOrder();
+    assertThat(keys).containsExactlyElementsIn(curation.deviceDefaultColumns()).inOrder();
     assertThat(config.getLanding().getBrowseAllCount()).isEqualTo(snapshot.deviceCount());
   }
 

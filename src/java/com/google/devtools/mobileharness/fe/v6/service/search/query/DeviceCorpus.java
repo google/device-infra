@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -23,12 +25,16 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.Cell;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Column;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetUtilization;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.TextCell;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.CompositeFleetIndex;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.CompositePostings;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceRecord;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceValueExtractor;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.OverlayView;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -38,8 +44,7 @@ import javax.annotation.Nullable;
  *
  * <p>Records are the snapshot's devices, identified by device UUID. The value projection delegates
  * to {@link DeviceValueExtractor} (lowercased sets) and {@link FleetCellMapper} (display values,
- * headers, typed cells), so it mirrors exactly what the device index builder recorded. Utilization
- * is the device idle / busy / other bucketing, so a device group carries a utilization breakdown.
+ * headers, typed cells), falling back to {@link OverlayView} for on-demand long-tail dimensions.
  */
 public final class DeviceCorpus implements SearchCorpus {
 
@@ -59,24 +64,36 @@ public final class DeviceCorpus implements SearchCorpus {
           "FASTBOOTDMODE");
 
   private final FleetSnapshot snapshot;
-  private final LazyPostings postings;
+  private final FleetIndex index;
+  private final Postings postings;
+  private final OverlayView overlayView;
   @Nullable private final ScenarioCuration curation;
   private final FleetCellMapper cellMapper = new FleetCellMapper();
 
   public DeviceCorpus(
-      FleetSnapshot snapshot, LazyPostings postings, @Nullable ScenarioCuration curation) {
-    this.snapshot = snapshot;
-    this.postings = postings;
+      FleetSnapshot snapshot,
+      Postings postings,
+      @Nullable ScenarioCuration curation,
+      OverlayView overlayView) {
+    this.snapshot = checkNotNull(snapshot);
+    this.overlayView = checkNotNull(overlayView);
+    this.index = new CompositeFleetIndex(snapshot.index(), overlayView);
+    this.postings = new CompositePostings(postings, overlayView);
     this.curation = curation;
+  }
+
+  public DeviceCorpus(
+      FleetSnapshot snapshot, Postings postings, @Nullable ScenarioCuration curation) {
+    this(snapshot, postings, curation, OverlayView.empty());
   }
 
   @Override
   public FleetIndex index() {
-    return snapshot.index();
+    return index;
   }
 
   @Override
-  public LazyPostings postings() {
+  public Postings postings() {
     return postings;
   }
 
@@ -107,21 +124,34 @@ public final class DeviceCorpus implements SearchCorpus {
 
   @Override
   public ImmutableSet<String> valuesForKey(int index, String keyId) {
+    if (overlayView.containsKey(keyId)) {
+      return overlayView.valuesForKey(index, keyId);
+    }
     return DeviceValueExtractor.valuesForKey(snapshot.devices().get(index), keyId);
   }
 
   @Override
   public ImmutableList<String> displayValues(int index, String keyId) {
+    if (overlayView.containsKey(keyId)) {
+      return overlayView.displayValues(index, keyId);
+    }
     return FleetCellMapper.displayValues(snapshot.devices().get(index), keyId, snapshot);
   }
 
   @Override
   public Column column(String keyId) {
-    return cellMapper.column(keyId, snapshot);
+    return Column.newBuilder().setKey(keyId).setDisplayName(index.displayName(keyId)).build();
   }
 
   @Override
   public Cell cell(int index, String keyId) {
+    if (overlayView.containsKey(keyId)) {
+      return Cell.newBuilder()
+          .setText(
+              TextCell.newBuilder()
+                  .setValue(String.join(", ", overlayView.displayValues(index, keyId))))
+          .build();
+    }
     return cellMapper.cell(keyId, snapshot.devices().get(index), snapshot);
   }
 
