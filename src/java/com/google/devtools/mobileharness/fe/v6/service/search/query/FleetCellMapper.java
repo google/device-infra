@@ -27,8 +27,15 @@ import static com.google.devtools.mobileharness.fe.v6.service.search.index.Fleet
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_TYPE;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_UUID;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_ATS_CONTROLLER;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_CONNECTIVITY;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DAEMON_STATUS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_IP;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_SERVER_VERSION;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_TYPE;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_NAME;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_OS;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_RELEASE_STATUS;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_RELEASE_TYPE;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PROP_PREFIX;
 
 import com.google.common.base.Ascii;
@@ -173,6 +180,21 @@ public final class FleetCellMapper {
       // The device stores the raw controller id; show the friendly display from the index's
       // per-value display map, falling back to the id itself when the registry has no entry.
       case HOST_ATS_CONTROLLER -> atsControllerValues(device, snapshot);
+      // Cross-entity host attributes stamped onto each device. These mirror the value sets recorded
+      // by DeviceValueExtractor.valuesForKey: lab type is multi valued, the rest single valued,
+      // with
+      // the optionals collapsing to an empty list when absent so the column renders blank.
+      case HOST_LAB_TYPE -> device.labTypes();
+      case HOST_OS -> singleton(device.hostOs());
+      case HOST_CONNECTIVITY -> singleton(device.hostConnectivity());
+      case HOST_DAEMON_STATUS ->
+          device.daemonStatus().map(ImmutableList::of).orElse(ImmutableList.of());
+      case HOST_RELEASE_STATUS ->
+          device.releaseStatus().map(ImmutableList::of).orElse(ImmutableList.of());
+      case HOST_RELEASE_TYPE ->
+          device.releaseType().map(ImmutableList::of).orElse(ImmutableList.of());
+      case HOST_LAB_SERVER_VERSION ->
+          device.labServerVersion().map(ImmutableList::of).orElse(ImmutableList.of());
       default -> prefixedValues(device, keyId);
     };
   }

@@ -92,13 +92,16 @@ public final class FleetColumnCatalogerTest {
         cataloger.getColumnCatalog(
             snapshot, FleetColumnCatalogRequest.getDefaultInstance(), postings);
 
-    // Built-ins are the field::, host::, and config:: keys, listed in full and sorted by display
-    // name: Host IP, Host Name, Owners, Status, Type, UUID.
+    // Built-ins are the field::, host::, and config:: keys present in the index, listed in full and
+    // sorted by display name: Host IP, Host Lab Server Connectivity, Host Name, Host OS, Owners,
+    // Status, Type, UUID.
     FleetColumnCatalogSection builtin = section(response, "Built-in fields");
     assertThat(keys(builtin))
         .containsExactly(
             "host::host_ip",
+            "host::connectivity",
             "host::host_name",
+            "host::host_os",
             "field::owner",
             "field::status",
             "field::type",

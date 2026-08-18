@@ -25,7 +25,10 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
+import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
@@ -46,6 +49,8 @@ import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceEnrich
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.HostEnrichment;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import com.google.inject.Guice;
 import java.time.Instant;
 import java.util.Optional;
@@ -70,6 +75,7 @@ public final class FleetFlatSearcherTest {
   // obtain them through Guice rather than constructing directly.
   private final FleetSnapshot snapshot =
       Guice.createInjector().getInstance(FleetIndexBuilder.class).build(fleet(), BUILD_TIME);
+  private final LazyPostings postings = new LazyPostings(snapshot.devices());
   private final FleetFlatSearcher searcher =
       Guice.createInjector().getInstance(FleetFlatSearcher.class);
 
@@ -81,7 +87,8 @@ public final class FleetFlatSearcherTest {
             ImmutableList.of(),
             COLUMNS,
             FleetColumnSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance());
+            FleetPageRequest.getDefaultInstance(),
+            postings);
 
     assertThat(rowIds(results)).containsExactly("device-0", "device-1", "device-2").inOrder();
     assertThat(results.getTotal()).isEqualTo(3);
@@ -99,7 +106,8 @@ public final class FleetFlatSearcherTest {
             ImmutableList.of(simple("field::status", "IDLE")),
             COLUMNS,
             FleetColumnSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance());
+            FleetPageRequest.getDefaultInstance(),
+            postings);
 
     assertThat(rowIds(results)).containsExactly("device-0", "device-2").inOrder();
     assertThat(results.getTotal()).isEqualTo(2);
@@ -113,7 +121,8 @@ public final class FleetFlatSearcherTest {
             ImmutableList.of(),
             COLUMNS,
             FleetColumnSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance());
+            FleetPageRequest.getDefaultInstance(),
+            postings);
 
     assertThat(columnKeys(results))
         .containsExactly("field::uuid", "host::host_name", "field::status", "dim::os")
@@ -132,7 +141,8 @@ public final class FleetFlatSearcherTest {
             ImmutableList.of(simple("field::uuid", "device-0")),
             COLUMNS,
             FleetColumnSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance());
+            FleetPageRequest.getDefaultInstance(),
+            postings);
 
     Row row = results.getRows(0);
     Cell uuidCell = row.getCells(0);
@@ -166,7 +176,8 @@ public final class FleetFlatSearcherTest {
             ImmutableList.of(simple("field::uuid", "device-1")),
             COLUMNS,
             FleetColumnSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance());
+            FleetPageRequest.getDefaultInstance(),
+            postings);
 
     Cell statusCell = results.getRows(0).getCells(2);
     assertThat(statusCell.getStatus().getText()).isEqualTo("BUSY");
@@ -181,7 +192,8 @@ public final class FleetFlatSearcherTest {
             ImmutableList.of(simple("field::uuid", "device-2")),
             ImmutableList.of("field::owner"),
             FleetColumnSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance());
+            FleetPageRequest.getDefaultInstance(),
+            postings);
 
     Cell ownerCell = results.getRows(0).getCells(0);
     assertThat(ownerCell.getKindCase()).isEqualTo(Cell.KindCase.TEXT);
@@ -196,7 +208,8 @@ public final class FleetFlatSearcherTest {
             ImmutableList.of(),
             COLUMNS,
             FleetColumnSort.newBuilder().setKey("field::status").setAscending(true).build(),
-            FleetPageRequest.getDefaultInstance());
+            FleetPageRequest.getDefaultInstance(),
+            postings);
 
     // BUSY sorts before IDLE; the two IDLE devices tie-break by UUID ascending.
     assertThat(rowIds(results)).containsExactly("device-1", "device-0", "device-2").inOrder();
@@ -210,7 +223,8 @@ public final class FleetFlatSearcherTest {
             ImmutableList.of(),
             COLUMNS,
             FleetColumnSort.newBuilder().setKey("field::status").setAscending(false).build(),
-            FleetPageRequest.getDefaultInstance());
+            FleetPageRequest.getDefaultInstance(),
+            postings);
 
     // Descending reverses the whole ordering, tie-break included.
     assertThat(rowIds(results)).containsExactly("device-2", "device-0", "device-1").inOrder();
@@ -221,7 +235,12 @@ public final class FleetFlatSearcherTest {
     FleetPageRequest firstPage = FleetPageRequest.newBuilder().setPageSize(2).build();
     FleetFlatResults page1 =
         searcher.searchFlat(
-            snapshot, ImmutableList.of(), COLUMNS, FleetColumnSort.getDefaultInstance(), firstPage);
+            snapshot,
+            ImmutableList.of(),
+            COLUMNS,
+            FleetColumnSort.getDefaultInstance(),
+            firstPage,
+            postings);
 
     assertThat(rowIds(page1)).containsExactly("device-0", "device-1").inOrder();
     assertThat(page1.getTotal()).isEqualTo(3);
@@ -238,7 +257,8 @@ public final class FleetFlatSearcherTest {
             ImmutableList.of(),
             COLUMNS,
             FleetColumnSort.getDefaultInstance(),
-            secondPage);
+            secondPage,
+            postings);
 
     assertThat(rowIds(page2)).containsExactly("device-2");
     assertThat(page2.getRangeStart()).isEqualTo(3);
@@ -272,7 +292,8 @@ public final class FleetFlatSearcherTest {
             ImmutableList.of(),
             ImmutableList.of("field::uuid", "host::ats_controller"),
             FleetColumnSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance());
+            FleetPageRequest.getDefaultInstance(),
+            postings);
 
     assertThat(rowIds(results)).containsExactly("device-0", "device-1", "device-2").inOrder();
     // device-0: ctrl-1 mapped to its friendly display.
@@ -286,6 +307,89 @@ public final class FleetFlatSearcherTest {
   }
 
   @Test
+  public void hostAttributeColumns_projectValuesWithEmptyFallback() {
+    // Layer host attributes onto the fleet: lab1 runs debian with a Core Lab release, lab2 runs
+    // macos with no HostInfoService enrichment. The host keys added by CL A must render their
+    // stamped values rather than a blank cell.
+    FleetRawData raw =
+        FleetRawData.builder()
+            .setLabData(hostAttributeFleet())
+            .setHostEnrichments(
+                ImmutableMap.of(
+                    "lab1",
+                    HostEnrichment.builder()
+                        .setReleaseType(Optional.of("SHARED_LAB"))
+                        .setReleaseStatus(Optional.of("RUNNING"))
+                        .setDaemonStatus(Optional.of("RUNNING"))
+                        .setLabServerVersion(Optional.of("1.2.3"))
+                        .build()))
+            .build();
+    FleetSnapshot enriched =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(raw, BUILD_TIME);
+    LazyPostings enrichedPostings = new LazyPostings(enriched.devices());
+
+    ImmutableList<String> columns =
+        ImmutableList.of("field::uuid", "host::lab_type", "host::host_os", "host::release_status");
+    FleetFlatResults results =
+        searcher.searchFlat(
+            enriched,
+            ImmutableList.of(),
+            columns,
+            FleetColumnSort.getDefaultInstance(),
+            FleetPageRequest.getDefaultInstance(),
+            enrichedPostings);
+
+    assertThat(rowIds(results)).containsExactly("device-0", "device-1", "device-2").inOrder();
+
+    // device-0 on lab1: every host key projects a value, lab type as a comma-joinable TextCell.
+    Row lab1Row = results.getRows(0);
+    Cell labTypeCell = lab1Row.getCells(1);
+    assertThat(labTypeCell.getKindCase()).isEqualTo(Cell.KindCase.TEXT);
+    assertThat(labTypeCell.getText().getValue()).isEqualTo("Core Lab");
+    assertThat(lab1Row.getCells(2).getText().getValue()).isEqualTo("debian");
+    assertThat(lab1Row.getCells(3).getText().getValue()).isEqualTo("RUNNING");
+
+    // device-2 on lab2: no lab type and no release status, so those cells are blank; host os still
+    // renders from the LabInfo host property.
+    Row lab2Row = results.getRows(2);
+    assertThat(lab2Row.getCells(1).getText().getValue()).isEmpty();
+    assertThat(lab2Row.getCells(2).getText().getValue()).isEqualTo("macos");
+    assertThat(lab2Row.getCells(3).getText().getValue()).isEmpty();
+  }
+
+  @Test
+  public void sortByHostKey_ordersRowsByHostAttribute() {
+    FleetSnapshot enriched =
+        Guice.createInjector()
+            .getInstance(FleetIndexBuilder.class)
+            .build(FleetRawData.builder().setLabData(hostAttributeFleet()).build(), BUILD_TIME);
+    LazyPostings enrichedPostings = new LazyPostings(enriched.devices());
+    ImmutableList<String> columns = ImmutableList.of("field::uuid", "host::host_os");
+
+    // debian (lab1) sorts before macos (lab2); the two lab1 devices tie-break by UUID ascending.
+    FleetFlatResults ascending =
+        searcher.searchFlat(
+            enriched,
+            ImmutableList.of(),
+            columns,
+            FleetColumnSort.newBuilder().setKey("host::host_os").setAscending(true).build(),
+            FleetPageRequest.getDefaultInstance(),
+            enrichedPostings);
+    assertThat(rowIds(ascending)).containsExactly("device-0", "device-1", "device-2").inOrder();
+
+    // Descending reverses the whole ordering, tie-break included.
+    FleetFlatResults descending =
+        searcher.searchFlat(
+            enriched,
+            ImmutableList.of(),
+            columns,
+            FleetColumnSort.newBuilder().setKey("host::host_os").setAscending(false).build(),
+            FleetPageRequest.getDefaultInstance(),
+            enrichedPostings);
+    assertThat(rowIds(descending)).containsExactly("device-2", "device-1", "device-0").inOrder();
+  }
+
+  @Test
   public void pagination_defaultPageSizeReturnsEverything() {
     FleetFlatResults results =
         searcher.searchFlat(
@@ -293,7 +397,8 @@ public final class FleetFlatSearcherTest {
             ImmutableList.of(),
             COLUMNS,
             FleetColumnSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance());
+            FleetPageRequest.getDefaultInstance(),
+            postings);
 
     assertThat(results.getRowsCount()).isEqualTo(3);
     assertThat(results.getNextPageToken()).isEmpty();
@@ -346,6 +451,38 @@ public final class FleetFlatSearcherTest {
             LabInfo.newBuilder()
                 .setLabLocator(LabLocator.newBuilder().setHostName(hostName).setIp(ip))
                 .setLabStatus(LabStatus.LAB_RUNNING))
+        .setDeviceList(deviceList)
+        .build();
+  }
+
+  // A fleet that stamps a host_os host property per host so the host attribute keys have values.
+  private static LabQueryResult hostAttributeFleet() {
+    return LabQueryResult.newBuilder()
+        .setLabView(
+            LabQueryResult.LabView.newBuilder()
+                .setLabTotalCount(2)
+                .addLabData(labDataWithHostOs("lab1", "1.1.1.1", "debian", device0(), device1()))
+                .addLabData(labDataWithHostOs("lab2", "2.2.2.2", "macos", device2())))
+        .build();
+  }
+
+  private static LabData labDataWithHostOs(
+      String hostName, String ip, String hostOs, DeviceInfo... devices) {
+    DeviceList.Builder deviceList = DeviceList.newBuilder().setDeviceTotalCount(devices.length);
+    for (DeviceInfo device : devices) {
+      deviceList.addDeviceInfo(device);
+    }
+    return LabData.newBuilder()
+        .setLabInfo(
+            LabInfo.newBuilder()
+                .setLabLocator(LabLocator.newBuilder().setHostName(hostName).setIp(ip))
+                .setLabStatus(LabStatus.LAB_RUNNING)
+                .setLabServerFeature(
+                    LabServerFeature.newBuilder()
+                        .setHostProperties(
+                            HostProperties.newBuilder()
+                                .addHostProperty(
+                                    HostProperty.newBuilder().setKey("host_os").setValue(hostOs)))))
         .setDeviceList(deviceList)
         .build();
   }

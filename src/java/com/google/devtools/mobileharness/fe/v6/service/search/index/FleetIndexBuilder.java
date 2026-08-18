@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.index;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.CONFIG_WIFI_SSID;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.DIM_PREFIX;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.DIM_QUARANTINED;
@@ -29,9 +30,15 @@ import static com.google.devtools.mobileharness.fe.v6.service.search.index.Fleet
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_TYPE;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_UUID;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_ATS_CONTROLLER;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_CONNECTIVITY;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DAEMON_STATUS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_IP;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_SERVER_VERSION;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_TYPE;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_NAME;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_OS;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_RELEASE_STATUS;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_RELEASE_TYPE;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PLAIN_VALUE_KEYS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PROP_PREFIX;
 
@@ -52,6 +59,9 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
+import com.google.devtools.mobileharness.fe.v6.service.host.util.HostConnectivityStatuses;
+import com.google.devtools.mobileharness.fe.v6.service.host.util.HostTypes;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.UiLabType;
 import com.google.protobuf.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -115,14 +125,14 @@ public final class FleetIndexBuilder {
           .put(CONFIG_WIFI_SSID, "Wi-Fi SSID")
           .put(HOST_NAME, "Host Name")
           .put(HOST_IP, "Host IP")
-          .put("host::host_os", "Host OS")
+          .put(HOST_OS, "Host OS")
           .put(HOST_LAB_TYPE, "Host Lab Type")
-          .put("host::connectivity", "Host Lab Server Connectivity")
+          .put(HOST_CONNECTIVITY, "Host Lab Server Connectivity")
           .put("host::lab_server_activity", "Host Lab Server Activity")
-          .put("host::daemon_status", "Host Daemon Server Status")
-          .put("host::release_status", "Host Release Status")
-          .put("host::lab_server_version", "Host Lab Server Version")
-          .put("host::release_type", "Host Release Type")
+          .put(HOST_DAEMON_STATUS, "Host Daemon Server Status")
+          .put(HOST_RELEASE_STATUS, "Host Release Status")
+          .put(HOST_LAB_SERVER_VERSION, "Host Lab Server Version")
+          .put(HOST_RELEASE_TYPE, "Host Release Type")
           .put(HOST_ATS_CONTROLLER, "ATS Lab")
           .buildOrThrow();
 
@@ -177,13 +187,34 @@ public final class FleetIndexBuilder {
                   ImmutableMap<String, String> hostProperties = extractHostProperties(labInfo);
                   Optional<HostEnrichment> hostEnrichment =
                       Optional.ofNullable(raw.hostEnrichments().get(hostName));
+                  // Lab type is the composite of the LabInfo host properties (lab_type, dm_type)
+                  // and the HostInfoService release enum, matching the host detail page. It is
+                  // empty
+                  // for any host with no lab type (every ATS host), which keeps the key internal
+                  // only and data driven. UNKNOWN is treated as no lab type so it never surfaces.
+                  Optional<String> releaseTypeOpt =
+                      hostEnrichment.flatMap(HostEnrichment::releaseType);
                   ImmutableList<String> labTypes =
-                      hostEnrichment.map(HostEnrichment::labTypes).orElse(ImmutableList.of());
+                      HostTypes.determineUiLabTypes(Optional.of(labInfo), releaseTypeOpt).stream()
+                          .filter(labType -> labType != UiLabType.UNKNOWN)
+                          .map(HostTypes::labTypeDisplayName)
+                          .collect(toImmutableList());
+                  // Host OS mirrors the host detail page default of "Unknown" when the property is
+                  // absent. Connectivity uses the same LabStatus bucketing as the detail page.
+                  String hostOs = hostProperties.getOrDefault("host_os", "Unknown");
+                  String hostConnectivity =
+                      HostConnectivityStatuses.create(Optional.of(labInfo)).getTitle();
 
                   DeviceList deviceList = labData.getDeviceList();
                   HostRecord hostRecord =
                       buildHostRecord(
-                          hostName, hostIp, labStatus, hostProperties, deviceList, hostEnrichment);
+                          hostName,
+                          hostIp,
+                          labStatus,
+                          hostProperties,
+                          deviceList,
+                          labTypes,
+                          hostEnrichment);
 
                   // TODO: Consider refactoring thread-identity partitioned
                   // accumulators to a standard Stream collect/reduce or manual list chunking
@@ -204,9 +235,12 @@ public final class FleetIndexBuilder {
                             labStatus,
                             masterDetectedIp,
                             hostProperties,
+                            hostRecord,
+                            hostOs,
+                            hostConnectivity,
                             deviceEnrichment);
                     devices.add(record);
-                    indexDevice(accum, record, hostProperties, labTypes, atsControllerDisplays);
+                    indexDevice(accum, record, atsControllerDisplays);
                   }
                   return new HostDevices(hostRecord, devices);
                 })
@@ -239,6 +273,7 @@ public final class FleetIndexBuilder {
       String labStatus,
       ImmutableMap<String, String> hostProperties,
       DeviceList deviceList,
+      ImmutableList<String> labTypes,
       Optional<HostEnrichment> enrichment) {
     return HostRecord.builder()
         .setHostName(hostName)
@@ -246,7 +281,7 @@ public final class FleetIndexBuilder {
         .setLabStatus(labStatus)
         .setHostProperties(hostProperties)
         .setDeviceCount(deviceList.getDeviceInfoCount())
-        .setLabTypes(enrichment.map(HostEnrichment::labTypes).orElse(ImmutableList.of()))
+        .setLabTypes(labTypes)
         .setReleaseStatus(enrichment.flatMap(HostEnrichment::releaseStatus))
         .setReleaseType(enrichment.flatMap(HostEnrichment::releaseType))
         .setDaemonStatus(enrichment.flatMap(HostEnrichment::daemonStatus))
@@ -266,6 +301,9 @@ public final class FleetIndexBuilder {
       String labStatus,
       Optional<String> masterDetectedIp,
       ImmutableMap<String, String> hostProperties,
+      HostRecord host,
+      String hostOs,
+      String hostConnectivity,
       Optional<DeviceEnrichment> enrichment) {
     DeviceFeature feature = deviceInfo.getDeviceFeature();
     DeviceCondition condition = deviceInfo.getDeviceCondition();
@@ -293,6 +331,13 @@ public final class FleetIndexBuilder {
         .setHostProperties(hostProperties)
         .setWifiSsid(enrichment.flatMap(DeviceEnrichment::wifiSsid))
         .setAtsController(enrichment.flatMap(DeviceEnrichment::atsController))
+        .setLabTypes(host.labTypes())
+        .setHostOs(hostOs)
+        .setHostConnectivity(hostConnectivity)
+        .setDaemonStatus(host.daemonStatus())
+        .setReleaseStatus(host.releaseStatus())
+        .setReleaseType(host.releaseType())
+        .setLabServerVersion(host.labServerVersion())
         .build();
   }
 
@@ -360,8 +405,6 @@ public final class FleetIndexBuilder {
   private static void indexDevice(
       Accumulator accumulator,
       DeviceRecord record,
-      ImmutableMap<String, String> hostProperties,
-      ImmutableList<String> labTypes,
       ImmutableMap<String, String> atsControllerDisplays) {
     Set<String> seen = new HashSet<>();
 
@@ -395,7 +438,7 @@ public final class FleetIndexBuilder {
       }
     }
     accumulator.add(seen, DIM_QUARANTINED, record.quarantined() ? "Yes" : "No");
-    for (Map.Entry<String, String> entry : hostProperties.entrySet()) {
+    for (Map.Entry<String, String> entry : record.hostProperties().entrySet()) {
       accumulator.add(seen, PROP_PREFIX + entry.getKey(), entry.getValue());
     }
     if (!record.hostName().isEmpty()) {
@@ -404,15 +447,23 @@ public final class FleetIndexBuilder {
     if (!record.hostIp().isEmpty()) {
       accumulator.add(seen, HOST_IP, record.hostIp());
     }
-    // Stamp the host lab types onto each device so devices are filterable and facetable by lab
-    // type.
-    for (String labType : labTypes) {
+    // Stamp the cross-entity host attributes onto each device so devices are filterable, facetable,
+    // and groupable by a host attribute. The empty-value skip in Accumulator.add gates these to the
+    // data that exists: HostInfoService-sourced values are absent in ATS and simply do not appear,
+    // and a host with no lab type contributes no lab type value.
+    for (String labType : record.labTypes()) {
       accumulator.add(seen, HOST_LAB_TYPE, labType);
     }
-    // TODO: index the remaining cross-entity host attributes (host::host_os,
-    // host::connectivity, host::lab_server_activity, host::daemon_status, host::release_status,
-    // host::lab_server_version, host::release_type). They are derived from HostInfoService, which
-    // later CLs add.
+    accumulator.add(seen, HOST_OS, record.hostOs());
+    accumulator.add(seen, HOST_CONNECTIVITY, record.hostConnectivity());
+    record.daemonStatus().ifPresent(value -> accumulator.add(seen, HOST_DAEMON_STATUS, value));
+    record.releaseStatus().ifPresent(value -> accumulator.add(seen, HOST_RELEASE_STATUS, value));
+    record.releaseType().ifPresent(value -> accumulator.add(seen, HOST_RELEASE_TYPE, value));
+    record
+        .labServerVersion()
+        .ifPresent(value -> accumulator.add(seen, HOST_LAB_SERVER_VERSION, value));
+    // TODO: index host::lab_server_activity once the lab activity source is wired into the fleet
+    // pull. It is the only cross-entity host attribute still deferred.
     record
         .wifiSsid()
         .filter(ssid -> !ssid.isEmpty())

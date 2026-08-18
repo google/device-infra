@@ -97,11 +97,43 @@ public abstract class DeviceRecord {
    */
   public abstract Optional<String> atsController();
 
+  // --- Cross-entity host attributes, stamped from the device's host so a device can be filtered,
+  // faceted, and grouped by a host attribute. Resolved once per host and shared across its devices.
+
+  /**
+   * User-facing host lab types (multi-valued, for example ["Core Lab", "Satellite Lab"]). Derived
+   * from LabInfo host properties and the HostInfoService release enum by {@code
+   * HostTypes.determineUiLabTypes}. Empty for hosts with no lab type, which is every ATS host, so
+   * the lab type key stays internal-only and data driven.
+   */
+  public abstract ImmutableList<String> labTypes();
+
+  /** Host OS from the host_os host property, defaulting to "Unknown" when absent. */
+  public abstract String hostOs();
+
+  /** Host lab server connectivity title ("Running", "Missing", or "Unknown") from LabInfo. */
+  public abstract String hostConnectivity();
+
+  /** Daemon server status (for example "RUNNING"). From HostInfoService, absent in ATS. */
+  public abstract Optional<String> daemonStatus();
+
+  /** Lab server release status (for example "RUNNING"). From HostInfoService, absent in ATS. */
+  public abstract Optional<String> releaseStatus();
+
+  /** Host release type (raw LabType enum name). From HostInfoService, absent in ATS. */
+  public abstract Optional<String> releaseType();
+
+  /** Lab server version. From the host_version property or HostInfoService. */
+  public abstract Optional<String> labServerVersion();
+
   /** Creates a new builder. */
   public static Builder builder() {
     return new AutoValue_DeviceRecord.Builder()
         .setQuarantined(false)
-        .setAtsController(Optional.empty());
+        .setAtsController(Optional.empty())
+        .setLabTypes(ImmutableList.of())
+        .setHostOs("")
+        .setHostConnectivity("");
   }
 
   /** Builder for {@link DeviceRecord}. */
@@ -140,6 +172,20 @@ public abstract class DeviceRecord {
     public abstract Builder setWifiSsid(Optional<String> wifiSsid);
 
     public abstract Builder setAtsController(Optional<String> atsController);
+
+    public abstract Builder setLabTypes(ImmutableList<String> labTypes);
+
+    public abstract Builder setHostOs(String hostOs);
+
+    public abstract Builder setHostConnectivity(String hostConnectivity);
+
+    public abstract Builder setDaemonStatus(Optional<String> daemonStatus);
+
+    public abstract Builder setReleaseStatus(Optional<String> releaseStatus);
+
+    public abstract Builder setReleaseType(Optional<String> releaseType);
+
+    public abstract Builder setLabServerVersion(Optional<String> labServerVersion);
 
     public abstract DeviceRecord build();
   }

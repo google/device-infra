@@ -69,6 +69,12 @@ public final class FleetSearchKeys {
   public static final String HOST_NAME = "host::host_name";
   public static final String HOST_IP = "host::host_ip";
   public static final String HOST_LAB_TYPE = "host::lab_type";
+  public static final String HOST_OS = "host::host_os";
+  public static final String HOST_CONNECTIVITY = "host::connectivity";
+  public static final String HOST_DAEMON_STATUS = "host::daemon_status";
+  public static final String HOST_RELEASE_STATUS = "host::release_status";
+  public static final String HOST_RELEASE_TYPE = "host::release_type";
+  public static final String HOST_LAB_SERVER_VERSION = "host::lab_server_version";
   public static final String HOST_ATS_CONTROLLER = "host::ats_controller";
 
   // ---- Built-in config keys ----

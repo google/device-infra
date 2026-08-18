@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.index;
 
 import com.google.auto.value.AutoValue;
-import com.google.common.collect.ImmutableList;
 import java.util.Optional;
 
 /**
@@ -31,12 +30,6 @@ import java.util.Optional;
  */
 @AutoValue
 public abstract class HostEnrichment {
-
-  /**
-   * User-facing lab types for the host (multi-valued, for example ["Core", "Satellite"]). Empty
-   * when the source cannot classify the host.
-   */
-  public abstract ImmutableList<String> labTypes();
 
   /** Lab server release status (for example "RUNNING", "DRAINING"). */
   public abstract Optional<String> releaseStatus();
@@ -53,7 +46,6 @@ public abstract class HostEnrichment {
   /** Creates a new builder. */
   public static Builder builder() {
     return new AutoValue_HostEnrichment.Builder()
-        .setLabTypes(ImmutableList.of())
         .setReleaseStatus(Optional.empty())
         .setReleaseType(Optional.empty())
         .setDaemonStatus(Optional.empty())
@@ -63,8 +55,6 @@ public abstract class HostEnrichment {
   /** Builder for {@link HostEnrichment}. */
   @AutoValue.Builder
   public abstract static class Builder {
-    public abstract Builder setLabTypes(ImmutableList<String> labTypes);
-
     public abstract Builder setReleaseStatus(Optional<String> releaseStatus);
 
     public abstract Builder setReleaseType(Optional<String> releaseType);

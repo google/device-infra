@@ -27,14 +27,22 @@ import static com.google.devtools.mobileharness.fe.v6.service.search.index.Fleet
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_TYPE;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_UUID;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_ATS_CONTROLLER;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_CONNECTIVITY;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DAEMON_STATUS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_IP;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_SERVER_VERSION;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_TYPE;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_NAME;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_OS;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_RELEASE_STATUS;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_RELEASE_TYPE;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PROP_PREFIX;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Extracts the lowercased value set for a given key from a {@link DeviceRecord}'s forward store.
@@ -68,6 +76,13 @@ public final class DeviceValueExtractor {
           device.atsController().isPresent()
               ? ImmutableSet.of(Ascii.toLowerCase(device.atsController().get()))
               : ImmutableSet.of();
+      case HOST_LAB_TYPE -> lowercasedSet(device.labTypes());
+      case HOST_OS -> singletonLower(device.hostOs());
+      case HOST_CONNECTIVITY -> singletonLower(device.hostConnectivity());
+      case HOST_DAEMON_STATUS -> optionalLower(device.daemonStatus());
+      case HOST_RELEASE_STATUS -> optionalLower(device.releaseStatus());
+      case HOST_RELEASE_TYPE -> optionalLower(device.releaseType());
+      case HOST_LAB_SERVER_VERSION -> optionalLower(device.labServerVersion());
       default -> valuesForPrefixedKey(device, keyId);
     };
   }
@@ -88,6 +103,10 @@ public final class DeviceValueExtractor {
 
   private static ImmutableSet<String> singletonLower(String value) {
     return value.isEmpty() ? ImmutableSet.of() : ImmutableSet.of(Ascii.toLowerCase(value));
+  }
+
+  private static ImmutableSet<String> optionalLower(Optional<String> value) {
+    return value.map(DeviceValueExtractor::singletonLower).orElse(ImmutableSet.of());
   }
 
   private static ImmutableSet<String> lowercasedSet(List<String> values) {
