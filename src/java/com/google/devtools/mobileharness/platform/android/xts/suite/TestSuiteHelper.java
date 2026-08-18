@@ -84,7 +84,7 @@ public class TestSuiteHelper {
     SuiteConfig suiteConfig = suiteConfigFetcher.fetchConfig(xtsRootDir, xtsType);
     this.allowParameterizedModules = suiteConfig.allowParameterizedModules().orElse(true);
     this.allowOptionalParameterizedModules =
-        suiteConfig.allowOptionalParameterizedModules().orElse(true);
+        suiteConfig.allowOptionalParameterizedModules().orElse(false);
     this.primaryAbiOnly = suiteConfig.primaryAbiOnly().orElse(false);
   }
 

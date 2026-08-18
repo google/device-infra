@@ -234,4 +234,83 @@ public final class TestSuiteHelperTest {
     assertThat(testSuiteHelper.loadTestsUsingAbisForArchFromSuite().keySet())
         .containsExactly("arm64-v8a Foo");
   }
+
+  @Test
+  public void loadTestsUsingAbisForArchFromSuite_defaultOptionalParameterizationIsFalse()
+      throws Exception {
+    File xtsRootDir = tmpFolder.getRoot();
+    when(localFileUtil.isDirExist(xtsRootDir.getAbsolutePath())).thenReturn(true);
+    File toolsDir = tmpFolder.newFolder("android-cts-opt-param-default", "tools");
+    File testcasesDir = tmpFolder.newFolder("android-cts-opt-param-default", "testcases");
+    File tradefedJar = new File(toolsDir, "cts-opt-param-default-tradefed.jar");
+    try (JarOutputStream target = new JarOutputStream(new FileOutputStream(tradefedJar))) {
+      target.putNextEntry(new ZipEntry("test-suite-info.properties"));
+      byte[] propertiesBytes = "target_arch=arm64".getBytes(UTF_8);
+      target.write(propertiesBytes, 0, propertiesBytes.length);
+      target.closeEntry();
+    }
+    File fooConfig = new File(testcasesDir, "Foo.config");
+    String configContent =
+        """
+        <?xml version="1.0" encoding="utf-8"?>
+        <configuration description="Dummy module config">
+            <option name="config-descriptor:metadata" key="component" value="dummy" />
+            <option name="config-descriptor:metadata" key="parameter" value="secondary_user" />
+        </configuration>\
+        """;
+    try (FileOutputStream fos = new FileOutputStream(fooConfig)) {
+      fos.write(configContent.getBytes(UTF_8));
+    }
+
+    testSuiteHelper =
+        new TestSuiteHelper(xtsRootDir.getAbsolutePath(), "cts-opt-param-default", localFileUtil);
+
+    assertThat(testSuiteHelper.loadTestsUsingAbisForArchFromSuite().keySet())
+        .containsExactly("arm64-v8a Foo", "armeabi-v7a Foo");
+  }
+
+  @Test
+  public void loadTestsUsingAbisForArchFromSuite_optionalParameterizationFromXml_enabled()
+      throws Exception {
+    File xtsRootDir = tmpFolder.getRoot();
+    when(localFileUtil.isDirExist(xtsRootDir.getAbsolutePath())).thenReturn(true);
+    File toolsDir = tmpFolder.newFolder("android-cts-opt-param-xml", "tools");
+    File testcasesDir = tmpFolder.newFolder("android-cts-opt-param-xml", "testcases");
+    File tradefedJar = new File(toolsDir, "cts-opt-param-xml-tradefed.jar");
+    try (JarOutputStream target = new JarOutputStream(new FileOutputStream(tradefedJar))) {
+      target.putNextEntry(new ZipEntry("test-suite-info.properties"));
+      byte[] propertiesBytes = "target_arch=arm64".getBytes(UTF_8);
+      target.write(propertiesBytes, 0, propertiesBytes.length);
+      target.closeEntry();
+
+      target.putNextEntry(new ZipEntry("config/cts-opt-param-xml.xml"));
+      String xmlContent =
+          """
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration description="CTS Opt Param">
+              <option name="compatibility:enable-optional-parameterization" value="true" />
+          </configuration>\
+          """;
+      target.write(xmlContent.getBytes(UTF_8));
+      target.closeEntry();
+    }
+    File fooConfig = new File(testcasesDir, "Foo.config");
+    String configContent =
+        """
+        <?xml version="1.0" encoding="utf-8"?>
+        <configuration description="Dummy module config">
+            <option name="config-descriptor:metadata" key="component" value="dummy" />
+            <option name="config-descriptor:metadata" key="parameter" value="secondary_user" />
+        </configuration>\
+        """;
+    try (FileOutputStream fos = new FileOutputStream(fooConfig)) {
+      fos.write(configContent.getBytes(UTF_8));
+    }
+
+    testSuiteHelper =
+        new TestSuiteHelper(xtsRootDir.getAbsolutePath(), "cts-opt-param-xml", localFileUtil);
+
+    assertThat(testSuiteHelper.loadTestsUsingAbisForArchFromSuite().keySet())
+        .containsExactly("arm64-v8a Foo", "armeabi-v7a Foo", "arm64-v8a Foo[secondary_user]");
+  }
 }
