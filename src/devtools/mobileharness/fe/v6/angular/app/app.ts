@@ -90,6 +90,39 @@ export class App implements OnDestroy {
     return !this.isEmbeddedMode;
   }
 
+  isNavActive(
+    section: 'home' | 'devices' | 'hosts' | 'tests' | 'jobs',
+  ): boolean {
+    const path = this.getCurrentRoutePath();
+    const fragment = this.router.parseUrl(this.router.url).fragment;
+
+    switch (section) {
+      case 'home':
+        return path === 'dev/device-harness' && !fragment;
+      case 'devices':
+        return path.startsWith('devices') || fragment === 'device-scenarios';
+      case 'hosts':
+        return path.startsWith('hosts') || fragment === 'host-scenarios';
+      case 'tests':
+        return path.includes('tests') || fragment === 'test-scenarios';
+      case 'jobs':
+        return (
+          (path.startsWith('jobs') && !path.includes('tests')) ||
+          fragment === 'job-scenarios'
+        );
+      default:
+        return false;
+    }
+  }
+
+  private getCurrentRoutePath(): string {
+    let route = this.router.routerState.snapshot.root;
+    while (route.firstChild) {
+      route = route.firstChild;
+    }
+    return route.routeConfig?.path || '';
+  }
+
   constructor() {
     this.route.queryParamMap
       .pipe(takeUntil(this.destroy))
@@ -129,7 +162,9 @@ export class App implements OnDestroy {
     const path = route.routeConfig?.path;
     const params = route.params;
 
-    if (path === 'devices/:id' && params['id']) {
+    if (path === 'dev/device-harness' || path === 'devices' || !path) {
+      this.showContent = true;
+    } else if (path === 'devices/:id' && params['id']) {
       this.showContent = true;
     } else if (path === 'hosts/:hostName' && params['hostName']) {
       this.showContent = true;

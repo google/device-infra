@@ -1,7 +1,7 @@
 <div class="harness-container">
   <aside class="harness-sidebar">
     <!-- Device Scenarios -->
-    <h3 class="sidebar-title" (click)="toggleDeviceScenarios()">
+    <h3 id="device-scenarios" class="sidebar-title" (click)="toggleDeviceScenarios()">
       <span>Device Scenarios</span>
       <mat-icon [style.transform]="deviceCollapsed() ? 'rotate(-90deg)' : 'rotate(0deg)'" class="transition-transform">expand_more</mat-icon>
     </h3>
@@ -16,7 +16,7 @@
     }
 
     <!-- Host Scenarios -->
-    <h3 class="sidebar-title mt-6" (click)="toggleHostScenarios()">
+    <h3 id="host-scenarios" class="sidebar-title mt-6" (click)="toggleHostScenarios()">
       <span>Host Scenarios</span>
       <mat-icon [style.transform]="hostCollapsed() ? 'rotate(-90deg)' : 'rotate(0deg)'" class="transition-transform">expand_more</mat-icon>
     </h3>
@@ -31,7 +31,7 @@
     }
 
     <!-- Test Scenarios -->
-    <h3 class="sidebar-title mt-6" (click)="toggleTestScenarios()">
+    <h3 id="test-scenarios" class="sidebar-title mt-6" (click)="toggleTestScenarios()">
       <span>Test Scenarios</span>
       <mat-icon [style.transform]="testCollapsed() ? 'rotate(-90deg)' : 'rotate(0deg)'" class="transition-transform">expand_more</mat-icon>
     </h3>
@@ -46,7 +46,7 @@
     }
 
     <!-- Job Scenarios -->
-    <h3 class="sidebar-title mt-6" (click)="toggleJobScenarios()">
+    <h3 id="job-scenarios" class="sidebar-title mt-6" (click)="toggleJobScenarios()">
       <span>Job Scenarios</span>
       <mat-icon [style.transform]="jobCollapsed() ? 'rotate(-90deg)' : 'rotate(0deg)'" class="transition-transform">expand_more</mat-icon>
     </h3>

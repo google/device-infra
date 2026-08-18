@@ -16,6 +16,22 @@
 @use '@angular/material' as mat;
 @use 'sass:list';
 @use 'sass:map';
+@use 'shared/styles/common';
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined', sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+}
 
 // Colors
 $blue-50: #e8f0fe;
@@ -52,7 +68,10 @@ $yellow-400: #fcc934;
 $yellow-800: #f9a825;
 $yellow-900: #e37400;
 
-$labcosnole-bg: #f0f4f9;
+$labconsole-bg: #f0f4f9;
+$labconsole-border-color: #c4c7c5;
+$nav-menu-active-bg: #c2e7ff;
+$nav-menu-active-text: #001d35;
 
 $white: #fff;
 
@@ -82,7 +101,7 @@ $warning: $yellow-400;
 $warning-background: $yellow-100;
 
 // $background-default: $white;
-$background-default: $labcosnole-bg;
+$background-default: $labconsole-bg;
 $text-default: $grey-900;
 
 // Components
@@ -140,7 +159,7 @@ $theme: mat.m2-define-light-theme(
 
 // Add background theme
 // $background-color: $white;
-$background-color: $labcosnole-bg;
+$background-color: $labconsole-bg;
 $background: map.get(mat.m2-get-color-config($theme), background);
 $background: map.merge(
   $background,
@@ -155,38 +174,26 @@ $theme: map.merge(
   )
 );
 
-// Apply themes to all components
-@include mat.all-component-themes($theme);
+// Apply themes only to the components used
+@include mat.button-theme($theme);
+@include mat.sidenav-theme($theme);
+@include mat.toolbar-theme($theme);
 @include mat.divider-theme($theme);
-@include mat.radio-theme($theme);
-@include mat.select-theme($theme);
-@include mat.checkbox-theme($theme);
-@include mat.dialog-theme($theme);
-@include mat.tooltip-theme($theme);
-@include mat.table-theme($theme);
-@include mat.progress-spinner-theme($theme);
-@include mat.fab-theme($theme);
-@include mat.progress-bar-theme($theme);
-@include mat.icon-button-theme($theme);
-@include mat.paginator-theme($theme);
-// @include mat.tabs-theme($theme);
 @include mat.list-theme($theme);
-@include mat.autocomplete-theme($theme);
+@include mat.icon-theme($theme);
 @include mat.menu-theme($theme);
+@include mat.checkbox-theme($theme);
 @include mat.card-theme($theme);
-@include mat.core-theme($theme);
+@include mat.progress-bar-theme($theme);
+@include mat.progress-spinner-theme($theme);
 @include mat.chips-theme($theme);
+@include mat.form-field-theme($theme);
+@include mat.select-theme($theme);
+@include mat.tooltip-theme($theme);
+@include mat.tabs-theme($theme);
+@include mat.stepper-theme($theme);
+@include mat.dialog-theme($theme);
 @include mat.snack-bar-theme($theme);
-
-@include mat.checkbox-typography($typography);
-@include mat.radio-typography($typography);
-@include mat.dialog-typography($typography);
-@include mat.tooltip-typography($typography);
-@include mat.snack-bar-typography($typography);
-@include mat.table-typography($typography);
-@include mat.progress-spinner-typography($typography);
-@include mat.progress-bar-typography($typography);
-@include mat.menu-typography($typography);
 
 $button-primary: mat.m2-define-palette(mat.$m2-grey-palette);
 $button-accent: mat.m2-define-palette(mat.$m2-blue-palette, 700);
@@ -197,10 +204,9 @@ $button-theme: mat.m2-define-light-theme(
       accent: $button-accent,
     ),
     density: 0,
-    typography: mat.m2-define-typography-config(),
   )
 );
-@include mat.button-theme($button-theme);
+@include mat.button-color($button-theme);
 
 $stepper-primary: mat.m2-define-palette(mat.$m2-blue-palette, 700);
 $stepper-accent: mat.m2-define-palette(mat.$m2-blue-palette, 100);
@@ -211,10 +217,9 @@ $stepper-theme: mat.m2-define-light-theme(
       accent: $stepper-accent,
     ),
     density: 0,
-    typography: mat.m2-define-typography-config(),
   )
 );
-@include mat.stepper-theme($stepper-theme);
+@include mat.stepper-color($stepper-theme);
 
 $tabs-primary: mat.m2-define-palette(mat.$m2-blue-palette, 600);
 $tabs-accent: mat.m2-define-palette(mat.$m2-blue-palette, 100);
@@ -225,10 +230,9 @@ $tabs-theme: mat.m2-define-light-theme(
       accent: $tabs-accent,
     ),
     density: 0,
-    typography: $typography,
   )
 );
-@include mat.tabs-theme($tabs-theme);
+@include mat.tabs-color($tabs-theme);
 
 $input-primary: mat.m2-define-palette(mat.$m2-blue-palette, 600);
 $input-accent: mat.m2-define-palette(mat.$m2-blue-palette, 600);
@@ -278,7 +282,6 @@ mat-spinner.loading-spinner {
 .loading-spinner-overlay {
   align-items: center;
   display: flex;
-  height: 100%;
   justify-content: center;
   position: fixed;
   top: 0;
@@ -328,13 +331,14 @@ mat-spinner.loading-spinner {
 // ================================begin of app.scss
 
 app-root {
-  height: calc(100vh - 64px);
-  display: block;
-}
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100vh;
+  background-color: $labconsole-bg;
 
-app-root {
   $sidenav-collapsed-width: 62px;
-  $sidenav-expanded-width: 200px;
+  $sidenav-expanded-width: 256px;
   $nav-transition-duration: 250ms;
 
   @mixin sidenav-container-transition($duration) {
@@ -357,118 +361,17 @@ app-root {
     transition-timing-function: ease-in-out;
   }
 
-  button.toggleSidenavButton.toolbar-button {
-    left: -10px;
-
-    mat-icon {
-      color: $navigation;
-    }
-  }
-
-  :host,
-  mat-sidenav-content {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-  }
-
-  footer {
-    color: #787878;
-    flex: none;
-    font-size: 13px;
-    margin: 20px 20px 4px;
-    display: flex;
-    flex-wrap: nowrap;
-    place-content: center space-between;
-    align-items: center;
-  }
-
-  main {
-    // flex: 1;
-    height: calc(100% - 41px);
-    overflow: auto;
-  }
-
-  mat-divider {
-    margin: 10px;
-  }
-
-  // mat-icon {
-  //   margin-right: 6px;
-  // }
-
-  mat-nav-list {
-    a[mat-list-item] {
-      font-size: 14px;
-      height: 40px;
-      margin: 5px 0px;
-    }
-
-    [mat-list-item].active {
-      background: $background-active;
-    }
-  }
-
-  .mat-mdc-list-base {
-    @include mat.list-overrides(
-      (
-        list-item-leading-icon-color: rgba(0, 0, 0, 0.87),
-      )
-    );
-  }
-
-  .app-sidenav-container {
-    background-color: $labcosnole-bg;
-
-    > mat-sidenav {
-      background-color: $labcosnole-bg;
-    }
-  }
-
-  mat-sidenav-container {
-    height: 100%;
-
-    mat-sidenav {
-      @include sidenav-container-transition($nav-transition-duration);
-      width: $sidenav-expanded-width;
-
-      .mat-mdc-subheader,
-      .mat-divider,
-      .mat-mdc-list-item span {
-        @include sidenav-nav-list-transition($nav-transition-duration);
-      }
-    }
-
-    .mat-sidenav-content {
-      @include sidenav-content-transition($nav-transition-duration);
-      // stylelint-disable declaration-no-important -- override the margin-left to adjust the width of the content for the side nav.
-      margin-left: calc($sidenav-expanded-width - 12px) !important;
-    }
-
-    &.collapsed {
-      mat-sidenav {
-        width: $sidenav-collapsed-width;
-
-        .mat-mdc-subheader,
-        .mat-divider,
-        .mat-mdc-list-item span {
-          opacity: 0;
-        }
-      }
-
-      .mat-sidenav-content {
-        // stylelint-disable declaration-no-important -- override the margin-left to adjust the width of the content for the side nav.
-        margin-left: $sidenav-collapsed-width !important;
-      }
-    }
-  }
-
   .app-toolbar {
-    background-color: $white;
-    border-bottom: 1px solid $border-menu;
+    background-color: $labconsole-bg;
+    // border-bottom: 1px solid $border-menu;
     position: sticky;
     top: 0;
     display: flex;
+    align-items: center;
+    height: 64px;
+    min-height: 64px;
+    box-sizing: border-box;
+    overflow: hidden;
 
     .title {
       font-size: 20px;
@@ -503,6 +406,110 @@ app-root {
       width: 52px;
       height: 32px;
     }
+
+    button.toggleSidenavButton.toolbar-button {
+      left: -10px;
+
+      mat-icon {
+        color: $navigation;
+      }
+    }
+  }
+
+  .app-sidenav-container {
+    background-color: $labconsole-bg;
+    height: calc(100% - 64px);
+
+
+    mat-sidenav {
+      margin-top: 1.5rem;
+      @include common.shared-scrollbar-style();
+
+      .sidenav-container {
+        @include common.shared-scrollbar-style();
+      }
+
+      mat-nav-list {
+        padding: 0;
+      }
+
+      mat-nav-list > mat-divider {
+        margin: 16px;
+      }
+
+      mat-nav-list > a[mat-list-item] {
+        display: flex;
+        align-items: center;
+        height: 56px;
+        border-radius: 28px;
+        color: #444746;
+        text-decoration: none;
+        font-weight: 500;
+        transition: background-color 0.2s, color 0.2s;
+        white-space: nowrap;
+        margin: 0 5px;
+        padding: 0;
+        width: auto;
+      }
+
+      mat-nav-list > a[mat-list-item].active {
+        background-color: $nav-menu-active-bg;
+        color: $nav-menu-active-text;
+      }
+    }
+
+    mat-sidenav-content {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background-color: $labconsole-bg;
+      @include common.shared-scrollbar-style();
+
+      main {
+        flex: 1;
+        overflow: auto;
+        background-color: $labconsole-bg;
+        @include common.shared-scrollbar-style();
+      }
+    }
+
+    @include mat.sidenav-overrides(
+      (
+        container-background-color: $labconsole-bg,
+        content-background-color: $labconsole-bg,
+        container-width: $sidenav-expanded-width,
+      )
+    );
+
+    &.collapsed {
+      @include mat.sidenav-overrides(
+        (
+          container-divider-color: $border-menu,
+          container-width: $sidenav-collapsed-width,
+        )
+      );
+
+      mat-divider {
+        margin: 16px 0;
+        border-color: transparent;
+      }
+
+      mat-nav-list > a[mat-list-item] {
+        border-radius: 0;
+        margin: 0;
+      }
+    }
+  }
+
+  footer {
+    color: #787878;
+    flex: none;
+    font-size: 13px;
+    margin: 20px 20px 4px;
+    display: flex;
+    flex-wrap: nowrap;
+    place-content: center space-between;
+    align-items: center;
   }
 }
 

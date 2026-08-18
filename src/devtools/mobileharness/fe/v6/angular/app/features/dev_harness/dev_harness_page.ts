@@ -6,7 +6,7 @@ import {
   signal,
 } from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
-import {RouterLink} from '@angular/router';
+import {ActivatedRoute, RouterLink} from '@angular/router';
 
 import {
   MOCK_DEVICE_SCENARIOS,
@@ -50,6 +50,7 @@ export class DevHarnessPage {
   readonly sessionCollapsed = signal(true);
 
   private readonly loadingService = inject(LoadingService);
+  private readonly route = inject(ActivatedRoute);
 
   constructor() {
     this.deviceScenarios = [...MOCK_DEVICE_SCENARIOS].sort((a, b) => {
@@ -91,6 +92,31 @@ export class DevHarnessPage {
     });
 
     this.loadingService.hide();
+
+    this.route.fragment.subscribe((fragment) => {
+      if (fragment === 'device-scenarios') {
+        this.deviceCollapsed.set(false);
+        this.scrollToElement('device-scenarios');
+      } else if (fragment === 'host-scenarios') {
+        this.hostCollapsed.set(false);
+        this.scrollToElement('host-scenarios');
+      } else if (fragment === 'test-scenarios') {
+        this.testCollapsed.set(false);
+        this.scrollToElement('test-scenarios');
+      } else if (fragment === 'job-scenarios') {
+        this.jobCollapsed.set(false);
+        this.scrollToElement('job-scenarios');
+      }
+    });
+  }
+
+  private scrollToElement(id: string) {
+    setTimeout(() => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.scrollIntoView({behavior: 'smooth', block: 'start'});
+      }
+    }, 0);
   }
 
   toggleDeviceScenarios() {
