@@ -486,22 +486,80 @@ public class SessionRequestHandlerUtil {
     jobInfo.params().addList(JobInfo.PARAM_PERISTENT_CACHE_FILE_LIST, urls);
   }
 
-  /** Gets all local tradefed modules which doesn't include the mcts modules. */
-  public ImmutableSet<String> getAllLocalTradefedModules(SessionRequestInfo sessionRequestInfo) {
+  /** Gets all local tradefed configs. */
+  private ImmutableMap<String, Configuration> getLocalTradefedConfigs(
+      SessionRequestInfo sessionRequestInfo) {
     Path xtsRootDir = Path.of(sessionRequestInfo.getXtsRootDir());
     if (!localFileUtil.isDirExist(xtsRootDir)) {
       logger.atInfo().log(
           "xTS root dir [%s] doesn't exist, skip getting all TF modules.", xtsRootDir);
-      return ImmutableSet.of();
+      return ImmutableMap.of();
     }
     String xtsType = sessionRequestInfo.getXtsType();
-    ImmutableMap<String, Configuration> configsMap =
-        configurationUtil.getConfigsFromDirs(
-            ImmutableList.of(XtsDirUtil.getXtsTestCasesDir(xtsRootDir, xtsType).toFile()));
+    return configurationUtil.getConfigsFromDirs(
+        ImmutableList.of(XtsDirUtil.getXtsTestCasesDir(xtsRootDir, xtsType).toFile()));
+  }
 
-    return configsMap.values().stream()
+  /** Gets all local tradefed modules which doesn't include the mcts modules. */
+  public ImmutableSet<String> getAllLocalTradefedModules(SessionRequestInfo sessionRequestInfo) {
+    return getLocalTradefedConfigs(sessionRequestInfo).values().stream()
         .map(config -> config.getMetadata().getXtsModule())
         .collect(toImmutableSet());
+  }
+
+  private static ImmutableListMultimap<String, String> getModuleMetadata(Configuration config) {
+    return config.getConfigDescriptor().getMetadataMap().values().stream()
+        .flatMap(
+            metadata ->
+                metadata.getValueList().stream()
+                    .map(value -> Maps.immutableEntry(metadata.getKey(), value)))
+        .collect(toImmutableListMultimap(Entry::getKey, Entry::getValue));
+  }
+
+  private TestPlanFilter getTestPlanFilter(
+      Path xtsRootDir, SessionRequestInfo sessionRequestInfo, String testPlan)
+      throws MobileHarnessException {
+    return testPlan.isEmpty()
+        ? TestPlanFilter.create(
+            ImmutableSet.of(),
+            ImmutableSet.of(),
+            ImmutableMultimap.of(),
+            ImmutableMultimap.of(),
+            ImmutableSet.of())
+        : testPlanParser.parseFilters(xtsRootDir, sessionRequestInfo.getXtsType(), testPlan);
+  }
+
+  private TestPlanFilter getTestPlanFilter(Path xtsRootDir, SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException {
+    return getTestPlanFilter(xtsRootDir, sessionRequestInfo, sessionRequestInfo.getTestPlan());
+  }
+
+  private static ImmutableMultimap<String, String> getModuleMetadataIncludeFilters(
+      SessionRequestInfo sessionRequestInfo, TestPlanFilter testPlanFilter) {
+    ImmutableMultimap.Builder<String, String> moduleMetadataIncludeFiltersBuilder =
+        ImmutableMultimap.builder();
+    sessionRequestInfo
+        .getModuleMetadataIncludeFiltersMap()
+        .forEach(
+            (key, filterValues) ->
+                moduleMetadataIncludeFiltersBuilder.putAll(key, filterValues.getValuesList()));
+    return moduleMetadataIncludeFiltersBuilder
+        .putAll(testPlanFilter.moduleMetadataIncludeFilters())
+        .build();
+  }
+
+  private static ImmutableMultimap<String, String> getModuleMetadataExcludeFilters(
+      SessionRequestInfo sessionRequestInfo, TestPlanFilter testPlanFilter) {
+    ImmutableMultimap.Builder<String, String> moduleMetadataExcludeFiltersBuilder =
+        ImmutableMultimap.builder();
+    sessionRequestInfo
+        .getModuleMetadataExcludeFiltersMap()
+        .forEach(
+            (key, filterValues) ->
+                moduleMetadataExcludeFiltersBuilder.putAll(key, filterValues.getValuesList()));
+    return moduleMetadataExcludeFiltersBuilder
+        .putAll(testPlanFilter.moduleMetadataExcludeFilters())
+        .build();
   }
 
   private ImmutableSet<String> getStringSetFromResourceFile(String resPathInJar)
@@ -567,16 +625,7 @@ public class SessionRequestHandlerUtil {
     ImmutableSet<String> givenMatchedTfModules =
         modules.isEmpty() ? allTfModules : matchModules(modules, allTfModules);
 
-    String testPlan = sessionRequestInfo.getTestPlan();
-    TestPlanFilter testPlanFilter =
-        testPlan.isEmpty()
-            ? TestPlanFilter.create(
-                ImmutableSet.of(),
-                ImmutableSet.of(),
-                ImmutableMultimap.of(),
-                ImmutableMultimap.of(),
-                ImmutableSet.of())
-            : testPlanParser.parseFilters(xtsRootDir, sessionRequestInfo.getXtsType(), testPlan);
+    TestPlanFilter testPlanFilter = getTestPlanFilter(xtsRootDir, sessionRequestInfo);
 
     // Filter modules by include/exclude filters.
     // For "run with strict include filters" (--strict-include-filter set), the include filters
@@ -881,8 +930,8 @@ public class SessionRequestHandlerUtil {
             ? subPlan.getPreviousSessionXtsTestPlan()
             : sessionRequestInfo.getTestPlan();
     TestPlanFilter testPlanFilter =
-        testPlanParser.parseFilters(
-            Path.of(sessionRequestInfo.getXtsRootDir()), sessionRequestInfo.getXtsType(), testPlan);
+        getTestPlanFilter(
+            Path.of(sessionRequestInfo.getXtsRootDir()), sessionRequestInfo, testPlan);
 
     if (!testPlanFilter.tests().contains(COMPATIBILITY_TEST_SUITE_CLASS_NAME)) {
       logger
@@ -946,29 +995,10 @@ public class SessionRequestHandlerUtil {
     }
     logger.atInfo().log("Exclude filters for Non-TF run: %s", excludeFilters);
 
-    ImmutableMultimap.Builder<String, String> moduleMetadataIncludeFiltersBuilder =
-        ImmutableMultimap.builder();
-    sessionRequestInfo
-        .getModuleMetadataIncludeFiltersMap()
-        .forEach(
-            (key, filterValues) ->
-                moduleMetadataIncludeFiltersBuilder.putAll(key, filterValues.getValuesList()));
     ImmutableMultimap<String, String> moduleMetadataIncludeFilters =
-        moduleMetadataIncludeFiltersBuilder
-            .putAll(testPlanFilter.moduleMetadataIncludeFilters())
-            .build();
-
-    ImmutableMultimap.Builder<String, String> moduleMetadataExcludeFiltersBuilder =
-        ImmutableMultimap.builder();
-    sessionRequestInfo
-        .getModuleMetadataExcludeFiltersMap()
-        .forEach(
-            (key, filterValues) ->
-                moduleMetadataExcludeFiltersBuilder.putAll(key, filterValues.getValuesList()));
+        getModuleMetadataIncludeFilters(sessionRequestInfo, testPlanFilter);
     ImmutableMultimap<String, String> moduleMetadataExcludeFilters =
-        moduleMetadataExcludeFiltersBuilder
-            .putAll(testPlanFilter.moduleMetadataExcludeFilters())
-            .build();
+        getModuleMetadataExcludeFilters(sessionRequestInfo, testPlanFilter);
 
     Duration jobTimeout =
         (sessionRequestInfo.getJobTimeout().getSeconds() == 0
@@ -1034,13 +1064,7 @@ public class SessionRequestHandlerUtil {
         String moduleParameter = getModuleParameter(expandedModuleName).orElse(null);
 
         // Filters the module by metadata include-filter and exclude-filter.
-        ImmutableListMultimap<String, String> moduleMetadata =
-            entry.getValue().getConfigDescriptor().getMetadataMap().values().stream()
-                .flatMap(
-                    metadata ->
-                        metadata.getValueList().stream()
-                            .map(value -> Maps.immutableEntry(metadata.getKey(), value)))
-                .collect(toImmutableListMultimap(Entry::getKey, Entry::getValue));
+        ImmutableListMultimap<String, String> moduleMetadata = getModuleMetadata(entry.getValue());
         if (!filterModuleByConfigMetadata(
             moduleMetadata, moduleMetadataIncludeFilters, moduleMetadataExcludeFilters)) {
           continue;
