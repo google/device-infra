@@ -19,10 +19,12 @@ package com.google.devtools.mobileharness.infra.master.central.model.lab;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.auto.value.AutoValue;
+import com.google.auto.value.extension.memoized.Memoized;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
+import com.google.devtools.mobileharness.api.model.proto.Device.HealthCategory;
 import com.google.devtools.mobileharness.infra.master.central.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.infra.master.central.proto.Device.DeviceProfile;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
@@ -55,6 +57,11 @@ public abstract class DeviceDao {
     return DeviceConditionUtil.mergeMnmDeviceStatusIfAny(
         condition(),
         DeviceConditionUtil.isSharedPoolDevice(this) ? DeviceStatus.LAMEDUCK : DeviceStatus.IDLE);
+  }
+
+  @Memoized
+  public HealthCategory getHealthCategory() {
+    return DeviceConditionUtil.calculateHealthCategory(this);
   }
 
   public Instant getStatusModifyTime() {
