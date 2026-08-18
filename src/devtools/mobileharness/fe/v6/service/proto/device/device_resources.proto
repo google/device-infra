@@ -91,16 +91,47 @@ message RemoteControlInfo {
   string unsupported_reason = 2;
 }
 
-// High-level health state of the device.
+// Transitional: superseded by `UiState ui_state` plus the `title` text.
+//
+// Retained during the frontend/backend release transition so a client on either
+// side of a skew window still renders an icon. The backend keeps setting
+// `HealthAndActivityInfo.state` (best-fit legacy value) alongside the new
+// `ui_state`. Removed by a follow-up cleanup CL once both sides are rolled out.
 enum HealthState {
-  HEALTH_STATE_UNSPECIFIED = 0;
-  IN_SERVICE_IDLE = 1;
-  IN_SERVICE_BUSY = 2;
-  OUT_OF_SERVICE_RECOVERING = 3;
-  OUT_OF_SERVICE_TEMP_MAINT = 4;
-  OUT_OF_SERVICE_NEEDS_FIXING = 5;
-  UNKNOWN = 6;
-  IDLE_BUT_QUARANTINED = 7;
+  option deprecated = true;
+
+  HEALTH_STATE_UNSPECIFIED = 0 [deprecated = true];
+  IN_SERVICE_IDLE = 1 [deprecated = true];
+  IN_SERVICE_BUSY = 2 [deprecated = true];
+  OUT_OF_SERVICE_RECOVERING = 3 [deprecated = true];
+  OUT_OF_SERVICE_TEMP_MAINT = 4 [deprecated = true];
+  OUT_OF_SERVICE_NEEDS_FIXING = 5 [deprecated = true];
+  UNKNOWN = 6 [deprecated = true];
+  IDLE_BUT_QUARANTINED = 7 [deprecated = true];
+}
+
+// Presentation intent for the Health & Activity card.
+//
+// This is a pure presentation signal: the frontend maps each value to an
+// icon/color/spin treatment. It intentionally carries no business semantics.
+// The device's semantic health category (In Service, In Transition, Auto
+// Recovery, Needs Manual Repair) is conveyed to the user through the `title`
+// text, not as a wire enum, per the FE v6 BFF principle.
+enum UiState {
+  UI_STATE_UNSPECIFIED = 0;
+  // Healthy and idle: solid success treatment.
+  HEALTHY = 1;
+  // Healthy and actively running a task: in-progress treatment.
+  BUSY = 2;
+  // Temporarily unavailable but expected to self-recover: transient treatment.
+  TRANSITIONING = 3;
+  // An automated recovery task is running: in-progress warning treatment.
+  RECOVERING = 4;
+  // Broken and needs a human: error treatment.
+  ERROR = 5;
+  // Healthy but manually withheld from tests (e.g. quarantined): blocked
+  // treatment.
+  BLOCKED = 6;
 }
 
 // Contains all data related to the device's health, status, and current
@@ -112,8 +143,11 @@ message HealthAndActivityInfo {
   // A concise, human-readable explanation of the device's state.
   string subtitle = 2;
 
-  // The high-level health state category.
-  HealthState state = 3;
+  // Transitional: use `ui_state` instead. Still populated by the backend during
+  // the release transition so older frontends render an icon; a newer frontend
+  // reads it only as a fallback when `ui_state` is unset (older backend).
+  // Removed by a follow-up cleanup CL once both sides are rolled out.
+  HealthState state = 3 [deprecated = true];
 
   // The raw device status from the underlying system.
   message DeviceStatus {
@@ -150,6 +184,10 @@ message HealthAndActivityInfo {
     string suggested_action = 3;
   }
   Diagnostics diagnostics = 8;
+
+  // Presentation intent that tells the frontend how to render the card
+  // (icon/color/spin). The semantic health category is conveyed via `title`.
+  UiState ui_state = 9;
 }
 
 // Basic hardware, software, and real-time information about the device.
