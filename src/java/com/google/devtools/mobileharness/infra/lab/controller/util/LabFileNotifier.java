@@ -320,7 +320,9 @@ public class LabFileNotifier {
     @Nullable
     @Override
     public String handleFile(String specPath) throws InterruptedException, MobileHarnessException {
-      if (!specPath.equals(originalPath)) {
+      if (!specPath.equals(originalPath)
+          && !tag.equals(JobSpecHelper.FILE_TAG_PREFIX + specPath)
+          && !tag.equals(ScopedSpecs.FILE_TAG_PREFIX + specPath)) {
         return null;
       }
       if (targetPath == null) {
