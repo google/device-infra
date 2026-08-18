@@ -16,8 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.client.api.mode.local;
 
-import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
-import com.google.inject.AbstractModule;
 import com.google.inject.Module;
 import org.junit.rules.ExternalResource;
 
@@ -59,7 +57,7 @@ public class LocalModeRule extends ExternalResource {
 
   private final LocalModeEnvironment env = LocalModeEnvironment.createForTest();
   private final LocalMode localMode = new LocalMode(env);
-  private final Module module = new LocalModeTestModule();
+  private final Module module = new LocalModeModule(env);
 
   /** Gets the pre-created {@link LocalMode} instance for this test. */
   public LocalMode getLocalMode() {
@@ -67,8 +65,7 @@ public class LocalModeRule extends ExternalResource {
   }
 
   /**
-   * Gets a Guice module binding the test's {@link LocalModeEnvironment}, {@link LocalMode}, and
-   * {@link ExecMode}.
+   * Gets a Guice module binding the test's {@link LocalModeEnvironment} and related dependencies.
    */
   public Module getModule() {
     return module;
@@ -77,14 +74,5 @@ public class LocalModeRule extends ExternalResource {
   @Override
   protected void after() {
     env.tearDownForTest();
-  }
-
-  private class LocalModeTestModule extends AbstractModule {
-    @Override
-    protected void configure() {
-      bind(LocalModeEnvironment.class).toInstance(env);
-      bind(LocalMode.class).toInstance(localMode);
-      bind(ExecMode.class).to(LocalMode.class);
-    }
   }
 }

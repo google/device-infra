@@ -342,6 +342,10 @@ class LocalModeEnvironment {
     return doCreateTestRunner(launcher, setting, devices, threadPool);
   }
 
+  LabInfoService getLabInfoService() {
+    return labInfoService;
+  }
+
   ImmutableList<BindableService> provideServicesForNonWorker() {
     return ImmutableList.of(labInfoService);
   }

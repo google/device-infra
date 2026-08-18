@@ -119,7 +119,6 @@ java_library(
     deps = [
         ":device_cache_manager",
         "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -128,6 +127,7 @@ java_library(
     name = "local_session_device_cache",
     srcs = ["LocalSessionDeviceCache.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
     ],

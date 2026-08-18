@@ -16,16 +16,12 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
-import static com.google.common.base.Preconditions.checkState;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.testrunner.device.cache.LocalSessionDeviceCache;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.ClientApiModule;
-import com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver.DeviceReserver;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.EnableDatabase;
@@ -43,7 +39,6 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.ser
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStubImpl;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.SessionService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.VersionService;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.persistence.JdbcBasedSessionPersistenceUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.persistence.SessionPersistenceUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.persistence.SessionPersistenceUtil.NoOpSessionPersistenceUtil;
@@ -54,7 +49,6 @@ import com.google.devtools.mobileharness.infra.controller.scheduler.simple.persi
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.infra.monitoring.CloudPubsubMonitorModule;
 import com.google.devtools.mobileharness.infra.monitoring.MonitorPipelineLauncher;
-import com.google.devtools.mobileharness.shared.labinfo.LabInfoService;
 import com.google.devtools.mobileharness.shared.util.comm.relay.service.NoOpServerUtils;
 import com.google.devtools.mobileharness.shared.util.comm.relay.service.ServerUtils;
 import com.google.devtools.mobileharness.shared.util.database.DatabaseConnections;
@@ -67,8 +61,6 @@ import com.google.inject.Scopes;
 import com.google.inject.util.Providers;
 import io.grpc.BindableService;
 import java.time.Instant;
-import javax.inject.Inject;
-import javax.inject.Provider;
 import javax.inject.Singleton;
 
 /** Module for OLC server. */
@@ -78,6 +70,8 @@ class OlcServerModule extends AbstractModule {
 
   private static final String LOCAL_MODE_CLASS_NAME =
       "com.google.devtools.mobileharness.infra.client.api.mode.local.LocalMode";
+  private static final String LOCAL_MODE_MODULE_CLASS_NAME =
+      "com.google.devtools.mobileharness.infra.client.api.mode.local.LocalModeModule";
   private static final String ATS_MODE_CLASS_NAME =
       "com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsMode";
   private static final String ATS_MODE_MODULE_CLASS_NAME =
@@ -221,12 +215,8 @@ class OlcServerModule extends AbstractModule {
       installByClassName(ATS_MODE_MODULE_CLASS_NAME);
       bind(ExecMode.class).to(loadExecMode(ATS_MODE_CLASS_NAME)).in(Scopes.SINGLETON);
     } else {
-      bind(ExecMode.class)
-          .toProvider(provideExecModeByClassName(LOCAL_MODE_CLASS_NAME))
-          .in(Scopes.SINGLETON);
-      bind(DeviceReserver.class).toProvider(ExecModeDeviceReserverProvider.class);
-      bind(LabInfoService.class).toProvider(LocalModeLabInfoServiceProvider.class);
-      bind(SessionDeviceCache.class).to(LocalSessionDeviceCache.class).in(Scopes.SINGLETON);
+      installByClassName(LOCAL_MODE_MODULE_CLASS_NAME);
+      bind(ExecMode.class).to(loadExecMode(LOCAL_MODE_CLASS_NAME)).in(Scopes.SINGLETON);
     }
   }
 
@@ -251,17 +241,6 @@ class OlcServerModule extends AbstractModule {
     }
   }
 
-  private static Provider<ExecMode> provideExecModeByClassName(String className) {
-    Class<? extends ExecMode> execModeClass = loadExecMode(className);
-    return () -> {
-      try {
-        return execModeClass.getConstructor().newInstance();
-      } catch (ReflectiveOperationException e) {
-        throw new IllegalStateException(e);
-      }
-    };
-  }
-
   private static Class<? extends ServerUtils> loadServerUtils(boolean enableGrpcRelay) {
     if (enableGrpcRelay) {
       try {
@@ -275,39 +254,6 @@ class OlcServerModule extends AbstractModule {
       }
     } else {
       return NoOpServerUtils.class;
-    }
-  }
-
-  private record ExecModeDeviceReserverProvider(ExecMode execMode)
-      implements Provider<DeviceReserver> {
-
-    @Inject
-    ExecModeDeviceReserverProvider {}
-
-    @Override
-    public DeviceReserver get() {
-      return execMode.createDeviceReserver();
-    }
-  }
-
-  private record LocalModeLabInfoServiceProvider(ExecMode execMode)
-      implements Provider<LabInfoService> {
-
-    @Inject
-    LocalModeLabInfoServiceProvider {}
-
-    @Override
-    public LabInfoService get() {
-      checkState(execMode instanceof ServiceProvider);
-      ServiceProvider serviceProvider = (ServiceProvider) execMode;
-      return serviceProvider.provideServicesForNonWorker().stream()
-          .filter(LabInfoService.class::isInstance)
-          .map(LabInfoService.class::cast)
-          .findFirst()
-          .orElseThrow(
-              () ->
-                  new IllegalStateException(
-                      "LabInfoService not found in ExecMode.provideServicesForNonWorker()"));
     }
   }
 }

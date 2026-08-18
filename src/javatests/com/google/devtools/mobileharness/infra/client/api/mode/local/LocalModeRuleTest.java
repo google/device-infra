@@ -18,7 +18,9 @@ package com.google.devtools.mobileharness.infra.client.api.mode.local;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
+import com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver.DeviceReserver;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache;
+import com.google.devtools.mobileharness.shared.labinfo.LabInfoService;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.junit.Rule;
@@ -37,11 +39,26 @@ public class LocalModeRuleTest {
   }
 
   @Test
-  public void getModule_bindsExecModeAndLocalMode() {
+  public void getModule_bindsRequiredDependencies() {
     Injector injector = Guice.createInjector(rule.getModule());
 
-    assertThat(injector.getInstance(ExecMode.class)).isSameInstanceAs(rule.getLocalMode());
-    assertThat(injector.getInstance(LocalMode.class)).isSameInstanceAs(rule.getLocalMode());
-    assertThat(injector.getInstance(LocalModeEnvironment.class)).isNotNull();
+    LocalModeEnvironment env = injector.getInstance(LocalModeEnvironment.class);
+    assertThat(env).isNotNull();
+    assertThat(injector.getInstance(DeviceReserver.class)).isNotNull();
+    assertThat(injector.getInstance(LabInfoService.class))
+        .isSameInstanceAs(env.getLabInfoService());
+    assertThat(injector.getInstance(SessionDeviceCache.class)).isNotNull();
+  }
+
+  @Test
+  public void localModeModule_bindsRequiredDependencies() {
+    Injector injector = Guice.createInjector(new LocalModeModule());
+
+    LocalModeEnvironment env = injector.getInstance(LocalModeEnvironment.class);
+    assertThat(env).isSameInstanceAs(LocalModeEnvironment.getInstance());
+    assertThat(injector.getInstance(DeviceReserver.class)).isNotNull();
+    assertThat(injector.getInstance(LabInfoService.class))
+        .isSameInstanceAs(env.getLabInfoService());
+    assertThat(injector.getInstance(SessionDeviceCache.class)).isNotNull();
   }
 }
