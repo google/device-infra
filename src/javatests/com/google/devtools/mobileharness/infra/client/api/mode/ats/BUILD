@@ -51,6 +51,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:lab_record_manager",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:module",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:remote_device_manager",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:abstract_scheduler",
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub/grpc:lab_info",
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub/grpc:lab_sync",

@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.ats.common.olcserver;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerChannel;
@@ -28,6 +27,7 @@ import io.grpc.Channel;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
 import java.io.IOException;
+import java.util.Set;
 import javax.inject.Singleton;
 
 /** Module for providing gRPC in-process channels connecting to an in-process OLC server. */
@@ -39,7 +39,7 @@ public class OlcServerGrpcInProcessChannelModule extends AbstractModule {
   Channel provideInProcessServerChannel(
       ListeningExecutorService threadPool,
       ListeningScheduledExecutorService scheduledThreadPool,
-      @OlcServicesForNonWorker ImmutableList<BindableService> services)
+      @OlcServicesForNonWorker Set<BindableService> services)
       throws IOException {
     String serverName = "in-process-olc-grpc-server";
     InProcessServerBuilder serverBuilder =

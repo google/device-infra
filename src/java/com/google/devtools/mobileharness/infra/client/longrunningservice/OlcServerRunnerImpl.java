@@ -58,6 +58,7 @@ import io.grpc.BindableService;
 import io.grpc.ServerBuilder;
 import java.time.Duration;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
 import javax.annotation.Nullable;
@@ -72,9 +73,9 @@ class OlcServerRunnerImpl implements OlcServerRunner {
 
   private static final Duration DUMP_MEMORY_INFO_INTERVAL = Duration.ofMinutes(5L);
 
-  private final ImmutableList<BindableService> servicesForNonWorker;
-  private final ImmutableList<BindableService> servicesForWorker;
-  private final ImmutableList<BindableService> servicesDualMode;
+  private final Set<BindableService> servicesForNonWorker;
+  private final Set<BindableService> servicesForWorker;
+  private final Set<BindableService> servicesDualMode;
   private final ControlService controlService;
   private final SessionManager sessionManager;
   @Nullable private final MonitorPipelineLauncher monitorPipelineLauncher;
@@ -94,9 +95,9 @@ class OlcServerRunnerImpl implements OlcServerRunner {
 
   @Inject
   OlcServerRunnerImpl(
-      @OlcServicesForNonWorker ImmutableList<BindableService> servicesForNonWorker,
-      @OlcServicesForWorker ImmutableList<BindableService> servicesForWorker,
-      @OlcServicesDualMode ImmutableList<BindableService> servicesDualMode,
+      @OlcServicesForNonWorker Set<BindableService> servicesForNonWorker,
+      @OlcServicesForWorker Set<BindableService> servicesForWorker,
+      @OlcServicesDualMode Set<BindableService> servicesDualMode,
       ControlService controlService,
       SessionManager sessionManager,
       @Nullable MonitorPipelineLauncher monitorPipelineLauncher,

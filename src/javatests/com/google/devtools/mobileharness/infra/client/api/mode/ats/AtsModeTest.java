@@ -46,6 +46,8 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.AllocationWithStats;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServicesForNonWorker;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServicesForWorker;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabInfoGrpcStub;
@@ -73,6 +75,7 @@ import io.grpc.BindableService;
 import io.grpc.netty.NettyServerBuilder;
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Test;
@@ -123,6 +126,8 @@ public class AtsModeTest {
   @Inject private ListeningExecutorService listeningExecutorService;
   @Inject private AtsMode atsMode;
   @Inject private LabInfoGrpcStub labInfoGrpcStub;
+  @Inject @OlcServicesForNonWorker private Set<BindableService> nonWorkerServices;
+  @Inject @OlcServicesForWorker private Set<BindableService> workerServices;
 
   private LabSyncGrpcStub labSyncGrpcStub;
 
@@ -144,14 +149,13 @@ public class AtsModeTest {
     labSyncGrpcStub = new LabSyncGrpcStub(masterGrpcStubHelper);
 
     atsMode.initialize(null);
-    ImmutableList<BindableService> bindableServices = atsMode.provideServicesForNonWorker();
     NettyServerBuilder nettyServerBuilder =
         NettyServerBuilder.forPort(serverPort).executor(listeningExecutorService);
-    bindableServices.forEach(nettyServerBuilder::addService);
+    nonWorkerServices.forEach(nettyServerBuilder::addService);
     nettyServerBuilder.build().start();
     NettyServerBuilder workerServerBuilder =
         NettyServerBuilder.forPort(workerServerPort).executor(listeningExecutorService);
-    atsMode.provideServicesForWorker().forEach(workerServerBuilder::addService);
+    workerServices.forEach(workerServerBuilder::addService);
     workerServerBuilder.build().start();
   }
 

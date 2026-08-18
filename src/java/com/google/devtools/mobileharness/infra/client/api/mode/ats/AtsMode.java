@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -32,14 +31,11 @@ import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDevice
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator.EmptyDeviceVerifier;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.RemoteTestRunner;
 import com.google.devtools.mobileharness.infra.client.api.proto.ResourceFederationProto.ResourceFederation;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ServiceProvider;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
-import com.google.devtools.mobileharness.shared.labinfo.LabInfoService;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
-import io.grpc.BindableService;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -49,15 +45,13 @@ import javax.inject.Singleton;
  * <p>The {@link #initialize} method much be called before it is used.
  */
 @Singleton
-public class AtsMode implements ExecMode, ServiceProvider {
+public class AtsMode implements ExecMode {
 
   private final RemoteDeviceManager remoteDeviceManager;
   private final DeviceQuerier deviceQuerier;
   private final AbstractScheduler scheduler;
   private final ListeningExecutorService threadPool;
-  private final LabInfoService labInfoService;
   private final LabRecordManager labRecordManager;
-  private final LabRecordService labRecordService;
   private final JobSyncService jobSyncService;
   private final DeviceReserver deviceReserver;
   private final ResourceFederation resourceFederation;
@@ -69,9 +63,7 @@ public class AtsMode implements ExecMode, ServiceProvider {
       @AtsModeDeviceQuerier DeviceQuerier deviceQuerier,
       @AtsModeAbstractScheduler AbstractScheduler scheduler,
       ListeningExecutorService threadPool,
-      LabInfoService labInfoService,
       LabRecordManager labRecordManager,
-      LabRecordService labRecordService,
       JobSyncService jobSyncService,
       DeviceReserver deviceReserver,
       @AtsResourceFederation ResourceFederation resourceFederation) {
@@ -79,9 +71,7 @@ public class AtsMode implements ExecMode, ServiceProvider {
     this.deviceQuerier = deviceQuerier;
     this.scheduler = scheduler;
     this.threadPool = threadPool;
-    this.labInfoService = labInfoService;
     this.labRecordManager = labRecordManager;
-    this.labRecordService = labRecordService;
     this.jobSyncService = jobSyncService;
     this.deviceReserver = deviceReserver;
     this.resourceFederation = resourceFederation;
@@ -123,20 +113,5 @@ public class AtsMode implements ExecMode, ServiceProvider {
       throws MobileHarnessException {
     return new RemoteTestRunner(
         setting, threadPool, resourceFederation, /* supportImpersonation= */ false, fileResolver);
-  }
-
-  @Override
-  public ImmutableList<BindableService> provideServicesForNonWorker() {
-    return ImmutableList.of(labInfoService, labRecordService, jobSyncService);
-  }
-
-  @Override
-  public ImmutableList<BindableService> provideServicesForWorker() {
-    return ImmutableList.of(remoteDeviceManager.getLabSyncService(), jobSyncService);
-  }
-
-  @Override
-  public ImmutableList<BindableService> provideServicesDualMode() {
-    return ImmutableList.of();
   }
 }

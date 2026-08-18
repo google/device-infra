@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.client.api.mode.local;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -24,12 +23,10 @@ import com.google.devtools.mobileharness.infra.client.api.controller.allocation.
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver.DeviceReserver;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ServiceProvider;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
-import io.grpc.BindableService;
 import javax.inject.Inject;
 
 /**
@@ -43,7 +40,7 @@ import javax.inject.Inject;
  * <p>For unit and integration tests, use {@link LocalModeRule} instead to provide a dedicated,
  * isolated environment per test that is automatically torn down upon test completion.
  */
-public class LocalMode implements ExecMode, ServiceProvider {
+public class LocalMode implements ExecMode {
 
   private final LocalModeEnvironment env;
 
@@ -87,20 +84,5 @@ public class LocalMode implements ExecMode, ServiceProvider {
       FileResolver fileResolver)
       throws MobileHarnessException, InterruptedException {
     return env.createTestRunner(setting, threadPool, fileResolver);
-  }
-
-  @Override
-  public ImmutableList<BindableService> provideServicesForNonWorker() {
-    return env.provideServicesForNonWorker();
-  }
-
-  @Override
-  public ImmutableList<BindableService> provideServicesForWorker() {
-    return env.provideServicesForWorker();
-  }
-
-  @Override
-  public ImmutableList<BindableService> provideServicesDualMode() {
-    return env.provideServicesDualMode();
   }
 }

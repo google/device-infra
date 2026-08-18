@@ -80,7 +80,6 @@ import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceU
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
-import io.grpc.BindableService;
 import java.time.Duration;
 import java.time.InstantSource;
 import java.util.ArrayList;
@@ -344,18 +343,6 @@ class LocalModeEnvironment {
 
   LabInfoService getLabInfoService() {
     return labInfoService;
-  }
-
-  ImmutableList<BindableService> provideServicesForNonWorker() {
-    return ImmutableList.of(labInfoService);
-  }
-
-  ImmutableList<BindableService> provideServicesForWorker() {
-    return ImmutableList.of();
-  }
-
-  ImmutableList<BindableService> provideServicesDualMode() {
-    return ImmutableList.of();
   }
 
   void tearDownForTest() {

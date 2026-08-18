@@ -52,5 +52,11 @@ public final class Annotations {
   @Retention(RUNTIME)
   public @interface AtsResourceFederation {}
 
+  /** Annotation for AtsMode LabSyncService. */
+  @Qualifier
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  @interface AtsModeLabSyncService {}
+
   private Annotations() {}
 }

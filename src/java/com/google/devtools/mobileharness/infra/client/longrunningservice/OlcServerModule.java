@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
@@ -32,7 +31,6 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotat
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.ServerStartTime;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ControllerModule;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager.LogRecordsCollector;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ServiceProvider;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.ControlService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
@@ -58,6 +56,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
+import com.google.inject.multibindings.Multibinder;
 import com.google.inject.util.Providers;
 import io.grpc.BindableService;
 import java.time.Instant;
@@ -136,6 +135,19 @@ class OlcServerModule extends AbstractModule {
                 : NoOpAllocationPersistenceUtil.class);
     bind(boolean.class).annotatedWith(EnableDatabase.class).toInstance(enableDatabase);
     bind(ServerUtils.class).to(loadServerUtils(enableGrpcRelay)).in(Singleton.class);
+
+    // Binds gRPC services.
+    Multibinder<BindableService> nonWorkerServices =
+        Multibinder.newSetBinder(binder(), BindableService.class, OlcServicesForNonWorker.class);
+    nonWorkerServices.addBinding().to(SessionService.class);
+    nonWorkerServices.addBinding().to(VersionService.class);
+    nonWorkerServices.addBinding().to(ControlService.class);
+
+    Multibinder.newSetBinder(binder(), BindableService.class, OlcServicesForWorker.class);
+
+    Multibinder<BindableService> dualModeServices =
+        Multibinder.newSetBinder(binder(), BindableService.class, OlcServicesDualMode.class);
+    dualModeServices.addBinding().to(VersionService.class);
   }
 
   @Provides
@@ -155,46 +167,6 @@ class OlcServerModule extends AbstractModule {
   @GlobalInternalEventBus
   EventBus provideGlobalInternalEventBus() {
     return new EventBus(new SubscriberExceptionLoggingHandler());
-  }
-
-  @Provides
-  @Singleton
-  @OlcServicesForNonWorker
-  ImmutableList<BindableService> provideOlcServicesForNonWorker(
-      SessionService sessionService,
-      VersionService versionService,
-      ControlService controlService,
-      ExecMode execMode) {
-    ImmutableList.Builder<BindableService> services = ImmutableList.builder();
-    services.add(sessionService, versionService, controlService);
-    if (execMode instanceof ServiceProvider serviceProvider) {
-      services.addAll(serviceProvider.provideServicesForNonWorker());
-    }
-    return services.build();
-  }
-
-  @Provides
-  @Singleton
-  @OlcServicesForWorker
-  ImmutableList<BindableService> provideOlcServicesForWorker(ExecMode execMode) {
-    ImmutableList.Builder<BindableService> services = ImmutableList.builder();
-    if (execMode instanceof ServiceProvider serviceProvider) {
-      services.addAll(serviceProvider.provideServicesForWorker());
-    }
-    return services.build();
-  }
-
-  @Provides
-  @Singleton
-  @OlcServicesDualMode
-  ImmutableList<BindableService> provideOlcServicesDualMode(
-      VersionService versionService, ExecMode execMode) {
-    ImmutableList.Builder<BindableService> services = ImmutableList.builder();
-    services.add(versionService);
-    if (execMode instanceof ServiceProvider serviceProvider) {
-      services.addAll(serviceProvider.provideServicesDualMode());
-    }
-    return services.build();
   }
 
   @Provides

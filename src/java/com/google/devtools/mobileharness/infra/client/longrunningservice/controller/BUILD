@@ -73,15 +73,6 @@ java_library(
 )
 
 java_library(
-    name = "service_provider",
-    srcs = ["ServiceProvider.java"],
-    deps = [
-        "@grpc-java//core",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
     name = "session_detail_creator",
     srcs = ["SessionDetailCreator.java"],
     deps = [

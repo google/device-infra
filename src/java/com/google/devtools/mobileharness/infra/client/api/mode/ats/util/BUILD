@@ -41,8 +41,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:device_cache",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/java/com/google/wireless/qa/mobileharness/client/api/util/stub",
-        "@maven//:com_google_guava_guava",
-        "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:javax_inject_jsr330_api",
     ],
 )

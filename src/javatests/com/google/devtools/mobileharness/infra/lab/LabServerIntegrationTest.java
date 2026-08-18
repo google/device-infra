@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.allocation.
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsModeModule;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServicesForWorker;
 import com.google.devtools.mobileharness.shared.usmf.UsmfBinary;
 import com.google.devtools.mobileharness.shared.usmf.UsmfEnvironment;
 import com.google.devtools.mobileharness.shared.util.base.StackTraceExtractor;
@@ -70,6 +71,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -113,6 +115,7 @@ public class LabServerIntegrationTest {
 
   @Inject private ListeningExecutorService threadPool;
   @Inject private AtsMode atsMode;
+  @Inject @OlcServicesForWorker private Set<BindableService> workerServices;
 
   @Before
   public void setUp() throws Exception {
@@ -359,10 +362,9 @@ public class LabServerIntegrationTest {
       throws MobileHarnessException, InterruptedException, IOException, ExecutionException {
     logger.atInfo().log("Starting AtsMode, port=%s", masterPort);
     atsMode.initialize(null);
-    ImmutableList<BindableService> bindableServices = atsMode.provideServicesForWorker();
     NettyServerBuilder nettyServerBuilder =
         NettyServerBuilder.forPort(masterPort).executor(threadPool);
-    bindableServices.forEach(nettyServerBuilder::addService);
+    workerServices.forEach(nettyServerBuilder::addService);
     nettyServerBuilder.build().start();
 
     logger.atInfo().log("Starting lab server, command=%s", labServerCommand);

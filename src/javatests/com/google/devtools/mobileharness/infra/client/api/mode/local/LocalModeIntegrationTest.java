@@ -48,6 +48,7 @@ import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.ClientApiModule;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver.DeviceReserver;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
+import com.google.devtools.mobileharness.shared.labinfo.LabInfoService;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceGrpc;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceGrpc.LabInfoServiceBlockingStub;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
@@ -72,7 +73,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
-import io.grpc.BindableService;
 import io.grpc.ManagedChannel;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -103,6 +103,7 @@ public class LocalModeIntegrationTest {
 
   @Inject private ClientApi clientApi;
   @Inject private LocalMode localMode;
+  @Inject private LabInfoService labInfoService;
 
   private DeviceReserver deviceReserver;
   private DeviceQuerier deviceQuerier;
@@ -182,9 +183,7 @@ public class LocalModeIntegrationTest {
 
     String serverName = InProcessServerBuilder.generateName();
     ServerBuilder<?> serverBuilder = InProcessServerBuilder.forName(serverName);
-    for (BindableService service : localMode.provideServicesForNonWorker()) {
-      serverBuilder.addService(service);
-    }
+    serverBuilder.addService(labInfoService);
     Server server = serverBuilder.build().start();
     ManagedChannel channel = InProcessChannelBuilder.forName(serverName).directExecutor().build();
     LabInfoServiceBlockingStub stub = LabInfoServiceGrpc.newBlockingStub(channel);

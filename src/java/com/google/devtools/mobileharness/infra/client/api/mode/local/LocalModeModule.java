@@ -18,10 +18,13 @@ package com.google.devtools.mobileharness.infra.client.api.mode.local;
 
 import com.google.devtools.mobileharness.api.testrunner.device.cache.LocalSessionDeviceCache;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver.DeviceReserver;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServicesForNonWorker;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoService;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import com.google.inject.multibindings.Multibinder;
+import io.grpc.BindableService;
 import javax.annotation.Nullable;
 import javax.inject.Singleton;
 
@@ -59,6 +62,9 @@ public class LocalModeModule extends AbstractModule {
     bind(LocalModeEnvironment.class)
         .toInstance(env != null ? env : LocalModeEnvironment.getInstance());
     bind(SessionDeviceCache.class).to(LocalSessionDeviceCache.class).in(Singleton.class);
+    Multibinder.newSetBinder(binder(), BindableService.class, OlcServicesForNonWorker.class)
+        .addBinding()
+        .to(LabInfoService.class);
   }
 
   @Provides
