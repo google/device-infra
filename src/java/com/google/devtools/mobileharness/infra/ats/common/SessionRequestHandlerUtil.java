@@ -601,7 +601,22 @@ public class SessionRequestHandlerUtil {
           /* cause= */ null);
     }
 
-    ImmutableSet<String> localTfModules = getAllLocalTradefedModules(sessionRequestInfo);
+    TestPlanFilter testPlanFilter = getTestPlanFilter(xtsRootDir, sessionRequestInfo);
+    ImmutableMultimap<String, String> moduleMetadataIncludeFilters =
+        getModuleMetadataIncludeFilters(sessionRequestInfo, testPlanFilter);
+    ImmutableMultimap<String, String> moduleMetadataExcludeFilters =
+        getModuleMetadataExcludeFilters(sessionRequestInfo, testPlanFilter);
+
+    ImmutableSet<String> localTfModules =
+        getLocalTradefedConfigs(sessionRequestInfo).values().stream()
+            .filter(
+                config ->
+                    filterModuleByConfigMetadata(
+                        getModuleMetadata(config),
+                        moduleMetadataIncludeFilters,
+                        moduleMetadataExcludeFilters))
+            .map(config -> config.getMetadata().getXtsModule())
+            .collect(toImmutableSet());
     ImmutableSet<String> staticTfModules = getStaticMctsModules();
     ImmutableSet<String> allTfModules =
         Stream.concat(localTfModules.stream(), staticTfModules.stream()).collect(toImmutableSet());
@@ -624,9 +639,6 @@ public class SessionRequestHandlerUtil {
             : ImmutableList.copyOf(sessionRequestInfo.getModuleNamesList());
     ImmutableSet<String> givenMatchedTfModules =
         modules.isEmpty() ? allTfModules : matchModules(modules, allTfModules);
-
-    TestPlanFilter testPlanFilter = getTestPlanFilter(xtsRootDir, sessionRequestInfo);
-
     // Filter modules by include/exclude filters.
     // For "run with strict include filters" (--strict-include-filter set), the include filters
     // and exclude filters will be ignored.

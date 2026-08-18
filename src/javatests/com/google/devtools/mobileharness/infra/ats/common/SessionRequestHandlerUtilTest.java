@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Job.AllocationExitStrategy;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser.TestPlanFilter;
+import com.google.devtools.mobileharness.infra.ats.common.proto.FilterValues;
 import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
@@ -910,6 +911,101 @@ public final class SessionRequestHandlerUtilTest {
                 SessionRequestInfoUtil.buildAndValidate(
                     defaultSessionRequestInfoBuilder()
                         .setTestPlan("plan_with_non_matched_include"))));
+  }
+
+  @Test
+  public void getFilteredTradefedModules_testPlanMetadataFilters() throws Exception {
+    Configuration config1 =
+        defaultConfigurationBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(false))
+            .setConfigDescriptor(
+                ConfigurationDescriptor.newBuilder()
+                    .putMetadata(
+                        "component",
+                        ConfigurationDescriptorMetadata.newBuilder()
+                            .setKey("component")
+                            .addValue("gts-root")
+                            .build()))
+            .build();
+    Configuration config2 =
+        defaultConfigurationBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(false))
+            .build();
+    when(configurationUtil.getConfigsFromDirs(any()))
+        .thenReturn(ImmutableMap.of("/path/to/config1", config1, "/path/to/config2", config2));
+    when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
+
+    when(testPlanParser.parseFilters(any(), anyString(), eq("plan_with_metadata_exclude")))
+        .thenReturn(
+            TestPlanFilter.create(
+                ImmutableSet.of(),
+                ImmutableSet.of(),
+                ImmutableMultimap.of(),
+                ImmutableMultimap.of("component", "gts-root"),
+                ImmutableSet.of()));
+    when(testPlanParser.parseFilters(any(), anyString(), eq("plan_with_metadata_include")))
+        .thenReturn(
+            TestPlanFilter.create(
+                ImmutableSet.of(),
+                ImmutableSet.of(),
+                ImmutableMultimap.of("component", "gts-root"),
+                ImmutableMultimap.of(),
+                ImmutableSet.of()));
+
+    assertThat(
+            sessionRequestHandlerUtil.getFilteredTradefedModules(
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder().setTestPlan("plan_with_metadata_exclude"))))
+        .containsExactly("module2");
+
+    assertThat(
+            sessionRequestHandlerUtil.getFilteredTradefedModules(
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder().setTestPlan("plan_with_metadata_include"))))
+        .containsExactly("module1");
+  }
+
+  @Test
+  public void getFilteredTradefedModules_sessionRequestMetadataFilters() throws Exception {
+    Configuration config1 =
+        defaultConfigurationBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(false))
+            .setConfigDescriptor(
+                ConfigurationDescriptor.newBuilder()
+                    .putMetadata(
+                        "component",
+                        ConfigurationDescriptorMetadata.newBuilder()
+                            .setKey("component")
+                            .addValue("gts-root")
+                            .build()))
+            .build();
+    Configuration config2 =
+        defaultConfigurationBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(false))
+            .build();
+    when(configurationUtil.getConfigsFromDirs(any()))
+        .thenReturn(ImmutableMap.of("/path/to/config1", config1, "/path/to/config2", config2));
+    when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
+
+    assertThat(
+            sessionRequestHandlerUtil.getFilteredTradefedModules(
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder()
+                        .putModuleMetadataExcludeFilters(
+                            "component", FilterValues.newBuilder().addValues("gts-root").build()))))
+        .containsExactly("module2");
+
+    assertThat(
+            sessionRequestHandlerUtil.getFilteredTradefedModules(
+                SessionRequestInfoUtil.buildAndValidate(
+                    defaultSessionRequestInfoBuilder()
+                        .putModuleMetadataIncludeFilters(
+                            "component", FilterValues.newBuilder().addValues("gts-root").build()))))
+        .containsExactly("module1");
   }
 
   /** Common setUp for createXtsNonTradefedJobs... tests */
