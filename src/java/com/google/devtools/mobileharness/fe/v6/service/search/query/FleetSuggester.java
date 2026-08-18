@@ -51,9 +51,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetViewExi
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.NoValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TextSegment;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceRecord;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.KeyCount;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.ValueKeyPair;
@@ -237,19 +235,18 @@ public final class FleetSuggester {
   }
 
   /** Returns ranked suggestions for the request against the given snapshot. */
-  public FleetSuggestionResponse suggest(
-      FleetSnapshot snapshot, FleetSuggestionRequest request, LazyPostings postings) {
+  public FleetSuggestionResponse suggest(SearchCorpus corpus, FleetSuggestionRequest request) {
     int limit = request.getLimit() > 0 ? request.getLimit() : DEFAULT_LIMIT;
     String query = WHITESPACE.matcher(request.getInput()).replaceAll(" ").trim();
 
-    FleetIndex index = snapshot.index();
+    FleetIndex index = corpus.index();
     List<Filter> filters = request.getFiltersList();
     boolean hasFilters = !filters.isEmpty();
     Set<String> activeKeys = new HashSet<>();
     for (Filter filter : filters) {
       activeKeys.add(filter.getKey());
     }
-    ImmutableList<Integer> current = filterEngine.match(snapshot, filters, postings);
+    ImmutableList<Integer> current = filterEngine.match(corpus, filters);
     BitSet currentBits = toBitSet(current);
 
     // FLEET_UNSPECIFIED defaults to FLEET_SELF (see the Fleet proto). Resolve the curation for the
@@ -264,7 +261,7 @@ public final class FleetSuggester {
 
     Context context =
         new Context(
-            snapshot,
+            corpus,
             index,
             filters,
             hasFilters,
@@ -272,7 +269,7 @@ public final class FleetSuggester {
             current,
             currentBits,
             keyPriority,
-            postings);
+            corpus.postings());
 
     if (query.isEmpty()) {
       return emptyState(context, limit);
@@ -421,7 +418,7 @@ public final class FleetSuggester {
   private List<Cand> suggestEmpty(Context context, String keyToken, boolean empty) {
     List<Cand> out = new ArrayList<>();
     FleetIndex index = context.index();
-    int base = context.hasFilters() ? context.current().size() : context.snapshot().deviceCount();
+    int base = context.hasFilters() ? context.current().size() : context.corpus().recordCount();
     for (String keyId : resolveKey(index, keyToken)) {
       if (!MULTI_VALUE_KEYS.contains(keyId) || !index.keyIds().contains(keyId)) {
         continue;
@@ -892,17 +889,14 @@ public final class FleetSuggester {
     if (!cand.needsCount) {
       return;
     }
-    int base = context.hasFilters() ? context.current().size() : context.snapshot().deviceCount();
+    int base = context.hasFilters() ? context.current().size() : context.corpus().recordCount();
 
     if (cand.inChip && !cand.exclude) {
       // Modify include: the true delta is how many devices matching the OTHER chips and this value
       // are not already in the result.
       BitSet baseK =
           toBitSet(
-              filterEngine.match(
-                  context.snapshot(),
-                  otherFilters(context.filters(), cand.keyId),
-                  context.postings()));
+              filterEngine.match(context.corpus(), otherFilters(context.filters(), cand.keyId)));
       int added = 0;
       for (int deviceIndex : context.postings().get(cand.keyId, cand.value)) {
         if (baseK.get(deviceIndex) && !context.currentBits().get(deviceIndex)) {
@@ -1081,11 +1075,10 @@ public final class FleetSuggester {
   // ---- Group-by counting (mirrors FleetPromotedKeysProvider) ----
 
   private static int groupCount(Context context, String keyId) {
-    ImmutableList<DeviceRecord> devices = context.snapshot().devices();
     Set<String> combos = new HashSet<>();
     boolean hasMissing = false;
     for (int deviceIndex : context.current()) {
-      ImmutableSet<String> values = FleetFilterEngine.valuesForKey(devices.get(deviceIndex), keyId);
+      ImmutableSet<String> values = context.corpus().valuesForKey(deviceIndex, keyId);
       if (values.isEmpty()) {
         hasMissing = true;
       } else {
@@ -1510,7 +1503,7 @@ public final class FleetSuggester {
 
   /** Per-request query context, so helpers avoid threading many parameters. */
   private record Context(
-      FleetSnapshot snapshot,
+      SearchCorpus corpus,
       FleetIndex index,
       List<Filter> filters,
       boolean hasFilters,

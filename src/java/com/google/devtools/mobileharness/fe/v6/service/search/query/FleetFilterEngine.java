@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.ComplexMatch;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.ContainsSubstring;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
@@ -28,12 +27,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.MatchesExact
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.MatchesRegex;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.StartsWith;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceRecord;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceValueExtractor;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
-import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.BitSet;
 import java.util.HashSet;
 import java.util.List;
@@ -43,17 +38,16 @@ import java.util.regex.PatternSyntaxException;
 import javax.inject.Inject;
 
 /**
- * Resolves a list of proto {@link Filter}s against a {@link FleetSnapshot} into the set of matching
- * device indices, using the fleet's inverted index.
+ * Resolves a list of proto {@link Filter}s against a {@link SearchCorpus} into the set of matching
+ * record indices, using the corpus's inverted index.
  *
  * <p>This is the Java port of the search prototype's {@code filter_devices} and {@code _chip_set}.
- * Filters are AND'd together: a device matches only if it satisfies every filter. Within a single
- * simple filter the listed values are OR'd. An empty filter list matches every device.
+ * Filters are AND'd together: a record matches only if it satisfies every filter. Within a single
+ * simple filter the listed values are OR'd. An empty filter list matches every record.
  *
  * <p>The index stores all values lowercased, so every value the caller supplies is lowercased
- * before lookup and regular expressions are compiled case-insensitively. Posting lists hold device
- * indices into {@link FleetSnapshot#devices()} in ascending order; the returned list is likewise
- * ascending.
+ * before lookup and regular expressions are compiled case-insensitively. Posting lists hold record
+ * indices into the corpus in ascending order; the returned list is likewise ascending.
  */
 public final class FleetFilterEngine {
 
@@ -61,80 +55,64 @@ public final class FleetFilterEngine {
   FleetFilterEngine() {}
 
   /**
-   * Returns the device indices matching all of the given filters, in ascending order.
+   * Returns the record indices matching all of the given filters, in ascending order.
    *
-   * <p>Indices point into {@link FleetSnapshot#devices()}. An empty filter list returns every
-   * device index (0 to deviceCount - 1).
+   * <p>Indices point into the corpus records. An empty filter list returns every record index (0 to
+   * recordCount - 1).
    */
-  public ImmutableList<Integer> match(FleetSnapshot snapshot, List<Filter> filters) {
-    return match(snapshot, filters, new LazyPostings(snapshot.devices()));
-  }
-
-  /**
-   * Returns the device indices matching all of the given filters, in ascending order.
-   *
-   * <p>Indices point into {@link FleetSnapshot#devices()}. An empty filter list returns every
-   * device index (0 to deviceCount - 1).
-   */
-  public ImmutableList<Integer> match(
-      FleetSnapshot snapshot, List<Filter> filters, LazyPostings postings) {
-    int deviceCount = snapshot.deviceCount();
+  public ImmutableList<Integer> match(SearchCorpus corpus, List<Filter> filters) {
+    int recordCount = corpus.recordCount();
     BitSet result = null;
     for (Filter filter : filters) {
-      BitSet filterSet = matchFilter(snapshot, filter, postings);
+      BitSet filterSet = matchFilter(corpus, filter);
       if (result == null) {
         result = filterSet;
       } else {
         result.and(filterSet);
       }
-      if (result.isEmpty()) {
-        break;
-      }
     }
     if (result == null) {
-      result = allDevices(deviceCount);
+      result = allRecords(recordCount);
     }
     return toSortedList(result);
   }
 
-  /** Device-index set for one filter. A filter with no mode set imposes no constraint. */
-  private static BitSet matchFilter(FleetSnapshot snapshot, Filter filter, LazyPostings postings) {
+  /** Record-index set for one filter. A filter with no mode set imposes no constraint. */
+  private static BitSet matchFilter(SearchCorpus corpus, Filter filter) {
     String keyId = filter.getKey();
     return switch (filter.getModeCase()) {
-      case SIMPLE -> matchSimple(snapshot, keyId, filter.getSimple(), postings);
-      case COMPLEX -> matchComplex(snapshot, keyId, filter.getComplex(), postings);
-      case MODE_NOT_SET -> allDevices(snapshot.deviceCount());
+      case SIMPLE -> matchSimple(corpus, keyId, filter.getSimple());
+      case COMPLEX -> matchComplex(corpus, keyId, filter.getComplex());
+      case MODE_NOT_SET -> allRecords(corpus.recordCount());
     };
   }
 
   /**
    * Simple match: the union of the listed values (OR). A {@code no_value} entry contributes the
-   * devices that lack the key entirely. When {@code negated} is set the whole result is inverted.
+   * records that lack the key entirely. When {@code negated} is set the whole result is inverted.
    */
-  private static BitSet matchSimple(
-      FleetSnapshot snapshot, String keyId, SimpleMatch simple, LazyPostings postings) {
+  private static BitSet matchSimple(SearchCorpus corpus, String keyId, SimpleMatch simple) {
+    LazyPostings postings = corpus.postings();
     BitSet include = new BitSet();
     for (FilterValue value : simple.getValuesList()) {
       switch (value.getKindCase()) {
         case VALUE -> orInto(include, postings.get(keyId, Ascii.toLowerCase(value.getValue())));
-        case NO_VALUE -> include.or(noValueSet(snapshot, keyId, postings));
+        case NO_VALUE -> include.or(noValueSet(corpus, keyId));
         case KIND_NOT_SET -> {}
       }
     }
-    return negateIfNeeded(include, simple.getNegated(), snapshot.deviceCount());
+    return negateIfNeeded(include, simple.getNegated(), corpus.recordCount());
   }
 
   /** Complex match: exactly one advanced mode. */
-  private static BitSet matchComplex(
-      FleetSnapshot snapshot, String keyId, ComplexMatch complex, LazyPostings postings) {
+  private static BitSet matchComplex(SearchCorpus corpus, String keyId, ComplexMatch complex) {
     return switch (complex.getKindCase()) {
-      case STARTS_WITH -> matchStartsWith(snapshot, keyId, complex.getStartsWith(), postings);
-      case CONTAINS_SUBSTRING ->
-          matchContains(snapshot, keyId, complex.getContainsSubstring(), postings);
-      case MATCHES_REGEX -> matchRegex(snapshot, keyId, complex.getMatchesRegex(), postings);
-      case MATCHES_EXACTLY -> matchExactly(snapshot, keyId, complex.getMatchesExactly());
-      case MATCHES_AT_LEAST -> matchAtLeast(keyId, complex.getMatchesAtLeast(), postings);
-      case KIND_NOT_SET -> allDevices(snapshot.deviceCount());
+      case STARTS_WITH -> matchStartsWith(corpus, keyId, complex.getStartsWith());
+      case CONTAINS_SUBSTRING -> matchContains(corpus, keyId, complex.getContainsSubstring());
+      case MATCHES_REGEX -> matchRegex(corpus, keyId, complex.getMatchesRegex());
+      case MATCHES_EXACTLY -> matchExactly(corpus, keyId, complex.getMatchesExactly());
+      case MATCHES_AT_LEAST -> matchAtLeast(corpus, keyId, complex.getMatchesAtLeast());
+      case KIND_NOT_SET -> allRecords(corpus.recordCount());
     };
   }
 
@@ -142,9 +120,9 @@ public final class FleetFilterEngine {
    * Prefix match over the key's sorted distinct values. Locates the contiguous run of values that
    * begin with the prefix via two binary searches, then unions their posting lists. Not negatable.
    */
-  private static BitSet matchStartsWith(
-      FleetSnapshot snapshot, String keyId, StartsWith startsWith, LazyPostings postings) {
-    FleetIndex index = snapshot.index();
+  private static BitSet matchStartsWith(SearchCorpus corpus, String keyId, StartsWith startsWith) {
+    FleetIndex index = corpus.index();
+    LazyPostings postings = corpus.postings();
     ImmutableList<String> sorted = index.sortedValues().getOrDefault(keyId, ImmutableList.of());
     String prefix = Ascii.toLowerCase(startsWith.getValue());
     int lo = lowerBound(sorted, prefix);
@@ -159,8 +137,9 @@ public final class FleetFilterEngine {
 
   /** Substring match: scans distinct values for the needle and unions their postings. Negatable. */
   private static BitSet matchContains(
-      FleetSnapshot snapshot, String keyId, ContainsSubstring contains, LazyPostings postings) {
-    FleetIndex index = snapshot.index();
+      SearchCorpus corpus, String keyId, ContainsSubstring contains) {
+    FleetIndex index = corpus.index();
+    LazyPostings postings = corpus.postings();
     String needle = Ascii.toLowerCase(contains.getValue());
     BitSet matched = new BitSet();
     for (String value : index.sortedValues().getOrDefault(keyId, ImmutableList.of())) {
@@ -168,7 +147,7 @@ public final class FleetFilterEngine {
         orInto(matched, postings.get(keyId, value));
       }
     }
-    return negateIfNeeded(matched, contains.getNegated(), snapshot.deviceCount());
+    return negateIfNeeded(matched, contains.getNegated(), corpus.recordCount());
   }
 
   /**
@@ -176,14 +155,14 @@ public final class FleetFilterEngine {
    * unions their postings. Negatable. An invalid pattern matches nothing (so a negated invalid
    * pattern matches everything), mirroring the prototype.
    */
-  private static BitSet matchRegex(
-      FleetSnapshot snapshot, String keyId, MatchesRegex regex, LazyPostings postings) {
-    FleetIndex index = snapshot.index();
+  private static BitSet matchRegex(SearchCorpus corpus, String keyId, MatchesRegex regex) {
+    FleetIndex index = corpus.index();
+    LazyPostings postings = corpus.postings();
     Pattern pattern;
     try {
       pattern = Pattern.compile(regex.getValue(), Pattern.CASE_INSENSITIVE);
     } catch (PatternSyntaxException pse) {
-      return negateIfNeeded(new BitSet(), regex.getNegated(), snapshot.deviceCount());
+      return negateIfNeeded(new BitSet(), regex.getNegated(), corpus.recordCount());
     }
     BitSet matched = new BitSet();
     for (String value : index.sortedValues().getOrDefault(keyId, ImmutableList.of())) {
@@ -191,15 +170,14 @@ public final class FleetFilterEngine {
         orInto(matched, postings.get(keyId, value));
       }
     }
-    return negateIfNeeded(matched, regex.getNegated(), snapshot.deviceCount());
+    return negateIfNeeded(matched, regex.getNegated(), corpus.recordCount());
   }
 
   /**
-   * Exact set match: the device's value set for the key equals the given set. Intersects the
-   * postings of the wanted values to find candidates that carry all of them, then keeps only those
-   * whose full value set equals the wanted set. Not negatable.
+   * Exact set match: the record's value set for the key equals the given set. Scans the forward
+   * store, keeping only records whose full value set equals the wanted set. Not negatable.
    */
-  private static BitSet matchExactly(FleetSnapshot snapshot, String keyId, MatchesExactly exactly) {
+  private static BitSet matchExactly(SearchCorpus corpus, String keyId, MatchesExactly exactly) {
     // Exact set matching scans the forward store, so it does not need posting lists.
     ImmutableList<String> wanted = lowercased(exactly.getValuesList());
     if (wanted.isEmpty()) {
@@ -207,9 +185,9 @@ public final class FleetFilterEngine {
     }
     Set<String> want = new HashSet<>(wanted);
     BitSet result = new BitSet();
-    ImmutableList<DeviceRecord> devices = snapshot.devices();
-    for (int i = 0; i < devices.size(); i++) {
-      if (valuesForKey(devices.get(i), keyId).equals(want)) {
+    int recordCount = corpus.recordCount();
+    for (int i = 0; i < recordCount; i++) {
+      if (corpus.valuesForKey(i, keyId).equals(want)) {
         result.set(i);
       }
     }
@@ -217,22 +195,22 @@ public final class FleetFilterEngine {
   }
 
   /**
-   * Superset match: the device's value set for the key contains all the given values. Equivalent to
+   * Superset match: the record's value set for the key contains all the given values. Equivalent to
    * intersecting the postings of the wanted values. Not negatable.
    */
-  private static BitSet matchAtLeast(String keyId, MatchesAtLeast atLeast, LazyPostings postings) {
-    return intersectPostings(postings, keyId, lowercased(atLeast.getValuesList()));
+  private static BitSet matchAtLeast(SearchCorpus corpus, String keyId, MatchesAtLeast atLeast) {
+    return intersectPostings(corpus.postings(), keyId, lowercased(atLeast.getValuesList()));
   }
 
-  /** Devices that lack the key entirely: all devices minus those carrying any value for it. */
-  private static BitSet noValueSet(FleetSnapshot snapshot, String keyId, LazyPostings postings) {
-    BitSet result = allDevices(snapshot.deviceCount());
-    result.andNot(devicesWithKey(postings, keyId));
+  /** Records that lack the key entirely: all records minus those carrying any value for it. */
+  private static BitSet noValueSet(SearchCorpus corpus, String keyId) {
+    BitSet result = allRecords(corpus.recordCount());
+    result.andNot(recordsWithKey(corpus.postings(), keyId));
     return result;
   }
 
-  /** Union of every posting list for the key: the devices that carry at least one value for it. */
-  private static BitSet devicesWithKey(LazyPostings postings, String keyId) {
+  /** Union of every posting list for the key: the records that carry at least one value for it. */
+  private static BitSet recordsWithKey(LazyPostings postings, String keyId) {
     BitSet withKey = new BitSet();
     for (int[] posting : postings.forKey(keyId).values()) {
       orInto(withKey, posting);
@@ -254,20 +232,8 @@ public final class FleetFilterEngine {
       } else {
         clause.and(posting);
       }
-      if (clause.isEmpty()) {
-        return clause;
-      }
     }
     return clause == null ? new BitSet() : clause;
-  }
-
-  /**
-   * The device's lowercased value set for the key, derived from the forward store so it mirrors
-   * exactly what the index builder recorded. Used by exact set matching; {@link LazyPostings} calls
-   * {@link DeviceValueExtractor} directly to avoid a circular dependency.
-   */
-  public static ImmutableSet<String> valuesForKey(DeviceRecord device, String keyId) {
-    return DeviceValueExtractor.valuesForKey(device, keyId);
   }
 
   private static ImmutableList<String> lowercased(List<String> values) {
@@ -278,18 +244,19 @@ public final class FleetFilterEngine {
     return result.build();
   }
 
-  /** Inverts the set over the device space when negated, otherwise returns it unchanged. */
-  @CanIgnoreReturnValue
-  private static BitSet negateIfNeeded(BitSet matched, boolean negated, int deviceCount) {
-    if (negated) {
-      matched.flip(0, deviceCount);
+  /** Inverts the set over the record space when negated, otherwise returns it unchanged. */
+  private static BitSet negateIfNeeded(BitSet matched, boolean negated, int recordCount) {
+    if (!negated) {
+      return matched;
     }
-    return matched;
+    BitSet all = allRecords(recordCount);
+    all.andNot(matched);
+    return all;
   }
 
-  private static BitSet allDevices(int deviceCount) {
-    BitSet all = new BitSet(deviceCount);
-    all.set(0, deviceCount);
+  private static BitSet allRecords(int recordCount) {
+    BitSet all = new BitSet(recordCount);
+    all.set(0, recordCount);
     return all;
   }
 
@@ -300,8 +267,7 @@ public final class FleetFilterEngine {
   }
 
   private static ImmutableList<Integer> toSortedList(BitSet set) {
-    ImmutableList.Builder<Integer> result =
-        ImmutableList.builderWithExpectedSize(set.cardinality());
+    ImmutableList.Builder<Integer> result = ImmutableList.builder();
     for (int i = set.nextSetBit(0); i >= 0; i = set.nextSetBit(i + 1)) {
       result.add(i);
     }

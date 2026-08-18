@@ -70,14 +70,14 @@ public final class FleetColumnCatalogerTest {
   private final FleetSnapshot snapshot =
       Guice.createInjector().getInstance(FleetIndexBuilder.class).build(fleet(), BUILD_TIME);
   private final LazyPostings postings = new LazyPostings(snapshot.devices());
+  private final DeviceCorpus corpus = new DeviceCorpus(snapshot, postings, null);
   private final FleetColumnCataloger cataloger =
       Guice.createInjector().getInstance(FleetColumnCataloger.class);
 
   @Test
   public void browse_sectionsInOrder() {
     FleetColumnCatalogResponse response =
-        cataloger.getColumnCatalog(
-            snapshot, FleetColumnCatalogRequest.getDefaultInstance(), postings);
+        cataloger.getColumnCatalog(corpus, FleetColumnCatalogRequest.getDefaultInstance());
 
     // No filters, no recents, no query: the suggested and search sections are absent, and the three
     // browse sections appear in their fixed order.
@@ -89,8 +89,7 @@ public final class FleetColumnCatalogerTest {
   @Test
   public void builtinSection_listsBuiltinsSortedByDisplayName() {
     FleetColumnCatalogResponse response =
-        cataloger.getColumnCatalog(
-            snapshot, FleetColumnCatalogRequest.getDefaultInstance(), postings);
+        cataloger.getColumnCatalog(corpus, FleetColumnCatalogRequest.getDefaultInstance());
 
     // Built-ins are the field::, host::, and config:: keys present in the index, listed in full and
     // sorted by display name: Host IP, Host Lab Server Connectivity, Host Name, Host OS, Owners,
@@ -114,8 +113,7 @@ public final class FleetColumnCatalogerTest {
   @Test
   public void dimensionsSection_excludesRedundantDimAndReportsTotal() {
     FleetColumnCatalogResponse response =
-        cataloger.getColumnCatalog(
-            snapshot, FleetColumnCatalogRequest.getDefaultInstance(), postings);
+        cataloger.getColumnCatalog(corpus, FleetColumnCatalogRequest.getDefaultInstance());
 
     FleetColumnCatalogSection dimensions = section(response, "Dimensions");
     // dim::host_name is present in the fleet but restates host::host_name on every device, so it is
@@ -133,8 +131,7 @@ public final class FleetColumnCatalogerTest {
   @Test
   public void deviceCount_countsDistinctDevicesCarryingTheKey() {
     FleetColumnCatalogResponse response =
-        cataloger.getColumnCatalog(
-            snapshot, FleetColumnCatalogRequest.getDefaultInstance(), postings);
+        cataloger.getColumnCatalog(corpus, FleetColumnCatalogRequest.getDefaultInstance());
 
     // Status is carried by all three devices.
     assertThat(entryFor(section(response, "Built-in fields"), "field::status").getDeviceCount())
@@ -155,7 +152,7 @@ public final class FleetColumnCatalogerTest {
             .addRecentKeys("field::status")
             .build();
 
-    FleetColumnCatalogResponse response = cataloger.getColumnCatalog(snapshot, request, postings);
+    FleetColumnCatalogResponse response = cataloger.getColumnCatalog(corpus, request);
 
     // The suggested section leads, before the browse sections.
     assertThat(headings(response).get(0)).isEqualTo("Suggested for you");
@@ -170,8 +167,7 @@ public final class FleetColumnCatalogerTest {
   @Test
   public void suggested_omittedWhenNothingToSuggest() {
     FleetColumnCatalogResponse response =
-        cataloger.getColumnCatalog(
-            snapshot, FleetColumnCatalogRequest.getDefaultInstance(), postings);
+        cataloger.getColumnCatalog(corpus, FleetColumnCatalogRequest.getDefaultInstance());
 
     assertThat(headings(response)).doesNotContain("Suggested for you");
   }
@@ -180,7 +176,7 @@ public final class FleetColumnCatalogerTest {
   public void search_presentOnlyWithQueryAndMatchesAcrossNamespaces() {
     FleetColumnCatalogResponse withQuery =
         cataloger.getColumnCatalog(
-            snapshot, FleetColumnCatalogRequest.newBuilder().setQuery("model").build(), postings);
+            corpus, FleetColumnCatalogRequest.newBuilder().setQuery("model").build());
 
     FleetColumnCatalogSection search = section(withQuery, "Search results");
     assertThat(keys(search)).contains("dim::model");
@@ -188,8 +184,7 @@ public final class FleetColumnCatalogerTest {
 
     // With no query there is no search section.
     FleetColumnCatalogResponse noQuery =
-        cataloger.getColumnCatalog(
-            snapshot, FleetColumnCatalogRequest.getDefaultInstance(), postings);
+        cataloger.getColumnCatalog(corpus, FleetColumnCatalogRequest.getDefaultInstance());
     assertThat(headings(noQuery)).doesNotContain("Search results");
   }
 

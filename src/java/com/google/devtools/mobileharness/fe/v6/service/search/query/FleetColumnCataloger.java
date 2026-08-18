@@ -27,9 +27,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnC
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogSection;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceRecord;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -112,14 +110,14 @@ public final class FleetColumnCataloger {
   /**
    * Returns the ordered column catalog for the current dialog state.
    *
-   * @param snapshot the fleet snapshot to read
+   * @param corpus the corpus to read
    * @param request the dialog state: an optional query, the current filters, and recently used keys
    */
   public FleetColumnCatalogResponse getColumnCatalog(
-      FleetSnapshot snapshot, FleetColumnCatalogRequest request, LazyPostings postings) {
-    FleetIndex index = snapshot.index();
-    ImmutableMap<String, Integer> deviceCounts = keyDeviceCounts(index, postings);
-    ImmutableSet<String> redundant = redundantDims(snapshot, index);
+      SearchCorpus corpus, FleetColumnCatalogRequest request) {
+    FleetIndex index = corpus.index();
+    ImmutableMap<String, Integer> deviceCounts = keyDeviceCounts(index, corpus.postings());
+    ImmutableSet<String> redundant = redundantDims(corpus, index);
 
     Comparator<String> byCoverage =
         Comparator.<String>comparingInt(keyId -> -deviceCounts.getOrDefault(keyId, 0))
@@ -291,10 +289,10 @@ public final class FleetColumnCataloger {
    * field can be present where the mirroring dimension is absent), so a dimension counts as
    * redundant only when it never disagrees with its twin on any device that carries it. That is
    * precisely "adds nothing", and it re-derives itself as the fleet changes. Values are compared
-   * over the normalized per-device value sets that {@link FleetFilterEngine#valuesForKey} returns,
+   * over the normalized per-record value sets that {@link SearchCorpus#valuesForKey} returns,
    * matching the prototype's comparison over its lowercased forward store.
    */
-  private static ImmutableSet<String> redundantDims(FleetSnapshot snapshot, FleetIndex index) {
+  private static ImmutableSet<String> redundantDims(SearchCorpus corpus, FleetIndex index) {
     // First non-dim key seen for each bare name is the twin candidate.
     Map<String, String> bareToBuiltin = new LinkedHashMap<>();
     for (String keyId : index.keyIds()) {
@@ -312,16 +310,17 @@ public final class FleetColumnCataloger {
         }
       }
     }
-    for (DeviceRecord device : snapshot.devices()) {
+    for (int i = 0; i < corpus.recordCount(); i++) {
       if (live.isEmpty()) {
         break;
       }
+      int recordIndex = i;
       live.entrySet()
           .removeIf(
               e -> {
-                ImmutableSet<String> dimValues = FleetFilterEngine.valuesForKey(device, e.getKey());
+                ImmutableSet<String> dimValues = corpus.valuesForKey(recordIndex, e.getKey());
                 return !dimValues.isEmpty()
-                    && !dimValues.equals(FleetFilterEngine.valuesForKey(device, e.getValue()));
+                    && !dimValues.equals(corpus.valuesForKey(recordIndex, e.getValue()));
               });
     }
     return ImmutableSet.copyOf(live.keySet());

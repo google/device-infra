@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueLi
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import com.google.inject.Guice;
 import java.time.Instant;
 import org.junit.Test;
@@ -62,13 +63,15 @@ public final class FleetValueListerTest {
   // them through Guice rather than constructing directly.
   private final FleetSnapshot snapshot =
       Guice.createInjector().getInstance(FleetIndexBuilder.class).build(fleet(), BUILD_TIME);
+  private final LazyPostings postings = new LazyPostings(snapshot.devices());
+  private final DeviceCorpus corpus = new DeviceCorpus(snapshot, postings, null);
   private final FleetValueLister lister =
       Guice.createInjector().getInstance(FleetValueLister.class);
 
   @Test
   public void countedKey_noFilters_filteredEqualsTotal() {
     FleetValueListResponse response =
-        lister.listValues(snapshot, "field::status", ImmutableList.of());
+        lister.listValues(corpus, "field::status", ImmutableList.of());
 
     assertThat(response.getKindCase()).isEqualTo(FleetValueListResponse.KindCase.COUNTED);
     FleetCountedValueList counted = response.getCounted();
@@ -88,7 +91,7 @@ public final class FleetValueListerTest {
   public void countedKey_otherFilterApplied_filteredBelowTotal() {
     FleetValueListResponse response =
         lister.listValues(
-            snapshot, "field::status", ImmutableList.of(simple("field::owner", "alice")));
+            corpus, "field::status", ImmutableList.of(simple("field::owner", "alice")));
 
     FleetCountedValueList counted = response.getCounted();
     // Owner alice covers device-0, device-1, device-3, all IDLE.
@@ -109,7 +112,7 @@ public final class FleetValueListerTest {
     // Filtering on the same key must not collapse its own picker to the selected value.
     FleetValueListResponse response =
         lister.listValues(
-            snapshot, "field::status", ImmutableList.of(simple("field::status", "BUSY")));
+            corpus, "field::status", ImmutableList.of(simple("field::status", "BUSY")));
 
     FleetCountedValueList counted = response.getCounted();
     assertThat(valuesOf(counted)).containsExactly("IDLE", "BUSY").inOrder();
@@ -120,7 +123,7 @@ public final class FleetValueListerTest {
 
   @Test
   public void noValueEntry_presentWhenSomeDevicesLackKey() {
-    FleetValueListResponse response = lister.listValues(snapshot, "dim::os", ImmutableList.of());
+    FleetValueListResponse response = lister.listValues(corpus, "dim::os", ImmutableList.of());
 
     FleetCountedValueList counted = response.getCounted();
     assertThat(valuesOf(counted)).containsExactly("android", "ios").inOrder();
@@ -136,7 +139,7 @@ public final class FleetValueListerTest {
   @Test
   public void noValueEntry_filteredBelowTotalUnderOtherFilter() {
     FleetValueListResponse response =
-        lister.listValues(snapshot, "dim::os", ImmutableList.of(simple("field::status", "BUSY")));
+        lister.listValues(corpus, "dim::os", ImmutableList.of(simple("field::status", "BUSY")));
 
     FleetCountedValueList counted = response.getCounted();
     // Only device-2 (BUSY, os=ios) survives the filter.
@@ -153,8 +156,7 @@ public final class FleetValueListerTest {
 
   @Test
   public void identifierKey_returnsPlainListSortedByValue() {
-    FleetValueListResponse response =
-        lister.listValues(snapshot, "field::uuid", ImmutableList.of());
+    FleetValueListResponse response = lister.listValues(corpus, "field::uuid", ImmutableList.of());
 
     assertThat(response.getKindCase()).isEqualTo(FleetValueListResponse.KindCase.PLAIN);
     ImmutableList.Builder<String> values = ImmutableList.builder();
@@ -171,7 +173,7 @@ public final class FleetValueListerTest {
   @Test
   public void unknownKey_returnsEmptyCountedListWithoutNoValueEntry() {
     FleetValueListResponse response =
-        lister.listValues(snapshot, "dim::does_not_exist", ImmutableList.of());
+        lister.listValues(corpus, "dim::does_not_exist", ImmutableList.of());
 
     assertThat(response.getKindCase()).isEqualTo(FleetValueListResponse.KindCase.COUNTED);
     assertThat(response.getCounted().getValuesList()).isEmpty();

@@ -42,7 +42,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggest
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListResponse;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.search.query.DeviceCorpus;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetChipResolver;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetColumnCataloger;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetFlatSearcher;
@@ -52,6 +52,7 @@ import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetSearchC
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetSuggester;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetValueLister;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.ScenarioCuration;
+import com.google.devtools.mobileharness.fe.v6.service.search.query.SearchCorpus;
 import com.google.devtools.mobileharness.fe.v6.service.search.refresh.FleetSnapshotStore;
 import java.util.Map;
 import javax.inject.Inject;
@@ -136,43 +137,39 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
 
   private FleetSearchResults searchFleetSync(FleetSearchRequest request) {
     Fleet fleet = normalize(request.getFleet());
-    FleetSnapshot snapshot = store.get(fleet);
-    LazyPostings postings = store.postings(fleet);
+    SearchCorpus corpus = corpus(fleet);
     return switch (request.getViewCase()) {
       case FLAT -> {
         FleetFlatView flat = request.getFlat();
         FleetFlatResults results =
             flatSearcher.searchFlat(
-                snapshot,
+                corpus,
                 request.getFiltersList(),
                 flat.getColumnsList(),
                 flat.getSort(),
-                flat.getPage(),
-                postings);
+                flat.getPage());
         yield FleetSearchResults.newBuilder().setFlat(results).build();
       }
       case GROUP_HEADER -> {
         FleetGroupHeaderView header = request.getGroupHeader();
         FleetGroupedResults results =
             groupSearcher.searchGrouped(
-                snapshot,
+                corpus,
                 request.getFiltersList(),
                 header.getGroupByList(),
                 header.getSort(),
-                header.getPage(),
-                postings);
+                header.getPage());
         yield FleetSearchResults.newBuilder().setGrouped(results).build();
       }
       case GROUP_EXPAND -> {
         FleetGroupExpandView expand = request.getGroupExpand();
         FleetFlatResults results =
             groupSearcher.expandGroup(
-                snapshot,
+                corpus,
                 request.getFiltersList(),
                 expand.getGroupId(),
                 expand.getColumnsList(),
-                expand.getPageToken(),
-                postings);
+                expand.getPageToken());
         yield FleetSearchResults.newBuilder().setFlat(results).build();
       }
       // A request with no view selects no results shape, so return an empty result rather than
@@ -187,8 +184,7 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
     return Futures.submit(
         () -> {
           Fleet fleet = normalize(request.getFleet());
-          FleetSnapshot snapshot = store.get(fleet);
-          return suggester.suggest(snapshot, request, store.postings(fleet));
+          return suggester.suggest(corpus(fleet), request);
         },
         executor);
   }
@@ -212,9 +208,7 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
     return Futures.submit(
         () -> {
           Fleet fleet = normalize(request.getFleet());
-          FleetSnapshot snapshot = store.get(fleet);
-          return valueLister.listValues(
-              snapshot, request.getKey(), request.getFiltersList(), store.postings(fleet));
+          return valueLister.listValues(corpus(fleet), request.getKey(), request.getFiltersList());
         },
         executor);
   }
@@ -225,8 +219,7 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
     return Futures.submit(
         () -> {
           Fleet fleet = normalize(request.getFleet());
-          FleetSnapshot snapshot = store.get(fleet);
-          return promotedKeysProvider.getPromotedKeys(snapshot, request, store.postings(fleet));
+          return promotedKeysProvider.getPromotedKeys(corpus(fleet), request);
         },
         executor);
   }
@@ -237,10 +230,18 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
     return Futures.submit(
         () -> {
           Fleet fleet = normalize(request.getFleet());
-          FleetSnapshot snapshot = store.get(fleet);
-          return columnCataloger.getColumnCatalog(snapshot, request, store.postings(fleet));
+          return columnCataloger.getColumnCatalog(corpus(fleet), request);
         },
         executor);
+  }
+
+  /**
+   * Builds the search corpus for a fleet. Device search routes through a {@link DeviceCorpus} for
+   * every entity for now; host entity routing arrives in a later change. A missing curation is
+   * passed through as null so the promoted keys provider keeps its curation-missing fallback.
+   */
+  private SearchCorpus corpus(Fleet fleet) {
+    return new DeviceCorpus(store.get(fleet), store.postings(fleet), curations.get(fleet));
   }
 
   /**

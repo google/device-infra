@@ -67,6 +67,7 @@ public final class FleetGroupSearcherTest {
   private final FleetSnapshot snapshot =
       Guice.createInjector().getInstance(FleetIndexBuilder.class).build(fleet(), BUILD_TIME);
   private final LazyPostings postings = new LazyPostings(snapshot.devices());
+  private final DeviceCorpus corpus = new DeviceCorpus(snapshot, postings, null);
   private final FleetGroupSearcher searcher =
       Guice.createInjector().getInstance(FleetGroupSearcher.class);
 
@@ -74,12 +75,11 @@ public final class FleetGroupSearcherTest {
   public void groupByOs_partitionsIntoCountsWithNoValueBucket() {
     FleetGroupedResults results =
         searcher.searchGrouped(
-            snapshot,
+            corpus,
             ImmutableList.of(),
             ImmutableList.of("dim::os"),
             FleetGroupSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance(),
-            postings);
+            FleetPageRequest.getDefaultInstance());
 
     // Default sort is item count descending, so android (3) leads. The two size-1 groups tie on
     // count and break by name descending, putting "ios" before "(no value)".
@@ -95,12 +95,11 @@ public final class FleetGroupSearcherTest {
   public void groupByOs_utilizationBreakdown() {
     FleetGroupedResults results =
         searcher.searchGrouped(
-            snapshot,
+            corpus,
             ImmutableList.of(),
             ImmutableList.of("dim::os"),
             FleetGroupSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance(),
-            postings);
+            FleetPageRequest.getDefaultInstance());
 
     // android holds device-0 (idle), device-1 (busy), device-4 (idle but abnormal type -> other).
     FleetUtilization android = groupByFirstValue(results, "android").getUtilization();
@@ -121,12 +120,11 @@ public final class FleetGroupSearcherTest {
   public void groupId_roundTripsAndExpandsToItsDevices() {
     FleetGroupedResults results =
         searcher.searchGrouped(
-            snapshot,
+            corpus,
             ImmutableList.of(),
             ImmutableList.of("dim::os"),
             FleetGroupSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance(),
-            postings);
+            FleetPageRequest.getDefaultInstance());
     String androidGroupId = groupByFirstValue(results, "android").getGroupId();
 
     // The opaque id decodes back to its single group-by entry.
@@ -139,8 +137,7 @@ public final class FleetGroupSearcherTest {
 
     // Expanding it returns exactly the android devices, sorted by uuid.
     FleetFlatResults expanded =
-        searcher.expandGroup(
-            snapshot, ImmutableList.of(), androidGroupId, EXPAND_COLUMNS, "", postings);
+        searcher.expandGroup(corpus, ImmutableList.of(), androidGroupId, EXPAND_COLUMNS, "");
     assertThat(rowIds(expanded)).containsExactly("device-0", "device-1", "device-4").inOrder();
     assertThat(expanded.getTotal()).isEqualTo(3);
   }
@@ -149,12 +146,11 @@ public final class FleetGroupSearcherTest {
   public void noValueGroup_expandsToDevicesLackingTheKey() {
     FleetGroupedResults results =
         searcher.searchGrouped(
-            snapshot,
+            corpus,
             ImmutableList.of(),
             ImmutableList.of("dim::os"),
             FleetGroupSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance(),
-            postings);
+            FleetPageRequest.getDefaultInstance());
     String noValueId = groupByFirstValue(results, "(no value)").getGroupId();
 
     ImmutableList<FleetGroupSearcher.GroupEntry> entries =
@@ -163,7 +159,7 @@ public final class FleetGroupSearcherTest {
     assertThat(entries.get(0).noValue()).isTrue();
 
     FleetFlatResults expanded =
-        searcher.expandGroup(snapshot, ImmutableList.of(), noValueId, EXPAND_COLUMNS, "", postings);
+        searcher.expandGroup(corpus, ImmutableList.of(), noValueId, EXPAND_COLUMNS, "");
     assertThat(rowIds(expanded)).containsExactly("device-3");
   }
 
@@ -171,12 +167,11 @@ public final class FleetGroupSearcherTest {
   public void multiValuedKey_wholeValueSetIsOneGroup() {
     FleetGroupedResults results =
         searcher.searchGrouped(
-            snapshot,
+            corpus,
             ImmutableList.of(),
             ImmutableList.of("field::owner"),
             FleetGroupSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance(),
-            postings);
+            FleetPageRequest.getDefaultInstance());
 
     // alice+carol is a single group, distinct from the alice-only group. alice holds device-0 and
     // device-4; bob holds device-1; alice+carol holds device-2; device-3 has no owner.
@@ -186,7 +181,7 @@ public final class FleetGroupSearcherTest {
 
     FleetFlatResults expanded =
         searcher.expandGroup(
-            snapshot, ImmutableList.of(), aliceCarol.getGroupId(), EXPAND_COLUMNS, "", postings);
+            corpus, ImmutableList.of(), aliceCarol.getGroupId(), EXPAND_COLUMNS, "");
     // Exact-set membership: device-2 (alice+carol) only, not the alice-only devices.
     assertThat(rowIds(expanded)).containsExactly("device-2");
   }
@@ -195,7 +190,7 @@ public final class FleetGroupSearcherTest {
   public void sortByItemCountAscending_reordersGroups() {
     FleetGroupedResults results =
         searcher.searchGrouped(
-            snapshot,
+            corpus,
             ImmutableList.of(),
             ImmutableList.of("dim::os"),
             FleetGroupSort.newBuilder()
@@ -204,8 +199,7 @@ public final class FleetGroupSearcherTest {
                         .setItemCount(FleetItemCountSort.getDefaultInstance()))
                 .setAscending(true)
                 .build(),
-            FleetPageRequest.getDefaultInstance(),
-            postings);
+            FleetPageRequest.getDefaultInstance());
 
     // Ascending count: the two size-1 groups first, tie-broken by name ascending, then android (3).
     assertThat(groupValues(results)).containsExactly("(no value)", "ios", "android").inOrder();
@@ -215,12 +209,11 @@ public final class FleetGroupSearcherTest {
   public void threeKeyGuard_capsToFirstThreeKnownKeys() {
     FleetGroupedResults results =
         searcher.searchGrouped(
-            snapshot,
+            corpus,
             ImmutableList.of(),
             ImmutableList.of("dim::os", "field::status", "field::type", "field::owner"),
             FleetGroupSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance(),
-            postings);
+            FleetPageRequest.getDefaultInstance());
 
     assertThat(results.getGroupByKeysCount()).isEqualTo(3);
     assertThat(results.getGroupByKeys(0).getKey()).isEqualTo("dim::os");
@@ -233,12 +226,11 @@ public final class FleetGroupSearcherTest {
     FleetPageRequest firstPage = FleetPageRequest.newBuilder().setPageSize(2).build();
     FleetGroupedResults page1 =
         searcher.searchGrouped(
-            snapshot,
+            corpus,
             ImmutableList.of(),
             ImmutableList.of("field::owner"),
             FleetGroupSort.getDefaultInstance(),
-            firstPage,
-            postings);
+            firstPage);
 
     assertThat(page1.getGroupsCount()).isEqualTo(2);
     assertThat(page1.getTotalGroups()).isEqualTo(4);
@@ -251,12 +243,11 @@ public final class FleetGroupSearcherTest {
         FleetPageRequest.newBuilder().setPageSize(2).setPageToken(page1.getNextPageToken()).build();
     FleetGroupedResults page2 =
         searcher.searchGrouped(
-            snapshot,
+            corpus,
             ImmutableList.of(),
             ImmutableList.of("field::owner"),
             FleetGroupSort.getDefaultInstance(),
-            secondPage,
-            postings);
+            secondPage);
 
     assertThat(page2.getGroupsCount()).isEqualTo(2);
     assertThat(page2.getRangeStart()).isEqualTo(3);
@@ -274,34 +265,31 @@ public final class FleetGroupSearcherTest {
             .build(uniformAndroidFleet(150), BUILD_TIME);
     FleetGroupedResults headers =
         searcher.searchGrouped(
-            large,
+            new DeviceCorpus(large, postings, null),
             ImmutableList.of(),
             ImmutableList.of("dim::os"),
             FleetGroupSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance(),
-            postings);
+            FleetPageRequest.getDefaultInstance());
     String groupId = headers.getGroups(0).getGroupId();
 
     FleetFlatResults page1 =
         searcher.expandGroup(
-            large,
+            new DeviceCorpus(large, new LazyPostings(large.devices()), null),
             ImmutableList.of(),
             groupId,
             EXPAND_COLUMNS,
-            "",
-            new LazyPostings(large.devices()));
+            "");
     assertThat(page1.getTotal()).isEqualTo(150);
     assertThat(page1.getRowsCount()).isEqualTo(100);
     assertThat(page1.getNextPageToken()).isNotEmpty();
 
     FleetFlatResults page2 =
         searcher.expandGroup(
-            large,
+            new DeviceCorpus(large, new LazyPostings(large.devices()), null),
             ImmutableList.of(),
             groupId,
             EXPAND_COLUMNS,
-            page1.getNextPageToken(),
-            new LazyPostings(large.devices()));
+            page1.getNextPageToken());
     assertThat(page2.getRowsCount()).isEqualTo(50);
     assertThat(page2.getNextPageToken()).isEmpty();
   }
@@ -309,8 +297,7 @@ public final class FleetGroupSearcherTest {
   @Test
   public void expand_unknownGroupIdReturnsNoRows() {
     FleetFlatResults expanded =
-        searcher.expandGroup(
-            snapshot, ImmutableList.of(), "not-a-real-group-id", EXPAND_COLUMNS, "", postings);
+        searcher.expandGroup(corpus, ImmutableList.of(), "not-a-real-group-id", EXPAND_COLUMNS, "");
     assertThat(expanded.getRowsCount()).isEqualTo(0);
     assertThat(expanded.getColumnsCount()).isEqualTo(EXPAND_COLUMNS.size());
   }

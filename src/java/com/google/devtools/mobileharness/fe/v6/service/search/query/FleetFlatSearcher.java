@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_UUID;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.base.Ascii;
@@ -25,9 +24,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnSort;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFlatResults;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPageRequest;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceRecord;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.Row;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
@@ -39,15 +36,12 @@ import javax.inject.Inject;
  * rows.
  *
  * <p>This is the Java port of the search prototype's flat branch of {@code search_devices}. It runs
- * entirely over an in-memory {@link FleetSnapshot}: {@link FleetFilterEngine} resolves the filters
- * to matching device indices, records are ordered by the requested sort column's display value, a
- * page slice is cut with an opaque offset cursor, and {@link FleetCellMapper} turns the slice into
- * columns and rows.
+ * entirely over an in-memory {@link SearchCorpus}: {@link FleetFilterEngine} resolves the filters
+ * to matching record indices, records are ordered by the requested sort column's display value, a
+ * page slice is cut with an opaque offset cursor, and the corpus turns the slice into columns and
+ * rows.
  */
 public final class FleetFlatSearcher {
-
-  /** Default sort when the request leaves the sort unspecified. */
-  private static final String DEFAULT_SORT_KEY = FIELD_UUID;
 
   /** Page size used when the request leaves it unset (or non-positive). */
   private static final int DEFAULT_PAGE_SIZE = 25;
@@ -56,51 +50,30 @@ public final class FleetFlatSearcher {
   private static final String TOKEN_PREFIX = "o:";
 
   private final FleetFilterEngine filterEngine;
-  private final FleetCellMapper cellMapper;
 
   @Inject
-  FleetFlatSearcher(FleetFilterEngine filterEngine, FleetCellMapper cellMapper) {
+  FleetFlatSearcher(FleetFilterEngine filterEngine) {
     this.filterEngine = filterEngine;
-    this.cellMapper = cellMapper;
   }
 
   /**
-   * Runs a flat search over the snapshot and returns one page of results.
+   * Runs a flat search over the corpus and returns one page of results.
    *
-   * @param snapshot the fleet snapshot to search
-   * @param filters the filter chips, AND'd together; empty matches every device
+   * @param corpus the corpus to search
+   * @param filters the filter chips, AND'd together; empty matches every record
    * @param columnKeys the column keys to include in each row, in display order
-   * @param sort the sort order; when null or with an empty key, sorts by device UUID ascending
+   * @param sort the sort order; when null or with an empty key, sorts by the corpus identifier key
+   *     ascending
    * @param page the page request; when null or with a non-positive size, uses the default size
    */
   public FleetFlatResults searchFlat(
-      FleetSnapshot snapshot,
+      SearchCorpus corpus,
       List<Filter> filters,
       List<String> columnKeys,
       FleetColumnSort sort,
       FleetPageRequest page) {
-    return searchFlat(
-        snapshot, filters, columnKeys, sort, page, new LazyPostings(snapshot.devices()));
-  }
-
-  /**
-   * Runs a flat search over the snapshot and returns one page of results.
-   *
-   * @param snapshot the fleet snapshot to search
-   * @param filters the filter chips, AND'd together; empty matches every device
-   * @param columnKeys the column keys to include in each row, in display order
-   * @param sort the sort order; when null or with an empty key, sorts by device UUID ascending
-   * @param page the page request; when null or with a non-positive size, uses the default size
-   */
-  public FleetFlatResults searchFlat(
-      FleetSnapshot snapshot,
-      List<Filter> filters,
-      List<String> columnKeys,
-      FleetColumnSort sort,
-      FleetPageRequest page,
-      LazyPostings postings) {
-    List<Integer> ordered = new ArrayList<>(filterEngine.match(snapshot, filters, postings));
-    sortInPlace(ordered, snapshot, sort);
+    List<Integer> ordered = new ArrayList<>(filterEngine.match(corpus, filters));
+    sortInPlace(ordered, corpus, sort);
 
     int total = ordered.size();
     int pageSize = pageSize(page);
@@ -110,10 +83,10 @@ public final class FleetFlatSearcher {
 
     FleetFlatResults.Builder result = FleetFlatResults.newBuilder();
     for (String keyId : columnKeys) {
-      result.addColumns(cellMapper.column(keyId, snapshot));
+      result.addColumns(corpus.column(keyId));
     }
-    for (int deviceIndex : pageIndices) {
-      result.addRows(cellMapper.row(snapshot.devices().get(deviceIndex), columnKeys, snapshot));
+    for (int recordIndex : pageIndices) {
+      result.addRows(buildRow(corpus, recordIndex, columnKeys));
     }
     result
         .setTotal(total)
@@ -128,28 +101,37 @@ public final class FleetFlatSearcher {
     return result.build();
   }
 
+  /** Builds one result row: the record id as id, plus one typed cell per requested column key. */
+  private static Row buildRow(SearchCorpus corpus, int recordIndex, List<String> columnKeys) {
+    Row.Builder row = Row.newBuilder().setId(corpus.recordId(recordIndex));
+    for (String keyId : columnKeys) {
+      row.addCells(corpus.cell(recordIndex, keyId));
+    }
+    return row.build();
+  }
+
   /**
-   * Orders the matched device indices by the sort column's lowercased first display value, breaking
-   * ties by device UUID so the order is stable. A descending sort reverses the whole comparison,
+   * Orders the matched record indices by the sort column's lowercased first display value, breaking
+   * ties by record id so the order is stable. A descending sort reverses the whole comparison,
    * matching the prototype.
    */
   private static void sortInPlace(
-      List<Integer> indices, FleetSnapshot snapshot, FleetColumnSort sort) {
-    String sortKey = (sort == null || sort.getKey().isEmpty()) ? DEFAULT_SORT_KEY : sort.getKey();
+      List<Integer> indices, SearchCorpus corpus, FleetColumnSort sort) {
+    String sortKey =
+        (sort == null || sort.getKey().isEmpty()) ? corpus.identifierKey() : sort.getKey();
     boolean ascending = sort == null || sort.getKey().isEmpty() || sort.getAscending();
 
-    ImmutableList<DeviceRecord> devices = snapshot.devices();
     Comparator<Integer> comparator =
-        Comparator.<Integer, String>comparing(i -> sortValue(devices.get(i), sortKey, snapshot))
-            .thenComparing(i -> devices.get(i).deviceId());
+        Comparator.<Integer, String>comparing(i -> sortValue(corpus, i, sortKey))
+            .thenComparing(corpus::recordId);
     if (!ascending) {
       comparator = comparator.reversed();
     }
     indices.sort(comparator);
   }
 
-  private static String sortValue(DeviceRecord device, String sortKey, FleetSnapshot snapshot) {
-    ImmutableList<String> values = FleetCellMapper.displayValues(device, sortKey, snapshot);
+  private static String sortValue(SearchCorpus corpus, int recordIndex, String sortKey) {
+    ImmutableList<String> values = corpus.displayValues(recordIndex, sortKey);
     return values.isEmpty() ? "" : Ascii.toLowerCase(values.get(0));
   }
 

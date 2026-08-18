@@ -26,8 +26,6 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPlainVa
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPlainValueList;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListResponse;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -67,41 +65,27 @@ public final class FleetValueLister {
   /**
    * Returns the value list for one key under the current filters.
    *
-   * @param snapshot the fleet snapshot to read
+   * @param corpus the corpus to read
    * @param keyId the namespaced key whose values to enumerate (for example {@code field::status})
    * @param filters the current filter chips; the chip on {@code keyId} is excluded from the
    *     filtered counts so the picker offers alternatives to the current selection
    */
   public FleetValueListResponse listValues(
-      FleetSnapshot snapshot, String keyId, List<Filter> filters) {
-    return listValues(snapshot, keyId, filters, new LazyPostings(snapshot.devices()));
-  }
-
-  /**
-   * Returns the value list for one key under the current filters.
-   *
-   * @param snapshot the fleet snapshot to read
-   * @param keyId the namespaced key whose values to enumerate (for example {@code field::status})
-   * @param filters the current filter chips; the chip on {@code keyId} is excluded from the
-   *     filtered counts so the picker offers alternatives to the current selection
-   * @param postings the lazy posting lists for intersection counting
-   */
-  public FleetValueListResponse listValues(
-      FleetSnapshot snapshot, String keyId, List<Filter> filters, LazyPostings postings) {
-    FleetIndex index = snapshot.index();
+      SearchCorpus corpus, String keyId, List<Filter> filters) {
+    FleetIndex index = corpus.index();
+    LazyPostings postings = corpus.postings();
     boolean knownKey = index.keyIds().contains(keyId);
     ImmutableList<String> values = index.sortedValues().getOrDefault(keyId, ImmutableList.of());
 
     // The filtered set drops this key's own chip. With no other filters this is the whole fleet, so
     // every value's filtered count equals its total, which is exactly the prototype's behavior.
-    BitSet filteredSet =
-        toBitSet(filterEngine.match(snapshot, otherFilters(filters, keyId), postings));
+    BitSet filteredSet = toBitSet(filterEngine.match(corpus, otherFilters(filters, keyId)));
 
-    if (FleetSearchKeys.PLAIN_VALUE_KEYS.contains(keyId)) {
+    if (corpus.plainValueKey(keyId)) {
       return FleetValueListResponse.newBuilder().setPlain(buildPlain(index, keyId, values)).build();
     }
     return FleetValueListResponse.newBuilder()
-        .setCounted(buildCounted(index, keyId, values, snapshot, filteredSet, knownKey, postings))
+        .setCounted(buildCounted(index, keyId, values, corpus, filteredSet, knownKey, postings))
         .build();
   }
 
@@ -109,7 +93,7 @@ public final class FleetValueLister {
       FleetIndex index,
       String keyId,
       ImmutableList<String> values,
-      FleetSnapshot snapshot,
+      SearchCorpus corpus,
       BitSet filteredSet,
       boolean knownKey,
       LazyPostings postings) {
@@ -131,7 +115,7 @@ public final class FleetValueLister {
     FleetCountedValueList.Builder builder =
         FleetCountedValueList.newBuilder().addAllValues(entries);
     if (knownKey) {
-      int totalNoValue = noValueTotal(snapshot, postings, keyId);
+      int totalNoValue = noValueTotal(corpus, postings, keyId);
       if (totalNoValue > 0) {
         builder.setNoValueEntry(
             FleetCountedNoValueEntry.newBuilder()
@@ -190,8 +174,8 @@ public final class FleetValueLister {
   }
 
   /** Fleet-wide count of devices that lack the key entirely. */
-  private static int noValueTotal(FleetSnapshot snapshot, LazyPostings postings, String keyId) {
-    return snapshot.deviceCount() - devicesWithKey(postings, keyId).cardinality();
+  private static int noValueTotal(SearchCorpus corpus, LazyPostings postings, String keyId) {
+    return corpus.recordCount() - devicesWithKey(postings, keyId).cardinality();
   }
 
   /** Count of devices in the filtered set that lack the key entirely. */

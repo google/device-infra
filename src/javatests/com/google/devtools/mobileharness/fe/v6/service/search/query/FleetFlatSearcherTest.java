@@ -76,6 +76,7 @@ public final class FleetFlatSearcherTest {
   private final FleetSnapshot snapshot =
       Guice.createInjector().getInstance(FleetIndexBuilder.class).build(fleet(), BUILD_TIME);
   private final LazyPostings postings = new LazyPostings(snapshot.devices());
+  private final DeviceCorpus corpus = new DeviceCorpus(snapshot, postings, null);
   private final FleetFlatSearcher searcher =
       Guice.createInjector().getInstance(FleetFlatSearcher.class);
 
@@ -83,12 +84,11 @@ public final class FleetFlatSearcherTest {
   public void noFilter_returnsAllRowsSortedByUuidAscending() {
     FleetFlatResults results =
         searcher.searchFlat(
-            snapshot,
+            corpus,
             ImmutableList.of(),
             COLUMNS,
             FleetColumnSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance(),
-            postings);
+            FleetPageRequest.getDefaultInstance());
 
     assertThat(rowIds(results)).containsExactly("device-0", "device-1", "device-2").inOrder();
     assertThat(results.getTotal()).isEqualTo(3);
@@ -102,12 +102,11 @@ public final class FleetFlatSearcherTest {
   public void filter_narrowsResults() {
     FleetFlatResults results =
         searcher.searchFlat(
-            snapshot,
+            corpus,
             ImmutableList.of(simple("field::status", "IDLE")),
             COLUMNS,
             FleetColumnSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance(),
-            postings);
+            FleetPageRequest.getDefaultInstance());
 
     assertThat(rowIds(results)).containsExactly("device-0", "device-2").inOrder();
     assertThat(results.getTotal()).isEqualTo(2);
@@ -117,12 +116,11 @@ public final class FleetFlatSearcherTest {
   public void columns_produceExpectedHeaders() {
     FleetFlatResults results =
         searcher.searchFlat(
-            snapshot,
+            corpus,
             ImmutableList.of(),
             COLUMNS,
             FleetColumnSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance(),
-            postings);
+            FleetPageRequest.getDefaultInstance());
 
     assertThat(columnKeys(results))
         .containsExactly("field::uuid", "host::host_name", "field::status", "dim::os")
@@ -137,12 +135,11 @@ public final class FleetFlatSearcherTest {
   public void cells_haveExpectedTypedKinds() {
     FleetFlatResults results =
         searcher.searchFlat(
-            snapshot,
+            corpus,
             ImmutableList.of(simple("field::uuid", "device-0")),
             COLUMNS,
             FleetColumnSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance(),
-            postings);
+            FleetPageRequest.getDefaultInstance());
 
     Row row = results.getRows(0);
     Cell uuidCell = row.getCells(0);
@@ -172,12 +169,11 @@ public final class FleetFlatSearcherTest {
   public void busyStatus_mapsToActiveIndicator() {
     FleetFlatResults results =
         searcher.searchFlat(
-            snapshot,
+            corpus,
             ImmutableList.of(simple("field::uuid", "device-1")),
             COLUMNS,
             FleetColumnSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance(),
-            postings);
+            FleetPageRequest.getDefaultInstance());
 
     Cell statusCell = results.getRows(0).getCells(2);
     assertThat(statusCell.getStatus().getText()).isEqualTo("BUSY");
@@ -188,12 +184,11 @@ public final class FleetFlatSearcherTest {
   public void multiValueKey_commaJoinedIntoTextCell() {
     FleetFlatResults results =
         searcher.searchFlat(
-            snapshot,
+            corpus,
             ImmutableList.of(simple("field::uuid", "device-2")),
             ImmutableList.of("field::owner"),
             FleetColumnSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance(),
-            postings);
+            FleetPageRequest.getDefaultInstance());
 
     Cell ownerCell = results.getRows(0).getCells(0);
     assertThat(ownerCell.getKindCase()).isEqualTo(Cell.KindCase.TEXT);
@@ -204,12 +199,11 @@ public final class FleetFlatSearcherTest {
   public void sortByStatus_ascending() {
     FleetFlatResults results =
         searcher.searchFlat(
-            snapshot,
+            corpus,
             ImmutableList.of(),
             COLUMNS,
             FleetColumnSort.newBuilder().setKey("field::status").setAscending(true).build(),
-            FleetPageRequest.getDefaultInstance(),
-            postings);
+            FleetPageRequest.getDefaultInstance());
 
     // BUSY sorts before IDLE; the two IDLE devices tie-break by UUID ascending.
     assertThat(rowIds(results)).containsExactly("device-1", "device-0", "device-2").inOrder();
@@ -219,12 +213,11 @@ public final class FleetFlatSearcherTest {
   public void sortByStatus_descending() {
     FleetFlatResults results =
         searcher.searchFlat(
-            snapshot,
+            corpus,
             ImmutableList.of(),
             COLUMNS,
             FleetColumnSort.newBuilder().setKey("field::status").setAscending(false).build(),
-            FleetPageRequest.getDefaultInstance(),
-            postings);
+            FleetPageRequest.getDefaultInstance());
 
     // Descending reverses the whole ordering, tie-break included.
     assertThat(rowIds(results)).containsExactly("device-2", "device-0", "device-1").inOrder();
@@ -235,12 +228,7 @@ public final class FleetFlatSearcherTest {
     FleetPageRequest firstPage = FleetPageRequest.newBuilder().setPageSize(2).build();
     FleetFlatResults page1 =
         searcher.searchFlat(
-            snapshot,
-            ImmutableList.of(),
-            COLUMNS,
-            FleetColumnSort.getDefaultInstance(),
-            firstPage,
-            postings);
+            corpus, ImmutableList.of(), COLUMNS, FleetColumnSort.getDefaultInstance(), firstPage);
 
     assertThat(rowIds(page1)).containsExactly("device-0", "device-1").inOrder();
     assertThat(page1.getTotal()).isEqualTo(3);
@@ -253,12 +241,7 @@ public final class FleetFlatSearcherTest {
         FleetPageRequest.newBuilder().setPageSize(2).setPageToken(page1.getNextPageToken()).build();
     FleetFlatResults page2 =
         searcher.searchFlat(
-            snapshot,
-            ImmutableList.of(),
-            COLUMNS,
-            FleetColumnSort.getDefaultInstance(),
-            secondPage,
-            postings);
+            corpus, ImmutableList.of(), COLUMNS, FleetColumnSort.getDefaultInstance(), secondPage);
 
     assertThat(rowIds(page2)).containsExactly("device-2");
     assertThat(page2.getRangeStart()).isEqualTo(3);
@@ -288,12 +271,11 @@ public final class FleetFlatSearcherTest {
 
     FleetFlatResults results =
         searcher.searchFlat(
-            enriched,
+            new DeviceCorpus(enriched, postings, null),
             ImmutableList.of(),
             ImmutableList.of("field::uuid", "host::ats_controller"),
             FleetColumnSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance(),
-            postings);
+            FleetPageRequest.getDefaultInstance());
 
     assertThat(rowIds(results)).containsExactly("device-0", "device-1", "device-2").inOrder();
     // device-0: ctrl-1 mapped to its friendly display.
@@ -332,12 +314,11 @@ public final class FleetFlatSearcherTest {
         ImmutableList.of("field::uuid", "host::lab_type", "host::host_os", "host::release_status");
     FleetFlatResults results =
         searcher.searchFlat(
-            enriched,
+            new DeviceCorpus(enriched, enrichedPostings, null),
             ImmutableList.of(),
             columns,
             FleetColumnSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance(),
-            enrichedPostings);
+            FleetPageRequest.getDefaultInstance());
 
     assertThat(rowIds(results)).containsExactly("device-0", "device-1", "device-2").inOrder();
 
@@ -369,23 +350,21 @@ public final class FleetFlatSearcherTest {
     // debian (lab1) sorts before macos (lab2); the two lab1 devices tie-break by UUID ascending.
     FleetFlatResults ascending =
         searcher.searchFlat(
-            enriched,
+            new DeviceCorpus(enriched, enrichedPostings, null),
             ImmutableList.of(),
             columns,
             FleetColumnSort.newBuilder().setKey("host::host_os").setAscending(true).build(),
-            FleetPageRequest.getDefaultInstance(),
-            enrichedPostings);
+            FleetPageRequest.getDefaultInstance());
     assertThat(rowIds(ascending)).containsExactly("device-0", "device-1", "device-2").inOrder();
 
     // Descending reverses the whole ordering, tie-break included.
     FleetFlatResults descending =
         searcher.searchFlat(
-            enriched,
+            new DeviceCorpus(enriched, enrichedPostings, null),
             ImmutableList.of(),
             columns,
             FleetColumnSort.newBuilder().setKey("host::host_os").setAscending(false).build(),
-            FleetPageRequest.getDefaultInstance(),
-            enrichedPostings);
+            FleetPageRequest.getDefaultInstance());
     assertThat(rowIds(descending)).containsExactly("device-2", "device-1", "device-0").inOrder();
   }
 
@@ -393,12 +372,11 @@ public final class FleetFlatSearcherTest {
   public void pagination_defaultPageSizeReturnsEverything() {
     FleetFlatResults results =
         searcher.searchFlat(
-            snapshot,
+            corpus,
             ImmutableList.of(),
             COLUMNS,
             FleetColumnSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance(),
-            postings);
+            FleetPageRequest.getDefaultInstance());
 
     assertThat(results.getRowsCount()).isEqualTo(3);
     assertThat(results.getNextPageToken()).isEmpty();

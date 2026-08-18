@@ -22,19 +22,14 @@ import static com.google.devtools.mobileharness.fe.v6.service.search.index.Fleet
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
-import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFilterChipMetadata;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedFilterKey;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedGroupByKey;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysResponse;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceRecord;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.inject.Inject;
@@ -55,11 +50,6 @@ import javax.inject.Inject;
  * com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet}, using {@link
  * ScenarioCuration#filterByRow()} and {@link ScenarioCuration#groupByRow()} as the candidate key
  * lists. The dead-end, applied, and limit trimming below is scenario independent and stays here.
- *
- * <p>TODO: vary the candidate rows by {@code SearchEntity}. The prototype keeps separate device and
- * host rows (suggest_engine.py {@code FILTER_BY_ROW}, {@code GROUP_BY_ROW}, {@code
- * HOST_FILTER_BY_ROW}, {@code HOST_GROUP_BY_ROW}). Wire host rows into the curation alongside host
- * entity search.
  */
 public final class FleetPromotedKeysProvider {
 
@@ -84,45 +74,34 @@ public final class FleetPromotedKeysProvider {
 
   private final FleetFilterEngine filterEngine;
 
-  /**
-   * The per-fleet curations, keyed by {@link Fleet}. The candidate {@code filterByRow} and {@code
-   * groupByRow} orderings come from the entry for the request's fleet. Empty until activation
-   * installs the {@link ScenarioCurationModule} MapBinder, in which case no keys are promoted.
-   */
-  private final Map<Fleet, ScenarioCuration> curations;
-
   @Inject
-  FleetPromotedKeysProvider(
-      FleetFilterEngine filterEngine, Map<Fleet, ScenarioCuration> curations) {
+  FleetPromotedKeysProvider(FleetFilterEngine filterEngine) {
     this.filterEngine = filterEngine;
-    this.curations = curations;
   }
 
   /**
    * Returns the promoted filter and group-by rows for the current query.
    *
-   * @param snapshot the fleet snapshot to read
+   * @param corpus the corpus to read
    * @param request the current filters and applied group-by keys
    */
   public FleetPromotedKeysResponse getPromotedKeys(
-      FleetSnapshot snapshot, FleetPromotedKeysRequest request, LazyPostings postings) {
-    // FLEET_UNSPECIFIED defaults to FLEET_SELF (see the Fleet proto). Resolve the curation for the
-    // request's fleet. If none is installed (the MapBinder is wired at activation), promote no
-    // keys rather than failing, keeping behavior safe until the curation module is installed.
-    Fleet fleet = request.getFleet();
-    ScenarioCuration curation =
-        curations.get(fleet == Fleet.FLEET_UNSPECIFIED ? Fleet.FLEET_SELF : fleet);
+      SearchCorpus corpus, FleetPromotedKeysRequest request) {
+    // The curation is bound to the corpus's fleet by the corpus factory. If none is installed (the
+    // MapBinder is wired at activation), promote no keys rather than failing, keeping behavior safe
+    // until the curation module is installed.
+    ScenarioCuration curation = corpus.curation();
     if (curation == null) {
       return FleetPromotedKeysResponse.getDefaultInstance();
     }
 
-    FleetIndex index = snapshot.index();
+    FleetIndex index = corpus.index();
     List<Filter> filters = request.getFiltersList();
     boolean hasFilters = !filters.isEmpty();
 
     // The current result set. With no filters this is the whole fleet, so distinct-value counts
     // taken over it equal the fleet-wide counts, matching the prototype's global-count path.
-    ImmutableList<Integer> current = filterEngine.match(snapshot, filters, postings);
+    ImmutableList<Integer> current = filterEngine.match(corpus, filters);
 
     Set<String> appliedFilterKeys = new HashSet<>();
     for (Filter filter : filters) {
@@ -132,8 +111,8 @@ public final class FleetPromotedKeysProvider {
 
     FleetPromotedKeysResponse.Builder response = FleetPromotedKeysResponse.newBuilder();
     addFilterKeys(
-        response, snapshot, index, current, hasFilters, appliedFilterKeys, curation.filterByRow());
-    addGroupByKeys(response, snapshot, index, current, appliedGroupByKeys, curation.groupByRow());
+        response, corpus, index, current, hasFilters, appliedFilterKeys, curation.filterByRow());
+    addGroupByKeys(response, corpus, index, current, appliedGroupByKeys, curation.groupByRow());
     return response.build();
   }
 
@@ -147,7 +126,7 @@ public final class FleetPromotedKeysProvider {
    */
   private void addFilterKeys(
       FleetPromotedKeysResponse.Builder response,
-      FleetSnapshot snapshot,
+      SearchCorpus corpus,
       FleetIndex index,
       ImmutableList<Integer> current,
       boolean hasFilters,
@@ -164,7 +143,7 @@ public final class FleetPromotedKeysProvider {
       if (appliedFilterKeys.contains(keyId)) {
         continue;
       }
-      if (hasFilters && comboCount(snapshot, current, keyId).distinctCombos() <= 1) {
+      if (hasFilters && comboCount(corpus, current, keyId).distinctCombos() <= 1) {
         continue;
       }
       response.addFilterKeys(
@@ -182,7 +161,7 @@ public final class FleetPromotedKeysProvider {
    */
   private void addGroupByKeys(
       FleetPromotedKeysResponse.Builder response,
-      FleetSnapshot snapshot,
+      SearchCorpus corpus,
       FleetIndex index,
       ImmutableList<Integer> current,
       Set<String> appliedGroupByKeys,
@@ -201,7 +180,7 @@ public final class FleetPromotedKeysProvider {
       if (appliedGroupByKeys.contains(keyId)) {
         continue;
       }
-      KeyCount count = comboCount(snapshot, current, keyId);
+      KeyCount count = comboCount(corpus, current, keyId);
       int groups = count.distinctCombos() + (count.hasMissing() ? 1 : 0);
       if (groups < MIN_GROUP_COUNT) {
         continue;
@@ -224,12 +203,11 @@ public final class FleetPromotedKeysProvider {
    * reading the forward store the same way the prototype reads {@code dev_values}.
    */
   private static KeyCount comboCount(
-      FleetSnapshot snapshot, ImmutableList<Integer> current, String keyId) {
-    ImmutableList<DeviceRecord> devices = snapshot.devices();
+      SearchCorpus corpus, ImmutableList<Integer> current, String keyId) {
     Set<String> combos = new HashSet<>();
     boolean hasMissing = false;
-    for (int deviceIndex : current) {
-      ImmutableSet<String> values = FleetFilterEngine.valuesForKey(devices.get(deviceIndex), keyId);
+    for (int recordIndex : current) {
+      ImmutableSet<String> values = corpus.valuesForKey(recordIndex, keyId);
       if (values.isEmpty()) {
         hasMissing = true;
       } else {
