@@ -36,26 +36,58 @@ export class HttpDeviceService extends DeviceService {
     super();
   }
 
+  /**
+   * Gets the overview data of a device.
+   * @param request The request containing device ID and host name.
+   * @return An Observable emitting the device overview page data.
+   */
   override getDeviceOverview(
     request: GetDeviceOverviewRequest,
   ): Observable<DeviceOverviewPageData> {
-    const options = request.forceRefresh
-      ? {params: {'force_refresh': 'true'}}
-      : {};
+    const params: {[key: string]: string} = {};
+    if (request.forceRefresh) {
+      params['force_refresh'] = 'true';
+    }
+    if (request.hostName) {
+      params['host_name'] = request.hostName;
+    }
+    const options = {params};
     return this.http.get<DeviceOverviewPageData>(
       `${this.apiUrl}/${request.id}/overview`,
       options,
     );
   }
 
-  override getDeviceHeaderInfo(id: string): Observable<DeviceHeaderInfo> {
-    return this.http.get<DeviceHeaderInfo>(`${this.apiUrl}/${id}/header-info`);
+  /**
+   * Gets the header information of a device.
+   * @param id The ID of the device.
+   * @param hostName The name of the host running the device.
+   * @return An Observable emitting the device header information.
+   */
+  override getDeviceHeaderInfo(
+    id: string,
+    hostName: string,
+  ): Observable<DeviceHeaderInfo> {
+    const options = {params: {'host_name': hostName}};
+    return this.http.get<DeviceHeaderInfo>(
+      `${this.apiUrl}/${id}/header-info`,
+      options,
+    );
   }
 
+  /**
+   * Gets the healthiness statistics of a device.
+   * @param id The ID of the device.
+   * @param startDate The start date of the time range.
+   * @param endDate The end date of the time range.
+   * @param hostName The name of the host running the device.
+   * @return An Observable emitting the healthiness statistics.
+   */
   override getDeviceHealthinessStats(
     id: string,
     startDate: GoogleDate,
     endDate: GoogleDate,
+    hostName: string,
   ): Observable<HealthinessStats> {
     return this.http.post<HealthinessStats>(
       `${this.apiUrl}/${id}/stats:getHealthiness`,
@@ -70,14 +102,24 @@ export class HttpDeviceService extends DeviceService {
           'month': endDate.month,
           'day': endDate.day,
         },
+        'host_name': hostName,
       },
     );
   }
 
+  /**
+   * Gets the test result statistics of a device.
+   * @param id The ID of the device.
+   * @param startDate The start date of the time range.
+   * @param endDate The end date of the time range.
+   * @param hostName The name of the host running the device.
+   * @return An Observable emitting the test result statistics.
+   */
   override getDeviceTestResultStats(
     id: string,
     startDate: GoogleDate,
     endDate: GoogleDate,
+    hostName: string,
   ): Observable<TestResultStats> {
     return this.http.post<TestResultStats>(
       `${this.apiUrl}/${id}/stats:getTestResults`,
@@ -92,14 +134,24 @@ export class HttpDeviceService extends DeviceService {
           'month': endDate.month,
           'day': endDate.day,
         },
+        'host_name': hostName,
       },
     );
   }
 
+  /**
+   * Gets the recovery task statistics of a device.
+   * @param id The ID of the device.
+   * @param startDate The start date of the time range.
+   * @param endDate The end date of the time range.
+   * @param hostName The name of the host running the device.
+   * @return An Observable emitting the recovery task statistics.
+   */
   override getDeviceRecoveryTaskStats(
     id: string,
     startDate: GoogleDate,
     endDate: GoogleDate,
+    hostName: string,
   ): Observable<RecoveryTaskStats> {
     return this.http.post<RecoveryTaskStats>(
       `${this.apiUrl}/${id}/stats:getRecoveryTasks`,
@@ -114,46 +166,84 @@ export class HttpDeviceService extends DeviceService {
           'month': endDate.month,
           'day': endDate.day,
         },
+        'host_name': hostName,
       },
     );
   }
 
-  override takeScreenshot(id: string): Observable<TakeScreenshotResponse> {
+  /**
+   * Takes a screenshot of a device.
+   * @param id The ID of the device.
+   * @param hostName The name of the host running the device.
+   * @return An Observable emitting the screenshot response.
+   */
+  override takeScreenshot(
+    id: string,
+    hostName: string,
+  ): Observable<TakeScreenshotResponse> {
     return this.http.post<TakeScreenshotResponse>(
       `${this.apiUrl}/${id}:takeScreenshot`,
-      {},
+      {'host_name': hostName},
     );
   }
 
-  override getLogcat(id: string): Observable<GetLogcatResponse> {
-    return this.http.post<GetLogcatResponse>(
-      `${this.apiUrl}/${id}:getLogcat`,
-      {},
-    );
+  /**
+   * Gets the logcat of a device.
+   * @param id The ID of the device.
+   * @param hostName The name of the host running the device.
+   * @return An Observable emitting the logcat response.
+   */
+  override getLogcat(
+    id: string,
+    hostName: string,
+  ): Observable<GetLogcatResponse> {
+    return this.http.post<GetLogcatResponse>(`${this.apiUrl}/${id}:getLogcat`, {
+      'host_name': hostName,
+    });
   }
 
+  /**
+   * Quarantines a device.
+   * @param id The ID of the device.
+   * @param req The request containing quarantine end time and host name.
+   * @return An Observable emitting the quarantine device response.
+   */
   override quarantineDevice(
     id: string,
     req: QuarantineDeviceRequest,
   ): Observable<QuarantineDeviceResponse> {
     return this.http.post<QuarantineDeviceResponse>(
       `${this.apiUrl}/${id}:quarantine`,
-      req,
+      {
+        'end_time': req.endTime,
+        'host_name': req.hostName,
+      },
     );
   }
 
-  override unquarantineDevice(id: string): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/${id}:unquarantine`, {});
+  /**
+   * Unquarantines a device.
+   * @param id The ID of the device.
+   * @param hostName The name of the host running the device.
+   * @return An Observable that completes when the operation finishes.
+   */
+  override unquarantineDevice(id: string, hostName: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${id}:unquarantine`, {
+      'host_name': hostName,
+    });
   }
 
   /**
    * Prepares the device via HTTP POST.
    *
    * @param id The ID of the device to prepare.
+   * @param hostName The name of the host running the device.
    * @return An Observable that completes when the prepare operation finishes.
    */
-  override prepareDevice(id: string): Observable<void> {
-    return this.http.post<void>(`${this.apiUrl}/${id}:prepare`, {});
+  override prepareDevice(id: string, hostName: string): Observable<void> {
+    return this.http.post<void>(`${this.apiUrl}/${id}:prepare`, {
+      'host_name': hostName,
+    });
   }
 
   // override remoteControl(
@@ -166,15 +256,41 @@ export class HttpDeviceService extends DeviceService {
   //   );
   // }
 
-  override getTestbedConfig(id: string): Observable<TestbedConfig> {
-    return this.http.get<TestbedConfig>(`${this.apiUrl}/${id}/testbed-config`);
+  /**
+   * Gets the testbed configuration of a device.
+   * @param id The ID of the device.
+   * @param hostName The name of the host running the device.
+   * @return An Observable emitting the testbed configuration.
+   */
+  override getTestbedConfig(
+    id: string,
+    hostName: string,
+  ): Observable<TestbedConfig> {
+    const options = {params: {'host_name': hostName}};
+    return this.http.get<TestbedConfig>(
+      `${this.apiUrl}/${id}/testbed-config`,
+      options,
+    );
   }
 
+  /**
+   * Gets the test history of a device.
+   * @param id The ID of the device.
+   * @param hostName The name of the host running the device.
+   * @param pageToken The page token for pagination.
+   * @return An Observable emitting the device test history response.
+   */
   override getDeviceTestHistory(
     id: string,
+    hostName: string,
     pageToken = '',
   ): Observable<DeviceTestHistoryResponse> {
-    const options = pageToken ? {params: {'page_token': pageToken}} : {};
+    const params: {[key: string]: string} = {};
+    if (pageToken) {
+      params['page_token'] = pageToken;
+    }
+    params['host_name'] = hostName;
+    const options = {params};
     return this.http.get<DeviceTestHistoryResponse>(
       `${this.apiUrl}/${id}/test-history`,
       options,

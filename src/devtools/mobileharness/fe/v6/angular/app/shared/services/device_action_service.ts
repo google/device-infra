@@ -45,9 +45,19 @@ export class DeviceActionService {
   private readonly snackBar = inject(SnackBarService);
   private readonly environment = inject(Environment);
 
-  takeScreenshot(deviceId: string): Observable<TakeScreenshotResponse> {
+  /**
+   * Takes a screenshot of the device.
+   * Shows a snackbar in progress, calls the device service, opens a dialog with the result, and handles errors.
+   * @param deviceId The ID of the device.
+   * @param hostName The name of the host.
+   * @return An Observable of type TakeScreenshotResponse.
+   */
+  takeScreenshot(
+    deviceId: string,
+    hostName: string,
+  ): Observable<TakeScreenshotResponse> {
     const snackBarRef = this.snackBar.showInProgress('Taking screenshot...');
-    return this.deviceService.takeScreenshot(deviceId).pipe(
+    return this.deviceService.takeScreenshot(deviceId, hostName).pipe(
       tap((response) => {
         this.snackBar.showSuccess('Screenshot taken successfully.');
         this.dialog.open(ScreenshotDialog, {
@@ -72,9 +82,16 @@ export class DeviceActionService {
     );
   }
 
-  getLogcat(deviceId: string): Observable<GetLogcatResponse> {
+  /**
+   * Gets the logcat of the device.
+   * Shows a snackbar in progress, calls the device service, opens the log URL in a new tab, and handles errors.
+   * @param deviceId The ID of the device.
+   * @param hostName The name of the host.
+   * @return An Observable of type GetLogcatResponse.
+   */
+  getLogcat(deviceId: string, hostName: string): Observable<GetLogcatResponse> {
     const snackBarRef = this.snackBar.showInProgress('Getting logcat...');
-    return this.deviceService.getLogcat(deviceId).pipe(
+    return this.deviceService.getLogcat(deviceId, hostName).pipe(
       tap((response) => {
         this.snackBar.showSuccess(
           'Logcat retrieved successfully. And opened in a new browser tab.',
@@ -117,10 +134,18 @@ export class DeviceActionService {
     });
   }
 
+  /**
+   * Quarantines or unquarantines the device.
+   * Checks the quarantine status if not provided, and shows either an unquarantine confirmation dialog or a quarantine dialog.
+   * @param deviceId The ID of the device.
+   * @param options The options for quarantine, including quarantine info and host name.
+   * @return An Observable that completes when the action is confirmed or cancelled.
+   */
   quarantineDevice(
     deviceId: string,
-    options?: {
+    options: {
       quarantineInfo?: {isQuarantined: boolean; expiry?: string};
+      hostName: string;
     },
   ): Observable<unknown> {
     const handleQuarantineFlow$ = (
@@ -142,7 +167,9 @@ export class DeviceActionService {
           tap(() => {
             this.snackBar.showInfo('Unquarantining device...');
           }),
-          switchMap(() => this.deviceService.unquarantineDevice(deviceId)),
+          switchMap(() =>
+            this.deviceService.unquarantineDevice(deviceId, options.hostName),
+          ),
           tap(() => {
             this.snackBar.showSuccess(
               'Device unquarantined successfully.\nIt may take a few minutes to take effect at the UI side.',
@@ -167,31 +194,48 @@ export class DeviceActionService {
                    <li>You can manually unquarantine or change the duration at any time after the device is quarantined.</li>
                </ul>`,
             confirmText: 'Quarantine',
+            hostName: options.hostName,
           } as QuarantineDialogData,
         });
         return dialogRef.afterClosed();
       }
     };
 
-    if (options?.quarantineInfo) {
+    if (options.quarantineInfo) {
       return handleQuarantineFlow$(options.quarantineInfo.isQuarantined);
     } else {
       this.snackBar.showInfo('Checking device quarantine status...');
-      return this.deviceService.getDeviceHeaderInfo(deviceId).pipe(
-        switchMap((headerInfo) => {
-          const isQuarantined = headerInfo.quarantine?.isQuarantined ?? false;
-          return handleQuarantineFlow$(isQuarantined);
-        }),
-        catchError((err) => {
-          this.snackBar.showError('Failed to fetch device quarantine status.');
-          console.error(err);
-          return throwError(() => err);
-        }),
-      );
+      return this.deviceService
+        .getDeviceHeaderInfo(deviceId, options.hostName)
+        .pipe(
+          switchMap((headerInfo) => {
+            const isQuarantined = headerInfo.quarantine?.isQuarantined ?? false;
+            return handleQuarantineFlow$(isQuarantined);
+          }),
+          catchError((err) => {
+            this.snackBar.showError(
+              'Failed to fetch device quarantine status.',
+            );
+            console.error(err);
+            return throwError(() => err);
+          }),
+        );
     }
   }
 
-  changeQuarantine(deviceId: string, expiry?: string): Observable<unknown> {
+  /**
+   * Updates the quarantine duration of the device.
+   * Opens a quarantine dialog in update mode.
+   * @param deviceId The ID of the device.
+   * @param hostName The name of the host.
+   * @param expiry The current expiry time (optional).
+   * @return An Observable that completes when the dialog is closed.
+   */
+  changeQuarantine(
+    deviceId: string,
+    hostName: string,
+    expiry?: string,
+  ): Observable<unknown> {
     const dialogRef = this.dialog.open(QuarantineDialog, {
       data: {
         deviceId,
@@ -200,6 +244,7 @@ export class DeviceActionService {
         title: `Update Quarantine Duration - ${deviceId}`,
         description: `Please specify a new duration for how long <strong>${deviceId}</strong> should remain quarantined, starting from now.`,
         confirmText: 'Update',
+        hostName,
       } as QuarantineDialogData,
     });
     return dialogRef.afterClosed();
@@ -293,7 +338,7 @@ export class DeviceActionService {
       (this.environment.isGoogleInternal() && action === 'new') ||
       action === 'copy'
     ) {
-      this.openDeviceWizard(action, deviceId, config, universe);
+      this.openDeviceWizard(action, deviceId, config, hostName, universe);
     }
 
     if (!this.environment.isGoogleInternal() && action === 'new') {
@@ -301,18 +346,35 @@ export class DeviceActionService {
     }
   }
 
+  /**
+   * Opens the device wizard dialog.
+   * @param action The action type (e.g., 'new', 'copy').
+   * @param deviceId The ID of the device.
+   * @param config The device configuration model or null.
+   * @param hostName The name of the host.
+   * @param universe The universe (optional).
+   */
   openDeviceWizard(
     action: string,
     deviceId: string,
     config: DeviceConfigModel | null,
+    hostName: string,
     universe?: string,
   ) {
     this.dialog.open(DeviceWizard, {
-      data: {source: action, deviceId, config, universe},
+      data: {source: action, deviceId, config, hostName, universe},
       autoFocus: false,
     });
   }
 
+  /**
+   * Opens the device settings dialog.
+   * @param deviceId The ID of the device.
+   * @param config The device configuration model or null.
+   * @param hostName The name of the host.
+   * @param hostIp The IP of the host.
+   * @param universe The universe (optional).
+   */
   openDeviceSettings(
     deviceId: string,
     config: DeviceConfigModel | null,
@@ -321,7 +383,7 @@ export class DeviceActionService {
     universe?: string,
   ) {
     const dialogRef = this.dialog.open(DeviceSettings, {
-      data: {deviceId, config, universe},
+      data: {deviceId, config, hostName, universe},
       autoFocus: false,
     });
 
@@ -349,9 +411,10 @@ export class DeviceActionService {
    * calls the backend API, and updates the snackbar with success/error results.
    *
    * @param deviceId The ID of the device to prepare.
+   * @param hostName The name of the host.
    * @return An Observable that completes when the prepare operation finishes.
    */
-  prepareDevice(deviceId: string): Observable<unknown> {
+  prepareDevice(deviceId: string, hostName: string): Observable<unknown> {
     const dialogRef = this.dialog.open(ConfirmDialog, {
       data: {
         title: `Prepare Device ${deviceId}?`,
@@ -373,7 +436,7 @@ export class DeviceActionService {
         );
       }),
       switchMap(() => {
-        return this.deviceService.prepareDevice(deviceId);
+        return this.deviceService.prepareDevice(deviceId, hostName);
       }),
       tap(() => {
         // TODO: check if we need to refresh the device status, or give a hint that it may take some minutes for it to take effect at the UI side.

@@ -73,6 +73,7 @@ export class Wifi implements OnInit, OnChanges {
     visible: true,
     editability: {editable: true},
   });
+  readonly hostName = input<string>('');
 
   @Input() wifi = {type: 'none', ssid: 'GoogleGuest', psk: '', scanSsid: false};
   @Output() readonly wifiChange = new EventEmitter<{}>();

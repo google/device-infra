@@ -39,6 +39,7 @@ import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
 })
 export class TestHistoryTab implements OnInit {
   @Input({required: true}) deviceId!: string;
+  @Input() hostName = '';
 
   private readonly deviceService = inject(DEVICE_SERVICE);
 
@@ -129,24 +130,31 @@ export class TestHistoryTab implements OnInit {
     return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
   }
 
+  /**
+   * Loads a page of device test history.
+   * Calls the device service to fetch test history using the provided token and updates the component state.
+   * @param token The pagination token to fetch the next/previous page.
+   */
   private loadPage(token: string) {
     this.loading.set(true);
     this.error.set('');
-    this.deviceService.getDeviceTestHistory(this.deviceId, token).subscribe({
-      next: (response) => {
-        this.currentToken = token;
-        this.columns.set(response.columns ?? []);
-        this.rows.set(response.rows ?? []);
-        this.nextToken = response.nextPageToken ?? '';
-        this.hasNextPage.set(this.nextToken !== '');
-        this.loading.set(false);
-      },
-      error: () => {
-        this.error.set('Failed to load test history.');
-        this.rows.set([]);
-        this.hasNextPage.set(false);
-        this.loading.set(false);
-      },
-    });
+    this.deviceService
+      .getDeviceTestHistory(this.deviceId, this.hostName, token)
+      .subscribe({
+        next: (response) => {
+          this.currentToken = token;
+          this.columns.set(response.columns ?? []);
+          this.rows.set(response.rows ?? []);
+          this.nextToken = response.nextPageToken ?? '';
+          this.hasNextPage.set(this.nextToken !== '');
+          this.loading.set(false);
+        },
+        error: () => {
+          this.error.set('Failed to load test history.');
+          this.rows.set([]);
+          this.hasNextPage.set(false);
+          this.loading.set(false);
+        },
+      });
   }
 }

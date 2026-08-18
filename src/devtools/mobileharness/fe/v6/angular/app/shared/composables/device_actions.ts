@@ -106,21 +106,33 @@ export function useDeviceActions() {
         .subscribe();
     },
 
-    takeScreenshot: (deviceId: string) => {
+    /**
+     * Takes a screenshot of the device.
+     * @param deviceId The ID of the device.
+     * @param hostName The name of the host.
+     */
+    takeScreenshot: (deviceId: string, hostName: string) => {
       runAction(
         'screenshot',
         actionService
-          .takeScreenshot(deviceId)
+          .takeScreenshot(deviceId, hostName)
           .pipe(takeUntilDestroyed(destroyRef)),
       ).subscribe({
         error: () => {},
       });
     },
 
-    getLogcat: (deviceId: string) => {
+    /**
+     * Gets the logcat of the device.
+     * @param deviceId The ID of the device.
+     * @param hostName The name of the host.
+     */
+    getLogcat: (deviceId: string, hostName: string) => {
       runAction(
         'logcat',
-        actionService.getLogcat(deviceId).pipe(takeUntilDestroyed(destroyRef)),
+        actionService
+          .getLogcat(deviceId, hostName)
+          .pipe(takeUntilDestroyed(destroyRef)),
       ).subscribe({
         error: () => {},
       });
@@ -149,18 +161,25 @@ export function useDeviceActions() {
       actionService.flashDevice(deviceId, hostName, params);
     },
 
+    /**
+     * Quarantines the device or opens the quarantine dialog.
+     * @param deviceId The ID of the device.
+     * @param options The options for quarantine, including quarantine info, success callback, and host name.
+     */
     quarantineDevice: (
       deviceId: string,
-      options?: {
+      options: {
         quarantineInfo?: {isQuarantined: boolean; expiry?: string};
         onSuccess?: () => void;
+        hostName: string;
       },
     ) => {
       runAction(
         'quarantine',
         actionService
           .quarantineDevice(deviceId, {
-            quarantineInfo: options?.quarantineInfo,
+            quarantineInfo: options.quarantineInfo,
+            hostName: options.hostName,
           })
           .pipe(
             takeUntilDestroyed(destroyRef),
@@ -174,9 +193,15 @@ export function useDeviceActions() {
       });
     },
 
-    changeQuarantine: (deviceId: string, expiry?: string) => {
+    /**
+     * Changes the quarantine duration of the device.
+     * @param deviceId The ID of the device.
+     * @param hostName The name of the host.
+     * @param expiry The new expiry time for the quarantine (optional).
+     */
+    changeQuarantine: (deviceId: string, hostName: string, expiry?: string) => {
       actionService
-        .changeQuarantine(deviceId, expiry)
+        .changeQuarantine(deviceId, hostName, expiry)
         .pipe(takeUntilDestroyed(destroyRef))
         .subscribe({
           error: () => {},
@@ -196,12 +221,13 @@ export function useDeviceActions() {
      * Prepares the device.
      *
      * @param deviceId The ID of the device to prepare.
+     * @param hostName The name of the host.
      */
-    prepareDevice: (deviceId: string) => {
+    prepareDevice: (deviceId: string, hostName: string) => {
       runAction(
         'prepare',
         actionService
-          .prepareDevice(deviceId)
+          .prepareDevice(deviceId, hostName)
           .pipe(takeUntilDestroyed(destroyRef)),
       ).subscribe({
         error: () => {},

@@ -137,7 +137,7 @@
             <!-- Kept mounted (hidden) after first open so switching tabs does not refetch. -->
             @if (testHistoryVisited()) {
               <div class="tab-content" [hidden]="activeTab() !== 'test-history'">
-                <app-test-history-tab [deviceId]="device.id"></app-test-history-tab>
+                <app-test-history-tab [deviceId]="device.id" [hostName]="device.host.name"></app-test-history-tab>
               </div>
             }
             @if (activeTab() === 'record') {

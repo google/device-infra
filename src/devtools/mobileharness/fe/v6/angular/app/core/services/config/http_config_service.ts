@@ -1,4 +1,4 @@
-import {HttpClient} from '@angular/common/http';
+import {HttpClient, HttpParams} from '@angular/common/http';
 import {inject, Injectable} from '@angular/core';
 import {Observable} from 'rxjs';
 import {map} from 'rxjs/operators';
@@ -41,11 +41,25 @@ export class HttpConfigService extends ConfigService {
 
   // ===== Device Config Methods =====
 
+  /**
+   * Retrieves the configuration for a specific device via HTTP.
+   *
+   * @param deviceId The unique identifier of the device.
+   * @param hostName The host name to disambiguate devices with same ID.
+   * @return An Observable emitting the device configuration result.
+   */
   override getDeviceConfig(
     deviceId: string,
+    hostName: string, // hostName is required to disambiguate devices.
   ): Observable<GetDeviceConfigResult> {
+    let params = new HttpParams();
+    if (hostName) {
+      params = params.set('host_name', hostName);
+    }
     return this.http
-      .get<GetDeviceConfigResult>(`${this.apiUrl}/devices/${deviceId}/config`)
+      .get<GetDeviceConfigResult>(`${this.apiUrl}/devices/${deviceId}/config`, {
+        params,
+      })
       .pipe(
         map((result) => {
           result.deviceConfig = normalizeDeviceConfig(result.deviceConfig!);

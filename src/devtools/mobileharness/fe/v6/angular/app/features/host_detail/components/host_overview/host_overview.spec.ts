@@ -521,7 +521,10 @@ describe('HostOverview Component', () => {
 
     component.takeScreenshot(mockDevice);
 
-    expect(deviceActionService.takeScreenshot).toHaveBeenCalledWith('device-1');
+    expect(deviceActionService.takeScreenshot).toHaveBeenCalledWith(
+      'device-1',
+      component.host().hostName,
+    );
   });
   it('getLogcat should delegate to deviceActions', () => {
     const mockDevice = {id: 'device-1'} as unknown as DeviceSummary;
@@ -532,7 +535,10 @@ describe('HostOverview Component', () => {
 
     component.getLogcat(mockDevice);
 
-    expect(deviceActionService.getLogcat).toHaveBeenCalledWith('device-1');
+    expect(deviceActionService.getLogcat).toHaveBeenCalledWith(
+      'device-1',
+      component.host().hostName,
+    );
   });
 
   it('flashDevice should delegate to deviceActions', () => {

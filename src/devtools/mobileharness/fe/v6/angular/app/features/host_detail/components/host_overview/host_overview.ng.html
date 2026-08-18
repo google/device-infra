@@ -251,6 +251,7 @@
                 <td mat-cell *matCellDef="let element" class="limit-width">
                   <a app-nav-link
                     [config]="{type: 'device', hostName: host.hostName, hostIp: host.ip, deviceId: element.id}"
+                    [customQueryParams]="{'host_name': host.hostName}"
                     queryParamsHandling="merge"
                     class="id-link truncate-text"
                     matTooltip="{{element.id}}"

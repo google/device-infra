@@ -125,6 +125,7 @@
               type="host"
               workflow="settings"
               [wifi]="deviceConfig().wifi!"
+              [hostName]="hostName"
               (wifiChange)="updateDeviceWifi($event)"
               [uiStatus]="wifiUiStatus()"
             ></app-wifi>

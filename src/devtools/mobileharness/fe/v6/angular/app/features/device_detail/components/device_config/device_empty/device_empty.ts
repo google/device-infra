@@ -111,7 +111,11 @@ export class DeviceEmpty implements OnInit {
       return;
     }
 
-    this.configService.getDeviceConfig(this.anotherDeviceUuid).subscribe({
+    // TODO: tianch - We need to use host name to disambiguate devices. But
+    // this is not supported in the UI yet, as the UX design won't ask users to
+    // enter the host name. Need to figure out how to ask users to enter the
+    // host name, or infer the host name from the device UUID.
+    this.configService.getDeviceConfig(this.anotherDeviceUuid, '').subscribe({
       next: (config) => {
         if (!config) {
           this.copyFromAnotherErrorMessage.set(

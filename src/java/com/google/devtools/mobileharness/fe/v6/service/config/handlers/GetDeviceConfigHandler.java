@@ -54,6 +54,13 @@ public final class GetDeviceConfigHandler {
     this.executor = executor;
   }
 
+  /**
+   * Retrieves the configuration for a specific device.
+   *
+   * @param request The request containing the device ID and host name.
+   * @param universe The scope of the universe.
+   * @return A future of GetDeviceConfigResponse containing the configuration.
+   */
   public ListenableFuture<GetDeviceConfigResponse> getDeviceConfig(
       GetDeviceConfigRequest request, UniverseScope universe) {
     logger.atInfo().log("Getting device config for %s", request.getId());
@@ -66,7 +73,7 @@ public final class GetDeviceConfigHandler {
     }
 
     ListenableFuture<DeviceData> deviceDataFuture =
-        deviceDataLoader.loadDeviceData(request.getId(), universe);
+        deviceDataLoader.loadDeviceData(request.getId(), request.getHostName(), universe);
 
     return Futures.transform(
         deviceDataFuture,

@@ -58,6 +58,7 @@ describe('HealthStatisticTab Component', () => {
     fixture = TestBed.createComponent(HealthStatisticTab);
     component = fixture.componentInstance;
     component.deviceId = 'test_id';
+    component.hostName = 'test_host';
     fixture.detectChanges();
   });
 

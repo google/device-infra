@@ -46,6 +46,7 @@
             <app-wifi
               workflow="settings"
               [wifi]="newConfig().wifi!"
+              [hostName]="hostName()"
               (wifiChange)="updateWifi($event)"
               [uiStatus]="uiStatus.wifi"
             ></app-wifi>

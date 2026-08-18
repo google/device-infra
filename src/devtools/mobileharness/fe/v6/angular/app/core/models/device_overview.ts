@@ -301,6 +301,8 @@ export interface GetDeviceOverviewRequest {
   id: string;
   /** Force refresh the data by bypassing cache. */
   forceRefresh?: boolean;
+  /** Optional host name to disambiguate devices with the same ID. */
+  hostName?: string;
 }
 
 /**

@@ -428,10 +428,16 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
     this.decoratorsSearchSubject.next(this.decoratorsSearchTerm);
   }
 
+  /**
+   * Loads the testbed configuration for the device.
+   * Calls the device service to get the testbed configuration and updates the `testbedConfig` signal.
+   */
   loadTestbedConfig() {
-    this.deviceService.getTestbedConfig(this.device.id).subscribe((config) => {
-      this.testbedConfig.set(config);
-    });
+    this.deviceService
+      .getTestbedConfig(this.device.id, this.device.host.name)
+      .subscribe((config) => {
+        this.testbedConfig.set(config);
+      });
   }
 
   showTestbedConfig(event: MouseEvent) {
