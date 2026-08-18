@@ -335,7 +335,7 @@ public final class DeviceConditionUtil {
       return HealthCategory.HEALTH_CATEGORY_UNSPECIFIED;
     }
 
-    DeviceStatus status = deviceDao.getStatus();
+    DeviceStatus status = deviceDao.getMergedMnmDeviceStatusIfAny();
 
     // 1. In Service
     if ((status == DeviceStatus.IDLE || status == DeviceStatus.BUSY)

@@ -749,4 +749,23 @@ public class DeviceConditionUtilTest {
         DeviceProfile.newBuilder().setFeature(DeviceFeature.newBuilder().addAllType(types)).build(),
         conditionBuilder.build());
   }
+
+  @Test
+  public void calculateHealthCategory_androidIdleButDmInit_returnsTransition() {
+    DeviceDao device =
+        createDeviceWithDmStatus(
+            DeviceStatus.IDLE, DeviceStatus.INIT, ImmutableList.of("AndroidRealDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_TRANSITION);
+  }
+
+  private DeviceDao createDeviceWithDmStatus(
+      DeviceStatus labStatus, DeviceStatus dmStatus, List<String> types) {
+    DeviceCondition.Builder conditionBuilder =
+        DeviceCondition.newBuilder().setStatusFromLab(labStatus).setStatusFromDm(dmStatus);
+    return DeviceDao.create(
+        deviceLocator,
+        DeviceProfile.newBuilder().setFeature(DeviceFeature.newBuilder().addAllType(types)).build(),
+        conditionBuilder.build());
+  }
 }
