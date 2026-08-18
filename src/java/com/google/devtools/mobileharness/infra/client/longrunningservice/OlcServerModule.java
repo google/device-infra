@@ -221,7 +221,9 @@ class OlcServerModule extends AbstractModule {
       installByClassName(ATS_MODE_MODULE_CLASS_NAME);
       bind(ExecMode.class).to(loadExecMode(ATS_MODE_CLASS_NAME)).in(Scopes.SINGLETON);
     } else {
-      bind(ExecMode.class).to(loadExecMode(LOCAL_MODE_CLASS_NAME)).in(Scopes.SINGLETON);
+      bind(ExecMode.class)
+          .toProvider(provideExecModeByClassName(LOCAL_MODE_CLASS_NAME))
+          .in(Scopes.SINGLETON);
       bind(DeviceReserver.class).toProvider(ExecModeDeviceReserverProvider.class);
       bind(LabInfoService.class).toProvider(LocalModeLabInfoServiceProvider.class);
       bind(SessionDeviceCache.class).to(LocalSessionDeviceCache.class).in(Scopes.SINGLETON);
@@ -247,6 +249,17 @@ class OlcServerModule extends AbstractModule {
     } catch (MobileHarnessException | ClassNotFoundException e) {
       throw new IllegalStateException(e);
     }
+  }
+
+  private static Provider<ExecMode> provideExecModeByClassName(String className) {
+    Class<? extends ExecMode> execModeClass = loadExecMode(className);
+    return () -> {
+      try {
+        return execModeClass.getConstructor().newInstance();
+      } catch (ReflectiveOperationException e) {
+        throw new IllegalStateException(e);
+      }
+    };
   }
 
   private static Class<? extends ServerUtils> loadServerUtils(boolean enableGrpcRelay) {

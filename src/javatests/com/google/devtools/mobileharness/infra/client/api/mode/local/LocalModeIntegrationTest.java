@@ -97,6 +97,7 @@ public class LocalModeIntegrationTest {
   @Rule public final SetFlags flags = new SetFlags();
   @Rule public final CaptureLogs captureLogs = new CaptureLogs();
   @Rule public final PrintTestName printTestName = new PrintTestName();
+  @Rule public final LocalModeRule localModeRule = new LocalModeRule();
 
   @Bind @GlobalInternalEventBus private final EventBus globalInternalEventBus = new EventBus();
 
@@ -122,7 +123,9 @@ public class LocalModeIntegrationTest {
             "no_op_device_num",
             "1"));
 
-    Guice.createInjector(new ClientApiModule(), BoundFieldModule.of(this)).injectMembers(this);
+    Guice.createInjector(
+            new ClientApiModule(), localModeRule.getModule(), BoundFieldModule.of(this))
+        .injectMembers(this);
 
     deviceReserver = localMode.createDeviceReserver();
     deviceQuerier = localMode.createDeviceQuerier();
@@ -175,6 +178,8 @@ public class LocalModeIntegrationTest {
 
   @Test
   public void testLabInfoService() throws Exception {
+    var unused = deviceQuerier.queryDevice(DeviceQueryFilter.getDefaultInstance());
+
     String serverName = InProcessServerBuilder.generateName();
     ServerBuilder<?> serverBuilder = InProcessServerBuilder.forName(serverName);
     for (BindableService service : localMode.provideServicesForNonWorker()) {

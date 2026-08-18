@@ -20,9 +20,8 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "local",
     srcs = [
-        "LocalDeviceManagerSchedulerSyncer.java",
-        "LocalDeviceQuerier.java",
         "LocalMode.java",
+        "LocalModeModule.java",
     ],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__subpackages__",
@@ -32,6 +31,55 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/device/proxy:__pkg__",
     ],
     runtime_deps = [
+    ],
+    deps = [
+        ":local_mode_environment",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/allocator",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/reserver",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:service_provider",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner_setting",
+        "//src/java/com/google/devtools/mobileharness/shared/file/resolver:file_resolver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@grpc-java//core",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "rule",
+    testonly = 1,
+    srcs = ["LocalModeRule.java"],
+    visibility = [
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/local:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/device/proxy:__pkg__",
+    ],
+    deps = [
+        ":local",
+        ":local_mode_environment",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode",
+        "@maven//:com_google_inject_guice",
+        "@maven//:junit_junit",
+    ],
+)
+
+java_library(
+    name = "local_mode_environment",
+    srcs = [
+        "LocalDeviceManagerSchedulerSyncer.java",
+        "LocalDeviceQuerier.java",
+        "LocalModeEnvironment.java",
+    ],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__",
     ],
     deps = [
         ":device_info_filter",
@@ -47,8 +95,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/allocator",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/reserver",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode",
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:service_provider",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_id_manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_status_info",
@@ -98,6 +144,7 @@ java_library(
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
         "@protobuf//:protobuf_java",
     ],
 )

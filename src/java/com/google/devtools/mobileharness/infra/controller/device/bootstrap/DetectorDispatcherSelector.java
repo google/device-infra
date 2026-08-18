@@ -75,7 +75,7 @@ public final class DetectorDispatcherSelector {
   }
 
   private ImmutableList<Class<? extends Dispatcher>> selectSupportedDispatchers() {
-    DispatcherManager dispatcherManager = DispatcherManager.getInstance();
+    DispatcherManager dispatcherManager = new DispatcherManager();
     if (component == Component.LOCAL_MODE) {
       if (Flags.alwaysUseOssDetectorAndDispatcher.getNonNull()) {
         AllDetectorsAndDispatchers.addDispatchersForLocalModeOss(dispatcherManager);

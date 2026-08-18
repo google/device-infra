@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.infra.controller.device;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.graph.GraphBuilder;
@@ -38,10 +37,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class DispatcherManager {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  private static class SingletonHolder {
-    private static final DispatcherManager singleton = new DispatcherManager();
-  }
 
   /**
    * To bundle an element with a mutable structure of the dependency graph.
@@ -71,17 +66,12 @@ public final class DispatcherManager {
     }
   }
 
-  public static DispatcherManager getInstance() {
-    return SingletonHolder.singleton;
-  }
-
   private final ConcurrentHashMap<String, Class<? extends Dispatcher>> dispatcherNameToTypes =
       new ConcurrentHashMap<>();
 
   private final MutableGraph<String> graphs;
 
-  @VisibleForTesting
-  DispatcherManager() {
+  public DispatcherManager() {
     graphs = GraphBuilder.directed().allowsSelfLoops(false).build();
   }
 

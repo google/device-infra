@@ -29,7 +29,6 @@ import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabScheduleUnit;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
-import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator.DeviceVerifier;
 import com.google.devtools.mobileharness.infra.controller.device.proxy.ProxyDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.simple.SimpleScheduler;
@@ -58,7 +57,7 @@ public final class LocalDeviceAllocatorTest {
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
-  @Mock private DeviceVerifier deviceVerifier;
+  @Mock private LocalDeviceAllocator.DeviceVerifier deviceVerifier;
   @Mock private AbstractScheduler scheduler;
   @Mock private ProxyDeviceManager proxyDeviceManager;
 

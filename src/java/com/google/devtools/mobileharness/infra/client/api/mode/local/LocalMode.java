@@ -16,287 +16,68 @@
 
 package com.google.devtools.mobileharness.infra.client.api.mode.local;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.util.concurrent.Futures.getUnchecked;
-import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
-import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
-import static java.util.Objects.requireNonNull;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
-import com.google.common.eventbus.Subscribe;
-import com.google.common.flogger.FluentLogger;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
-import com.google.common.util.concurrent.SettableFuture;
-import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver.DeviceReserver;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ServiceProvider;
-import com.google.devtools.mobileharness.infra.controller.device.DeviceIdManager;
-import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
-import com.google.devtools.mobileharness.infra.controller.device.TestExecutor;
-import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorDispatcherSelector;
-import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorDispatcherSelector.Component;
-import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorsAndDispatchers;
-import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
-import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfigFileProcessor;
-import com.google.devtools.mobileharness.infra.controller.device.external.NoopExternalDeviceManager;
-import com.google.devtools.mobileharness.infra.controller.device.proxy.ProxyDeviceManager;
-import com.google.devtools.mobileharness.infra.controller.device.proxy.ProxyDeviceManager.ProxyDevices;
-import com.google.devtools.mobileharness.infra.controller.device.proxy.ProxyDeviceManagerModule;
-import com.google.devtools.mobileharness.infra.controller.device.util.DeviceStatusInfoPrinter;
-import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
-import com.google.devtools.mobileharness.infra.controller.scheduler.simple.SimpleScheduler;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
-import com.google.devtools.mobileharness.infra.controller.test.TestRunner;
-import com.google.devtools.mobileharness.infra.controller.test.TestRunnerLauncher;
-import com.google.devtools.mobileharness.infra.controller.test.launcher.LocalDeviceTestRunnerLauncher;
-import com.google.devtools.mobileharness.infra.controller.test.launcher.ThreadPoolTestRunnerLauncher;
-import com.google.devtools.mobileharness.infra.controller.test.local.LocalTestRunner;
-import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.NoOpTestFlowConverter;
-import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.TestFlowConverter;
-import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.IncompatibleReasonProto;
-import com.google.devtools.mobileharness.infra.lab.controller.LocalFileBasedDeviceConfigManager;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
-import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager;
-import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
-import com.google.devtools.mobileharness.shared.labinfo.LabInfoService;
-import com.google.devtools.mobileharness.shared.labinfo.LocalLabInfoProvider;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
-import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;
-import com.google.devtools.mobileharness.shared.util.time.Sleeper;
-import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Provides;
-import com.google.wireless.qa.mobileharness.shared.api.device.Device;
-import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceUpEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import io.grpc.BindableService;
-import java.time.Duration;
-import java.time.InstantSource;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.logging.Level;
-import java.util.stream.IntStream;
+import javax.inject.Inject;
 
-/** Execution mode which run tests on local devices. */
+/**
+ * Execution mode which runs tests on local devices.
+ *
+ * <p>In production, whether instantiated directly via {@link #LocalMode()} or injected via {@link
+ * LocalModeModule}, all {@link LocalMode} instances share the same underlying process-level runtime
+ * environment (device manager, scheduler, thread pools) which persists throughout the lifetime of
+ * the process.
+ *
+ * <p>For unit and integration tests, use {@link LocalModeRule} instead to provide a dedicated,
+ * isolated environment per test that is automatically torn down upon test completion.
+ */
 public class LocalMode implements ExecMode, ServiceProvider {
 
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  /** LocalDeviceManager is singleton and shared by all LocalMode jobs in the same machine. */
-  private static volatile LocalDeviceManager localDeviceManager;
-
-  /** Future which is set when the device manager is initialized. */
-  private static final SettableFuture<LocalDeviceManager> localDeviceManagerFuture =
-      SettableFuture.create();
+  private final LocalModeEnvironment env;
 
   /**
-   * Count down when the first device has been dispatched or the device manager detector&dispatcher
-   * have started for a while.
+   * Creates a {@link LocalMode} instance backed by the default process-level shared environment.
    */
-  private static final CountDownLatch firstDeviceLatch = new CountDownLatch(1);
-
-  private static volatile ProxyDeviceManager proxyDeviceManager;
-
-  /** Synchronization lock for {@link #localDeviceManager}. */
-  private static final Object LOCAL_ENV_LOCK = new Object();
-
-  /** Only do lightweight work here, including assignments and Guice injection. */
-  private static class LazyInitializer {
-
-    private static final ListeningExecutorService threadPool =
-        ThreadPools.createStandardThreadPool("local-mode-thread-pool");
-    private static final ListeningScheduledExecutorService scheduledThreadPool =
-        ThreadPools.createStandardScheduledThreadPool(
-            "local-mode-scheduled-thread-pool", /* corePoolSize= */ 5);
-    private static final LabInfoService labInfoService;
-    private static final DeviceTempRequiredDimensionManager tempRequiredDimensionManager;
-    private static final AbstractScheduler localScheduler = new SimpleScheduler(threadPool);
-
-    static {
-      ShutdownHookManager.getInstance()
-          .addShutdownHook(threadPool::shutdownNow, "local-mode-thread-pool-shutdown");
-      ShutdownHookManager.getInstance()
-          .addShutdownHook(
-              scheduledThreadPool::shutdownNow, "local-mode-scheduled-thread-pool-shutdown");
-
-      Injector injector =
-          Guice.createInjector(
-              new AbstractModule() {
-                @Override
-                protected void configure() {
-                  bind(ListeningExecutorService.class).toInstance(threadPool);
-                  bind(ListeningScheduledExecutorService.class).toInstance(scheduledThreadPool);
-                  bind(InstantSource.class).toInstance(InstantSource.system());
-                  bind(LabInfoProvider.class).to(LocalLabInfoProvider.class);
-                }
-
-                @Provides
-                ListenableFuture<LocalDeviceManager> provideLocalDeviceManager() {
-                  return localDeviceManagerFuture;
-                }
-              });
-      labInfoService = injector.getInstance(LabInfoService.class);
-      tempRequiredDimensionManager = injector.getInstance(DeviceTempRequiredDimensionManager.class);
-    }
+  public LocalMode() {
+    this(LocalModeEnvironment.getInstance());
   }
 
-  /** Starts the singleton local device manager and the local scheduler, if they have not been. */
+  @Inject
+  LocalMode(LocalModeEnvironment env) {
+    this.env = env;
+  }
+
   @Override
   public void initialize(EventBus globalInternalBus) throws InterruptedException {
-    if (localDeviceManager == null && proxyDeviceManager == null) {
-      synchronized (LOCAL_ENV_LOCK) {
-        if (localDeviceManager == null && proxyDeviceManager == null) {
-          logger.atInfo().log("Starting local device manager");
-
-          ApiConfig.getInstance()
-              .initialize(
-                  /* isDefaultPublic= */ true,
-                  /* isDefaultSynced= */ !Flags.enableDeviceConfigManager.getNonNull(),
-                  "");
-
-          // Subscribes LocalDeviceUpEvent.
-          globalInternalBus.register(this);
-
-          if (Flags.enableProxyMode.getNonNull()) {
-            // Initializes ProxyDeviceManager.
-            proxyDeviceManager =
-                Guice.createInjector(
-                        new AbstractModule() {
-                          @Override
-                          protected void configure() {
-                            bind(ListeningExecutorService.class)
-                                .toInstance(LazyInitializer.threadPool);
-                            install(new ProxyDeviceManagerModule());
-                          }
-                        })
-                    .getInstance(ProxyDeviceManager.class);
-            return;
-          }
-
-          // Initializes local device manager.
-          DetectorsAndDispatchers detectorsAndDispatchers =
-              new DetectorDispatcherSelector(Component.LOCAL_MODE).selectDetectorsAndDispatchers();
-          localDeviceManager =
-              new LocalDeviceManager(
-                  detectorsAndDispatchers.supportedDetectors(),
-                  detectorsAndDispatchers.supportedDispatchers(),
-                  /* keepGoing= */ false,
-                  LazyInitializer.threadPool,
-                  globalInternalBus,
-                  new NoopExternalDeviceManager());
-          localDeviceManager.initialize();
-          localDeviceManagerFuture.set(localDeviceManager);
-
-          // Starts device config manager.
-          if (Flags.enableDeviceConfigManager.getNonNull()) {
-            logFailure(
-                LazyInitializer.threadPool.submit(
-                    threadRenaming(
-                        new LocalFileBasedDeviceConfigManager(
-                            localDeviceManager,
-                            DeviceIdManager.getInstance(),
-                            ApiConfig.getInstance(),
-                            new ApiConfigFileProcessor()),
-                        () -> "device-config-manager")),
-                Level.SEVERE,
-                "Fatal error in device config manager");
-          }
-
-          // Initializes scheduler syncer.
-          LocalDeviceManagerSchedulerSyncer localDeviceManagerSchedulerSyncer =
-              new LocalDeviceManagerSchedulerSyncer(
-                  localDeviceManager,
-                  LazyInitializer.localScheduler,
-                  LazyInitializer.tempRequiredDimensionManager,
-                  ApiConfig.getInstance());
-          ApiConfig.getInstance().addListener(localDeviceManagerSchedulerSyncer);
-          // Notifies scheduler about device/test change.
-          globalInternalBus.register(localDeviceManagerSchedulerSyncer);
-
-          // Starts local device manager, scheduler and temp dimension manager.
-          logFailure(
-              LazyInitializer.threadPool.submit(
-                  threadRenaming(localDeviceManager, () -> "local-device-manager")),
-              Level.SEVERE,
-              "Fatal error in local device manager");
-          LazyInitializer.localScheduler.start();
-          LazyInitializer.tempRequiredDimensionManager.start();
-
-          // Starts device status info printer.
-          Duration printDeviceStatusInfoInterval = Duration.ofMinutes(2L);
-          logFailure(
-              LazyInitializer.scheduledThreadPool.scheduleWithFixedDelay(
-                  threadRenaming(
-                      () -> {
-                        try {
-                          logger.atInfo().log(
-                              "%s",
-                              DeviceStatusInfoPrinter.printDeviceStatusInfos(
-                                  localDeviceManager.getAllDeviceStatusWithoutDuplicatedUuid(
-                                      /* realtimeDetect= */ false)));
-                        } catch (InterruptedException e) {
-                          Thread.currentThread().interrupt();
-                        }
-                      },
-                      () -> "device-status-info-printer"),
-                  printDeviceStatusInfoInterval,
-                  printDeviceStatusInfoInterval),
-              Level.WARNING,
-              "Error when printing device status info");
-
-          // Starts first device detector.
-          logFailure(
-              LazyInitializer.threadPool.submit(
-                  (Callable<Void>)
-                      () -> {
-                        Sleeper.defaultSleeper().sleep(Duration.ofSeconds(10L));
-                        firstDeviceLatch.countDown();
-                        return null;
-                      }),
-              Level.INFO,
-              "Error when waiting device manager started");
-        }
-      }
-    }
+    env.initialize(globalInternalBus);
   }
 
   @Override
   public DeviceAllocator createDeviceAllocator(JobInfo jobInfo, EventBus globalInternalBus)
       throws InterruptedException {
-    initialize(globalInternalBus);
-    return new LocalDeviceAllocator(
-        jobInfo,
-        new LocalDeviceVerifier(localDeviceManager),
-        LazyInitializer.threadPool,
-        proxyDeviceManager,
-        LazyInitializer.localScheduler);
+    return env.createDeviceAllocator(jobInfo, globalInternalBus);
   }
 
   @Override
   public DeviceQuerier createDeviceQuerier() {
-    return new LocalDeviceQuerier(
-        localDeviceManagerFuture, firstDeviceLatch, LazyInitializer.tempRequiredDimensionManager);
+    return env.createDeviceQuerier();
   }
 
   @Override
   public DeviceReserver createDeviceReserver() {
-    return new LocalDeviceReserver(
-        LazyInitializer.tempRequiredDimensionManager, DeviceIdManager.getInstance());
+    return env.createDeviceReserver();
   }
 
   @Override
@@ -305,76 +86,21 @@ public class LocalMode implements ExecMode, ServiceProvider {
       ListeningExecutorService threadPool,
       FileResolver fileResolver)
       throws MobileHarnessException, InterruptedException {
-    EventBus globalInternalBus = setting.globalInternalBus().orElseThrow();
-    initialize(globalInternalBus);
-    ImmutableList<Device> devices;
-    TestRunnerLauncher<TestRunner> launcher;
-
-    if (Flags.enableProxyMode.getNonNull()) {
-      TestInfo testInfo = setting.testInfo();
-      JobInfo jobInfo = testInfo.jobInfo();
-      ProxyDevices proxyDevices =
-          requireNonNull(
-              getUnchecked(
-                  proxyDeviceManager.getDevicesOfTest(testInfo.locator().toNewTestLocator())));
-      devices =
-          IntStream.range(0, jobInfo.subDeviceSpecs().getSubDeviceCount())
-              .boxed()
-              .map(subDeviceIndex -> requireNonNull(proxyDevices.devices().get(subDeviceIndex)))
-              .collect(toImmutableList());
-      launcher = new ThreadPoolTestRunnerLauncher<>(threadPool, globalInternalBus);
-    } else {
-      List<TestExecutor> testExecutors = new ArrayList<>();
-      for (DeviceLocator deviceLocator : setting.allocation().getAllDeviceLocators()) {
-        String deviceSerial = deviceLocator.getSerial();
-        TestExecutor testExecutor =
-            MobileHarnessExceptions.checkNotNull(
-                localDeviceManager.getTestExecutorForDeviceId(deviceSerial),
-                InfraErrorId.CLIENT_LOCAL_MODE_ALLOCATED_DEVICE_NOT_FOUND,
-                String.format("Device %s not found", deviceSerial));
-        testExecutors.add(testExecutor);
-      }
-      TestExecutor primaryTestExecutor = testExecutors.get(0);
-      ImmutableList<TestExecutor> secondaryTestExecutors =
-          testExecutors.stream().skip(1L).collect(toImmutableList());
-      launcher = new LocalDeviceTestRunnerLauncher(primaryTestExecutor, secondaryTestExecutors);
-      devices = testExecutors.stream().map(TestExecutor::getDevice).collect(toImmutableList());
-    }
-    return doCreateTestRunner(launcher, setting, devices, threadPool);
+    return env.createTestRunner(setting, threadPool, fileResolver);
   }
 
   @Override
   public ImmutableList<BindableService> provideServicesForNonWorker() {
-    return ImmutableList.of(LazyInitializer.labInfoService);
+    return env.provideServicesForNonWorker();
   }
 
   @Override
   public ImmutableList<BindableService> provideServicesForWorker() {
-    return ImmutableList.of();
+    return env.provideServicesForWorker();
   }
 
   @Override
   public ImmutableList<BindableService> provideServicesDualMode() {
-    return ImmutableList.of();
-  }
-
-  private DirectTestRunner doCreateTestRunner(
-      TestRunnerLauncher<TestRunner> launcher,
-      DirectTestRunnerSetting setting,
-      List<Device> devices,
-      ListeningExecutorService threadPool)
-      throws MobileHarnessException {
-    return new LocalTestRunner(
-        launcher, setting, devices, threadPool, createTestFlowConverterOss());
-  }
-
-  private static TestFlowConverter createTestFlowConverterOss() {
-    return new NoOpTestFlowConverter(
-        IncompatibleReasonProto.InfraIncompatibleReason.ATS2, "ATS uses classic mode");
-  }
-
-  @Subscribe
-  private void onLocalDeviceUp(LocalDeviceUpEvent unused) {
-    firstDeviceLatch.countDown();
+    return env.provideServicesDualMode();
   }
 }
