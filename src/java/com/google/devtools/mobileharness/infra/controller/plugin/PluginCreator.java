@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.infra.controller.plugin;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static java.util.stream.Collectors.groupingBy;
 
 import com.google.common.cache.Cache;
 import com.google.common.collect.ImmutableList;
@@ -55,7 +54,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import javax.annotation.Nullable;
@@ -137,11 +135,6 @@ public class PluginCreator implements AutoCloseable {
   @Nullable
   private ClassLoader classLoader;
 
-  /** The scan result of the plugin jars. */
-  @GuardedBy("lock")
-  @Nullable
-  private ScanResult scanResult;
-
   /**
    * Creates a plugin loader.
    *
@@ -163,7 +156,7 @@ public class PluginCreator implements AutoCloseable {
       @Nullable LogCollector<?> log,
       Module... systemModules) {
     checkArgument(
-        !PluginType.UNSPECIFIED.equals(pluginType),
+        !pluginType.equals(PluginType.UNSPECIFIED),
         "Plugin type should not be %s",
         PluginType.UNSPECIFIED);
     this.jarUris = jarPaths.stream().map(File::new).map(File::toURI).collect(toImmutableList());
@@ -247,10 +240,6 @@ public class PluginCreator implements AutoCloseable {
   public void close() {
     synchronized (lock) {
       isClosed = true;
-      if (scanResult != null) {
-        scanResult.close();
-        scanResult = null;
-      }
       if (classLoader != null) {
         clearEventBusSubscriberCache(classLoader);
         try {
@@ -309,34 +298,6 @@ public class PluginCreator implements AutoCloseable {
     }
   }
 
-  /** Scans the target jars. Handles creation-specific exceptions explicitly. */
-  private void scanJars(List<URL> jarUrls) throws MobileHarnessException {
-    synchronized (lock) {
-      if (isClosed) {
-        logInfo("Plugin creator is closed, skip scanning all jars: [%s]", jarUrls);
-        return;
-      }
-      if (scanResult != null) {
-        logInfo("Plugin creator has already scanned all jars: [%s]", jarUrls);
-        return;
-      }
-      try {
-        scanResult =
-            new ClassGraph()
-                .overrideClassLoaders(classLoader)
-                .enableAnnotationInfo() // module scanning is enabled by default
-                .ignoreClassVisibility()
-                .scan();
-      } catch (Exception e) {
-        close();
-        throw new MobileHarnessException(
-            BasicErrorId.PLUGIN_LOADER_FAILED_TO_SCAN_CLASS_GRAPH_IN_JAR,
-            String.format("Error scanning class graph in plugin jar [%s]", jarUrls),
-            e);
-      }
-    }
-  }
-
   /**
    * Gets the plugin module classes. If {@code moduleClassNames} is specified, the loader tries to
    * load class with the given names. Otherwise, the loader tries to load all classes with {@link
@@ -350,35 +311,65 @@ public class PluginCreator implements AutoCloseable {
         logInfo(
             "No plugin module class name given, scanning the jars to search plugin module classes"
                 + " by plugin module annotation");
-        scanJars(jarUrls);
-        if (scanResult == null) {
-          logInfo("Failed to scan the jars: [%s]", jarUrls);
-          return moduleClasses;
-        }
-        // Group class metadata from ScanResult by their originating JAR URL
-        Map<URL, List<ClassInfo>> classesByJar =
-            scanResult.getClassesWithAnnotation(PluginModule.class).stream()
-                .collect(groupingBy(ClassInfo::getClasspathElementURL));
-        // Evaluate the fallback rules independently for each JAR.
-        for (var entry : classesByJar.entrySet()) {
-          final URL jarUrl = entry.getKey();
+        for (URL jarUrl : jarUrls) {
           logInfo("Searching plugin module classes in jar [%s]", jarUrl);
-          final List<ClassInfo> classInfos = entry.getValue();
-          PluginModuleClassProvider moduleClassProvider =
-              new RetryPluginModuleClassProvider(
-                  new AnnotatedPluginModuleClassProvider(
-                      classInfos, log, /* warnUnmatchedTypes= */ true, pluginType),
-                  new AnnotatedPluginModuleClassProvider(
-                      classInfos, log, /* warnUnmatchedTypes= */ false, PluginType.UNSPECIFIED));
-          Set<Class<? extends Module>> newModuleClasses;
-          try {
-            newModuleClasses = moduleClassProvider.getPluginModuleClasses();
+          // Scan each plugin jar individually with overrideClasspath(jarUrl) to keep memory
+          // consumption minimal (<10MB per jar) and immediately close ScanResult via
+          // try-with-resources to release memory, preventing OutOfMemoryError when dealing with
+          // multiple large deploy jars.
+          // ignoreParentClassLoaders() ensures the host Mobile Harness classpath is never scanned.
+          // overrideClassLoaders(classLoader) ensures discovered classes are loaded via
+          // PluginClassLoader, preserving *_plugin_force_load_from_jar_class_regex.
+          try (ScanResult scanResult =
+              new ClassGraph()
+                  .overrideClasspath(jarUrl)
+                  .overrideClassLoaders(classLoader)
+                  .ignoreParentClassLoaders()
+                  .disableDirScanning()
+                  .disableModuleScanning()
+                  .disableNestedJarScanning()
+                  .rejectPackages(
+                      "kotlin",
+                      "kotlinx",
+                      "com.google.protobuf",
+                      "google.protobuf",
+                      "io.grpc",
+                      "io.netty",
+                      "org.apache",
+                      "com.fasterxml",
+                      "okhttp3",
+                      "okio",
+                      "android",
+                      "androidx")
+                  .enableAnnotationInfo()
+                  .ignoreClassVisibility()
+                  .scan(/* numThreads= */ 1)) {
+            List<ClassInfo> classInfos = scanResult.getClassesWithAnnotation(PluginModule.class);
+            PluginModuleClassProvider moduleClassProvider =
+                new RetryPluginModuleClassProvider(
+                    new AnnotatedPluginModuleClassProvider(
+                        classInfos, log, /* warnUnmatchedTypes= */ true, pluginType),
+                    new AnnotatedPluginModuleClassProvider(
+                        classInfos, log, /* warnUnmatchedTypes= */ false, PluginType.UNSPECIFIED));
+            Set<Class<? extends Module>> newModuleClasses;
+            try {
+              newModuleClasses = moduleClassProvider.getPluginModuleClasses();
+            } catch (MobileHarnessException e) {
+              close();
+              throw e;
+            }
+            logInfo("Get plugin module classes %s from jar [%s]", newModuleClasses, jarUrl);
+            moduleClasses.addAll(newModuleClasses);
           } catch (MobileHarnessException e) {
             close();
             throw e;
+          } catch (RuntimeException e) {
+            close();
+            throw new MobileHarnessException(
+                BasicErrorId.PLUGIN_LOADER_FAILED_TO_SCAN_CLASS_GRAPH_IN_JAR,
+                String.format("Error scanning class graph in plugin jar [%s]", jarUrl),
+                e);
           }
-          logInfo("Get plugin module classes %s from jar [%s]", newModuleClasses, jarUrl);
-          moduleClasses.addAll(newModuleClasses);
         }
       } else {
         logInfo("Searching plugin module classes in all jars by names %s", moduleClassNames);
@@ -406,38 +397,68 @@ public class PluginCreator implements AutoCloseable {
       Set<Class<?>> classes = new HashSet<>();
       if (classNames == null) {
         logInfo("No plugin class name given, searching plugin class by plugin annotation");
-        scanJars(jarUrls);
-        if (scanResult == null) {
-          logInfo("Failed to scan the jars: [%s]", jarUrls);
-          return classes;
-        }
-        // Group class metadata from ScanResult by their originating JAR URL
-        Map<URL, List<ClassInfo>> classesByJar =
-            scanResult.getClassesWithAnnotation(Plugin.class).stream()
-                .collect(groupingBy(ClassInfo::getClasspathElementURL));
-        // Evaluate the fallback rules independently for each JAR.
-        for (var entry : classesByJar.entrySet()) {
-          final URL jarUrl = entry.getKey();
+        for (URL jarUrl : jarUrls) {
           logInfo("Searching plugin classes in jar [%s]", jarUrl);
-          final List<ClassInfo> classInfos = entry.getValue();
-          PluginClassProvider classProvider =
-              new RetryPluginClassProvider(
-                  new AnnotatedPluginClassProvider(
-                      classInfos, log, /* warnUnmatchedTypes= */ true, pluginType),
-                  new AnnotatedPluginClassProvider(
-                      classInfos, log, /* warnUnmatchedTypes= */ false, PluginType.UNSPECIFIED));
-          Set<Class<?>> newClasses;
-          try {
-            newClasses = classProvider.getPluginClasses();
+          // Scan each plugin jar individually with overrideClasspath(jarUrl) to keep memory
+          // consumption minimal (<10MB per jar) and immediately close ScanResult via
+          // try-with-resources to release memory, preventing OutOfMemoryError when dealing with
+          // multiple large deploy jars.
+          // ignoreParentClassLoaders() ensures the host Mobile Harness classpath is never scanned.
+          // overrideClassLoaders(classLoader) ensures discovered classes are loaded via
+          // PluginClassLoader, preserving *_plugin_force_load_from_jar_class_regex.
+          try (ScanResult scanResult =
+              new ClassGraph()
+                  .overrideClasspath(jarUrl)
+                  .overrideClassLoaders(classLoader)
+                  .ignoreParentClassLoaders()
+                  .disableDirScanning()
+                  .disableModuleScanning()
+                  .disableNestedJarScanning()
+                  .rejectPackages(
+                      "kotlin",
+                      "kotlinx",
+                      "com.google.protobuf",
+                      "google.protobuf",
+                      "io.grpc",
+                      "io.netty",
+                      "org.apache",
+                      "com.fasterxml",
+                      "okhttp3",
+                      "okio",
+                      "android",
+                      "androidx")
+                  .enableAnnotationInfo()
+                  .ignoreClassVisibility()
+                  .scan(/* numThreads= */ 1)) {
+            List<ClassInfo> classInfos = scanResult.getClassesWithAnnotation(Plugin.class);
+            PluginClassProvider classProvider =
+                new RetryPluginClassProvider(
+                    new AnnotatedPluginClassProvider(
+                        classInfos, log, /* warnUnmatchedTypes= */ true, pluginType),
+                    new AnnotatedPluginClassProvider(
+                        classInfos, log, /* warnUnmatchedTypes= */ false, PluginType.UNSPECIFIED));
+            Set<Class<?>> newClasses;
+            try {
+              newClasses = classProvider.getPluginClasses();
+            } catch (MobileHarnessException e) {
+              close();
+              throw e;
+            }
+            logInfo("Get plugin classes %s from jar [%s]", newClasses, jarUrl);
+            if (newClasses.size() > 1) {
+              logWarning("Get more than one plugin class from jar [%s]: %s", jarUrl, newClasses);
+            }
+            classes.addAll(newClasses);
           } catch (MobileHarnessException e) {
             close();
             throw e;
+          } catch (RuntimeException e) {
+            close();
+            throw new MobileHarnessException(
+                BasicErrorId.PLUGIN_LOADER_FAILED_TO_SCAN_CLASS_GRAPH_IN_JAR,
+                String.format("Error scanning class graph in plugin jar [%s]", jarUrl),
+                e);
           }
-          logInfo("Get plugin classes %s from jar [%s]", newClasses, jarUrl);
-          if (newClasses.size() > 1) {
-            logWarning("Get more than one plugin class from jar [%s]: %s", jarUrl, newClasses);
-          }
-          classes.addAll(newClasses);
         }
       } else {
         logInfo("Searching plugin classes in all jars by names %s", classNames);
