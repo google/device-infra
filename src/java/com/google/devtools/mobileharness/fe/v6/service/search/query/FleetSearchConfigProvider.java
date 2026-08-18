@@ -57,15 +57,21 @@ public final class FleetSearchConfigProvider {
    */
   public FleetSearchConfig getConfig(
       FleetSnapshot snapshot, FleetSearchConfigRequest request, ScenarioCuration curation) {
-    FleetIndex index = snapshot.index();
+    boolean host = request.getEntity() == SearchEntity.SEARCH_ENTITY_HOST;
+    // A host search reads its column names from the host index and its curated column lists from
+    // the
+    // host curation methods; a device search reads the device index and the device curation
+    // methods.
+    // The identifier and landing count are entity-aware below on their own.
+    FleetIndex index = host ? snapshot.hostIndex() : snapshot.index();
     String identifierKey = identifierKey(request.getEntity());
 
     FleetColumnConfig.Builder columns = FleetColumnConfig.newBuilder();
-    for (String keyId : curation.recommendedColumns()) {
+    for (String keyId : host ? curation.hostRecommendedColumns() : curation.recommendedColumns()) {
       columns.addRecommended(
           KeyDescriptor.newBuilder().setKey(keyId).setDisplayName(displayName(index, keyId)));
     }
-    for (String keyId : curation.defaultColumns()) {
+    for (String keyId : host ? curation.hostDefaultColumns() : curation.defaultColumns()) {
       columns.addDefaults(
           FleetColumnDescriptor.newBuilder()
               .setKey(keyId)

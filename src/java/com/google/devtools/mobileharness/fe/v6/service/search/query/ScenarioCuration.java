@@ -47,6 +47,32 @@ public interface ScenarioCuration {
   /** The recommended columns offered in the column catalog, in display order. */
   ImmutableList<String> recommendedColumns();
 
+  // ---- Host-entity curation ----
+  //
+  // The host entity has its own curated lists, analogous to the device ones above. They default to
+  // the device lists so a curation that has not been taught the host entity yet still compiles and
+  // serves a reasonable host page; a deployment overrides them with its host-specific lists.
+
+  /** The keys promoted into the host "Filter by:" row of the query bar, in display order. */
+  default ImmutableList<String> hostFilterByRow() {
+    return filterByRow();
+  }
+
+  /** The keys promoted into the host "Group by:" row of the query bar, in display order. */
+  default ImmutableList<String> hostGroupByRow() {
+    return groupByRow();
+  }
+
+  /** The default column set for the host flat search results table, in display order. */
+  default ImmutableList<String> hostDefaultColumns() {
+    return defaultColumns();
+  }
+
+  /** The recommended host columns offered in the column catalog, in display order. */
+  default ImmutableList<String> hostRecommendedColumns() {
+    return recommendedColumns();
+  }
+
   /**
    * The suggester ranking for {@code keyId}: a higher value means the key is offered earlier. The
    * mapping is scenario aware, so the same key can rank differently in different deployments.

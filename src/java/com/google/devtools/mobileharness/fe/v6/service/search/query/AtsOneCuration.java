@@ -20,7 +20,12 @@ import static com.google.devtools.mobileharness.fe.v6.service.search.index.Fleet
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_STATUS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_TYPE;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_UUID;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_CONNECTIVITY;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DEVICE_COUNT;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_IP;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_SERVER_VERSION;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_NAME;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_OS;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
@@ -69,6 +74,33 @@ public final class AtsOneCuration implements ScenarioCuration {
         "dim::device_class_name",
         "dim::manufacturer",
         CONFIG_WIFI_SSID);
+  }
+
+  // ---- Host-entity curation ----
+  //
+  // Ported verbatim from the prototype's ats-one HOST_* lists (suggest_engine.py). ats-one promotes
+  // nothing into the host "Group by:" row, so its group-by list is empty.
+
+  @Override
+  public ImmutableList<String> hostFilterByRow() {
+    return ImmutableList.of(HOST_NAME, HOST_CONNECTIVITY, HOST_DEVICE_COUNT);
+  }
+
+  @Override
+  public ImmutableList<String> hostGroupByRow() {
+    return ImmutableList.of();
+  }
+
+  @Override
+  public ImmutableList<String> hostDefaultColumns() {
+    return ImmutableList.of(
+        HOST_NAME, HOST_CONNECTIVITY, HOST_DEVICE_COUNT, HOST_IP, HOST_LAB_SERVER_VERSION);
+  }
+
+  @Override
+  public ImmutableList<String> hostRecommendedColumns() {
+    return ImmutableList.of(
+        HOST_CONNECTIVITY, HOST_DEVICE_COUNT, HOST_OS, HOST_LAB_SERVER_VERSION, HOST_IP);
   }
 
   @Override

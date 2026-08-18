@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggest
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.DeviceCorpus;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetChipResolver;
@@ -51,6 +52,7 @@ import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetPromote
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetSearchConfigProvider;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetSuggester;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetValueLister;
+import com.google.devtools.mobileharness.fe.v6.service.search.query.HostCorpus;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.ScenarioCuration;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.SearchCorpus;
 import com.google.devtools.mobileharness.fe.v6.service.search.refresh.FleetSnapshotStore;
@@ -137,7 +139,7 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
 
   private FleetSearchResults searchFleetSync(FleetSearchRequest request) {
     Fleet fleet = normalize(request.getFleet());
-    SearchCorpus corpus = corpus(fleet);
+    SearchCorpus corpus = corpus(fleet, request.getEntity());
     return switch (request.getViewCase()) {
       case FLAT -> {
         FleetFlatView flat = request.getFlat();
@@ -184,7 +186,9 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
     return Futures.submit(
         () -> {
           Fleet fleet = normalize(request.getFleet());
-          return suggester.suggest(corpus(fleet), request);
+          // TODO: route suggestions by request.getEntity(). Host suggestions need host key
+          // priority tiers and host empty-state seeds, so they stay on the device path until then.
+          return suggester.suggest(corpus(fleet, SearchEntity.SEARCH_ENTITY_DEVICE), request);
         },
         executor);
   }
@@ -208,7 +212,8 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
     return Futures.submit(
         () -> {
           Fleet fleet = normalize(request.getFleet());
-          return valueLister.listValues(corpus(fleet), request.getKey(), request.getFiltersList());
+          return valueLister.listValues(
+              corpus(fleet, request.getEntity()), request.getKey(), request.getFiltersList());
         },
         executor);
   }
@@ -219,7 +224,11 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
     return Futures.submit(
         () -> {
           Fleet fleet = normalize(request.getFleet());
-          return promotedKeysProvider.getPromotedKeys(corpus(fleet), request);
+          // TODO: route promoted keys by request.getEntity(). They rely on host key priority
+          // and
+          // host candidate rows, so they stay on the device path until then.
+          return promotedKeysProvider.getPromotedKeys(
+              corpus(fleet, SearchEntity.SEARCH_ENTITY_DEVICE), request);
         },
         executor);
   }
@@ -230,17 +239,21 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
     return Futures.submit(
         () -> {
           Fleet fleet = normalize(request.getFleet());
-          return columnCataloger.getColumnCatalog(corpus(fleet), request);
+          return columnCataloger.getColumnCatalog(corpus(fleet, request.getEntity()), request);
         },
         executor);
   }
 
   /**
-   * Builds the search corpus for a fleet. Device search routes through a {@link DeviceCorpus} for
-   * every entity for now; host entity routing arrives in a later change. A missing curation is
-   * passed through as null so the promoted keys provider keeps its curation-missing fallback.
+   * Builds the search corpus for a fleet and entity. A host search projects the fleet through a
+   * {@link HostCorpus} over the host index and host posting lists; every other entity projects it
+   * through a {@link DeviceCorpus}. A missing curation is passed through as null so the promoted
+   * keys provider keeps its curation-missing fallback.
    */
-  private SearchCorpus corpus(Fleet fleet) {
+  private SearchCorpus corpus(Fleet fleet, SearchEntity entity) {
+    if (entity == SearchEntity.SEARCH_ENTITY_HOST) {
+      return new HostCorpus(store.get(fleet), store.hostPostings(fleet), curations.get(fleet));
+    }
     return new DeviceCorpus(store.get(fleet), store.postings(fleet), curations.get(fleet));
   }
 
