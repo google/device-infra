@@ -114,11 +114,23 @@ java_library(
 )
 
 java_library(
+    name = "host_value_extractor",
+    srcs = ["HostValueExtractor.java"],
+    deps = [
+        ":fleet_search_keys",
+        ":host_record",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "lazy_postings",
     srcs = ["LazyPostings.java"],
     deps = [
         ":device_record",
         ":device_value_extractor",
+        ":host_record",
+        ":host_value_extractor",
         "@maven//:com_google_guava_guava",
     ],
 )

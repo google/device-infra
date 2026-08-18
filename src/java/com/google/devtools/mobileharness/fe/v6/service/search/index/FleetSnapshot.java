@@ -47,6 +47,9 @@ public abstract class FleetSnapshot {
   /** Inverted index and value index over {@link #devices()}. */
   public abstract FleetIndex index();
 
+  /** Inverted index and value index over {@link #hosts()}. */
+  public abstract FleetIndex hostIndex();
+
   /** Convenience: number of devices in this snapshot. */
   public int deviceCount() {
     return devices().size();
@@ -69,6 +72,7 @@ public abstract class FleetSnapshot {
         .setDevices(ImmutableList.of())
         .setHosts(ImmutableList.of())
         .setIndex(FleetIndex.empty())
+        .setHostIndex(FleetIndex.empty())
         .build();
   }
 
@@ -82,6 +86,8 @@ public abstract class FleetSnapshot {
     public abstract Builder setHosts(ImmutableList<HostRecord> hosts);
 
     public abstract Builder setIndex(FleetIndex index);
+
+    public abstract Builder setHostIndex(FleetIndex hostIndex);
 
     public abstract FleetSnapshot build();
   }

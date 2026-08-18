@@ -216,6 +216,77 @@ public final class FleetIndexBuilderTest {
     assertThat(snapshot.hosts().get(1).labTypes()).isEmpty();
     assertThat(snapshot.hosts().get(1).releaseStatus()).isEmpty();
     assertThat(snapshot.hosts().get(1).daemonStatus()).isEmpty();
+
+    // Host record OS and connectivity: sourced from the host_os property (defaulting to "Unknown")
+    // and the lab status bucket.
+    assertThat(snapshot.hosts().get(0).hostOs()).isEqualTo("ubuntu");
+    assertThat(snapshot.hosts().get(0).hostConnectivity()).isEqualTo("Running");
+    assertThat(snapshot.hosts().get(1).hostOs()).isEqualTo("Unknown");
+    assertThat(snapshot.hosts().get(1).hostConnectivity()).isEqualTo("Missing");
+
+    // Host index: a parallel index over hosts, not devices. Counts are distinct-host counts, so
+    // each of the two hosts contributes at most one to any value. The device count is a host-only
+    // key stamped as its decimal string.
+    FleetIndex hostIndex = snapshot.hostIndex();
+    assertThat(hostIndex.valueCount("host::device_count", "2")).isEqualTo(1);
+    assertThat(hostIndex.valueCount("host::device_count", "1")).isEqualTo(1);
+    assertThat(hostIndex.displayNames()).containsEntry("host::device_count", "Device Count");
+    assertThat(hostIndex.valueCount("host::host_name", "lab1")).isEqualTo(1);
+    assertThat(hostIndex.valueCount("host::host_name", "lab2")).isEqualTo(1);
+    assertThat(hostIndex.valueCount("host::host_ip", "1.1.1.1")).isEqualTo(1);
+    assertThat(hostIndex.valueCount("host::host_ip", "2.2.2.2")).isEqualTo(1);
+    assertThat(hostIndex.valueCount("host::host_os", "ubuntu")).isEqualTo(1);
+    assertThat(hostIndex.valueCount("host::host_os", "unknown")).isEqualTo(1);
+    assertThat(hostIndex.valueCount("host::connectivity", "running")).isEqualTo(1);
+    assertThat(hostIndex.valueCount("host::connectivity", "missing")).isEqualTo(1);
+    // The HostInfoService-sourced keys and lab type are carried only by the enriched host (lab1).
+    assertThat(hostIndex.valueCount("host::lab_type", "core lab")).isEqualTo(1);
+    assertThat(hostIndex.valueCount("host::daemon_status", "running")).isEqualTo(1);
+    assertThat(hostIndex.valueCount("host::release_status", "running")).isEqualTo(1);
+    assertThat(hostIndex.valueCount("host::release_type", "shared_lab")).isEqualTo(1);
+    assertThat(hostIndex.valueCount("host::lab_server_version", "v42")).isEqualTo(1);
+    // Host properties are indexed per host, so the location on lab1 counts once (not per device).
+    assertThat(hostIndex.valueCount("prop::location", "mtv")).isEqualTo(1);
+
+    // Host posting lists resolve host keys through the host forward store, keyed by host index in
+    // hosts() order.
+    LazyPostings hostIndexPostings = LazyPostings.forHosts(snapshot.hosts());
+    assertThat(posting(hostIndexPostings, "host::device_count", "2")).containsExactly(0);
+    assertThat(posting(hostIndexPostings, "host::device_count", "1")).containsExactly(1);
+    assertThat(posting(hostIndexPostings, "host::lab_type", "core lab")).containsExactly(0);
+    assertThat(posting(hostIndexPostings, "host::connectivity", "missing")).containsExactly(1);
+  }
+
+  @Test
+  public void build_hostIndex_includesZeroDeviceHost() {
+    // A host with no devices contributes nothing to the device index but is still a first-class
+    // record in the host index, counted by its zero device count.
+    LabQueryResult labResult =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "empty-lab",
+                            "9.9.9.9",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.getDefaultInstance())))
+            .build();
+
+    FleetSnapshot snapshot = builder.build(labResult, BUILD_TIME);
+
+    assertThat(snapshot.deviceCount()).isEqualTo(0);
+    assertThat(snapshot.hostCount()).isEqualTo(1);
+
+    FleetIndex hostIndex = snapshot.hostIndex();
+    assertThat(hostIndex.valueCount("host::device_count", "0")).isEqualTo(1);
+    assertThat(hostIndex.valueCount("host::host_name", "empty-lab")).isEqualTo(1);
+    LazyPostings hostPostings = LazyPostings.forHosts(snapshot.hosts());
+    assertThat(posting(hostPostings, "host::device_count", "0")).containsExactly(0);
+
+    // The device index carries no host_name entry, because there are no devices to stamp it onto.
+    assertThat(snapshot.index().valueCount("host::host_name", "empty-lab")).isEqualTo(0);
   }
 
   @Test

@@ -76,6 +76,7 @@ public final class FleetSearchKeys {
   public static final String HOST_RELEASE_TYPE = "host::release_type";
   public static final String HOST_LAB_SERVER_VERSION = "host::lab_server_version";
   public static final String HOST_ATS_CONTROLLER = "host::ats_controller";
+  public static final String HOST_DEVICE_COUNT = "host::device_count";
 
   // ---- Built-in config keys ----
 
@@ -142,6 +143,15 @@ public final class FleetSearchKeys {
           "dim::ecid",
           "dim::wifi_address",
           "dim::testbed_name");
+
+  /**
+   * Host-entity keys whose values are identifier-like, so the host value list shows no facet
+   * counts. The host name is unique per host, and the device count is a numeric string that reads
+   * as an identifier rather than a facet. This is the host-index analogue of {@link
+   * #PLAIN_VALUE_KEYS}.
+   */
+  public static final ImmutableSet<String> HOST_PLAIN_VALUE_KEYS =
+      ImmutableSet.of(HOST_NAME, HOST_DEVICE_COUNT);
 
   /**
    * Keys treated as device identifiers when routing a typed query to a key (UUID like or host

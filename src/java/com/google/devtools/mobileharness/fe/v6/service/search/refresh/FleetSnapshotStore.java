@@ -39,6 +39,7 @@ public final class FleetSnapshotStore {
 
   private final ConcurrentMap<Fleet, FleetSnapshot> snapshots = new ConcurrentHashMap<>();
   private final ConcurrentMap<Fleet, LazyPostings> postingsCache = new ConcurrentHashMap<>();
+  private final ConcurrentMap<Fleet, LazyPostings> hostPostingsCache = new ConcurrentHashMap<>();
 
   @Inject
   FleetSnapshotStore() {}
@@ -48,9 +49,14 @@ public final class FleetSnapshotStore {
     return snapshots.getOrDefault(fleet, FleetSnapshot.empty());
   }
 
-  /** Returns the lazy posting lists for the fleet, building a new one if none exists yet. */
+  /** Returns the lazy device posting lists for the fleet, building a new one if none exists yet. */
   public LazyPostings postings(Fleet fleet) {
     return postingsCache.computeIfAbsent(fleet, f -> new LazyPostings(get(f).devices()));
+  }
+
+  /** Returns the lazy host posting lists for the fleet, building a new one if none exists yet. */
+  public LazyPostings hostPostings(Fleet fleet) {
+    return hostPostingsCache.computeIfAbsent(fleet, f -> LazyPostings.forHosts(get(f).hosts()));
   }
 
   /** Publishes a new snapshot as the serving snapshot for the fleet. */
@@ -59,5 +65,6 @@ public final class FleetSnapshotStore {
     // container (e.g. SnapshotEntry) if atomic pairing across get() and postings() is desired.
     snapshots.put(fleet, snapshot);
     postingsCache.put(fleet, new LazyPostings(snapshot.devices()));
+    hostPostingsCache.put(fleet, LazyPostings.forHosts(snapshot.hosts()));
   }
 }

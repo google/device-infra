@@ -32,6 +32,7 @@ import static com.google.devtools.mobileharness.fe.v6.service.search.index.Fleet
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_ATS_CONTROLLER;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_CONNECTIVITY;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DAEMON_STATUS;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DEVICE_COUNT;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_IP;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_SERVER_VERSION;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_TYPE;
@@ -134,6 +135,7 @@ public final class FleetIndexBuilder {
           .put(HOST_LAB_SERVER_VERSION, "Host Lab Server Version")
           .put(HOST_RELEASE_TYPE, "Host Release Type")
           .put(HOST_ATS_CONTROLLER, "ATS Lab")
+          .put(HOST_DEVICE_COUNT, "Device Count")
           .buildOrThrow();
 
   @Inject
@@ -170,6 +172,11 @@ public final class FleetIndexBuilder {
     record HostDevices(HostRecord host, List<DeviceRecord> devices) {}
 
     ConcurrentMap<Thread, Accumulator> accumulatorsByThread = new ConcurrentHashMap<>();
+
+    // A parallel per-thread accumulator builds the host index over host records, independent of the
+    // device accumulator above. The two are kept separate so the device index stays a pure index
+    // over devices and the host index a pure index over hosts.
+    ConcurrentMap<Thread, Accumulator> hostAccumulatorsByThread = new ConcurrentHashMap<>();
 
     List<HostDevices> hostDevices =
         labDataList.parallelStream()
@@ -214,7 +221,13 @@ public final class FleetIndexBuilder {
                           hostProperties,
                           deviceList,
                           labTypes,
+                          hostOs,
+                          hostConnectivity,
                           hostEnrichment);
+                  Accumulator hostAccum =
+                      hostAccumulatorsByThread.computeIfAbsent(
+                          Thread.currentThread(), t -> new Accumulator());
+                  indexHost(hostAccum, hostRecord);
 
                   // TODO: Consider refactoring thread-identity partitioned
                   // accumulators to a standard Stream collect/reduce or manual list chunking
@@ -259,11 +272,17 @@ public final class FleetIndexBuilder {
       merged.mergeFrom(a);
     }
 
+    Accumulator hostMerged = new Accumulator();
+    for (Accumulator a : hostAccumulatorsByThread.values()) {
+      hostMerged.mergeFrom(a);
+    }
+
     return FleetSnapshot.builder()
         .setBuildTime(buildTime)
         .setDevices(ImmutableList.copyOf(allDevices))
         .setHosts(allHosts.build())
         .setIndex(merged.toIndex())
+        .setHostIndex(hostMerged.toIndex())
         .build();
   }
 
@@ -274,11 +293,15 @@ public final class FleetIndexBuilder {
       ImmutableMap<String, String> hostProperties,
       DeviceList deviceList,
       ImmutableList<String> labTypes,
+      String hostOs,
+      String hostConnectivity,
       Optional<HostEnrichment> enrichment) {
     return HostRecord.builder()
         .setHostName(hostName)
         .setHostIp(hostIp)
         .setLabStatus(labStatus)
+        .setHostOs(hostOs)
+        .setHostConnectivity(hostConnectivity)
         .setHostProperties(hostProperties)
         .setDeviceCount(deviceList.getDeviceInfoCount())
         .setLabTypes(labTypes)
@@ -477,6 +500,43 @@ public final class FleetIndexBuilder {
             id ->
                 accumulator.add(
                     seen, HOST_ATS_CONTROLLER, id, atsControllerDisplays.getOrDefault(id, id)));
+  }
+
+  /**
+   * Adds all index terms for one host to the host accumulator.
+   *
+   * <p>Mirrors {@link #indexDevice} for the host entity: it stamps the host's own attributes rather
+   * than the cross-entity join. The same empty-value skip in {@link Accumulator#add} gates these to
+   * the data that exists, so a host with no HostInfoService attributes (every ATS host) simply does
+   * not contribute those keys, and a host with no lab type contributes no lab type value. Host OS
+   * and connectivity are always present because {@code buildHostRecord} defaults them. The device
+   * count is stamped as its decimal string so it is filterable and groupable like any other value.
+   */
+  private static void indexHost(Accumulator accumulator, HostRecord host) {
+    Set<String> seen = new HashSet<>();
+
+    if (!host.hostName().isEmpty()) {
+      accumulator.add(seen, HOST_NAME, host.hostName());
+    }
+    if (!host.hostIp().isEmpty()) {
+      accumulator.add(seen, HOST_IP, host.hostIp());
+    }
+    accumulator.add(seen, HOST_OS, host.hostOs());
+    for (String labType : host.labTypes()) {
+      accumulator.add(seen, HOST_LAB_TYPE, labType);
+    }
+    accumulator.add(seen, HOST_CONNECTIVITY, host.hostConnectivity());
+    host.daemonStatus().ifPresent(value -> accumulator.add(seen, HOST_DAEMON_STATUS, value));
+    host.releaseStatus().ifPresent(value -> accumulator.add(seen, HOST_RELEASE_STATUS, value));
+    host.releaseType().ifPresent(value -> accumulator.add(seen, HOST_RELEASE_TYPE, value));
+    host.labServerVersion()
+        .ifPresent(value -> accumulator.add(seen, HOST_LAB_SERVER_VERSION, value));
+    for (Map.Entry<String, String> entry : host.hostProperties().entrySet()) {
+      accumulator.add(seen, PROP_PREFIX + entry.getKey(), entry.getValue());
+    }
+    // ats_controller and lab_server_activity are deferred: HostRecord carries no controller id (it
+    // is a device enrichment), and no lab activity source is wired into the fleet pull yet.
+    accumulator.add(seen, HOST_DEVICE_COUNT, String.valueOf(host.deviceCount()));
   }
 
   private static Instant toInstant(Timestamp timestamp) {

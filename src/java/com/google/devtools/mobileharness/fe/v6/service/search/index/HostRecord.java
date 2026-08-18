@@ -40,6 +40,18 @@ public abstract class HostRecord {
   /** Host connectivity status (e.g. "LAB_RUNNING", "LAB_MISSING"). From LabInfo.lab_status. */
   public abstract String labStatus();
 
+  /**
+   * Host operating system. Sourced from the {@code host_os} host property, defaulting to "Unknown"
+   * when the property is absent, matching the host detail page.
+   */
+  public abstract String hostOs();
+
+  /**
+   * Host lab server connectivity, bucketed from the lab status the same way as the host detail page
+   * (for example "Running", "Missing").
+   */
+  public abstract String hostConnectivity();
+
   /** Host properties from LabInfo (key-value pairs). */
   public abstract ImmutableMap<String, String> hostProperties();
 
@@ -79,6 +91,10 @@ public abstract class HostRecord {
     public abstract Builder setHostIp(String hostIp);
 
     public abstract Builder setLabStatus(String labStatus);
+
+    public abstract Builder setHostOs(String hostOs);
+
+    public abstract Builder setHostConnectivity(String hostConnectivity);
 
     public abstract Builder setHostProperties(ImmutableMap<String, String> hostProperties);
 

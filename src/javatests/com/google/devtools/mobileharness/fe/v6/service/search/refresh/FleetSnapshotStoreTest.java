@@ -19,10 +19,14 @@ package com.google.devtools.mobileharness.fe.v6.service.search.refresh;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.HostRecord;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import java.time.Instant;
+import java.util.Optional;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -70,12 +74,51 @@ public final class FleetSnapshotStoreTest {
     assertThat(store.get(Fleet.FLEET_ATS).buildTime()).isEqualTo(Instant.EPOCH);
   }
 
+  @Test
+  public void hostPostings_resolveHostKeysOverPublishedHosts() {
+    FleetSnapshot snapshot =
+        FleetSnapshot.builder()
+            .setBuildTime(Instant.ofEpochSecond(1_700_000_000L))
+            .setDevices(ImmutableList.of())
+            .setHosts(ImmutableList.of(host("lab1", 2), host("lab2", 1)))
+            .setIndex(FleetIndex.empty())
+            .setHostIndex(FleetIndex.empty())
+            .build();
+
+    store.publish(Fleet.FLEET_SELF, snapshot);
+
+    // The host postings are keyed by host index in hosts() order and resolve the host-only device
+    // count key as well as the host name.
+    LazyPostings hostPostings = store.hostPostings(Fleet.FLEET_SELF);
+    assertThat(hostPostings.get("host::device_count", "2")).asList().containsExactly(0);
+    assertThat(hostPostings.get("host::device_count", "1")).asList().containsExactly(1);
+    assertThat(hostPostings.get("host::host_name", "lab2")).asList().containsExactly(1);
+  }
+
   private static FleetSnapshot snapshotAt(long epochSecond) {
     return FleetSnapshot.builder()
         .setBuildTime(Instant.ofEpochSecond(epochSecond))
         .setDevices(ImmutableList.of())
         .setHosts(ImmutableList.of())
         .setIndex(FleetIndex.empty())
+        .setHostIndex(FleetIndex.empty())
+        .build();
+  }
+
+  private static HostRecord host(String hostName, int deviceCount) {
+    return HostRecord.builder()
+        .setHostName(hostName)
+        .setHostIp("0.0.0.0")
+        .setLabStatus("LAB_RUNNING")
+        .setHostOs("Unknown")
+        .setHostConnectivity("Running")
+        .setHostProperties(ImmutableMap.of())
+        .setDeviceCount(deviceCount)
+        .setLabTypes(ImmutableList.of())
+        .setReleaseStatus(Optional.empty())
+        .setReleaseType(Optional.empty())
+        .setDaemonStatus(Optional.empty())
+        .setLabServerVersion(Optional.empty())
         .build();
   }
 }
