@@ -37,13 +37,17 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.ListMultimap;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.ModuleInfo;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -72,6 +76,7 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public final class MctsDynamicDownloadPluginTest {
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
+  @Rule public final SetFlags setFlags = new SetFlags();
   @Mock private LocalTestStartingEvent mockEvent;
   @Mock private TestInfo mockTestInfo;
   @Mock private JobInfo mockJobInfo;
@@ -89,6 +94,8 @@ public final class MctsDynamicDownloadPluginTest {
   @SuppressWarnings("DirectInvocationOnMock")
   @Before
   public void setUp() throws MobileHarnessException, InterruptedException {
+    setFlags.set("tmp_dir_root", "/tmp");
+    setFlags.set("xts_res_dir_root", "/tmp");
     when(mockEvent.getTest()).thenReturn(mockTestInfo);
     when(mockEvent.getAllocation()).thenReturn(mockAllocation);
     when(mockAllocation.getAllDeviceLocators()).thenReturn(ImmutableList.of(mockDeviceLocator));
@@ -99,6 +106,8 @@ public final class MctsDynamicDownloadPluginTest {
     when(mockTestInfo.getTmpFileDir()).thenReturn("/tmp");
     when(mockTestInfo.properties()).thenReturn(testProperties);
     when(mockTestInfo.jobInfo().properties()).thenReturn(jobProperties);
+    when(jobProperties.getOptional(PropertyName.Job.SESSION_ID))
+        .thenReturn(Optional.of("test_session_id"));
     when(testProperties.getOptional(XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY))
         .thenReturn(Optional.of("30"));
     when(testProperties.getOptional(XtsConstants.DEVICE_TVP_VERSION_PROPERTY_KEY))
@@ -299,6 +308,8 @@ public final class MctsDynamicDownloadPluginTest {
     verify(testProperties, times(2)).add(XtsConstants.DEVICE_TVP_VERSION_PROPERTY_KEY, "351030004");
     verify(testProperties).add(XtsConstants.DEVICE_ABI_PROPERTY_KEY, "arm64-v8a");
     verify(testProperties).add(eq(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY), anyString());
+    localFileUtil.removeFileOrDir(
+        XtsDirUtil.getXtsDynamicDownloadDir("test_session_id").toString());
   }
 
   @Test
@@ -418,7 +429,12 @@ public final class MctsDynamicDownloadPluginTest {
   }
 
   private void verifyDownloadAndUnzipFile() throws Exception {
-    File directory = new File("/tmp/android/xts/mcts/testcases");
+    verifyDownloadAndUnzipFile(
+        XtsDirUtil.getXtsDynamicDownloadTestCasesDir("test_session_id").toString());
+  }
+
+  private void verifyDownloadAndUnzipFile(String testcasesPath) throws Exception {
+    File directory = new File(testcasesPath);
     File[] files = directory.listFiles();
 
     ImmutableSet<String> actualFileNames =
@@ -639,5 +655,45 @@ public final class MctsDynamicDownloadPluginTest {
                     "990500000", "some_module", "default", ""));
     assertThat(thrown.getErrorId())
         .isEqualTo(AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_DEVICE_SDK_VERSION_NOT_SUPPORT);
+  }
+
+  @Test
+  public void onTestStarting_dynamicMctsJob_missingSessionId_throwsException() throws Exception {
+    when(jobProperties.getOptional(XtsConstants.XTS_JOB_NAME))
+        .thenReturn(Optional.of(XtsConstants.DYNAMIC_MCTS_JOB_NAME));
+    when(jobProperties.getOptional(PropertyName.Job.SESSION_ID)).thenReturn(Optional.empty());
+    generateTestZipFilesForDynamicJob();
+
+    SkipTestException thrown =
+        assertThrows(
+            SkipTestException.class, () -> spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent));
+    assertThat(thrown.getCause()).isInstanceOf(MobileHarnessException.class);
+    MobileHarnessException cause = (MobileHarnessException) thrown.getCause();
+    assertThat(cause.getErrorId())
+        .isEqualTo(AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_PROPERTY_NOT_FOUND);
+    assertThat(cause).hasMessageThat().contains(PropertyName.Job.SESSION_ID.name());
+  }
+
+  @Test
+  public void onTestStarting_dynamicMctsJob_missingSessionIdForJdk_throwsException()
+      throws Exception {
+    when(jobProperties.getOptional(XtsConstants.XTS_JOB_NAME))
+        .thenReturn(Optional.of(XtsConstants.DYNAMIC_MCTS_JOB_NAME));
+    when(jobProperties.getOptional(PropertyName.Job.SESSION_ID)).thenReturn(Optional.empty());
+    Mockito.doReturn("/tmp/jdk.zip")
+        .when(spyMctsDynamicDownloadPlugin)
+        .downloadPublicUrlFiles(
+            "https://dl.google.com/dl/android/xts/mcts/tool/35/jdk.zip",
+            "/android/xts/mcts/tool/jdk.zip");
+    generateTestZipFilesForDynamicJob();
+
+    SkipTestException thrown =
+        assertThrows(
+            SkipTestException.class, () -> spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent));
+    assertThat(thrown.getCause()).isInstanceOf(MobileHarnessException.class);
+    MobileHarnessException cause = (MobileHarnessException) thrown.getCause();
+    assertThat(cause.getErrorId())
+        .isEqualTo(AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_PROPERTY_NOT_FOUND);
+    assertThat(cause).hasMessageThat().contains(PropertyName.Job.SESSION_ID.name());
   }
 }

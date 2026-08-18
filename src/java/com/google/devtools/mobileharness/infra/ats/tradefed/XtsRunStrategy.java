@@ -348,15 +348,31 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
     Path linkLibDir = XtsDirUtil.getXtsLibDir(workDir, xtsType);
     Path linkLib64Dir = XtsDirUtil.getXtsLib64Dir(workDir, xtsType);
 
+    boolean isDynamicMctsJob =
+        testInfo
+            .jobInfo()
+            .properties()
+            .getOptional(XtsConstants.XTS_JOB_NAME)
+            .orElse("")
+            .equals(XtsConstants.DYNAMIC_MCTS_JOB_NAME);
+    String sessionId =
+        isDynamicMctsJob
+            ? testInfo
+                .jobInfo()
+                .properties()
+                .getOptional(Job.SESSION_ID)
+                .filter(id -> !id.isEmpty())
+                .orElseThrow(
+                    () ->
+                        new MobileHarnessException(
+                            AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_PROPERTY_NOT_FOUND,
+                            String.format("Job property %s is not set or empty.", Job.SESSION_ID)))
+            : null;
+
     if (Flags.xtsJdkDir.getNonNull().isEmpty()) {
       // Create symlinks for the downloaded JDK only for the dynamic download jobs.
-      if (testInfo.properties().has(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_JDK_PROPERTY_KEY)) {
-        Path downloadedJdkPath =
-            Path.of(
-                testInfo.getTmpFileDir()
-                    + testInfo
-                        .properties()
-                        .get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_JDK_PROPERTY_KEY));
+      if (isDynamicMctsJob) {
+        Path downloadedJdkPath = XtsDirUtil.getXtsDynamicDownloadJdkDir(sessionId);
         createSymlink(linkJdkDir, downloadedJdkPath);
         logger.atInfo().log("Use the downloaded JDK files from %s", downloadedJdkPath);
       } else {
@@ -399,34 +415,22 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
             getStringSetFromResourceFile(getStaticMctsListFilePath()));
       }
 
-      if (testInfo
-          .jobInfo()
-          .properties()
-          .getOptional(XtsConstants.XTS_JOB_NAME)
-          .orElse("")
-          .equals(XtsConstants.DYNAMIC_MCTS_JOB_NAME)) {
-        if (testInfo.properties().has(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY)) {
-          // Integrates the dynamic downloaded test cases with the temp XTS workspace.
-          missingTestList.addAll(
-              createSymlinksForDynamicDownloadTestCases(
-                  linkTestcasesDir,
-                  Path.of(
-                      testInfo.getTmpFileDir()
-                          + testInfo
-                              .properties()
-                              .get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY)),
-                  /* isDynamicDownload= */ true,
-                  xtsDynamicDownloadTestList));
-          // Also include the test dependencies for dynamic download test cases.
-          logger.atInfo().log("Missing dynamic download test list: %s", missingTestList);
-          createSymlinksForDynamicDownloadTestCases(
-              linkTestcasesDir,
-              sourceXtsBundledTestcasesDir,
-              /* isDynamicDownload= */ true,
-              missingTestList);
-        } else {
-          createSymlinksForTestCases(linkTestcasesDir, sourceXtsBundledTestcasesDir);
-        }
+      if (isDynamicMctsJob) {
+        // Integrates the dynamic downloaded test cases with the temp XTS workspace.
+        Path dynamicDownloadTestcasesDir = XtsDirUtil.getXtsDynamicDownloadTestCasesDir(sessionId);
+        missingTestList.addAll(
+            createSymlinksForDynamicDownloadTestCases(
+                linkTestcasesDir,
+                dynamicDownloadTestcasesDir,
+                /* isDynamicDownload= */ true,
+                xtsDynamicDownloadTestList));
+        // Also include the test dependencies for dynamic download test cases.
+        logger.atInfo().log("Missing dynamic download test list: %s", missingTestList);
+        createSymlinksForDynamicDownloadTestCases(
+            linkTestcasesDir,
+            sourceXtsBundledTestcasesDir,
+            /* isDynamicDownload= */ true,
+            missingTestList);
       }
 
       if (testInfo

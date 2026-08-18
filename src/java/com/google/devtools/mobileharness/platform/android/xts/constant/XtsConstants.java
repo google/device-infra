@@ -92,17 +92,9 @@ public class XtsConstants {
   public static final String TRADEFED_FILTERED_EXPANDED_MODULES_FOR_TEST_PROPERTY_KEY =
       "tradefed_filtered_expanded_modules_for_test";
 
-  /** MH test property keys of path relative to the xts dynamic download dir. */
-  public static final String XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY =
-      "xts_dynamic_download_path";
-
   /** MH test property keys of the path of the test list file. */
   public static final String XTS_DYNAMIC_DOWNLOAD_PATH_TEST_LIST_PROPERTY_KEY =
       "xts_dynamic_download_test_list_path";
-
-  /** MH test property keys of the path of the downloaded JDK. */
-  public static final String XTS_DYNAMIC_DOWNLOAD_PATH_JDK_PROPERTY_KEY =
-      "xts_dynamic_download_jdk_path";
 
   /** MH test property keys of the preloaded mainline version. */
   public static final String PRELOAD_MAINLINE_VERSION_TEST_PROPERTY_KEY =

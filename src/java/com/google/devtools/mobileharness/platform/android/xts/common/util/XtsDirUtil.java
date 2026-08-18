@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.platform.android.xts.common.util;
 
 import static com.google.common.base.Ascii.toLowerCase;
 
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
@@ -76,6 +77,23 @@ public class XtsDirUtil {
   /** Gets the tools directory for the given {@code xtsType}. */
   public static Path getXtsToolsDir(Path xtsRootDir, String xtsType) {
     return xtsRootDir.resolve(String.format("android-%s/tools", toLowerCase(xtsType)));
+  }
+
+  /** Gets the dynamic download root directory for the given {@code sessionId}. */
+  public static Path getXtsDynamicDownloadDir(String sessionId) {
+    return Path.of(Flags.xtsResDirRoot.getNonNull())
+        .resolve("mcts_dynamic_download")
+        .resolve(String.format("ats_session_%s", sessionId));
+  }
+
+  /** Gets the dynamic download test cases directory for the given {@code sessionId}. */
+  public static Path getXtsDynamicDownloadTestCasesDir(String sessionId) {
+    return getXtsDynamicDownloadDir(sessionId).resolve("android/xts/mcts/testcases");
+  }
+
+  /** Gets the dynamic download JDK directory for the given {@code sessionId}. */
+  public static Path getXtsDynamicDownloadJdkDir(String sessionId) {
+    return getXtsDynamicDownloadDir(sessionId).resolve("android/xts/mcts/tool/jdk");
   }
 
   private XtsDirUtil() {}

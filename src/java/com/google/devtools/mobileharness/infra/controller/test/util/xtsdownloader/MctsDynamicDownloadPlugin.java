@@ -40,12 +40,14 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdb
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.protobuf.TextFormat;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
@@ -59,6 +61,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashSet;
@@ -75,15 +78,9 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
 
   private static final Object lock = new Object();
 
-  private static final String STATIC_MCTS_TESTCASES_PATH = "/android/xts/mcts";
-
-  private static final String TMP_MCTS_TESTCASES_PATH = "/android/xts/mcts/testcases";
-
   private static final String MCTS_JDK_PATH = "/android/xts/mcts/tool/jdk.zip";
 
   private static final String TMP_MCTS_TOOL_PATH = "/android/xts/mcts/tool";
-
-  private static final String TMP_MCTS_JDK_PATH = "/android/xts/mcts/tool/jdk";
 
   private static final String MAINLINE_TVP_PKG = "com.google.android.modulemetadata";
 
@@ -303,9 +300,6 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       allTestModules.addAll(
           unzipDownloadedTestCases(testInfo, filePath, subDirName, excludeTestModules));
     }
-    testInfo
-        .properties()
-        .add(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY, TMP_MCTS_TESTCASES_PATH);
     // Print out all the downloaded MCTS test modules
     logger.atInfo().log("Downloaded MCTS test modules:");
     for (String testModule : allTestModules) {
@@ -319,12 +313,25 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     String jdkFilePath =
         downloadPublicUrlFiles("https://dl.google.com/dl" + jdkFileTargetPath, MCTS_JDK_PATH);
     if (jdkFilePath != null) {
-      fileUtil.unzipFile(jdkFilePath, testInfo.getTmpFileDir() + TMP_MCTS_TOOL_PATH);
-      testInfo
-          .properties()
-          .add(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_JDK_PROPERTY_KEY, TMP_MCTS_JDK_PATH);
+      String sessionId = getSessionId(testInfo);
+      Path mctsJdkDir = XtsDirUtil.getXtsDynamicDownloadJdkDir(sessionId);
+      fileUtil.unzipFile(jdkFilePath, mctsJdkDir.getParent().toString());
       logger.atInfo().log("Downloaded MCTS JDK files");
     }
+  }
+
+  private String getSessionId(TestInfo testInfo) throws MobileHarnessException {
+    return testInfo
+        .jobInfo()
+        .properties()
+        .getOptional(PropertyName.Job.SESSION_ID)
+        .filter(id -> !id.isEmpty())
+        .orElseThrow(
+            () ->
+                new MobileHarnessException(
+                    AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_PROPERTY_NOT_FOUND,
+                    String.format(
+                        "Job property %s is not set or empty.", PropertyName.Job.SESSION_ID)));
   }
 
   @Subscribe
@@ -641,26 +648,27 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     if (filePath == null) {
       return new HashSet<>();
     }
-    // unzip the file to /tmp/android/xts/mcts/android-mcts-<module>/testcases
-    String unzipDirPath = testInfo.getTmpFileDir() + STATIC_MCTS_TESTCASES_PATH;
+    String sessionId = getSessionId(testInfo);
+    Path testcasesDir = XtsDirUtil.getXtsDynamicDownloadTestCasesDir(sessionId);
+    String testcasesDirPath = testcasesDir.toString();
+    String unzipDirPath = testcasesDir.getParent().toString();
     fileUtil.unzipFile(filePath, unzipDirPath);
-    // mv all the mcts test cases to /tmp/android/xts/mcts/testcases/
+    // mv all the mcts test cases to testcasesDir
     List<String> listPaths =
         fileUtil.listFileOrDirPaths(
             unzipDirPath + "/" + PathUtil.basename(subDirName).replace(".zip", "") + "/testcases");
     Set<String> testModules = new HashSet<>(); // Track MCTS test modules.
     for (String path : listPaths) {
-      String desPath = unzipDirPath + "/testcases";
       // Skip moving the files that already existed. For example, CtsDeviceInfo contained in all the
       // android-mcts-<module>.zip.
-      if (!fileUtil.getFileOrDir(desPath + "/" + PathUtil.basename(path)).exists()
+      if (!fileUtil.getFileOrDir(testcasesDirPath + "/" + PathUtil.basename(path)).exists()
           && !excludeTestModules.contains(PathUtil.basename(path))) {
-        fileUtil.moveFileOrDir(path, desPath);
-        logger.atInfo().log("Moved test cases from link [%s] to [%s]", path, unzipDirPath);
+        fileUtil.moveFileOrDir(path, testcasesDirPath);
+        logger.atInfo().log("Moved test cases from link [%s] to [%s]", path, testcasesDirPath);
         testModules.add(PathUtil.basename(path));
       }
     }
-    logger.atInfo().log("Unzipped resource to %s", unzipDirPath);
+    logger.atInfo().log("Unzipped resource to %s", testcasesDirPath);
     return testModules;
   }
 

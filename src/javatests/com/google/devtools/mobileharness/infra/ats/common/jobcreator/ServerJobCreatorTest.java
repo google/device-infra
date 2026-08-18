@@ -28,6 +28,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -56,6 +57,8 @@ import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
@@ -831,7 +834,8 @@ public final class ServerJobCreatorTest {
             .setAtsServerTestEnvironment(testEnvironment)
             .setXtsRootDir(xtsRootDir)
             .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
-            .setIsXtsDynamicDownloadEnabled(true);
+            .setIsXtsDynamicDownloadEnabled(true)
+            .setSessionId("session_id");
     SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
     when(sessionRequestHandlerUtil.getStaticMctsModules())
         .thenReturn(ImmutableSet.of("mcts-module"));
@@ -845,6 +849,11 @@ public final class ServerJobCreatorTest {
             invocation -> {
               JobInfo jobInfo = mock(JobInfo.class);
               when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
+              TestInfos testInfos = mock(TestInfos.class);
+              TestInfo testInfo = mock(TestInfo.class);
+              when(testInfo.properties()).thenReturn(new Properties(new Timing()));
+              when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
+              when(jobInfo.tests()).thenReturn(testInfos);
               return jobInfo;
             });
     when(sessionRequestHandlerUtil.getFilteredTradefedModules(any()))

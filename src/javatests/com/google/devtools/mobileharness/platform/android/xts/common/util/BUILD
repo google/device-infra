@@ -54,3 +54,15 @@ java_test(
         "@maven//:org_mockito_mockito_core",
     ],
 )
+
+java_test(
+    name = "XtsDirUtilTest",
+    size = "small",
+    srcs = ["XtsDirUtilTest.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:junit_junit",
+    ],
+)
