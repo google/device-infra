@@ -25,7 +25,7 @@ option java_multiple_files = true;
 option java_outer_classname = "AndroidGeoHttpProxyDecoratorSpecProto";
 
 // Specs for {@link AndroidGeoHttpProxyDecorator}.
-// Next tag: 3
+// Next tag: 6
 message AndroidGeoHttpProxyDecoratorSpec {
   extend DecoratorSpec {
     optional AndroidGeoHttpProxyDecoratorSpec ext = 1019;
@@ -39,5 +39,20 @@ message AndroidGeoHttpProxyDecoratorSpec {
   optional string credentials_file = 2 [(field_detail) = {
     is_required: false,
     help: "Optional path to the credentials file for the proxy."
+  }];
+
+  optional bool is_burnt = 3 [(field_detail) = {
+    is_required: false,
+    help: "Whether to allow burnt proxies. When set to false, requests unburnt / stealthy proxy."
+  }];
+
+  optional bool is_mobile = 4 [(field_detail) = {
+    is_required: false,
+    help: "Whether to request mobile carrier proxy."
+  }];
+
+  optional string usage_tag = 5 [(field_detail) = {
+    is_required: false,
+    help: "Usage tag for specialized proxy classes (e.g. ADS_NORTHERN_LIGHT)."
   }];
 }
