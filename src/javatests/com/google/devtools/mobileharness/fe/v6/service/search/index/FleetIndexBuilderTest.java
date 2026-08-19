@@ -408,6 +408,61 @@ public final class FleetIndexBuilderTest {
   }
 
   @Test
+  public void build_hostAtsController_termIsIdDisplayIsFriendly() {
+    // Host lab1 belongs to controller "xiaomi", which the registry maps to a friendly display. Host
+    // lab2 carries no controller enrichment, so it contributes nothing to the key.
+    LabQueryResult labResult =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(2)
+                    .addLabData(
+                        labData(
+                            "lab1",
+                            "1.1.1.1",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.getDefaultInstance(),
+                            device0()))
+                    .addLabData(
+                        labData(
+                            "lab2",
+                            "2.2.2.2",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.getDefaultInstance(),
+                            device1())))
+            .build();
+
+    FleetRawData raw =
+        FleetRawData.builder()
+            .setLabData(labResult)
+            .setHostEnrichments(ImmutableMap.of("lab1", hostAtsControllerEnrichment("xiaomi")))
+            .setAtsControllerDisplays(ImmutableMap.of("xiaomi", "Partner Lab: Xiaomi"))
+            .build();
+
+    FleetSnapshot snapshot = builder.build(raw, BUILD_TIME);
+    FleetIndex hostIndex = snapshot.hostIndex();
+
+    // The enriched host record carries the controller id; the unenriched host has none.
+    assertThat(snapshot.hosts().get(0).atsController()).hasValue("xiaomi");
+    assertThat(snapshot.hosts().get(1).atsController()).isEmpty();
+
+    // The key is indexed in the host index and its column label is "ATS Lab".
+    assertThat(hostIndex.keyIds()).contains("host::ats_controller");
+    assertThat(hostIndex.displayNames()).containsEntry("host::ats_controller", "ATS Lab");
+
+    // The stored/filter term is the lowercased controller id; the enriched host is selected and the
+    // unenriched host contributes nothing.
+    assertThat(hostIndex.valueCount("host::ats_controller", "xiaomi")).isEqualTo(1);
+    assertThat(hostIndex.sortedValues().get("host::ats_controller")).containsExactly("xiaomi");
+    LazyPostings hostPostings = LazyPostings.forHosts(snapshot.hosts());
+    assertThat(posting(hostPostings, "host::ats_controller", "xiaomi")).containsExactly(0);
+
+    // The per-value display is the friendly name from the registry.
+    assertThat(hostIndex.valueDisplays().get("host::ats_controller"))
+        .containsEntry("xiaomi", "Partner Lab: Xiaomi");
+  }
+
+  @Test
   public void build_emptyResult_returnsEmptySnapshot() {
     FleetSnapshot snapshot =
         builder.build(FleetRawData.ofLabData(LabQueryResult.getDefaultInstance()), BUILD_TIME);
@@ -505,6 +560,10 @@ public final class FleetIndexBuilderTest {
 
   private static DeviceEnrichment atsControllerEnrichment(String controllerId) {
     return DeviceEnrichment.builder().setAtsController(Optional.of(controllerId)).build();
+  }
+
+  private static HostEnrichment hostAtsControllerEnrichment(String controllerId) {
+    return HostEnrichment.builder().setAtsController(Optional.of(controllerId)).build();
   }
 
   private static HostEnrichment lab1Enrichment() {

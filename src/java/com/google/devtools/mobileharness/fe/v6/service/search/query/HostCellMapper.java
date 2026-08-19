@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_ATS_CONTROLLER;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_CONNECTIVITY;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DAEMON_STATUS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DEVICE_COUNT;
@@ -142,9 +143,27 @@ public final class HostCellMapper {
           host.releaseType().map(ImmutableList::of).orElse(ImmutableList.of());
       case HOST_LAB_SERVER_VERSION ->
           host.labServerVersion().map(ImmutableList::of).orElse(ImmutableList.of());
+      // The host stores the raw controller id; show the friendly display from the host index's
+      // per-value display map, falling back to the id itself when the registry has no entry.
+      case HOST_ATS_CONTROLLER -> atsControllerValues(host, snapshot);
       case HOST_DEVICE_COUNT -> ImmutableList.of(String.valueOf(host.deviceCount()));
       default -> prefixedValues(host, keyId);
     };
+  }
+
+  private static ImmutableList<String> atsControllerValues(
+      HostRecord host, FleetSnapshot snapshot) {
+    return host.atsController()
+        .filter(id -> !id.isEmpty())
+        .map(
+            id ->
+                ImmutableList.of(
+                    snapshot
+                        .hostIndex()
+                        .valueDisplays()
+                        .getOrDefault(HOST_ATS_CONTROLLER, ImmutableMap.of())
+                        .getOrDefault(Ascii.toLowerCase(id), id)))
+        .orElse(ImmutableList.of());
   }
 
   private static ImmutableList<String> prefixedValues(HostRecord host, String keyId) {
