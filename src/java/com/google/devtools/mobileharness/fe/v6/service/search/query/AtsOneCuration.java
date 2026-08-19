@@ -48,24 +48,24 @@ public final class AtsOneCuration implements ScenarioCuration {
   AtsOneCuration() {}
 
   @Override
-  public ImmutableList<String> filterByRow() {
+  public ImmutableList<String> deviceFilterByRow() {
     return ImmutableList.of(
         FIELD_UUID, HOST_NAME, FIELD_STATUS, "dim::model", "dim::sdk_version", CONFIG_WIFI_SSID);
   }
 
   @Override
-  public ImmutableList<String> groupByRow() {
+  public ImmutableList<String> deviceGroupByRow() {
     return ImmutableList.of(HOST_NAME, CONFIG_WIFI_SSID);
   }
 
   @Override
-  public ImmutableList<String> defaultColumns() {
+  public ImmutableList<String> deviceDefaultColumns() {
     return ImmutableList.of(
         FIELD_UUID, HOST_NAME, FIELD_STATUS, "dim::model", "dim::os", CONFIG_WIFI_SSID);
   }
 
   @Override
-  public ImmutableList<String> recommendedColumns() {
+  public ImmutableList<String> deviceRecommendedColumns() {
     return ImmutableList.of(
         HOST_NAME,
         FIELD_STATUS,

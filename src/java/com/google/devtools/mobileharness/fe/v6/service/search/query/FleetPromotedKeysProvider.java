@@ -49,8 +49,9 @@ import javax.inject.Inject;
  * not hardcoded here: the provider injects the per-fleet {@link Map} of {@link ScenarioCuration}
  * and reads the entry for the request's {@link
  * com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet}, using {@link
- * ScenarioCuration#filterByRow()} and {@link ScenarioCuration#groupByRow()} as the candidate key
- * lists. The dead-end, applied, and limit trimming below is scenario independent and stays here.
+ * ScenarioCuration#deviceFilterByRow()} and {@link ScenarioCuration#deviceGroupByRow()} as the
+ * candidate key lists. The dead-end, applied, and limit trimming below is scenario independent and
+ * stays here.
  */
 public final class FleetPromotedKeysProvider {
 
@@ -114,8 +115,10 @@ public final class FleetPromotedKeysProvider {
     // entity reads the device rows. For the device corpus this is the device filter and group-by
     // rows exactly, so device promoted keys are unchanged.
     boolean host = corpus.entity() == SearchEntity.SEARCH_ENTITY_HOST;
-    ImmutableList<String> filterByRow = host ? curation.hostFilterByRow() : curation.filterByRow();
-    ImmutableList<String> groupByRow = host ? curation.hostGroupByRow() : curation.groupByRow();
+    ImmutableList<String> filterByRow =
+        host ? curation.hostFilterByRow() : curation.deviceFilterByRow();
+    ImmutableList<String> groupByRow =
+        host ? curation.hostGroupByRow() : curation.deviceGroupByRow();
 
     FleetPromotedKeysResponse.Builder response = FleetPromotedKeysResponse.newBuilder();
     addFilterKeys(response, corpus, index, current, hasFilters, appliedFilterKeys, filterByRow);

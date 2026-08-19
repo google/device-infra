@@ -177,22 +177,22 @@ public final class HostPromotedKeysProviderTest {
    */
   private static final class FakeCuration implements ScenarioCuration {
     @Override
-    public ImmutableList<String> filterByRow() {
+    public ImmutableList<String> deviceFilterByRow() {
       return ImmutableList.of();
     }
 
     @Override
-    public ImmutableList<String> groupByRow() {
+    public ImmutableList<String> deviceGroupByRow() {
       return ImmutableList.of();
     }
 
     @Override
-    public ImmutableList<String> defaultColumns() {
+    public ImmutableList<String> deviceDefaultColumns() {
       return ImmutableList.of();
     }
 
     @Override
-    public ImmutableList<String> recommendedColumns() {
+    public ImmutableList<String> deviceRecommendedColumns() {
       return ImmutableList.of();
     }
 

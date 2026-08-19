@@ -67,11 +67,12 @@ public final class FleetSearchConfigProvider {
     String identifierKey = identifierKey(request.getEntity());
 
     FleetColumnConfig.Builder columns = FleetColumnConfig.newBuilder();
-    for (String keyId : host ? curation.hostRecommendedColumns() : curation.recommendedColumns()) {
+    for (String keyId :
+        host ? curation.hostRecommendedColumns() : curation.deviceRecommendedColumns()) {
       columns.addRecommended(
           KeyDescriptor.newBuilder().setKey(keyId).setDisplayName(displayName(index, keyId)));
     }
-    for (String keyId : host ? curation.hostDefaultColumns() : curation.defaultColumns()) {
+    for (String keyId : host ? curation.hostDefaultColumns() : curation.deviceDefaultColumns()) {
       columns.addDefaults(
           FleetColumnDescriptor.newBuilder()
               .setKey(keyId)

@@ -37,16 +37,16 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity
 public interface ScenarioCuration {
 
   /** The keys promoted into the "Filter by:" row of the query bar, in display order. */
-  ImmutableList<String> filterByRow();
+  ImmutableList<String> deviceFilterByRow();
 
   /** The keys promoted into the "Group by:" row of the query bar, in display order. */
-  ImmutableList<String> groupByRow();
+  ImmutableList<String> deviceGroupByRow();
 
   /** The default column set for the flat search results table, in display order. */
-  ImmutableList<String> defaultColumns();
+  ImmutableList<String> deviceDefaultColumns();
 
   /** The recommended columns offered in the column catalog, in display order. */
-  ImmutableList<String> recommendedColumns();
+  ImmutableList<String> deviceRecommendedColumns();
 
   // ---- Host-entity curation ----
   //
@@ -56,22 +56,22 @@ public interface ScenarioCuration {
 
   /** The keys promoted into the host "Filter by:" row of the query bar, in display order. */
   default ImmutableList<String> hostFilterByRow() {
-    return filterByRow();
+    return deviceFilterByRow();
   }
 
   /** The keys promoted into the host "Group by:" row of the query bar, in display order. */
   default ImmutableList<String> hostGroupByRow() {
-    return groupByRow();
+    return deviceGroupByRow();
   }
 
   /** The default column set for the host flat search results table, in display order. */
   default ImmutableList<String> hostDefaultColumns() {
-    return defaultColumns();
+    return deviceDefaultColumns();
   }
 
   /** The recommended host columns offered in the column catalog, in display order. */
   default ImmutableList<String> hostRecommendedColumns() {
-    return recommendedColumns();
+    return deviceRecommendedColumns();
   }
 
   /**
