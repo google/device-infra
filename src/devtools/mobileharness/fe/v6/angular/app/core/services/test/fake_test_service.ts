@@ -60,9 +60,20 @@ export class FakeTestService extends TestService {
     );
 
     const execDetails = scenario.overview.executionDetails;
+    let filteredProperties: Record<string, string> | undefined = undefined;
+    if (scenario.overview.properties) {
+      filteredProperties = {};
+      for (const [key, value] of Object.entries(scenario.overview.properties)) {
+        if (key !== 'dimension_subdevice_dimensions') {
+          filteredProperties[key] = value;
+        }
+      }
+    }
+
     const overview: TestOverviewData = {
       ...scenario.overview,
       status,
+      properties: filteredProperties,
       executionDetails: execDetails
         ? {
             ...execDetails,

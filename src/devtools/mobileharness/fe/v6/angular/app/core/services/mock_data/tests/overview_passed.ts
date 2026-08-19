@@ -45,6 +45,8 @@ export const SCENARIO_TEST_PASSED: MockTestScenario = {
       updateTime: '2026-07-22T09:28:37.781Z',
     },
     properties: {
+      'dimension_subdevice_dimensions':
+        'very_long_meaningless_value_repeat_a_lot_very_long_meaningless_value_repeat_a_lot_very_long_meaningless_value_repeat_a_lot',
       'dimension_baseband_version': 'g5123b-93368-211225-b-8029609',
       'dimension_screen_density': '420',
       'apk_size_com_google_codelab_mobileharness_android_hellomobileharness':
