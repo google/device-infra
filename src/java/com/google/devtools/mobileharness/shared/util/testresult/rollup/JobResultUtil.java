@@ -22,21 +22,19 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.processor.RetryTestsGrouper;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.processor.RetryTestsGrouper.GroupedTests;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.processor.RetryTestsGrouper.ShardTestRuns;
 import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestSuiteResult;
-import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import com.google.devtools.mobileharness.shared.util.testresult.loader.TestSuiteResultLoader;
 import com.google.devtools.mobileharness.shared.util.testresult.rollup.Outcome.OutcomeSummary;
-import com.google.protobuf.ExtensionRegistryLite;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 /** Utility for computing job-level rolled up test results. */
 public final class JobResultUtil {
@@ -93,24 +91,14 @@ public final class JobResultUtil {
           State.COMPLETE);
     }
 
-    LocalFileUtil localFileUtil = new LocalFileUtil();
-    try {
-      String genFileDir = testInfo.getGenFileDir();
-      String pbPath = PathUtil.join(genFileDir, "instrument_test_result.pb");
-      if (localFileUtil.isFileExist(pbPath)) {
-        byte[] bytes = localFileUtil.readBinaryFile(pbPath);
-        TestSuiteResult testSuiteResult =
-            TestSuiteResult.parseFrom(bytes, ExtensionRegistryLite.getEmptyRegistry());
-        return AndroidInstrumentationTestSuiteResultConverter.toTestResult(testSuiteResult);
-      } else {
-        logger.atInfo().log(
-            "No instrument_test_result.pb found for test %s.", testInfo.locator().getId());
+    TestSuiteResultLoader loader = new TestSuiteResultLoader();
+    Optional<TestSuiteResult> testSuiteResultOpt = loader.loadTestResult(testInfo);
+    if (testSuiteResultOpt.isPresent()) {
+      boolean isIos = false;
+      if (testInfo.jobInfo() != null && testInfo.jobInfo().type() != null) {
+        isIos = Objects.equals(testInfo.jobInfo().type().getDriver(), "IosNativeXcTest");
       }
-    } catch (InvalidProtocolBufferException | MobileHarnessException e) {
-      // Fall back to simple TestResult
-      logger.atWarning().withCause(e).log(
-          "Failed to load test result for test %s, fallback to simple TestResult.",
-          testInfo.locator().getId());
+      return TestSuiteResultConverter.toTestResult(testSuiteResultOpt.get(), isIos);
     }
     return buildFallbackTestResult(testInfo);
   }
