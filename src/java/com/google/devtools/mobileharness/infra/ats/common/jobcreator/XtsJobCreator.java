@@ -69,7 +69,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Path;
-import java.time.Clock;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Locale;
@@ -97,7 +96,7 @@ public abstract class XtsJobCreator {
           InfraErrorId.XTS_NO_MATCHED_TRADEFED_MODULES,
           InfraErrorId.XTS_NO_MATCHED_NON_TF_MODULES_TO_RETRY);
 
-  private static final ImmutableSet<String> CTS_TEST_PLANS =
+  private static final ImmutableSet<String> DYNAMIC_MCTS_SUPPORTED_CTS_TEST_PLANS =
       ImmutableSet.of("cts", "cts-sim", "cts-system", "cts-validation", "incremental-deqp");
 
   private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
@@ -214,8 +213,7 @@ public abstract class XtsJobCreator {
         SessionHandlerHelper.useTfRetry(
             sessionRequestInfo.getIsAtsServerRequest(),
             xtsType,
-            sessionRequestInfo.hasTestSuiteInfo()
-                    && sessionRequestInfo.getTestSuiteInfo().hasTestSuiteVersion()
+            sessionRequestInfo.getTestSuiteInfo().hasTestSuiteVersion()
                 ? sessionRequestInfo.getTestSuiteInfo().getTestSuiteVersion()
                 : null);
     if (SessionRequestHandlerUtil.isRunRetry(testPlan)) {
@@ -868,11 +866,9 @@ public abstract class XtsJobCreator {
 
   private boolean shouldCreateDynamicDownloadJobs(
       TradefedJobInfo tradefedJobInfo, SessionRequestInfo sessionRequestInfo) {
-    return (sessionRequestInfo.hasIsXtsDynamicDownloadEnabled()
-            ? sessionRequestInfo.getIsXtsDynamicDownloadEnabled()
-            : false)
+    return sessionRequestInfo.getIsXtsDynamicDownloadEnabled()
         // Only enable dynamic download for CTS test plan currently.
-        && isCtsTestPlan(tradefedJobInfo.extraJobProperties())
+        && isDynamicMctsSupportedCtsTestPlan(tradefedJobInfo.extraJobProperties())
         // Disable dynamic download if the job is for module sharding.
         && !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo);
   }
@@ -912,13 +908,15 @@ public abstract class XtsJobCreator {
     return dynamicDownloadJobInfo;
   }
 
-  private boolean isCtsTestPlan(ImmutableMap<XtsPropertyName, String> extraJobProperties) {
+  private boolean isDynamicMctsSupportedCtsTestPlan(
+      ImmutableMap<XtsPropertyName, String> extraJobProperties) {
     if (extraJobProperties.getOrDefault(Job.IS_RUN_RETRY, "").equals("true")) {
       // check the previous session test plan
-      return CTS_TEST_PLANS.contains(
+      return DYNAMIC_MCTS_SUPPORTED_CTS_TEST_PLANS.contains(
           extraJobProperties.getOrDefault(Job.PREV_SESSION_XTS_TEST_PLAN, ""));
     } else {
-      return CTS_TEST_PLANS.contains(extraJobProperties.getOrDefault(Job.XTS_TEST_PLAN, ""));
+      return DYNAMIC_MCTS_SUPPORTED_CTS_TEST_PLANS.contains(
+          extraJobProperties.getOrDefault(Job.XTS_TEST_PLAN, ""));
     }
   }
 
@@ -953,7 +951,7 @@ public abstract class XtsJobCreator {
         xtsSubPlansDir.resolve(
             String.format(
                 "tf_retry_session_%s_%d.xml",
-                formattedPreviousSessionIdentifier, Clock.systemUTC().millis()));
+                formattedPreviousSessionIdentifier, Instant.now().toEpochMilli()));
     try (OutputStream outputStream = new FileOutputStream(subPlanPath.toFile())) {
       subPlan.serialize(outputStream, /* tfFiltersOnly= */ true);
     } catch (IOException e) {

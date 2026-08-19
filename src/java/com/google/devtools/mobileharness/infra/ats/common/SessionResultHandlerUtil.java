@@ -1092,8 +1092,7 @@ public class SessionResultHandlerUtil {
   private static void callAndLogException(MobileHarnessCallable<Void> callable, String errorMessage)
       throws InterruptedException {
     try {
-      @SuppressWarnings("unused")
-      Void unused = callable.call();
+      callable.call();
     } catch (MobileHarnessException | RuntimeException | Error e) {
       logger.atWarning().with(IMPORTANCE, IMPORTANT).withCause(e).log("%s", errorMessage);
     }
