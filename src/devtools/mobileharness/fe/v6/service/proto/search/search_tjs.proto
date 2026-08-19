@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package devtools.mobileharness.fe.v6.service.proto.search;
 
+import "google/protobuf/timestamp.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/search/search_common.proto";
 
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.search";
@@ -87,35 +88,20 @@ message EnumValues {
   repeated string values = 1;
 }
 
-// Time range filter for create_time.
+// Time range filter for create_time. Both endpoints are absolute timestamps,
+// carried as the proto3 well-known Timestamp (transcoded to an RFC 3339 string
+// over REST), consistent with every other timestamp in the FE v6 API.
 //
-// Both endpoints are absolute timestamps. Preset shortcuts (e.g. "last 1 hour")
-// are a frontend concern — the frontend computes now − delta and sends the
-// absolute timestamp. The backend only sees timestamps and the Now marker.
+// Preset shortcuts (e.g. "last 1 hour") are a frontend concern: the frontend
+// computes the absolute bounds and sends them. Either bound may be omitted for
+// an open-ended range (only "from" means since, only "to" means until).
 message TimeRange {
-  // Lower bound (>=). The "From" in the UI.
-  TimeBound from = 1;
+  // Lower bound, inclusive (>=). The "From" in the UI.
+  google.protobuf.Timestamp from = 1;
 
-  // Upper bound (<=). The "To" in the UI.
-  TimeBound to = 2;
+  // Upper bound, inclusive (<=). The "To" in the UI.
+  google.protobuf.Timestamp to = 2;
 }
-
-// A single time bound: either an absolute timestamp or "now" (re-evaluated
-// per request so the query stays fresh on page refresh).
-message TimeBound {
-  oneof kind {
-    // Absolute timestamp in milliseconds since epoch.
-    int64 timestamp = 1;
-
-    // "Now" — the server substitutes the current time at query execution.
-    // Using this instead of a client-side timestamp means a saved/shared URL
-    // with a "since" filter stays fresh on reload.
-    Now now = 2;
-  }
-}
-
-// Marker for "current time", re-evaluated at query time by the server.
-message Now {}
 
 // Named key-value pair for property and dimension filters.
 //

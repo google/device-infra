@@ -55,7 +55,10 @@ java_proto_library(
 proto_library(
     name = "search_tjs_proto",
     srcs = ["search_tjs.proto"],
-    deps = [":search_common_proto"],
+    deps = [
+        ":search_common_proto",
+        "@protobuf//:timestamp_proto",
+    ],
 )
 
 java_proto_library(
