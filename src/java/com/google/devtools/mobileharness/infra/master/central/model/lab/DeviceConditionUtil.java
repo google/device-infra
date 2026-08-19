@@ -326,6 +326,13 @@ public final class DeviceConditionUtil {
 
   /** Calculates the health category of a device based on Phase 1 rules. */
   public static HealthCategory calculateHealthCategory(DeviceDao deviceDao) {
+    DeviceStatus status = deviceDao.getMergedMnmDeviceStatusIfAny();
+
+    // FAILED or MISSING status always means NEED_MANUAL_REPAIR, regardless of device type.
+    if (status == DeviceStatus.FAILED || status == DeviceStatus.MISSING) {
+      return HealthCategory.HEALTH_CATEGORY_NEED_MANUAL_REPAIR;
+    }
+
     List<String> types = deviceDao.profile().getFeature().getTypeList();
     // TODO: Only support Android devices in the short term. Need to expand to
     // non-Android devices.
@@ -334,8 +341,6 @@ public final class DeviceConditionUtil {
     if (!isSupported) {
       return HealthCategory.HEALTH_CATEGORY_UNSPECIFIED;
     }
-
-    DeviceStatus status = deviceDao.getMergedMnmDeviceStatusIfAny();
 
     // 1. In Service
     if ((status == DeviceStatus.IDLE || status == DeviceStatus.BUSY)
@@ -355,9 +360,7 @@ public final class DeviceConditionUtil {
     }
 
     // 4. Need Manual Repair
-    if (status == DeviceStatus.FAILED
-        || status == DeviceStatus.MISSING
-        || types.stream().anyMatch(UNHEALTHY_DEVICE_TYPES::contains)) {
+    if (types.stream().anyMatch(UNHEALTHY_DEVICE_TYPES::contains)) {
       return HealthCategory.HEALTH_CATEGORY_NEED_MANUAL_REPAIR;
     }
 

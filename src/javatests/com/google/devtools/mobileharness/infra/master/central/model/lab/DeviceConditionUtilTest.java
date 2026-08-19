@@ -759,6 +759,20 @@ public class DeviceConditionUtilTest {
         .isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_TRANSITION);
   }
 
+  @Test
+  public void calculateHealthCategory_iosFailed_returnsNeedManualRepair() {
+    DeviceDao device = createDevice(DeviceStatus.FAILED, ImmutableList.of("IosRealDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_NEED_MANUAL_REPAIR);
+  }
+
+  @Test
+  public void calculateHealthCategory_failedDeviceTypeMissing_returnsNeedManualRepair() {
+    DeviceDao device = createDevice(DeviceStatus.MISSING, ImmutableList.of("FailedDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_NEED_MANUAL_REPAIR);
+  }
+
   private DeviceDao createDeviceWithDmStatus(
       DeviceStatus labStatus, DeviceStatus dmStatus, List<String> types) {
     DeviceCondition.Builder conditionBuilder =
