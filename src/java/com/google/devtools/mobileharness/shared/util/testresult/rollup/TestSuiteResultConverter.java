@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.shared.util.testresult.rollup;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
+import com.google.common.collect.Multimaps;
 import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestResult;
 import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestStatus;
 import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestSuiteResult;
@@ -25,17 +27,17 @@ import com.google.protobuf.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 
-/** Helper converter class for Android Instrumentation test result formats. */
-public final class AndroidInstrumentationTestSuiteResultConverter {
+/** Helper converter class for test suite result formats. */
+public final class TestSuiteResultConverter {
 
-  private AndroidInstrumentationTestSuiteResultConverter() {}
+  private TestSuiteResultConverter() {}
 
   /**
    * Converts a {@link TestSuiteResult} to a rollup {@link
    * com.google.devtools.mobileharness.shared.util.testresult.rollup.TestResult}.
    */
   public static com.google.devtools.mobileharness.shared.util.testresult.rollup.TestResult
-      toTestResult(TestSuiteResult testSuiteResult) {
+      toTestResult(TestSuiteResult testSuiteResult, boolean isIos) {
     ImmutableList.Builder<TestCase> testCasesBuilder = ImmutableList.builder();
     String suiteName =
         testSuiteResult.hasTestSuiteMetaData()
@@ -43,14 +45,34 @@ public final class AndroidInstrumentationTestSuiteResultConverter {
             : "";
 
     for (TestResult testResult : testSuiteResult.getTestResultList()) {
-      testCasesBuilder.add(toTestCase(testResult, suiteName));
+      testCasesBuilder.add(toTestCase(testResult, suiteName, isIos));
     }
 
     ImmutableList<TestCase> testCases = testCasesBuilder.build();
-    Duration totalElapsed =
-        testCases.stream().map(TestCase::elapsedTime).reduce(Duration.ZERO, Duration::plus);
-    TestSuiteOverview suiteOverview =
-        TestSuiteOverview.builder().setName(suiteName).setElapsedTime(totalElapsed).build();
+
+    ImmutableList<TestSuiteOverview> testSuiteOverviews;
+    if (isIos) {
+      // Group test cases by their suite name (which is the iOS package name, i.e., target name)
+      // and create an overview for each target.
+      ImmutableListMultimap<String, TestCase> groupedCases =
+          Multimaps.index(testCases, tc -> tc.testCaseReference().testSuiteName());
+      ImmutableList.Builder<TestSuiteOverview> overviewsBuilder = ImmutableList.builder();
+      for (String name : groupedCases.keySet()) {
+        Duration targetElapsed =
+            groupedCases.get(name).stream()
+                .map(TestCase::elapsedTime)
+                .reduce(Duration.ZERO, Duration::plus);
+        overviewsBuilder.add(
+            TestSuiteOverview.builder().setName(name).setElapsedTime(targetElapsed).build());
+      }
+      testSuiteOverviews = overviewsBuilder.build();
+    } else {
+      Duration totalElapsed =
+          testCases.stream().map(TestCase::elapsedTime).reduce(Duration.ZERO, Duration::plus);
+      testSuiteOverviews =
+          ImmutableList.of(
+              TestSuiteOverview.builder().setName(suiteName).setElapsedTime(totalElapsed).build());
+    }
 
     OutcomeSummary outcomeSummary =
         getOutcomeSummaryFromTestStatus(testSuiteResult.getTestStatus());
@@ -58,11 +80,11 @@ public final class AndroidInstrumentationTestSuiteResultConverter {
     State state = State.COMPLETE;
 
     return com.google.devtools.mobileharness.shared.util.testresult.rollup.TestResult.create(
-        testCases, ImmutableList.of(suiteOverview), outcome, state);
+        testCases, testSuiteOverviews, outcome, state);
   }
 
-  /** Converts an Android Instrumentation test case {@link TestResult} to a {@link TestCase}. */
-  public static TestCase toTestCase(TestResult testResult, String suiteName) {
+  /** Converts a test case {@link TestResult} to a {@link TestCase}. */
+  public static TestCase toTestCase(TestResult testResult, String suiteName, boolean isIos) {
     com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestCase
         instrumentationTestCase = testResult.getTestCase();
 
@@ -73,11 +95,13 @@ public final class AndroidInstrumentationTestSuiteResultConverter {
                 + "."
                 + instrumentationTestCase.getTestClass();
 
+    String finalSuiteName = isIos ? instrumentationTestCase.getTestPackage() : suiteName;
+
     TestCaseReference testCaseRef =
         TestCaseReference.builder()
             .setName(instrumentationTestCase.getTestMethod())
             .setClassName(className)
-            .setTestSuiteName(suiteName)
+            .setTestSuiteName(finalSuiteName)
             .build();
 
     TestCase.Builder testCaseBuilder = TestCase.builder().setTestCaseReference(testCaseRef);

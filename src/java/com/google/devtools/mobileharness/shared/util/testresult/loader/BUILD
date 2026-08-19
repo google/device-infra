@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_java//java:java_library.bzl", "java_library")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -23,16 +23,16 @@ package(
 )
 
 java_library(
-    name = "test_suite_result_converter",
-    srcs = [
-        "TestSuiteResultConverter.java",
-    ],
+    name = "loader",
+    srcs = ["TestSuiteResultLoader.java"],
     deps = [
         "//src/devtools/mobileharness/platform/android/instrumentation/result/proto:test_suite_result_java_proto",
-        "//src/java/com/google/devtools/mobileharness/shared/util/junit/xmlwriter/model",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
-        "@maven//:com_google_protobuf_protobuf_java",
-        "@maven//:javax_inject_jsr330_api",
-        "@protobuf//:protobuf_java_util",
+        "@protobuf//:protobuf_java",
     ],
 )

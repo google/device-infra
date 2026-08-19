@@ -40,8 +40,8 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/platform/android/instrumentation/result/proto:test_suite_result_java_proto",
-        "//src/java/com/google/devtools/mobileharness/platform/android/instrumentation/result:test_suite_result_loader",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/testresult/loader",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
