@@ -35,7 +35,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestFailure;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.infra.ats.console.util.tradefed.TestRecordWriter;
-import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
+import com.google.devtools.mobileharness.platform.android.xts.suite.TestReportPropertiesUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
@@ -52,7 +52,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.xml.transform.Transformer;
@@ -154,7 +153,7 @@ public class CompatibilityReportCreator {
           String.format("Failed to write report to dir %s", resultDir),
           e);
     }
-    writeTestReportProperties(testReportProperties, resultDir.toFile());
+    TestReportPropertiesUtil.writeTestReportProperties(testReportProperties, resultDir.toFile());
     copyFormattingFiles(resultDir.toFile());
 
     if (testRecord != null) {
@@ -544,21 +543,5 @@ public class CompatibilityReportCreator {
       return Optional.empty();
     }
     return Optional.of(failureReport);
-  }
-
-  private void writeTestReportProperties(Map<String, String> testReportProperties, File parentDir) {
-    File file = new File(parentDir, SuiteCommon.TEST_REPORT_PROPERTIES_FILE_NAME);
-    try {
-      file.createNewFile();
-      Properties properties = new Properties();
-      testReportProperties.forEach(properties::setProperty);
-      try (FileOutputStream outputStream = new FileOutputStream(file)) {
-        properties.store(
-            outputStream, /* comments= */ "Auto generated test report properties. Do NOT modify.");
-      }
-    } catch (IOException e) {
-      logger.atWarning().withCause(e).log(
-          "Failed to write test report properties to %s: %s", file, testReportProperties);
-    }
   }
 }

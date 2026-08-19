@@ -46,7 +46,7 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
-import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
+import com.google.devtools.mobileharness.platform.android.xts.suite.TestReportPropertiesUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
@@ -63,7 +63,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.DeviceList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.Driver;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringList;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -824,14 +823,11 @@ public abstract class XtsJobCreator {
     if (testReportPropertiesFile.isEmpty()) {
       return;
     }
-    Properties testReportProperties = loadTestReportProperties(testReportPropertiesFile.get());
+    Properties testReportProperties =
+        TestReportPropertiesUtil.loadTestReportProperties(testReportPropertiesFile.get());
 
-    boolean hasTfModule =
-        Boolean.parseBoolean(
-            testReportProperties.getProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE));
-    boolean hasNonTfModule =
-        Boolean.parseBoolean(
-            testReportProperties.getProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE));
+    boolean hasTfModule = TestReportPropertiesUtil.hasTfModule(testReportProperties);
+    boolean hasNonTfModule = TestReportPropertiesUtil.hasNonTfModule(testReportProperties);
 
     if (throwIfNoNonTfModule && !hasNonTfModule) {
       // If previous session doesn't have Non-TF module, throw exception to skip the retry.
@@ -927,20 +923,6 @@ public abstract class XtsJobCreator {
       extraJobProperties.put(
           Job.XTS_SUITE_VERSION, sessionRequestInfo.getTestSuiteInfo().getVersion());
     }
-  }
-
-  protected static Properties loadTestReportProperties(Path testReportPropertiesFile)
-      throws MobileHarnessException {
-    Properties properties = new Properties();
-    try (InputStream inputStream = new FileInputStream(testReportPropertiesFile.toFile())) {
-      properties.load(inputStream);
-    } catch (IOException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.ATSC_RUN_RETRY_COMMAND_TEST_REPORT_PROPERTIES_FILE_READ_ERROR,
-          String.format("Failed to read test report properties file %s", testReportPropertiesFile),
-          e);
-    }
-    return properties;
   }
 
   protected Path serializeRetrySubPlan(

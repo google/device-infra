@@ -164,6 +164,23 @@ java_library(
 )
 
 java_library(
+    name = "test_report_properties_util",
+    srcs = ["TestReportPropertiesUtil.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
+    ],
+    deps = [
+        ":suite_common",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+    ],
+)
+
+java_library(
     name = "suite_test_filter",
     srcs = ["SuiteTestFilter.java"],
     visibility = [

@@ -31,8 +31,8 @@ import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestIn
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName;
-import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
+import com.google.devtools.mobileharness.platform.android.xts.suite.TestReportPropertiesUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader.TradefedResultFilesBundle;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
@@ -157,10 +157,10 @@ public class ConsoleJobCreator extends XtsJobCreator {
     Optional<Path> testReportPropertiesFile =
         getPrevSessionTestReportProperties(sessionRequestInfo);
     if (testReportPropertiesFile.isPresent()) {
-      Properties testReportProperties = loadTestReportProperties(testReportPropertiesFile.get());
+      Properties testReportProperties =
+          TestReportPropertiesUtil.loadTestReportProperties(testReportPropertiesFile.get());
       // If previous session doesn't have TF module, skip running TF retry.
-      if (!Boolean.parseBoolean(
-          testReportProperties.getProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE))) {
+      if (!TestReportPropertiesUtil.hasTfModule(testReportProperties)) {
         throw MobileHarnessExceptionFactory.createUserFacingException(
             InfraErrorId.ATSC_TF_RETRY_WITHOUT_TF_MODULE,
             "Previous session doesn't have tradefed module",
