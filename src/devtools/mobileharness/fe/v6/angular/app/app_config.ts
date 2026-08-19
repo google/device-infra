@@ -6,7 +6,7 @@ import {
 } from '@angular/core';
 import {MatSnackBarModule} from '@angular/material/snack-bar';
 import {provideAnimations} from '@angular/platform-browser/animations';
-import {ActivatedRoute, provideRouter} from '@angular/router';
+import {ActivatedRoute, provideRouter, withRouterConfig} from '@angular/router';
 
 import {routes} from './app_routes';
 import {authInterceptor} from './core/interceptors/auth_interceptor';
@@ -26,6 +26,9 @@ import {InterceptedFakeHostService} from './core/services/host/intercepted_fake_
 import {FakeJobService} from './core/services/job/fake_job_service';
 import {HttpJobService} from './core/services/job/http_job_service';
 import {JOB_SERVICE} from './core/services/job/job_service';
+import {FakeSearchService} from './core/services/search/fake_search_service';
+import {HttpSearchService} from './core/services/search/http_search_service';
+import {SEARCH_SERVICE} from './core/services/search/search_service';
 import {FakeSessionService} from './core/services/session/fake_session_service';
 import {HttpSessionService} from './core/services/session/http_session_service';
 import {SESSION_SERVICE} from './core/services/session/session_service';
@@ -40,7 +43,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
     importProvidersFrom(MatSnackBarModule),
-    provideRouter(routes),
+    provideRouter(routes, withRouterConfig({onSameUrlNavigation: 'reload'})),
     provideHttpClient(
       withInterceptors([
         authInterceptor,
@@ -100,6 +103,14 @@ export const appConfig: ApplicationConfig = {
         return useFakeData
           ? new FakeSessionService()
           : new HttpSessionService();
+      },
+      deps: [ActivatedRoute],
+    },
+    {
+      provide: SEARCH_SERVICE,
+      useFactory: (route: ActivatedRoute) => {
+        const useFakeData = route.snapshot.queryParams['fake_data'] === 'true';
+        return useFakeData ? new FakeSearchService() : new HttpSearchService();
       },
       deps: [ActivatedRoute],
     },

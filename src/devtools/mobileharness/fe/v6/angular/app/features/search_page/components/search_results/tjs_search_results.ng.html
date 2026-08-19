@@ -1,0 +1,185 @@
+<mat-card class="results-area tjs-mode">
+  @if (store.activeChips().length === 0 && !store.browseAll() && !store.searchQuery().trim()) {
+    <div class="tjs-empty">Add a filter to search {{ entity() }}.</div>
+  } @else {
+    <!-- Toolbar -->
+    <div class="rt-toolbar">
+      <span class="rt-count">{{ getTjsNounPlural() }}</span>
+      <span class="rt-grow"></span>
+      <button class="rt-btn-text" [matMenuTriggerFor]="densityMenu">
+        <mat-icon class="material-symbols-outlined">
+          {{ density() === 'compact' ? 'density_small' : (density() === 'comfortable' ? 'density_large' : 'density_medium') }}
+        </mat-icon>
+        Density
+        <mat-icon class="material-symbols-outlined rt-caret">arrow_drop_down</mat-icon>
+      </button>
+      <mat-menu #densityMenu="matMenu" class="density-dropdown-menu">
+        <button mat-menu-item (click)="density.set('compact')" [class.active-density]="density() === 'compact'">
+          <mat-icon class="material-symbols-outlined">
+            {{ density() === 'compact' ? 'check' : '' }}
+          </mat-icon>
+          <span>Compact</span>
+        </button>
+        <button mat-menu-item (click)="density.set('default')" [class.active-density]="density() === 'default'">
+          <mat-icon class="material-symbols-outlined">
+            {{ density() === 'default' ? 'check' : '' }}
+          </mat-icon>
+          <span>Default</span>
+        </button>
+        <button mat-menu-item (click)="density.set('comfortable')" [class.active-density]="density() === 'comfortable'">
+          <mat-icon class="material-symbols-outlined">
+            {{ density() === 'comfortable' ? 'check' : '' }}
+          </mat-icon>
+          <span>Comfortable</span>
+        </button>
+      </mat-menu>
+    </div>
+
+    @if (isLoading()) {
+      <mat-progress-bar mode="indeterminate" class="table-progress-bar"></mat-progress-bar>
+    }
+
+    @if (isLoading() && rows().length === 0) {
+      <div class="tjs-empty">Loading {{ getTjsNounPlural() }}…</div>
+    } @else if (!isLoading() && rows().length === 0) {
+      <div class="tjs-empty">No matching {{ entity() }}.</div>
+    } @else {
+      <mat-card-content class="results-card-content">
+        <!-- Data Table -->
+        <div class="table-container" [class]="'density-' + density()">
+          <table mat-table [dataSource]="rows()" class="results-table">
+            <!-- Dynamic Columns -->
+            @for (col of columns(); track col.key) {
+              <ng-container [matColumnDef]="col.key">
+                <th mat-header-cell *matHeaderCellDef [class]="'col-' + col.key">
+                  <span class="header-content">{{ col.displayName }}</span>
+                </th>
+                <td mat-cell *matCellDef="let row" [class]="'col-' + col.key">
+                  @if (getCell(row, col.key); as cell) {
+                    @switch (getCellType(cell, col)) {
+                      @case ('link') {
+                        @if (getRouterLinkFromTarget(cell); as linkArr) {
+                          <a [routerLink]="linkArr" queryParamsHandling="preserve" class="device-link" [title]="getCellValue(cell)">
+                            {{ getCellValue(cell) }}
+                          </a>
+                        } @else {
+                          <span [title]="getCellValue(cell)">{{ getCellValue(cell) }}</span>
+                        }
+                      }
+                      @case ('time') {
+                        @if (formatTime(cell.value); as tVal) {
+                          <span [title]="tVal">{{ tVal }}</span>
+                        } @else {
+                          <em class="rt-empty">(no value)</em>
+                        }
+                      }
+                      @case ('duration') {
+                        @if (formatDuration(cell.value); as dVal) {
+                          <span [title]="dVal">{{ dVal }}</span>
+                        } @else {
+                          <em class="rt-empty">(no value)</em>
+                        }
+                      }
+                      @case ('list') {
+                        @if (getCellListValues(cell); as listVals) {
+                          @for (item of listVals; track $index) {
+                            <div class="tjs-list-item" [title]="item">{{ item }}</div>
+                          }
+                        } @else {
+                          <em class="rt-empty">(no value)</em>
+                        }
+                      }
+                      @case ('status') {
+                        <span class="status-cell">
+                          <span class="rt-dot" [class]="'rt-dot ' + getStatusClass(cell)"></span>
+                          {{ getCellValue(cell) }}
+                        </span>
+                      }
+                      @case ('chips') {
+                        @if (getChipsValues(cell); as chipVals) {
+                          <app-overflow-chip-list
+                            [items]="chipVals"
+                            [title]="getColumnDisplayName(col.key)"
+                            [subtitle]="row.testId || row.jobId || row.sessionId"
+                          ></app-overflow-chip-list>
+                        } @else {
+                          <em class="rt-empty">(no value)</em>
+                        }
+                      }
+                      @case ('multilink') {
+                        @for (entry of cell.multiLink?.entries || []; track $index) {
+                          @if (getRouterLink(entry.target); as linkArr) {
+                            <a [routerLink]="linkArr" queryParamsHandling="preserve" class="device-link">
+                              {{ entry.text }}
+                            </a>
+                          } @else {
+                            {{ entry.text }}
+                          }
+                          @if (!$last) {, }
+                        }
+                      }
+                      @case ('text') {
+                        @if (col.key === 'status' || col.key === 'result') {
+                          <span class="status-cell">
+                            <span class="rt-dot" [class]="'rt-dot ' + getStatusClass(cell)"></span>
+                            {{ getCellValue(cell) }}
+                          </span>
+                        } @else if (getCellValue(cell); as txtVal) {
+                          <span [title]="txtVal">{{ txtVal }}</span>
+                        } @else {
+                          <em class="rt-empty">(no value)</em>
+                        }
+                      }
+                      @default {
+                        @if (getCellValue(cell); as defVal) {
+                          <span [title]="defVal">{{ defVal }}</span>
+                        } @else {
+                          <em class="rt-empty">(no value)</em>
+                        }
+                      }
+                    }
+                  } @else if (getRowPropertyValue(row, col.key); as propVal) {
+                    @if (isArray(propVal) && propVal.length > 0) {
+                      <app-overflow-chip-list
+                        [items]="propVal"
+                        [title]="getColumnDisplayName(col.key)"
+                        [subtitle]="row.testId || row.jobId || row.sessionId"
+                      ></app-overflow-chip-list>
+                    } @else if (propVal) {
+                      <span [title]="propVal">{{ propVal }}</span>
+                    } @else {
+                      <em class="rt-empty">(no value)</em>
+                    }
+                  } @else {
+                    <em class="rt-empty">(no value)</em>
+                  }
+                </td>
+              </ng-container>
+            }
+
+            @if (columnsToDisplay().length > 0) {
+              <tr mat-header-row *matHeaderRowDef="columnsToDisplay(); sticky: true"></tr>
+            }
+            <tr mat-row *matRowDef="let row; columns: columnsToDisplay()"></tr>
+          </table>
+        </div>
+      </mat-card-content>
+
+      <!-- Pagination Footer -->
+      <div class="rt-pagination">
+        <span class="rt-range">
+          showing {{ pageIndex() * pageSize() + 1 }}–{{ pageIndex() * pageSize() + rows().length }}
+        </span>
+        <span class="rt-grow"></span>
+        <button class="rt-btn-text" [disabled]="pageIndex() === 0" (click)="prevPage()" title="Previous page">
+          <mat-icon class="material-symbols-outlined">chevron_left</mat-icon>
+          Previous
+        </button>
+        <button class="rt-btn-text" [disabled]="!store.searchResults()?.flat?.nextPageToken" (click)="nextPage()" title="Next page">
+          Next
+          <mat-icon class="material-symbols-outlined">chevron_right</mat-icon>
+        </button>
+      </div>
+    }
+  }
+</mat-card>

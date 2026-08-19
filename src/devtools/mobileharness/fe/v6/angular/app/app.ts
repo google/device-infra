@@ -91,7 +91,7 @@ export class App implements OnDestroy {
   }
 
   isNavActive(
-    section: 'home' | 'devices' | 'hosts' | 'tests' | 'jobs',
+    section: 'home' | 'devices' | 'hosts' | 'tests' | 'jobs' | 'sessions',
   ): boolean {
     const path = this.getCurrentRoutePath();
     const fragment = this.router.parseUrl(this.router.url).fragment;
@@ -110,9 +110,26 @@ export class App implements OnDestroy {
           (path.startsWith('jobs') && !path.includes('tests')) ||
           fragment === 'job-scenarios'
         );
+      case 'sessions':
+        return path.startsWith('sessions') || fragment === 'session-scenarios';
       default:
         return false;
     }
+  }
+
+  getPreservedQueryParams() {
+    const qParams: Record<string, string> = {};
+    if (this.isFakeData) {
+      qParams['fake_data'] = 'true';
+    }
+    if (this.isEmbeddedMode) {
+      qParams['is_embedded_mode'] = 'true';
+    }
+    const universe = this.route.snapshot.queryParams['universe'];
+    if (universe) {
+      qParams['universe'] = universe;
+    }
+    return qParams;
   }
 
   private getCurrentRoutePath(): string {
@@ -162,7 +179,15 @@ export class App implements OnDestroy {
     const path = route.routeConfig?.path;
     const params = route.params;
 
-    if (path === 'dev/device-harness' || path === 'devices' || !path) {
+    if (
+      !path ||
+      path === 'dev/device-harness' ||
+      path === 'devices' ||
+      path === 'hosts' ||
+      path === 'tests' ||
+      path === 'jobs' ||
+      path === 'sessions'
+    ) {
       this.showContent = true;
     } else if (path === 'devices/:id' && params['id']) {
       this.showContent = true;
