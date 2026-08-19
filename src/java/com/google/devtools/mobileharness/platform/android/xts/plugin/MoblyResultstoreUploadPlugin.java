@@ -32,7 +32,10 @@ import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndingEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin;
@@ -58,6 +61,10 @@ public final class MoblyResultstoreUploadPlugin {
 
   private static final Pattern RESULT_STORE_LINK_PATTERN =
       Pattern.compile("(https?://btx\\.cloud\\.google\\.com/\\S+)");
+
+  @VisibleForTesting static final String RESULTSTORE_LINK_KEY = "resultstore_link";
+
+  private static final Gson GSON = new Gson();
 
   private final MoblyPythonVenvUtil moblyPythonVenvUtil;
   private final CommandExecutor commandExecutor;
@@ -247,15 +254,42 @@ public final class MoblyResultstoreUploadPlugin {
     return null;
   }
 
-  private void saveLinkToJson(String link, String moduleName, Path moblyLogDir, TestInfo testInfo) {
+  @VisibleForTesting
+  void saveLinkToJson(String link, String moduleName, Path moblyLogDir, TestInfo testInfo) {
     Path reportLogDir = moblyLogDir.resolve("report-log-files");
     try {
       localFileUtil.prepareDir(reportLogDir);
       Path reportLogFile = reportLogDir.resolve(moduleName + ".reportlog.json");
 
-      JsonObject jsonObject = new JsonObject();
-      jsonObject.addProperty("resultstore_link", link);
-      String jsonContent = new Gson().toJson(jsonObject);
+      JsonObject jsonObject;
+      if (localFileUtil.isFileExist(reportLogFile)) {
+        try {
+          JsonElement element = JsonParser.parseString(localFileUtil.readFile(reportLogFile));
+          if (element.isJsonObject()) {
+            jsonObject = element.getAsJsonObject();
+          } else {
+            testInfo
+                .log()
+                .atWarning()
+                .alsoTo(logger)
+                .log("Existing report log file %s is not a JSON object.", reportLogFile);
+            jsonObject = new JsonObject();
+          }
+        } catch (JsonSyntaxException e) {
+          testInfo
+              .log()
+              .atWarning()
+              .withCause(e)
+              .alsoTo(logger)
+              .log("Failed to parse existing report log file %s.", reportLogFile);
+          jsonObject = new JsonObject();
+        }
+      } else {
+        jsonObject = new JsonObject();
+      }
+
+      jsonObject.addProperty(RESULTSTORE_LINK_KEY, link);
+      String jsonContent = GSON.toJson(jsonObject);
 
       localFileUtil.writeToFile(reportLogFile.toString(), jsonContent);
     } catch (MobileHarnessException e) {

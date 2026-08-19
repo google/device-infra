@@ -27,6 +27,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/testbed:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/plugin:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/testbed:__subpackages__",
     ],
 )
