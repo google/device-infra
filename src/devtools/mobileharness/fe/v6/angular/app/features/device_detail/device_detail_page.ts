@@ -100,16 +100,28 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
 
   /**
-   * Subject to trigger a data refresh.
+   * Subject to trigger a refresh of the overview/main page data.
    */
-  private readonly refreshSubject$ = new Subject<void>();
+  private readonly overviewRefresh$ = new Subject<void>();
   private refreshSnackBarRef?: MatSnackBarRef<unknown>;
 
+  /** Subject to trigger a refresh of the Test History tab data. */
+  readonly testHistoryRefresh$ = new Subject<void>();
+  /** Subject to trigger a refresh of the Health Statistics tab data. */
+  readonly healthRefresh$ = new Subject<void>();
+
   /**
-   * Triggers a refresh of the device data.
+   * Triggers a refresh of the device data, refreshing the active tab (e.g., test history
+   * or health statistics) and always refreshing the overview/device status.
    */
   triggerRefresh(): void {
-    this.refreshSubject$.next();
+    if (this.activeTab() === 'test-history') {
+      this.testHistoryRefresh$.next();
+    } else if (this.activeTab() === 'health') {
+      this.healthRefresh$.next();
+    }
+    // Always refresh the overview tab, so that the device status is up to date.
+    this.overviewRefresh$.next();
   }
 
   activeTab = signal<'overview' | 'test-history' | 'health' | 'record'>(
@@ -142,11 +154,16 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
       });
   }
 
-  ngOnDestroy() {
+  /**
+   * Cleans up subscriptions, dismisses snackbars, and completes all refresh subjects.
+   */
+  ngOnDestroy(): void {
     this.refreshSnackBarRef?.dismiss();
     this.refreshSnackBarRef = undefined;
     this.loadingService.hide();
-    this.refreshSubject$.complete();
+    this.overviewRefresh$.complete();
+    this.testHistoryRefresh$.complete();
+    this.healthRefresh$.complete();
     this.destroyed.next();
     this.destroyed.complete();
     this.titleService.setTitle(`OmniLab Console`);
@@ -158,7 +175,7 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
       switchMap((id) =>
         merge(
           of({id, isRefresh: false}),
-          this.refreshSubject$.pipe(map(() => ({id, isRefresh: true}))),
+          this.overviewRefresh$.pipe(map(() => ({id, isRefresh: true}))),
         ),
       ),
     )

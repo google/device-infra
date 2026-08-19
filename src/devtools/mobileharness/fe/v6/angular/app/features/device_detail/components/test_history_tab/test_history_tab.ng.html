@@ -7,7 +7,10 @@
   }
 
   <div class="table-card">
-    <div class="table-scroll">
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" class="progress-bar"></mat-progress-bar>
+    }
+    <div class="table-scroll" [class.loading]="loading()">
       <table mat-table [dataSource]="rows()" class="test-history-table">
         @for (col of columns(); track col.key; let i = $index) {
           <ng-container [matColumnDef]="col.key ?? ''">
@@ -50,11 +53,7 @@
       </table>
     </div>
 
-    @if (loading()) {
-      <div class="state-row">
-        <span>Loading tests…</span>
-      </div>
-    } @else if (rows().length === 0) {
+    @if (!loading() && rows().length === 0) {
       <div class="state-row empty-state">No tests found for this device.</div>
     }
 

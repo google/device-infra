@@ -2,6 +2,7 @@ import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   Input,
   OnDestroy,
   OnInit,
@@ -9,10 +10,10 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import {toSignal} from '@angular/core/rxjs-interop';
+import {takeUntilDestroyed, toSignal} from '@angular/core/rxjs-interop';
 import {MatTableModule} from '@angular/material/table';
 import {load} from '@google-web-components/google-chart/loader';
-import {Subject, of} from 'rxjs';
+import {Observable, Subject, of} from 'rxjs';
 import {catchError, finalize, switchMap, tap} from 'rxjs/operators';
 
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
@@ -57,9 +58,13 @@ import {StatisticCard} from './statistic_card/statistic_card';
   ],
 })
 export class HealthStatisticTab implements OnInit, OnDestroy {
+  /** The device ID to fetch statistics for. */
   @Input({required: true}) deviceId!: string;
+  /** Optional observable trigger to refresh statistics for the cached date ranges. */
+  @Input() refreshTrigger$?: Observable<void>;
 
   private readonly deviceService = inject(DEVICE_SERVICE);
+  private readonly destroyRef = inject(DestroyRef);
 
   // Used for breakdown charts that depend on global google lib being loaded for DataTable creation
   private readonly chartsLibraryLoaded = signal(false);
@@ -98,6 +103,13 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
   private readonly healthDateRange$ = new Subject<{start: Date; end: Date}>();
   private readonly testDateRange$ = new Subject<{start: Date; end: Date}>();
   private readonly recoveryDateRange$ = new Subject<{start: Date; end: Date}>();
+
+  /** Cached date range for healthiness statistics. */
+  private currentHealthRange?: {start: Date; end: Date};
+  /** Cached date range for test result statistics. */
+  private currentTestRange?: {start: Date; end: Date};
+  /** Cached date range for recovery task statistics. */
+  private currentRecoveryRange?: {start: Date; end: Date};
 
   // Healthiness statistics.
   readonly healthinessStats = toSignal(
@@ -308,22 +320,52 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
 
   readonly recoveryHasData = computed(() => this.recoveryChartData().hasData);
 
-  ngOnInit() {}
+  /**
+   * Initializes the component and subscribes to refresh triggers to re-fetch
+   * statistics for each active section using their cached date ranges.
+   */
+  ngOnInit(): void {
+    if (this.refreshTrigger$) {
+      this.refreshTrigger$
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(() => {
+          if (this.currentHealthRange) {
+            this.healthDateRange$.next(this.currentHealthRange);
+          }
+          if (this.currentTestRange) {
+            this.testDateRange$.next(this.currentTestRange);
+          }
+          if (this.currentRecoveryRange) {
+            this.recoveryDateRange$.next(this.currentRecoveryRange);
+          }
+        });
+    }
+  }
 
   ngOnDestroy() {}
 
+  /**
+   * Handles date range changes for a specific statistic section, caching the range
+   * and emitting it to trigger the corresponding data fetch.
+   *
+   * @param type The section type ('health', 'test', or 'recovery').
+   * @param range The selected date range with start and end Date objects.
+   */
   onDateRangeChange(
     type: 'health' | 'test' | 'recovery',
     range: {start: Date; end: Date},
-  ) {
+  ): void {
     switch (type) {
       case 'health':
+        this.currentHealthRange = range;
         this.healthDateRange$.next(range);
         break;
       case 'test':
+        this.currentTestRange = range;
         this.testDateRange$.next(range);
         break;
       case 'recovery':
+        this.currentRecoveryRange = range;
         this.recoveryDateRange$.next(range);
         break;
       default:

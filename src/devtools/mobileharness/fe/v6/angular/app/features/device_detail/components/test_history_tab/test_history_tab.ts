@@ -2,14 +2,19 @@ import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   Input,
   OnInit,
   computed,
   inject,
   signal,
 } from '@angular/core';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {MatIconModule} from '@angular/material/icon';
+import {MatProgressBarModule} from '@angular/material/progress-bar';
 import {MatTableModule} from '@angular/material/table';
+import {EMPTY, Observable, Subject} from 'rxjs';
+import {catchError, map, switchMap} from 'rxjs/operators';
 
 import {
   Indicator,
@@ -35,12 +40,17 @@ import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
   templateUrl: './test_history_tab.ng.html',
   styleUrl: './test_history_tab.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, MatIconModule, MatTableModule],
+  imports: [CommonModule, MatIconModule, MatProgressBarModule, MatTableModule],
 })
 export class TestHistoryTab implements OnInit {
+  /** The device ID to fetch test history for. */
   @Input({required: true}) deviceId!: string;
+  /** Optional observable trigger to reload the first page of test history. */
+  @Input() refreshTrigger$?: Observable<void>;
 
   private readonly deviceService = inject(DEVICE_SERVICE);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly loadTrigger$ = new Subject<string>();
 
   readonly columns = signal<TableColumn[]>([]);
   readonly rows = signal<TableRow[]>([]);
@@ -57,11 +67,59 @@ export class TestHistoryTab implements OnInit {
   private nextToken = '';
   private readonly prevTokens: string[] = [];
 
-  ngOnInit() {
+  /**
+   * Initializes the component by loading the first page of test history and
+   * subscribing to refresh triggers if provided.
+   */
+  ngOnInit(): void {
+    this.loadTrigger$
+      .pipe(
+        switchMap((token) => {
+          this.loading.set(true);
+          this.error.set('');
+          if (token === '') {
+            this.prevTokens.length = 0;
+            this.canPrev.set(false);
+          }
+          return this.deviceService
+            .getDeviceTestHistory(this.deviceId, token)
+            .pipe(
+              map((response) => ({token, response})),
+              catchError(() => {
+                this.error.set('Failed to load test history.');
+                this.rows.set([]);
+                this.hasNextPage.set(false);
+                this.loading.set(false);
+                return EMPTY;
+              }),
+            );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe(({token, response}) => {
+        this.currentToken = token;
+        this.columns.set(response.columns ?? []);
+        this.rows.set(response.rows ?? []);
+        this.nextToken = response.nextPageToken ?? '';
+        this.hasNextPage.set(this.nextToken !== '');
+        this.loading.set(false);
+      });
+
     this.loadPage('');
+
+    if (this.refreshTrigger$) {
+      this.refreshTrigger$
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(() => {
+          this.loadPage('');
+        });
+    }
   }
 
-  nextPage() {
+  /**
+   * Navigates to the next page of test history using the stored next token.
+   */
+  nextPage(): void {
     if (!this.nextToken || this.loading()) {
       return;
     }
@@ -70,7 +128,10 @@ export class TestHistoryTab implements OnInit {
     this.loadPage(this.nextToken);
   }
 
-  prevPage() {
+  /**
+   * Navigates to the previous page of test history from the token stack.
+   */
+  prevPage(): void {
     if (this.prevTokens.length === 0 || this.loading()) {
       return;
     }
@@ -119,6 +180,12 @@ export class TestHistoryTab implements OnInit {
     return value;
   }
 
+  /**
+   * Formats a duration in milliseconds into a human-readable string (e.g., "2m 5s").
+   *
+   * @param ms Duration in milliseconds.
+   * @return Formatted duration string or '-' if invalid/non-positive.
+   */
   private formatDuration(ms: number): string {
     if (Number.isNaN(ms) || ms <= 0) {
       return '-';
@@ -129,24 +196,12 @@ export class TestHistoryTab implements OnInit {
     return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
   }
 
-  private loadPage(token: string) {
-    this.loading.set(true);
-    this.error.set('');
-    this.deviceService.getDeviceTestHistory(this.deviceId, token).subscribe({
-      next: (response) => {
-        this.currentToken = token;
-        this.columns.set(response.columns ?? []);
-        this.rows.set(response.rows ?? []);
-        this.nextToken = response.nextPageToken ?? '';
-        this.hasNextPage.set(this.nextToken !== '');
-        this.loading.set(false);
-      },
-      error: () => {
-        this.error.set('Failed to load test history.');
-        this.rows.set([]);
-        this.hasNextPage.set(false);
-        this.loading.set(false);
-      },
-    });
+  /**
+   * Loads a page of test history for the current device.
+   *
+   * @param token The pagination token for the requested page (empty for first page).
+   */
+  private loadPage(token: string): void {
+    this.loadTrigger$.next(token);
   }
 }

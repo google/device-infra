@@ -1,6 +1,6 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
-import {of} from 'rxjs';
+import {of, Subject} from 'rxjs';
 
 import {DeviceTestHistoryResponse} from '../../../../core/models/device_test_history';
 import {
@@ -82,5 +82,23 @@ describe('TestHistoryTab Component', () => {
       'status-error',
     );
     expect(component.indicatorClass(undefined)).toContain('status-neutral');
+  });
+
+  it('reloads the first page and resets pagination when refreshTrigger emits', () => {
+    const testFixture = TestBed.createComponent(TestHistoryTab);
+    const testComponent = testFixture.componentInstance;
+    testComponent.deviceId = 'device-1';
+    const refreshSubject = new Subject<void>();
+    testComponent.refreshTrigger$ = refreshSubject.asObservable();
+    testFixture.detectChanges();
+
+    deviceServiceSpy.getDeviceTestHistory.calls.reset();
+    refreshSubject.next();
+
+    expect(deviceServiceSpy.getDeviceTestHistory).toHaveBeenCalledWith(
+      'device-1',
+      '',
+    );
+    expect(testComponent.canPrev()).toBeFalse();
   });
 });
