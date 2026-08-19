@@ -42,4 +42,10 @@ go_test(
     name = "download_test",
     srcs = ["download_test.go"],
     embed = [":download"],
+    tags = ["deviceinfra_disable_in_kokoro"],
+    deps = [
+        "@com_github_bazelbuild_remote_apis//build/bazel/remote/execution/v2:remote_execution_go_proto",
+        "@com_github_bazelbuild_remote_apis_sdks//go/pkg/fakes",
+        "@org_golang_google_protobuf//proto",
+    ],
 )
